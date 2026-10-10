@@ -1,0 +1,205 @@
+{
+  "mes": {
+    "module": {
+      "common": "通用",
+      "org": "组织",
+      "equipment": "设备",
+      "product": "产品与物料",
+      "process": "工艺",
+      "quality": "质量",
+      "lot": "批次与晶圆规则"
+    },
+    "entity": {
+      "dict_type": "数据字典",
+      "dict_item": "字典项",
+      "code_rule": "编码规则",
+      "attr_def": "自定义属性",
+      "audit_log": "审计日志",
+      "site": "工厂",
+      "area": "区域",
+      "workcenter": "Bay / 工作中心",
+      "shift": "班次",
+      "work_calendar": "工作日历",
+      "calendar_day": "日历日"
+    },
+    "field": {
+      "dict_type": {
+        "code": "编码",
+        "name": "名称",
+        "is_active": "启用",
+        "description": "描述"
+      },
+      "dict_item": {
+        "code": "编码",
+        "name": "名称",
+        "dict_type": "字典",
+        "value": "值",
+        "color": "颜色",
+        "sort_order": "排序",
+        "is_active": "启用",
+        "description": "描述"
+      },
+      "code_rule": {
+        "code": "编码",
+        "name": "名称",
+        "target": "适用对象",
+        "pattern": "模板",
+        "seq_width": "流水号位数",
+        "seq_start": "起始流水号",
+        "seq_reset": "重置周期",
+        "description": "描述"
+      },
+      "attr_def": {
+        "code": "编码",
+        "name": "名称",
+        "entity_type": "实体",
+        "data_type": "数据类型",
+        "required": "必填",
+        "options": "选项（逗号分隔）",
+        "dict_type": "选项来源字典",
+        "sort_order": "排序",
+        "description": "描述"
+      },
+      "audit_log": {
+        "entity_type": "实体",
+        "action": "操作",
+        "record_id": "记录 ID",
+        "record_code": "记录",
+        "changes": "变更内容",
+        "user_email": "用户"
+      },
+      "site": {
+        "code": "编码",
+        "name": "名称",
+        "timezone": "时区",
+        "address": "地址",
+        "is_active": "启用",
+        "description": "描述"
+      },
+      "area": {
+        "code": "编码",
+        "name": "名称",
+        "site": "工厂",
+        "area_type": "区域类型",
+        "is_active": "启用",
+        "description": "描述"
+      },
+      "workcenter": {
+        "code": "编码",
+        "name": "名称",
+        "parent": "上级",
+        "area": "区域",
+        "kind": "类型",
+        "is_active": "启用",
+        "description": "描述"
+      },
+      "shift": {
+        "code": "编码",
+        "name": "名称",
+        "site": "工厂",
+        "start_time": "开始时间",
+        "end_time": "结束时间",
+        "crosses_midnight": "跨午夜",
+        "sort_order": "排序",
+        "description": "描述"
+      },
+      "work_calendar": {
+        "code": "编码",
+        "name": "名称",
+        "site": "工厂",
+        "year": "年份",
+        "is_active": "启用",
+        "description": "描述"
+      },
+      "calendar_day": {
+        "work_calendar": "日历",
+        "day": "日期",
+        "day_type": "日类型",
+        "shifts": "班次",
+        "note": "备注"
+      }
+    },
+    "help": {
+      "code_rule": {
+        "pattern": "占位符：{YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}"
+      },
+      "calendar_day": {
+        "shifts": "逗号分隔的班次编码"
+      }
+    },
+    "enum": {
+      "status": {
+        "draft": "草稿",
+        "active": "生效",
+        "inactive": "失效"
+      },
+      "audit_action": {
+        "create": "新建",
+        "update": "修改",
+        "delete": "删除",
+        "status": "状态变更",
+        "import": "导入",
+        "new_version": "新版本"
+      },
+      "seq_reset": {
+        "never": "不重置",
+        "daily": "每日",
+        "monthly": "每月",
+        "yearly": "每年"
+      },
+      "code_target": {
+        "lot": "批次号",
+        "wafer": "晶圆号",
+        "carrier": "载具号",
+        "material": "物料批号",
+        "equipment": "设备编号",
+        "other": "其他"
+      },
+      "attr_type": {
+        "string": "文本",
+        "number": "数值",
+        "boolean": "是/否",
+        "date": "日期",
+        "select": "下拉选择"
+      },
+      "area_type": {
+        "fab": "前道晶圆厂",
+        "cleanroom": "洁净室",
+        "test": "测试",
+        "assembly": "封装",
+        "warehouse": "仓库",
+        "facility": "厂务"
+      },
+      "wc_kind": {
+        "bay": "Bay 区",
+        "workcenter": "工作中心",
+        "cell": "单元"
+      },
+      "day_type": {
+        "workday": "工作日",
+        "holiday": "节假日",
+        "maintenance": "维护日"
+      }
+    }
+  },
+  "menu": {
+    "mes-dict_type": "数据字典",
+    "mes-dict_item": "字典项",
+    "mes-code_rule": "编码规则",
+    "mes-attr_def": "自定义属性",
+    "mes-audit_log": "审计日志",
+    "mes-site": "工厂",
+    "mes-area": "区域",
+    "mes-workcenter": "Bay / 工作中心",
+    "mes-shift": "班次",
+    "mes-work_calendar": "工作日历",
+    "mes-calendar_day": "日历日",
+    "mes-common": "MES 建模 · 通用",
+    "mes-org": "MES 建模 · 组织",
+    "mes-equipment": "MES 建模 · 设备",
+    "mes-product": "MES 建模 · 产品与物料",
+    "mes-process": "MES 建模 · 工艺",
+    "mes-quality": "MES 建模 · 质量",
+    "mes-lot": "MES 建模 · 批次与晶圆规则"
+  }
+}

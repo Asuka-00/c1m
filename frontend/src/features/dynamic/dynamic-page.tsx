@@ -4,6 +4,7 @@ import type { MenuNode } from '@/lib/api'
 import { useMyMenus } from '@/lib/api/hooks'
 import { ForbiddenError } from '@/features/errors/forbidden'
 import { NotFoundError } from '@/features/errors/not-found-error'
+import { MesEntityPage } from '@/features/mes/entity-page'
 import { COMPONENTS } from './registry'
 
 function flatten(nodes: MenuNode[]): MenuNode[] {
@@ -28,6 +29,9 @@ export function DynamicPage({ path }: { path: string }) {
     ) : (
       <NotFoundError />
     )
+  // MES master data: one generic page per entity (component `mes:<entity>`)
+  if (node.component?.startsWith('mes:'))
+    return <MesEntityPage key={node.component} code={node.component.slice(4)} />
   const Comp = node.component ? COMPONENTS[node.component] : undefined
   if (!Comp) return <NotFoundError />
   return (

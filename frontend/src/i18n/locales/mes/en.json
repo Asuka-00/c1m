@@ -1,0 +1,205 @@
+{
+  "mes": {
+    "module": {
+      "common": "Common",
+      "org": "Organization",
+      "equipment": "Equipment",
+      "product": "Product & material",
+      "process": "Process",
+      "quality": "Quality",
+      "lot": "Lot & wafer rules"
+    },
+    "entity": {
+      "dict_type": "Dictionary",
+      "dict_item": "Dictionary item",
+      "code_rule": "Code rule",
+      "attr_def": "Custom attribute",
+      "audit_log": "Audit log",
+      "site": "Factory / site",
+      "area": "Area",
+      "workcenter": "Bay / work center",
+      "shift": "Shift",
+      "work_calendar": "Work calendar",
+      "calendar_day": "Calendar day"
+    },
+    "field": {
+      "dict_type": {
+        "code": "Code",
+        "name": "Name",
+        "is_active": "Active",
+        "description": "Description"
+      },
+      "dict_item": {
+        "code": "Code",
+        "name": "Name",
+        "dict_type": "Dictionary",
+        "value": "Value",
+        "color": "Color",
+        "sort_order": "Sort order",
+        "is_active": "Active",
+        "description": "Description"
+      },
+      "code_rule": {
+        "code": "Code",
+        "name": "Name",
+        "target": "Applies to",
+        "pattern": "Pattern",
+        "seq_width": "Sequence width",
+        "seq_start": "Sequence start",
+        "seq_reset": "Reset",
+        "description": "Description"
+      },
+      "attr_def": {
+        "code": "Code",
+        "name": "Name",
+        "entity_type": "Entity",
+        "data_type": "Data type",
+        "required": "Required",
+        "options": "Options (comma separated)",
+        "dict_type": "Options from dictionary",
+        "sort_order": "Sort order",
+        "description": "Description"
+      },
+      "audit_log": {
+        "entity_type": "Entity",
+        "action": "Action",
+        "record_id": "Record id",
+        "record_code": "Record",
+        "changes": "Changes",
+        "user_email": "User"
+      },
+      "site": {
+        "code": "Code",
+        "name": "Name",
+        "timezone": "Time zone",
+        "address": "Address",
+        "is_active": "Active",
+        "description": "Description"
+      },
+      "area": {
+        "code": "Code",
+        "name": "Name",
+        "site": "Site",
+        "area_type": "Area type",
+        "is_active": "Active",
+        "description": "Description"
+      },
+      "workcenter": {
+        "code": "Code",
+        "name": "Name",
+        "parent": "Parent",
+        "area": "Area",
+        "kind": "Kind",
+        "is_active": "Active",
+        "description": "Description"
+      },
+      "shift": {
+        "code": "Code",
+        "name": "Name",
+        "site": "Site",
+        "start_time": "Start",
+        "end_time": "End",
+        "crosses_midnight": "Crosses midnight",
+        "sort_order": "Sort order",
+        "description": "Description"
+      },
+      "work_calendar": {
+        "code": "Code",
+        "name": "Name",
+        "site": "Site",
+        "year": "Year",
+        "is_active": "Active",
+        "description": "Description"
+      },
+      "calendar_day": {
+        "work_calendar": "Calendar",
+        "day": "Date",
+        "day_type": "Day type",
+        "shifts": "Shifts",
+        "note": "Note"
+      }
+    },
+    "help": {
+      "code_rule": {
+        "pattern": "Tokens: {YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}"
+      },
+      "calendar_day": {
+        "shifts": "Comma separated shift codes"
+      }
+    },
+    "enum": {
+      "status": {
+        "draft": "Draft",
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "audit_action": {
+        "create": "Create",
+        "update": "Update",
+        "delete": "Delete",
+        "status": "Status change",
+        "import": "Import",
+        "new_version": "New version"
+      },
+      "seq_reset": {
+        "never": "Never",
+        "daily": "Daily",
+        "monthly": "Monthly",
+        "yearly": "Yearly"
+      },
+      "code_target": {
+        "lot": "Lot ID",
+        "wafer": "Wafer ID",
+        "carrier": "Carrier ID",
+        "material": "Material lot",
+        "equipment": "Equipment ID",
+        "other": "Other"
+      },
+      "attr_type": {
+        "string": "Text",
+        "number": "Number",
+        "boolean": "Yes/No",
+        "date": "Date",
+        "select": "Select"
+      },
+      "area_type": {
+        "fab": "Fab (front-end)",
+        "cleanroom": "Clean room",
+        "test": "Test / probe",
+        "assembly": "Assembly",
+        "warehouse": "Warehouse",
+        "facility": "Facility"
+      },
+      "wc_kind": {
+        "bay": "Bay",
+        "workcenter": "Work center",
+        "cell": "Cell"
+      },
+      "day_type": {
+        "workday": "Workday",
+        "holiday": "Holiday",
+        "maintenance": "Maintenance"
+      }
+    }
+  },
+  "menu": {
+    "mes-dict_type": "Dictionary",
+    "mes-dict_item": "Dictionary item",
+    "mes-code_rule": "Code rule",
+    "mes-attr_def": "Custom attribute",
+    "mes-audit_log": "Audit log",
+    "mes-site": "Factory / site",
+    "mes-area": "Area",
+    "mes-workcenter": "Bay / work center",
+    "mes-shift": "Shift",
+    "mes-work_calendar": "Work calendar",
+    "mes-calendar_day": "Calendar day",
+    "mes-common": "MES · Common",
+    "mes-org": "MES · Organization",
+    "mes-equipment": "MES · Equipment",
+    "mes-product": "MES · Product & material",
+    "mes-process": "MES · Process",
+    "mes-quality": "MES · Quality",
+    "mes-lot": "MES · Lot & wafer rules"
+  }
+}

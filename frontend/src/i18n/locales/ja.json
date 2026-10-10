@@ -394,5 +394,43 @@
         "support_url": "フッターに表示する任意のサポートリンク。"
       }
     }
+  },
+  "mes": {
+    "clear": "クリア",
+    "editTitle": "{{entity}}を編集",
+    "newTitle": "{{entity}}を新規作成",
+    "versionInfo": "バージョン {{version}}（下書き）",
+    "formDesc": "* は必須項目です。",
+    "customAttrs": "カスタム属性",
+    "allOf": "すべての{{field}}",
+    "saved": "保存しました",
+    "deleted": "削除しました",
+    "statusChanged": "ステータスを変更しました",
+    "versionCreated": "下書きバージョン {{version}} を作成しました",
+    "imported": "インポート完了：作成 {{created}}、更新 {{updated}}",
+    "importFailed": "インポート失敗（何も保存されていません）",
+    "importRow": "{{row}} 行目：{{msg}}",
+    "version": "バージョン",
+    "at": "日時",
+    "details": "詳細",
+    "versionActions": "バージョン操作",
+    "activate": "有効化",
+    "deactivate": "無効化",
+    "newVersion": "新バージョン（コピー）",
+    "treeView": "ツリー表示",
+    "tableView": "テーブル表示",
+    "export": "エクスポート",
+    "import": "インポート",
+    "new": "新規",
+    "empty": "{{entity}}はまだありません。",
+    "deleteTitle": "{{entity}}を削除しますか？",
+    "deleteDesc": "「{{name}}」を削除します。元に戻せません。",
+    "detailDesc": "このレコードの関連データ。",
+    "pattern": "パターン",
+    "sampleLot": "サンプルロット ID",
+    "previewHint": "プレビューのみ（番号は確保されません）。",
+    "panel": {
+      "code_rule": "プレビュー"
+    }
   }
 }

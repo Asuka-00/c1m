@@ -1,0 +1,205 @@
+{
+  "mes": {
+    "module": {
+      "common": "共通",
+      "org": "組織",
+      "equipment": "設備",
+      "product": "製品・資材",
+      "process": "プロセス",
+      "quality": "品質",
+      "lot": "ロット・ウェーハ規則"
+    },
+    "entity": {
+      "dict_type": "データ辞書",
+      "dict_item": "辞書項目",
+      "code_rule": "採番ルール",
+      "attr_def": "カスタム属性",
+      "audit_log": "監査ログ",
+      "site": "工場",
+      "area": "エリア",
+      "workcenter": "ベイ / ワークセンター",
+      "shift": "シフト",
+      "work_calendar": "稼働カレンダー",
+      "calendar_day": "カレンダー日"
+    },
+    "field": {
+      "dict_type": {
+        "code": "コード",
+        "name": "名称",
+        "is_active": "有効",
+        "description": "説明"
+      },
+      "dict_item": {
+        "code": "コード",
+        "name": "名称",
+        "dict_type": "辞書",
+        "value": "値",
+        "color": "色",
+        "sort_order": "並び順",
+        "is_active": "有効",
+        "description": "説明"
+      },
+      "code_rule": {
+        "code": "コード",
+        "name": "名称",
+        "target": "対象",
+        "pattern": "パターン",
+        "seq_width": "連番桁数",
+        "seq_start": "開始番号",
+        "seq_reset": "リセット周期",
+        "description": "説明"
+      },
+      "attr_def": {
+        "code": "コード",
+        "name": "名称",
+        "entity_type": "エンティティ",
+        "data_type": "データ型",
+        "required": "必須",
+        "options": "選択肢（カンマ区切り）",
+        "dict_type": "選択肢の辞書",
+        "sort_order": "並び順",
+        "description": "説明"
+      },
+      "audit_log": {
+        "entity_type": "エンティティ",
+        "action": "操作",
+        "record_id": "レコード ID",
+        "record_code": "レコード",
+        "changes": "変更内容",
+        "user_email": "ユーザー"
+      },
+      "site": {
+        "code": "コード",
+        "name": "名称",
+        "timezone": "タイムゾーン",
+        "address": "住所",
+        "is_active": "有効",
+        "description": "説明"
+      },
+      "area": {
+        "code": "コード",
+        "name": "名称",
+        "site": "工場",
+        "area_type": "エリア種別",
+        "is_active": "有効",
+        "description": "説明"
+      },
+      "workcenter": {
+        "code": "コード",
+        "name": "名称",
+        "parent": "親",
+        "area": "エリア",
+        "kind": "種別",
+        "is_active": "有効",
+        "description": "説明"
+      },
+      "shift": {
+        "code": "コード",
+        "name": "名称",
+        "site": "工場",
+        "start_time": "開始時刻",
+        "end_time": "終了時刻",
+        "crosses_midnight": "日跨ぎ",
+        "sort_order": "並び順",
+        "description": "説明"
+      },
+      "work_calendar": {
+        "code": "コード",
+        "name": "名称",
+        "site": "工場",
+        "year": "年",
+        "is_active": "有効",
+        "description": "説明"
+      },
+      "calendar_day": {
+        "work_calendar": "カレンダー",
+        "day": "日付",
+        "day_type": "日種別",
+        "shifts": "シフト",
+        "note": "備考"
+      }
+    },
+    "help": {
+      "code_rule": {
+        "pattern": "トークン：{YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}"
+      },
+      "calendar_day": {
+        "shifts": "カンマ区切りのシフトコード"
+      }
+    },
+    "enum": {
+      "status": {
+        "draft": "下書き",
+        "active": "有効",
+        "inactive": "無効"
+      },
+      "audit_action": {
+        "create": "作成",
+        "update": "更新",
+        "delete": "削除",
+        "status": "ステータス変更",
+        "import": "インポート",
+        "new_version": "新バージョン"
+      },
+      "seq_reset": {
+        "never": "リセットしない",
+        "daily": "毎日",
+        "monthly": "毎月",
+        "yearly": "毎年"
+      },
+      "code_target": {
+        "lot": "ロット ID",
+        "wafer": "ウェーハ ID",
+        "carrier": "キャリア ID",
+        "material": "資材ロット",
+        "equipment": "設備 ID",
+        "other": "その他"
+      },
+      "attr_type": {
+        "string": "テキスト",
+        "number": "数値",
+        "boolean": "はい/いいえ",
+        "date": "日付",
+        "select": "選択"
+      },
+      "area_type": {
+        "fab": "前工程",
+        "cleanroom": "クリーンルーム",
+        "test": "テスト",
+        "assembly": "組立",
+        "warehouse": "倉庫",
+        "facility": "ファシリティ"
+      },
+      "wc_kind": {
+        "bay": "ベイ",
+        "workcenter": "ワークセンター",
+        "cell": "セル"
+      },
+      "day_type": {
+        "workday": "稼働日",
+        "holiday": "休日",
+        "maintenance": "保全日"
+      }
+    }
+  },
+  "menu": {
+    "mes-dict_type": "データ辞書",
+    "mes-dict_item": "辞書項目",
+    "mes-code_rule": "採番ルール",
+    "mes-attr_def": "カスタム属性",
+    "mes-audit_log": "監査ログ",
+    "mes-site": "工場",
+    "mes-area": "エリア",
+    "mes-workcenter": "ベイ / ワークセンター",
+    "mes-shift": "シフト",
+    "mes-work_calendar": "稼働カレンダー",
+    "mes-calendar_day": "カレンダー日",
+    "mes-common": "MES モデリング · 共通",
+    "mes-org": "MES モデリング · 組織",
+    "mes-equipment": "MES モデリング · 設備",
+    "mes-product": "MES モデリング · 製品・資材",
+    "mes-process": "MES モデリング · プロセス",
+    "mes-quality": "MES モデリング · 品質",
+    "mes-lot": "MES モデリング · ロット・ウェーハ規則"
+  }
+}

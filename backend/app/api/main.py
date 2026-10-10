@@ -5,6 +5,7 @@ from app.api.routes import (
     files,
     login,
     menus,
+    mes,
     private,
     rbac,
     tenants,
@@ -24,6 +25,7 @@ api_router.include_router(utils.router)
 api_router.include_router(config.router)
 api_router.include_router(files.router)
 api_router.include_router(tenants.router)
+api_router.include_router(mes.router)
 api_router.include_router(menus.router)
 
 

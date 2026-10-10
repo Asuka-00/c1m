@@ -22,6 +22,15 @@ TENANT_PERMISSIONS: dict[str, str] = {
     "config:read": "Read system configuration (tenant overrides; platform defaults with a platform role)",
     "config:write": "Edit system configuration (tenant overrides; platform defaults with a platform role)",
 }
+# MES master data: read/write per module (tenant scope)
+from app.mes.core import MODULES as _MES_MODULES  # noqa: E402
+
+MES_PERMISSIONS: dict[str, str] = {
+    f"mes.{m}:{a}": f"MES {lbl.split('|')[0]}: {a}"
+    for m, (lbl, _) in _MES_MODULES.items()
+    for a in ("read", "write")
+}
+TENANT_PERMISSIONS.update(MES_PERMISSIONS)
 DEFAULT_PERMISSIONS = {**PLATFORM_PERMISSIONS, **TENANT_PERMISSIONS}
 
 DEFAULT_ROLES: dict[str, tuple[str, list[str]]] = {
@@ -32,9 +41,18 @@ TENANT_ROLES: dict[str, tuple[str, list[str]]] = {
     "owner": ("Tenant owner", list(TENANT_PERMISSIONS)),
     "admin": (
         "Tenant administrator",
-        ["members:read", "members:write", "config:read", "config:write"],
+        [
+            "members:read",
+            "members:write",
+            "config:read",
+            "config:write",
+            *MES_PERMISSIONS,
+        ],
     ),
-    "member": ("Tenant member", ["members:read"]),
+    "member": (
+        "Tenant member",
+        ["members:read", *(p for p in MES_PERMISSIONS if p.endswith(":read"))],
+    ),
 }
 ADMIN_ROLE = "admin"
 DEFAULT_USER_ROLE = "user"

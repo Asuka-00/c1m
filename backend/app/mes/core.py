@@ -1,0 +1,218 @@
+"""Declarative entity specs -> SQLAlchemy tables (tenant-scoped, RLS)."""
+
+from dataclasses import dataclass, field
+from typing import Any, Literal
+
+import sqlalchemy as sa
+from sqlmodel import SQLModel
+
+FieldType = Literal[
+    "str", "text", "int", "float", "bool", "enum", "ref", "date", "time", "json"
+]
+STATUSES = ("draft", "active", "inactive")
+# versioned master data: allowed status transitions
+STATUS_TRANSITIONS = {
+    "draft": {"active", "inactive"},
+    "active": {"inactive"},
+    "inactive": {"active"},
+}
+
+# module -> (permission suffix, label "en|zh|ja", sort order)
+MODULES: dict[str, tuple[str, int]] = {
+    "common": ("Common|通用|共通", 0),
+    "org": ("Organization|组织|組織", 10),
+    "equipment": ("Equipment|设备|設備", 20),
+    "product": ("Product & material|产品与物料|製品・資材", 30),
+    "process": ("Process|工艺|プロセス", 40),
+    "quality": ("Quality|质量|品質", 50),
+    "lot": ("Lot & wafer rules|批次与晶圆规则|ロット・ウェーハ規則", 60),
+}
+
+
+def perm(module: str, action: Literal["read", "write"]) -> str:
+    return f"mes.{module}:{action}"
+
+
+@dataclass
+class F:
+    name: str
+    type: FieldType = "str"
+    label: str | None = None  # "en|zh|ja"; None -> shared FIELD_LABELS
+    required: bool = False
+    enum: str | None = None  # ENUMS key
+    ref: str | None = None  # target entity code
+    cascade: bool = False  # ref: delete with the referenced row (child rows)
+    max_length: int = 100
+    search: bool = False  # included in ?q= keyword search
+    list: bool = True  # shown as a table column
+    default: Any = None
+    filter: bool | None = None  # dropdown filter; default: enum/bool/ref fields
+    help: str | None = None
+
+    @property
+    def column(self) -> str:
+        return f"{self.name}_id" if self.type == "ref" else self.name
+
+    @property
+    def filterable(self) -> bool:
+        if self.filter is not None:
+            return self.filter
+        return self.type in ("enum", "bool", "ref")
+
+
+@dataclass
+class Entity:
+    code: str  # api name, e.g. "equipment_type"
+    module: str
+    label: str  # "en|zh|ja"
+    fields: list[F]
+    phase: int
+    path: str | None = None  # url segment; default code with '-'
+    has_code: bool = True  # `code` + `name` columns (+ unique code)
+    tree: bool = False  # self `parent_id`
+    versioned: bool = False  # `version` + `status` (draft/active/inactive)
+    unique: list[tuple[str, ...]] = field(default_factory=list)  # natural keys
+    parent: str | None = None  # child of this ref field (shown in a detail sheet)
+    children: list[str] = field(default_factory=list)  # child entity codes
+    readonly: bool = False  # e.g. audit log
+    internal: bool = False  # no API / menu
+    icon: str = "Box"
+    order: int = 0
+    label_field: str = "code"
+    sort_default: str = "code"
+
+    @property
+    def table_name(self) -> str:
+        return f"mes_{self.code}"
+
+    @property
+    def url(self) -> str:
+        return self.path or self.code.replace("_", "-")
+
+    def field(self, name: str) -> F | None:
+        return next((f for f in self.all_fields if f.name == name), None)
+
+    @property
+    def all_fields(self) -> list[F]:
+        """Declared + implicit editable fields, in display order."""
+        out: list[F] = []
+        if self.has_code:
+            out += [
+                F("code", required=True, search=True, max_length=64),
+                F("name", required=True, search=True, max_length=200),
+            ]
+        if self.tree:
+            out.append(F("parent", "ref", ref=self.code, list=False, cascade=True))
+        out += self.fields
+        if self.has_code:
+            out.append(F("description", "text", list=False, search=True))
+        return out
+
+    @property
+    def natural_key(self) -> tuple[str, ...]:
+        if self.unique:
+            return self.unique[0]
+        return ("code", "version") if self.versioned else ("code",)
+
+
+ENTITIES: dict[str, Entity] = {}
+ENUMS: dict[str, list[tuple[str, str]]] = {}
+FIELD_LABELS: dict[str, str] = {}
+TABLES: dict[str, sa.Table] = {}
+
+
+def _sa_type(f: F) -> Any:
+    match f.type:
+        case "str" | "enum":
+            return sa.String(f.max_length if f.type == "str" else 40)
+        case "text":
+            return sa.Text()
+        case "int":
+            return sa.Integer()
+        case "float":
+            return sa.Float()
+        case "bool":
+            return sa.Boolean()
+        case "date":
+            return sa.Date()
+        case "time":
+            return sa.Time()
+        case "json":
+            return sa.JSON()
+        case "ref":
+            return sa.Uuid()
+
+
+def build_table(e: Entity) -> sa.Table:
+    cols: list[Any] = [
+        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column(
+            "tenant_id",
+            sa.Uuid(),
+            sa.ForeignKey("tenant.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        ),
+    ]
+    for f in e.all_fields:
+        if f.type == "ref":
+            target = ENTITIES[f.ref or ""].table_name
+            cols.append(
+                sa.Column(
+                    f.column,
+                    sa.Uuid(),
+                    sa.ForeignKey(
+                        f"{target}.id",
+                        ondelete="CASCADE" if f.cascade else "RESTRICT",
+                    ),
+                    nullable=not f.required,
+                    index=True,
+                )
+            )
+        else:
+            cols.append(sa.Column(f.column, _sa_type(f), nullable=not f.required))
+    if e.versioned:
+        cols += [
+            sa.Column("version", sa.Integer(), nullable=False, server_default="1"),
+            sa.Column("status", sa.String(20), nullable=False, server_default="draft"),
+        ]
+    cols += [
+        sa.Column("attrs", sa.JSON(), nullable=True),  # custom attributes
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_by", sa.Uuid(), nullable=True),
+        sa.Column("updated_by", sa.Uuid(), nullable=True),
+    ]
+    keys = list(e.unique) or ([e.natural_key] if e.has_code else [])
+    for i, key in enumerate(keys):
+        colnames = [(fld.column if (fld := e.field(k)) else k) for k in key]
+        cols.append(
+            sa.UniqueConstraint("tenant_id", *colnames, name=f"uq_{e.table_name}_{i}")
+        )
+    return sa.Table(e.table_name, SQLModel.metadata, *cols)
+
+
+def register(*entities: Entity) -> None:
+    for e in entities:
+        assert e.code not in ENTITIES, e.code
+        assert e.module in MODULES, e.module
+        ENTITIES[e.code] = e
+
+
+def build_all() -> None:
+    for e in ENTITIES.values():
+        if e.code not in TABLES:
+            for f in e.all_fields:
+                assert f.label or f.name in FIELD_LABELS, f"{e.code}.{f.name}: label"
+                assert f.type != "enum" or f.enum in ENUMS, f"{e.code}.{f.name}: enum"
+                assert f.type != "ref" or f.ref in ENTITIES, f"{e.code}.{f.name}: ref"
+            TABLES[e.code] = build_table(e)
+
+
+def label_of(f: F) -> str:
+    return f.label or FIELD_LABELS[f.name]
+
+
+def split_label(s: str) -> dict[str, str]:
+    en, zh, ja = s.split("|")
+    return {"en": en, "zh-CN": zh, "ja": ja}

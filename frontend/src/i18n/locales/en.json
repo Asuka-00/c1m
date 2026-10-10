@@ -394,5 +394,43 @@
         "support_url": "Optional help / support link in the footer."
       }
     }
+  },
+  "mes": {
+    "clear": "Clear",
+    "editTitle": "Edit {{entity}}",
+    "newTitle": "New {{entity}}",
+    "versionInfo": "Version {{version}} (draft)",
+    "formDesc": "Fields marked * are required.",
+    "customAttrs": "Custom attributes",
+    "allOf": "All: {{field}}",
+    "saved": "Saved",
+    "deleted": "Deleted",
+    "statusChanged": "Status changed",
+    "versionCreated": "Draft version {{version}} created",
+    "imported": "Imported: {{created}} created, {{updated}} updated",
+    "importFailed": "Import failed — nothing was saved",
+    "importRow": "Row {{row}}: {{msg}}",
+    "version": "Version",
+    "at": "Time",
+    "details": "Details",
+    "versionActions": "Version actions",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "newVersion": "New version (copy)",
+    "treeView": "Tree view",
+    "tableView": "Table view",
+    "export": "Export",
+    "import": "Import",
+    "new": "New",
+    "empty": "No {{entity}} yet.",
+    "deleteTitle": "Delete {{entity}}?",
+    "deleteDesc": "“{{name}}” will be deleted. This cannot be undone.",
+    "detailDesc": "Related data of this record.",
+    "pattern": "Pattern",
+    "sampleLot": "Sample lot ID",
+    "previewHint": "Preview only — no numbers are reserved.",
+    "panel": {
+      "code_rule": "Preview"
+    }
   }
 }

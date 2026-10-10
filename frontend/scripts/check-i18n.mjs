@@ -11,9 +11,12 @@ const flat = (o, p = '') =>
   Object.entries(o).flatMap(([k, v]) =>
     v && typeof v === 'object' ? flat(v, `${p}${k}.`) : [[`${p}${k}`, v]]
   )
-const data = Object.fromEntries(
-  LOCALES.map((l) => [l, new Map(flat(JSON.parse(readFileSync(join(dir, `${l}.json`), 'utf8'))))])
-)
+// app strings + generated MES bundles (locales/mes/<lang>.json)
+const load = (l) => [
+  ...flat(JSON.parse(readFileSync(join(dir, `${l}.json`), 'utf8'))),
+  ...flat(JSON.parse(readFileSync(join(dir, 'mes', `${l}.json`), 'utf8'))),
+]
+const data = Object.fromEntries(LOCALES.map((l) => [l, new Map(load(l))]))
 let errors = 0
 const fail = (m) => {
   errors++

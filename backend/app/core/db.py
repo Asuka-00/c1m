@@ -56,3 +56,10 @@ def init_db(session: Session) -> None:
     if not get_membership(session, tenant.id, user.id):
         add_member(session, tenant, user, ["owner"])
         session.commit()
+    # keep every tenant's default roles in sync with new default permissions
+    from app.models import Tenant
+    from app.tenancy import seed_tenant_roles
+
+    for t in session.exec(select(Tenant)).all():
+        seed_tenant_roles(session, t)
+    session.commit()

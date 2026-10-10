@@ -63,7 +63,12 @@ DEFAULT_MENUS: list[
 
 def seed_menus(session: Session) -> None:
     existing = {m.key: m for m in session.exec(select(Menu)).all()}
-    for key, parent, title, path, icon, comp, order, perm in DEFAULT_MENUS:
+    from app.mes.menus import mes_menus
+
+    for key, parent, title, path, icon, comp, order, perm in [
+        *DEFAULT_MENUS,
+        *mes_menus(),
+    ]:
         if key in existing:
             continue
         m = Menu(

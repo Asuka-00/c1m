@@ -394,5 +394,43 @@
         "support_url": "页脚中的可选帮助/支持链接。"
       }
     }
+  },
+  "mes": {
+    "clear": "清除",
+    "editTitle": "编辑{{entity}}",
+    "newTitle": "新建{{entity}}",
+    "versionInfo": "版本 {{version}}（草稿）",
+    "formDesc": "带 * 的字段为必填项。",
+    "customAttrs": "自定义属性",
+    "allOf": "全部{{field}}",
+    "saved": "已保存",
+    "deleted": "已删除",
+    "statusChanged": "状态已变更",
+    "versionCreated": "已创建草稿版本 {{version}}",
+    "imported": "导入完成：新增 {{created}}，更新 {{updated}}",
+    "importFailed": "导入失败，未保存任何数据",
+    "importRow": "第 {{row}} 行：{{msg}}",
+    "version": "版本",
+    "at": "时间",
+    "details": "详情",
+    "versionActions": "版本操作",
+    "activate": "生效",
+    "deactivate": "失效",
+    "newVersion": "新建版本（复制）",
+    "treeView": "树形视图",
+    "tableView": "表格视图",
+    "export": "导出",
+    "import": "导入",
+    "new": "新建",
+    "empty": "暂无{{entity}}。",
+    "deleteTitle": "删除{{entity}}？",
+    "deleteDesc": "将删除“{{name}}”，此操作不可撤销。",
+    "detailDesc": "该记录的关联数据。",
+    "pattern": "模板",
+    "sampleLot": "示例批次号",
+    "previewHint": "仅预览，不会占用流水号。",
+    "panel": {
+      "code_rule": "预览"
+    }
   }
 }

@@ -523,3 +523,8 @@ class FileUploadPublic(SQLModel):
     content_type: str
     size: int
     tenant_id: uuid.UUID | None = None
+
+
+# MES master-data tables (generated from app.mes specs) share this metadata
+import app.mes.specs  # noqa: E402, F401
+import app.mes.validators  # noqa: E402, F401

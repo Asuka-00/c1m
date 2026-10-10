@@ -3,7 +3,22 @@ import LanguageDetector from 'i18next-browser-languagedetector'
 import { initReactI18next } from 'react-i18next'
 import en from './locales/en.json'
 import ja from './locales/ja.json'
+import mesEn from './locales/mes/en.json'
+import mesJa from './locales/mes/ja.json'
+import mesZh from './locales/mes/zh-CN.json'
 import zhCN from './locales/zh-CN.json'
+
+type Tree = { [k: string]: string | Tree }
+/** app strings + generated MES bundles (mes.*, menu.mes-*) */
+function deepMerge(a: Tree, b: Tree): Tree {
+  const out: Tree = { ...a }
+  for (const [k, v] of Object.entries(b)) {
+    const cur = out[k]
+    out[k] =
+      typeof v === 'object' && typeof cur === 'object' ? deepMerge(cur, v) : v
+  }
+  return out
+}
 
 export const LANGUAGES = ['zh-CN', 'ja', 'en'] as const
 export type Language = (typeof LANGUAGES)[number]
@@ -15,9 +30,9 @@ void i18n
   .use(initReactI18next)
   .init({
     resources: {
-      'zh-CN': { translation: zhCN },
-      ja: { translation: ja },
-      en: { translation: en },
+      'zh-CN': { translation: deepMerge(zhCN, mesZh) },
+      ja: { translation: deepMerge(ja, mesJa) },
+      en: { translation: deepMerge(en, mesEn) },
     },
     supportedLngs: [...LANGUAGES],
     nonExplicitSupportedLngs: false,

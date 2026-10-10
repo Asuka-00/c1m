@@ -6,6 +6,7 @@ from sqlmodel import Session
 from app import crud
 from app.core.config import settings
 from app.models import UserCreate, UserUpdate
+from app.rbac import TENANT_PERMISSIONS
 from tests.utils.utils import random_lower_string
 
 API = settings.API_V1_STR
@@ -234,7 +235,9 @@ def test_enumerable_filters(
     p = client.get(
         f"{API}/permissions/", headers=h, params={"scope": "tenant", "page_size": 100}
     ).json()
-    assert p["count"] == 5 and {x["scope"] for x in p["data"]} == {"tenant"}
+    assert p["count"] == len(TENANT_PERMISSIONS) and {
+        x["scope"] for x in p["data"]
+    } == {"tenant"}
     assert (
         client.get(
             f"{API}/permissions/", headers=h, params={"scope": "tenant", "q": "members"}
