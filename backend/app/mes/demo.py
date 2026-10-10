@@ -221,7 +221,6 @@ for c, n, fam, node, die in _rows(
         gross_die=die,
         uom=("uom", "WFR"),
     )
-    ACTIVATE.append(("product", c))
 add(
     "product",
     code="MON-PARTICLE",
@@ -935,6 +934,10 @@ add(
     max_minutes=120,
     action="rework",
 )
+
+
+# products go active last: activation needs an active default route
+ACTIVATE.extend([("product", "MCU-A100@1"), ("product", "MCU-B200@1")])
 
 
 # ---------------- helpers ----------------

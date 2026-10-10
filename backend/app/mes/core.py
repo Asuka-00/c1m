@@ -108,7 +108,7 @@ class Entity:
                 F("name", required=True, search=True, max_length=200),
             ]
         if self.tree:
-            out.append(F("parent", "ref", ref=self.code, list=False, cascade=True))
+            out.append(F("parent", "ref", ref=self.code, cascade=True))
         out += self.fields
         if self.has_code:
             out.append(F("description", "text", list=False, search=True))

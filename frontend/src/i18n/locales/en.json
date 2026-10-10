@@ -438,24 +438,26 @@
     "panel": {
       "code_rule": "Preview",
       "uom": "Converter",
-      "route": "Route editor",
+      "route": "Flow diagram",
       "lot_type": "ID preview"
     },
     "convertValue": "Value in {{unit}}",
     "convertTo": "Convert to",
-    "routeDraftHint": "Draft: steps can be added, edited and re-ordered.",
     "routeLockedHint": "This version is locked — create a new version to change steps.",
-    "listView": "List view",
-    "flowView": "Flow view",
     "addStep": "Add step",
-    "noSteps": "No steps yet.",
-    "reworkTo": "Rework: {{route}}",
-    "branchTo": "If {{cond}} → step {{seq}}",
-    "resources": "Resources",
     "moveUp": "Move up",
     "moveDown": "Move down",
     "noLotRule": "No lot ID rule assigned.",
     "nextLotId": "Next lot ID",
-    "waferIds": "Wafer IDs"
+    "waferIds": "Wafer IDs",
+    "flowStart": "Start",
+    "flowEnd": "End",
+    "subRoute": "Sub-route",
+    "reworkRoute": "Rework",
+    "edgeCall": "call",
+    "edgeReturn": "return",
+    "edgeRework": "rework",
+    "flowDraftHint": "Draft: drag from a step's right handle to another step (branch) or a rework route; select an edge and press Delete to remove it; click a step to edit or reorder.",
+    "branchDialog": "Branch from step {{from}} to step {{to}}"
   }
 }

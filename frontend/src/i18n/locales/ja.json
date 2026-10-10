@@ -438,24 +438,26 @@
     "panel": {
       "code_rule": "プレビュー",
       "uom": "換算ツール",
-      "route": "ルートエディタ",
+      "route": "フロー図",
       "lot_type": "ID プレビュー"
     },
     "convertValue": "値（{{unit}}）",
     "convertTo": "換算先",
-    "routeDraftHint": "下書き：ステップの追加・編集・並べ替えができます。",
     "routeLockedHint": "このバージョンはロックされています。変更するには新バージョンを作成してください。",
-    "listView": "リスト表示",
-    "flowView": "フロー表示",
     "addStep": "ステップ追加",
-    "noSteps": "ステップはまだありません。",
-    "reworkTo": "リワーク：{{route}}",
-    "branchTo": "{{cond}} の場合 → ステップ {{seq}}",
-    "resources": "資源",
     "moveUp": "上へ",
     "moveDown": "下へ",
     "noLotRule": "ロット ID ルールが未設定です。",
     "nextLotId": "次のロット ID",
-    "waferIds": "ウェーハ ID"
+    "waferIds": "ウェーハ ID",
+    "flowStart": "開始",
+    "flowEnd": "終了",
+    "subRoute": "サブルート",
+    "reworkRoute": "リワーク",
+    "edgeCall": "呼出",
+    "edgeReturn": "戻り",
+    "edgeRework": "リワーク",
+    "flowDraftHint": "下書き：ステップ右側のハンドルから別ステップ（分岐）またはリワークルートへドラッグ。エッジを選択し Delete で削除。ステップをクリックで編集・並べ替え。",
+    "branchDialog": "ステップ {{from}} からステップ {{to}} への分岐"
   }
 }

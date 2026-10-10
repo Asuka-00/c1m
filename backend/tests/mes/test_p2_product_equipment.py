@@ -6,6 +6,44 @@ from sqlmodel import Session
 from tests.mes.helpers import API, Mes
 
 
+def _bind_active_route(m: Mes, product_id: str) -> None:
+    op = m.post("operation", {"code": f"OP-{product_id[:6]}", "name": "op"})
+    r = m.post("route", {"code": f"R-{product_id[:6]}", "name": "r"})
+    m.post("route_step", {"route_id": r["id"], "seq": 10, "operation_id": op["id"]})
+    m.action("route", r["id"], "status", {"status": "active"})
+    m.post(
+        "product_route",
+        {"product_id": product_id, "route_id": r["id"], "is_default": True},
+    )
+
+
+def test_product_activation_needs_default_route(
+    client: TestClient, db: Session
+) -> None:
+    m = Mes(client, db)
+    p = m.post("product", {"code": "P", "name": "P"})
+    err = m.action("product", p["id"], "status", {"status": "active"}, 422)
+    assert "default" in err["detail"][0]["msg"]
+    op = m.post("operation", {"code": "OP", "name": "op"})
+    draft = m.post("route", {"code": "RD", "name": "draft route"})
+    m.post("route_step", {"route_id": draft["id"], "seq": 10, "operation_id": op["id"]})
+    link = m.post(
+        "product_route",
+        {"product_id": p["id"], "route_id": draft["id"], "is_default": True},
+    )
+    m.action(
+        "product", p["id"], "status", {"status": "active"}, 422
+    )  # route not active
+    m.action("route", draft["id"], "status", {"status": "active"})
+    m.patch("product_route", link["id"], {"is_default": False})
+    m.action("product", p["id"], "status", {"status": "active"}, 422)  # not default
+    m.patch("product_route", link["id"], {"is_default": True})
+    assert (
+        m.action("product", p["id"], "status", {"status": "active"})["status"]
+        == "active"
+    )
+
+
 def test_versioned_product_lifecycle(client: TestClient, db: Session) -> None:
     m = Mes(client, db)
     node = m.post("tech_node", {"code": "N28", "name": "28nm", "feature_nm": 28})
@@ -22,6 +60,7 @@ def test_versioned_product_lifecycle(client: TestClient, db: Session) -> None:
         "MCU · MCU",
     )
     m.patch("product", p1["id"], {"gross_die": 610})  # drafts are editable
+    _bind_active_route(m, p1["id"])
     m.action("product", p1["id"], "status", {"status": "active"})
     m.patch("product", p1["id"], {"gross_die": 1}, 409)  # active is locked
     m.delete("product", p1["id"], 409)
@@ -29,6 +68,7 @@ def test_versioned_product_lifecycle(client: TestClient, db: Session) -> None:
     p2 = m.action("product", p1["id"], "new-version")
     assert (p2["version"], p2["status"], p2["gross_die"]) == (2, "draft", 610)
     m.patch("product", p2["id"], {"gross_die": 620})
+    _bind_active_route(m, p2["id"])
     m.action("product", p2["id"], "status", {"status": "active"})
     rows = {r["version"]: r["status"] for r in m.list("product", code="MCU-A")["data"]}
     assert rows == {1: "inactive", 2: "active"}  # single active version per code

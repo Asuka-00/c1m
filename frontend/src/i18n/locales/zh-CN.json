@@ -438,24 +438,26 @@
     "panel": {
       "code_rule": "预览",
       "uom": "换算器",
-      "route": "流程编辑器",
+      "route": "流程图",
       "lot_type": "编号预览"
     },
     "convertValue": "数值（{{unit}}）",
     "convertTo": "换算为",
-    "routeDraftHint": "草稿：可以新增、编辑和调整步骤顺序。",
     "routeLockedHint": "此版本已锁定，如需修改请新建版本。",
-    "listView": "列表视图",
-    "flowView": "流程视图",
     "addStep": "添加步骤",
-    "noSteps": "暂无步骤。",
-    "reworkTo": "返工：{{route}}",
-    "branchTo": "若 {{cond}} → 跳转步骤 {{seq}}",
-    "resources": "资源",
     "moveUp": "上移",
     "moveDown": "下移",
     "noLotRule": "未设置批次号规则。",
     "nextLotId": "下一个批次号",
-    "waferIds": "晶圆号"
+    "waferIds": "晶圆号",
+    "flowStart": "开始",
+    "flowEnd": "结束",
+    "subRoute": "子流程",
+    "reworkRoute": "返工",
+    "edgeCall": "调用",
+    "edgeReturn": "返回",
+    "edgeRework": "返工",
+    "flowDraftHint": "草稿：从步骤右侧连接点拖到另一步骤（分支）或返工流程；选中连线按 Delete 删除；点击步骤可编辑或调整顺序。",
+    "branchDialog": "从步骤 {{from}} 分支到步骤 {{to}}"
   }
 }

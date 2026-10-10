@@ -411,3 +411,34 @@ def _qtime(s: Session, tid: uuid.UUID, _e: Entity, row: Row, _old: Row | None) -
         errs.append(("max_minutes", "max_minutes: must be >= min_minutes"))
     if errs:
         raise MesError(errs)
+
+
+@validator("product:activate")
+def _product_activate(
+    s: Session, tid: uuid.UUID, _e: Entity, row: Row, _old: Row | None
+) -> None:
+    """A product can go Active only with an Active route bound as default."""
+    pr, rt = TABLES["product_route"], TABLES["route"]
+    ok = (
+        conn(s)
+        .execute(
+            sa.select(pr.c.id)
+            .join(rt, rt.c.id == pr.c.route_id)
+            .where(
+                pr.c.tenant_id == tid,
+                pr.c.product_id == row["id"],
+                pr.c.is_default.is_(True),
+                rt.c.status == "active",
+            )
+        )
+        .first()
+    )
+    if not ok:
+        raise MesError(
+            [
+                (
+                    "product_route",
+                    "product: needs an active route bound as default before activation",
+                )
+            ]
+        )

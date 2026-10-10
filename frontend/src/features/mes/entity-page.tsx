@@ -3,12 +3,12 @@ import { t } from '@/i18n'
 import { Loader2 } from 'lucide-react'
 import type { MesRow } from '@/lib/api/mes'
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Page, useListParams } from '@/components/crud'
 import { NotFoundError } from '@/features/errors/not-found-error'
@@ -39,11 +39,11 @@ export function MesEntityPage({ code }: { code: string }) {
         extraActions={EXTRA_ACTIONS[code]}
         onOpenChildren={hasDetail ? setDetail : undefined}
       />
-      <Sheet open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
-        <SheetContent className='w-full overflow-y-auto sm:max-w-4xl'>
+      <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
+        <DialogContent className='max-h-[95vh] overflow-y-auto sm:max-w-6xl'>
           {detail && <Detail code={code} row={detail} />}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </Page>
   )
 }
@@ -62,13 +62,13 @@ function Detail({ code, row }: { code: string; row: MesRow }) {
   ]
   return (
     <>
-      <SheetHeader>
-        <SheetTitle>
+      <DialogHeader>
+        <DialogTitle>
           {entityLabel(code)}: {rowLabel(row, entity.label_field)}
-        </SheetTitle>
-        <SheetDescription>{t('mes.detailDesc')}</SheetDescription>
-      </SheetHeader>
-      <Tabs defaultValue={tabs[0]?.key} className='px-4 pb-4'>
+        </DialogTitle>
+        <DialogDescription>{t('mes.detailDesc')}</DialogDescription>
+      </DialogHeader>
+      <Tabs defaultValue={tabs[0]?.key}>
         {tabs.length > 1 && (
           <TabsList>
             {tabs.map((x) => (

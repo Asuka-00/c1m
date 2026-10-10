@@ -22,7 +22,6 @@ export function ChildTable({
       entity={entity}
       params={params}
       fixed={{ [f.column]: parentId }}
-      allowTree={false}
     />
   )
 }

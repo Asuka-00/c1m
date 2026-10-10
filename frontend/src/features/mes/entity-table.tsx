@@ -1,15 +1,13 @@
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import { AxiosError } from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fmtDateTime, t } from '@/i18n'
 import {
   CopyPlus,
   Download,
-  FolderTree,
   ListTree,
   MoreHorizontal,
   Plus,
-  Table2,
   Upload,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -36,7 +34,6 @@ import {
 import { cellValue } from './cells'
 import { EntityForm } from './entity-form'
 import { entityLabel, fieldLabel, rowLabel, statusLabel } from './labels'
-import { TreeView } from './tree-view'
 import { useMesFilters } from './use-mes-filters'
 
 const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'outline'> = {
@@ -54,14 +51,13 @@ export function StatusBadge({ status }: { status: string }) {
 }
 
 /** Generic MES table: paging/sort/search/filters, CRUD dialog, versioning,
- *  xlsx import/export, optional tree view and per-row extra actions. */
+ *  xlsx import/export and per-row extra actions. */
 export function EntityTable({
   entity: e,
   params,
   fixed = {},
   extraActions,
   onOpenChildren,
-  allowTree = true,
 }: {
   entity: MesEntity
   params: ListParams
@@ -69,12 +65,10 @@ export function EntityTable({
   fixed?: Record<string, string>
   extraActions?: (r: MesRow) => React.ReactNode
   onOpenChildren?: (r: MesRow) => void
-  allowTree?: boolean
 }) {
   const qc = useQueryClient()
   const tk = useTenantKey()
   const s = useCrudState<MesRow>()
-  const [view, setView] = useState<'table' | 'tree'>('table')
   const fileRef = useRef<HTMLInputElement>(null)
   const hide = Object.keys(fixed)
   const filters = useMesFilters(e, hide)
@@ -244,16 +238,6 @@ export function EntityTable({
 
   const toolbar = (
     <div className='ms-auto flex flex-wrap items-center gap-2'>
-      {e.tree && allowTree && (
-        <Button
-          variant='outline'
-          size='sm'
-          onClick={() => setView(view === 'table' ? 'tree' : 'table')}
-        >
-          {view === 'table' ? <FolderTree /> : <Table2 />}
-          {view === 'table' ? t('mes.treeView') : t('mes.tableView')}
-        </Button>
-      )}
       <Button
         variant='outline'
         size='sm'
@@ -290,24 +274,17 @@ export function EntityTable({
 
   return (
     <>
-      {view === 'tree' ? (
-        <div className='flex flex-col gap-3'>
-          <div className='flex'>{toolbar}</div>
-          <TreeView entity={e} onEdit={(r) => editable(r) && s.openEdit(r)} />
-        </div>
-      ) : (
-        <DataTable
-          rows={list.data?.data}
-          total={list.data?.count}
-          loading={list.isLoading}
-          rowKey={(r) => r.id}
-          params={params}
-          filters={filters}
-          columns={columns}
-          toolbar={toolbar}
-          empty={t('mes.empty', { entity: entityLabel(e.code) })}
-        />
-      )}
+      <DataTable
+        rows={list.data?.data}
+        total={list.data?.count}
+        loading={list.isLoading}
+        rowKey={(r) => r.id}
+        params={params}
+        filters={filters}
+        columns={columns}
+        toolbar={toolbar}
+        empty={t('mes.empty', { entity: entityLabel(e.code) })}
+      />
       <EntityForm
         entity={e}
         row={s.editing}
