@@ -20,7 +20,23 @@
       "workcenter": "ベイ / ワークセンター",
       "shift": "シフト",
       "work_calendar": "稼働カレンダー",
-      "calendar_day": "カレンダー日"
+      "calendar_day": "カレンダー日",
+      "uom": "単位",
+      "uom_conversion": "単位換算",
+      "tech_node": "テクノロジーノード",
+      "product_family": "製品ファミリー",
+      "product": "製品",
+      "material_type": "資材タイプ",
+      "material": "資材",
+      "carrier_type": "キャリアタイプ",
+      "carrier": "キャリア",
+      "reticle": "レチクル",
+      "fixture": "治具・工具",
+      "equipment_type": "設備タイプ",
+      "equipment_group": "設備グループ",
+      "e10_state": "E10 状態",
+      "e10_transition": "E10 状態遷移",
+      "equipment": "設備"
     },
     "field": {
       "dict_type": {
@@ -117,6 +133,138 @@
         "day_type": "日種別",
         "shifts": "シフト",
         "note": "備考"
+      },
+      "uom": {
+        "code": "コード",
+        "name": "名称",
+        "symbol": "記号",
+        "dimension": "次元",
+        "description": "説明"
+      },
+      "uom_conversion": {
+        "from_uom": "換算元",
+        "to_uom": "換算先",
+        "factor": "換算係数",
+        "offset": "オフセット"
+      },
+      "tech_node": {
+        "code": "コード",
+        "name": "名称",
+        "feature_nm": "最小寸法（nm）",
+        "wafer_size": "ウェーハサイズ",
+        "description": "説明"
+      },
+      "product_family": {
+        "code": "コード",
+        "name": "名称",
+        "tech_node": "テクノロジーノード",
+        "description": "説明"
+      },
+      "product": {
+        "code": "コード",
+        "name": "名称",
+        "family": "ファミリー",
+        "tech_node": "テクノロジーノード",
+        "product_type": "種別",
+        "wafer_size": "ウェーハサイズ",
+        "gross_die": "ウェーハ当たりダイ数",
+        "uom": "単位",
+        "description": "説明"
+      },
+      "material_type": {
+        "code": "コード",
+        "name": "名称",
+        "category": "カテゴリ",
+        "description": "説明"
+      },
+      "material": {
+        "code": "コード",
+        "name": "名称",
+        "material_type": "資材タイプ",
+        "uom": "単位",
+        "vendor": "ベンダー",
+        "shelf_life_days": "使用期限（日）",
+        "storage": "保管条件",
+        "is_active": "有効",
+        "description": "説明"
+      },
+      "carrier_type": {
+        "code": "コード",
+        "name": "名称",
+        "category": "カテゴリ",
+        "capacity": "容量（スロット）",
+        "wafer_size": "ウェーハサイズ",
+        "clean_interval_days": "洗浄周期（日）",
+        "description": "説明"
+      },
+      "carrier": {
+        "code": "コード",
+        "name": "名称",
+        "carrier_type": "キャリアタイプ",
+        "status_code": "状態",
+        "max_uses": "最大使用回数",
+        "rfid": "RFID タグ",
+        "description": "説明"
+      },
+      "reticle": {
+        "code": "コード",
+        "name": "名称",
+        "product": "製品",
+        "layer": "レイヤー",
+        "grade": "グレード",
+        "max_shots": "最大ショット数",
+        "status_code": "状態",
+        "description": "説明"
+      },
+      "fixture": {
+        "code": "コード",
+        "name": "名称",
+        "kind": "種別",
+        "max_uses": "最大使用回数",
+        "status_code": "状態",
+        "description": "説明"
+      },
+      "equipment_type": {
+        "code": "コード",
+        "name": "名称",
+        "category": "カテゴリ",
+        "vendor": "ベンダー",
+        "model": "型式",
+        "description": "説明"
+      },
+      "equipment_group": {
+        "code": "コード",
+        "name": "名称",
+        "equipment_type": "設備タイプ",
+        "area": "エリア",
+        "description": "説明"
+      },
+      "e10_state": {
+        "code": "コード",
+        "name": "名称",
+        "e10_category": "E10 区分",
+        "color": "色",
+        "is_initial": "初期状態",
+        "sort_order": "並び順",
+        "description": "説明"
+      },
+      "e10_transition": {
+        "from_state": "遷移元",
+        "to_state": "遷移先",
+        "reason_required": "理由必須"
+      },
+      "equipment": {
+        "code": "コード",
+        "name": "名称",
+        "parent": "親",
+        "unit_kind": "ユニット種別",
+        "equipment_type": "設備タイプ",
+        "equipment_group": "設備グループ",
+        "workcenter": "ワークセンター",
+        "serial_no": "シリアル番号",
+        "initial_state": "初期 E10 状態",
+        "is_active": "有効",
+        "description": "説明"
       }
     },
     "help": {
@@ -125,6 +273,9 @@
       },
       "calendar_day": {
         "shifts": "カンマ区切りのシフトコード"
+      },
+      "uom_conversion": {
+        "factor": "換算先 = 換算元 × 係数"
       }
     },
     "enum": {
@@ -179,6 +330,84 @@
         "workday": "稼働日",
         "holiday": "休日",
         "maintenance": "保全日"
+      },
+      "uom_dimension": {
+        "count": "数量",
+        "length": "長さ",
+        "area": "面積",
+        "volume": "体積",
+        "mass": "質量",
+        "time": "時間",
+        "pressure": "圧力",
+        "temperature": "温度"
+      },
+      "wafer_size": {
+        "100": "100 mm（4 インチ）",
+        "150": "150 mm（6 インチ）",
+        "200": "200 mm（8 インチ）",
+        "300": "300 mm（12 インチ）"
+      },
+      "product_type": {
+        "production": "量産",
+        "engineering": "エンジニアリング",
+        "monitor": "モニター",
+        "dummy": "ダミー"
+      },
+      "material_category": {
+        "wafer": "原料ウェーハ",
+        "chemical": "薬液",
+        "gas": "ガス",
+        "target": "ターゲット",
+        "slurry": "スラリー",
+        "photoresist": "フォトレジスト",
+        "consumable": "消耗品"
+      },
+      "carrier_category": {
+        "foup": "FOUP",
+        "fosb": "FOSB",
+        "cassette": "カセット",
+        "pod": "レチクルポッド",
+        "smif": "SMIF ポッド"
+      },
+      "asset_status": {
+        "available": "使用可",
+        "in_use": "使用中",
+        "dirty": "要洗浄",
+        "hold": "保留",
+        "retired": "廃棄"
+      },
+      "reticle_grade": {
+        "binary": "バイナリ",
+        "psm": "位相シフト",
+        "euv": "EUV"
+      },
+      "fixture_kind": {
+        "probe_card": "プローブカード",
+        "fixture": "治具",
+        "jig": "ジグ",
+        "tool": "工具"
+      },
+      "eqp_category": {
+        "process": "プロセス装置",
+        "metrology": "計測装置",
+        "inspection": "検査装置",
+        "test": "テスト装置",
+        "transport": "搬送装置"
+      },
+      "unit_kind": {
+        "main": "本体",
+        "chamber": "チャンバー",
+        "load_port": "ロードポート",
+        "port": "ポート",
+        "sub_unit": "サブユニット"
+      },
+      "e10_category": {
+        "PRD": "PRD · 生産",
+        "SBY": "SBY · 待機",
+        "ENG": "ENG · エンジニアリング",
+        "SDT": "SDT · 計画停止",
+        "UDT": "UDT · 計画外停止",
+        "NST": "NST · 非稼働予定"
       }
     }
   },
@@ -194,12 +423,28 @@
     "mes-shift": "シフト",
     "mes-work_calendar": "稼働カレンダー",
     "mes-calendar_day": "カレンダー日",
-    "mes-common": "MES モデリング · 共通",
-    "mes-org": "MES モデリング · 組織",
-    "mes-equipment": "MES モデリング · 設備",
-    "mes-product": "MES モデリング · 製品・資材",
-    "mes-process": "MES モデリング · プロセス",
-    "mes-quality": "MES モデリング · 品質",
-    "mes-lot": "MES モデリング · ロット・ウェーハ規則"
+    "mes-uom": "単位",
+    "mes-uom_conversion": "単位換算",
+    "mes-tech_node": "テクノロジーノード",
+    "mes-product_family": "製品ファミリー",
+    "mes-product": "製品",
+    "mes-material_type": "資材タイプ",
+    "mes-material": "資材",
+    "mes-carrier_type": "キャリアタイプ",
+    "mes-carrier": "キャリア",
+    "mes-reticle": "レチクル",
+    "mes-fixture": "治具・工具",
+    "mes-equipment_type": "設備タイプ",
+    "mes-equipment_group": "設備グループ",
+    "mes-e10_state": "E10 状態",
+    "mes-e10_transition": "E10 状態遷移",
+    "mes-equipment": "設備",
+    "mes-g-common": "MES モデリング · 共通",
+    "mes-g-org": "MES モデリング · 組織",
+    "mes-g-equipment": "MES モデリング · 設備",
+    "mes-g-product": "MES モデリング · 製品・資材",
+    "mes-g-process": "MES モデリング · プロセス",
+    "mes-g-quality": "MES モデリング · 品質",
+    "mes-g-lot": "MES モデリング · ロット・ウェーハ規則"
   }
 }

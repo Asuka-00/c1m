@@ -1,5 +1,6 @@
 import type { MesRow } from '@/lib/api/mes'
 import { CodeRulePreview } from './code-rule-preview'
+import { UomConverter } from './uom-converter'
 
 /** Entity-specific detail panels (first tab of the row detail sheet). */
 export const ROW_PANELS: Record<
@@ -7,6 +8,7 @@ export const ROW_PANELS: Record<
   React.ComponentType<{ row: MesRow }>
 > = {
   code_rule: CodeRulePreview,
+  uom: UomConverter,
 }
 
 /** Entity-specific extra row action buttons. */

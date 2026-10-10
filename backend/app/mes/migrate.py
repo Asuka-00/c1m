@@ -51,5 +51,5 @@ def remove_permissions(op: Any, modules: list[str]) -> None:
     conn.execute(sa.text("DELETE FROM permission WHERE code = ANY(:c)"), {"c": codes})
     conn.execute(
         sa.text("DELETE FROM menu WHERE key = ANY(:k)"),
-        {"k": [f"mes-{m}" for m in modules]},
+        {"k": [f"mes-g-{m}" for m in modules]},
     )

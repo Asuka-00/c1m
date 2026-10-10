@@ -29,7 +29,7 @@ def mes_menus() -> list[MenuTuple]:
             continue
         out.append(
             (
-                f"mes-{m}",
+                f"mes-g-{m}",
                 None,
                 f"MES · {lbl.split('|')[0]}",
                 None,
@@ -43,7 +43,7 @@ def mes_menus() -> list[MenuTuple]:
             out.append(
                 (
                     f"mes-{e.code}",
-                    f"mes-{m}",
+                    f"mes-g-{m}",
                     e.label.split("|")[0],
                     f"/mes/{e.url}",
                     e.icon,

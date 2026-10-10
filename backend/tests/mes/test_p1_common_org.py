@@ -42,7 +42,13 @@ def test_meta_and_menus(client: TestClient, db: Session) -> None:
     assert site["can_write"] and site["read"] == "mes.org:read"
     menus = client.get("/api/v1/menus/me", headers=m.h).json()
     keys = {c["key"] for g in menus["menus"] for c in g["children"]}
-    assert {"mes-site", "mes-workcenter", "mes-code_rule"} <= keys
+    assert {
+        "mes-site",
+        "mes-workcenter",
+        "mes-code_rule",
+        "mes-product",
+        "mes-equipment",
+    } <= keys
 
 
 def test_crud_search_filter_sort_page(client: TestClient, db: Session) -> None:

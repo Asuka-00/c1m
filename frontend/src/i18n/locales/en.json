@@ -177,7 +177,12 @@
     "The owner role cannot be deleted": "The owner role cannot be deleted",
     "Only platform admins can change tenant status": "Only platform admins can change tenant status",
     "Incorrect username/email or password": "Incorrect username/email or password",
-    "User with this username already exists": "User with this username already exists"
+    "User with this username already exists": "User with this username already exists",
+    "No conversion path between these units": "No conversion path between these units",
+    "Only draft versions can be changed; create a new version": "Only draft versions can be changed; create a new version",
+    "A record with the same key already exists": "A record with the same key already exists",
+    "Record is referenced by other records": "Record is referenced by other records",
+    "Read-only entity": "Read-only entity"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -430,7 +435,10 @@
     "sampleLot": "Sample lot ID",
     "previewHint": "Preview only — no numbers are reserved.",
     "panel": {
-      "code_rule": "Preview"
-    }
+      "code_rule": "Preview",
+      "uom": "Converter"
+    },
+    "convertValue": "Value in {{unit}}",
+    "convertTo": "Convert to"
   }
 }

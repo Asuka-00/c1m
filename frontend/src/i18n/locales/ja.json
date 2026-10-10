@@ -177,7 +177,12 @@
     "The owner role cannot be deleted": "所有者ロールは削除できません",
     "Only platform admins can change tenant status": "テナントのステータスを変更できるのはプラットフォーム管理者のみです",
     "Incorrect username/email or password": "ユーザー名/メールまたはパスワードが正しくありません",
-    "User with this username already exists": "このユーザー名は既に使われています"
+    "User with this username already exists": "このユーザー名は既に使われています",
+    "No conversion path between these units": "これらの単位間に換算経路がありません",
+    "Only draft versions can be changed; create a new version": "下書きのみ変更できます。新しいバージョンを作成してください",
+    "A record with the same key already exists": "同じキーのレコードが既に存在します",
+    "Record is referenced by other records": "他のレコードから参照されています",
+    "Read-only entity": "読み取り専用"
   },
   "dashboard": {
     "title": "ダッシュボード",
@@ -430,7 +435,10 @@
     "sampleLot": "サンプルロット ID",
     "previewHint": "プレビューのみ（番号は確保されません）。",
     "panel": {
-      "code_rule": "プレビュー"
-    }
+      "code_rule": "プレビュー",
+      "uom": "換算ツール"
+    },
+    "convertValue": "値（{{unit}}）",
+    "convertTo": "換算先"
   }
 }

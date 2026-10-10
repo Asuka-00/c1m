@@ -117,6 +117,12 @@ export const mesApi = {
       .post<{ created: number; updated: number }>(`${base(code)}/import`, fd)
       .then((r) => r.data)
   },
+  convert: (from_uom: string, to_uom: string, value: number) =>
+    http
+      .get<{ value: number; path: string[] }>('/mes/_convert', {
+        params: { from_uom, to_uom, value },
+      })
+      .then((r) => r.data),
   codePreview: (id: string, count = 3, context?: Record<string, unknown>) =>
     http
       .post<{ codes: string[] }>(`/mes/code-rule/${id}/preview`, {

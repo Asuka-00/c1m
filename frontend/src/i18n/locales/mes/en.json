@@ -20,7 +20,23 @@
       "workcenter": "Bay / work center",
       "shift": "Shift",
       "work_calendar": "Work calendar",
-      "calendar_day": "Calendar day"
+      "calendar_day": "Calendar day",
+      "uom": "Unit of measure",
+      "uom_conversion": "UOM conversion",
+      "tech_node": "Technology node",
+      "product_family": "Product family",
+      "product": "Product",
+      "material_type": "Material type",
+      "material": "Material",
+      "carrier_type": "Carrier type",
+      "carrier": "Carrier",
+      "reticle": "Reticle",
+      "fixture": "Fixture / tool",
+      "equipment_type": "Equipment type",
+      "equipment_group": "Equipment group",
+      "e10_state": "E10 state",
+      "e10_transition": "E10 transition",
+      "equipment": "Equipment"
     },
     "field": {
       "dict_type": {
@@ -117,6 +133,138 @@
         "day_type": "Day type",
         "shifts": "Shifts",
         "note": "Note"
+      },
+      "uom": {
+        "code": "Code",
+        "name": "Name",
+        "symbol": "Symbol",
+        "dimension": "Dimension",
+        "description": "Description"
+      },
+      "uom_conversion": {
+        "from_uom": "From",
+        "to_uom": "To",
+        "factor": "Factor",
+        "offset": "Offset"
+      },
+      "tech_node": {
+        "code": "Code",
+        "name": "Name",
+        "feature_nm": "Feature size (nm)",
+        "wafer_size": "Wafer size",
+        "description": "Description"
+      },
+      "product_family": {
+        "code": "Code",
+        "name": "Name",
+        "tech_node": "Technology node",
+        "description": "Description"
+      },
+      "product": {
+        "code": "Code",
+        "name": "Name",
+        "family": "Family",
+        "tech_node": "Technology node",
+        "product_type": "Type",
+        "wafer_size": "Wafer size",
+        "gross_die": "Gross die / wafer",
+        "uom": "Unit",
+        "description": "Description"
+      },
+      "material_type": {
+        "code": "Code",
+        "name": "Name",
+        "category": "Category",
+        "description": "Description"
+      },
+      "material": {
+        "code": "Code",
+        "name": "Name",
+        "material_type": "Material type",
+        "uom": "Unit",
+        "vendor": "Vendor",
+        "shelf_life_days": "Shelf life (days)",
+        "storage": "Storage condition",
+        "is_active": "Active",
+        "description": "Description"
+      },
+      "carrier_type": {
+        "code": "Code",
+        "name": "Name",
+        "category": "Category",
+        "capacity": "Capacity (slots)",
+        "wafer_size": "Wafer size",
+        "clean_interval_days": "Clean interval (days)",
+        "description": "Description"
+      },
+      "carrier": {
+        "code": "Code",
+        "name": "Name",
+        "carrier_type": "Carrier type",
+        "status_code": "State",
+        "max_uses": "Max uses",
+        "rfid": "RFID tag",
+        "description": "Description"
+      },
+      "reticle": {
+        "code": "Code",
+        "name": "Name",
+        "product": "Product",
+        "layer": "Layer",
+        "grade": "Grade",
+        "max_shots": "Max shots",
+        "status_code": "State",
+        "description": "Description"
+      },
+      "fixture": {
+        "code": "Code",
+        "name": "Name",
+        "kind": "Kind",
+        "max_uses": "Max uses",
+        "status_code": "State",
+        "description": "Description"
+      },
+      "equipment_type": {
+        "code": "Code",
+        "name": "Name",
+        "category": "Category",
+        "vendor": "Vendor",
+        "model": "Model",
+        "description": "Description"
+      },
+      "equipment_group": {
+        "code": "Code",
+        "name": "Name",
+        "equipment_type": "Equipment type",
+        "area": "Area",
+        "description": "Description"
+      },
+      "e10_state": {
+        "code": "Code",
+        "name": "Name",
+        "e10_category": "E10 category",
+        "color": "Color",
+        "is_initial": "Initial state",
+        "sort_order": "Sort order",
+        "description": "Description"
+      },
+      "e10_transition": {
+        "from_state": "From state",
+        "to_state": "To state",
+        "reason_required": "Reason required"
+      },
+      "equipment": {
+        "code": "Code",
+        "name": "Name",
+        "parent": "Parent",
+        "unit_kind": "Unit kind",
+        "equipment_type": "Equipment type",
+        "equipment_group": "Equipment group",
+        "workcenter": "Work center",
+        "serial_no": "Serial no.",
+        "initial_state": "Initial E10 state",
+        "is_active": "Active",
+        "description": "Description"
       }
     },
     "help": {
@@ -125,6 +273,9 @@
       },
       "calendar_day": {
         "shifts": "Comma separated shift codes"
+      },
+      "uom_conversion": {
+        "factor": "to = from × factor"
       }
     },
     "enum": {
@@ -179,6 +330,84 @@
         "workday": "Workday",
         "holiday": "Holiday",
         "maintenance": "Maintenance"
+      },
+      "uom_dimension": {
+        "count": "Count",
+        "length": "Length",
+        "area": "Area",
+        "volume": "Volume",
+        "mass": "Mass",
+        "time": "Time",
+        "pressure": "Pressure",
+        "temperature": "Temperature"
+      },
+      "wafer_size": {
+        "100": "100 mm (4\")",
+        "150": "150 mm (6\")",
+        "200": "200 mm (8\")",
+        "300": "300 mm (12\")"
+      },
+      "product_type": {
+        "production": "Production",
+        "engineering": "Engineering",
+        "monitor": "Monitor",
+        "dummy": "Dummy"
+      },
+      "material_category": {
+        "wafer": "Raw wafer",
+        "chemical": "Chemical",
+        "gas": "Gas",
+        "target": "Sputter target",
+        "slurry": "Slurry",
+        "photoresist": "Photoresist",
+        "consumable": "Consumable"
+      },
+      "carrier_category": {
+        "foup": "FOUP",
+        "fosb": "FOSB",
+        "cassette": "Cassette",
+        "pod": "Reticle pod",
+        "smif": "SMIF pod"
+      },
+      "asset_status": {
+        "available": "Available",
+        "in_use": "In use",
+        "dirty": "Needs cleaning",
+        "hold": "On hold",
+        "retired": "Retired"
+      },
+      "reticle_grade": {
+        "binary": "Binary",
+        "psm": "Phase shift (PSM)",
+        "euv": "EUV"
+      },
+      "fixture_kind": {
+        "probe_card": "Probe card",
+        "fixture": "Fixture",
+        "jig": "Jig",
+        "tool": "Tool"
+      },
+      "eqp_category": {
+        "process": "Process",
+        "metrology": "Metrology",
+        "inspection": "Inspection",
+        "test": "Test",
+        "transport": "Transport (AMHS)"
+      },
+      "unit_kind": {
+        "main": "Main equipment",
+        "chamber": "Chamber",
+        "load_port": "Load port",
+        "port": "Port",
+        "sub_unit": "Sub-unit"
+      },
+      "e10_category": {
+        "PRD": "PRD · Productive",
+        "SBY": "SBY · Standby",
+        "ENG": "ENG · Engineering",
+        "SDT": "SDT · Scheduled down",
+        "UDT": "UDT · Unscheduled down",
+        "NST": "NST · Non-scheduled"
       }
     }
   },
@@ -194,12 +423,28 @@
     "mes-shift": "Shift",
     "mes-work_calendar": "Work calendar",
     "mes-calendar_day": "Calendar day",
-    "mes-common": "MES · Common",
-    "mes-org": "MES · Organization",
-    "mes-equipment": "MES · Equipment",
-    "mes-product": "MES · Product & material",
-    "mes-process": "MES · Process",
-    "mes-quality": "MES · Quality",
-    "mes-lot": "MES · Lot & wafer rules"
+    "mes-uom": "Unit of measure",
+    "mes-uom_conversion": "UOM conversion",
+    "mes-tech_node": "Technology node",
+    "mes-product_family": "Product family",
+    "mes-product": "Product",
+    "mes-material_type": "Material type",
+    "mes-material": "Material",
+    "mes-carrier_type": "Carrier type",
+    "mes-carrier": "Carrier",
+    "mes-reticle": "Reticle",
+    "mes-fixture": "Fixture / tool",
+    "mes-equipment_type": "Equipment type",
+    "mes-equipment_group": "Equipment group",
+    "mes-e10_state": "E10 state",
+    "mes-e10_transition": "E10 transition",
+    "mes-equipment": "Equipment",
+    "mes-g-common": "MES · Common",
+    "mes-g-org": "MES · Organization",
+    "mes-g-equipment": "MES · Equipment",
+    "mes-g-product": "MES · Product & material",
+    "mes-g-process": "MES · Process",
+    "mes-g-quality": "MES · Quality",
+    "mes-g-lot": "MES · Lot & wafer rules"
   }
 }

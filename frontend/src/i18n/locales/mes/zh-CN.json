@@ -20,7 +20,23 @@
       "workcenter": "Bay / 工作中心",
       "shift": "班次",
       "work_calendar": "工作日历",
-      "calendar_day": "日历日"
+      "calendar_day": "日历日",
+      "uom": "计量单位",
+      "uom_conversion": "单位换算",
+      "tech_node": "工艺节点",
+      "product_family": "产品族",
+      "product": "产品",
+      "material_type": "物料类型",
+      "material": "物料",
+      "carrier_type": "载具类型",
+      "carrier": "载具",
+      "reticle": "光罩",
+      "fixture": "治具 / 工具",
+      "equipment_type": "设备类型",
+      "equipment_group": "设备组",
+      "e10_state": "E10 状态",
+      "e10_transition": "E10 状态迁移",
+      "equipment": "设备"
     },
     "field": {
       "dict_type": {
@@ -117,6 +133,138 @@
         "day_type": "日类型",
         "shifts": "班次",
         "note": "备注"
+      },
+      "uom": {
+        "code": "编码",
+        "name": "名称",
+        "symbol": "符号",
+        "dimension": "量纲",
+        "description": "描述"
+      },
+      "uom_conversion": {
+        "from_uom": "源单位",
+        "to_uom": "目标单位",
+        "factor": "换算系数",
+        "offset": "偏移量"
+      },
+      "tech_node": {
+        "code": "编码",
+        "name": "名称",
+        "feature_nm": "特征尺寸（nm）",
+        "wafer_size": "晶圆尺寸",
+        "description": "描述"
+      },
+      "product_family": {
+        "code": "编码",
+        "name": "名称",
+        "tech_node": "工艺节点",
+        "description": "描述"
+      },
+      "product": {
+        "code": "编码",
+        "name": "名称",
+        "family": "产品族",
+        "tech_node": "工艺节点",
+        "product_type": "类型",
+        "wafer_size": "晶圆尺寸",
+        "gross_die": "每片总晶粒数",
+        "uom": "单位",
+        "description": "描述"
+      },
+      "material_type": {
+        "code": "编码",
+        "name": "名称",
+        "category": "类别",
+        "description": "描述"
+      },
+      "material": {
+        "code": "编码",
+        "name": "名称",
+        "material_type": "物料类型",
+        "uom": "单位",
+        "vendor": "供应商",
+        "shelf_life_days": "保质期（天）",
+        "storage": "存储条件",
+        "is_active": "启用",
+        "description": "描述"
+      },
+      "carrier_type": {
+        "code": "编码",
+        "name": "名称",
+        "category": "类别",
+        "capacity": "容量（槽位）",
+        "wafer_size": "晶圆尺寸",
+        "clean_interval_days": "清洗周期（天）",
+        "description": "描述"
+      },
+      "carrier": {
+        "code": "编码",
+        "name": "名称",
+        "carrier_type": "载具类型",
+        "status_code": "状态",
+        "max_uses": "最大使用次数",
+        "rfid": "RFID 标签",
+        "description": "描述"
+      },
+      "reticle": {
+        "code": "编码",
+        "name": "名称",
+        "product": "产品",
+        "layer": "层",
+        "grade": "类型",
+        "max_shots": "最大曝光次数",
+        "status_code": "状态",
+        "description": "描述"
+      },
+      "fixture": {
+        "code": "编码",
+        "name": "名称",
+        "kind": "类型",
+        "max_uses": "最大使用次数",
+        "status_code": "状态",
+        "description": "描述"
+      },
+      "equipment_type": {
+        "code": "编码",
+        "name": "名称",
+        "category": "类别",
+        "vendor": "供应商",
+        "model": "型号",
+        "description": "描述"
+      },
+      "equipment_group": {
+        "code": "编码",
+        "name": "名称",
+        "equipment_type": "设备类型",
+        "area": "区域",
+        "description": "描述"
+      },
+      "e10_state": {
+        "code": "编码",
+        "name": "名称",
+        "e10_category": "E10 类别",
+        "color": "颜色",
+        "is_initial": "初始状态",
+        "sort_order": "排序",
+        "description": "描述"
+      },
+      "e10_transition": {
+        "from_state": "源状态",
+        "to_state": "目标状态",
+        "reason_required": "需填写原因"
+      },
+      "equipment": {
+        "code": "编码",
+        "name": "名称",
+        "parent": "上级",
+        "unit_kind": "单元类型",
+        "equipment_type": "设备类型",
+        "equipment_group": "设备组",
+        "workcenter": "工作中心",
+        "serial_no": "序列号",
+        "initial_state": "初始 E10 状态",
+        "is_active": "启用",
+        "description": "描述"
       }
     },
     "help": {
@@ -125,6 +273,9 @@
       },
       "calendar_day": {
         "shifts": "逗号分隔的班次编码"
+      },
+      "uom_conversion": {
+        "factor": "目标 = 源 × 系数"
       }
     },
     "enum": {
@@ -179,6 +330,84 @@
         "workday": "工作日",
         "holiday": "节假日",
         "maintenance": "维护日"
+      },
+      "uom_dimension": {
+        "count": "数量",
+        "length": "长度",
+        "area": "面积",
+        "volume": "体积",
+        "mass": "质量",
+        "time": "时间",
+        "pressure": "压力",
+        "temperature": "温度"
+      },
+      "wafer_size": {
+        "100": "100 mm（4 寸）",
+        "150": "150 mm（6 寸）",
+        "200": "200 mm（8 寸）",
+        "300": "300 mm（12 寸）"
+      },
+      "product_type": {
+        "production": "量产",
+        "engineering": "工程",
+        "monitor": "监控片",
+        "dummy": "陪片"
+      },
+      "material_category": {
+        "wafer": "原始晶圆",
+        "chemical": "化学品",
+        "gas": "气体",
+        "target": "靶材",
+        "slurry": "研磨液",
+        "photoresist": "光刻胶",
+        "consumable": "耗材"
+      },
+      "carrier_category": {
+        "foup": "FOUP",
+        "fosb": "FOSB",
+        "cassette": "片盒",
+        "pod": "光罩盒",
+        "smif": "SMIF 盒"
+      },
+      "asset_status": {
+        "available": "可用",
+        "in_use": "使用中",
+        "dirty": "待清洗",
+        "hold": "冻结",
+        "retired": "报废"
+      },
+      "reticle_grade": {
+        "binary": "二元掩模",
+        "psm": "相移掩模",
+        "euv": "EUV"
+      },
+      "fixture_kind": {
+        "probe_card": "探针卡",
+        "fixture": "治具",
+        "jig": "夹具",
+        "tool": "工具"
+      },
+      "eqp_category": {
+        "process": "工艺设备",
+        "metrology": "量测设备",
+        "inspection": "检测设备",
+        "test": "测试设备",
+        "transport": "搬运设备"
+      },
+      "unit_kind": {
+        "main": "主设备",
+        "chamber": "腔体",
+        "load_port": "装载口",
+        "port": "端口",
+        "sub_unit": "子单元"
+      },
+      "e10_category": {
+        "PRD": "PRD · 生产",
+        "SBY": "SBY · 待机",
+        "ENG": "ENG · 工程",
+        "SDT": "SDT · 计划停机",
+        "UDT": "UDT · 非计划停机",
+        "NST": "NST · 非排程"
       }
     }
   },
@@ -194,12 +423,28 @@
     "mes-shift": "班次",
     "mes-work_calendar": "工作日历",
     "mes-calendar_day": "日历日",
-    "mes-common": "MES 建模 · 通用",
-    "mes-org": "MES 建模 · 组织",
-    "mes-equipment": "MES 建模 · 设备",
-    "mes-product": "MES 建模 · 产品与物料",
-    "mes-process": "MES 建模 · 工艺",
-    "mes-quality": "MES 建模 · 质量",
-    "mes-lot": "MES 建模 · 批次与晶圆规则"
+    "mes-uom": "计量单位",
+    "mes-uom_conversion": "单位换算",
+    "mes-tech_node": "工艺节点",
+    "mes-product_family": "产品族",
+    "mes-product": "产品",
+    "mes-material_type": "物料类型",
+    "mes-material": "物料",
+    "mes-carrier_type": "载具类型",
+    "mes-carrier": "载具",
+    "mes-reticle": "光罩",
+    "mes-fixture": "治具 / 工具",
+    "mes-equipment_type": "设备类型",
+    "mes-equipment_group": "设备组",
+    "mes-e10_state": "E10 状态",
+    "mes-e10_transition": "E10 状态迁移",
+    "mes-equipment": "设备",
+    "mes-g-common": "MES 建模 · 通用",
+    "mes-g-org": "MES 建模 · 组织",
+    "mes-g-equipment": "MES 建模 · 设备",
+    "mes-g-product": "MES 建模 · 产品与物料",
+    "mes-g-process": "MES 建模 · 工艺",
+    "mes-g-quality": "MES 建模 · 质量",
+    "mes-g-lot": "MES 建模 · 批次与晶圆规则"
   }
 }

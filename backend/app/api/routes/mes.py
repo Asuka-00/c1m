@@ -31,6 +31,7 @@ from app.mes.service import (
     tree,
     update_row,
 )
+from app.mes.uom import convert
 from app.tenancy import TenantContext
 
 router = APIRouter(prefix="/mes", tags=["mes"])
@@ -100,6 +101,19 @@ def code_rule_generate(
     e = _ent(ctx, "code_rule", "write")
     rule = get_row(session, e, ctx.id, rid)
     return {"codes": coderule.generate(session, ctx.id, rule, body.count, body.context)}
+
+
+@router.get("/_convert")
+def uom_convert(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    from_uom: uuid.UUID,
+    to_uom: uuid.UUID,
+    value: float = 1.0,
+) -> Any:
+    """Convert `value` between units (direct, inverse or multi-hop conversions)."""
+    _ent(ctx, "uom", "read")
+    return convert(session, ctx.id, from_uom, to_uom, value)
 
 
 @router.get("/{entity}")

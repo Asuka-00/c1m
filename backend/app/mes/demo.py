@@ -154,6 +154,281 @@ for d, tp, sh in [
     )
 
 
+# ---------------- P2: product/material + equipment ----------------
+for c, n, sym, d in [
+    ("EA", "Each", "ea", "count"),
+    ("WFR", "Wafer", "wfr", "count"),
+    ("L", "Liter", "L", "volume"),
+    ("ML", "Milliliter", "mL", "volume"),
+    ("GAL", "US gallon", "gal", "volume"),
+    ("KG", "Kilogram", "kg", "mass"),
+    ("G", "Gram", "g", "mass"),
+    ("SCCM", "Std. cubic cm / min", "sccm", "volume"),
+    ("MIN", "Minute", "min", "time"),
+    ("NM", "Nanometer", "nm", "length"),
+    ("A", "Angstrom", "Å", "length"),
+]:
+    add("uom", code=c, name=n, symbol=sym, dimension=d)
+for a, b, fct in [
+    ("L", "ML", 1000),
+    ("GAL", "L", 3.785411784),
+    ("KG", "G", 1000),
+    ("NM", "A", 10),
+]:
+    add("uom_conversion", from_uom=("uom", a), to_uom=("uom", b), factor=fct)
+add("tech_node", code="N28", name="28 nm HKMG (DEMO)", feature_nm=28, wafer_size="300")
+add("tech_node", code="N40", name="40 nm LP (DEMO)", feature_nm=40, wafer_size="300")
+add(
+    "product_family",
+    code="MCU",
+    name="Microcontrollers",
+    tech_node=("tech_node", "N40"),
+)
+add(
+    "product_family",
+    code="PMIC",
+    name="Power management",
+    tech_node=("tech_node", "N28"),
+)
+for c, n, fam, node, die in [
+    ("MCU-A100", "MCU A100 (DEMO)", "MCU", "N40", 1450),
+    ("MCU-B200", "MCU B200 (DEMO)", "MCU", "N40", 980),
+    ("PM-X10", "PMIC X10 (DEMO)", "PMIC", "N28", 2210),
+]:
+    add(
+        "product",
+        code=c,
+        name=n,
+        family=("product_family", fam),
+        tech_node=("tech_node", node),
+        gross_die=die,
+        uom=("uom", "WFR"),
+    )
+    ACTIVATE.append(("product", c))
+add(
+    "product",
+    code="MON-PARTICLE",
+    name="Particle monitor wafer (DEMO)",
+    product_type="monitor",
+    gross_die=0,
+    uom=("uom", "WFR"),
+)
+for c, n, cat in [
+    ("RAW-WFR", "Raw silicon wafers", "wafer"),
+    ("CHEM", "Wet chemicals", "chemical"),
+    ("GAS", "Process gases", "gas"),
+    ("PR", "Photoresists", "photoresist"),
+    ("SLURRY", "CMP slurries", "slurry"),
+]:
+    add("material_type", code=c, name=n, category=cat)
+for c, n, mt, u, life in [
+    ("SI300-P", "300mm prime Si wafer", "RAW-WFR", "WFR", None),
+    ("H2SO4-96", "Sulfuric acid 96%", "CHEM", "L", 365),
+    ("NF3", "Nitrogen trifluoride", "GAS", "KG", None),
+    ("PR-ARF-01", "ArF photoresist", "PR", "L", 180),
+    ("SL-CU-01", "Cu CMP slurry", "SLURRY", "L", 120),
+]:
+    add(
+        "material",
+        code=c,
+        name=n,
+        material_type=("material_type", mt),
+        uom=("uom", u),
+        shelf_life_days=life,
+    )
+add(
+    "carrier_type",
+    code="FOUP25",
+    name="FOUP 25-slot 300mm",
+    category="foup",
+    capacity=25,
+    wafer_size="300",
+    clean_interval_days=30,
+)
+add(
+    "carrier_type",
+    code="FOSB25",
+    name="FOSB shipping box",
+    category="fosb",
+    capacity=25,
+    wafer_size="300",
+)
+add(
+    "carrier_type",
+    code="RPOD",
+    name="Reticle SMIF pod",
+    category="pod",
+    capacity=1,
+    wafer_size="300",
+)
+for i in range(1, 7):
+    add(
+        "carrier",
+        code=f"FP{i:04d}",
+        name=f"FOUP {i} (DEMO)",
+        carrier_type=("carrier_type", "FOUP25"),
+        max_uses=500,
+        status_code="dirty" if i == 5 else "available",
+    )
+for c, layer, g in [
+    ("RT-A100-AA", "AA", "binary"),
+    ("RT-A100-PO", "PO", "psm"),
+    ("RT-A100-M1", "M1", "psm"),
+]:
+    add(
+        "reticle",
+        code=c,
+        name=f"MCU-A100 {layer} mask (DEMO)",
+        product=("product", "MCU-A100"),
+        layer=layer,
+        grade=g,
+        max_shots=250000,
+    )
+add(
+    "fixture",
+    code="PC-A100-01",
+    name="Probe card A100 #1",
+    kind="probe_card",
+    max_uses=1_000_000,
+)
+for c, n, cat, v, mdl in [
+    ("SCANNER", "ArF immersion scanner", "process", "ASML", "NXT:1980Di"),
+    ("TRACK", "Coater/developer", "process", "TEL", "Lithius Pro"),
+    ("DRYETCH", "Conductor etcher", "process", "LAM", "Kiyo"),
+    ("FURNACE", "Vertical furnace", "process", "KOKUSAI", "AdvancedAce"),
+    ("CVD", "PECVD", "process", "AMAT", "Producer"),
+    ("CMP", "CMP polisher", "process", "AMAT", "Reflexion LK"),
+    ("CDSEM", "CD-SEM", "metrology", "Hitachi", "CG6300"),
+    ("OVL", "Overlay metrology", "metrology", "KLA", "Archer 750"),
+]:
+    add("equipment_type", code=c, name=n, category=cat, vendor=v, model=mdl)
+for c, n, et, area in [
+    ("G-SCAN", "Scanners", "SCANNER", "PHOTO"),
+    ("G-TRACK", "Tracks", "TRACK", "PHOTO"),
+    ("G-ETCH", "Poly etch", "DRYETCH", "ETCH"),
+    ("G-FURN", "Furnaces", "FURNACE", "DIFF"),
+    ("G-CVD", "PECVD", "CVD", "THIN"),
+    ("G-CMP", "CMP", "CMP", "CMP"),
+    ("G-CDSEM", "CD-SEM", "CDSEM", "METRO"),
+]:
+    add(
+        "equipment_group",
+        code=c,
+        name=n,
+        equipment_type=("equipment_type", et),
+        area=("area", area),
+    )
+for i, (c, n, cat, col, init) in enumerate(
+    [
+        ("PRD-RUN", "Productive", "PRD", "#16a34a", False),
+        ("SBY-IDLE", "Standby – no WIP", "SBY", "#eab308", True),
+        ("SBY-WAIT", "Standby – waiting operator", "SBY", "#facc15", False),
+        ("ENG-TEST", "Engineering test", "ENG", "#3b82f6", False),
+        ("SDT-PM", "Preventive maintenance", "SDT", "#f97316", False),
+        ("UDT-DOWN", "Unscheduled repair", "UDT", "#dc2626", False),
+        ("NST-OFF", "Not scheduled", "NST", "#6b7280", False),
+    ]
+):
+    add(
+        "e10_state",
+        code=c,
+        name=n,
+        e10_category=cat,
+        color=col,
+        is_initial=init,
+        sort_order=i,
+    )
+for a, b, r in [
+    ("SBY-IDLE", "PRD-RUN", False),
+    ("PRD-RUN", "SBY-IDLE", False),
+    ("SBY-IDLE", "SBY-WAIT", False),
+    ("SBY-WAIT", "PRD-RUN", False),
+    ("SBY-IDLE", "SDT-PM", True),
+    ("SDT-PM", "SBY-IDLE", False),
+    ("PRD-RUN", "UDT-DOWN", True),
+    ("SBY-IDLE", "UDT-DOWN", True),
+    ("UDT-DOWN", "ENG-TEST", False),
+    ("ENG-TEST", "SBY-IDLE", False),
+    ("SBY-IDLE", "NST-OFF", True),
+    ("NST-OFF", "SBY-IDLE", False),
+]:
+    add(
+        "e10_transition",
+        from_state=("e10_state", a),
+        to_state=("e10_state", b),
+        reason_required=r,
+    )
+for c, n, et, g, wc, subs in [
+    (
+        "SCN01",
+        "Scanner 01",
+        "SCANNER",
+        "G-SCAN",
+        "PH-SCAN",
+        [("LP1", "load_port"), ("LP2", "load_port"), ("WS1", "chamber")],
+    ),
+    (
+        "TRK01",
+        "Track 01",
+        "TRACK",
+        "G-TRACK",
+        "PH-TRACK",
+        [("LP1", "load_port"), ("COT1", "chamber"), ("DEV1", "chamber")],
+    ),
+    (
+        "ETC01",
+        "Poly etcher 01",
+        "DRYETCH",
+        "G-ETCH",
+        "ET-DRY",
+        [
+            ("LP1", "load_port"),
+            ("LP2", "load_port"),
+            ("PM1", "chamber"),
+            ("PM2", "chamber"),
+            ("PM3", "chamber"),
+        ],
+    ),
+    (
+        "ETC02",
+        "Poly etcher 02",
+        "DRYETCH",
+        "G-ETCH",
+        "ET-DRY",
+        [("LP1", "load_port"), ("PM1", "chamber"), ("PM2", "chamber")],
+    ),
+    ("FRN01", "Furnace 01", "FURNACE", "G-FURN", "DF-FURN", [("TUBE", "chamber")]),
+    (
+        "CVD01",
+        "PECVD 01",
+        "CVD",
+        "G-CVD",
+        "TF-CVD",
+        [("PM1", "chamber"), ("PM2", "chamber")],
+    ),
+    ("CMP01", "CMP 01", "CMP", "G-CMP", None, [("P1", "chamber"), ("P2", "chamber")]),
+    ("CDS01", "CD-SEM 01", "CDSEM", "G-CDSEM", "MT-CD", []),
+]:
+    add(
+        "equipment",
+        code=c,
+        name=f"{n} (DEMO)",
+        unit_kind="main",
+        equipment_type=("equipment_type", et),
+        equipment_group=("equipment_group", g),
+        initial_state=("e10_state", "SBY-IDLE"),
+        **({"workcenter": ("workcenter", wc)} if wc else {}),
+    )
+    for sc, kind in subs:
+        add(
+            "equipment",
+            code=f"{c}-{sc}",
+            name=f"{n} {sc}",
+            unit_kind=kind,
+            parent=("equipment", c),
+        )
+
+
 # ---------------- helpers ----------------
 def _resolve(session: Session, tid: uuid.UUID, ref: Ref) -> Any:
     ent, key = ref

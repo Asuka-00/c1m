@@ -81,7 +81,7 @@ def i18n_bundle(lang: str) -> dict[str, Any]:
             helps[e.code] = hs
         menu[f"mes-{e.code}"] = pick(e.label)
     for m, (lbl, _) in MODULES.items():
-        menu[f"mes-{m}"] = {
+        menu[f"mes-g-{m}"] = {
             "zh-CN": "MES 建模 · ",
             "ja": "MES モデリング · ",
             "en": "MES · ",

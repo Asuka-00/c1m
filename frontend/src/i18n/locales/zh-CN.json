@@ -177,7 +177,12 @@
     "The owner role cannot be deleted": "所有者角色不能删除",
     "Only platform admins can change tenant status": "只有平台管理员可以修改租户状态",
     "Incorrect username/email or password": "用户名/邮箱或密码错误",
-    "User with this username already exists": "该用户名已被使用"
+    "User with this username already exists": "该用户名已被使用",
+    "No conversion path between these units": "这两个单位之间没有换算关系",
+    "Only draft versions can be changed; create a new version": "只有草稿版本可以修改，请新建版本",
+    "A record with the same key already exists": "已存在相同编码/键的记录",
+    "Record is referenced by other records": "该记录被其他数据引用，无法删除",
+    "Read-only entity": "只读数据"
   },
   "dashboard": {
     "title": "仪表盘",
@@ -430,7 +435,10 @@
     "sampleLot": "示例批次号",
     "previewHint": "仅预览，不会占用流水号。",
     "panel": {
-      "code_rule": "预览"
-    }
+      "code_rule": "预览",
+      "uom": "换算器"
+    },
+    "convertValue": "数值（{{unit}}）",
+    "convertTo": "换算为"
   }
 }
