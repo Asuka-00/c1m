@@ -19,9 +19,13 @@ password_hash = PasswordHash(
 ALGORITHM = "HS256"
 
 
-def create_access_token(subject: str | Any, expires_delta: timedelta) -> str:
+def create_access_token(
+    subject: str | Any, expires_delta: timedelta, tenant_id: Any | None = None
+) -> str:
     expire = datetime.now(UTC) + expires_delta
-    to_encode = {"exp": expire, "sub": str(subject)}
+    to_encode: dict[str, Any] = {"exp": expire, "sub": str(subject)}
+    if tenant_id is not None:
+        to_encode["tid"] = str(tenant_id)
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 

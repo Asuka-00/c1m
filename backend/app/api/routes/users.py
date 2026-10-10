@@ -2,57 +2,100 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import col, delete, func, select
+from sqlmodel import Session, col, select
 
 from app import crud
 from app.api.deps import (
     CurrentUser,
     SessionDep,
-    get_current_active_superuser,
+    require_permissions,
 )
+from app.api.pagination import ListParamsDep, paginate
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
 from app.models import (
-    Item,
     Message,
     UpdatePassword,
     User,
     UserCreate,
+    UserPermissionsPublic,
     UserPublic,
     UserRegister,
+    UserRole,
     UsersPublic,
     UserUpdate,
     UserUpdateMe,
 )
+from app.rbac import has_permissions, user_permission_codes
 from app.utils import generate_new_account_email, send_email
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 
+def _check_username(
+    session: Session, username: str | None, exclude_id: uuid.UUID | None = None
+) -> None:
+    if not username:
+        return
+    other = crud.get_user_by_username(session=session, username=username)
+    if other and other.id != exclude_id:
+        raise HTTPException(
+            status_code=409, detail="User with this username already exists"
+        )
+
+
 @router.get(
     "/",
-    dependencies=[Depends(get_current_active_superuser)],
+    dependencies=[Depends(require_permissions("users:read"))],
     response_model=UsersPublic,
 )
-def read_users(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
+def read_users(
+    session: SessionDep,
+    params: ListParamsDep,
+    is_active: bool | None = None,
+    is_superuser: bool | None = None,
+    role_id: uuid.UUID | None = None,
+) -> Any:
     """
-    Retrieve users.
+    Retrieve users (paginated; sort_by: email, full_name, created_at, is_active, is_superuser;
+    q searches email/full_name; filters: is_active, is_superuser, role_id = platform role).
     """
-
-    count_statement = select(func.count()).select_from(User)
-    count = session.exec(count_statement).one()
-
-    statement = (
-        select(User).order_by(col(User.created_at).desc()).offset(skip).limit(limit)
+    stmt = select(User)
+    if is_active is not None:
+        stmt = stmt.where(User.is_active == is_active)
+    if is_superuser is not None:
+        stmt = stmt.where(User.is_superuser == is_superuser)
+    if role_id is not None:
+        stmt = stmt.where(
+            col(User.id).in_(
+                select(UserRole.user_id).where(UserRole.role_id == role_id)
+            )
+        )
+    users, count = paginate(
+        session,
+        stmt,
+        params,
+        {
+            "email": User.email,
+            "username": User.username,
+            "full_name": User.full_name,
+            "created_at": User.created_at,
+            "is_active": User.is_active,
+            "is_superuser": User.is_superuser,
+        },
+        ("created_at", "desc"),
+        User.id,
+        search=[User.email, User.username, User.full_name],
     )
-    users = session.exec(statement).all()
 
     users_public = [UserPublic.model_validate(user) for user in users]
     return UsersPublic(data=users_public, count=count)
 
 
 @router.post(
-    "/", dependencies=[Depends(get_current_active_superuser)], response_model=UserPublic
+    "/",
+    dependencies=[Depends(require_permissions("users:write"))],
+    response_model=UserPublic,
 )
 def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
     """
@@ -64,6 +107,7 @@ def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
             status_code=400,
             detail="The user with this email already exists in the system.",
         )
+    _check_username(session, user_in.username)
 
     user = crud.create_user(session=session, user_create=user_in)
     if settings.emails_enabled and user_in.email:
@@ -86,6 +130,7 @@ def update_user_me(
     Update own user.
     """
 
+    _check_username(session, user_in.username, current_user.id)
     if user_in.email:
         existing_user = crud.get_user_by_email(session=session, email=user_in.email)
         if existing_user and existing_user.id != current_user.id:
@@ -129,6 +174,19 @@ def read_user_me(current_user: CurrentUser) -> Any:
     return current_user
 
 
+@router.get("/me/permissions", response_model=UserPermissionsPublic)
+def read_user_me_permissions(current_user: CurrentUser) -> Any:
+    """
+    Get current user's roles and effective permissions.
+    """
+    return UserPermissionsPublic(
+        user_id=current_user.id,
+        is_superuser=current_user.is_superuser,
+        roles=sorted(r.name for r in current_user.roles),
+        permissions=sorted(user_permission_codes(current_user)),
+    )
+
+
 @router.delete("/me", response_model=Message)
 def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
     """
@@ -169,7 +227,7 @@ def read_user_by_id(
     user = session.get(User, user_id)
     if user == current_user:
         return user
-    if not current_user.is_superuser:
+    if not has_permissions(current_user, "users:read"):
         raise HTTPException(
             status_code=403,
             detail="The user doesn't have enough privileges",
@@ -181,7 +239,7 @@ def read_user_by_id(
 
 @router.patch(
     "/{user_id}",
-    dependencies=[Depends(get_current_active_superuser)],
+    dependencies=[Depends(require_permissions("users:write"))],
     response_model=UserPublic,
 )
 def update_user(
@@ -200,6 +258,7 @@ def update_user(
             status_code=404,
             detail="The user with this id does not exist in the system",
         )
+    _check_username(session, user_in.username, user_id)
     if user_in.email:
         existing_user = crud.get_user_by_email(session=session, email=user_in.email)
         if existing_user and existing_user.id != user_id:
@@ -211,7 +270,9 @@ def update_user(
     return db_user
 
 
-@router.delete("/{user_id}", dependencies=[Depends(get_current_active_superuser)])
+@router.delete(
+    "/{user_id}", dependencies=[Depends(require_permissions("users:delete"))]
+)
 def delete_user(
     session: SessionDep, current_user: CurrentUser, user_id: uuid.UUID
 ) -> Message:
@@ -225,8 +286,6 @@ def delete_user(
         raise HTTPException(
             status_code=403, detail="Super users are not allowed to delete themselves"
         )
-    statement = delete(Item).where(col(Item.owner_id) == user_id)
-    session.exec(statement)
     session.delete(user)
     session.commit()
     return Message(message="User deleted successfully")

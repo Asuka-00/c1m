@@ -27,12 +27,24 @@ class Settings(BaseSettings):
     FASTAPI_ENV: Literal["development"] | None = None
 
     PROJECT_NAME: str
+    # uploaded files (branding images, ...) - relative paths are under backend/
+    UPLOAD_DIR: str = "data/uploads"
+    MAX_UPLOAD_BYTES: int = 5 * 1024 * 1024
     SENTRY_DSN: HttpUrl | None = None
     DATABASE_URL: PostgresDsn
+    # Privileged URL (table owner) used for migrations / role setup. The app itself
+    # connects with DATABASE_URL as a non-owner role so Postgres RLS is enforced.
+    MIGRATION_DATABASE_URL: PostgresDsn | None = None
 
-    @field_validator("DATABASE_URL", mode="before")
+    @property
+    def migration_database_url(self) -> str:
+        return str(self.MIGRATION_DATABASE_URL or self.DATABASE_URL)
+
+    @field_validator("DATABASE_URL", "MIGRATION_DATABASE_URL", mode="before")
     @classmethod
-    def _use_psycopg_driver(cls, value: str | PostgresDsn) -> str:
+    def _use_psycopg_driver(cls, value: str | PostgresDsn | None) -> str | None:
+        if value is None:
+            return None
         database_url = str(value)
         for scheme in ("postgres://", "postgresql://"):
             if database_url.startswith(scheme):
@@ -63,6 +75,7 @@ class Settings(BaseSettings):
 
     EMAIL_TEST_USER: EmailStr = "test@example.com"
     FIRST_SUPERUSER: EmailStr
+    FIRST_SUPERUSER_USERNAME: str = "admin"
     FIRST_SUPERUSER_PASSWORD: str
 
     def _check_default_secret(self, var_name: str, value: str | None) -> None:

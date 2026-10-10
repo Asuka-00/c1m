@@ -1,56 +1,76 @@
+import { StrictMode } from 'react'
+import ReactDOM from 'react-dom/client'
+import { AxiosError } from 'axios'
 import {
-  MutationCache,
   QueryCache,
   QueryClient,
   QueryClientProvider,
-} from "@tanstack/react-query"
-import { createRouter, RouterProvider } from "@tanstack/react-router"
-import { AxiosError } from "axios"
-import { StrictMode } from "react"
-import ReactDOM from "react-dom/client"
-import { client } from "./client/client.gen"
-import { ThemeProvider } from "./components/theme-provider"
-import { Toaster } from "./components/ui/sonner"
-import "./index.css"
-import { routeTree } from "./routeTree.gen"
+} from '@tanstack/react-query'
+import { createRouter } from '@tanstack/react-router'
+import { toast } from 'sonner'
+// Generated Routes
+import { App } from './app'
+import { DirectionProvider } from './context/direction-provider'
+import { FontProvider } from './context/font-provider'
+import { ThemeProvider } from './context/theme-provider'
+import { t } from './i18n'
+import { routeTree } from './routeTree.gen'
+// Styles
+import './styles/index.css'
 
-client.setConfig({
-  baseURL: import.meta.env.VITE_API_URL ?? "",
-  auth: () => localStorage.getItem("access_token") || "",
-})
-
-const handleApiError = (error: Error) => {
-  if (
-    error instanceof AxiosError &&
-    [401, 403].includes(error.response?.status ?? 0)
-  ) {
-    localStorage.removeItem("access_token")
-    window.location.href = "/login"
-  }
-}
 const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // 401 is handled by the axios interceptor (logout); don't retry auth errors
+      retry: (failureCount, error) =>
+        failureCount < 2 &&
+        !(
+          error instanceof AxiosError &&
+          [401, 403, 404].includes(error.response?.status ?? 0)
+        ),
+      refetchOnWindowFocus: false,
+      staleTime: 10 * 1000,
+    },
+  },
   queryCache: new QueryCache({
-    onError: handleApiError,
-  }),
-  mutationCache: new MutationCache({
-    onError: handleApiError,
+    onError: (error) => {
+      if (error instanceof AxiosError && error.response?.status === 500) {
+        toast.error(t('errors.server'))
+      }
+    },
   }),
 })
 
-const router = createRouter({ routeTree })
-declare module "@tanstack/react-router" {
+// Create a new router instance
+const router = createRouter({
+  routeTree,
+  context: { queryClient },
+  defaultPreload: 'intent',
+  defaultPreloadStaleTime: 0,
+})
+
+// Register the router instance for type safety
+declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router
   }
 }
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+// Render the app
+const rootElement = document.getElementById('root')!
+if (!rootElement.innerHTML) {
+  const root = ReactDOM.createRoot(rootElement)
+  root.render(
+    <StrictMode>
       <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-        <Toaster richColors closeButton />
+        <ThemeProvider>
+          <FontProvider>
+            <DirectionProvider>
+              <App router={router} />
+            </DirectionProvider>
+          </FontProvider>
+        </ThemeProvider>
       </QueryClientProvider>
-    </ThemeProvider>
-  </StrictMode>,
-)
+    </StrictMode>
+  )
+}

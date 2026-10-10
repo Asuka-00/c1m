@@ -1,123 +1,119 @@
-# FastAPI Project - Frontend
+# Shadcn Admin Dashboard
 
-The frontend is built with [Vite](https://vitejs.dev/), [React](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), [TanStack Query](https://tanstack.com/query), [TanStack Router](https://tanstack.com/router), [Tailwind CSS](https://tailwindcss.com/), and [shadcn/ui](https://ui.shadcn.com/).
+Admin Dashboard UI crafted with Shadcn and Vite. Built with responsiveness and accessibility in mind.
 
-## Requirements
+![alt text](public/images/shadcn-admin.png)
 
-- [Bun](https://bun.sh/)
+[![Sponsored by Clerk](https://img.shields.io/badge/Sponsored%20by-Clerk-5b6ee1?logo=clerk)](https://go.clerk.com/GttUAaK)
 
-## Quick Start
+I've been creating dashboard UIs at work and for my personal projects. I always wanted to make a reusable collection of dashboard UI for future projects; and here it is now. While I've created a few custom components, some of the code is directly adapted from ShadcnUI examples.
 
-From the project root, install the dependencies and start the frontend development server:
+> This is not a starter project (template) though. I'll probably make one in the future.
 
-```bash
-bun install
-bun run dev
-```
+## Features
 
-Then open <http://localhost:5173/> in your browser.
+- Light/dark mode
+- Responsive
+- Accessible
+- With built-in Sidebar component
+- Global search command
+- 10+ pages
+- Extra custom components
+- RTL support
 
-Run `uv run bash scripts/prestart.sh` and `uv run fastapi dev` from the `backend` directory, with PostgreSQL running in Docker Compose. See [../development.md](../development.md) for the complete setup.
+<details>
+<summary>Customized Components (click to expand)</summary>
 
-To serve the frontend with FastAPI, run `bun run build` from the `frontend` directory and open `http://localhost:8000`.
+This project uses Shadcn UI components, but some have been slightly modified for better RTL (Right-to-Left) support and other improvements. These customized components differ from the original Shadcn UI versions.
 
-Check `frontend/package.json` to see the other available commands.
+If you want to update components using the Shadcn CLI (e.g., `npx shadcn@latest add <component>`), it's generally safe for non-customized components. For the listed customized ones, you may need to manually merge changes to preserve the project's modifications and avoid overwriting RTL support or other updates.
 
-## Removing the Frontend
+> If you don't require RTL support, you can safely update the 'RTL Updated Components' via the Shadcn CLI, as these changes are primarily for RTL compatibility. The 'Modified Components' may have other customizations to consider.
 
-If you are developing an API-only app and want to remove the frontend, you can do it easily:
+### Modified Components
 
-* Remove the `./frontend` directory.
+- scroll-area
+- sonner
+- separator
 
-* In the `backend/app/main.py` file, remove the `app.frontend()` call.
+### RTL Updated Components
 
-* In the `backend/Dockerfile` file, remove the frontend build stage and the `COPY --from=frontend-build` instruction.
+- alert-dialog
+- calendar
+- command
+- dialog
+- dropdown-menu
+- select
+- table
+- sheet
+- sidebar
+- switch
 
-* In the `compose.override.yml` file, remove the `playwright` service.
+**Notes:**
 
-* In the `.github/workflows/deploy.yml` file, remove the **Set up Bun**, **Install frontend dependencies**, and **Build frontend** steps.
+- **Modified Components**: These have general updates, potentially including RTL adjustments.
+- **RTL Updated Components**: These have specific changes for RTL language support (e.g., layout, positioning).
+- For implementation details, check the source files in `src/components/ui/`.
+- All other Shadcn UI components in the project are standard and can be safely updated via the CLI.
 
-* In the `.fastapicloudignore` file, remove the `!backend/app/frontend/` entry.
+</details>
 
-Done, you now have an API-only app. 🤓
+## Tech Stack
 
-## Generate Client
+**UI:** [ShadcnUI](https://ui.shadcn.com) (TailwindCSS + RadixUI)
 
-### Automatically
+**Build Tool:** [Vite](https://vitejs.dev/)
 
-* From the project root, run the script:
+**Routing:** [TanStack Router](https://tanstack.com/router/latest)
 
-```bash
-bash ./scripts/generate-client.sh
-```
+**Type Checking:** [TypeScript](https://www.typescriptlang.org/)
 
-* Commit the changes.
+**Linting/Formatting:** [ESLint](https://eslint.org/) & [Prettier](https://prettier.io/)
 
-### Manually
+**Icons:** [Lucide Icons](https://lucide.dev/icons/), [Tabler Icons](https://tabler.io/icons) (Brand icons only)
 
-* Make sure the backend is running.
+**Auth (partial):** [Clerk](https://go.clerk.com/GttUAaK)
 
-* Download the OpenAPI JSON file from `http://localhost:8000/api/v1/openapi.json` and copy it to a new file `openapi.json` at the root of the `frontend` directory.
+## Run Locally
 
-* To generate the frontend client, run:
-
-```bash
-bun run generate-client
-```
-
-* Commit the changes.
-
-Regenerate the client whenever backend changes affect the OpenAPI schema.
-
-## Using a Remote API
-
-By default, the built frontend uses the same origin as the FastAPI app. If you want to use a remote API while running the Vite development server, you can set the environment variable `VITE_API_URL` to the URL of the remote API. For example, you can set it in the `frontend/.env` file:
-
-```env
-VITE_API_URL=https://my-domain.example.com
-```
-
-Then, when you run the frontend, it will use that URL as the base URL for the API.
-
-## Code Structure
-
-The frontend code is structured as follows:
-
-* `frontend/src` - The main frontend code.
-* `frontend/public` - Static assets.
-* `frontend/src/client` - The generated OpenAPI client.
-* `frontend/src/components` - The components of the frontend, including the shadcn/ui components in `frontend/src/components/ui`.
-* `frontend/src/hooks` - Custom hooks.
-* `frontend/src/lib` - Shared frontend utilities.
-* `frontend/src/routes` - The frontend routes and pages.
-
-## End-to-End Testing with Playwright
-
-The frontend includes initial end-to-end tests using Playwright. To run the tests, you need to have the Docker Compose stack running. Start the stack with the following command:
+Clone the project
 
 ```bash
-docker compose run --rm backend bash scripts/prestart.sh
-docker compose up -d --wait backend
+  git clone https://github.com/satnaing/shadcn-admin.git
 ```
 
-Then, you can run the tests with the following command:
+Go to the project directory
 
 ```bash
-bunx playwright test
+  cd shadcn-admin
 ```
 
-You can also run your tests in UI mode to see the browser and interact with it running:
+Install dependencies
 
 ```bash
-bunx playwright test --ui
+  pnpm install
 ```
 
-To stop and remove the Docker Compose stack and clean the data created in tests, use the following command:
+Start the server
 
 ```bash
-docker compose down -v
+  pnpm run dev
 ```
 
-To update the tests, navigate to the tests directory and modify the existing test files or add new ones as needed.
+## Sponsoring this project ❤️
 
-For more information on writing and running Playwright tests, refer to the official [Playwright documentation](https://playwright.dev/docs/intro).
+If you find this project helpful or use this in your own work, consider [sponsoring me](https://github.com/sponsors/satnaing) to support development and maintenance. You can [buy me a coffee](https://buymeacoffee.com/satnaing) as well. Don’t worry, every penny helps. Thank you! 🙏
+
+For questions or sponsorship inquiries, feel free to reach out at [satnaingdev@gmail.com](mailto:satnaingdev@gmail.com).
+
+### Current Sponsor
+
+- [Clerk](https://go.clerk.com/GttUAaK) - authentication and user management for the modern web
+
+## Author
+
+Crafted with 🤍 by [@satnaing](https://github.com/satnaing)
+
+## License
+
+Licensed under the [MIT License](https://choosealicense.com/licenses/mit/)
