@@ -81,6 +81,7 @@ export function EntityForm({
   open,
   onOpenChange,
   preset = {},
+  defaults = {},
   onSubmit,
   pending,
 }: {
@@ -88,6 +89,8 @@ export function EntityForm({
   row: MesRow | null
   open: boolean
   onOpenChange: (o: boolean) => void
+  /** initial values for new rows (fields stay visible) */
+  defaults?: V
   /** fixed values (e.g. parent id) for new rows; those fields are hidden */
   preset?: V
   onSubmit: (body: V) => Promise<unknown>
@@ -101,6 +104,7 @@ export function EntityForm({
             e={e}
             row={row}
             preset={preset}
+            defaults={defaults}
             onSubmit={onSubmit}
             pending={pending}
             onCancel={() => onOpenChange(false)}
@@ -115,6 +119,7 @@ function FormBody({
   e,
   row,
   preset,
+  defaults,
   onSubmit,
   pending,
   onCancel,
@@ -122,12 +127,15 @@ function FormBody({
   e: MesEntity
   row: MesRow | null
   preset: V
+  defaults: V
   onSubmit: (body: V) => Promise<unknown>
   pending?: boolean
   onCancel: () => void
 }) {
   const tk = useTenantKey()
-  const [v, setV] = useState<V>(() => initialValues(e, row, preset))
+  const [v, setV] = useState<V>(() =>
+    initialValues(e, row, { ...defaults, ...preset })
+  )
   const [jsonErr, setJsonErr] = useState<string | null>(null)
   const attrs = useQuery({
     queryKey: ['mes', 'attrs', e.code, tk],

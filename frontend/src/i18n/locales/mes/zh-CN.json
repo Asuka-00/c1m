@@ -36,7 +36,16 @@
       "equipment_group": "设备组",
       "e10_state": "E10 状态",
       "e10_transition": "E10 状态迁移",
-      "equipment": "设备"
+      "equipment": "设备",
+      "operation": "工序",
+      "route": "工艺流程",
+      "route_step": "流程步骤",
+      "step_resource": "步骤资源",
+      "product_route": "产品流程绑定",
+      "recipe": "配方",
+      "recipe_equipment": "配方设备映射",
+      "param_spec": "工艺参数规格",
+      "equipment_capability": "设备能力"
     },
     "field": {
       "dict_type": {
@@ -265,6 +274,87 @@
         "initial_state": "初始 E10 状态",
         "is_active": "启用",
         "description": "描述"
+      },
+      "operation": {
+        "code": "编码",
+        "name": "名称",
+        "operation_type": "类型",
+        "area": "区域",
+        "std_minutes": "标准工时（分钟）",
+        "is_active": "启用",
+        "description": "描述"
+      },
+      "route": {
+        "code": "编码",
+        "name": "名称",
+        "route_type": "流程类型",
+        "product_family": "产品族",
+        "description": "描述"
+      },
+      "route_step": {
+        "route": "流程",
+        "seq": "序号",
+        "step_type": "步骤类型",
+        "operation": "工序",
+        "sub_route": "子流程",
+        "rework_route": "返工流程",
+        "is_optional": "可选",
+        "branch_condition": "分支条件",
+        "branch_to_seq": "分支跳转序号",
+        "note": "备注"
+      },
+      "step_resource": {
+        "route_step": "流程步骤",
+        "resource_kind": "资源类型",
+        "equipment": "设备",
+        "equipment_group": "设备组",
+        "reticle": "光罩",
+        "material": "物料",
+        "fixture": "治具 / 工具",
+        "recipe": "配方",
+        "qty": "数量",
+        "uom": "单位"
+      },
+      "product_route": {
+        "product": "产品",
+        "route": "流程",
+        "is_default": "默认",
+        "priority": "优先级",
+        "effective_from": "生效日期",
+        "effective_to": "失效日期"
+      },
+      "recipe": {
+        "code": "编码",
+        "name": "名称",
+        "equipment_type": "设备类型",
+        "recipe_type": "配方类型",
+        "body": "参数（JSON）",
+        "description": "描述"
+      },
+      "recipe_equipment": {
+        "recipe": "配方",
+        "equipment": "设备",
+        "eqp_recipe": "设备端配方名",
+        "is_enabled": "启用"
+      },
+      "param_spec": {
+        "code": "编码",
+        "name": "名称",
+        "operation": "工序",
+        "recipe": "配方",
+        "product": "产品",
+        "uom": "单位",
+        "target": "目标值",
+        "lsl": "规格下限",
+        "usl": "规格上限",
+        "description": "描述"
+      },
+      "equipment_capability": {
+        "equipment": "设备",
+        "operation": "工序",
+        "recipe": "配方",
+        "is_qualified": "已认证",
+        "qualified_until": "认证有效期"
       }
     },
     "help": {
@@ -276,6 +366,9 @@
       },
       "uom_conversion": {
         "factor": "目标 = 源 × 系数"
+      },
+      "route_step": {
+        "branch_condition": "例如 lot_type == 'ENG'，执行时判定（不在本模块）"
       }
     },
     "enum": {
@@ -408,6 +501,36 @@
         "SDT": "SDT · 计划停机",
         "UDT": "UDT · 非计划停机",
         "NST": "NST · 非排程"
+      },
+      "operation_type": {
+        "process": "加工",
+        "metrology": "量测",
+        "inspection": "检验",
+        "test": "测试",
+        "clean": "清洗",
+        "move": "搬送"
+      },
+      "route_type": {
+        "main": "主流程",
+        "sub": "子流程",
+        "rework": "返工流程"
+      },
+      "step_type": {
+        "operation": "工序",
+        "sub_route": "调用子流程"
+      },
+      "recipe_type": {
+        "production": "生产",
+        "monitor": "监控",
+        "clean": "清洗 / 暖机",
+        "rework": "返工"
+      },
+      "resource_kind": {
+        "equipment": "设备",
+        "equipment_group": "设备组",
+        "reticle": "光罩",
+        "material": "物料",
+        "fixture": "治具 / 工具"
       }
     }
   },
@@ -439,6 +562,15 @@
     "mes-e10_state": "E10 状态",
     "mes-e10_transition": "E10 状态迁移",
     "mes-equipment": "设备",
+    "mes-operation": "工序",
+    "mes-route": "工艺流程",
+    "mes-route_step": "流程步骤",
+    "mes-step_resource": "步骤资源",
+    "mes-product_route": "产品流程绑定",
+    "mes-recipe": "配方",
+    "mes-recipe_equipment": "配方设备映射",
+    "mes-param_spec": "工艺参数规格",
+    "mes-equipment_capability": "设备能力",
     "mes-g-common": "MES 建模 · 通用",
     "mes-g-org": "MES 建模 · 组织",
     "mes-g-equipment": "MES 建模 · 设备",

@@ -36,7 +36,16 @@
       "equipment_group": "設備グループ",
       "e10_state": "E10 状態",
       "e10_transition": "E10 状態遷移",
-      "equipment": "設備"
+      "equipment": "設備",
+      "operation": "工程",
+      "route": "ルート / フロー",
+      "route_step": "ルートステップ",
+      "step_resource": "ステップ資源",
+      "product_route": "製品・ルート割当",
+      "recipe": "レシピ",
+      "recipe_equipment": "レシピ・設備対応",
+      "param_spec": "プロセスパラメータ規格",
+      "equipment_capability": "設備能力"
     },
     "field": {
       "dict_type": {
@@ -265,6 +274,87 @@
         "initial_state": "初期 E10 状態",
         "is_active": "有効",
         "description": "説明"
+      },
+      "operation": {
+        "code": "コード",
+        "name": "名称",
+        "operation_type": "種別",
+        "area": "エリア",
+        "std_minutes": "標準時間（分）",
+        "is_active": "有効",
+        "description": "説明"
+      },
+      "route": {
+        "code": "コード",
+        "name": "名称",
+        "route_type": "ルート種別",
+        "product_family": "製品ファミリー",
+        "description": "説明"
+      },
+      "route_step": {
+        "route": "ルート",
+        "seq": "順番",
+        "step_type": "ステップ種別",
+        "operation": "工程",
+        "sub_route": "サブルート",
+        "rework_route": "リワークルート",
+        "is_optional": "任意",
+        "branch_condition": "分岐条件",
+        "branch_to_seq": "分岐先順番",
+        "note": "備考"
+      },
+      "step_resource": {
+        "route_step": "ルートステップ",
+        "resource_kind": "資源種別",
+        "equipment": "設備",
+        "equipment_group": "設備グループ",
+        "reticle": "レチクル",
+        "material": "資材",
+        "fixture": "治具・工具",
+        "recipe": "レシピ",
+        "qty": "数量",
+        "uom": "単位"
+      },
+      "product_route": {
+        "product": "製品",
+        "route": "ルート",
+        "is_default": "デフォルト",
+        "priority": "優先度",
+        "effective_from": "有効開始日",
+        "effective_to": "有効終了日"
+      },
+      "recipe": {
+        "code": "コード",
+        "name": "名称",
+        "equipment_type": "設備タイプ",
+        "recipe_type": "レシピ種別",
+        "body": "パラメータ（JSON）",
+        "description": "説明"
+      },
+      "recipe_equipment": {
+        "recipe": "レシピ",
+        "equipment": "設備",
+        "eqp_recipe": "装置レシピ名",
+        "is_enabled": "有効"
+      },
+      "param_spec": {
+        "code": "コード",
+        "name": "名称",
+        "operation": "工程",
+        "recipe": "レシピ",
+        "product": "製品",
+        "uom": "単位",
+        "target": "目標値",
+        "lsl": "規格下限",
+        "usl": "規格上限",
+        "description": "説明"
+      },
+      "equipment_capability": {
+        "equipment": "設備",
+        "operation": "工程",
+        "recipe": "レシピ",
+        "is_qualified": "認定済",
+        "qualified_until": "認定期限"
       }
     },
     "help": {
@@ -276,6 +366,9 @@
       },
       "uom_conversion": {
         "factor": "換算先 = 換算元 × 係数"
+      },
+      "route_step": {
+        "branch_condition": "例：lot_type == 'ENG'（実行時に判定。本モジュール対象外）"
       }
     },
     "enum": {
@@ -408,6 +501,36 @@
         "SDT": "SDT · 計画停止",
         "UDT": "UDT · 計画外停止",
         "NST": "NST · 非稼働予定"
+      },
+      "operation_type": {
+        "process": "加工",
+        "metrology": "計測",
+        "inspection": "検査",
+        "test": "テスト",
+        "clean": "洗浄",
+        "move": "搬送"
+      },
+      "route_type": {
+        "main": "メインルート",
+        "sub": "サブルート",
+        "rework": "リワークルート"
+      },
+      "step_type": {
+        "operation": "工程",
+        "sub_route": "サブルート呼出"
+      },
+      "recipe_type": {
+        "production": "生産",
+        "monitor": "モニター",
+        "clean": "洗浄 / シーズニング",
+        "rework": "リワーク"
+      },
+      "resource_kind": {
+        "equipment": "設備",
+        "equipment_group": "設備グループ",
+        "reticle": "レチクル",
+        "material": "資材",
+        "fixture": "治具・工具"
       }
     }
   },
@@ -439,6 +562,15 @@
     "mes-e10_state": "E10 状態",
     "mes-e10_transition": "E10 状態遷移",
     "mes-equipment": "設備",
+    "mes-operation": "工程",
+    "mes-route": "ルート / フロー",
+    "mes-route_step": "ルートステップ",
+    "mes-step_resource": "ステップ資源",
+    "mes-product_route": "製品・ルート割当",
+    "mes-recipe": "レシピ",
+    "mes-recipe_equipment": "レシピ・設備対応",
+    "mes-param_spec": "プロセスパラメータ規格",
+    "mes-equipment_capability": "設備能力",
     "mes-g-common": "MES モデリング · 共通",
     "mes-g-org": "MES モデリング · 組織",
     "mes-g-equipment": "MES モデリング · 設備",

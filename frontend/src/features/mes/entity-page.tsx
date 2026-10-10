@@ -10,8 +10,9 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Page, useListParams, useLocalListParams } from '@/components/crud'
+import { Page, useListParams } from '@/components/crud'
 import { NotFoundError } from '@/features/errors/not-found-error'
+import { ChildTable } from './child-table'
 import { EntityTable } from './entity-table'
 import { EXTRA_ACTIONS, ROW_PANELS } from './extensions'
 import { entityLabel, rowLabel } from './labels'
@@ -89,29 +90,5 @@ function Detail({ code, row }: { code: string; row: MesRow }) {
         ))}
       </Tabs>
     </>
-  )
-}
-
-export function ChildTable({
-  code,
-  parentCode,
-  parentId,
-}: {
-  code: string
-  parentCode: string
-  parentId: string
-}) {
-  const { entity } = useMesEntity(code)
-  const params = useLocalListParams()
-  if (!entity) return null
-  const f = entity.fields.find((x) => x.type === 'ref' && x.ref === parentCode)
-  if (!f) return null
-  return (
-    <EntityTable
-      entity={entity}
-      params={params}
-      fixed={{ [f.column]: parentId }}
-      allowTree={false}
-    />
   )
 }

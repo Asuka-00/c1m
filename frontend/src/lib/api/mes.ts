@@ -131,3 +131,10 @@ export const mesApi = {
       })
       .then((r) => r.data),
 }
+
+export const reorderRouteSteps = (routeId: string, stepIds: string[]) =>
+  http
+    .post<{ data: MesRow[] }>(`/mes/route/${routeId}/reorder`, {
+      step_ids: stepIds,
+    })
+    .then((r) => r.data)

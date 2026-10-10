@@ -17,6 +17,7 @@ from app.mes import coderule
 from app.mes.core import ENTITIES, Entity, perm
 from app.mes.excel import export_xlsx, import_xlsx
 from app.mes.meta import all_meta
+from app.mes.routing import reorder_steps
 from app.mes.service import (
     attr_defs,
     attr_options,
@@ -114,6 +115,19 @@ def uom_convert(
     """Convert `value` between units (direct, inverse or multi-hop conversions)."""
     _ent(ctx, "uom", "read")
     return convert(session, ctx.id, from_uom, to_uom, value)
+
+
+class ReorderIn(BaseModel):
+    step_ids: list[uuid.UUID]
+
+
+@router.post("/route/{rid}/reorder")
+def route_reorder(
+    session: SessionDep, ctx: CurrentTenant, rid: uuid.UUID, body: ReorderIn
+) -> Any:
+    """Renumber a draft route's steps (10, 20, 30, ...) in the given order."""
+    e = _ent(ctx, "route_step", "write")
+    return {"data": reorder_steps(session, ctx.id, rid, body.step_ids, ctx.user, e)}
 
 
 @router.get("/{entity}")

@@ -182,7 +182,8 @@
     "Only draft versions can be changed; create a new version": "Only draft versions can be changed; create a new version",
     "A record with the same key already exists": "A record with the same key already exists",
     "Record is referenced by other records": "Record is referenced by other records",
-    "Read-only entity": "Read-only entity"
+    "Read-only entity": "Read-only entity",
+    "step_ids must list every step of the route exactly once": "step_ids must list every step of the route exactly once"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -436,9 +437,21 @@
     "previewHint": "Preview only — no numbers are reserved.",
     "panel": {
       "code_rule": "Preview",
-      "uom": "Converter"
+      "uom": "Converter",
+      "route": "Route editor"
     },
     "convertValue": "Value in {{unit}}",
-    "convertTo": "Convert to"
+    "convertTo": "Convert to",
+    "routeDraftHint": "Draft: steps can be added, edited and re-ordered.",
+    "routeLockedHint": "This version is locked — create a new version to change steps.",
+    "listView": "List view",
+    "flowView": "Flow view",
+    "addStep": "Add step",
+    "noSteps": "No steps yet.",
+    "reworkTo": "Rework: {{route}}",
+    "branchTo": "If {{cond}} → step {{seq}}",
+    "resources": "Resources",
+    "moveUp": "Move up",
+    "moveDown": "Move down"
   }
 }

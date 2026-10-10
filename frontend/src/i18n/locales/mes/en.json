@@ -36,7 +36,16 @@
       "equipment_group": "Equipment group",
       "e10_state": "E10 state",
       "e10_transition": "E10 transition",
-      "equipment": "Equipment"
+      "equipment": "Equipment",
+      "operation": "Operation / step",
+      "route": "Route / flow",
+      "route_step": "Route step",
+      "step_resource": "Step resource",
+      "product_route": "Product ↔ route",
+      "recipe": "Recipe",
+      "recipe_equipment": "Recipe ↔ equipment",
+      "param_spec": "Parameter spec",
+      "equipment_capability": "Equipment capability"
     },
     "field": {
       "dict_type": {
@@ -265,6 +274,87 @@
         "initial_state": "Initial E10 state",
         "is_active": "Active",
         "description": "Description"
+      },
+      "operation": {
+        "code": "Code",
+        "name": "Name",
+        "operation_type": "Type",
+        "area": "Area",
+        "std_minutes": "Standard time (min)",
+        "is_active": "Active",
+        "description": "Description"
+      },
+      "route": {
+        "code": "Code",
+        "name": "Name",
+        "route_type": "Route type",
+        "product_family": "Product family",
+        "description": "Description"
+      },
+      "route_step": {
+        "route": "Route",
+        "seq": "Seq.",
+        "step_type": "Step type",
+        "operation": "Operation",
+        "sub_route": "Sub-route",
+        "rework_route": "Rework route",
+        "is_optional": "Optional",
+        "branch_condition": "Branch condition",
+        "branch_to_seq": "Branch to seq.",
+        "note": "Note"
+      },
+      "step_resource": {
+        "route_step": "Route step",
+        "resource_kind": "Resource kind",
+        "equipment": "Equipment",
+        "equipment_group": "Equipment group",
+        "reticle": "Reticle",
+        "material": "Material",
+        "fixture": "Fixture / tool",
+        "recipe": "Recipe",
+        "qty": "Quantity",
+        "uom": "Unit"
+      },
+      "product_route": {
+        "product": "Product",
+        "route": "Route",
+        "is_default": "Default",
+        "priority": "Priority",
+        "effective_from": "Effective from",
+        "effective_to": "Effective to"
+      },
+      "recipe": {
+        "code": "Code",
+        "name": "Name",
+        "equipment_type": "Equipment type",
+        "recipe_type": "Recipe type",
+        "body": "Parameters (JSON)",
+        "description": "Description"
+      },
+      "recipe_equipment": {
+        "recipe": "Recipe",
+        "equipment": "Equipment",
+        "eqp_recipe": "Equipment recipe name",
+        "is_enabled": "Enabled"
+      },
+      "param_spec": {
+        "code": "Code",
+        "name": "Name",
+        "operation": "Operation",
+        "recipe": "Recipe",
+        "product": "Product",
+        "uom": "Unit",
+        "target": "Target",
+        "lsl": "LSL",
+        "usl": "USL",
+        "description": "Description"
+      },
+      "equipment_capability": {
+        "equipment": "Equipment",
+        "operation": "Operation",
+        "recipe": "Recipe",
+        "is_qualified": "Qualified",
+        "qualified_until": "Qualified until"
       }
     },
     "help": {
@@ -276,6 +366,9 @@
       },
       "uom_conversion": {
         "factor": "to = from × factor"
+      },
+      "route_step": {
+        "branch_condition": "e.g. lot_type == 'ENG' — evaluated at execution time (not in this module)"
       }
     },
     "enum": {
@@ -408,6 +501,36 @@
         "SDT": "SDT · Scheduled down",
         "UDT": "UDT · Unscheduled down",
         "NST": "NST · Non-scheduled"
+      },
+      "operation_type": {
+        "process": "Process",
+        "metrology": "Metrology",
+        "inspection": "Inspection",
+        "test": "Test",
+        "clean": "Clean",
+        "move": "Move / stocker"
+      },
+      "route_type": {
+        "main": "Main route",
+        "sub": "Sub-route",
+        "rework": "Rework route"
+      },
+      "step_type": {
+        "operation": "Operation",
+        "sub_route": "Call sub-route"
+      },
+      "recipe_type": {
+        "production": "Production",
+        "monitor": "Monitor",
+        "clean": "Clean / seasoning",
+        "rework": "Rework"
+      },
+      "resource_kind": {
+        "equipment": "Equipment",
+        "equipment_group": "Equipment group",
+        "reticle": "Reticle",
+        "material": "Material",
+        "fixture": "Fixture / tool"
       }
     }
   },
@@ -439,6 +562,15 @@
     "mes-e10_state": "E10 state",
     "mes-e10_transition": "E10 transition",
     "mes-equipment": "Equipment",
+    "mes-operation": "Operation / step",
+    "mes-route": "Route / flow",
+    "mes-route_step": "Route step",
+    "mes-step_resource": "Step resource",
+    "mes-product_route": "Product ↔ route",
+    "mes-recipe": "Recipe",
+    "mes-recipe_equipment": "Recipe ↔ equipment",
+    "mes-param_spec": "Parameter spec",
+    "mes-equipment_capability": "Equipment capability",
     "mes-g-common": "MES · Common",
     "mes-g-org": "MES · Organization",
     "mes-g-equipment": "MES · Equipment",

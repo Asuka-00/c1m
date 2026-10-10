@@ -182,7 +182,8 @@
     "Only draft versions can be changed; create a new version": "下書きのみ変更できます。新しいバージョンを作成してください",
     "A record with the same key already exists": "同じキーのレコードが既に存在します",
     "Record is referenced by other records": "他のレコードから参照されています",
-    "Read-only entity": "読み取り専用"
+    "Read-only entity": "読み取り専用",
+    "step_ids must list every step of the route exactly once": "step_ids にはルートの全ステップを 1 回ずつ指定してください"
   },
   "dashboard": {
     "title": "ダッシュボード",
@@ -436,9 +437,21 @@
     "previewHint": "プレビューのみ（番号は確保されません）。",
     "panel": {
       "code_rule": "プレビュー",
-      "uom": "換算ツール"
+      "uom": "換算ツール",
+      "route": "ルートエディタ"
     },
     "convertValue": "値（{{unit}}）",
-    "convertTo": "換算先"
+    "convertTo": "換算先",
+    "routeDraftHint": "下書き：ステップの追加・編集・並べ替えができます。",
+    "routeLockedHint": "このバージョンはロックされています。変更するには新バージョンを作成してください。",
+    "listView": "リスト表示",
+    "flowView": "フロー表示",
+    "addStep": "ステップ追加",
+    "noSteps": "ステップはまだありません。",
+    "reworkTo": "リワーク：{{route}}",
+    "branchTo": "{{cond}} の場合 → ステップ {{seq}}",
+    "resources": "資源",
+    "moveUp": "上へ",
+    "moveDown": "下へ"
   }
 }

@@ -182,7 +182,8 @@
     "Only draft versions can be changed; create a new version": "只有草稿版本可以修改，请新建版本",
     "A record with the same key already exists": "已存在相同编码/键的记录",
     "Record is referenced by other records": "该记录被其他数据引用，无法删除",
-    "Read-only entity": "只读数据"
+    "Read-only entity": "只读数据",
+    "step_ids must list every step of the route exactly once": "step_ids 必须恰好包含流程的每个步骤一次"
   },
   "dashboard": {
     "title": "仪表盘",
@@ -436,9 +437,21 @@
     "previewHint": "仅预览，不会占用流水号。",
     "panel": {
       "code_rule": "预览",
-      "uom": "换算器"
+      "uom": "换算器",
+      "route": "流程编辑器"
     },
     "convertValue": "数值（{{unit}}）",
-    "convertTo": "换算为"
+    "convertTo": "换算为",
+    "routeDraftHint": "草稿：可以新增、编辑和调整步骤顺序。",
+    "routeLockedHint": "此版本已锁定，如需修改请新建版本。",
+    "listView": "列表视图",
+    "flowView": "流程视图",
+    "addStep": "添加步骤",
+    "noSteps": "暂无步骤。",
+    "reworkTo": "返工：{{route}}",
+    "branchTo": "若 {{cond}} → 跳转步骤 {{seq}}",
+    "resources": "资源",
+    "moveUp": "上移",
+    "moveDown": "下移"
   }
 }

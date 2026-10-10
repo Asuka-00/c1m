@@ -187,7 +187,12 @@ def build_table(e: Entity) -> sa.Table:
     for i, key in enumerate(keys):
         colnames = [(fld.column if (fld := e.field(k)) else k) for k in key]
         cols.append(
-            sa.UniqueConstraint("tenant_id", *colnames, name=f"uq_{e.table_name}_{i}")
+            sa.UniqueConstraint(
+                "tenant_id",
+                *colnames,
+                name=f"uq_{e.table_name}_{i}",
+                postgresql_nulls_not_distinct=True,  # optional key parts
+            )
         )
     return sa.Table(e.table_name, SQLModel.metadata, *cols)
 

@@ -23,6 +23,11 @@ DEMO: list[tuple[str, dict[str, Any]]] = []
 ACTIVATE: list[Ref] = []
 
 
+def _rows(rows: list[Any]) -> list[Any]:
+    """Heterogeneous literal tables (keeps the type checker out of the data)."""
+    return rows
+
+
 def add(entity: str, **values: Any) -> None:
     DEMO.append((entity, values))
 
@@ -79,31 +84,35 @@ add(
     attrs={"cleanroom_class": "ISO 4"},
 )
 add("site", code="TEST1", name="Test house 1 (DEMO)", timezone="Asia/Taipei")
-for c, n, tp in [
-    ("PHOTO", "Photolithography", "fab"),
-    ("ETCH", "Etch", "fab"),
-    ("DIFF", "Diffusion / furnace", "fab"),
-    ("THIN", "Thin film (CVD/PVD)", "fab"),
-    ("CMP", "CMP", "fab"),
-    ("METRO", "Metrology", "fab"),
-]:
+for c, n, tp in _rows(
+    [
+        ("PHOTO", "Photolithography", "fab"),
+        ("ETCH", "Etch", "fab"),
+        ("DIFF", "Diffusion / furnace", "fab"),
+        ("THIN", "Thin film (CVD/PVD)", "fab"),
+        ("CMP", "CMP", "fab"),
+        ("METRO", "Metrology", "fab"),
+    ]
+):
     add("area", code=c, name=n, site=("site", "FAB12"), area_type=tp)
 add("area", code="PROBE", name="Wafer probe", site=("site", "TEST1"), area_type="test")
-for c, n, area, kind, parent in [
-    ("PH-BAY1", "Photo bay 1", "PHOTO", "bay", None),
-    ("PH-SCAN", "Scanner WC", "PHOTO", "workcenter", "PH-BAY1"),
-    ("PH-TRACK", "Track WC", "PHOTO", "workcenter", "PH-BAY1"),
-    ("ET-BAY1", "Etch bay 1", "ETCH", "bay", None),
-    ("ET-DRY", "Dry etch WC", "ETCH", "workcenter", "ET-BAY1"),
-    ("ET-WET", "Wet clean WC", "ETCH", "workcenter", "ET-BAY1"),
-    ("DF-BAY1", "Furnace bay", "DIFF", "bay", None),
-    ("DF-FURN", "Furnace WC", "DIFF", "workcenter", "DF-BAY1"),
-    ("TF-BAY1", "Thin film bay", "THIN", "bay", None),
-    ("TF-CVD", "CVD WC", "THIN", "workcenter", "TF-BAY1"),
-    ("CMP-BAY", "CMP bay", "CMP", "bay", None),
-    ("MT-BAY", "Metrology bay", "METRO", "bay", None),
-    ("MT-CD", "CD-SEM cell", "METRO", "cell", "MT-BAY"),
-]:
+for c, n, area, kind, parent in _rows(
+    [
+        ("PH-BAY1", "Photo bay 1", "PHOTO", "bay", None),
+        ("PH-SCAN", "Scanner WC", "PHOTO", "workcenter", "PH-BAY1"),
+        ("PH-TRACK", "Track WC", "PHOTO", "workcenter", "PH-BAY1"),
+        ("ET-BAY1", "Etch bay 1", "ETCH", "bay", None),
+        ("ET-DRY", "Dry etch WC", "ETCH", "workcenter", "ET-BAY1"),
+        ("ET-WET", "Wet clean WC", "ETCH", "workcenter", "ET-BAY1"),
+        ("DF-BAY1", "Furnace bay", "DIFF", "bay", None),
+        ("DF-FURN", "Furnace WC", "DIFF", "workcenter", "DF-BAY1"),
+        ("TF-BAY1", "Thin film bay", "THIN", "bay", None),
+        ("TF-CVD", "CVD WC", "THIN", "workcenter", "TF-BAY1"),
+        ("CMP-BAY", "CMP bay", "CMP", "bay", None),
+        ("MT-BAY", "Metrology bay", "METRO", "bay", None),
+        ("MT-CD", "CD-SEM cell", "METRO", "cell", "MT-BAY"),
+    ]
+):
     add(
         "workcenter",
         code=c,
@@ -138,12 +147,14 @@ add(
     site=("site", "FAB12"),
     year=2026,
 )
-for d, tp, sh in [
-    ("2026-10-09", "workday", "D,N"),
-    ("2026-10-10", "holiday", "D,N"),
-    ("2026-10-11", "workday", "D,N"),
-    ("2026-10-12", "maintenance", "D"),
-]:
+for d, tp, sh in _rows(
+    [
+        ("2026-10-09", "workday", "D,N"),
+        ("2026-10-10", "holiday", "D,N"),
+        ("2026-10-11", "workday", "D,N"),
+        ("2026-10-12", "maintenance", "D"),
+    ]
+):
     add(
         "calendar_day",
         work_calendar=("work_calendar", "FAB12-2026"),
@@ -155,26 +166,30 @@ for d, tp, sh in [
 
 
 # ---------------- P2: product/material + equipment ----------------
-for c, n, sym, d in [
-    ("EA", "Each", "ea", "count"),
-    ("WFR", "Wafer", "wfr", "count"),
-    ("L", "Liter", "L", "volume"),
-    ("ML", "Milliliter", "mL", "volume"),
-    ("GAL", "US gallon", "gal", "volume"),
-    ("KG", "Kilogram", "kg", "mass"),
-    ("G", "Gram", "g", "mass"),
-    ("SCCM", "Std. cubic cm / min", "sccm", "volume"),
-    ("MIN", "Minute", "min", "time"),
-    ("NM", "Nanometer", "nm", "length"),
-    ("A", "Angstrom", "Å", "length"),
-]:
+for c, n, sym, d in _rows(
+    [
+        ("EA", "Each", "ea", "count"),
+        ("WFR", "Wafer", "wfr", "count"),
+        ("L", "Liter", "L", "volume"),
+        ("ML", "Milliliter", "mL", "volume"),
+        ("GAL", "US gallon", "gal", "volume"),
+        ("KG", "Kilogram", "kg", "mass"),
+        ("G", "Gram", "g", "mass"),
+        ("SCCM", "Std. cubic cm / min", "sccm", "volume"),
+        ("MIN", "Minute", "min", "time"),
+        ("NM", "Nanometer", "nm", "length"),
+        ("A", "Angstrom", "Å", "length"),
+    ]
+):
     add("uom", code=c, name=n, symbol=sym, dimension=d)
-for a, b, fct in [
-    ("L", "ML", 1000),
-    ("GAL", "L", 3.785411784),
-    ("KG", "G", 1000),
-    ("NM", "A", 10),
-]:
+for a, b, fct in _rows(
+    [
+        ("L", "ML", 1000),
+        ("GAL", "L", 3.785411784),
+        ("KG", "G", 1000),
+        ("NM", "A", 10),
+    ]
+):
     add("uom_conversion", from_uom=("uom", a), to_uom=("uom", b), factor=fct)
 add("tech_node", code="N28", name="28 nm HKMG (DEMO)", feature_nm=28, wafer_size="300")
 add("tech_node", code="N40", name="40 nm LP (DEMO)", feature_nm=40, wafer_size="300")
@@ -190,11 +205,13 @@ add(
     name="Power management",
     tech_node=("tech_node", "N28"),
 )
-for c, n, fam, node, die in [
-    ("MCU-A100", "MCU A100 (DEMO)", "MCU", "N40", 1450),
-    ("MCU-B200", "MCU B200 (DEMO)", "MCU", "N40", 980),
-    ("PM-X10", "PMIC X10 (DEMO)", "PMIC", "N28", 2210),
-]:
+for c, n, fam, node, die in _rows(
+    [
+        ("MCU-A100", "MCU A100 (DEMO)", "MCU", "N40", 1450),
+        ("MCU-B200", "MCU B200 (DEMO)", "MCU", "N40", 980),
+        ("PM-X10", "PMIC X10 (DEMO)", "PMIC", "N28", 2210),
+    ]
+):
     add(
         "product",
         code=c,
@@ -213,21 +230,25 @@ add(
     gross_die=0,
     uom=("uom", "WFR"),
 )
-for c, n, cat in [
-    ("RAW-WFR", "Raw silicon wafers", "wafer"),
-    ("CHEM", "Wet chemicals", "chemical"),
-    ("GAS", "Process gases", "gas"),
-    ("PR", "Photoresists", "photoresist"),
-    ("SLURRY", "CMP slurries", "slurry"),
-]:
+for c, n, cat in _rows(
+    [
+        ("RAW-WFR", "Raw silicon wafers", "wafer"),
+        ("CHEM", "Wet chemicals", "chemical"),
+        ("GAS", "Process gases", "gas"),
+        ("PR", "Photoresists", "photoresist"),
+        ("SLURRY", "CMP slurries", "slurry"),
+    ]
+):
     add("material_type", code=c, name=n, category=cat)
-for c, n, mt, u, life in [
-    ("SI300-P", "300mm prime Si wafer", "RAW-WFR", "WFR", None),
-    ("H2SO4-96", "Sulfuric acid 96%", "CHEM", "L", 365),
-    ("NF3", "Nitrogen trifluoride", "GAS", "KG", None),
-    ("PR-ARF-01", "ArF photoresist", "PR", "L", 180),
-    ("SL-CU-01", "Cu CMP slurry", "SLURRY", "L", 120),
-]:
+for c, n, mt, u, life in _rows(
+    [
+        ("SI300-P", "300mm prime Si wafer", "RAW-WFR", "WFR", None),
+        ("H2SO4-96", "Sulfuric acid 96%", "CHEM", "L", 365),
+        ("NF3", "Nitrogen trifluoride", "GAS", "KG", None),
+        ("PR-ARF-01", "ArF photoresist", "PR", "L", 180),
+        ("SL-CU-01", "Cu CMP slurry", "SLURRY", "L", 120),
+    ]
+):
     add(
         "material",
         code=c,
@@ -270,11 +291,13 @@ for i in range(1, 7):
         max_uses=500,
         status_code="dirty" if i == 5 else "available",
     )
-for c, layer, g in [
-    ("RT-A100-AA", "AA", "binary"),
-    ("RT-A100-PO", "PO", "psm"),
-    ("RT-A100-M1", "M1", "psm"),
-]:
+for c, layer, g in _rows(
+    [
+        ("RT-A100-AA", "AA", "binary"),
+        ("RT-A100-PO", "PO", "psm"),
+        ("RT-A100-M1", "M1", "psm"),
+    ]
+):
     add(
         "reticle",
         code=c,
@@ -291,26 +314,30 @@ add(
     kind="probe_card",
     max_uses=1_000_000,
 )
-for c, n, cat, v, mdl in [
-    ("SCANNER", "ArF immersion scanner", "process", "ASML", "NXT:1980Di"),
-    ("TRACK", "Coater/developer", "process", "TEL", "Lithius Pro"),
-    ("DRYETCH", "Conductor etcher", "process", "LAM", "Kiyo"),
-    ("FURNACE", "Vertical furnace", "process", "KOKUSAI", "AdvancedAce"),
-    ("CVD", "PECVD", "process", "AMAT", "Producer"),
-    ("CMP", "CMP polisher", "process", "AMAT", "Reflexion LK"),
-    ("CDSEM", "CD-SEM", "metrology", "Hitachi", "CG6300"),
-    ("OVL", "Overlay metrology", "metrology", "KLA", "Archer 750"),
-]:
+for c, n, cat, v, mdl in _rows(
+    [
+        ("SCANNER", "ArF immersion scanner", "process", "ASML", "NXT:1980Di"),
+        ("TRACK", "Coater/developer", "process", "TEL", "Lithius Pro"),
+        ("DRYETCH", "Conductor etcher", "process", "LAM", "Kiyo"),
+        ("FURNACE", "Vertical furnace", "process", "KOKUSAI", "AdvancedAce"),
+        ("CVD", "PECVD", "process", "AMAT", "Producer"),
+        ("CMP", "CMP polisher", "process", "AMAT", "Reflexion LK"),
+        ("CDSEM", "CD-SEM", "metrology", "Hitachi", "CG6300"),
+        ("OVL", "Overlay metrology", "metrology", "KLA", "Archer 750"),
+    ]
+):
     add("equipment_type", code=c, name=n, category=cat, vendor=v, model=mdl)
-for c, n, et, area in [
-    ("G-SCAN", "Scanners", "SCANNER", "PHOTO"),
-    ("G-TRACK", "Tracks", "TRACK", "PHOTO"),
-    ("G-ETCH", "Poly etch", "DRYETCH", "ETCH"),
-    ("G-FURN", "Furnaces", "FURNACE", "DIFF"),
-    ("G-CVD", "PECVD", "CVD", "THIN"),
-    ("G-CMP", "CMP", "CMP", "CMP"),
-    ("G-CDSEM", "CD-SEM", "CDSEM", "METRO"),
-]:
+for c, n, et, area in _rows(
+    [
+        ("G-SCAN", "Scanners", "SCANNER", "PHOTO"),
+        ("G-TRACK", "Tracks", "TRACK", "PHOTO"),
+        ("G-ETCH", "Poly etch", "DRYETCH", "ETCH"),
+        ("G-FURN", "Furnaces", "FURNACE", "DIFF"),
+        ("G-CVD", "PECVD", "CVD", "THIN"),
+        ("G-CMP", "CMP", "CMP", "CMP"),
+        ("G-CDSEM", "CD-SEM", "CDSEM", "METRO"),
+    ]
+):
     add(
         "equipment_group",
         code=c,
@@ -338,77 +365,88 @@ for i, (c, n, cat, col, init) in enumerate(
         is_initial=init,
         sort_order=i,
     )
-for a, b, r in [
-    ("SBY-IDLE", "PRD-RUN", False),
-    ("PRD-RUN", "SBY-IDLE", False),
-    ("SBY-IDLE", "SBY-WAIT", False),
-    ("SBY-WAIT", "PRD-RUN", False),
-    ("SBY-IDLE", "SDT-PM", True),
-    ("SDT-PM", "SBY-IDLE", False),
-    ("PRD-RUN", "UDT-DOWN", True),
-    ("SBY-IDLE", "UDT-DOWN", True),
-    ("UDT-DOWN", "ENG-TEST", False),
-    ("ENG-TEST", "SBY-IDLE", False),
-    ("SBY-IDLE", "NST-OFF", True),
-    ("NST-OFF", "SBY-IDLE", False),
-]:
+for a, b, r in _rows(
+    [
+        ("SBY-IDLE", "PRD-RUN", False),
+        ("PRD-RUN", "SBY-IDLE", False),
+        ("SBY-IDLE", "SBY-WAIT", False),
+        ("SBY-WAIT", "PRD-RUN", False),
+        ("SBY-IDLE", "SDT-PM", True),
+        ("SDT-PM", "SBY-IDLE", False),
+        ("PRD-RUN", "UDT-DOWN", True),
+        ("SBY-IDLE", "UDT-DOWN", True),
+        ("UDT-DOWN", "ENG-TEST", False),
+        ("ENG-TEST", "SBY-IDLE", False),
+        ("SBY-IDLE", "NST-OFF", True),
+        ("NST-OFF", "SBY-IDLE", False),
+    ]
+):
     add(
         "e10_transition",
         from_state=("e10_state", a),
         to_state=("e10_state", b),
         reason_required=r,
     )
-for c, n, et, g, wc, subs in [
-    (
-        "SCN01",
-        "Scanner 01",
-        "SCANNER",
-        "G-SCAN",
-        "PH-SCAN",
-        [("LP1", "load_port"), ("LP2", "load_port"), ("WS1", "chamber")],
-    ),
-    (
-        "TRK01",
-        "Track 01",
-        "TRACK",
-        "G-TRACK",
-        "PH-TRACK",
-        [("LP1", "load_port"), ("COT1", "chamber"), ("DEV1", "chamber")],
-    ),
-    (
-        "ETC01",
-        "Poly etcher 01",
-        "DRYETCH",
-        "G-ETCH",
-        "ET-DRY",
-        [
-            ("LP1", "load_port"),
-            ("LP2", "load_port"),
-            ("PM1", "chamber"),
-            ("PM2", "chamber"),
-            ("PM3", "chamber"),
-        ],
-    ),
-    (
-        "ETC02",
-        "Poly etcher 02",
-        "DRYETCH",
-        "G-ETCH",
-        "ET-DRY",
-        [("LP1", "load_port"), ("PM1", "chamber"), ("PM2", "chamber")],
-    ),
-    ("FRN01", "Furnace 01", "FURNACE", "G-FURN", "DF-FURN", [("TUBE", "chamber")]),
-    (
-        "CVD01",
-        "PECVD 01",
-        "CVD",
-        "G-CVD",
-        "TF-CVD",
-        [("PM1", "chamber"), ("PM2", "chamber")],
-    ),
-    ("CMP01", "CMP 01", "CMP", "G-CMP", None, [("P1", "chamber"), ("P2", "chamber")]),
-    ("CDS01", "CD-SEM 01", "CDSEM", "G-CDSEM", "MT-CD", []),
-]:
+for c, n, et, g, wc, subs in _rows(
+    [
+        (
+            "SCN01",
+            "Scanner 01",
+            "SCANNER",
+            "G-SCAN",
+            "PH-SCAN",
+            [("LP1", "load_port"), ("LP2", "load_port"), ("WS1", "chamber")],
+        ),
+        (
+            "TRK01",
+            "Track 01",
+            "TRACK",
+            "G-TRACK",
+            "PH-TRACK",
+            [("LP1", "load_port"), ("COT1", "chamber"), ("DEV1", "chamber")],
+        ),
+        (
+            "ETC01",
+            "Poly etcher 01",
+            "DRYETCH",
+            "G-ETCH",
+            "ET-DRY",
+            [
+                ("LP1", "load_port"),
+                ("LP2", "load_port"),
+                ("PM1", "chamber"),
+                ("PM2", "chamber"),
+                ("PM3", "chamber"),
+            ],
+        ),
+        (
+            "ETC02",
+            "Poly etcher 02",
+            "DRYETCH",
+            "G-ETCH",
+            "ET-DRY",
+            [("LP1", "load_port"), ("PM1", "chamber"), ("PM2", "chamber")],
+        ),
+        ("FRN01", "Furnace 01", "FURNACE", "G-FURN", "DF-FURN", [("TUBE", "chamber")]),
+        (
+            "CVD01",
+            "PECVD 01",
+            "CVD",
+            "G-CVD",
+            "TF-CVD",
+            [("PM1", "chamber"), ("PM2", "chamber")],
+        ),
+        (
+            "CMP01",
+            "CMP 01",
+            "CMP",
+            "G-CMP",
+            None,
+            [("P1", "chamber"), ("P2", "chamber")],
+        ),
+        ("CDS01", "CD-SEM 01", "CDSEM", "G-CDSEM", "MT-CD", []),
+    ]
+):
     add(
         "equipment",
         code=c,
@@ -429,9 +467,262 @@ for c, n, et, g, wc, subs in [
         )
 
 
+# ---------------- P3: process ----------------
+OPS = [
+    ("PH-COAT", "Resist coat", "process", "PHOTO", 6),
+    ("PH-EXPO", "Exposure", "process", "PHOTO", 3),
+    ("PH-DEV", "Develop", "process", "PHOTO", 5),
+    ("PH-CD", "After-develop CD measure", "metrology", "METRO", 4),
+    ("PH-OVL", "Overlay measure", "metrology", "METRO", 4),
+    ("PH-STRIP", "Resist strip (rework)", "clean", "PHOTO", 8),
+    ("DF-OX", "Gate oxidation", "process", "DIFF", 180),
+    ("TF-DEP", "PECVD oxide deposition", "process", "THIN", 25),
+    ("ET-POLY", "Poly gate etch", "process", "ETCH", 12),
+    ("ET-CLN", "Post-etch clean", "clean", "ETCH", 15),
+    ("CMP-OX", "Oxide CMP", "process", "CMP", 10),
+    ("IN-PART", "Particle inspection", "inspection", "METRO", 5),
+]
+for c, n, tp, area, mins in OPS:
+    add(
+        "operation",
+        code=c,
+        name=n,
+        operation_type=tp,
+        area=("area", area),
+        std_minutes=mins,
+    )
+add("route", code="RW-PHOTO", name="Photo rework (DEMO)", route_type="rework")
+add(
+    "route_step",
+    route=("route", "RW-PHOTO@1"),
+    seq=10,
+    operation=("operation", "PH-STRIP"),
+)
+add(
+    "route_step",
+    route=("route", "RW-PHOTO@1"),
+    seq=20,
+    operation=("operation", "IN-PART"),
+)
+add("route", code="SUB-PHOTO", name="Photo module (DEMO)", route_type="sub")
+for i, op in enumerate(["PH-COAT", "PH-EXPO", "PH-DEV"]):
+    add(
+        "route_step",
+        route=("route", "SUB-PHOTO@1"),
+        seq=(i + 1) * 10,
+        operation=("operation", op),
+    )
+add(
+    "route",
+    code="MCU40-MAIN",
+    name="MCU 40nm front-end flow (DEMO)",
+    route_type="main",
+    product_family=("product_family", "MCU"),
+)
+MAIN = [
+    (10, "operation", "DF-OX", {}),
+    (20, "operation", "TF-DEP", {}),
+    (
+        30,
+        "sub_route",
+        None,
+        {"sub_route": ("route", "SUB-PHOTO@1"), "note": "Gate photo"},
+    ),
+    (40, "operation", "PH-CD", {"rework_route": ("route", "RW-PHOTO@1")}),
+    (
+        50,
+        "operation",
+        "PH-OVL",
+        {"rework_route": ("route", "RW-PHOTO@1"), "is_optional": True},
+    ),
+    (60, "operation", "ET-POLY", {}),
+    (70, "operation", "ET-CLN", {}),
+    (
+        80,
+        "operation",
+        "IN-PART",
+        {"branch_condition": "lot_type == 'ENG'", "branch_to_seq": 100},
+    ),
+    (90, "operation", "CMP-OX", {}),
+    (100, "operation", "TF-DEP", {"note": "Cap oxide"}),
+]
+for seq, st, op, extra in _rows(MAIN):
+    add(
+        "route_step",
+        route=("route", "MCU40-MAIN@1"),
+        seq=seq,
+        step_type=st,
+        **({"operation": ("operation", op)} if op else {}),
+        **extra,
+    )
+ACTIVATE.extend(
+    [("route", "RW-PHOTO@1"), ("route", "SUB-PHOTO@1"), ("route", "MCU40-MAIN@1")]
+)
+for p in ("MCU-A100", "MCU-B200"):
+    add(
+        "product_route",
+        product=("product", f"{p}@1"),
+        route=("route", "MCU40-MAIN@1"),
+        is_default=True,
+        priority=1,
+        effective_from="2026-01-01",
+    )
+for c, n, et, tp, body in _rows(
+    [
+        (
+            "EXP-GATE",
+            "Gate exposure 28mJ",
+            "SCANNER",
+            "production",
+            {"dose_mj": 28.0, "focus_um": -0.03, "na": 1.35},
+        ),
+        (
+            "COAT-ARF",
+            "ArF resist coat 120nm",
+            "TRACK",
+            "production",
+            {"spin_rpm": 1500, "bake_c": 110},
+        ),
+        (
+            "ETCH-POLY",
+            "Poly gate main etch",
+            "DRYETCH",
+            "production",
+            {"rf_w": 600, "pressure_mtorr": 8, "cl2_sccm": 80},
+        ),
+        (
+            "OX-GATE",
+            "Dry gate oxide 3nm",
+            "FURNACE",
+            "production",
+            {"temp_c": 850, "o2_slm": 10, "minutes": 45},
+        ),
+        ("SEASON-ET", "Etch chamber seasoning", "DRYETCH", "clean", {"minutes": 10}),
+    ]
+):
+    add(
+        "recipe",
+        code=c,
+        name=f"{n} (DEMO)",
+        equipment_type=("equipment_type", et),
+        recipe_type=tp,
+        body=body,
+    )
+    ACTIVATE.append(("recipe", f"{c}@1"))
+for rc, eqs in _rows(
+    [
+        ("EXP-GATE", ["SCN01"]),
+        ("COAT-ARF", ["TRK01"]),
+        ("ETCH-POLY", ["ETC01", "ETC02"]),
+        ("OX-GATE", ["FRN01"]),
+        ("SEASON-ET", ["ETC01", "ETC02"]),
+    ]
+):
+    for eq in eqs:
+        add(
+            "recipe_equipment",
+            recipe=("recipe", f"{rc}@1"),
+            equipment=("equipment", eq),
+            eqp_recipe=f"{rc.replace('-', '_')}_V1",
+        )
+for c, n, op, rc, tgt, lsl, usl, u in _rows(
+    [
+        ("DOSE", "Exposure dose", None, "EXP-GATE", 28.0, 27.0, 29.0, None),
+        ("GATE-CD", "Gate CD after develop", "PH-CD", None, 45.0, 42.0, 48.0, "NM"),
+        ("OVL-X", "Overlay X", "PH-OVL", None, 0.0, -8.0, 8.0, "NM"),
+        ("OX-THK", "Gate oxide thickness", "DF-OX", "OX-GATE", 30.0, 28.5, 31.5, "A"),
+        (
+            "ETCH-RATE",
+            "Poly etch rate",
+            "ET-POLY",
+            "ETCH-POLY",
+            2500.0,
+            2300.0,
+            2700.0,
+            "A",
+        ),
+    ]
+):
+    add(
+        "param_spec",
+        code=c,
+        name=n,
+        target=tgt,
+        lsl=lsl,
+        usl=usl,
+        **({"operation": ("operation", op)} if op else {}),
+        **({"recipe": ("recipe", f"{rc}@1")} if rc else {}),
+        **({"uom": ("uom", u)} if u else {}),
+    )
+for eq, op, rc in _rows(
+    [
+        ("SCN01", "PH-EXPO", "EXP-GATE"),
+        ("TRK01", "PH-COAT", "COAT-ARF"),
+        ("TRK01", "PH-DEV", None),
+        ("ETC01", "ET-POLY", "ETCH-POLY"),
+        ("ETC02", "ET-POLY", "ETCH-POLY"),
+        ("FRN01", "DF-OX", "OX-GATE"),
+        ("CVD01", "TF-DEP", None),
+        ("CMP01", "CMP-OX", None),
+        ("CDS01", "PH-CD", None),
+    ]
+):
+    add(
+        "equipment_capability",
+        equipment=("equipment", eq),
+        operation=("operation", op),
+        qualified_until="2027-06-30",
+        **({"recipe": ("recipe", f"{rc}@1")} if rc else {}),
+    )
+for seq, kind, ref, rc in _rows(
+    [
+        (10, "equipment_group", ("equipment_group", "G-FURN"), "OX-GATE"),
+        (20, "equipment_group", ("equipment_group", "G-CVD"), None),
+        (40, "equipment", ("equipment", "CDS01"), None),
+        (60, "equipment_group", ("equipment_group", "G-ETCH"), "ETCH-POLY"),
+        (60, "material", ("material", "NF3"), None),
+        (90, "equipment", ("equipment", "CMP01"), None),
+        (90, "material", ("material", "SL-CU-01"), None),
+    ]
+):
+    add(
+        "step_resource",
+        route_step=("route_step", f"MCU40-MAIN@1#{seq}"),
+        resource_kind=kind,
+        **{kind: ref},
+        **({"recipe": ("recipe", f"{rc}@1")} if rc else {}),
+    )
+for seq, kind, ref, rc in _rows(
+    [
+        (10, "equipment_group", ("equipment_group", "G-TRACK"), "COAT-ARF"),
+        (20, "equipment", ("equipment", "SCN01"), "EXP-GATE"),
+        (20, "reticle", ("reticle", "RT-A100-PO"), None),
+        (30, "equipment_group", ("equipment_group", "G-TRACK"), None),
+    ]
+):
+    add(
+        "step_resource",
+        route_step=("route_step", f"SUB-PHOTO@1#{seq}"),
+        resource_kind=kind,
+        **{kind: ref},
+        **({"recipe": ("recipe", f"{rc}@1")} if rc else {}),
+    )
+
+
 # ---------------- helpers ----------------
 def _resolve(session: Session, tid: uuid.UUID, ref: Ref) -> Any:
     ent, key = ref
+    if ent == "route_step":  # "ROUTE@v#seq"
+        rkey, _, seq = key.partition("#")
+        st = TABLES["route_step"]
+        rid = _resolve(session, tid, ("route", rkey))
+        return (
+            conn(session)
+            .execute(
+                sa.select(st.c.id).where(st.c.route_id == rid, st.c.seq == int(seq))
+            )
+            .scalar()
+        )
     e = ENTITIES[ent]
     t = TABLES[ent]
     code, _, ver = key.partition("@")
@@ -456,10 +747,10 @@ def _exists(
         f = e.field(k)
         if k == "version":
             stmt = stmt.where(t.c.version == int(values.get("version") or 1))
-        elif f and f.type == "ref":
-            stmt = stmt.where(t.c[f.column] == refs.get(k))
         elif f:
-            stmt = stmt.where(t.c[f.column] == coerce(f, values.get(k)))
+            v = refs.get(k) if f.type == "ref" else coerce(f, values.get(k))
+            col = t.c[f.column]
+            stmt = stmt.where(col.is_(None) if v is None else col == v)
     return conn(session).execute(stmt).first() is not None
 
 
@@ -515,7 +806,7 @@ def remove(session: Session) -> int:
             t = TABLES[e.code]
             demo = sa.cast(t.c.attrs, JSONB)["_demo"].astext == "true"
             try:
-                with session.begin_nested():
+                with c.begin_nested():
                     r = c.execute(sa.delete(t).where(t.c.tenant_id == tid, demo))
                 total += r.rowcount
                 progress = progress or r.rowcount > 0
