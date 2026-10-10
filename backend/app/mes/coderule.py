@@ -120,6 +120,8 @@ def generate(
     rule: dict[str, Any],
     count: int,
     ctx: dict[str, Any] | None = None,
+    *,
+    commit: bool = True,
 ) -> list[str]:
     """Reserve `count` codes (increments the counter atomically)."""
     at = now()
@@ -147,5 +149,6 @@ def generate(
         .where(t.c.id == cur["id"])
         .values(value=cur["value"] + count, updated_at=at)
     )
-    session.commit()
+    if commit:
+        session.commit()
     return codes

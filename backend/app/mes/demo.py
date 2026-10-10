@@ -944,6 +944,37 @@ add(
 # products go active last: activation needs an active default route
 ACTIVATE.extend([("product", "MCU-A100@1"), ("product", "MCU-B200@1")])
 
+# ---------------- work orders + lot start ----------------
+add(
+    "code_rule",
+    code="WO_NO",
+    name="Work order no. (DEMO)",
+    target="work_order",
+    pattern="WO{YY}{MM}{SEQ}",
+    seq_width=4,
+    seq_reset="monthly",
+)
+add(
+    "work_order",
+    code="WO-DEMO-01",
+    product=("product", "MCU-A100@1"),
+    lot_type=("lot_type", "PROD"),
+    planned_qty=50,
+    over_start_limit_pct=4,
+    customer="ACME Semi (DEMO)",
+    order_ref="PO-2026-0815",
+)
+add(
+    "work_order",
+    code="WO-DEMO-02",
+    product=("product", "MCU-B200@1"),
+    lot_type=("lot_type", "PROD"),
+    planned_qty=25,
+    remarks="Draft – not released yet (DEMO)",
+)
+# released + started after seeding: (wo, [(qty, carrier code | None)])
+STARTS = [("WO-DEMO-01", [(25, "FP0001"), (15, None)])]
+
 
 # ---------------- helpers ----------------
 def _resolve(session: Session, tid: uuid.UUID, ref: Ref) -> Any:
@@ -1027,6 +1058,33 @@ def seed(session: Session) -> int:
         )
         if row == "draft":
             set_status(session, tid, ENTITIES[ref[0]], rid, "active", admin)
+    from app.mes import wo as wos
+
+    for code, lots in STARTS:
+        w = _resolve(session, tid, ("work_order", code))
+        row = (
+            conn(session)
+            .execute(
+                sa.select(TABLES["work_order"]).where(TABLES["work_order"].c.id == w)
+            )
+            .mappings()
+            .first()
+        )
+        if not row or row["started_qty"]:
+            continue
+        if row["wo_status"] == "draft":
+            wos.transition(session, tid, row["id"], "release", admin)
+        wos.start(
+            session,
+            tid,
+            row["id"],
+            [
+                {"qty": q, "carrier_id": c and _resolve(session, tid, ("carrier", c))}
+                for q, c in lots
+            ],
+            admin,
+            demo=True,
+        )
     return n
 
 

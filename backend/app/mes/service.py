@@ -122,6 +122,8 @@ def coerce(f: F, v: Any) -> Any:
             if isinstance(v, datetime):
                 return v.time()
             return v if isinstance(v, time) else time.fromisoformat(str(v))
+        case "datetime":
+            return v if isinstance(v, datetime) else datetime.fromisoformat(str(v))
         case "ref":
             return v if isinstance(v, uuid.UUID) else uuid.UUID(str(v))
         case "json":
@@ -136,7 +138,8 @@ def ref_labels(
         return {}
     t = table(target)
     cols = [t.c.id, t.c[target.label_field if target.label_field in t.c else "id"]]
-    if target.has_code:
+    named = target.has_code and target.has_name
+    if named:
         cols.append(t.c.name)
     if target.versioned:
         cols.append(t.c.version)
@@ -166,7 +169,7 @@ def ref_labels(
             lbl += f" · {extra_codes[r[extra.column]]}"
         if target.versioned:
             lbl += f" v{r['version']}"
-        if target.has_code and r["name"] and target.label_field == "code":
+        if named and r["name"] and target.label_field == "code":
             lbl += f" · {r['name']}"
         out[r["id"]] = lbl
     return out
@@ -311,7 +314,7 @@ def validate(
     values: Row = {}
     for f in e.all_fields:
         key = f.column if f.column in data else f.name if f.name in data else None
-        if key is None:
+        if key is None or f.system:
             continue
         try:
             values[f.column] = coerce(f, data[key])
@@ -324,6 +327,14 @@ def validate(
         for f in e.all_fields:
             if merged.get(f.column) is None and f.default is not None:
                 merged[f.column] = values[f.column] = f.default
+    if not errors:
+        before = dict(merged)
+        for fn in VALIDATORS.get(f"{e.code}:prefill", []):
+            try:
+                fn(session, tenant_id, e, merged, existing)
+            except MesError as ex:
+                errors += ex.errors
+        values.update({k: v for k, v in merged.items() if before.get(k) != v})
     for f in e.all_fields:
         if f.default_from and merged.get(f.column) in (None, ""):
             src = merged.get(f.default_from)
@@ -645,6 +656,11 @@ def delete_row(
 ) -> None:
     old = get_row(session, e, tenant_id, rid)
     check_editable(session, tenant_id, e, old)
+    for fn in VALIDATORS.get(f"{e.code}:delete", []):
+        try:
+            fn(session, tenant_id, e, old, old)
+        except MesError as ex:
+            raise http_422(ex.errors) from ex
     t = table(e)
     try:
         with session.begin_nested():

@@ -23,6 +23,7 @@ TENANT_PERMISSIONS: dict[str, str] = {
     "config:write": "Edit system configuration (tenant overrides; platform defaults with a platform role)",
 }
 # MES master data: read/write per module (tenant scope)
+from app.mes.core import EXTRA_PERMISSIONS as _MES_EXTRA  # noqa: E402
 from app.mes.core import MODULES as _MES_MODULES  # noqa: E402
 
 MES_PERMISSIONS: dict[str, str] = {
@@ -30,6 +31,7 @@ MES_PERMISSIONS: dict[str, str] = {
     for m, (lbl, _) in _MES_MODULES.items()
     for a in ("read", "write")
 }
+MES_PERMISSIONS.update(_MES_EXTRA)
 TENANT_PERMISSIONS.update(MES_PERMISSIONS)
 DEFAULT_PERMISSIONS = {**PLATFORM_PERMISSIONS, **TENANT_PERMISSIONS}
 

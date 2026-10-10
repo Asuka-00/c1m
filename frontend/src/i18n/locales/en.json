@@ -439,7 +439,8 @@
       "code_rule": "Preview",
       "uom": "Converter",
       "route": "Flow diagram",
-      "lot_type": "ID preview"
+      "lot_type": "ID preview",
+      "lot": "Lot & route"
     },
     "convertValue": "Value in {{unit}}",
     "convertTo": "Convert to",
@@ -467,6 +468,76 @@
       "parentTypeMismatch": "must match the parent equipment's type (leave blank to inherit)",
       "duplicateDefaultRoute": "the product already has a default route",
       "productNeedsDefaultRoute": "an Active route must be bound as default before activation"
+    },
+    "autoHint": "Leave blank to generate automatically",
+    "currentStep": "Current",
+    "lotFlowHint": "Route of this lot; the current step is highlighted.",
+    "lotRoute": "Route flow",
+    "wo": {
+      "actions": "Work order actions",
+      "startLots": "Start lots",
+      "undoStart": "Undo start",
+      "noActions": "No actions available",
+      "confirmBtn": "Confirm",
+      "undone": "{{count}} lot(s) undone",
+      "action": {
+        "release": "Release",
+        "hold": "Hold",
+        "resume": "Resume",
+        "complete": "Complete",
+        "close": "Close",
+        "cancel": "Cancel work order"
+      },
+      "done": {
+        "release": "Work order released",
+        "hold": "Work order on hold",
+        "resume": "Work order resumed",
+        "complete": "Work order completed",
+        "close": "Work order closed",
+        "cancel": "Work order cancelled"
+      },
+      "confirm": {
+        "release": "Release {{code}}? The product's default active route and versions are frozen on the work order.",
+        "hold": "Put {{code}} on hold? No lots can be started while on hold.",
+        "resume": "Resume {{code}}?",
+        "complete": "Mark {{code}} as completed? No further lots can be started.",
+        "close": "Close {{code}}? This is final.",
+        "cancel": "Cancel {{code}}? This is final.",
+        "undo": "Undo every lot started on {{code}}? Only possible while all lots still wait at the first step; lots and wafers are deleted."
+      }
+    },
+    "start": {
+      "desc": "Split a released work order into lots and start them at the first route step.",
+      "step1": "Choose work order",
+      "step2": "Split & carriers",
+      "step3": "Confirm",
+      "chooseWo": "Released / in-progress work orders",
+      "noWo": "No released work order.",
+      "next": "Next",
+      "back": "Back",
+      "split": "Split into lots",
+      "lotSize": "Wafers per lot (max {{max}})",
+      "qty": "Wafers to start (max {{max}})",
+      "resplit": "Re-split",
+      "lotNo": "Lot no. (preview)",
+      "slots": "Slots",
+      "autoNo": "(auto)",
+      "addLot": "Add lot",
+      "total": "Total {{total}} / max {{max}} wafers",
+      "limit": "Start limit",
+      "limitText": "{{max}} wafers (plan + {{pct}}%), {{remaining}} left",
+      "errNoLots": "Add at least one lot",
+      "errOver": "{{total}} wafers exceed the remaining limit {{max}}",
+      "errQty": "Lot {{n}}: wafers must be 1..{{max}}",
+      "errSlots": "Lot {{n}}: give {{qty}} distinct slots (e.g. 1-25 or 1,3,5)",
+      "errCarrierTwice": "A carrier can hold only one lot",
+      "confirm": "Confirm lot start",
+      "firstStep": "First step",
+      "wafers": "Wafer IDs",
+      "previewNote": "Lot numbers are previews; the final numbers are assigned on confirmation.",
+      "confirmStart": "Start {{count}} lot(s) / {{total}} wafers",
+      "done": "{{count}} lot(s) started",
+      "again": "Start more"
     }
   }
 }

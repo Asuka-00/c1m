@@ -15,4 +15,5 @@ export const COMPONENTS: Record<string, LazyExoticComponent<ComponentType>> = {
   menus: lazy(() => import('@/features/menus')),
   settings: lazy(() => import('@/features/settings')),
   config: lazy(() => import('@/features/config')),
+  'mes-page:lot-start': lazy(() => import('@/features/mes/lot-start')),
 }

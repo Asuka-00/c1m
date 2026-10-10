@@ -5,7 +5,7 @@ from sqlmodel import Session
 
 from app.core.db import engine
 from app.mes.core import TABLES
-from app.mes.demo import DEMO, default_tenant, remove, seed
+from app.mes.demo import DEMO, STARTS, default_tenant, remove, seed
 
 
 def _count(s: Session) -> int:
@@ -29,6 +29,7 @@ def test_seed_and_remove() -> None:
         before = _count(s)
         assert seed(s) == len(DEMO)
         assert seed(s) == 0
-        assert _count(s) == before + len(DEMO)
-        assert remove(s) == len(DEMO)
+        started = sum(len(lots) + sum(q for q, _ in lots) for _, lots in STARTS)
+        assert _count(s) == before + len(DEMO) + started  # + lots / wafers
+        assert remove(s) >= len(DEMO)  # + started demo lots / wafers
         assert _count(s) == before

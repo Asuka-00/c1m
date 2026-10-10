@@ -439,7 +439,8 @@
       "code_rule": "プレビュー",
       "uom": "換算ツール",
       "route": "フロー図",
-      "lot_type": "ID プレビュー"
+      "lot_type": "ID プレビュー",
+      "lot": "ロットとルート"
     },
     "convertValue": "値（{{unit}}）",
     "convertTo": "換算先",
@@ -467,6 +468,76 @@
       "parentTypeMismatch": "親設備の設備タイプと一致する必要があります（空欄で継承）",
       "duplicateDefaultRoute": "この製品には既定ルートがあります",
       "productNeedsDefaultRoute": "有効化の前に有効なルートを既定として割り当てる必要があります"
+    },
+    "autoHint": "空欄の場合は自動採番",
+    "currentStep": "現在",
+    "lotFlowHint": "このロットのルート。現在ステップを強調表示。",
+    "lotRoute": "ルートフロー",
+    "wo": {
+      "actions": "作業指示の操作",
+      "startLots": "ロット投入",
+      "undoStart": "投入取消",
+      "noActions": "操作なし",
+      "confirmBtn": "確認",
+      "undone": "{{count}} ロットを取消しました",
+      "action": {
+        "release": "リリース",
+        "hold": "保留",
+        "resume": "再開",
+        "complete": "完了",
+        "close": "クローズ",
+        "cancel": "作業指示取消"
+      },
+      "done": {
+        "release": "作業指示をリリースしました",
+        "hold": "作業指示を保留しました",
+        "resume": "作業指示を再開しました",
+        "complete": "作業指示を完了しました",
+        "close": "作業指示をクローズしました",
+        "cancel": "作業指示を取消しました"
+      },
+      "confirm": {
+        "release": "{{code}} をリリースしますか？製品の既定ルートと版が作業指示に固定されます。",
+        "hold": "{{code}} を保留しますか？保留中は投入できません。",
+        "resume": "{{code}} を再開しますか？",
+        "complete": "{{code}} を完了にしますか？以降は投入できません。",
+        "close": "{{code}} をクローズしますか？元に戻せません。",
+        "cancel": "{{code}} を取消しますか？元に戻せません。",
+        "undo": "{{code}} の全投入を取消しますか？全ロットが先頭ステップで待機中の場合のみ可能。ロットとウェーハは削除されます。"
+      }
+    },
+    "start": {
+      "desc": "リリース済み作業指示をロットに分割し、先頭ステップに投入します。",
+      "step1": "作業指示を選択",
+      "step2": "分割とキャリア",
+      "step3": "確認",
+      "chooseWo": "リリース済み・生産中の作業指示",
+      "noWo": "リリース済みの作業指示がありません。",
+      "next": "次へ",
+      "back": "戻る",
+      "split": "ロット分割",
+      "lotSize": "ロット当たり枚数（最大 {{max}}）",
+      "qty": "今回の投入枚数（最大 {{max}}）",
+      "resplit": "再分割",
+      "lotNo": "ロット番号（プレビュー）",
+      "slots": "スロット",
+      "autoNo": "（自動）",
+      "addLot": "ロット追加",
+      "total": "合計 {{total}} / 最大 {{max}} 枚",
+      "limit": "投入上限",
+      "limitText": "{{max}} 枚（計画 + {{pct}}%）、残り {{remaining}} 枚",
+      "errNoLots": "ロットを 1 つ以上追加してください",
+      "errOver": "{{total}} 枚が残り上限 {{max}} を超えています",
+      "errQty": "ロット {{n}}：枚数は 1..{{max}}",
+      "errSlots": "ロット {{n}}：重複しない {{qty}} 個のスロット（例：1-25、1,3,5）",
+      "errCarrierTwice": "1 つのキャリアには 1 ロットのみ",
+      "confirm": "投入の確認",
+      "firstStep": "先頭ステップ",
+      "wafers": "ウェーハ ID",
+      "previewNote": "ロット番号はプレビューです。確定時に正式採番されます。",
+      "confirmStart": "{{count}} ロット / {{total}} 枚を投入",
+      "done": "{{count}} ロットを投入しました",
+      "again": "続けて投入"
     }
   }
 }

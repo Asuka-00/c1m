@@ -3,7 +3,17 @@ the "en|zh|ja" labels in the specs)."""
 
 from typing import Any
 
-from app.mes.core import ENTITIES, ENUMS, MODULES, Entity, label_of, perm, split_label
+from app.mes.core import (
+    ENTITIES,
+    ENUMS,
+    GROUP_LABELS,
+    MODULES,
+    PAGES,
+    Entity,
+    label_of,
+    perm,
+    split_label,
+)
 
 LANGS = ("zh-CN", "ja", "en")
 
@@ -19,6 +29,8 @@ def field_meta(e: Entity) -> list[dict[str, Any]]:
                 "required": f.required,
                 "required_when": f.required_when,
                 "default_from": f.default_from,
+                "auto": f.auto,
+                "system": f.system,
                 "enum": f.enum,
                 "ref": f.ref,
                 "list": f.list,
@@ -47,8 +59,8 @@ def entity_meta(e: Entity) -> dict[str, Any]:
         "label_field": e.label_field,
         "sort_default": e.sort_default,
         "natural_key": list(e.natural_key),
-        "read": perm(e.module, "read"),
-        "write": perm(e.module, "write"),
+        "read": perm(e.pmod, "read"),
+        "write": perm(e.pmod, "write"),
         "fields": field_meta(e),
     }
 
@@ -84,11 +96,18 @@ def i18n_bundle(lang: str) -> dict[str, Any]:
             helps[e.code] = hs
         menu[f"mes-{e.code}"] = pick(e.label)
     for m, (lbl, _) in MODULES.items():
-        menu[f"mes-g-{m}"] = {
-            "zh-CN": "MES 建模 · ",
-            "ja": "MES モデリング · ",
-            "en": "MES · ",
-        }[lang] + pick(lbl)
+        menu[f"mes-g-{m}"] = (
+            pick(GROUP_LABELS[m])
+            if m in GROUP_LABELS
+            else {
+                "zh-CN": "MES 建模 · ",
+                "ja": "MES モデリング · ",
+                "en": "MES · ",
+            }[lang]
+            + pick(lbl)
+        )
+    for key, lbl in PAGES.items():
+        menu[key] = pick(lbl)
     return {
         "mes": {
             "module": {m: pick(lbl) for m, (lbl, _) in MODULES.items()},

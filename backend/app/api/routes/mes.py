@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 from app.api.deps import CurrentTenant, SessionDep
 from app.api.pagination import ListParamsDep
 from app.mes import coderule
-from app.mes.core import ENTITIES, Entity, perm
+from app.mes.core import ENTITIES, EXTRA_PERMISSIONS, Entity, perm
 from app.mes.excel import export_xlsx, import_xlsx
 from app.mes.meta import all_meta
 from app.mes.routing import reorder_steps
@@ -41,7 +41,7 @@ RESERVED = {"page", "page_size", "skip", "limit", "sort_by", "sort_order", "q"}
 
 def _ent(ctx: TenantContext, code: str, action: Literal["read", "write"]) -> Entity:
     e = get_entity(code)
-    if not ctx.can(perm(e.module, action)):
+    if not ctx.can(perm(e.pmod, action)):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     return e
 
@@ -57,6 +57,7 @@ def mes_meta(ctx: CurrentTenant) -> Any:
     """Entity metadata (fields, enums, refs, flags) the frontend renders from;
     each entity carries `can_read` / `can_write` for the current user."""
     meta = all_meta()
+    meta["perms"] = [p for p in EXTRA_PERMISSIONS if ctx.can(p)]
     for m in meta["entities"]:
         m["can_read"] = ctx.can(m["read"])
         m["can_write"] = ctx.can(m["write"])

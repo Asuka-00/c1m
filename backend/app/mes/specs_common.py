@@ -47,6 +47,14 @@ ENUMS.update(
             ("status", "Status change|状态变更|ステータス変更"),
             ("import", "Import|导入|インポート"),
             ("new_version", "New version|新版本|新バージョン"),
+            ("release", "Release|下达|リリース"),
+            ("hold", "Hold|暂停|保留"),
+            ("resume", "Resume|恢复|再開"),
+            ("complete", "Complete|完工|完了"),
+            ("close", "Close|关闭|クローズ"),
+            ("cancel", "Cancel|取消|取消"),
+            ("start", "Lot start|投产|投入"),
+            ("undo_start", "Undo start|撤销投产|投入取消"),
         ],
         "seq_reset": [
             ("never", "Never|不重置|リセットしない"),
@@ -60,6 +68,7 @@ ENUMS.update(
             ("carrier", "Carrier ID|载具号|キャリア ID"),
             ("material", "Material lot|物料批号|資材ロット"),
             ("equipment", "Equipment ID|设备编号|設備 ID"),
+            ("work_order", "Work order no.|工单号|作業指示番号"),
             ("other", "Other|其他|その他"),
         ],
         "attr_type": [

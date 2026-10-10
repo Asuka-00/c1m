@@ -34,6 +34,7 @@ import { cellValue } from './cells'
 import { EntityForm } from './entity-form'
 import { entityLabel, fieldLabel, rowLabel, statusLabel } from './labels'
 import { mesErrorMessage } from './required'
+import { CELLS, ROW_RULES } from './row-rules'
 import { useMesFilters } from './use-mes-filters'
 
 const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'outline'> = {
@@ -152,7 +153,8 @@ export function EntityTable({
       .map((f) => ({
         header: fieldLabel(e, f),
         sortKey: ['json', 'ref', 'text'].includes(f.type) ? undefined : f.name,
-        cell: (r: MesRow) => cellValue(e, r, f.name),
+        cell: (r: MesRow) =>
+          CELLS[e.code]?.[f.name]?.(r) ?? cellValue(e, r, f.name),
       })),
     ...(e.versioned
       ? [
@@ -182,8 +184,16 @@ export function EntityTable({
       className: 'w-0',
       cell: (r: MesRow) => (
         <RowActions
-          onEdit={editable(r) ? () => s.openEdit(r) : undefined}
-          onDelete={editable(r) ? () => s.openDelete(r) : undefined}
+          onEdit={
+            editable(r) && (ROW_RULES[e.code]?.edit?.(r) ?? true)
+              ? () => s.openEdit(r)
+              : undefined
+          }
+          onDelete={
+            editable(r) && (ROW_RULES[e.code]?.remove?.(r) ?? true)
+              ? () => s.openDelete(r)
+              : undefined
+          }
         >
           {extraActions?.(r)}
           {onOpenChildren && (

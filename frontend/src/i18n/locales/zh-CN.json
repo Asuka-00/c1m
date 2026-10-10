@@ -439,7 +439,8 @@
       "code_rule": "预览",
       "uom": "换算器",
       "route": "流程图",
-      "lot_type": "编号预览"
+      "lot_type": "编号预览",
+      "lot": "批次与流程"
     },
     "convertValue": "数值（{{unit}}）",
     "convertTo": "换算为",
@@ -467,6 +468,76 @@
       "parentTypeMismatch": "必须与上级设备的设备类型一致（留空则自动继承）",
       "duplicateDefaultRoute": "该产品已有默认流程",
       "productNeedsDefaultRoute": "生效前须绑定一个已生效的默认流程"
+    },
+    "autoHint": "留空则自动生成",
+    "currentStep": "当前",
+    "lotFlowHint": "该批次的工艺流程，当前步骤已高亮。",
+    "lotRoute": "工艺流程",
+    "wo": {
+      "actions": "工单操作",
+      "startLots": "投产批次",
+      "undoStart": "撤销投产",
+      "noActions": "无可用操作",
+      "confirmBtn": "确认",
+      "undone": "已撤销 {{count}} 个批次",
+      "action": {
+        "release": "下达",
+        "hold": "暂停",
+        "resume": "恢复",
+        "complete": "完工",
+        "close": "关闭",
+        "cancel": "取消工单"
+      },
+      "done": {
+        "release": "工单已下达",
+        "hold": "工单已暂停",
+        "resume": "工单已恢复",
+        "complete": "工单已完工",
+        "close": "工单已关闭",
+        "cancel": "工单已取消"
+      },
+      "confirm": {
+        "release": "确认下达 {{code}}？产品的默认生效流程及版本将快照到工单。",
+        "hold": "确认暂停 {{code}}？暂停期间不能投产。",
+        "resume": "确认恢复 {{code}}？",
+        "complete": "确认 {{code}} 完工？之后不能再投产。",
+        "close": "确认关闭 {{code}}？关闭后不可恢复。",
+        "cancel": "确认取消 {{code}}？取消后不可恢复。",
+        "undo": "撤销 {{code}} 的全部投产？仅当所有批次仍在首步骤等待时可撤销，批次与晶圆将被删除。"
+      }
+    },
+    "start": {
+      "desc": "将已下达工单拆分为批次，并投产到流程首步骤。",
+      "step1": "选择工单",
+      "step2": "拆批与载具",
+      "step3": "确认投产",
+      "chooseWo": "已下达 / 生产中的工单",
+      "noWo": "没有已下达的工单。",
+      "next": "下一步",
+      "back": "上一步",
+      "split": "拆分批次",
+      "lotSize": "每批片数（最多 {{max}}）",
+      "qty": "本次投产片数（最多 {{max}}）",
+      "resplit": "重新拆分",
+      "lotNo": "批次号（预览）",
+      "slots": "槽位",
+      "autoNo": "（自动）",
+      "addLot": "添加批次",
+      "total": "合计 {{total}} / 最多 {{max}} 片",
+      "limit": "投产上限",
+      "limitText": "{{max}} 片（计划 + {{pct}}%），剩余 {{remaining}} 片",
+      "errNoLots": "至少需要一个批次",
+      "errOver": "{{total}} 片超出剩余可投上限 {{max}}",
+      "errQty": "批次 {{n}}：片数须为 1..{{max}}",
+      "errSlots": "批次 {{n}}：须填写 {{qty}} 个不重复槽位（如 1-25 或 1,3,5）",
+      "errCarrierTwice": "一个载具只能装一个批次",
+      "confirm": "确认投产",
+      "firstStep": "首步骤",
+      "wafers": "晶圆号",
+      "previewNote": "批次号为预览，确认投产时正式分配。",
+      "confirmStart": "投产 {{count}} 个批次 / {{total}} 片",
+      "done": "已投产 {{count}} 个批次",
+      "again": "继续投产"
     }
   }
 }

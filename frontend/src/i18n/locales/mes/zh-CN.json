@@ -7,7 +7,8 @@
       "product": "产品与物料",
       "process": "工艺",
       "quality": "质量",
-      "lot": "批次与晶圆规则"
+      "lot": "批次与晶圆规则",
+      "wo": "工单"
     },
     "entity": {
       "dict_type": "数据字典",
@@ -55,7 +56,10 @@
       "lot_priority": "批次优先级",
       "lot_type": "批次类型",
       "split_merge_rule": "分批合批规则",
-      "qtime_rule": "Q-Time 规则"
+      "qtime_rule": "Q-Time 规则",
+      "work_order": "工单",
+      "lot": "批次",
+      "wafer": "晶圆"
     },
     "field": {
       "dict_type": {
@@ -463,6 +467,53 @@
         "action": "超时动作",
         "reason": "原因代码",
         "description": "描述"
+      },
+      "work_order": {
+        "code": "工单号",
+        "product": "产品",
+        "route": "流程（默认，下达时快照）",
+        "product_version": "产品版本",
+        "route_version": "流程版本",
+        "lot_type": "批次类型",
+        "priority": "优先级",
+        "planned_qty": "计划片数",
+        "over_start_limit_pct": "超投上限（%）",
+        "started_qty": "已投片数",
+        "planned_start": "计划开工",
+        "due_date": "交期",
+        "customer": "客户",
+        "order_ref": "客户订单号",
+        "remarks": "备注",
+        "wo_status": "状态",
+        "held_from": "暂停前状态",
+        "released_at": "下达时间",
+        "released_by": "下达人",
+        "description": "描述"
+      },
+      "lot": {
+        "code": "批次号",
+        "work_order": "工单",
+        "product": "产品",
+        "route": "流程",
+        "lot_type": "批次类型",
+        "priority": "优先级",
+        "qty": "片数",
+        "site": "工厂",
+        "current_step": "当前步骤",
+        "lot_status": "状态",
+        "carrier": "载具",
+        "source_ref": "来源晶圆 / 物料批次",
+        "started_at": "投产时间",
+        "started_by": "投产人",
+        "description": "描述"
+      },
+      "wafer": {
+        "code": "晶圆号",
+        "lot": "批次",
+        "slot": "槽位",
+        "wafer_status": "状态",
+        "source_ref": "来源晶圆",
+        "description": "描述"
       }
     },
     "help": {
@@ -480,6 +531,10 @@
       },
       "sampling_rule": {
         "fixed_slots": "逗号分隔的槽位号，例如 1,13,25"
+      },
+      "work_order": {
+        "priority": "留空则使用批次类型的默认优先级",
+        "over_start_limit_pct": "投产片数最多可超出计划片数的百分比"
       }
     },
     "enum": {
@@ -494,7 +549,15 @@
         "delete": "删除",
         "status": "状态变更",
         "import": "导入",
-        "new_version": "新版本"
+        "new_version": "新版本",
+        "release": "下达",
+        "hold": "暂停",
+        "resume": "恢复",
+        "complete": "完工",
+        "close": "关闭",
+        "cancel": "取消",
+        "start": "投产",
+        "undo_start": "撤销投产"
       },
       "seq_reset": {
         "never": "不重置",
@@ -508,6 +571,7 @@
         "carrier": "载具号",
         "material": "物料批号",
         "equipment": "设备编号",
+        "work_order": "工单号",
         "other": "其他"
       },
       "attr_type": {
@@ -684,6 +748,27 @@
         "hold": "冻结批次",
         "rework": "返工",
         "scrap": "报废"
+      },
+      "wo_status": {
+        "draft": "草稿",
+        "released": "已下达",
+        "in_progress": "生产中",
+        "on_hold": "暂停",
+        "completed": "已完工",
+        "closed": "已关闭",
+        "cancelled": "已取消"
+      },
+      "lot_status": {
+        "waiting": "等待",
+        "processing": "加工中",
+        "on_hold": "暂停",
+        "completed": "已完成",
+        "scrapped": "已报废"
+      },
+      "wafer_status": {
+        "waiting": "等待",
+        "processing": "加工中",
+        "scrapped": "已报废"
       }
     }
   },
@@ -734,12 +819,17 @@
     "mes-lot_type": "批次类型",
     "mes-split_merge_rule": "分批合批规则",
     "mes-qtime_rule": "Q-Time 规则",
+    "mes-work_order": "工单",
+    "mes-lot": "批次",
+    "mes-wafer": "晶圆",
     "mes-g-common": "MES 建模 · 通用",
     "mes-g-org": "MES 建模 · 组织",
     "mes-g-equipment": "MES 建模 · 设备",
     "mes-g-product": "MES 建模 · 产品与物料",
     "mes-g-process": "MES 建模 · 工艺",
     "mes-g-quality": "MES 建模 · 质量",
-    "mes-g-lot": "MES 建模 · 批次与晶圆规则"
+    "mes-g-lot": "MES 建模 · 批次与晶圆规则",
+    "mes-g-wo": "MES 工单",
+    "mes-lot-start": "批次投产"
   }
 }

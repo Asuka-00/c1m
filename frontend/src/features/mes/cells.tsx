@@ -1,4 +1,4 @@
-import { t } from '@/i18n'
+import { fmtDateTime, t } from '@/i18n'
 import type { MesEntity, MesRow } from '@/lib/api/mes'
 import { Badge } from '@/components/ui/badge'
 import { enumLabel } from './labels'
@@ -28,6 +28,8 @@ export function cellValue(
       )
     case 'time':
       return String(v).slice(0, 5)
+    case 'datetime':
+      return fmtDateTime(String(v))
     default:
       return name === 'code' ? (
         <span className='font-medium'>{String(v)}</span>

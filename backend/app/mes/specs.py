@@ -5,6 +5,7 @@ from app.mes import (  # noqa: F401  (registers entities)
     specs_p2,
     specs_p3,
     specs_p4,
+    specs_wo,
 )
 from app.mes.core import ENTITIES, ENUMS, build_all
 

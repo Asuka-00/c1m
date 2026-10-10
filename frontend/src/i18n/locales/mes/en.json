@@ -7,7 +7,8 @@
       "product": "Product & material",
       "process": "Process",
       "quality": "Quality",
-      "lot": "Lot & wafer rules"
+      "lot": "Lot & wafer rules",
+      "wo": "Work orders"
     },
     "entity": {
       "dict_type": "Dictionary",
@@ -55,7 +56,10 @@
       "lot_priority": "Lot priority",
       "lot_type": "Lot type",
       "split_merge_rule": "Split / merge rule",
-      "qtime_rule": "Q-Time rule"
+      "qtime_rule": "Q-Time rule",
+      "work_order": "Work order",
+      "lot": "Lot",
+      "wafer": "Wafer"
     },
     "field": {
       "dict_type": {
@@ -463,6 +467,53 @@
         "action": "On violation",
         "reason": "Reason code",
         "description": "Description"
+      },
+      "work_order": {
+        "code": "WO no.",
+        "product": "Product",
+        "route": "Route (default, at release)",
+        "product_version": "Product ver.",
+        "route_version": "Route ver.",
+        "lot_type": "Lot type",
+        "priority": "Priority",
+        "planned_qty": "Planned wafers",
+        "over_start_limit_pct": "Over-start limit (%)",
+        "started_qty": "Started wafers",
+        "planned_start": "Planned start",
+        "due_date": "Due date",
+        "customer": "Customer",
+        "order_ref": "Customer order ref.",
+        "remarks": "Remarks",
+        "wo_status": "Status",
+        "held_from": "Held from",
+        "released_at": "Released at",
+        "released_by": "Released by",
+        "description": "Description"
+      },
+      "lot": {
+        "code": "Lot no.",
+        "work_order": "Work order",
+        "product": "Product",
+        "route": "Route",
+        "lot_type": "Lot type",
+        "priority": "Priority",
+        "qty": "Wafers",
+        "site": "Site",
+        "current_step": "Current step",
+        "lot_status": "Status",
+        "carrier": "Carrier",
+        "source_ref": "Source wafer / material batch",
+        "started_at": "Started at",
+        "started_by": "Started by",
+        "description": "Description"
+      },
+      "wafer": {
+        "code": "Wafer ID",
+        "lot": "Lot",
+        "slot": "Slot",
+        "wafer_status": "Status",
+        "source_ref": "Source wafer",
+        "description": "Description"
       }
     },
     "help": {
@@ -480,6 +531,10 @@
       },
       "sampling_rule": {
         "fixed_slots": "Comma separated slot numbers, e.g. 1,13,25"
+      },
+      "work_order": {
+        "priority": "Blank: the lot type's default priority",
+        "over_start_limit_pct": "Started wafers may exceed the plan by at most this percentage"
       }
     },
     "enum": {
@@ -494,7 +549,15 @@
         "delete": "Delete",
         "status": "Status change",
         "import": "Import",
-        "new_version": "New version"
+        "new_version": "New version",
+        "release": "Release",
+        "hold": "Hold",
+        "resume": "Resume",
+        "complete": "Complete",
+        "close": "Close",
+        "cancel": "Cancel",
+        "start": "Lot start",
+        "undo_start": "Undo start"
       },
       "seq_reset": {
         "never": "Never",
@@ -508,6 +571,7 @@
         "carrier": "Carrier ID",
         "material": "Material lot",
         "equipment": "Equipment ID",
+        "work_order": "Work order no.",
         "other": "Other"
       },
       "attr_type": {
@@ -684,6 +748,27 @@
         "hold": "Hold lot",
         "rework": "Rework",
         "scrap": "Scrap"
+      },
+      "wo_status": {
+        "draft": "Draft",
+        "released": "Released",
+        "in_progress": "In progress",
+        "on_hold": "On hold",
+        "completed": "Completed",
+        "closed": "Closed",
+        "cancelled": "Cancelled"
+      },
+      "lot_status": {
+        "waiting": "Waiting",
+        "processing": "Processing",
+        "on_hold": "On hold",
+        "completed": "Completed",
+        "scrapped": "Scrapped"
+      },
+      "wafer_status": {
+        "waiting": "Waiting",
+        "processing": "Processing",
+        "scrapped": "Scrapped"
       }
     }
   },
@@ -734,12 +819,17 @@
     "mes-lot_type": "Lot type",
     "mes-split_merge_rule": "Split / merge rule",
     "mes-qtime_rule": "Q-Time rule",
+    "mes-work_order": "Work order",
+    "mes-lot": "Lot",
+    "mes-wafer": "Wafer",
     "mes-g-common": "MES · Common",
     "mes-g-org": "MES · Organization",
     "mes-g-equipment": "MES · Equipment",
     "mes-g-product": "MES · Product & material",
     "mes-g-process": "MES · Process",
     "mes-g-quality": "MES · Quality",
-    "mes-g-lot": "MES · Lot & wafer rules"
+    "mes-g-lot": "MES · Lot & wafer rules",
+    "mes-g-wo": "MES work orders",
+    "mes-lot-start": "Lot start"
   }
 }

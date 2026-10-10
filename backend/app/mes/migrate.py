@@ -19,11 +19,14 @@ def disable_rls(op: Any, tables: list[str]) -> None:
             op.execute(stmt)
 
 
-def add_permissions(op: Any, modules: list[str]) -> None:
-    """mes.<module>:read/write (tenant scope) -> platform admin, every tenant's
-    owner/admin; members get :read."""
+def add_permissions(
+    op: Any, modules: list[str], extra: list[str] | None = None
+) -> None:
+    """mes.<module>:read/write (+ extra codes, tenant scope) -> platform admin,
+    every tenant's owner/admin; members get :read."""
     conn = op.get_bind()
     codes = [f"mes.{m}:{a}" for m in modules for a in ("read", "write")]
+    codes += extra or []
     for c in codes:
         conn.execute(
             sa.text(
@@ -45,8 +48,11 @@ def add_permissions(op: Any, modules: list[str]) -> None:
     )
 
 
-def remove_permissions(op: Any, modules: list[str]) -> None:
+def remove_permissions(
+    op: Any, modules: list[str], extra: list[str] | None = None
+) -> None:
     codes = [f"mes.{m}:{a}" for m in modules for a in ("read", "write")]
+    codes += extra or []
     conn = op.get_bind()
     conn.execute(sa.text("DELETE FROM permission WHERE code = ANY(:c)"), {"c": codes})
     conn.execute(

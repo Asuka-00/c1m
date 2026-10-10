@@ -38,7 +38,14 @@ const condText = (e: MesEntity, c: { field: MesField; value: unknown }) =>
 export function validateRequired(e: MesEntity, v: V, skip: Set<string>) {
   const errs: Record<string, string> = {}
   for (const f of e.fields) {
-    if (skip.has(f.column) || f.default_from || f.type === 'bool') continue
+    if (
+      skip.has(f.column) ||
+      f.default_from ||
+      f.auto ||
+      f.system ||
+      f.type === 'bool'
+    )
+      continue
     const by = requiredBy(e, f, v)
     if (by && blank(v[f.column]))
       errs[f.name] = by === true ? t('mes.err.required') : condText(e, by)

@@ -59,7 +59,7 @@ function initialValues(e: MesEntity, row: MesRow | null, preset: V): V {
 function toPayload(e: MesEntity, v: V, hidden: Set<string>): V {
   const out: V = {}
   for (const f of e.fields) {
-    if (hidden.has(f.column) && v[f.column] === '') continue
+    if (f.system || (hidden.has(f.column) && v[f.column] === '')) continue
     const x = v[f.column]
     if (f.type === 'json') {
       out[f.column] = x === '' ? null : JSON.parse(String(x))
@@ -170,7 +170,7 @@ function FormBody({
     if (!row) Object.assign(body, preset)
     await onSubmit(body)
   }
-  const fields = e.fields.filter((f) => !hidden.has(f.column))
+  const fields = e.fields.filter((f) => !hidden.has(f.column) && !f.system)
   return (
     <form onSubmit={submit} noValidate className='space-y-4'>
       <DialogHeader>
@@ -197,7 +197,7 @@ function FormBody({
           >
             <Label htmlFor={`f-${f.name}`}>
               {fieldLabel(e, f)}
-              {requiredBy(e, f, v) && !f.default_from && (
+              {requiredBy(e, f, v) && !f.default_from && !f.auto && (
                 <span className='text-destructive'> *</span>
               )}
             </Label>
@@ -212,6 +212,11 @@ function FormBody({
                   {requiredHint(e, f, v)}
                 </p>
               )
+            )}
+            {f.auto && !row && (
+              <p className='text-xs text-muted-foreground'>
+                {t('mes.autoHint')}
+              </p>
             )}
             {f.default_from && (
               <p className='text-xs text-muted-foreground'>

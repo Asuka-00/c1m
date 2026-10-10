@@ -7,7 +7,8 @@
       "product": "製品・資材",
       "process": "プロセス",
       "quality": "品質",
-      "lot": "ロット・ウェーハ規則"
+      "lot": "ロット・ウェーハ規則",
+      "wo": "作業指示"
     },
     "entity": {
       "dict_type": "データ辞書",
@@ -55,7 +56,10 @@
       "lot_priority": "ロット優先度",
       "lot_type": "ロットタイプ",
       "split_merge_rule": "分割・統合規則",
-      "qtime_rule": "Q タイム規則"
+      "qtime_rule": "Q タイム規則",
+      "work_order": "作業指示",
+      "lot": "ロット",
+      "wafer": "ウェーハ"
     },
     "field": {
       "dict_type": {
@@ -463,6 +467,53 @@
         "action": "違反時処置",
         "reason": "理由コード",
         "description": "説明"
+      },
+      "work_order": {
+        "code": "作業指示番号",
+        "product": "製品",
+        "route": "ルート（既定・リリース時）",
+        "product_version": "製品版",
+        "route_version": "ルート版",
+        "lot_type": "ロットタイプ",
+        "priority": "優先度",
+        "planned_qty": "計画枚数",
+        "over_start_limit_pct": "超過投入上限（%）",
+        "started_qty": "投入済枚数",
+        "planned_start": "計画開始日",
+        "due_date": "納期",
+        "customer": "顧客",
+        "order_ref": "顧客注文番号",
+        "remarks": "備考",
+        "wo_status": "状態",
+        "held_from": "保留前状態",
+        "released_at": "リリース日時",
+        "released_by": "リリース者",
+        "description": "説明"
+      },
+      "lot": {
+        "code": "ロット番号",
+        "work_order": "作業指示",
+        "product": "製品",
+        "route": "ルート",
+        "lot_type": "ロットタイプ",
+        "priority": "優先度",
+        "qty": "枚数",
+        "site": "工場",
+        "current_step": "現在ステップ",
+        "lot_status": "状態",
+        "carrier": "キャリア",
+        "source_ref": "元ウェーハ・資材ロット",
+        "started_at": "投入日時",
+        "started_by": "投入者",
+        "description": "説明"
+      },
+      "wafer": {
+        "code": "ウェーハ ID",
+        "lot": "ロット",
+        "slot": "スロット",
+        "wafer_status": "状態",
+        "source_ref": "元ウェーハ",
+        "description": "説明"
       }
     },
     "help": {
@@ -480,6 +531,10 @@
       },
       "sampling_rule": {
         "fixed_slots": "カンマ区切りのスロット番号（例：1,13,25）"
+      },
+      "work_order": {
+        "priority": "空欄：ロットタイプの既定優先度",
+        "over_start_limit_pct": "投入枚数が計画を超えてよい割合"
       }
     },
     "enum": {
@@ -494,7 +549,15 @@
         "delete": "削除",
         "status": "ステータス変更",
         "import": "インポート",
-        "new_version": "新バージョン"
+        "new_version": "新バージョン",
+        "release": "リリース",
+        "hold": "保留",
+        "resume": "再開",
+        "complete": "完了",
+        "close": "クローズ",
+        "cancel": "取消",
+        "start": "投入",
+        "undo_start": "投入取消"
       },
       "seq_reset": {
         "never": "リセットしない",
@@ -508,6 +571,7 @@
         "carrier": "キャリア ID",
         "material": "資材ロット",
         "equipment": "設備 ID",
+        "work_order": "作業指示番号",
         "other": "その他"
       },
       "attr_type": {
@@ -684,6 +748,27 @@
         "hold": "ロット保留",
         "rework": "リワーク",
         "scrap": "スクラップ"
+      },
+      "wo_status": {
+        "draft": "下書き",
+        "released": "リリース済",
+        "in_progress": "生産中",
+        "on_hold": "保留中",
+        "completed": "完了",
+        "closed": "クローズ",
+        "cancelled": "取消"
+      },
+      "lot_status": {
+        "waiting": "待機",
+        "processing": "処理中",
+        "on_hold": "保留中",
+        "completed": "完了",
+        "scrapped": "廃棄"
+      },
+      "wafer_status": {
+        "waiting": "待機",
+        "processing": "処理中",
+        "scrapped": "廃棄"
       }
     }
   },
@@ -734,12 +819,17 @@
     "mes-lot_type": "ロットタイプ",
     "mes-split_merge_rule": "分割・統合規則",
     "mes-qtime_rule": "Q タイム規則",
+    "mes-work_order": "作業指示",
+    "mes-lot": "ロット",
+    "mes-wafer": "ウェーハ",
     "mes-g-common": "MES モデリング · 共通",
     "mes-g-org": "MES モデリング · 組織",
     "mes-g-equipment": "MES モデリング · 設備",
     "mes-g-product": "MES モデリング · 製品・資材",
     "mes-g-process": "MES モデリング · プロセス",
     "mes-g-quality": "MES モデリング · 品質",
-    "mes-g-lot": "MES モデリング · ロット・ウェーハ規則"
+    "mes-g-lot": "MES モデリング · ロット・ウェーハ規則",
+    "mes-g-wo": "MES 作業指示",
+    "mes-lot-start": "ロット投入"
   }
 }

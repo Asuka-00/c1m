@@ -46,7 +46,7 @@ import { enumLabel } from './labels'
 import { mesErrorMessage } from './required'
 import { useMesEntity } from './use-mes-meta'
 
-type StepData = { step: MesRow; selected: boolean }
+type StepData = { step: MesRow; selected: boolean; current?: boolean }
 type RefData = {
   label: string
   kind: 'sub' | 'rework'
@@ -66,7 +66,9 @@ function StepNode({ data }: NodeProps<Node<StepData>>) {
       className={cn(
         'rounded-lg border-2 bg-card px-3 py-2 text-xs shadow-sm',
         sub ? 'border-primary/60 bg-primary/5' : 'border-border',
-        data.selected && 'ring-2 ring-primary'
+        data.selected && 'ring-2 ring-primary',
+        data.current &&
+          'border-amber-500 bg-amber-50 ring-4 ring-amber-400/60 dark:bg-amber-950'
       )}
       style={{ width: W }}
       data-testid={`step-${String(s.seq)}`}
@@ -84,6 +86,11 @@ function StepNode({ data }: NodeProps<Node<StepData>>) {
         <Badge variant='outline' className='text-[10px]'>
           {enumLabel('step_type', String(s.step_type))}
         </Badge>
+        {data.current && (
+          <Badge className='bg-amber-500 text-[10px] text-white'>
+            {t('mes.currentStep')}
+          </Badge>
+        )}
         {!!s.is_optional && (
           <Badge variant='secondary' className='text-[10px]'>
             {t('mes.field.route_step.is_optional')}
@@ -181,12 +188,22 @@ function useRouteSteps(routeId: string | undefined) {
  *  flow, sub-route calls, rework loops and labelled branches. Draft: connect a
  *  step to another step (branch) or to a rework route, delete edges, add /
  *  edit / delete / reorder steps in the side panel. Active/Inactive: read-only. */
-export function RouteFlow({ row }: { row: MesRow }) {
+export function RouteFlow({
+  row,
+  readOnly = false,
+  highlight = null,
+}: {
+  row: MesRow
+  readOnly?: boolean
+  /** route step id to highlight (e.g. a lot's current step) */
+  highlight?: string | null
+}) {
   const qc = useQueryClient()
   const tk = useTenantKey()
   const { entity: stepEntity } = useMesEntity('route_step')
   const { entity: routeEntity } = useMesEntity('route')
-  const editable = row.status === 'draft' && !!routeEntity?.can_write
+  const editable =
+    !readOnly && row.status === 'draft' && !!routeEntity?.can_write
   const steps = useRouteSteps(row.id)
   const list = useMemo(() => steps.data?.data ?? [], [steps.data])
   const subIds = [
@@ -294,7 +311,11 @@ export function RouteFlow({ row }: { row: MesRow }) {
         id,
         type: 'step',
         position: { x: 0, y: 0 },
-        data: { step: s, selected: selected === s.id },
+        data: {
+          step: s,
+          selected: selected === s.id,
+          current: highlight === s.id,
+        },
       })
       es.push({
         id: `m-${prev}-${id}`,
@@ -425,7 +446,7 @@ export function RouteFlow({ row }: { row: MesRow }) {
           editable && ['branch', 'rework'].includes(String(e.data?.kind)),
       })),
     }
-  }, [list, subs.data, reworks.data, editable, selected])
+  }, [list, subs.data, reworks.data, editable, selected, highlight])
 
   const stepOf = (nodeId: string) => list.find((s) => `s-${s.id}` === nodeId)
   const onConnect = (c: Connection) => {
@@ -470,7 +491,11 @@ export function RouteFlow({ row }: { row: MesRow }) {
       <div className='flex flex-wrap items-center gap-2'>
         <StatusBadge status={String(row.status)} />
         <span className='text-sm text-muted-foreground'>
-          {editable ? t('mes.flowDraftHint') : t('mes.routeLockedHint')}
+          {readOnly
+            ? t('mes.lotFlowHint')
+            : editable
+              ? t('mes.flowDraftHint')
+              : t('mes.routeLockedHint')}
         </span>
         {editable && (
           <Button
