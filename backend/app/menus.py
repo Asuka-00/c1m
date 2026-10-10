@@ -2,88 +2,69 @@
 
 from sqlmodel import Session, select
 
+from app.menu_layout import GROUPS, ITEMS, OBSOLETE_KEYS, OBSOLETE_PREFIXES
 from app.models import Menu, MenuNode
 
-# key, parent key, title, path, icon, component, order, permission
-DEFAULT_MENUS: list[
-    tuple[str, str | None, str, str | None, str | None, str | None, int, str | None]
-] = [
-    ("general", None, "General", None, None, None, 0, None),
-    ("dashboard", "general", "Dashboard", "/", "LayoutDashboard", "dashboard", 0, None),
-    ("tenant", None, "Tenant", None, None, None, 10, None),
-    ("members", "tenant", "Members", "/members", "Users", "members", 0, "members:read"),
-    (
-        "tenant-roles",
-        "tenant",
-        "Tenant roles",
-        "/tenant-roles",
-        "ShieldCheck",
-        "tenant-roles",
-        10,
-        "members:read",
-    ),
-    ("admin", None, "Administration", None, None, None, 20, None),
-    ("users", "admin", "Users", "/users", "UserCog", "users", 0, "users:read"),
-    ("roles", "admin", "Roles", "/roles", "Shield", "roles", 10, "roles:read"),
-    (
-        "permissions",
-        "admin",
-        "Permissions",
-        "/permissions",
-        "KeyRound",
-        "permissions",
-        20,
-        "roles:read",
-    ),
-    (
-        "tenants",
-        "admin",
-        "Tenants",
-        "/tenants",
-        "Building2",
-        "tenants",
-        30,
-        "tenants:read",
-    ),
-    ("menus", "admin", "Menus", "/menus", "Menu", "menus", 40, "roles:write"),
-    (
-        "config",
-        "admin",
-        "System configuration",
-        "/config",
-        "SlidersHorizontal",
-        "config",
-        50,
-        "config:read",
-    ),
-    ("other", None, "Other", None, None, None, 30, None),
-    ("settings", "other", "Settings", "/settings", "Settings", "settings", 0, None),
+# system pages: key -> (path, icon, component, permission)
+SYSTEM_ITEMS: dict[str, tuple[str, str | None, str, str | None]] = {
+    "dashboard": ("/", "LayoutDashboard", "dashboard", None),
+    "users": ("/users", "UserCog", "users", "users:read"),
+    "roles": ("/roles", "Shield", "roles", "roles:read"),
+    "permissions": ("/permissions", "KeyRound", "permissions", "roles:read"),
+    "tenants": ("/tenants", "Building2", "tenants", "tenants:read"),
+    "members": ("/members", "Users", "members", "members:read"),
+    "tenant-roles": ("/tenant-roles", "ShieldCheck", "tenant-roles", "members:read"),
+    "menus": ("/menus", "Menu", "menus", "roles:write"),
+    "config": ("/config", "SlidersHorizontal", "config", "config:read"),
+    "settings": ("/settings", "Settings", "settings", None),
+}
+
+MenuTuple = tuple[
+    str, str | None, str, str | None, str | None, str | None, int, str | None
 ]
 
 
-def seed_menus(session: Session) -> None:
-    existing = {m.key: m for m in session.exec(select(Menu)).all()}
-    from app.mes.menus import mes_menus
+def registry_menus() -> list[MenuTuple]:
+    """(key, parent, title, path, icon, component, order, permission), groups first."""
+    from app.mes.menus import mes_items
 
-    for key, parent, title, path, icon, comp, order, perm in [
-        *DEFAULT_MENUS,
-        *mes_menus(),
-    ]:
-        if key in existing:
-            continue
-        m = Menu(
-            key=key,
-            title=title,
-            path=path,
-            icon=icon,
-            component=comp,
-            sort_order=order,
-            permission=perm,
-            parent_id=existing[parent].id if parent else None,
-        )
+    defs = {**SYSTEM_ITEMS, **mes_items()}
+    out: list[MenuTuple] = [
+        (g, None, lbl.split("|")[0], None, icon, None, order, None)
+        for g, lbl, icon, order in GROUPS
+    ]
+    for g, items in ITEMS.items():
+        for i, (key, lbl) in enumerate(items):
+            path, icon, comp, p = defs[key]
+            out.append((key, g, lbl.split("|")[0], path, icon, comp, i * 10, p))
+    return out
+
+
+def seed_menus(session: Session) -> None:
+    """Create / re-sync every registry menu (keeps `hidden` and custom menus);
+    retired system groups are removed (their custom children move to top level)."""
+    existing = {m.key: m for m in session.exec(select(Menu)).all()}
+    for key, parent, title, path, icon, comp, order, p in registry_menus():
+        m = existing.get(key)
+        if m is None:
+            m = Menu(key=key, title=title)
+            existing[key] = m
+        m.title, m.path, m.icon, m.component = title, path, icon, comp
+        m.sort_order, m.permission = order, p
+        m.parent_id = existing[parent].id if parent else None
         session.add(m)
         session.flush()
-        existing[key] = m
+    stale = [
+        m
+        for k, m in existing.items()
+        if k in OBSOLETE_KEYS or k.startswith(OBSOLETE_PREFIXES)
+    ]
+    for m in stale:
+        for child in session.exec(select(Menu).where(Menu.parent_id == m.id)).all():
+            child.parent_id = None
+            session.add(child)
+        session.flush()
+        session.delete(m)
     session.commit()
 
 

@@ -91,21 +91,18 @@
     "profile": "Profile & password",
     "superuserTag": "(superuser)",
     "signOut": "Sign out",
-    "signOutDesc": "Are you sure you want to sign out? You will need to sign in again to access your account."
+    "signOutDesc": "Are you sure you want to sign out? You will need to sign in again to access your account.",
+    "sidebar": "Navigation"
   },
   "menu": {
-    "general": "General",
     "dashboard": "Dashboard",
-    "tenant": "Tenant",
     "members": "Members",
     "tenant-roles": "Tenant roles",
-    "admin": "Administration",
     "users": "Users",
     "roles": "Roles",
     "permissions": "Permissions",
     "tenants": "Tenants",
     "menus": "Menus",
-    "other": "Other",
     "settings": "Settings",
     "config": "System configuration"
   },

@@ -56,8 +56,8 @@ def test_owner_vs_member_menus(client: TestClient, db: Session) -> None:
         "tenants",
         "menus",
     }
-    # tenant owners manage their tenant's config: Administration holds only that
-    assert {"admin", "config"} <= keys
+    # tenant owners manage their tenant's config (System group)
+    assert {"g-system", "config"} <= keys
     assert {"/users", "/roles", "/tenants"} <= set(owner_body["forbidden_paths"])
     assert "/members" not in owner_body["forbidden_paths"]
     tid = owner_body["tenant_id"]
@@ -198,3 +198,49 @@ def test_role_permission_bulk_and_tenant_roles(
     )
     # platform /roles must not expose tenant roles
     assert client.get(f"{API}/roles/{roles['member']}", headers=h).status_code == 404
+
+
+def test_menu_layout_complete_and_synced(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    from app.menu_layout import GROUPS, ITEMS
+    from app.menus import SYSTEM_ITEMS
+    from app.mes.menus import mes_items
+
+    placed = [k for items in ITEMS.values() for k, _ in items]
+    assert len(placed) == len(set(placed))  # each item once
+    assert set(placed) == set(SYSTEM_ITEMS) | set(mes_items())  # nothing missing
+    assert [g for g, *_ in GROUPS] == list(ITEMS)
+    tree = client.get(f"{API}/menus/me", headers=superuser_token_headers).json()
+    top = [n["key"] for n in tree["menus"]]
+    assert top == [g for g, *_ in GROUPS]  # ordered domain groups only
+    by = {n["key"]: [c["key"] for c in n["children"]] for n in tree["menus"]}
+    assert by["g-planning"] == ["mes-work_order", "mes-lot-start"]
+    assert "mes-audit_log" in by["g-system"] and "mes-uom" in by["g-master"]
+    assert not {"general", "admin", "other", "tenant"} & set(top)
+
+
+def test_sync_moves_and_drops_legacy_groups(db: Session) -> None:
+    from sqlmodel import select
+
+    from app.menus import seed_menus
+    from app.models import Menu
+
+    legacy = Menu(key="mes-g-legacy", title="MES · Legacy", sort_order=1)
+    db.add(legacy)
+    db.flush()
+    custom = Menu(
+        key="custom-under-legacy", title="x", parent_id=legacy.id, sort_order=1
+    )
+    dash = db.exec(select(Menu).where(Menu.key == "dashboard")).one()
+    dash.parent_id, dash.title = legacy.id, "old"
+    db.add_all([custom, dash])
+    db.commit()
+    seed_menus(db)
+    keys = {m.key: m for m in db.exec(select(Menu)).all()}
+    assert "mes-g-legacy" not in keys
+    assert keys["custom-under-legacy"].parent_id is None
+    assert keys["dashboard"].parent_id == keys["g-workspace"].id
+    assert keys["dashboard"].title == "Dashboard"
+    db.delete(keys["custom-under-legacy"])
+    db.commit()

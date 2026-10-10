@@ -91,21 +91,18 @@
     "profile": "プロフィールとパスワード",
     "superuserTag": "（スーパーユーザー）",
     "signOut": "ログアウト",
-    "signOutDesc": "ログアウトしますか？再度アクセスするにはログインが必要です。"
+    "signOutDesc": "ログアウトしますか？再度アクセスするにはログインが必要です。",
+    "sidebar": "ナビゲーション"
   },
   "menu": {
-    "general": "一般",
     "dashboard": "ダッシュボード",
-    "tenant": "テナント",
     "members": "メンバー",
     "tenant-roles": "テナントロール",
-    "admin": "管理",
     "users": "ユーザー",
     "roles": "ロール",
     "permissions": "権限",
     "tenants": "テナント",
     "menus": "メニュー",
-    "other": "その他",
     "settings": "設定",
     "config": "システム設定"
   },

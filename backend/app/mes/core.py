@@ -38,10 +38,6 @@ MODULES: dict[str, tuple[str, int]] = {
     "lot": ("Lot & wafer rules|批次与晶圆规则|ロット・ウェーハ規則", 60),
     "wo": ("Work orders|工单|作業指示", 70),
 }
-# module menu-group titles that are not "MES modeling · <module>"
-GROUP_LABELS: dict[str, str] = {"wo": "MES work orders|MES 工单|MES 作業指示"}
-# special (non-entity) MES pages: menu key -> label; see app/mes/menus.py
-PAGES: dict[str, str] = {"mes-lot-start": "Lot start|批次投产|ロット投入"}
 # extra (non read/write) MES permissions
 EXTRA_PERMISSIONS: dict[str, str] = {
     "mes.wo:release": "MES work orders: release / hold / close / cancel",

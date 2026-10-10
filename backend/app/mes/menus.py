@@ -1,83 +1,34 @@
-"""Backend-driven menus for MES entities: one top-level group per module."""
+"""MES menu items: one per (non-child) entity + special pages.
 
-from app.mes.core import ENTITIES, GROUP_LABELS, MODULES, PAGES, perm
+Grouping/titles live in app.menu_layout; this only supplies path, icon,
+component key and required permission per menu key.
+"""
 
-MenuTuple = tuple[
-    str, str | None, str, str | None, str | None, str | None, int, str | None
-]
+from app.mes.core import ENTITIES, perm
 
-MODULE_ICONS = {
-    "common": "Wrench",
-    "org": "Factory",
-    "equipment": "Cpu",
-    "product": "Package",
-    "process": "Workflow",
-    "quality": "BadgeCheck",
-    "lot": "Layers",
-    "wo": "ClipboardList",
-}
-# special pages: key -> (module group, path, icon, component, order, permission)
-PAGE_MENUS = {
+# key -> (path, icon, component, permission)
+ItemDef = tuple[str, str | None, str, str | None]
+
+PAGES: dict[str, ItemDef] = {
     "mes-lot-start": (
-        "wo",
         "/mes/lot-start",
         "PlayCircle",
         "mes-page:lot-start",
-        5,
         "mes.lot:start",
     ),
 }
 
 
-def mes_menus() -> list[MenuTuple]:
-    out: list[MenuTuple] = []
-    for m, (lbl, order) in MODULES.items():
-        ents = [
-            e
-            for e in ENTITIES.values()
-            if e.module == m and not e.internal and not e.parent
-        ]
-        if not ents:
-            continue
-        out.append(
-            (
-                f"mes-g-{m}",
-                None,
-                GROUP_LABELS[m].split("|")[0]
-                if m in GROUP_LABELS
-                else f"MES · {lbl.split('|')[0]}",
-                None,
-                MODULE_ICONS[m],
-                None,
-                100 + order,
-                None,
-            )
+def mes_items() -> dict[str, ItemDef]:
+    out: dict[str, ItemDef] = {
+        f"mes-{e.code}": (
+            f"/mes/{e.url}",
+            e.icon,
+            f"mes:{e.code}",
+            perm(e.pmod, "read"),
         )
-        for i, e in enumerate(sorted(ents, key=lambda x: x.order)):
-            out.append(
-                (
-                    f"mes-{e.code}",
-                    f"mes-g-{m}",
-                    e.label.split("|")[0],
-                    f"/mes/{e.url}",
-                    e.icon,
-                    f"mes:{e.code}",
-                    i * 10,
-                    perm(e.pmod, "read"),
-                )
-            )
-        for key, (pm, path, icon, comp, order, p) in PAGE_MENUS.items():
-            if pm == m:
-                out.append(
-                    (
-                        key,
-                        f"mes-g-{m}",
-                        PAGES[key].split("|")[0],
-                        path,
-                        icon,
-                        comp,
-                        order,
-                        p,
-                    )
-                )
+        for e in ENTITIES.values()
+        if not e.internal and not e.parent
+    }
+    out.update(PAGES)
     return out

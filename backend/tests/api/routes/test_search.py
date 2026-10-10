@@ -248,7 +248,7 @@ def test_enumerable_filters(
     menus = client.get(f"{API}/menus/", headers=h, params={"page_size": 100}).json()[
         "data"
     ]
-    admin_group = next(m["id"] for m in menus if m["key"] == "admin")
+    admin_group = next(m["id"] for m in menus if m["key"] == "g-system")
     kids = client.get(
         f"{API}/menus/", headers=h, params={"parent_id": admin_group}
     ).json()
@@ -257,8 +257,12 @@ def test_enumerable_filters(
         "roles",
         "permissions",
         "tenants",
+        "members",
+        "tenant-roles",
         "menus",
         "config",
+        "mes-audit_log",
+        "settings",
     }
     assert (
         client.get(

@@ -3,12 +3,11 @@ the "en|zh|ja" labels in the specs)."""
 
 from typing import Any
 
+from app.menu_layout import titles
 from app.mes.core import (
     ENTITIES,
     ENUMS,
-    GROUP_LABELS,
     MODULES,
-    PAGES,
     Entity,
     label_of,
     perm,
@@ -94,20 +93,7 @@ def i18n_bundle(lang: str) -> dict[str, Any]:
         hs = {f.name: pick(f.help) for f in e.all_fields if f.help}
         if hs:
             helps[e.code] = hs
-        menu[f"mes-{e.code}"] = pick(e.label)
-    for m, (lbl, _) in MODULES.items():
-        menu[f"mes-g-{m}"] = (
-            pick(GROUP_LABELS[m])
-            if m in GROUP_LABELS
-            else {
-                "zh-CN": "MES 建模 · ",
-                "ja": "MES モデリング · ",
-                "en": "MES · ",
-            }[lang]
-            + pick(lbl)
-        )
-    for key, lbl in PAGES.items():
-        menu[key] = pick(lbl)
+    menu.update(titles(["en", "zh-CN", "ja"].index(lang)))
     return {
         "mes": {
             "module": {m: pick(lbl) for m, (lbl, _) in MODULES.items()},

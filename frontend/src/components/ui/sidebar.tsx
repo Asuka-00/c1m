@@ -194,8 +194,8 @@ function Sidebar({
           side={side}
         >
           <SheetHeader className='sr-only'>
-            <SheetTitle>{t('menu.general')}</SheetTitle>
-            <SheetDescription>{t('menu.general')}</SheetDescription>
+            <SheetTitle>{t('nav.sidebar')}</SheetTitle>
+            <SheetDescription>{t('nav.sidebar')}</SheetDescription>
           </SheetHeader>
           <div className='flex h-full w-full flex-col'>{children}</div>
         </SheetContent>
