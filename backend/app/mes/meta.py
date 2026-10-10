@@ -17,6 +17,8 @@ def field_meta(e: Entity) -> list[dict[str, Any]]:
                 "column": f.column,
                 "type": f.type,
                 "required": f.required,
+                "required_when": f.required_when,
+                "default_from": f.default_from,
                 "enum": f.enum,
                 "ref": f.ref,
                 "list": f.list,

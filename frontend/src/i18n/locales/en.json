@@ -458,6 +458,15 @@
     "edgeReturn": "return",
     "edgeRework": "rework",
     "flowDraftHint": "Draft: drag from a step's right handle to another step (branch) or a rework route; select an edge and press Delete to remove it; click a step to edit or reorder.",
-    "branchDialog": "Branch from step {{from}} to step {{to}}"
+    "branchDialog": "Branch from step {{from}} to step {{to}}",
+    "err": {
+      "required": "Required",
+      "requiredWhen": "Required when {{cond}} is {{value}}",
+      "isSet": "set",
+      "defaultsFrom": "Leave blank to use {{field}}",
+      "parentTypeMismatch": "must match the parent equipment's type (leave blank to inherit)",
+      "duplicateDefaultRoute": "the product already has a default route",
+      "productNeedsDefaultRoute": "an Active route must be bound as default before activation"
+    }
   }
 }

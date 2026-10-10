@@ -543,7 +543,8 @@
         "mass": "Mass",
         "time": "Time",
         "pressure": "Pressure",
-        "temperature": "Temperature"
+        "temperature": "Temperature",
+        "energy_density": "Energy density"
       },
       "wafer_size": {
         "100": "100 mm (4\")",

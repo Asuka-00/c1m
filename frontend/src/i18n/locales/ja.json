@@ -458,6 +458,15 @@
     "edgeReturn": "戻り",
     "edgeRework": "リワーク",
     "flowDraftHint": "下書き：ステップ右側のハンドルから別ステップ（分岐）またはリワークルートへドラッグ。エッジを選択し Delete で削除。ステップをクリックで編集・並べ替え。",
-    "branchDialog": "ステップ {{from}} からステップ {{to}} への分岐"
+    "branchDialog": "ステップ {{from}} からステップ {{to}} への分岐",
+    "err": {
+      "required": "必須",
+      "requiredWhen": "{{cond}}が「{{value}}」の場合は必須",
+      "isSet": "入力済み",
+      "defaultsFrom": "空欄の場合は{{field}}を使用",
+      "parentTypeMismatch": "親設備の設備タイプと一致する必要があります（空欄で継承）",
+      "duplicateDefaultRoute": "この製品には既定ルートがあります",
+      "productNeedsDefaultRoute": "有効化の前に有効なルートを既定として割り当てる必要があります"
+    }
   }
 }

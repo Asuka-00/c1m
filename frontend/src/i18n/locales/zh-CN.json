@@ -458,6 +458,15 @@
     "edgeReturn": "返回",
     "edgeRework": "返工",
     "flowDraftHint": "草稿：从步骤右侧连接点拖到另一步骤（分支）或返工流程；选中连线按 Delete 删除；点击步骤可编辑或调整顺序。",
-    "branchDialog": "从步骤 {{from}} 分支到步骤 {{to}}"
+    "branchDialog": "从步骤 {{from}} 分支到步骤 {{to}}",
+    "err": {
+      "required": "必填",
+      "requiredWhen": "当{{cond}}为“{{value}}”时必填",
+      "isSet": "已填写",
+      "defaultsFrom": "留空则使用{{field}}",
+      "parentTypeMismatch": "必须与上级设备的设备类型一致（留空则自动继承）",
+      "duplicateDefaultRoute": "该产品已有默认流程",
+      "productNeedsDefaultRoute": "生效前须绑定一个已生效的默认流程"
+    }
   }
 }

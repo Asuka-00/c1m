@@ -135,6 +135,19 @@ def _equipment(
         raise MesError([("parent", f"parent: a {kind} needs a parent equipment")])
     if parent and parent["unit_kind"] not in ("main", "sub_unit"):
         raise MesError([("parent", "parent: must be a main equipment or sub-unit")])
+    if parent:  # sub-units inherit the parent's equipment type
+        pt, cur = parent["equipment_type_id"], row.get("equipment_type_id")
+        if cur is None:
+            row["equipment_type_id"] = pt
+        elif pt is not None and cur != pt:
+            raise MesError(
+                [
+                    (
+                        "equipment_type",
+                        "equipment_type: must match the parent equipment's type",
+                    )
+                ]
+            )
 
 
 @validator("carrier_type")
@@ -263,6 +276,24 @@ def _product_route(
     a, b = row.get("effective_from"), row.get("effective_to")
     if a and b and a > b:
         raise MesError([("effective_to", "effective_to: must be after effective_from")])
+    if row.get("is_default"):
+        pr = TABLES["product_route"]
+        other = (
+            conn(s)
+            .execute(
+                sa.select(pr.c.id).where(
+                    pr.c.tenant_id == tid,
+                    pr.c.product_id == row.get("product_id"),
+                    pr.c.is_default.is_(True),
+                    pr.c.id != row.get("id", uuid.uuid4()),
+                )
+            )
+            .first()
+        )
+        if other:
+            raise MesError(
+                [("is_default", "is_default: the product already has a default route")]
+            )
 
 
 def _type_match(s: Session, tid: uuid.UUID, recipe_id: Any, equipment_id: Any) -> None:

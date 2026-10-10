@@ -325,8 +325,22 @@ def validate(
             if merged.get(f.column) is None and f.default is not None:
                 merged[f.column] = values[f.column] = f.default
     for f in e.all_fields:
-        if f.required and merged.get(f.column) in (None, ""):
+        if f.default_from and merged.get(f.column) in (None, ""):
+            src = merged.get(f.default_from)
+            if src not in (None, ""):
+                merged[f.column] = values[f.column] = src
+    by_name = {f.name: f for f in e.all_fields}
+    for f in e.all_fields:
+        if merged.get(f.column) not in (None, ""):
+            continue
+        if f.required:
             errors.append((f.name, f"{f.name}: required"))
+        for k, allowed in (f.required_when or {}).items():
+            cur = merged.get(by_name[k].column)
+            active = cur not in (None, "") if "*" in allowed else cur in allowed
+            if active:
+                cond = "set" if "*" in allowed else str(cur)
+                errors.append((f.name, f"{f.name}: required when {k} = {cond}"))
     # refs must exist in this tenant (RLS would hide others anyway)
     for f in e.all_fields:
         v = values.get(f.column)
@@ -357,11 +371,16 @@ def validate(
             )
     errors += validate_attrs(session, tenant_id, e, merged.get("attrs"))
     if not errors:
+        before = dict(merged)
         for fn in VALIDATORS.get(e.code, []):
             try:
                 fn(session, tenant_id, e, merged, existing)
             except MesError as ex:
                 errors += ex.errors
+        # validators may derive values (e.g. inherited equipment type)
+        for k, v in merged.items():
+            if before.get(k) != v:
+                values[k] = v
     if errors:
         raise http_422(errors)
     return values

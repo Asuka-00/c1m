@@ -11,7 +11,6 @@ import {
   Upload,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { errorMessage } from '@/lib/api/client'
 import { useTenantKey } from '@/lib/api/hooks'
 import { mesApi, type MesEntity, type MesRow } from '@/lib/api/mes'
 import { Badge } from '@/components/ui/badge'
@@ -34,6 +33,7 @@ import {
 import { cellValue } from './cells'
 import { EntityForm } from './entity-form'
 import { entityLabel, fieldLabel, rowLabel, statusLabel } from './labels'
+import { mesErrorMessage } from './required'
 import { useMesFilters } from './use-mes-filters'
 
 const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'outline'> = {
@@ -78,7 +78,7 @@ export function EntityTable({
     queryFn: () => mesApi.list(e.code, query),
   })
   const invalidate = () => qc.invalidateQueries({ queryKey: ['mes', e.code] })
-  const onErr = (err: unknown) => toast.error(errorMessage(err))
+  const onErr = (err: unknown) => toast.error(mesErrorMessage(err, e))
   const save = useMutation({
     mutationFn: (body: Record<string, unknown>) =>
       s.editing

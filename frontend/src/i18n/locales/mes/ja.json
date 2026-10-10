@@ -543,7 +543,8 @@
         "mass": "質量",
         "time": "時間",
         "pressure": "圧力",
-        "temperature": "温度"
+        "temperature": "温度",
+        "energy_density": "エネルギー密度"
       },
       "wafer_size": {
         "100": "100 mm（4 インチ）",

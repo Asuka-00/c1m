@@ -20,6 +20,10 @@ export interface MesField {
   column: string
   type: MesFieldType
   required: boolean
+  /** conditionally required: {sibling field name: values}; '*' = any value */
+  required_when: Record<string, unknown[]> | null
+  /** blank -> backend copies this sibling field (e.g. code) */
+  default_from: string | null
   enum: string | null
   ref: string | null
   list: boolean

@@ -34,12 +34,15 @@ def add(entity: str, **values: Any) -> None:
 
 # ---------------- P1: common + org ----------------
 add("dict_type", code="WAFER_GRADE", name="Wafer grade (DEMO)")
-for i, (c, n) in enumerate([("PRIME", "Prime"), ("TEST", "Test"), ("MON", "Monitor")]):
+for i, (c, n, val) in enumerate(
+    [("PRIME", "Prime", "P"), ("TEST", "Test", "T"), ("MON", "Monitor", "M")]
+):
     add(
         "dict_item",
         dict_type=("dict_type", "WAFER_GRADE"),
         code=c,
         name=n,
+        value=val,
         sort_order=i,
     )
 add(
@@ -109,6 +112,7 @@ for c, n, area, kind, parent in _rows(
         ("TF-BAY1", "Thin film bay", "THIN", "bay", None),
         ("TF-CVD", "CVD WC", "THIN", "workcenter", "TF-BAY1"),
         ("CMP-BAY", "CMP bay", "CMP", "bay", None),
+        ("CMP-POL", "CMP polish WC", "CMP", "workcenter", "CMP-BAY"),
         ("MT-BAY", "Metrology bay", "METRO", "bay", None),
         ("MT-CD", "CD-SEM cell", "METRO", "cell", "MT-BAY"),
     ]
@@ -179,6 +183,7 @@ for c, n, sym, d in _rows(
         ("MIN", "Minute", "min", "time"),
         ("NM", "Nanometer", "nm", "length"),
         ("A", "Angstrom", "Å", "length"),
+        ("MJCM2", "Millijoule / cm²", "mJ/cm²", "energy_density"),
     ]
 ):
     add("uom", code=c, name=n, symbol=sym, dimension=d)
@@ -440,7 +445,7 @@ for c, n, et, g, wc, subs in _rows(
             "CMP 01",
             "CMP",
             "G-CMP",
-            None,
+            "CMP-POL",
             [("P1", "chamber"), ("P2", "chamber")],
         ),
         ("CDS01", "CD-SEM 01", "CDSEM", "G-CDSEM", "MT-CD", []),
@@ -626,7 +631,7 @@ for rc, eqs in _rows(
         )
 for c, n, op, rc, tgt, lsl, usl, u in _rows(
     [
-        ("DOSE", "Exposure dose", None, "EXP-GATE", 28.0, 27.0, 29.0, None),
+        ("DOSE", "Exposure dose", None, "EXP-GATE", 28.0, 27.0, 29.0, "MJCM2"),
         ("GATE-CD", "Gate CD after develop", "PH-CD", None, 45.0, 42.0, 48.0, "NM"),
         ("OVL-X", "Overlay X", "PH-OVL", None, 0.0, -8.0, 8.0, "NM"),
         ("OX-THK", "Gate oxide thickness", "DF-OX", "OX-GATE", 30.0, 28.5, 31.5, "A"),

@@ -13,6 +13,7 @@ ENUMS.update(
             ("time", "Time|时间|時間"),
             ("pressure", "Pressure|压力|圧力"),
             ("temperature", "Temperature|温度|温度"),
+            ("energy_density", "Energy density|能量密度|エネルギー密度"),
         ],
         "wafer_size": [
             ("100", '100 mm (4")|100 mm（4 寸）|100 mm（4 インチ）'),
@@ -159,6 +160,7 @@ register(
                 "ref",
                 "Technology node|工艺节点|テクノロジーノード",
                 ref="tech_node",
+                required=True,
             )
         ],
         phase=2,
@@ -170,12 +172,19 @@ register(
         "product",
         "Product|产品|製品",
         [
-            F("family", "ref", "Family|产品族|ファミリー", ref="product_family"),
+            F(
+                "family",
+                "ref",
+                "Family|产品族|ファミリー",
+                ref="product_family",
+                required_when={"product_type": ("production", "engineering")},
+            ),
             F(
                 "tech_node",
                 "ref",
                 "Technology node|工艺节点|テクノロジーノード",
                 ref="tech_node",
+                required_when={"product_type": ("production", "engineering")},
             ),
             F(
                 "product_type",
@@ -190,7 +199,7 @@ register(
                 "int",
                 "Gross die / wafer|每片总晶粒数|ウェーハ当たりダイ数",
             ),
-            F("uom", "ref", ref="uom", list=False),
+            F("uom", "ref", ref="uom", list=False, required=True),
         ],
         phase=2,
         versioned=True,
@@ -294,8 +303,15 @@ register(
         "product",
         "Reticle|光罩|レチクル",
         [
-            F("product", "ref", ref="product"),
-            F("layer", "str", "Layer|层|レイヤー", max_length=40, search=True),
+            F("product", "ref", ref="product", required=True),
+            F(
+                "layer",
+                "str",
+                "Layer|层|レイヤー",
+                max_length=40,
+                search=True,
+                required=True,
+            ),
             F(
                 "grade",
                 "enum",
@@ -341,7 +357,7 @@ register(
         "equipment",
         "Equipment group|设备组|設備グループ",
         [
-            F("equipment_type", "ref", ref="equipment_type"),
+            F("equipment_type", "ref", ref="equipment_type", required=True),
             F("area", "ref", ref="area"),
         ],
         phase=2,
@@ -419,7 +435,12 @@ register(
                 enum="unit_kind",
                 default="main",
             ),
-            F("equipment_type", "ref", ref="equipment_type"),
+            F(
+                "equipment_type",
+                "ref",
+                ref="equipment_type",
+                required_when={"unit_kind": ("main",)},
+            ),
             F(
                 "equipment_group",
                 "ref",
@@ -431,6 +452,7 @@ register(
                 "ref",
                 "Work center|工作中心|ワークセンター",
                 ref="workcenter",
+                required_when={"unit_kind": ("main",)},
             ),
             F(
                 "serial_no",
@@ -450,6 +472,9 @@ register(
             F("is_active", "bool", default=True),
         ],
         phase=2,
+        parent_required_when={
+            "unit_kind": ("chamber", "load_port", "port", "sub_unit")
+        },
         tree=True,
         icon="Cpu",
         order=4,

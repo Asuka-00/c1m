@@ -25,7 +25,6 @@ import {
   X,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { errorMessage } from '@/lib/api/client'
 import { useTenantKey } from '@/lib/api/hooks'
 import { mesApi, reorderRouteSteps, type MesRow } from '@/lib/api/mes'
 import { cn } from '@/lib/utils'
@@ -44,6 +43,7 @@ import { ConfirmDialog } from '@/components/crud'
 import { EntityForm } from './entity-form'
 import { StatusBadge } from './entity-table'
 import { enumLabel } from './labels'
+import { mesErrorMessage } from './required'
 import { useMesEntity } from './use-mes-meta'
 
 type StepData = { step: MesRow; selected: boolean }
@@ -233,7 +233,7 @@ export function RouteFlow({ row }: { row: MesRow }) {
 
   const refresh = () =>
     qc.invalidateQueries({ queryKey: ['mes', 'route_step'] })
-  const onErr = (e: unknown) => toast.error(errorMessage(e))
+  const onErr = (e: unknown) => toast.error(mesErrorMessage(e, stepEntity))
   const patch = useMutation({
     mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
       mesApi.update('route_step', id, body),

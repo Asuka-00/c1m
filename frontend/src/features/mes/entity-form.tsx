@@ -32,6 +32,7 @@ import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import { entityLabel, enumLabel, fieldHelp, fieldLabel } from './labels'
 import { RefSelect } from './ref-select'
+import { requiredBy, requiredHint, validateRequired } from './required'
 
 type V = Record<string, unknown>
 const NONE = '__none__'
@@ -70,6 +71,9 @@ function toPayload(e: MesEntity, v: V, hidden: Set<string>): V {
       out[f.column] = x === '' ? null : x
     }
   }
+  for (const f of e.fields)
+    if (f.default_from && out[f.column] == null && v[f.default_from])
+      out[f.column] = v[f.default_from]
   out.attrs = v.attrs
   return out
 }
@@ -137,16 +141,24 @@ function FormBody({
     initialValues(e, row, { ...defaults, ...preset })
   )
   const [jsonErr, setJsonErr] = useState<string | null>(null)
+  const [errs, setErrs] = useState<Record<string, string>>({})
   const attrs = useQuery({
     queryKey: ['mes', 'attrs', e.code, tk],
     queryFn: () => mesApi.attrs(e.code),
   })
   const hidden = new Set(Object.keys(preset))
-  const set = (k: string, x: unknown) => setV((p) => ({ ...p, [k]: x }))
+  const set = (k: string, x: unknown) => {
+    setV((p) => ({ ...p, [k]: x }))
+    const f = e.fields.find((y) => y.column === k)
+    if (f && errs[f.name]) setErrs(({ [f.name]: _, ...rest }) => rest)
+  }
   const setAttr = (k: string, x: unknown) =>
     setV((p) => ({ ...p, attrs: { ...(p.attrs as V), [k]: x } }))
   const submit = async (ev: React.FormEvent) => {
     ev.preventDefault()
+    const found = validateRequired(e, v, hidden)
+    setErrs(found)
+    if (Object.keys(found).length) return
     let body: V
     try {
       body = toPayload(e, v, hidden)
@@ -160,7 +172,7 @@ function FormBody({
   }
   const fields = e.fields.filter((f) => !hidden.has(f.column))
   return (
-    <form onSubmit={submit} className='space-y-4'>
+    <form onSubmit={submit} noValidate className='space-y-4'>
       <DialogHeader>
         <DialogTitle>
           {t(row ? 'mes.editTitle' : 'mes.newTitle', {
@@ -185,9 +197,29 @@ function FormBody({
           >
             <Label htmlFor={`f-${f.name}`}>
               {fieldLabel(e, f)}
-              {f.required && <span className='text-destructive'> *</span>}
+              {requiredBy(e, f, v) && !f.default_from && (
+                <span className='text-destructive'> *</span>
+              )}
             </Label>
             <FieldInput e={e} f={f} v={v} set={set} id={`f-${f.name}`} />
+            {errs[f.name] ? (
+              <p className='text-xs text-destructive' role='alert'>
+                {errs[f.name]}
+              </p>
+            ) : (
+              requiredHint(e, f, v) && (
+                <p className='text-xs text-muted-foreground'>
+                  {requiredHint(e, f, v)}
+                </p>
+              )
+            )}
+            {f.default_from && (
+              <p className='text-xs text-muted-foreground'>
+                {t('mes.err.defaultsFrom', {
+                  field: fieldLabel(e, f.default_from),
+                })}
+              </p>
+            )}
             {fieldHelp(e, f) && (
               <p className='text-xs text-muted-foreground'>{fieldHelp(e, f)}</p>
             )}

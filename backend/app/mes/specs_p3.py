@@ -55,7 +55,7 @@ register(
                 enum="operation_type",
                 default="process",
             ),
-            F("area", "ref", ref="area"),
+            F("area", "ref", ref="area", required=True),
             F(
                 "std_minutes",
                 "float",
@@ -107,8 +107,19 @@ register(
                 enum="step_type",
                 default="operation",
             ),
-            F("operation", "ref", ref="operation"),
-            F("sub_route", "ref", "Sub-route|子流程|サブルート", ref="route"),
+            F(
+                "operation",
+                "ref",
+                ref="operation",
+                required_when={"step_type": ("operation",)},
+            ),
+            F(
+                "sub_route",
+                "ref",
+                "Sub-route|子流程|サブルート",
+                ref="route",
+                required_when={"step_type": ("sub_route",)},
+            ),
             F(
                 "rework_route",
                 "ref",
@@ -125,6 +136,7 @@ register(
                 help="e.g. lot_type == 'ENG' — evaluated at execution time (not in this module)|"
                 "例如 lot_type == 'ENG'，执行时判定（不在本模块）|"
                 "例：lot_type == 'ENG'（実行時に判定。本モジュール対象外）",
+                required_when={"branch_to_seq": ("*",)},
             ),
             F("branch_to_seq", "int", "Branch to seq.|分支跳转序号|分岐先順番"),
             F("note", "str", "Note|备注|備考", max_length=200, list=False),
@@ -172,7 +184,7 @@ register(
             F("fixture", "ref", "Fixture / tool|治具 / 工具|治具・工具", ref="fixture"),
             F("recipe", "ref", ref="recipe"),
             F("qty", "float", "Quantity|数量|数量"),
-            F("uom", "ref", ref="uom", list=False),
+            F("uom", "ref", ref="uom", list=False, required_when={"qty": ("*",)}),
         ],
         phase=3,
         has_code=False,
@@ -208,7 +220,7 @@ register(
         "process",
         "Recipe|配方|レシピ",
         [
-            F("equipment_type", "ref", ref="equipment_type"),
+            F("equipment_type", "ref", ref="equipment_type", required=True),
             F(
                 "recipe_type",
                 "enum",
@@ -263,7 +275,7 @@ register(
             F("operation", "ref", ref="operation"),
             F("recipe", "ref", ref="recipe"),
             F("product", "ref", ref="product"),
-            F("uom", "ref", ref="uom", list=False),
+            F("uom", "ref", ref="uom", list=False, required=True),
             F("target", "float"),
             F("lsl", "float"),
             F("usl", "float"),

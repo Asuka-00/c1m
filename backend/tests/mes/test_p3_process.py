@@ -157,7 +157,7 @@ def test_step_resources_and_product_binding(client: TestClient, db: Session) -> 
     g = m.post(
         "equipment_group", {"code": "G1", "name": "G1", "equipment_type_id": et["id"]}
     )
-    rt = m.post("reticle", {"code": "RT1", "name": "RT1"})
+    rt = m.post("reticle", {"code": "RT1", "name": "RT1", "layer": "M1"})
     route = m.post("route", {"code": "R", "name": "R"})
     st = m.post(
         "route_step", {"route_id": route["id"], "seq": 10, "operation_id": op["EXPO"]}

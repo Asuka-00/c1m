@@ -48,6 +48,9 @@ class F:
     default: Any = None
     filter: bool | None = None  # dropdown filter; default: enum/bool/ref fields
     help: str | None = None
+    # conditionally required: {other_field: (values...)}; "*" = any non-empty value
+    required_when: dict[str, tuple[Any, ...]] | None = None
+    default_from: str | None = None  # blank -> copy this sibling field (e.g. code)
     depends: str | None = (
         None  # ref options filtered by this sibling ref (same name on target)
     )
@@ -86,6 +89,7 @@ class Entity:
         None  # append this ref's code to labels (e.g. step -> operation)
     )
     sort_default: str = "code"
+    parent_required_when: dict[str, tuple[Any, ...]] | None = None
 
     @property
     def table_name(self) -> str:
@@ -108,7 +112,15 @@ class Entity:
                 F("name", required=True, search=True, max_length=200),
             ]
         if self.tree:
-            out.append(F("parent", "ref", ref=self.code, cascade=True))
+            out.append(
+                F(
+                    "parent",
+                    "ref",
+                    ref=self.code,
+                    cascade=True,
+                    required_when=self.parent_required_when,
+                )
+            )
         out += self.fields
         if self.has_code:
             out.append(F("description", "text", list=False, search=True))
