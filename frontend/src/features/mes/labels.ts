@@ -20,5 +20,7 @@ export const rowLabel = (r: Record<string, unknown>, labelField = 'code') => {
   let s = String(r[labelField] ?? r.id)
   if (r.version != null) s += ` v${r.version}`
   if (labelField === 'code' && r.name) s += ` · ${r.name}`
+  else if (labelField !== 'code' && r.operation_label)
+    s += ` · ${String(r.operation_label).split(' · ')[0]}`
   return s
 }

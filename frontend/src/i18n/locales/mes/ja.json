@@ -45,7 +45,17 @@
       "recipe": "レシピ",
       "recipe_equipment": "レシピ・設備対応",
       "param_spec": "プロセスパラメータ規格",
-      "equipment_capability": "設備能力"
+      "equipment_capability": "設備能力",
+      "measurement_item": "測定項目",
+      "dc_plan": "データ収集計画",
+      "dc_plan_item": "収集項目",
+      "sampling_rule": "サンプリング規則",
+      "defect_code": "欠陥コード",
+      "reason_code": "理由コード",
+      "lot_priority": "ロット優先度",
+      "lot_type": "ロットタイプ",
+      "split_merge_rule": "分割・統合規則",
+      "qtime_rule": "Q タイム規則"
     },
     "field": {
       "dict_type": {
@@ -355,6 +365,104 @@
         "recipe": "レシピ",
         "is_qualified": "認定済",
         "qualified_until": "認定期限"
+      },
+      "measurement_item": {
+        "code": "コード",
+        "name": "名称",
+        "meas_type": "データ型",
+        "uom": "単位",
+        "precision": "小数桁",
+        "description": "説明"
+      },
+      "dc_plan": {
+        "code": "コード",
+        "name": "名称",
+        "operation": "工程",
+        "description": "説明"
+      },
+      "dc_plan_item": {
+        "dc_plan": "データ収集計画",
+        "measurement_item": "測定項目",
+        "seq": "順番",
+        "sites": "ウェーハ当たり測定点",
+        "target": "目標値",
+        "lsl": "規格下限",
+        "usl": "規格上限"
+      },
+      "sampling_rule": {
+        "code": "コード",
+        "name": "名称",
+        "level": "レベル",
+        "operation": "工程",
+        "dc_plan": "データ収集計画",
+        "product": "製品",
+        "lot_frequency": "N ロット毎",
+        "wafer_count": "ロット当たり枚数",
+        "wafer_selection": "ウェーハ選択",
+        "fixed_slots": "固定スロット",
+        "is_active": "有効",
+        "description": "説明"
+      },
+      "defect_code": {
+        "code": "コード",
+        "name": "名称",
+        "category": "カテゴリ",
+        "severity": "重大度",
+        "is_killer": "キラー欠陥",
+        "description": "説明"
+      },
+      "reason_code": {
+        "code": "コード",
+        "name": "名称",
+        "reason_type": "理由種別",
+        "area": "エリア",
+        "comment_required": "コメント必須",
+        "is_active": "有効",
+        "description": "説明"
+      },
+      "lot_priority": {
+        "code": "コード",
+        "name": "名称",
+        "level": "レベル（1 = 最高）",
+        "color": "色",
+        "is_hot": "ホットロット",
+        "description": "説明"
+      },
+      "lot_type": {
+        "code": "コード",
+        "name": "名称",
+        "category": "カテゴリ",
+        "default_priority": "既定優先度",
+        "lot_id_rule": "ロット ID ルール",
+        "wafer_id_rule": "ウェーハ ID ルール",
+        "max_wafers": "ロット最大枚数",
+        "description": "説明"
+      },
+      "split_merge_rule": {
+        "code": "コード",
+        "name": "名称",
+        "lot_type": "ロットタイプ",
+        "allow_split": "分割可",
+        "max_children": "最大子ロット数",
+        "min_wafers": "ロット最少枚数",
+        "allow_merge": "統合可",
+        "merge_same_product": "統合：同一製品",
+        "merge_same_step": "統合：同一ステップ",
+        "merge_same_priority": "統合：同一優先度",
+        "description": "説明"
+      },
+      "qtime_rule": {
+        "code": "コード",
+        "name": "名称",
+        "route": "ルート",
+        "from_step": "開始ステップ",
+        "to_step": "終了ステップ",
+        "product": "製品",
+        "min_minutes": "最短（分）",
+        "max_minutes": "最長（分）",
+        "action": "違反時処置",
+        "reason": "理由コード",
+        "description": "説明"
       }
     },
     "help": {
@@ -369,6 +477,9 @@
       },
       "route_step": {
         "branch_condition": "例：lot_type == 'ENG'（実行時に判定。本モジュール対象外）"
+      },
+      "sampling_rule": {
+        "fixed_slots": "カンマ区切りのスロット番号（例：1,13,25）"
       }
     },
     "enum": {
@@ -531,6 +642,47 @@
         "reticle": "レチクル",
         "material": "資材",
         "fixture": "治具・工具"
+      },
+      "meas_type": {
+        "numeric": "数値",
+        "attribute": "属性（合否）",
+        "count": "計数"
+      },
+      "sample_level": {
+        "lot": "ロット",
+        "wafer": "ウェーハ"
+      },
+      "wafer_selection": {
+        "first": "先頭 N 枚",
+        "last": "末尾 N 枚",
+        "random": "ランダム",
+        "alternate": "交互スロット",
+        "fixed": "固定スロット"
+      },
+      "defect_category": {
+        "particle": "パーティクル",
+        "scratch": "スクラッチ",
+        "pattern": "パターン欠陥",
+        "residue": "残渣",
+        "electrical": "電気特性",
+        "other": "その他"
+      },
+      "severity": {
+        "minor": "軽微",
+        "major": "重大",
+        "critical": "致命的"
+      },
+      "reason_type": {
+        "scrap": "スクラップ",
+        "rework": "リワーク",
+        "hold": "ホールド",
+        "release": "リリース"
+      },
+      "qtime_action": {
+        "warn": "警告",
+        "hold": "ロット保留",
+        "rework": "リワーク",
+        "scrap": "スクラップ"
       }
     }
   },
@@ -571,6 +723,16 @@
     "mes-recipe_equipment": "レシピ・設備対応",
     "mes-param_spec": "プロセスパラメータ規格",
     "mes-equipment_capability": "設備能力",
+    "mes-measurement_item": "測定項目",
+    "mes-dc_plan": "データ収集計画",
+    "mes-dc_plan_item": "収集項目",
+    "mes-sampling_rule": "サンプリング規則",
+    "mes-defect_code": "欠陥コード",
+    "mes-reason_code": "理由コード",
+    "mes-lot_priority": "ロット優先度",
+    "mes-lot_type": "ロットタイプ",
+    "mes-split_merge_rule": "分割・統合規則",
+    "mes-qtime_rule": "Q タイム規則",
     "mes-g-common": "MES モデリング · 共通",
     "mes-g-org": "MES モデリング · 組織",
     "mes-g-equipment": "MES モデリング · 設備",

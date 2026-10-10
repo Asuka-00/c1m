@@ -48,6 +48,9 @@ class F:
     default: Any = None
     filter: bool | None = None  # dropdown filter; default: enum/bool/ref fields
     help: str | None = None
+    depends: str | None = (
+        None  # ref options filtered by this sibling ref (same name on target)
+    )
 
     @property
     def column(self) -> str:
@@ -79,6 +82,9 @@ class Entity:
     icon: str = "Box"
     order: int = 0
     label_field: str = "code"
+    label_ref: str | None = (
+        None  # append this ref's code to labels (e.g. step -> operation)
+    )
     sort_default: str = "code"
 
     @property

@@ -138,6 +138,7 @@ register(
         order=2,
         sort_default="seq",
         label_field="seq",
+        label_ref="operation",
     ),
     Entity(
         "step_resource",

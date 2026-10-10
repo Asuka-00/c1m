@@ -438,7 +438,8 @@
     "panel": {
       "code_rule": "Preview",
       "uom": "Converter",
-      "route": "Route editor"
+      "route": "Route editor",
+      "lot_type": "ID preview"
     },
     "convertValue": "Value in {{unit}}",
     "convertTo": "Convert to",
@@ -452,6 +453,9 @@
     "branchTo": "If {{cond}} → step {{seq}}",
     "resources": "Resources",
     "moveUp": "Move up",
-    "moveDown": "Move down"
+    "moveDown": "Move down",
+    "noLotRule": "No lot ID rule assigned.",
+    "nextLotId": "Next lot ID",
+    "waferIds": "Wafer IDs"
   }
 }

@@ -1,5 +1,6 @@
 import type { MesRow } from '@/lib/api/mes'
 import { CodeRulePreview } from './code-rule-preview'
+import { LotTypePreview } from './lot-type-preview'
 import { RouteEditor } from './route-editor'
 import { UomConverter } from './uom-converter'
 
@@ -11,6 +12,7 @@ export const ROW_PANELS: Record<
   code_rule: CodeRulePreview,
   uom: UomConverter,
   route: RouteEditor,
+  lot_type: LotTypePreview,
 }
 
 /** Entity-specific extra row action buttons. */

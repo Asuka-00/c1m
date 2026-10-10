@@ -438,7 +438,8 @@
     "panel": {
       "code_rule": "预览",
       "uom": "换算器",
-      "route": "流程编辑器"
+      "route": "流程编辑器",
+      "lot_type": "编号预览"
     },
     "convertValue": "数值（{{unit}}）",
     "convertTo": "换算为",
@@ -452,6 +453,9 @@
     "branchTo": "若 {{cond}} → 跳转步骤 {{seq}}",
     "resources": "资源",
     "moveUp": "上移",
-    "moveDown": "下移"
+    "moveDown": "下移",
+    "noLotRule": "未设置批次号规则。",
+    "nextLotId": "下一个批次号",
+    "waferIds": "晶圆号"
   }
 }

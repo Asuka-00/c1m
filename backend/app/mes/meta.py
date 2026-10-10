@@ -25,6 +25,7 @@ def field_meta(e: Entity) -> list[dict[str, Any]]:
                 "default": f.default,
                 "max_length": f.max_length if f.type == "str" else None,
                 "help": bool(f.help),
+                "depends": f.depends,
             }
         )
     return out

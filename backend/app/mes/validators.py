@@ -294,3 +294,120 @@ def _capability(
     s: Session, tid: uuid.UUID, _e: Entity, row: Row, _old: Row | None
 ) -> None:
     _type_match(s, tid, row.get("recipe_id"), row.get("equipment_id"))
+
+
+# ---------------- phase 4 ----------------
+def _limits(row: Row) -> list[tuple[str, str]]:
+    lsl, tgt, usl = row.get("lsl"), row.get("target"), row.get("usl")
+    errs: list[tuple[str, str]] = []
+    if lsl is not None and usl is not None and lsl > usl:
+        errs.append(("usl", "usl: must be >= LSL"))
+    if tgt is not None and (
+        (lsl is not None and tgt < lsl) or (usl is not None and tgt > usl)
+    ):
+        errs.append(("target", "target: must lie within LSL..USL"))
+    return errs
+
+
+@validator("dc_plan_item")
+def _dc_item(
+    _s: Session, _t: uuid.UUID, _e: Entity, row: Row, _old: Row | None
+) -> None:
+    errs = _limits(row)
+    if (row.get("sites") or 0) < 1:
+        errs.append(("sites", "sites: must be >= 1"))
+    if errs:
+        raise MesError(errs)
+
+
+@validator("sampling_rule")
+def _sampling(
+    _s: Session, _t: uuid.UUID, _e: Entity, row: Row, _old: Row | None
+) -> None:
+    errs: list[tuple[str, str]] = []
+    if (row.get("lot_frequency") or 0) < 1:
+        errs.append(("lot_frequency", "lot_frequency: must be >= 1"))
+    if row.get("level") == "wafer":
+        if not 1 <= (row.get("wafer_count") or 0) <= 25:
+            errs.append(("wafer_count", "wafer_count: 1..25 for wafer-level sampling"))
+        if not row.get("wafer_selection"):
+            errs.append(
+                (
+                    "wafer_selection",
+                    "wafer_selection: required for wafer-level sampling",
+                )
+            )
+    if row.get("wafer_selection") == "fixed":
+        try:
+            slots = [
+                int(x) for x in (row.get("fixed_slots") or "").split(",") if x.strip()
+            ]
+        except ValueError:
+            slots = []
+        if not slots or any(not 1 <= x <= 25 for x in slots):
+            errs.append(("fixed_slots", "fixed_slots: comma separated slots 1..25"))
+        elif row.get("wafer_count") and len(slots) != row["wafer_count"]:
+            errs.append(("fixed_slots", "fixed_slots: count must equal wafer_count"))
+    if errs:
+        raise MesError(errs)
+
+
+@validator("lot_priority")
+def _priority(
+    _s: Session, _t: uuid.UUID, _e: Entity, row: Row, _old: Row | None
+) -> None:
+    if not 1 <= (row.get("level") or 0) <= 99:
+        raise MesError([("level", "level: must be 1..99")])
+
+
+@validator("lot_type")
+def _lot_type(
+    s: Session, tid: uuid.UUID, _e: Entity, row: Row, _old: Row | None
+) -> None:
+    errs: list[tuple[str, str]] = []
+    for k, target in (("lot_id_rule", "lot"), ("wafer_id_rule", "wafer")):
+        r = _get(s, tid, "code_rule", row.get(f"{k}_id"))
+        if r and r["target"] != target:
+            errs.append((k, f"{k}: must be a code rule for {target} IDs"))
+    if not 1 <= (row.get("max_wafers") or 0) <= 50:
+        errs.append(("max_wafers", "max_wafers: must be 1..50"))
+    if errs:
+        raise MesError(errs)
+
+
+@validator("split_merge_rule")
+def _split_merge(
+    _s: Session, _t: uuid.UUID, _e: Entity, row: Row, _old: Row | None
+) -> None:
+    errs: list[tuple[str, str]] = []
+    if row.get("allow_split") and (row.get("max_children") or 0) < 2:
+        errs.append(
+            ("max_children", "max_children: must be >= 2 when splitting is allowed")
+        )
+    if (row.get("min_wafers") or 0) < 1:
+        errs.append(("min_wafers", "min_wafers: must be >= 1"))
+    if errs:
+        raise MesError(errs)
+
+
+@validator("qtime_rule")
+def _qtime(s: Session, tid: uuid.UUID, _e: Entity, row: Row, _old: Row | None) -> None:
+    errs: list[tuple[str, str]] = []
+    a, b = (
+        _get(s, tid, "route_step", row.get("from_step_id")),
+        _get(s, tid, "route_step", row.get("to_step_id")),
+    )
+    for k, st in (("from_step", a), ("to_step", b)):
+        if st and st["route_id"] != row.get("route_id"):
+            errs.append((k, f"{k}: must be a step of the selected route"))
+    if a and b and a["seq"] >= b["seq"]:
+        errs.append(("to_step", "to_step: must come after from_step"))
+    lo, hi = row.get("min_minutes"), row.get("max_minutes")
+    if lo is None and hi is None:
+        errs.append(("max_minutes", "max_minutes: give a min and/or max time"))
+    if (lo is not None and lo < 0) or (hi is not None and hi <= 0):
+        errs.append(("max_minutes", "max_minutes: times must be positive"))
+    if lo is not None and hi is not None and lo > hi:
+        errs.append(("max_minutes", "max_minutes: must be >= min_minutes"))
+    if errs:
+        raise MesError(errs)

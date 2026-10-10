@@ -45,7 +45,17 @@
       "recipe": "配方",
       "recipe_equipment": "配方设备映射",
       "param_spec": "工艺参数规格",
-      "equipment_capability": "设备能力"
+      "equipment_capability": "设备能力",
+      "measurement_item": "量测项目",
+      "dc_plan": "数据收集计划",
+      "dc_plan_item": "收集项",
+      "sampling_rule": "抽样规则",
+      "defect_code": "缺陷代码",
+      "reason_code": "原因代码",
+      "lot_priority": "批次优先级",
+      "lot_type": "批次类型",
+      "split_merge_rule": "分批合批规则",
+      "qtime_rule": "Q-Time 规则"
     },
     "field": {
       "dict_type": {
@@ -355,6 +365,104 @@
         "recipe": "配方",
         "is_qualified": "已认证",
         "qualified_until": "认证有效期"
+      },
+      "measurement_item": {
+        "code": "编码",
+        "name": "名称",
+        "meas_type": "数据类型",
+        "uom": "单位",
+        "precision": "小数位",
+        "description": "描述"
+      },
+      "dc_plan": {
+        "code": "编码",
+        "name": "名称",
+        "operation": "工序",
+        "description": "描述"
+      },
+      "dc_plan_item": {
+        "dc_plan": "数据收集计划",
+        "measurement_item": "量测项目",
+        "seq": "序号",
+        "sites": "每片测点数",
+        "target": "目标值",
+        "lsl": "规格下限",
+        "usl": "规格上限"
+      },
+      "sampling_rule": {
+        "code": "编码",
+        "name": "名称",
+        "level": "抽样层级",
+        "operation": "工序",
+        "dc_plan": "数据收集计划",
+        "product": "产品",
+        "lot_frequency": "每 N 批抽 1 批",
+        "wafer_count": "每批抽片数",
+        "wafer_selection": "选片方式",
+        "fixed_slots": "固定槽位",
+        "is_active": "启用",
+        "description": "描述"
+      },
+      "defect_code": {
+        "code": "编码",
+        "name": "名称",
+        "category": "类别",
+        "severity": "严重度",
+        "is_killer": "致命缺陷",
+        "description": "描述"
+      },
+      "reason_code": {
+        "code": "编码",
+        "name": "名称",
+        "reason_type": "原因类型",
+        "area": "区域",
+        "comment_required": "需填写备注",
+        "is_active": "启用",
+        "description": "描述"
+      },
+      "lot_priority": {
+        "code": "编码",
+        "name": "名称",
+        "level": "级别（1 = 最高）",
+        "color": "颜色",
+        "is_hot": "紧急批",
+        "description": "描述"
+      },
+      "lot_type": {
+        "code": "编码",
+        "name": "名称",
+        "category": "类别",
+        "default_priority": "默认优先级",
+        "lot_id_rule": "批次号规则",
+        "wafer_id_rule": "晶圆号规则",
+        "max_wafers": "每批最大片数",
+        "description": "描述"
+      },
+      "split_merge_rule": {
+        "code": "编码",
+        "name": "名称",
+        "lot_type": "批次类型",
+        "allow_split": "允许分批",
+        "max_children": "最大子批数",
+        "min_wafers": "每批最少片数",
+        "allow_merge": "允许合批",
+        "merge_same_product": "合批：同产品",
+        "merge_same_step": "合批：同流程步骤",
+        "merge_same_priority": "合批：同优先级",
+        "description": "描述"
+      },
+      "qtime_rule": {
+        "code": "编码",
+        "name": "名称",
+        "route": "流程",
+        "from_step": "起始步骤",
+        "to_step": "结束步骤",
+        "product": "产品",
+        "min_minutes": "最短（分钟）",
+        "max_minutes": "最长（分钟）",
+        "action": "超时动作",
+        "reason": "原因代码",
+        "description": "描述"
       }
     },
     "help": {
@@ -369,6 +477,9 @@
       },
       "route_step": {
         "branch_condition": "例如 lot_type == 'ENG'，执行时判定（不在本模块）"
+      },
+      "sampling_rule": {
+        "fixed_slots": "逗号分隔的槽位号，例如 1,13,25"
       }
     },
     "enum": {
@@ -531,6 +642,47 @@
         "reticle": "光罩",
         "material": "物料",
         "fixture": "治具 / 工具"
+      },
+      "meas_type": {
+        "numeric": "数值型",
+        "attribute": "属性型（合格/不合格）",
+        "count": "计数型"
+      },
+      "sample_level": {
+        "lot": "批次",
+        "wafer": "晶圆"
+      },
+      "wafer_selection": {
+        "first": "前 N 片",
+        "last": "后 N 片",
+        "random": "随机",
+        "alternate": "隔槽",
+        "fixed": "固定槽位"
+      },
+      "defect_category": {
+        "particle": "颗粒",
+        "scratch": "划伤",
+        "pattern": "图形缺陷",
+        "residue": "残留",
+        "electrical": "电性",
+        "other": "其他"
+      },
+      "severity": {
+        "minor": "轻微",
+        "major": "严重",
+        "critical": "致命"
+      },
+      "reason_type": {
+        "scrap": "报废",
+        "rework": "返工",
+        "hold": "冻结",
+        "release": "解冻"
+      },
+      "qtime_action": {
+        "warn": "预警",
+        "hold": "冻结批次",
+        "rework": "返工",
+        "scrap": "报废"
       }
     }
   },
@@ -571,6 +723,16 @@
     "mes-recipe_equipment": "配方设备映射",
     "mes-param_spec": "工艺参数规格",
     "mes-equipment_capability": "设备能力",
+    "mes-measurement_item": "量测项目",
+    "mes-dc_plan": "数据收集计划",
+    "mes-dc_plan_item": "收集项",
+    "mes-sampling_rule": "抽样规则",
+    "mes-defect_code": "缺陷代码",
+    "mes-reason_code": "原因代码",
+    "mes-lot_priority": "批次优先级",
+    "mes-lot_type": "批次类型",
+    "mes-split_merge_rule": "分批合批规则",
+    "mes-qtime_rule": "Q-Time 规则",
     "mes-g-common": "MES 建模 · 通用",
     "mes-g-org": "MES 建模 · 组织",
     "mes-g-equipment": "MES 建模 · 设备",

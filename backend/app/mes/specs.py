@@ -1,6 +1,11 @@
 """Loads every MES spec module (in phase order) and builds the tables."""
 
-from app.mes import specs_common, specs_p2, specs_p3  # noqa: F401  (registers entities)
+from app.mes import (  # noqa: F401  (registers entities)
+    specs_common,
+    specs_p2,
+    specs_p3,
+    specs_p4,
+)
 from app.mes.core import ENTITIES, ENUMS, build_all
 
 ENUMS["entity_type"][:] = [

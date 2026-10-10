@@ -317,6 +317,12 @@ function FieldInput({
           target={f.ref!}
           value={(val as string) || null}
           label={v[`${f.name}_label`] as string | null}
+          filters={
+            f.depends
+              ? { [`${f.depends}_id`]: String(v[`${f.depends}_id`] ?? '') }
+              : undefined
+          }
+          disabled={!!f.depends && !v[`${f.depends}_id`]}
           onChange={(rid, lbl) => {
             set(f.column, rid ?? '')
             set(`${f.name}_label`, lbl)

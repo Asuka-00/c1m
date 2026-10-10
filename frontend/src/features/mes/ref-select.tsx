@@ -53,7 +53,7 @@ export function RefSelect({
     enabled: open,
   })
   return (
-    <div className='flex gap-1'>
+    <div className='flex min-w-0 gap-1'>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -62,7 +62,7 @@ export function RefSelect({
             variant='outline'
             role='combobox'
             disabled={disabled}
-            className='w-full justify-between font-normal'
+            className='min-w-0 flex-1 justify-between font-normal'
           >
             <span className={cn('truncate', !value && 'text-muted-foreground')}>
               {value ? (label ?? value) : t('common.select')}

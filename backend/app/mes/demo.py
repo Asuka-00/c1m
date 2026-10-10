@@ -709,6 +709,234 @@ for seq, kind, ref, rc in _rows(
     )
 
 
+# ---------------- P4: quality + lot/wafer rules ----------------
+for c, n, tp, u, prec in _rows(
+    [
+        ("GATE-CD", "Gate CD", "numeric", "NM", 2),
+        ("OVL-X", "Overlay X", "numeric", "NM", 2),
+        ("OVL-Y", "Overlay Y", "numeric", "NM", 2),
+        ("OX-THK", "Oxide thickness", "numeric", "A", 1),
+        ("PART-ADD", "Particle adders", "count", None, 0),
+        ("VIS-OK", "Visual inspection", "attribute", None, 0),
+    ]
+):
+    add(
+        "measurement_item",
+        code=c,
+        name=n,
+        meas_type=tp,
+        precision=prec,
+        **({"uom": ("uom", u)} if u else {}),
+    )
+add(
+    "dc_plan",
+    code="DC-PH-CD",
+    name="ADI CD plan (DEMO)",
+    operation=("operation", "PH-CD"),
+)
+add(
+    "dc_plan_item",
+    dc_plan=("dc_plan", "DC-PH-CD@1"),
+    measurement_item=("measurement_item", "GATE-CD"),
+    seq=10,
+    sites=9,
+    lsl=42,
+    target=45,
+    usl=48,
+)
+add(
+    "dc_plan",
+    code="DC-PH-OVL",
+    name="Overlay plan (DEMO)",
+    operation=("operation", "PH-OVL"),
+)
+for i, mi in enumerate(["OVL-X", "OVL-Y"]):
+    add(
+        "dc_plan_item",
+        dc_plan=("dc_plan", "DC-PH-OVL@1"),
+        measurement_item=("measurement_item", mi),
+        seq=(i + 1) * 10,
+        sites=13,
+        lsl=-8,
+        target=0,
+        usl=8,
+    )
+add(
+    "dc_plan",
+    code="DC-OX",
+    name="Gate oxide thickness (DEMO)",
+    operation=("operation", "DF-OX"),
+)
+add(
+    "dc_plan_item",
+    dc_plan=("dc_plan", "DC-OX@1"),
+    measurement_item=("measurement_item", "OX-THK"),
+    seq=10,
+    sites=49,
+    lsl=28.5,
+    target=30,
+    usl=31.5,
+)
+add(
+    "dc_plan",
+    code="DC-PART",
+    name="Particle monitor (DEMO)",
+    operation=("operation", "IN-PART"),
+)
+add(
+    "dc_plan_item",
+    dc_plan=("dc_plan", "DC-PART@1"),
+    measurement_item=("measurement_item", "PART-ADD"),
+    seq=10,
+    sites=1,
+    usl=30,
+)
+ACTIVATE.extend(
+    [("dc_plan", c) for c in ("DC-PH-CD@1", "DC-PH-OVL@1", "DC-OX@1", "DC-PART@1")]
+)
+add(
+    "sampling_rule",
+    code="SR-CD",
+    name="CD: every lot, 3 fixed wafers",
+    level="wafer",
+    operation=("operation", "PH-CD"),
+    dc_plan=("dc_plan", "DC-PH-CD@1"),
+    lot_frequency=1,
+    wafer_count=3,
+    wafer_selection="fixed",
+    fixed_slots="1,13,25",
+)
+add(
+    "sampling_rule",
+    code="SR-OVL",
+    name="Overlay: 1 in 4 lots, 2 random wafers",
+    level="wafer",
+    operation=("operation", "PH-OVL"),
+    dc_plan=("dc_plan", "DC-PH-OVL@1"),
+    lot_frequency=4,
+    wafer_count=2,
+    wafer_selection="random",
+)
+add(
+    "sampling_rule",
+    code="SR-OX",
+    name="Oxide: every lot, first wafer",
+    level="wafer",
+    operation=("operation", "DF-OX"),
+    dc_plan=("dc_plan", "DC-OX@1"),
+    lot_frequency=1,
+    wafer_count=1,
+    wafer_selection="first",
+)
+add(
+    "sampling_rule",
+    code="SR-PART",
+    name="Particles: 1 in 10 lots",
+    level="lot",
+    operation=("operation", "IN-PART"),
+    dc_plan=("dc_plan", "DC-PART@1"),
+    lot_frequency=10,
+)
+for c, n, cat, sev, killer in _rows(
+    [
+        ("D-PRT", "Particle", "particle", "major", False),
+        ("D-SCR", "Scratch", "scratch", "major", True),
+        ("D-BRG", "Bridging", "pattern", "critical", True),
+        ("D-RES", "Resist residue", "residue", "minor", False),
+        ("D-PIN", "Pinhole", "pattern", "major", False),
+        ("D-OPEN", "Electrical open", "electrical", "critical", True),
+    ]
+):
+    add("defect_code", code=c, name=n, category=cat, severity=sev, is_killer=killer)
+for c, n, tp, area, cmt in _rows(
+    [
+        ("SC-BRK", "Wafer broken", "scrap", None, True),
+        ("SC-OOS", "Out of spec, not reworkable", "scrap", None, True),
+        ("RW-CD", "CD out of spec", "rework", "PHOTO", False),
+        ("RW-OVL", "Overlay out of spec", "rework", "PHOTO", False),
+        ("HD-EQ", "Equipment abnormal", "hold", None, True),
+        ("HD-QT", "Q-Time exceeded", "hold", None, False),
+        ("HD-ENG", "Engineering request", "hold", None, True),
+        ("RL-OK", "Disposition OK", "release", None, False),
+        ("RL-ENG", "Engineering release", "release", None, True),
+    ]
+):
+    add(
+        "reason_code",
+        code=c,
+        name=n,
+        reason_type=tp,
+        comment_required=cmt,
+        **({"area": ("area", area)} if area else {}),
+    )
+for c, n, lvl, col, hot in _rows(
+    [
+        ("SH", "Super hot", 1, "#dc2626", True),
+        ("HOT", "Hot", 2, "#f97316", True),
+        ("NORMAL", "Normal", 5, "#3b82f6", False),
+        ("LOW", "Low / filler", 9, "#6b7280", False),
+    ]
+):
+    add("lot_priority", code=c, name=n, level=lvl, color=col, is_hot=hot)
+for c, n, cat, pr in _rows(
+    [
+        ("PROD", "Production lot", "production", "NORMAL"),
+        ("ENG", "Engineering lot", "engineering", "HOT"),
+        ("MON", "Monitor lot", "monitor", "LOW"),
+        ("DUMMY", "Dummy lot", "dummy", "LOW"),
+    ]
+):
+    add(
+        "lot_type",
+        code=c,
+        name=f"{n} (DEMO)",
+        category=cat,
+        default_priority=("lot_priority", pr),
+        lot_id_rule=("code_rule", "LOT_ID"),
+        wafer_id_rule=("code_rule", "WAFER_ID"),
+        max_wafers=25,
+    )
+add(
+    "split_merge_rule",
+    code="SM-PROD",
+    name="Production split/merge",
+    lot_type=("lot_type", "PROD"),
+    max_children=4,
+    min_wafers=5,
+)
+add(
+    "split_merge_rule",
+    code="SM-ENG",
+    name="Engineering split (no merge)",
+    lot_type=("lot_type", "ENG"),
+    max_children=10,
+    min_wafers=1,
+    allow_merge=False,
+)
+add(
+    "qtime_rule",
+    code="QT-OX-DEP",
+    name="Gate oxide → deposition (DEMO)",
+    route=("route", "MCU40-MAIN@1"),
+    from_step=("route_step", "MCU40-MAIN@1#10"),
+    to_step=("route_step", "MCU40-MAIN@1#20"),
+    max_minutes=240,
+    action="hold",
+    reason=("reason_code", "HD-QT"),
+)
+add(
+    "qtime_rule",
+    code="QT-ETCH-CLN",
+    name="Poly etch → clean (DEMO)",
+    route=("route", "MCU40-MAIN@1"),
+    from_step=("route_step", "MCU40-MAIN@1#60"),
+    to_step=("route_step", "MCU40-MAIN@1#70"),
+    min_minutes=5,
+    max_minutes=120,
+    action="rework",
+)
+
+
 # ---------------- helpers ----------------
 def _resolve(session: Session, tid: uuid.UUID, ref: Ref) -> Any:
     ent, key = ref

@@ -28,6 +28,8 @@ export interface MesField {
   default: unknown
   max_length: number | null
   help: boolean
+  /** ref options are filtered by this sibling ref field (e.g. route) */
+  depends: string | null
 }
 
 export interface MesEntity {

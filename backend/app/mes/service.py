@@ -140,14 +140,30 @@ def ref_labels(
         cols.append(t.c.name)
     if target.versioned:
         cols.append(t.c.version)
-    rows = (
+    extra = target.field(target.label_ref) if target.label_ref else None
+    if extra:
+        cols.append(t.c[extra.column])
+    rows = list(
         conn(session)
         .execute(sa.select(*cols).where(t.c.tenant_id == tenant_id, t.c.id.in_(ids)))
         .mappings()
     )
+    extra_codes: dict[Any, str] = {}
+    if extra:
+        et = table(ENTITIES[extra.ref or ""])
+        eids = {r[extra.column] for r in rows if r[extra.column]}
+        if eids:
+            extra_codes = {
+                x["id"]: x["code"]
+                for x in conn(session)
+                .execute(sa.select(et.c.id, et.c.code).where(et.c.id.in_(eids)))
+                .mappings()
+            }
     out: dict[Any, str] = {}
     for r in rows:
         lbl = str(to_json(r[cols[1].name]))
+        if extra and r[extra.column] in extra_codes:
+            lbl += f" · {extra_codes[r[extra.column]]}"
         if target.versioned:
             lbl += f" v{r['version']}"
         if target.has_code and r["name"] and target.label_field == "code":

@@ -45,7 +45,17 @@
       "recipe": "Recipe",
       "recipe_equipment": "Recipe ↔ equipment",
       "param_spec": "Parameter spec",
-      "equipment_capability": "Equipment capability"
+      "equipment_capability": "Equipment capability",
+      "measurement_item": "Measurement item",
+      "dc_plan": "Data collection plan",
+      "dc_plan_item": "DC plan item",
+      "sampling_rule": "Sampling rule",
+      "defect_code": "Defect code",
+      "reason_code": "Reason code",
+      "lot_priority": "Lot priority",
+      "lot_type": "Lot type",
+      "split_merge_rule": "Split / merge rule",
+      "qtime_rule": "Q-Time rule"
     },
     "field": {
       "dict_type": {
@@ -355,6 +365,104 @@
         "recipe": "Recipe",
         "is_qualified": "Qualified",
         "qualified_until": "Qualified until"
+      },
+      "measurement_item": {
+        "code": "Code",
+        "name": "Name",
+        "meas_type": "Data type",
+        "uom": "Unit",
+        "precision": "Decimals",
+        "description": "Description"
+      },
+      "dc_plan": {
+        "code": "Code",
+        "name": "Name",
+        "operation": "Operation",
+        "description": "Description"
+      },
+      "dc_plan_item": {
+        "dc_plan": "DC plan",
+        "measurement_item": "Measurement item",
+        "seq": "Seq.",
+        "sites": "Sites per wafer",
+        "target": "Target",
+        "lsl": "LSL",
+        "usl": "USL"
+      },
+      "sampling_rule": {
+        "code": "Code",
+        "name": "Name",
+        "level": "Level",
+        "operation": "Operation",
+        "dc_plan": "DC plan",
+        "product": "Product",
+        "lot_frequency": "Every N lots",
+        "wafer_count": "Wafers per lot",
+        "wafer_selection": "Wafer selection",
+        "fixed_slots": "Fixed slots",
+        "is_active": "Active",
+        "description": "Description"
+      },
+      "defect_code": {
+        "code": "Code",
+        "name": "Name",
+        "category": "Category",
+        "severity": "Severity",
+        "is_killer": "Killer defect",
+        "description": "Description"
+      },
+      "reason_code": {
+        "code": "Code",
+        "name": "Name",
+        "reason_type": "Reason type",
+        "area": "Area",
+        "comment_required": "Comment required",
+        "is_active": "Active",
+        "description": "Description"
+      },
+      "lot_priority": {
+        "code": "Code",
+        "name": "Name",
+        "level": "Level (1 = highest)",
+        "color": "Color",
+        "is_hot": "Hot lot",
+        "description": "Description"
+      },
+      "lot_type": {
+        "code": "Code",
+        "name": "Name",
+        "category": "Category",
+        "default_priority": "Default priority",
+        "lot_id_rule": "Lot ID rule",
+        "wafer_id_rule": "Wafer ID rule",
+        "max_wafers": "Max wafers / lot",
+        "description": "Description"
+      },
+      "split_merge_rule": {
+        "code": "Code",
+        "name": "Name",
+        "lot_type": "Lot type",
+        "allow_split": "Allow split",
+        "max_children": "Max child lots",
+        "min_wafers": "Min wafers per lot",
+        "allow_merge": "Allow merge",
+        "merge_same_product": "Merge: same product",
+        "merge_same_step": "Merge: same route step",
+        "merge_same_priority": "Merge: same priority",
+        "description": "Description"
+      },
+      "qtime_rule": {
+        "code": "Code",
+        "name": "Name",
+        "route": "Route",
+        "from_step": "From step",
+        "to_step": "To step",
+        "product": "Product",
+        "min_minutes": "Min (min)",
+        "max_minutes": "Max (min)",
+        "action": "On violation",
+        "reason": "Reason code",
+        "description": "Description"
       }
     },
     "help": {
@@ -369,6 +477,9 @@
       },
       "route_step": {
         "branch_condition": "e.g. lot_type == 'ENG' — evaluated at execution time (not in this module)"
+      },
+      "sampling_rule": {
+        "fixed_slots": "Comma separated slot numbers, e.g. 1,13,25"
       }
     },
     "enum": {
@@ -531,6 +642,47 @@
         "reticle": "Reticle",
         "material": "Material",
         "fixture": "Fixture / tool"
+      },
+      "meas_type": {
+        "numeric": "Numeric",
+        "attribute": "Attribute (pass/fail)",
+        "count": "Count"
+      },
+      "sample_level": {
+        "lot": "Lot",
+        "wafer": "Wafer"
+      },
+      "wafer_selection": {
+        "first": "First N",
+        "last": "Last N",
+        "random": "Random",
+        "alternate": "Alternate slots",
+        "fixed": "Fixed slots"
+      },
+      "defect_category": {
+        "particle": "Particle",
+        "scratch": "Scratch",
+        "pattern": "Pattern",
+        "residue": "Residue",
+        "electrical": "Electrical",
+        "other": "Other"
+      },
+      "severity": {
+        "minor": "Minor",
+        "major": "Major",
+        "critical": "Critical"
+      },
+      "reason_type": {
+        "scrap": "Scrap",
+        "rework": "Rework",
+        "hold": "Hold",
+        "release": "Release"
+      },
+      "qtime_action": {
+        "warn": "Warn",
+        "hold": "Hold lot",
+        "rework": "Rework",
+        "scrap": "Scrap"
       }
     }
   },
@@ -571,6 +723,16 @@
     "mes-recipe_equipment": "Recipe ↔ equipment",
     "mes-param_spec": "Parameter spec",
     "mes-equipment_capability": "Equipment capability",
+    "mes-measurement_item": "Measurement item",
+    "mes-dc_plan": "Data collection plan",
+    "mes-dc_plan_item": "DC plan item",
+    "mes-sampling_rule": "Sampling rule",
+    "mes-defect_code": "Defect code",
+    "mes-reason_code": "Reason code",
+    "mes-lot_priority": "Lot priority",
+    "mes-lot_type": "Lot type",
+    "mes-split_merge_rule": "Split / merge rule",
+    "mes-qtime_rule": "Q-Time rule",
     "mes-g-common": "MES · Common",
     "mes-g-org": "MES · Organization",
     "mes-g-equipment": "MES · Equipment",

@@ -438,7 +438,8 @@
     "panel": {
       "code_rule": "プレビュー",
       "uom": "換算ツール",
-      "route": "ルートエディタ"
+      "route": "ルートエディタ",
+      "lot_type": "ID プレビュー"
     },
     "convertValue": "値（{{unit}}）",
     "convertTo": "換算先",
@@ -452,6 +453,9 @@
     "branchTo": "{{cond}} の場合 → ステップ {{seq}}",
     "resources": "資源",
     "moveUp": "上へ",
-    "moveDown": "下へ"
+    "moveDown": "下へ",
+    "noLotRule": "ロット ID ルールが未設定です。",
+    "nextLotId": "次のロット ID",
+    "waferIds": "ウェーハ ID"
   }
 }
