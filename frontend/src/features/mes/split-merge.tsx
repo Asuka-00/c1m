@@ -10,6 +10,7 @@ import {
   type CheckResult,
   type ExecContext,
   type GenealogyLink,
+  type PrioRef,
   type SmBody,
   type SplitChild,
 } from '@/lib/api/mes'
@@ -444,6 +445,15 @@ function MergeDialog({
   const total =
     Number(cx.lot.qty ?? 0) +
     cands.filter((c) => sel.includes(c.id)).reduce((a, c) => a + c.qty, 0)
+  const prios = [
+    cx.sm?.priority,
+    ...cands.filter((c) => sel.includes(c.id)).map((c) => c.priority),
+  ].filter((p): p is PrioRef => !!p)
+  const best = prios.reduce<PrioRef | null>(
+    (a, p) => (!a || p.level < a.level ? p : a),
+    null
+  )
+  const changed = !!best && best.id !== cx.sm?.priority?.id
   const sm = useSm(
     (body) => execApi.merge(String(cx.lot.id), sel, { comment, ...body }),
     (r) => {
@@ -494,6 +504,7 @@ function MergeDialog({
                       <span className='font-sans font-normal text-muted-foreground'>
                         {t('mes.exec.qty')} {c.qty}
                       </span>
+                      {c.priority && <PrioBadge p={c.priority} />}
                       {c.on_hold && (
                         <Badge variant='destructive'>
                           {t('mes.exec.onHold')}
@@ -501,9 +512,11 @@ function MergeDialog({
                       )}
                     </label>
                     {c.problems.length > 0 && (
-                      <p className='text-xs text-muted-foreground'>
-                        {c.problems.join('; ')}
-                      </p>
+                      <ul className='list-disc ps-4 text-xs text-destructive'>
+                        {c.problems.map((x, k) => (
+                          <li key={k}>{x}</li>
+                        ))}
+                      </ul>
                     )}
                   </div>
                 </li>
@@ -511,6 +524,15 @@ function MergeDialog({
             })}
           </ul>
         )}
+        <p className='flex flex-wrap items-center gap-2 text-sm'>
+          {t('mes.sm.resultPriority')}
+          {best ? <PrioBadge p={best} /> : '—'}
+          {changed && cx.sm?.priority && (
+            <span className='text-xs text-muted-foreground'>
+              {t('mes.sm.prioChange', { from: cx.sm.priority.code })}
+            </span>
+          )}
+        </p>
         <p className='text-sm'>
           {t('mes.sm.mergedQty', { n: total })} ·{' '}
           <span className='text-muted-foreground'>{t('mes.sm.qtimeNote')}</span>
@@ -552,5 +574,17 @@ function MergeDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+function PrioBadge({ p }: { p: PrioRef }) {
+  return (
+    <Badge
+      variant='outline'
+      className='font-sans font-normal'
+      style={p.color ? { borderColor: p.color, color: p.color } : undefined}
+    >
+      {p.code} · {p.name}
+    </Badge>
   )
 }

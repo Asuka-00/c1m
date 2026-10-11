@@ -612,7 +612,7 @@
         "merge_same_wo": "統合：同一作業指示",
         "merge_same_product": "統合：同一製品",
         "merge_same_step": "統合：同一ステップ",
-        "merge_same_priority": "統合：同一優先度",
+        "merge_same_priority": "統合：同一優先度必須（否則最高を採用）",
         "description": "説明"
       },
       "qtime_rule": {

@@ -657,7 +657,10 @@
       "factChildren": "子ロット：{{list}}",
       "factParent": "親ロット {{code}} から",
       "factTarget": "{{code}} へ統合",
-      "factSources": "統合元：{{list}}"
+      "factSources": "統合元：{{list}}",
+      "resultPriority": "統合後の優先度（最高を採用）：",
+      "prioChange": "{{from}} から引上げ",
+      "factPriority": "優先度 {{from}} → {{to}}"
     }
   }
 }

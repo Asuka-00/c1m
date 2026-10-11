@@ -328,3 +328,53 @@ def test_bound_checks_override_preview_and_perms(
         ).status_code
         == 403
     )
+
+
+def test_merge_highest_priority_and_source_rules(
+    client: TestClient, db: Session
+) -> None:
+    f = _line(client, db)
+    m = f.m
+    hot = m.post("lot_priority", {"code": "HOT", "name": "hot", "level": 1})
+    a, b, c = f.start(3, 3, 3)
+    f.sql("UPDATE mes_lot SET priority_id = :p WHERE id = :l", p=hot["id"], l=b["id"])
+    old = f.lot(a)["priority_id"]
+    cand = {x["code"]: x for x in f.ctx(a)["sm"]["candidates"]}
+    assert cand[b["code"]]["priority"]["level"] == 1
+    r = merge(f, a, [b])
+    assert r["lot"]["priority_id"] == hot["id"] != old
+    h = m.list("lot_history", lot=a["id"], action="merge")["data"][0]
+    assert h["details"]["priority"]["to"] == "HOT"
+    # same-priority requirement only when explicitly enabled on the rule
+    m.patch("split_merge_rule", f.rule["id"], {"merge_same_priority": True})  # type: ignore[attr-defined]
+    assert "different priority" in _msgs(merge(f, a, [c], 409))
+    m.patch("split_merge_rule", f.rule["id"], {"merge_same_priority": False})  # type: ignore[attr-defined]
+    # the source's own lot-type rule must allow merging
+    lt2 = m.post(
+        "lot_type",
+        {
+            "code": "LT2",
+            "name": "lt2",
+            "max_wafers": 1000,
+            "default_priority_id": m.fx("default_priority"),
+            "lot_id_rule_id": m.fx("lot_id_rule"),
+            "wafer_id_rule_id": m.fx("wafer_id_rule"),
+        },
+    )
+    f.sql("UPDATE mes_lot SET lot_type_id = :t WHERE id = :l", t=lt2["id"], l=c["id"])
+    assert "no split/merge rule for its lot type" in _msgs(merge(f, a, [c], 409))
+    r2 = m.post(
+        "split_merge_rule",
+        {
+            "code": "SM2",
+            "name": "s2",
+            "lot_type_id": lt2["id"],
+            "max_children": 2,
+            "allow_merge": False,
+        },
+    )
+    assert "SM2 does not allow merge" in _msgs(merge(f, a, [c], 409))
+    p = {x["code"]: x for x in f.ctx(a)["sm"]["candidates"]}[c["code"]]["problems"]
+    assert any("SM2" in x for x in p)
+    m.patch("split_merge_rule", r2["id"], {"allow_merge": True})
+    assert merge(f, a, [c])["lot"]["qty"] == 9

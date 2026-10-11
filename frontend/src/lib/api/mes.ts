@@ -256,7 +256,15 @@ export interface GenealogyLink {
   at: string | null
   user: string | null
 }
+export interface PrioRef {
+  id: string
+  code: string
+  name: string
+  level: number
+  color: string | null
+}
 export interface SmContext {
+  priority: PrioRef | null
   rule: {
     code: string
     allow_split: boolean
@@ -273,6 +281,7 @@ export interface SmContext {
     code: string
     qty: number
     on_hold: boolean
+    priority: PrioRef | null
     problems: string[]
   }[]
   genealogy: GenealogyLink[]

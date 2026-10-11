@@ -612,7 +612,7 @@
         "merge_same_wo": "合批：同工单",
         "merge_same_product": "合批：同产品",
         "merge_same_step": "合批：同流程步骤",
-        "merge_same_priority": "合批：同优先级",
+        "merge_same_priority": "合批：要求同优先级（否则取最高）",
         "description": "描述"
       },
       "qtime_rule": {

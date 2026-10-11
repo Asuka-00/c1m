@@ -657,7 +657,10 @@
       "factChildren": "子批：{{list}}",
       "factParent": "来自母批 {{code}}",
       "factTarget": "合入 {{code}}",
-      "factSources": "合入批次：{{list}}"
+      "factSources": "合入批次：{{list}}",
+      "resultPriority": "合批后优先级（取最高）：",
+      "prioChange": "由 {{from}} 提升",
+      "factPriority": "优先级 {{from}} → {{to}}"
     }
   }
 }

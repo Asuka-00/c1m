@@ -359,7 +359,9 @@ def _ser(s: Session, tid: uuid.UUID, lot_id: Any) -> Row | None:
 
 
 # ---------------- merge ----------------
-def merge_problems(target: Row, src: Row, rule: Row | None) -> list[str]:
+def merge_problems(
+    target: Row, src: Row, rule: Row | None, src_rule: Row | None = None
+) -> list[str]:
     c = src["code"]
     p: list[str] = []
     if src["id"] == target["id"]:
@@ -389,7 +391,32 @@ def merge_problems(target: Row, src: Row, rule: Row | None) -> list[str]:
         and src["priority_id"] != target["priority_id"]
     ):
         p.append(f"{c}: different priority")
+    # the source's own lot-type rule must allow merging too
+    if src_rule is None:
+        p.append(f"{c}: no split/merge rule for its lot type")
+    elif not src_rule["allow_merge"]:
+        p.append(f"{c}: rule {src_rule['code']} does not allow merge")
     return p
+
+
+def _prio(s: Session, tid: uuid.UUID, pid: Any) -> Row | None:
+    return one(s, tid, "lot_priority", pid)
+
+
+def _prio_json(p: Row | None) -> Row | None:
+    return p and {
+        "id": str(p["id"]),
+        "code": p["code"],
+        "name": p["name"],
+        "level": p["level"],
+        "color": p.get("color"),
+    }
+
+
+def highest_priority(s: Session, tid: uuid.UUID, lots: list[Row]) -> Row | None:
+    """Level 1 = highest; ties keep the first (the target)."""
+    ps = [p for p in (_prio(s, tid, x["priority_id"]) for x in lots) if p]
+    return min(ps, key=lambda p: p["level"]) if ps else None
 
 
 def merge_candidates(s: Session, tid: uuid.UUID, target: Row) -> list[Row]:
@@ -416,7 +443,10 @@ def merge_candidates(s: Session, tid: uuid.UUID, target: Row) -> list[Row]:
             "code": r["code"],
             "qty": r["qty"],
             "on_hold": r["on_hold"],
-            "problems": merge_problems(target, dict(r), rule),
+            "priority": _prio_json(_prio(s, tid, r["priority_id"])),
+            "problems": merge_problems(
+                target, dict(r), rule, rule_for(s, tid, dict(r))
+            ),
         }
         for r in rows
     ]
@@ -443,7 +473,7 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
     elif not rule["allow_merge"]:
         errs.append(f"rule {rule['code']}: merge not allowed")
     for src in srcs:
-        errs += merge_problems(target, src, rule)
+        errs += merge_problems(target, src, rule, rule_for(s, tid, src))
     qty_mode = (target["tracking_level"] or "wafer") == "quantity"
     total = target["qty"] + sum(x["qty"] for x in srcs)
     if target["carrier_id"] and not qty_mode:
@@ -523,8 +553,25 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
         [x["step_in_at"] for x in [target, *srcs] if x["step_in_at"]], default=None
     )
     old = target["qty"]
-    _upd(s, tid, "lot", target["id"], user, qty=total, step_in_at=step_in)
-    target["qty"] = total
+    best = highest_priority(s, tid, [target, *srcs])
+    old_p = _prio(s, tid, target["priority_id"])
+    new_pid = best["id"] if best else target["priority_id"]
+    _upd(
+        s,
+        tid,
+        "lot",
+        target["id"],
+        user,
+        qty=total,
+        step_in_at=step_in,
+        priority_id=new_pid,
+    )
+    target.update(qty=total, priority_id=new_pid)
+    prio_change = (
+        {"from": old_p and old_p["code"], "to": best["code"]}
+        if best and (not old_p or best["id"] != old_p["id"])
+        else None
+    )
     history(
         s,
         tid,
@@ -533,7 +580,12 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
         user,
         from_status=target["lot_status"],
         comment=body.get("comment"),
-        details={"sources": merged, "checks": _brief(results), **_ov(body, results)},
+        details={
+            "sources": merged,
+            "priority": prio_change,
+            "checks": _brief(results),
+            **_ov(body, results),
+        },
     )
     audit(
         s,
@@ -542,7 +594,15 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
         "merge",
         target,
         user,
-        {"qty": (old, total), "sources": (None, ", ".join(m["code"] for m in merged))},
+        {
+            "qty": (old, total),
+            "sources": (None, ", ".join(m["code"] for m in merged)),
+            **(
+                {"priority": (prio_change["from"], prio_change["to"])}
+                if prio_change
+                else {}
+            ),
+        },
     )
     s.commit()
     return {"results": results, "merged": merged, "lot": _ser(s, tid, lot_id)}
@@ -581,6 +641,7 @@ def sm_context(s: Session, tid: uuid.UUID, lot: Row) -> Row:
             "children": len(_children(s, tid, lot["id"])),
         },
         "allowed": lot["lot_status"] in SPLIT_STATES,
+        "priority": _prio_json(_prio(s, tid, lot["priority_id"])),
         "candidates": merge_candidates(s, tid, lot)
         if lot["lot_status"] in SPLIT_STATES
         else [],

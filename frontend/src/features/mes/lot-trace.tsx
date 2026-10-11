@@ -106,6 +106,9 @@ function Details({ d }: { d: Record<string, unknown> }) {
       })
     )
   if (d.parent) facts.push(t('mes.sm.factParent', { code: d.parent }))
+  const pc = d.priority as { from: string | null; to: string } | null
+  if (pc && typeof pc === 'object' && pc.to)
+    facts.push(t('mes.sm.factPriority', { from: pc.from ?? '—', to: pc.to }))
   if (d.target) facts.push(t('mes.sm.factTarget', { code: d.target }))
   const srcs = d.sources as { code: string; qty: number }[] | undefined
   if (srcs?.length)

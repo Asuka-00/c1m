@@ -657,7 +657,10 @@
       "factChildren": "children: {{list}}",
       "factParent": "from parent {{code}}",
       "factTarget": "merged into {{code}}",
-      "factSources": "merged: {{list}}"
+      "factSources": "merged: {{list}}",
+      "resultPriority": "Resulting priority (highest wins):",
+      "prioChange": "raised from {{from}}",
+      "factPriority": "priority {{from}} → {{to}}"
     }
   }
 }

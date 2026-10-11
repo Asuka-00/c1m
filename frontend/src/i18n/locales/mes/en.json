@@ -612,7 +612,7 @@
         "merge_same_wo": "Merge: same work order",
         "merge_same_product": "Merge: same product",
         "merge_same_step": "Merge: same route step",
-        "merge_same_priority": "Merge: same priority",
+        "merge_same_priority": "Merge: require same priority (else highest wins)",
         "description": "Description"
       },
       "qtime_rule": {
