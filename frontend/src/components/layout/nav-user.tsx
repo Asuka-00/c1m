@@ -43,7 +43,10 @@ export function NavUser() {
         </AvatarFallback>
       </Avatar>
       <div className='grid flex-1 text-start text-sm leading-tight'>
-        <span className='truncate font-semibold'>
+        <span
+          className='truncate font-semibold'
+          title={me?.is_superuser ? `${name} ${t('nav.superuserTag')}` : name}
+        >
           {name}
           {me?.is_superuser && (
             <span className='ms-1 text-xs text-muted-foreground'>
@@ -51,7 +54,9 @@ export function NavUser() {
             </span>
           )}
         </span>
-        <span className='truncate text-xs'>{email}</span>
+        <span className='truncate text-xs' title={email}>
+          {email}
+        </span>
       </div>
     </>
   )

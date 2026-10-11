@@ -360,7 +360,7 @@ register(
             F(
                 "merge_same_priority",
                 "bool",
-                "Merge: require same priority (else highest wins)|合批：要求同优先级（否则取最高）|統合：同一優先度必須（否則最高を採用）",
+                "Merge: same priority required|合批：要求同优先级（否则取最高）|統合：同一優先度必須（否則最高を採用）",
                 default=False,
                 list=False,
             ),

@@ -30,6 +30,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -274,7 +275,7 @@ function Console({ cx, perms }: { cx: ExecContext; perms: string[] }) {
             </CardTitle>
           </CardHeader>
           <CardContent className='space-y-3 text-sm'>
-            <dl className='grid gap-x-6 gap-y-1 sm:grid-cols-3'>
+            <dl className='grid gap-x-6 gap-y-1 sm:grid-cols-2'>
               <Fact k={t('mes.exec.step')}>
                 {step
                   ? `${step.seq} · ${step.operation ? optLabel(step.operation) : '—'}`
@@ -443,6 +444,7 @@ function Console({ cx, perms }: { cx: ExecContext; perms: string[] }) {
                 <Button
                   variant='outline'
                   disabled={preview.isPending}
+                  data-testid='preview-stage'
                   onClick={() => preview.mutate()}
                 >
                   <SearchCheck className='size-4' />
@@ -496,6 +498,7 @@ function Console({ cx, perms }: { cx: ExecContext; perms: string[] }) {
               <Button
                 size='sm'
                 variant='outline'
+                data-testid='open-hold'
                 onClick={() => setHoldOpen(true)}
               >
                 <PauseCircle className='size-4' />
@@ -521,9 +524,18 @@ function Console({ cx, perms }: { cx: ExecContext; perms: string[] }) {
 
 function Fact({ k, children }: { k: string; children: React.ReactNode }) {
   return (
-    <div className='flex gap-2'>
-      <dt className='text-muted-foreground'>{k}</dt>
-      <dd>{children}</dd>
+    <div className='flex min-w-0 gap-2'>
+      <dt className='shrink-0 whitespace-nowrap text-muted-foreground'>{k}</dt>
+      <dd
+        className='min-w-0 truncate'
+        title={
+          typeof children === 'string' || typeof children === 'number'
+            ? String(children)
+            : undefined
+        }
+      >
+        {children}
+      </dd>
     </div>
   )
 }
@@ -902,6 +914,7 @@ function HoldRow({
           size='sm'
           variant='outline'
           className='mt-1'
+          data-testid='open-release'
           onClick={() => setOpen(true)}
         >
           {t('mes.exec.release')}
@@ -1009,9 +1022,11 @@ export function ReleaseDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {t('mes.exec.release')} · {String(hold.lot_label ?? '')} ·{' '}
-            {String(hold.reason_label ?? '')}
+            {t('mes.exec.release')} · {String(hold.lot_label ?? '')}
           </DialogTitle>
+          <DialogDescription>
+            {String(hold.reason_label ?? '')}
+          </DialogDescription>
         </DialogHeader>
         <Pick
           id='release-reason'

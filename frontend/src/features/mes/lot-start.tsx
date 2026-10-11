@@ -243,9 +243,11 @@ export default function LotStartPage() {
                       woId === w.id && 'border-primary ring-2 ring-primary/40'
                     )}
                   >
-                    <span className='font-medium'>{w.code}</span>
-                    <span>{cellValue(woE, w, 'product')}</span>
-                    <span>{cellValue(woE, w, 'route')}</span>
+                    <span className='truncate font-medium' title={w.code}>
+                      {w.code}
+                    </span>
+                    <TruncCell>{cellValue(woE, w, 'product')}</TruncCell>
+                    <TruncCell>{cellValue(woE, w, 'route')}</TruncCell>
                     {cellValue(woE, w, 'wo_status')}
                     <WoProgress row={w} />
                   </button>
@@ -601,5 +603,19 @@ export default function LotStartPage() {
         )}
       </div>
     </Page>
+  )
+}
+
+/** Grid cell that keeps one line; full text in the tooltip. */
+function TruncCell({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      className='min-w-0 truncate'
+      ref={(el) => {
+        if (el) el.title = el.textContent ?? ''
+      }}
+    >
+      {children}
+    </span>
   )
 }

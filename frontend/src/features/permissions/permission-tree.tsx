@@ -86,7 +86,7 @@ export function PermissionTree({
                       disabled={disabled}
                       onCheckedChange={(c) => toggle([p.code], c === true)}
                     />
-                    <span className='grid'>
+                    <span className='grid min-w-0'>
                       <span className='font-mono text-xs'>
                         {p.code}{' '}
                         <Badge
@@ -98,7 +98,10 @@ export function PermissionTree({
                           })}
                         </Badge>
                       </span>
-                      <span className='text-xs text-muted-foreground'>
+                      <span
+                        className='truncate text-xs text-muted-foreground'
+                        title={p.description ?? undefined}
+                      >
                         {p.description}
                       </span>
                     </span>

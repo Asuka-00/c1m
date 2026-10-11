@@ -273,7 +273,7 @@ export function EntityTable({
             <Upload />
             {t('mes.import')}
           </Button>
-          <Button size='sm' onClick={s.openCreate}>
+          <Button size='sm' onClick={s.openCreate} data-testid='crud-new'>
             <Plus />
             {t('mes.new')}
           </Button>
