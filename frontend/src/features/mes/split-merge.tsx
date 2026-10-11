@@ -2,7 +2,15 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { fmtDateTime, t } from '@/i18n'
-import { GitFork, GitMerge, Minus, Plus, Split } from 'lucide-react'
+import {
+  GitFork,
+  GitMerge,
+  Info,
+  Minus,
+  Plus,
+  Split,
+  TriangleAlert,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import {
   blockedResults,
@@ -15,9 +23,16 @@ import {
   type SplitChild,
 } from '@/lib/api/mes'
 import { cn } from '@/lib/utils'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
@@ -30,6 +45,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { EmptyState } from '@/components/desc-list'
 import { CheckPanel } from './exec-parts'
 import { mesErrorMessage } from './required'
 import { useMesEntity } from './use-mes-meta'
@@ -51,9 +67,7 @@ export function GenealogyList({
   page?: string
 }) {
   if (!links.length)
-    return (
-      <p className='text-sm text-muted-foreground'>{t('mes.sm.noGenealogy')}</p>
-    )
+    return <EmptyState icon={GitFork}>{t('mes.sm.noGenealogy')}</EmptyState>
   return (
     <ul className='space-y-1.5 text-sm' data-testid='genealogy'>
       {links.map((g, i) => {
@@ -127,10 +141,13 @@ export function SplitMergeCard({
     !onHold &&
     !!r?.allow_merge
   return (
-    <Card>
-      <CardHeader className='flex flex-row items-center justify-between gap-2 pb-2'>
-        <CardTitle className='text-base'>{t('mes.sm.title')}</CardTitle>
-        <div className='flex gap-2'>
+    <Card className='gap-3'>
+      <CardHeader>
+        <CardTitle className='flex items-center gap-2 text-base'>
+          <GitFork className='size-4 text-muted-foreground' />
+          {t('mes.sm.title')}
+        </CardTitle>
+        <CardAction className='flex gap-2'>
           <Button
             size='sm'
             variant='outline'
@@ -151,33 +168,62 @@ export function SplitMergeCard({
             <GitMerge className='size-4' />
             {t('mes.sm.merge')}
           </Button>
-        </div>
+        </CardAction>
       </CardHeader>
-      <CardContent className='space-y-3 text-sm'>
+      <CardContent className='space-y-4 text-sm'>
         {r ? (
-          <p className='text-xs text-muted-foreground'>
-            {t('mes.sm.ruleSummary', {
-              code: r.code,
-              max: r.max_children,
-              min: r.min_qty,
-              n: r.children,
-            })}
-            {!r.allow_split && ` · ${t('mes.sm.noSplit')}`}
-            {!r.allow_merge && ` · ${t('mes.sm.noMerge')}`}
-          </p>
+          <dl className='grid grid-cols-2 gap-x-4 gap-y-2 rounded-md bg-muted/40 p-3 text-xs'>
+            <div>
+              <dt className='text-muted-foreground'>{t('mes.sm.rule')}</dt>
+              <dd className='font-mono font-medium'>{r.code}</dd>
+            </div>
+            <div>
+              <dt className='text-muted-foreground'>{t('mes.sm.allowed')}</dt>
+              <dd className='flex flex-wrap gap-1'>
+                <Badge variant={r.allow_split ? 'secondary' : 'outline'}>
+                  {r.allow_split ? '✓' : '✕'} {t('mes.sm.split')}
+                </Badge>
+                <Badge variant={r.allow_merge ? 'secondary' : 'outline'}>
+                  {r.allow_merge ? '✓' : '✕'} {t('mes.sm.merge')}
+                </Badge>
+              </dd>
+            </div>
+            <div>
+              <dt className='text-muted-foreground'>{t('mes.sm.maxLots')}</dt>
+              <dd className='font-medium'>
+                {r.max_children}
+                <span className='ms-1 font-normal text-muted-foreground'>
+                  ({t('mes.sm.usedLots', { n: r.children + 1 })})
+                </span>
+              </dd>
+            </div>
+            <div>
+              <dt className='text-muted-foreground'>{t('mes.sm.minQty')}</dt>
+              <dd className='font-medium'>{r.min_qty}</dd>
+            </div>
+          </dl>
         ) : (
-          <p className='text-xs text-destructive'>{t('mes.sm.noRule')}</p>
+          <Alert variant='destructive'>
+            <TriangleAlert />
+            <AlertDescription>{t('mes.sm.noRule')}</AlertDescription>
+          </Alert>
         )}
         {!sm.allowed && (
-          <p className='text-xs text-muted-foreground'>
-            {t('mes.sm.stateHint')}
-          </p>
+          <Alert>
+            <Info />
+            <AlertDescription>{t('mes.sm.stateHint')}</AlertDescription>
+          </Alert>
         )}
-        <GenealogyList
-          lotId={String(cx.lot.id)}
-          links={sm.genealogy}
-          page='lot-console'
-        />
+        <div className='space-y-2'>
+          <p className='text-xs font-medium text-muted-foreground'>
+            {t('mes.sm.genealogy')}
+          </p>
+          <GenealogyList
+            lotId={String(cx.lot.id)}
+            links={sm.genealogy}
+            page='lot-console'
+          />
+        </div>
       </CardContent>
       {open === 'split' && (
         <SplitDialog cx={cx} perms={perms} onClose={() => setOpen(null)} />

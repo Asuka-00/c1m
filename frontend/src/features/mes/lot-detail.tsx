@@ -3,6 +3,7 @@ import { t } from '@/i18n'
 import { Loader2 } from 'lucide-react'
 import { useTenantKey } from '@/lib/api/hooks'
 import { mesApi, type MesRow } from '@/lib/api/mes'
+import { DescItem, DescList } from '@/components/desc-list'
 import { cellValue } from './cells'
 import { fieldLabel } from './labels'
 import { RouteFlow } from './route-flow'
@@ -36,14 +37,15 @@ export function LotDetail({ row }: { row: MesRow }) {
   ]
   return (
     <div className='space-y-3 pt-2' data-testid='lot-detail'>
-      <dl className='grid gap-x-6 gap-y-1 text-sm sm:grid-cols-3'>
+      <DescList>
         {keys.map((k) => (
-          <div key={k} className='flex gap-2'>
-            <dt className='text-muted-foreground'>{fieldLabel(entity, k)}</dt>
-            <dd>{cellValue(entity, row, k)}</dd>
-          </div>
+          <DescItem
+            key={k}
+            label={fieldLabel(entity, k)}
+            value={cellValue(entity, row, k)}
+          />
         ))}
-      </dl>
+      </DescList>
       <p className='text-sm font-medium'>{t('mes.lotRoute')}</p>
       {route.data ? (
         <RouteFlow

@@ -559,7 +559,7 @@
         "rework": "返工流程"
       },
       "refresh": "刷新",
-      "consoleHint": "选择批次并执行下一作业阶段：进站 → 上机 → 下机 → 出站。",
+      "consoleHint": "按阶段执行批次作业。",
       "pickLot": "请选择批次。",
       "auto": "自动",
       "autoDone": "自动{{stage}}",
@@ -614,7 +614,13 @@
       "goodQty": "下机后良品数量：{{good}}",
       "good": "良品",
       "scrap": "报废",
-      "rework": "返工"
+      "rework": "返工",
+      "stepDone": "已完成",
+      "stepNext": "下一步",
+      "nextAction": "下一操作",
+      "slot": "槽位",
+      "disposition": "处置",
+      "oosAction": "超规动作"
     },
     "trace": {
       "hint": "批次及其单元的每一个操作：时间、用户、步骤、设备、配方、数量与卡控结果。",
@@ -633,7 +639,7 @@
       "noSplit": "不允许分批",
       "noMerge": "不允许合批",
       "noRule": "该批次类型未配置分批合批规则。",
-      "stateHint": "仅在等待或已进站状态（非加工中）可分批/合批。",
+      "stateHint": "仅等待或已进站时可分批/合批。",
       "noGenealogy": "暂无分批/合批记录。",
       "genealogy": "批次谱系",
       "splitTo": "分出子批",
@@ -660,7 +666,12 @@
       "factSources": "合入批次：{{list}}",
       "resultPriority": "合批后优先级（取最高）：",
       "prioChange": "由 {{from}} 提升",
-      "factPriority": "优先级 {{from}} → {{to}}"
+      "factPriority": "优先级 {{from}} → {{to}}",
+      "rule": "规则",
+      "allowed": "允许",
+      "maxLots": "最多批数",
+      "usedLots": "已用 {{n}}",
+      "minQty": "每批最少数量"
     }
   }
 }

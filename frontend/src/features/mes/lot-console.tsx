@@ -3,13 +3,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { fmtDateTime, t } from '@/i18n'
 import {
+  CircleCheck,
   History,
+  Info,
+  ListChecks,
   Loader2,
   PauseCircle,
   PlayCircle,
   Plus,
   RefreshCw,
   SearchCheck,
+  Timer,
   Trash2,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -22,10 +26,20 @@ import {
   type ExecStage,
   type StageBody,
 } from '@/lib/api/mes'
+import { splitLabel } from '@/lib/split-label'
 import { cn } from '@/lib/utils'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
@@ -37,8 +51,17 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { Page } from '@/components/crud'
+import { DescItem, DescList, EmptyState } from '@/components/desc-list'
 import { CheckPanel, Pick, StageBar } from './exec-parts'
 import { enumLabel, optLabel } from './labels'
 import { RefSelect } from './ref-select'
@@ -253,94 +276,148 @@ function Console({ cx, perms }: { cx: ExecContext; perms: string[] }) {
   const terminal = !stage
   const onHold = !!lot.on_hold
   const canRun = perms.includes('mes.exec:write') && !terminal && !onHold
+  const [stepCode, stepName] = splitLabel(
+    step?.operation ? optLabel(step.operation) : ''
+  )
+  const [eqCode, eqName] = splitLabel(lot.equipment_label)
+  const [rcCode, rcName] = splitLabel(lot.recipe_label)
+  const [prCode, prName] = splitLabel(lot.product_label)
+  const [woCode] = splitLabel(lot.work_order_label)
+  const route = step?.route ?? ''
+  const rv = route.match(/^(.*) (v\d+)$/)
+  const qtimeBad = (cx.qtime ?? []).some((q) => q.exceeded || q.too_early)
   return (
-    <div className='grid gap-4 lg:grid-cols-[1fr_380px]'>
-      <div className='space-y-4'>
-        <Card>
-          <CardHeader className='pb-2'>
-            <CardTitle className='flex flex-wrap items-center gap-2 text-lg'>
-              {String(lot.code)}
-              <Badge variant='outline'>{String(lot.product_label ?? '')}</Badge>
+    <div
+      className='grid items-start gap-4 min-[1100px]:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]'
+      data-testid='console'
+    >
+      <div className='min-w-0 space-y-4'>
+        <Card className='gap-4'>
+          <CardHeader className='gap-2'>
+            <div className='flex flex-wrap items-center gap-2'>
+              <CardTitle className='font-mono text-xl'>
+                {String(lot.code)}
+              </CardTitle>
+              <Badge variant='outline'>
+                {enumLabel('lot_status', String(lot.lot_status))}
+              </Badge>
+              {onHold && (
+                <Badge variant='destructive'>
+                  <PauseCircle className='size-3' />
+                  {t('mes.exec.onHold')}
+                </Badge>
+              )}
               <Badge variant='secondary'>
                 {enumLabel('tracking_level', cx.tracking_level)}
               </Badge>
-              {onHold && (
-                <Badge variant='destructive'>{t('mes.exec.onHold')}</Badge>
-              )}
               {!!lot.pending_rework && (
                 <Badge className='bg-amber-500'>
                   {t('mes.exec.pendingRework')}
                 </Badge>
               )}
-            </CardTitle>
+            </div>
           </CardHeader>
-          <CardContent className='space-y-3 text-sm'>
-            <dl className='grid gap-x-6 gap-y-1 sm:grid-cols-2'>
-              <Fact k={t('mes.exec.step')}>
-                {step
-                  ? `${step.seq} · ${step.operation ? optLabel(step.operation) : '—'}`
-                  : '—'}
-              </Fact>
-              <Fact k={t('mes.exec.route')}>{step?.route ?? '—'}</Fact>
-              <Fact k={t('mes.exec.qty')}>
-                {String(lot.qty)}
-                {Number(lot.scrapped_qty) > 0 && (
-                  <span className='ms-1 text-destructive'>
-                    (−{String(lot.scrapped_qty)})
-                  </span>
-                )}
-              </Fact>
-              <Fact k={t('mes.exec.equipment')}>
-                {String(lot.equipment_label ?? '—')}
-              </Fact>
-              <Fact k={t('mes.exec.recipe')}>
-                {String(lot.recipe_label ?? '—')}
-              </Fact>
-              <Fact k={t('mes.exec.lastAction')}>
-                {lot.stage_at ? fmtDateTime(String(lot.stage_at)) : '—'}
-              </Fact>
-            </dl>
+          <CardContent className='space-y-5'>
+            <DescList>
+              <DescItem
+                label={t('mes.exec.step')}
+                value={step ? `${step.seq} · ${stepCode || '—'}` : '—'}
+                sub={stepName}
+              />
+              <DescItem
+                label={t('mes.exec.route')}
+                value={rv ? rv[1] : route || '—'}
+                sub={rv ? rv[2] : undefined}
+              />
+              <DescItem
+                label={t('mes.entity.product')}
+                value={prCode}
+                sub={prName}
+              />
+              <DescItem
+                label={t('mes.exec.qty')}
+                value={
+                  <>
+                    {String(lot.qty)}
+                    {Number(lot.scrapped_qty) > 0 && (
+                      <span className='ms-1 font-normal text-destructive'>
+                        (−{String(lot.scrapped_qty)})
+                      </span>
+                    )}
+                  </>
+                }
+                sub={woCode || undefined}
+              />
+              <DescItem
+                label={t('mes.exec.equipment')}
+                value={eqCode || '—'}
+                sub={eqName}
+              />
+              <DescItem
+                label={t('mes.exec.recipe')}
+                value={rcCode || '—'}
+                sub={rcName}
+              />
+              <DescItem
+                label={t('mes.exec.lastAction')}
+                value={lot.stage_at ? fmtDateTime(String(lot.stage_at)) : '—'}
+              />
+            </DescList>
             <StageBar
               next={stage}
               status={String(lot.lot_status)}
               auto={step?.auto}
             />
             {cx.stack.length > 0 && (
-              <p className='text-muted-foreground'>
-                {t('mes.exec.inSubRoute', {
-                  kind: t(
-                    `mes.exec.frame.${cx.stack[cx.stack.length - 1].kind}`
-                  ),
-                })}
-              </p>
+              <Alert>
+                <Info />
+                <AlertDescription>
+                  {t('mes.exec.inSubRoute', {
+                    kind: t(
+                      `mes.exec.frame.${cx.stack[cx.stack.length - 1].kind}`
+                    ),
+                  })}
+                </AlertDescription>
+              </Alert>
             )}
-            {(cx.qtime ?? []).map((q) => (
-              <p
-                key={q.rule}
-                className={cn(
-                  q.exceeded || q.too_early
-                    ? 'text-destructive'
-                    : 'text-muted-foreground'
-                )}
-              >
-                Q-Time {q.rule}: {q.minutes} min
-                {q.min != null && ` (min ${q.min})`}
-                {q.max != null && ` (max ${q.max})`}
-              </p>
-            ))}
+            {(cx.qtime ?? []).length > 0 && (
+              <Alert variant={qtimeBad ? 'destructive' : 'default'}>
+                <Timer />
+                <AlertTitle>Q-Time</AlertTitle>
+                <AlertDescription>
+                  {(cx.qtime ?? []).map((q) => (
+                    <span key={q.rule} className='block'>
+                      {q.rule}: {q.minutes} min
+                      {q.min != null && ` · min ${q.min}`}
+                      {q.max != null && ` · max ${q.max}`}
+                    </span>
+                  ))}
+                </AlertDescription>
+              </Alert>
+            )}
           </CardContent>
         </Card>
 
-        {!terminal && (
-          <Card>
-            <CardHeader className='pb-2'>
-              <CardTitle className='text-base'>
+        {!terminal ? (
+          <Card className='gap-4' data-testid='action-panel'>
+            <CardHeader>
+              <CardDescription>{t('mes.exec.nextAction')}</CardDescription>
+              <CardTitle className='text-lg'>
                 {t(`mes.exec.stage.${stage}`)}
               </CardTitle>
             </CardHeader>
             <CardContent className='space-y-4'>
+              {onHold && (
+                <Alert variant='destructive'>
+                  <PauseCircle />
+                  <AlertTitle>{t('mes.exec.onHold')}</AlertTitle>
+                  <AlertDescription>
+                    {t('mes.exec.holdBlocks')}
+                  </AlertDescription>
+                </Alert>
+              )}
               {(stage === 'move_in' || stage === 'track_in') && (
-                <div className='grid gap-3 sm:grid-cols-2'>
+                <div className='grid gap-4 sm:grid-cols-2'>
                   <Pick
                     id='ex-eqp'
                     label={t('mes.exec.equipment')}
@@ -398,8 +475,8 @@ function Console({ cx, perms }: { cx: ExecContext; perms: string[] }) {
                 />
               )}
               {stage === 'move_out' && (
-                <div className='space-y-2 text-sm'>
-                  <p>
+                <div className='space-y-3 text-sm'>
+                  <p className='text-muted-foreground'>
                     {step?.is_last
                       ? t('mes.exec.lastStep')
                       : t('mes.exec.nextStepHint')}
@@ -428,50 +505,50 @@ function Console({ cx, perms }: { cx: ExecContext; perms: string[] }) {
                   )}
                 </div>
               )}
-              <div className='flex flex-wrap gap-2'>
-                <Button
-                  disabled={!canRun || run.isPending}
-                  onClick={() => run.mutate({})}
-                  data-testid='run-stage'
-                >
-                  {run.isPending ? (
-                    <Loader2 className='size-4 animate-spin' />
-                  ) : (
-                    <PlayCircle className='size-4' />
-                  )}
-                  {t(`mes.exec.stage.${stage}`)}
-                </Button>
-                <Button
-                  variant='outline'
-                  disabled={preview.isPending}
-                  data-testid='preview-stage'
-                  onClick={() => preview.mutate()}
-                >
-                  <SearchCheck className='size-4' />
-                  {t('mes.exec.preview')}
-                </Button>
-              </div>
-              {onHold && (
-                <p className='text-sm text-destructive'>
-                  {t('mes.exec.holdBlocks')}
-                </p>
-              )}
             </CardContent>
+            <CardFooter className='flex flex-wrap justify-end gap-2 border-t'>
+              <Button
+                variant='outline'
+                disabled={preview.isPending}
+                data-testid='preview-stage'
+                onClick={() => preview.mutate()}
+              >
+                <SearchCheck className='size-4' />
+                {t('mes.exec.preview')}
+              </Button>
+              <Button
+                disabled={!canRun || run.isPending}
+                onClick={() => run.mutate({})}
+                data-testid='run-stage'
+              >
+                {run.isPending ? (
+                  <Loader2 className='size-4 animate-spin' />
+                ) : (
+                  <PlayCircle className='size-4' />
+                )}
+                {t(`mes.exec.stage.${stage}`)}
+              </Button>
+            </CardFooter>
           </Card>
-        )}
-        {terminal && (
-          <p className='text-muted-foreground'>
-            {t('mes.exec.terminal', {
-              status: enumLabel('lot_status', String(lot.lot_status)),
-            })}
-          </p>
+        ) : (
+          <Alert>
+            <CircleCheck />
+            <AlertDescription>
+              {t('mes.exec.terminal', {
+                status: enumLabel('lot_status', String(lot.lot_status)),
+              })}
+            </AlertDescription>
+          </Alert>
         )}
       </div>
 
-      <div className='space-y-4'>
-        <Card>
-          <CardHeader className='pb-2'>
-            <CardTitle className='text-base'>{t('mes.exec.checks')}</CardTitle>
+      <div className='min-w-0 space-y-4'>
+        <Card className='gap-3'>
+          <CardHeader>
+            <CardTitle className='flex items-center gap-2 text-base'>
+              <ListChecks className='size-4 text-muted-foreground' />
+              {t('mes.exec.checks')}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {results ? (
@@ -483,32 +560,36 @@ function Console({ cx, perms }: { cx: ExecContext; perms: string[] }) {
                 onOverride={(reason) => run.mutate({ override: reason })}
               />
             ) : (
-              <p className='text-sm text-muted-foreground'>
+              <EmptyState icon={SearchCheck}>
                 {t('mes.exec.checksHint')}
-              </p>
+              </EmptyState>
             )}
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className='flex flex-row items-center justify-between pb-2'>
-            <CardTitle className='text-base'>
+        <Card className='gap-3'>
+          <CardHeader>
+            <CardTitle className='flex items-center gap-2 text-base'>
+              <PauseCircle className='size-4 text-muted-foreground' />
               {t('menu.mes-lot_hold')}
             </CardTitle>
             {perms.includes('mes.exec:hold') && !terminal && (
-              <Button
-                size='sm'
-                variant='outline'
-                data-testid='open-hold'
-                onClick={() => setHoldOpen(true)}
-              >
-                <PauseCircle className='size-4' />
-                {t('mes.exec.hold')}
-              </Button>
+              <CardAction>
+                <Button
+                  size='sm'
+                  variant='outline'
+                  data-testid='open-hold'
+                  onClick={() => setHoldOpen(true)}
+                >
+                  {t('mes.exec.hold')}
+                </Button>
+              </CardAction>
             )}
           </CardHeader>
           <CardContent className='space-y-2 text-sm'>
             {cx.holds.length === 0 && (
-              <p className='text-muted-foreground'>{t('mes.exec.noHolds')}</p>
+              <EmptyState icon={CircleCheck}>
+                {t('mes.exec.noHolds')}
+              </EmptyState>
             )}
             {cx.holds.map((h) => (
               <HoldRow key={String(h.id)} h={h} cx={cx} perms={perms} />
@@ -518,24 +599,6 @@ function Console({ cx, perms }: { cx: ExecContext; perms: string[] }) {
         <SplitMergeCard cx={cx} perms={perms} />
       </div>
       <HoldDialog cx={cx} open={holdOpen} onOpenChange={setHoldOpen} />
-    </div>
-  )
-}
-
-function Fact({ k, children }: { k: string; children: React.ReactNode }) {
-  return (
-    <div className='flex min-w-0 gap-2'>
-      <dt className='shrink-0 whitespace-nowrap text-muted-foreground'>{k}</dt>
-      <dd
-        className='min-w-0 truncate'
-        title={
-          typeof children === 'string' || typeof children === 'number'
-            ? String(children)
-            : undefined
-        }
-      >
-        {children}
-      </dd>
     </div>
   )
 }
@@ -685,81 +748,90 @@ function TrackOutInputs(p: {
   }))
   return (
     <div className='space-y-4'>
-      <div className='space-y-2' data-testid='dc-entry'>
-        <p className='text-sm font-medium'>
-          {t('mes.exec.dc')}{' '}
-          <span className='font-normal text-muted-foreground'>
+      <section className='space-y-2' data-testid='dc-entry'>
+        <div>
+          <h4 className='text-sm font-semibold'>{t('mes.exec.dc')}</h4>
+          <p className='text-xs text-muted-foreground'>
             {dc?.dc_plan ? `${dc.dc_plan} · ` : ''}
             {dc?.message}
-          </span>
-        </p>
+          </p>
+        </div>
         {dc?.sampled && dc.items.length > 0 ? (
-          <div className='overflow-x-auto'>
-            <table className='text-sm'>
-              <thead>
-                <tr className='text-left text-muted-foreground'>
-                  <th className='pe-3'>{t('mes.exec.item')}</th>
-                  <th className='pe-3'>{t('mes.exec.unit')}</th>
-                  <th className='pe-3'>{t('mes.exec.limits')}</th>
-                  <th>{t('mes.exec.values')}</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className='overflow-hidden rounded-md border'>
+            <Table>
+              <TableHeader className='bg-muted/40'>
+                <TableRow>
+                  <TableHead>{t('mes.exec.item')}</TableHead>
+                  <TableHead>{t('mes.exec.unit')}</TableHead>
+                  <TableHead>{t('mes.exec.values')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {dc.items.flatMap((it) =>
                   units.map((u) => (
-                    <tr key={`${it.measurement_item_id}-${u?.id ?? 'lot'}`}>
-                      <td className='pe-3 font-medium'>{it.code}</td>
-                      <td className='pe-3'>
+                    <TableRow
+                      key={`${it.measurement_item_id}-${u?.id ?? 'lot'}`}
+                    >
+                      <TableCell className='align-top'>
+                        <div className='font-medium'>{it.code}</div>
+                        <div className='text-xs text-muted-foreground'>
+                          {it.lsl ?? '−∞'} … {it.usl ?? '∞'}
+                        </div>
+                        <div className='text-xs text-muted-foreground'>
+                          {t('mes.exec.oosAction')}:{' '}
+                          {enumLabel('oos_action', it.oos_action)}
+                        </div>
+                      </TableCell>
+                      <TableCell className='align-top font-mono text-xs'>
                         {u ? u.code : t('mes.exec.lotLevel')}
-                      </td>
-                      <td className='pe-3 text-xs whitespace-nowrap text-muted-foreground'>
-                        {it.lsl ?? '−∞'} … {it.usl ?? '∞'} ·{' '}
-                        {enumLabel('oos_action', it.oos_action)}
-                      </td>
-                      <td className='flex gap-1 py-0.5'>
-                        {Array.from(
-                          { length: Math.min(it.sites ?? 1, 5) || 1 },
-                          (_, s) => {
-                            const k = `${it.measurement_item_id}|${u?.id ?? ''}|${s + 1}`
-                            const v = p.dc[k] ?? ''
-                            const n = Number(v)
-                            const oos =
-                              v !== '' &&
-                              ((it.lsl != null && n < it.lsl) ||
-                                (it.usl != null && n > it.usl))
-                            return (
-                              <Input
-                                key={k}
-                                aria-label={`${it.code} ${s + 1}`}
-                                className={cn(
-                                  'h-8 w-20',
-                                  oos && 'border-destructive text-destructive'
-                                )}
-                                inputMode='decimal'
-                                value={v}
-                                onChange={(e) =>
-                                  p.setDc({ ...p.dc, [k]: e.target.value })
-                                }
-                              />
-                            )
-                          }
-                        )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                      <TableCell className='whitespace-normal'>
+                        <div className='flex flex-wrap gap-1.5'>
+                          {Array.from(
+                            { length: Math.min(it.sites ?? 1, 5) || 1 },
+                            (_, s) => {
+                              const k = `${it.measurement_item_id}|${u?.id ?? ''}|${s + 1}`
+                              const v = p.dc[k] ?? ''
+                              const n = Number(v)
+                              const oos =
+                                v !== '' &&
+                                ((it.lsl != null && n < it.lsl) ||
+                                  (it.usl != null && n > it.usl))
+                              return (
+                                <Input
+                                  key={k}
+                                  aria-label={`${it.code} ${s + 1}`}
+                                  placeholder={`#${s + 1}`}
+                                  className={cn(
+                                    'h-8 w-20',
+                                    oos && 'border-destructive text-destructive'
+                                  )}
+                                  inputMode='decimal'
+                                  value={v}
+                                  onChange={(e) =>
+                                    p.setDc({ ...p.dc, [k]: e.target.value })
+                                  }
+                                />
+                              )
+                            }
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   ))
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         ) : (
           <p className='text-sm text-muted-foreground'>{t('mes.exec.noDc')}</p>
         )}
-      </div>
+      </section>
 
-      <div className='space-y-2' data-testid='scrap-entry'>
-        <p className='text-sm font-medium'>
+      <section className='space-y-2' data-testid='scrap-entry'>
+        <h4 className='text-sm font-semibold'>
           {p.qty ? t('mes.exec.scrapQty') : t('mes.exec.scrapUnits')}
-        </p>
+        </h4>
         {p.qty ? (
           <>
             {p.scrap.map((s, i) => (
@@ -825,62 +897,90 @@ function TrackOutInputs(p: {
             </p>
           </>
         ) : (
-          <div className='grid max-h-72 gap-1 overflow-y-auto text-sm sm:grid-cols-2'>
-            {p.units.map((u) => {
-              const s = p.scrap.find((x) => x.unit_id === u.id)
-              return (
-                <div key={u.id} className='flex items-center gap-2'>
-                  <span className='w-32 truncate font-mono text-xs'>
-                    {u.slot != null ? `#${u.slot} ` : ''}
-                    {u.code}
-                  </span>
-                  <select
-                    aria-label={`${u.code} scrap`}
-                    className='h-7 rounded border border-input bg-transparent px-1 text-xs'
-                    value={s?.reason_id ?? ''}
-                    onChange={(e) => {
-                      const rest = p.scrap.filter((x) => x.unit_id !== u.id)
-                      p.setScrap(
-                        e.target.value
-                          ? [
-                              ...rest,
-                              { unit_id: u.id, reason_id: e.target.value },
-                            ]
-                          : rest
-                      )
-                    }}
-                  >
-                    <option value=''>{t('mes.exec.good')}</option>
-                    {cx.reasons.scrap.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {t('mes.exec.scrap')}: {r.code}
-                      </option>
-                    ))}
-                  </select>
+          <div className='max-h-80 overflow-y-auto rounded-md border'>
+            <Table>
+              <TableHeader className='sticky top-0 z-10 bg-muted'>
+                <TableRow>
+                  <TableHead className='w-14'>{t('mes.exec.slot')}</TableHead>
+                  <TableHead>{t('mes.exec.unit')}</TableHead>
+                  <TableHead>{t('mes.exec.disposition')}</TableHead>
                   {cx.reasons.rework.length > 0 && (
-                    <select
-                      aria-label={`${u.code} rework`}
-                      className='h-7 rounded border border-input bg-transparent px-1 text-xs'
-                      value={p.rework[u.id] ?? ''}
-                      disabled={!!s}
-                      onChange={(e) =>
-                        p.setRework({ ...p.rework, [u.id]: e.target.value })
-                      }
-                    >
-                      <option value=''>—</option>
-                      {cx.reasons.rework.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {t('mes.exec.rework')}: {r.code}
-                        </option>
-                      ))}
-                    </select>
+                    <TableHead>{t('mes.exec.rework')}</TableHead>
                   )}
-                </div>
-              )
-            })}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {p.units.map((u) => {
+                  const s = p.scrap.find((x) => x.unit_id === u.id)
+                  return (
+                    <TableRow key={u.id}>
+                      <TableCell className='text-muted-foreground tabular-nums'>
+                        {u.slot ?? '—'}
+                      </TableCell>
+                      <TableCell className='font-mono text-xs'>
+                        {u.code}
+                      </TableCell>
+                      <TableCell className='py-1'>
+                        <select
+                          aria-label={`${u.code} scrap`}
+                          className='h-8 w-full min-w-28 rounded-md border border-input bg-transparent px-2 text-sm'
+                          value={s?.reason_id ?? ''}
+                          onChange={(e) => {
+                            const rest = p.scrap.filter(
+                              (x) => x.unit_id !== u.id
+                            )
+                            p.setScrap(
+                              e.target.value
+                                ? [
+                                    ...rest,
+                                    {
+                                      unit_id: u.id,
+                                      reason_id: e.target.value,
+                                    },
+                                  ]
+                                : rest
+                            )
+                          }}
+                        >
+                          <option value=''>{t('mes.exec.good')}</option>
+                          {cx.reasons.scrap.map((r) => (
+                            <option key={r.id} value={r.id}>
+                              {t('mes.exec.scrap')}: {r.code}
+                            </option>
+                          ))}
+                        </select>
+                      </TableCell>
+                      {cx.reasons.rework.length > 0 && (
+                        <TableCell className='py-1'>
+                          <select
+                            aria-label={`${u.code} rework`}
+                            className='h-8 w-full min-w-28 rounded-md border border-input bg-transparent px-2 text-sm'
+                            value={p.rework[u.id] ?? ''}
+                            disabled={!!s}
+                            onChange={(e) =>
+                              p.setRework({
+                                ...p.rework,
+                                [u.id]: e.target.value,
+                              })
+                            }
+                          >
+                            <option value=''>—</option>
+                            {cx.reasons.rework.map((r) => (
+                              <option key={r.id} value={r.id}>
+                                {r.code}
+                              </option>
+                            ))}
+                          </select>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
           </div>
         )}
-      </div>
+      </section>
       <MaterialPick cx={cx} mats={p.mats} setMats={p.setMats} />
     </div>
   )

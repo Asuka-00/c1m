@@ -66,6 +66,7 @@ export function Pick({
 }
 
 /** Move In -> Track In -> Track Out -> Move Out with the next stage active. */
+/** Non-interactive stage stepper: done / current / pending + connectors. */
 export function StageBar({
   next,
   status,
@@ -77,31 +78,67 @@ export function StageBar({
 }) {
   const idx = next ? EXEC_STAGES.indexOf(next) : EXEC_STAGES.length
   return (
-    <ol className='flex flex-wrap items-center gap-2' data-testid='stage-bar'>
-      {EXEC_STAGES.map((s, i) => (
-        <li
-          key={s}
-          className={cn(
-            'flex items-center gap-2 rounded-full border px-3 py-1 text-sm',
-            i === idx && 'border-primary bg-primary text-primary-foreground',
-            i < idx && 'border-primary text-primary'
-          )}
-        >
-          {i < idx ? (
-            <Check className='size-4' />
-          ) : (
-            <span className='font-semibold'>{i + 1}</span>
-          )}
-          {t(`mes.exec.stage.${s}`)}
-          {auto?.[s] && (
-            <Zap className='size-3.5' aria-label={t('mes.exec.auto')} />
-          )}
-        </li>
-      ))}
-      <li className='ms-2 text-sm text-muted-foreground'>
-        {enumLabel('lot_status', status)}
-      </li>
-    </ol>
+    <div className='space-y-2'>
+      <ol
+        className='flex items-start'
+        data-testid='stage-bar'
+        aria-label={enumLabel('lot_status', status)}
+      >
+        {EXEC_STAGES.map((s, i) => {
+          const state = i < idx ? 'done' : i === idx ? 'current' : 'pending'
+          return (
+            <li
+              key={s}
+              className='relative flex flex-1 flex-col items-center text-center'
+              aria-current={state === 'current' ? 'step' : undefined}
+            >
+              {i > 0 && (
+                <span
+                  aria-hidden
+                  className={cn(
+                    'absolute top-3.5 right-1/2 h-0.5 w-full -translate-y-1/2',
+                    i <= idx ? 'bg-primary' : 'bg-border'
+                  )}
+                />
+              )}
+              <span
+                className={cn(
+                  'relative z-10 flex size-7 items-center justify-center rounded-full border-2 bg-background text-xs font-semibold',
+                  state === 'done' &&
+                    'border-primary bg-primary text-primary-foreground',
+                  state === 'current' &&
+                    'border-primary text-primary ring-4 ring-primary/15',
+                  state === 'pending' && 'border-border text-muted-foreground'
+                )}
+              >
+                {state === 'done' ? <Check className='size-4' /> : i + 1}
+              </span>
+              <span
+                className={cn(
+                  'mt-1.5 flex items-center gap-1 text-xs font-medium',
+                  state === 'pending' && 'text-muted-foreground'
+                )}
+              >
+                {t(`mes.exec.stage.${s}`)}
+                {auto?.[s] && (
+                  <Zap
+                    className='size-3 text-amber-500'
+                    aria-label={t('mes.exec.auto')}
+                  />
+                )}
+              </span>
+              <span className='text-[11px] text-muted-foreground'>
+                {state === 'done'
+                  ? t('mes.exec.stepDone')
+                  : state === 'current'
+                    ? t('mes.exec.stepNext')
+                    : '\u00a0'}
+              </span>
+            </li>
+          )
+        })}
+      </ol>
+    </div>
   )
 }
 

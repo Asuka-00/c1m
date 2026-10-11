@@ -559,7 +559,7 @@
         "rework": "rework route"
       },
       "refresh": "Refresh",
-      "consoleHint": "Select a lot and run the next stage: Move In → Track In → Track Out → Move Out.",
+      "consoleHint": "Run lot operations stage by stage.",
       "pickLot": "Select a lot to start.",
       "auto": "Automatic",
       "autoDone": "auto {{stage}}",
@@ -614,7 +614,13 @@
       "goodQty": "Good quantity after track out: {{good}}",
       "good": "Good",
       "scrap": "Scrap",
-      "rework": "Rework"
+      "rework": "Rework",
+      "stepDone": "Done",
+      "stepNext": "Next",
+      "nextAction": "Next action",
+      "slot": "Slot",
+      "disposition": "Disposition",
+      "oosAction": "OOS action"
     },
     "trace": {
       "hint": "Every action on the lot and its units with time, user, step, equipment, recipe, qty and check results.",
@@ -660,7 +666,12 @@
       "factSources": "merged: {{list}}",
       "resultPriority": "Resulting priority (highest wins):",
       "prioChange": "raised from {{from}}",
-      "factPriority": "priority {{from}} → {{to}}"
+      "factPriority": "priority {{from}} → {{to}}",
+      "rule": "Rule",
+      "allowed": "Allowed",
+      "maxLots": "Max lots",
+      "usedLots": "{{n}} used",
+      "minQty": "Min qty / lot"
     }
   }
 }

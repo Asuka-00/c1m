@@ -559,7 +559,7 @@
         "rework": "リワークルート"
       },
       "refresh": "更新",
-      "consoleHint": "ロットを選び次の工程を実行：ムーブイン → トラックイン → トラックアウト → ムーブアウト。",
+      "consoleHint": "ロットの作業を工程ごとに実行します。",
       "pickLot": "ロットを選択してください。",
       "auto": "自動",
       "autoDone": "自動{{stage}}",
@@ -614,7 +614,13 @@
       "goodQty": "トラックアウト後の良品数：{{good}}",
       "good": "良品",
       "scrap": "廃棄",
-      "rework": "リワーク"
+      "rework": "リワーク",
+      "stepDone": "完了",
+      "stepNext": "次",
+      "nextAction": "次の操作",
+      "slot": "スロット",
+      "disposition": "処置",
+      "oosAction": "規格外処置"
     },
     "trace": {
       "hint": "ロットとユニットの全操作（日時・ユーザー・ステップ・設備・レシピ・数量・チェック結果）。",
@@ -660,7 +666,12 @@
       "factSources": "統合元：{{list}}",
       "resultPriority": "統合後の優先度（最高を採用）：",
       "prioChange": "{{from}} から引上げ",
-      "factPriority": "優先度 {{from}} → {{to}}"
+      "factPriority": "優先度 {{from}} → {{to}}",
+      "rule": "規則",
+      "allowed": "許可",
+      "maxLots": "最大ロット数",
+      "usedLots": "使用 {{n}}",
+      "minQty": "1 ロット最少数"
     }
   }
 }
