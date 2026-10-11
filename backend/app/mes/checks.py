@@ -297,29 +297,47 @@ def _carrier(ctx: Ctx, _p: Row) -> Outcome:
     return "fail", f"carrier {c['code']} is {c['status_code']}", {}
 
 
+def qtime_clock(
+    s: Session, tid: uuid.UUID, lot_id: Any, step_id: Any, until: datetime | None
+) -> datetime | None:
+    """Start of a Q-Time clock: the lot's last move-out of `step_id`, inherited
+    through genealogy (split parent / merge sources, before the event). An own
+    move-out after the event supersedes it; otherwise the earliest (strictest)
+    start wins."""
+    h, g = TABLES["lot_history"], TABLES["lot_genealogy"]
+    q = sa.select(sa.func.max(h.c.at)).where(
+        h.c.tenant_id == tid,
+        h.c.lot_id == lot_id,
+        h.c.route_step_id == step_id,
+        h.c.action == "move_out",
+    )
+    if until is not None:
+        q = q.where(h.c.at <= until)
+    own = conn(s).execute(q).scalar()
+    gq = sa.select(g.c.parent_lot_id, g.c.at).where(
+        g.c.tenant_id == tid, g.c.child_lot_id == lot_id
+    )
+    if until is not None:
+        gq = gq.where(g.c.at <= until)
+    cands = [own] if own else []
+    for parent, at in conn(s).execute(gq).all():
+        if own and own > at:
+            continue
+        c = qtime_clock(s, tid, parent, step_id, at)
+        if c:
+            cands.append(c)
+    return min(cands) if cands else None
+
+
 def qtime_status(
     s: Session, tid: uuid.UUID, lot: Row, step: Row, at: datetime
 ) -> list[Row]:
     """Q-Time rules ending at `step`: elapsed minutes since move-out of from_step."""
     out = []
-    h = TABLES["lot_history"]
     for r in find(s, tid, "qtime_rule", to_step_id=step["id"]):
         if r["product_id"] and r["product_id"] != lot["product_id"]:
             continue
-        last = (
-            conn(s)
-            .execute(
-                sa.select(h.c.at)
-                .where(
-                    h.c.tenant_id == tid,
-                    h.c.lot_id == lot["id"],
-                    h.c.route_step_id == r["from_step_id"],
-                    h.c.action == "move_out",
-                )
-                .order_by(h.c.at.desc())
-            )
-            .scalar()
-        )
+        last = qtime_clock(s, tid, lot["id"], r["from_step_id"], None)
         if last is None:
             continue
         mins = (at - last).total_seconds() / 60
@@ -423,6 +441,12 @@ def _sampling(ctx: Ctx, _p: Row) -> Outcome:
 
 
 # ---------------- resolution ----------------
+@check_type("split_merge_rule")
+def _split_merge(_ctx: Ctx, _p: Row) -> Outcome:
+    # enforced intrinsically by app.mes.splitmerge on split / merge
+    return "na", "evaluated by the split / merge service", {}
+
+
 SPECIFICITY = {
     "route_step": 5,
     "equipment": 4,

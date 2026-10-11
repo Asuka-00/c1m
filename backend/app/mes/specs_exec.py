@@ -16,6 +16,8 @@ TRIGGERS = [
     ("track_in", "Track in|上机|トラックイン"),
     ("track_out", "Track out|下机|トラックアウト"),
     ("move_out", "Move out|出站|ムーブアウト"),
+    ("split", "Split|分批|分割"),
+    ("merge", "Merge|合批|統合"),
 ]
 # built-in check types (app.mes.checks implements them; plugins may add more)
 CHECK_TYPES = [
@@ -38,6 +40,7 @@ CHECK_TYPES = [
     ("dc_complete", "DC completeness|数据收集完整|データ収集完了"),
     ("oos", "Out of spec|超规|規格外"),
     ("sampling", "Sampling decision|抽样判定|サンプリング判定"),
+    ("split_merge_rule", "Split / merge rule|分批合批规则|分割・統合規則"),
 ]
 ENUMS.update(
     {
@@ -104,6 +107,12 @@ ENUMS.update(
             ("override", "Check override|卡控放行|チェック強制解除"),
             ("qtime", "Q-Time violation|Q-Time 超时|Q タイム違反"),
             ("oos", "Out of spec|超规|規格外"),
+            ("split", "Split|分批|分割"),
+            ("merge", "Merge|合批|統合"),
+        ],
+        "genealogy_relation": [
+            ("split", "Split|分批|分割"),
+            ("merge", "Merge|合批|統合"),
         ],
     }
 )
@@ -537,6 +546,48 @@ register(
         menu=False,
         sort_default="at",
         label_field="action",
+    ),
+    Entity(
+        "lot_genealogy",
+        "exec",
+        "Lot genealogy|批次谱系|ロット系譜",
+        [
+            F(
+                "parent_lot",
+                "ref",
+                "Parent / source lot|母批 / 来源批|親・元ロット",
+                required=True,
+                ref="lot",
+                cascade=True,
+            ),
+            F(
+                "child_lot",
+                "ref",
+                "Child / target lot|子批 / 目标批|子・統合先ロット",
+                required=True,
+                ref="lot",
+                cascade=True,
+            ),
+            F("relation", "enum", "Relation|关系|関係", enum="genealogy_relation"),
+            F("qty", "int", "Qty|数量|数量"),
+            F(
+                "units",
+                "json",
+                "Wafers / units|晶圆 / 单元|ウェーハ・ユニット",
+                list=False,
+            ),
+            F("route_step", "ref", ref="route_step", list=False, filter=False),
+            F("user_email", "str", "User|用户|ユーザー", max_length=255, search=True),
+            F("at", "datetime", "Time|时间|日時"),
+        ],
+        phase=6,
+        has_code=False,
+        readonly=True,
+        icon="GitFork",
+        order=3,
+        menu=False,
+        sort_default="at",
+        label_field="relation",
     ),
     Entity(
         "dc_result",

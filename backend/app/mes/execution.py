@@ -55,6 +55,7 @@ NEXT_STAGE = {
     "running": "track_out",
     "tracked_out": "move_out",
 }
+TERMINAL = ("completed", "scrapped", "merged")
 OOS_RANK = {"warn": 1, "rework": 2, "auto_hold": 3, "block": 4}
 
 
@@ -682,7 +683,7 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
     out: Row = {
         "lot": serialize(s, tid, LOT, [lot])[0],
         "next_stage": None
-        if lot["lot_status"] in ("completed", "scrapped")
+        if lot["lot_status"] in TERMINAL
         else NEXT_STAGE.get(lot["lot_status"]),
     }
     us = units(s, tid, lot["id"], active=False)
@@ -850,7 +851,7 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
 
 # ---------------- stages ----------------
 def _guard(lot: Row, stage: str) -> None:
-    if lot["lot_status"] in ("completed", "scrapped"):
+    if lot["lot_status"] in TERMINAL:
         raise http_422([("lot_status", f"lot_status: lot is {lot['lot_status']}")])
     if lot["on_hold"]:
         raise http_422([("on_hold", "on_hold: lot is on hold; release it first")])
@@ -1645,7 +1646,7 @@ def manual_hold(
     user: Any,
 ) -> Row:
     lot = lock_lot(s, tid, lot_id)
-    if lot["lot_status"] in ("completed", "scrapped"):
+    if lot["lot_status"] in TERMINAL:
         raise http_422([("lot_status", f"lot_status: lot is {lot['lot_status']}")])
     r = _reason(s, tid, reason_id, "hold")
     if r["comment_required"] and not (comment or "").strip():

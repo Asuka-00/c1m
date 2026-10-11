@@ -42,6 +42,7 @@ import { CheckPanel, Pick, StageBar } from './exec-parts'
 import { enumLabel, optLabel } from './labels'
 import { RefSelect } from './ref-select'
 import { mesErrorMessage } from './required'
+import { SplitMergeCard } from './split-merge'
 import { useMesEntity, useMesMeta } from './use-mes-meta'
 
 type Dc = Record<string, string> // `${item}|${unit}|${site}` -> value
@@ -511,6 +512,7 @@ function Console({ cx, perms }: { cx: ExecContext; perms: string[] }) {
             ))}
           </CardContent>
         </Card>
+        <SplitMergeCard cx={cx} perms={perms} />
       </div>
       <HoldDialog cx={cx} open={holdOpen} onOpenChange={setHoldOpen} />
     </div>

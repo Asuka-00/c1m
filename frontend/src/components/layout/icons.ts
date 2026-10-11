@@ -62,6 +62,7 @@ import {
   LineChart,
   PauseCircle,
   ScrollText,
+  GitFork,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -74,6 +75,7 @@ export const ICONS: Record<string, LucideIcon> = {
   Repeat,
   LineChart,
   PauseCircle,
+  GitFork,
   ScrollText,
   Activity,
   Aperture,

@@ -2,7 +2,7 @@
 
 Permissions: mes.exec:read (context / preview), mes.exec:write (stages),
 mes.exec:override (force past blocking checks, reason required),
-mes.exec:hold (manual hold / release).  A blocked stage answers 409
+mes.exec:hold (manual hold / release), mes.exec:split / mes.exec:merge.  A blocked stage answers 409
 {"detail": {"code": "check_blocked", "results": [...]}}.
 """
 
@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 
 from app.api.deps import CurrentTenant, SessionDep
 from app.mes import execution as svc
+from app.mes import splitmerge as sm
 from app.mes.checks import one
 from app.mes.core import ENTITIES
 from app.mes.service import serialize
@@ -75,7 +76,11 @@ class ReleaseIn(BaseModel):
 @router.get("/lots/{lot_id}")
 def lot_context(session: SessionDep, ctx: CurrentTenant, lot_id: uuid.UUID) -> Any:
     _need(ctx, "mes.exec:read")
-    return svc.context(session, ctx.id, lot_id)
+    out = svc.context(session, ctx.id, lot_id)
+    lot = one(session, ctx.id, "lot", lot_id)
+    if lot:
+        out["sm"] = sm.sm_context(session, ctx.id, lot)
+    return out
 
 
 @router.post("/lots/{lot_id}/preview/{stage}")
@@ -125,6 +130,50 @@ def hold_release(
         ENTITIES["lot"],
         [one(session, ctx.id, "lot", lot["id"]) or lot],
     )[0]
+
+
+class SplitChildIn(BaseModel):
+    unit_ids: list[uuid.UUID] = Field(default_factory=list)
+    qty: int | None = None
+    carrier_id: uuid.UUID | None = None
+
+
+class SplitIn(BaseModel):
+    children: list[SplitChildIn] = Field(default_factory=list, max_length=50)
+    comment: str | None = Field(default=None, max_length=300)
+    override: bool = False
+    override_reason: str | None = Field(default=None, max_length=300)
+    preview: bool = False
+
+
+class MergeIn(BaseModel):
+    source_lot_ids: list[uuid.UUID] = Field(default_factory=list, max_length=50)
+    comment: str | None = Field(default=None, max_length=300)
+    override: bool = False
+    override_reason: str | None = Field(default=None, max_length=300)
+    preview: bool = False
+
+
+def _sm_perm(ctx: TenantContext, p: str, body: SplitIn | MergeIn) -> None:
+    _need(ctx, "mes.exec:read" if body.preview else p)
+    if body.override and not body.preview:
+        _need(ctx, "mes.exec:override")
+
+
+@router.post("/lots/{lot_id}/split")
+def lot_split(
+    session: SessionDep, ctx: CurrentTenant, lot_id: uuid.UUID, body: SplitIn
+) -> Any:
+    _sm_perm(ctx, "mes.exec:split", body)
+    return sm.split(session, ctx.id, lot_id, body.model_dump(), ctx.user)
+
+
+@router.post("/lots/{lot_id}/merge")
+def lot_merge(
+    session: SessionDep, ctx: CurrentTenant, lot_id: uuid.UUID, body: MergeIn
+) -> Any:
+    _sm_perm(ctx, "mes.exec:merge", body)
+    return sm.merge(session, ctx.id, lot_id, body.model_dump(), ctx.user)
 
 
 @router.post("/lots/{lot_id}/{stage}")

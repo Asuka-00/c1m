@@ -328,7 +328,7 @@ def _carrier_busy(s: Session, tid: uuid.UUID, carrier_id: Any) -> bool:
             sa.select(t.c.id).where(
                 t.c.tenant_id == tid,
                 t.c.carrier_id == carrier_id,
-                t.c.lot_status.in_(["waiting", "processing", "on_hold"]),
+                t.c.lot_status.notin_(["completed", "scrapped", "merged"]),
             )
         )
         .first()

@@ -5,6 +5,8 @@ import {
   ArrowRightToLine,
   CircleCheck,
   CornerDownRight,
+  GitFork,
+  GitMerge,
   Gauge,
   GitBranch,
   LogIn,
@@ -21,16 +23,17 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { useTenantKey } from '@/lib/api/hooks'
-import { mesApi, type MesRow } from '@/lib/api/mes'
+import { execApi, mesApi, type MesRow } from '@/lib/api/mes'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Page } from '@/components/crud'
 import { ResultBadge } from './exec-parts'
 import { enumLabel } from './labels'
 import { RefSelect } from './ref-select'
+import { GenealogyList } from './split-merge'
 
 const ICON: Record<string, [LucideIcon, string]> = {
   start: [Rocket, 'bg-sky-500'],
@@ -49,6 +52,8 @@ const ICON: Record<string, [LucideIcon, string]> = {
   override: [ShieldAlert, 'bg-violet-600'],
   qtime: [Timer, 'bg-amber-600'],
   oos: [TriangleAlert, 'bg-amber-500'],
+  split: [GitFork, 'bg-sky-600'],
+  merge: [GitMerge, 'bg-violet-600'],
 }
 
 type Check = {
@@ -93,6 +98,22 @@ function Details({ d }: { d: Record<string, unknown> }) {
   if (d.reason && typeof d.reason === 'string')
     facts.push(t('mes.trace.overrideReason', { r: d.reason }))
   if (d.sampling) facts.push(String(d.sampling))
+  const kids = d.children as { code: string; qty: number }[] | undefined
+  if (kids?.length)
+    facts.push(
+      t('mes.sm.factChildren', {
+        list: kids.map((c) => `${c.code} (${c.qty})`).join(', '),
+      })
+    )
+  if (d.parent) facts.push(t('mes.sm.factParent', { code: d.parent }))
+  if (d.target) facts.push(t('mes.sm.factTarget', { code: d.target }))
+  const srcs = d.sources as { code: string; qty: number }[] | undefined
+  if (srcs?.length)
+    facts.push(
+      t('mes.sm.factSources', {
+        list: srcs.map((c) => `${c.code} (${c.qty})`).join(', '),
+      })
+    )
   return (
     <div className='space-y-1'>
       {facts.length > 0 && (
@@ -143,6 +164,11 @@ export default function LotTracePage() {
       }),
     enabled: !!lotId,
   })
+  const gen = useQuery({
+    queryKey: ['mes', 'exec', tk, lotId, 'genealogy'],
+    queryFn: () => execApi.context(lotId),
+    enabled: !!lotId,
+  })
   const rows = hist.data?.data ?? []
   return (
     <Page
@@ -190,6 +216,19 @@ export default function LotTracePage() {
       </div>
       {!lotId && (
         <p className='text-muted-foreground'>{t('mes.exec.pickLot')}</p>
+      )}
+      {lotId && (gen.data?.sm?.genealogy.length ?? 0) > 0 && (
+        <Card>
+          <CardHeader className='pb-2'>
+            <CardTitle className='text-base'>{t('mes.sm.genealogy')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <GenealogyList
+              lotId={lotId}
+              links={gen.data?.sm?.genealogy ?? []}
+            />
+          </CardContent>
+        </Card>
       )}
       {lotId && (
         <Card>

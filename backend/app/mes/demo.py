@@ -1164,6 +1164,14 @@ add(
     max_wafers=5000,
 )
 add(
+    "split_merge_rule",
+    code="SM-ASSY",
+    name="Assembly split/merge (DEMO)",
+    lot_type=("lot_type", "ASSY"),
+    max_children=5,
+    min_wafers=50,
+)
+add(
     "work_order",
     code="WO-DEMO-03",
     product=("product", "PKG-A100@1"),
@@ -1175,7 +1183,7 @@ add(
 # released + started after seeding: (wo, [(qty, carrier code | None)])
 STARTS: list[tuple[str, list[tuple[int, str | None]]]] = [
     ("WO-DEMO-01", [(25, "FP0001"), (15, None)]),
-    ("WO-DEMO-03", [(1000, None)]),
+    ("WO-DEMO-03", [(1000, None), (600, None)]),
 ]
 
 
@@ -1389,6 +1397,30 @@ def _run_exec(session: Session, tid: uuid.UUID, admin: Any) -> None:
                     }
                 ]
         ex.run_stage(session, tid, lot["id"], stage, body, admin)
+    if len(lots) > 3:  # split / merge example on the second assembly lot
+        from app.mes import splitmerge as sm
+
+        lot = lots[3]
+        r = sm.split(
+            session,
+            tid,
+            lot["id"],
+            {
+                "children": [{"qty": 200}, {"qty": 100}],
+                "comment": "Split for line balance (DEMO)",
+            },
+            admin,
+        )
+        sm.merge(
+            session,
+            tid,
+            lot["id"],
+            {
+                "source_lot_ids": [r["children"][1]["id"]],
+                "comment": "Re-merge after rework check (DEMO)",
+            },
+            admin,
+        )
 
 
 def remove(session: Session) -> int:

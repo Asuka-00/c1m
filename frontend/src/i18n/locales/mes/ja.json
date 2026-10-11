@@ -35,6 +35,7 @@
       "e10_auto_rule": "E10 自動遷移",
       "lot_hold": "ロットホールド",
       "lot_history": "ロット履歴",
+      "lot_genealogy": "ロット系譜",
       "dc_result": "測定データ",
       "uom": "単位",
       "uom_conversion": "単位換算",
@@ -276,6 +277,16 @@
         "reason": "理由コード",
         "comment": "コメント",
         "details": "詳細",
+        "user_email": "ユーザー",
+        "at": "日時"
+      },
+      "lot_genealogy": {
+        "parent_lot": "親・元ロット",
+        "child_lot": "子・統合先ロット",
+        "relation": "関係",
+        "qty": "数量",
+        "units": "ウェーハ・ユニット",
+        "route_step": "ルートステップ",
         "user_email": "ユーザー",
         "at": "日時"
       },
@@ -596,7 +607,9 @@
         "allow_split": "分割可",
         "max_children": "最大子ロット数",
         "min_wafers": "ロット最少枚数",
+        "child_id_mode": "子ロット番号",
         "allow_merge": "統合可",
+        "merge_same_wo": "統合：同一作業指示",
         "merge_same_product": "統合：同一製品",
         "merge_same_step": "統合：同一ステップ",
         "merge_same_priority": "統合：同一優先度",
@@ -737,6 +750,8 @@
         "track_out": "トラックアウト",
         "move_out": "ムーブアウト",
         "override": "チェック強制解除",
+        "split": "分割",
+        "merge": "統合",
         "e10": "E10 状態変更"
       },
       "seq_reset": {
@@ -784,7 +799,9 @@
         "move_in": "ムーブイン",
         "track_in": "トラックイン",
         "track_out": "トラックアウト",
-        "move_out": "ムーブアウト"
+        "move_out": "ムーブアウト",
+        "split": "分割",
+        "merge": "統合"
       },
       "check_type": {
         "e10_available": "設備 E10 状態使用可",
@@ -799,7 +816,8 @@
         "wo_status": "作業指示状態",
         "dc_complete": "データ収集完了",
         "oos": "規格外",
-        "sampling": "サンプリング判定"
+        "sampling": "サンプリング判定",
+        "split_merge_rule": "分割・統合規則"
       },
       "check_severity": {
         "block": "ブロック",
@@ -855,7 +873,13 @@
         "complete": "完了",
         "override": "チェック強制解除",
         "qtime": "Q タイム違反",
-        "oos": "規格外"
+        "oos": "規格外",
+        "split": "分割",
+        "merge": "統合"
+      },
+      "genealogy_relation": {
+        "split": "分割",
+        "merge": "統合"
       },
       "uom_dimension": {
         "count": "数量",
@@ -985,6 +1009,10 @@
         "material": "資材",
         "fixture": "治具・工具"
       },
+      "child_id_mode": {
+        "suffix": "親番号 + 接尾辞",
+        "code_rule": "ロットタイプ ID ルール"
+      },
       "meas_type": {
         "numeric": "数値",
         "attribute": "属性（合否）",
@@ -1047,7 +1075,8 @@
         "running": "処理中",
         "tracked_out": "トラックアウト済",
         "completed": "完了",
-        "scrapped": "廃棄"
+        "scrapped": "廃棄",
+        "merged": "統合済（終了）"
       },
       "wafer_status": {
         "waiting": "待機",

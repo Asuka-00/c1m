@@ -161,7 +161,7 @@ class Line:
             {"product_id": self.product["id"], "route_id": self.route["id"]},
         )
         m.action("product", self.product["id"], "status", {"status": "active"})
-        lt = m.post(
+        self.lt = lt = m.post(
             "lot_type",
             {
                 "code": "LT",

@@ -35,6 +35,7 @@
       "e10_auto_rule": "E10 auto transition",
       "lot_hold": "Lot hold",
       "lot_history": "Lot history",
+      "lot_genealogy": "Lot genealogy",
       "dc_result": "DC result",
       "uom": "Unit of measure",
       "uom_conversion": "UOM conversion",
@@ -276,6 +277,16 @@
         "reason": "Reason code",
         "comment": "Comment",
         "details": "Details",
+        "user_email": "User",
+        "at": "Time"
+      },
+      "lot_genealogy": {
+        "parent_lot": "Parent / source lot",
+        "child_lot": "Child / target lot",
+        "relation": "Relation",
+        "qty": "Qty",
+        "units": "Wafers / units",
+        "route_step": "Route step",
         "user_email": "User",
         "at": "Time"
       },
@@ -596,7 +607,9 @@
         "allow_split": "Allow split",
         "max_children": "Max child lots",
         "min_wafers": "Min wafers per lot",
+        "child_id_mode": "Child lot no.",
         "allow_merge": "Allow merge",
+        "merge_same_wo": "Merge: same work order",
         "merge_same_product": "Merge: same product",
         "merge_same_step": "Merge: same route step",
         "merge_same_priority": "Merge: same priority",
@@ -737,6 +750,8 @@
         "track_out": "Track out",
         "move_out": "Move out",
         "override": "Check override",
+        "split": "Split",
+        "merge": "Merge",
         "e10": "E10 state change"
       },
       "seq_reset": {
@@ -784,7 +799,9 @@
         "move_in": "Move in",
         "track_in": "Track in",
         "track_out": "Track out",
-        "move_out": "Move out"
+        "move_out": "Move out",
+        "split": "Split",
+        "merge": "Merge"
       },
       "check_type": {
         "e10_available": "Equipment E10 state available",
@@ -799,7 +816,8 @@
         "wo_status": "Work order status",
         "dc_complete": "DC completeness",
         "oos": "Out of spec",
-        "sampling": "Sampling decision"
+        "sampling": "Sampling decision",
+        "split_merge_rule": "Split / merge rule"
       },
       "check_severity": {
         "block": "Block",
@@ -855,7 +873,13 @@
         "complete": "Completed",
         "override": "Check override",
         "qtime": "Q-Time violation",
-        "oos": "Out of spec"
+        "oos": "Out of spec",
+        "split": "Split",
+        "merge": "Merge"
+      },
+      "genealogy_relation": {
+        "split": "Split",
+        "merge": "Merge"
       },
       "uom_dimension": {
         "count": "Count",
@@ -985,6 +1009,10 @@
         "material": "Material",
         "fixture": "Fixture / tool"
       },
+      "child_id_mode": {
+        "suffix": "Parent no. + suffix",
+        "code_rule": "Lot type ID rule"
+      },
       "meas_type": {
         "numeric": "Numeric",
         "attribute": "Attribute (pass/fail)",
@@ -1047,7 +1075,8 @@
         "running": "Running",
         "tracked_out": "Tracked out",
         "completed": "Completed",
-        "scrapped": "Scrapped"
+        "scrapped": "Scrapped",
+        "merged": "Merged (terminated)"
       },
       "wafer_status": {
         "waiting": "Waiting",

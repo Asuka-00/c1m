@@ -44,6 +44,8 @@ EXTRA_PERMISSIONS: dict[str, str] = {
     "mes.lot:start": "MES lots: start / undo start",
     "mes.exec:override": "MES execution: force-override blocking checks",
     "mes.exec:hold": "MES execution: hold / release lots",
+    "mes.exec:split": "MES execution: split lots",
+    "mes.exec:merge": "MES execution: merge lots",
 }
 
 

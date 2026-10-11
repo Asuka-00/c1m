@@ -60,6 +60,8 @@ ENUMS.update(
             ("track_out", "Track out|下机|トラックアウト"),
             ("move_out", "Move out|出站|ムーブアウト"),
             ("override", "Check override|卡控放行|チェック強制解除"),
+            ("split", "Split|分批|分割"),
+            ("merge", "Merge|合批|統合"),
             ("e10", "E10 state change|E10 状态变更|E10 状態変更"),
         ],
         "seq_reset": [

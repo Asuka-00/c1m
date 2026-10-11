@@ -4,6 +4,10 @@ from app.mes.core import ENUMS, Entity, F, register
 
 ENUMS.update(
     {
+        "child_id_mode": [
+            ("suffix", "Parent no. + suffix|母批号 + 后缀|親番号 + 接尾辞"),
+            ("code_rule", "Lot type ID rule|批次类型编码规则|ロットタイプ ID ルール"),
+        ],
         "meas_type": [
             ("numeric", "Numeric|数值型|数値"),
             ("attribute", "Attribute (pass/fail)|属性型（合格/不合格）|属性（合否）"),
@@ -325,7 +329,22 @@ register(
                 "Min wafers per lot|每批最少片数|ロット最少枚数",
                 default=1,
             ),
+            F(
+                "child_id_mode",
+                "enum",
+                "Child lot no.|子批号生成|子ロット番号",
+                enum="child_id_mode",
+                default="suffix",
+                list=False,
+            ),
             F("allow_merge", "bool", "Allow merge|允许合批|統合可", default=True),
+            F(
+                "merge_same_wo",
+                "bool",
+                "Merge: same work order|合批：同工单|統合：同一作業指示",
+                default=True,
+                list=False,
+            ),
             F(
                 "merge_same_product",
                 "bool",

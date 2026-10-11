@@ -20,6 +20,7 @@ ENUMS.update(
             ("tracked_out", "Tracked out|已下机|トラックアウト済"),
             ("completed", "Completed|已完成|完了"),
             ("scrapped", "Scrapped|已报废|廃棄"),
+            ("merged", "Merged (terminated)|已合批（终止）|統合済（終了）"),
         ],
         "wafer_status": [
             ("waiting", "Waiting|等待|待機"),

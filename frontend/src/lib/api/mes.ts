@@ -245,8 +245,58 @@ export interface ExecUnit {
   unit_kind: string
   rework_count: number
 }
+export interface GenealogyLink {
+  relation: 'split' | 'merge'
+  parent_id: string
+  parent: string
+  child_id: string
+  child: string
+  qty: number
+  units: string[]
+  at: string | null
+  user: string | null
+}
+export interface SmContext {
+  rule: {
+    code: string
+    allow_split: boolean
+    allow_merge: boolean
+    max_children: number
+    min_qty: number
+    child_id_mode: string
+    merge_same_wo: boolean
+    children: number
+  } | null
+  allowed: boolean
+  candidates: {
+    id: string
+    code: string
+    qty: number
+    on_hold: boolean
+    problems: string[]
+  }[]
+  genealogy: GenealogyLink[]
+}
+export interface SplitChild {
+  unit_ids?: string[]
+  qty?: number
+  carrier_id?: string | null
+}
+export interface SmBody {
+  comment?: string
+  override?: boolean
+  override_reason?: string
+  preview?: boolean
+}
+export interface SmResult {
+  results: CheckResult[]
+  children?: { id: string; code: string; qty: number; units: string[] }[]
+  merged?: { code: string; qty: number }[]
+  lot?: MesRow
+}
 export interface ExecContext {
   lot: MesRow
+  sm?: SmContext
   next_stage: ExecStage | null
   tracking_level: 'wafer' | 'unit' | 'quantity'
   units: ExecUnit[]
@@ -344,6 +394,17 @@ export interface StageResult {
 }
 
 export const execApi = {
+  split: (lotId: string, children: SplitChild[], body: SmBody) =>
+    http
+      .post<SmResult>(`/mes/exec/lots/${lotId}/split`, { children, ...body })
+      .then((r) => r.data),
+  merge: (lotId: string, source_lot_ids: string[], body: SmBody) =>
+    http
+      .post<SmResult>(`/mes/exec/lots/${lotId}/merge`, {
+        source_lot_ids,
+        ...body,
+      })
+      .then((r) => r.data),
   context: (lotId: string) =>
     http.get<ExecContext>(`/mes/exec/lots/${lotId}`).then((r) => r.data),
   preview: (lotId: string, stage: ExecStage, body: StageBody) =>
