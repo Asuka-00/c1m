@@ -8,7 +8,10 @@
       "process": "Process",
       "quality": "Quality",
       "lot": "Lot & wafer rules",
-      "wo": "Work orders"
+      "wo": "Work orders",
+      "exec": "Execution",
+      "inventory": "Line-side material & tools",
+      "check": "Checks"
     },
     "entity": {
       "dict_type": "Dictionary",
@@ -22,6 +25,17 @@
       "shift": "Shift",
       "work_calendar": "Work calendar",
       "calendar_day": "Calendar day",
+      "check_rule": "Check rule",
+      "check_plan": "Check plan",
+      "check_plan_item": "Plan rule",
+      "check_binding": "Check binding",
+      "check_log": "Check log",
+      "material_lot": "Material lot",
+      "tool": "Tool",
+      "e10_auto_rule": "E10 auto transition",
+      "lot_hold": "Lot hold",
+      "lot_history": "Lot history",
+      "dc_result": "DC result",
       "uom": "Unit of measure",
       "uom_conversion": "UOM conversion",
       "tech_node": "Technology node",
@@ -59,7 +73,7 @@
       "qtime_rule": "Q-Time rule",
       "work_order": "Work order",
       "lot": "Lot",
-      "wafer": "Wafer"
+      "wafer": "Wafer / unit"
     },
     "field": {
       "dict_type": {
@@ -157,6 +171,126 @@
         "shifts": "Shifts",
         "note": "Note"
       },
+      "check_rule": {
+        "code": "Code",
+        "name": "Name",
+        "check_type": "Check type",
+        "severity": "Severity",
+        "params": "Parameters (JSON)",
+        "is_active": "Active",
+        "description": "Description"
+      },
+      "check_plan": {
+        "code": "Code",
+        "name": "Name",
+        "is_active": "Active",
+        "description": "Description"
+      },
+      "check_plan_item": {
+        "check_plan": "Check plan",
+        "check_rule": "Check rule",
+        "seq": "Seq."
+      },
+      "check_binding": {
+        "check_plan": "Check plan",
+        "trigger": "Trigger",
+        "scope": "Scope",
+        "route_step": "Route step",
+        "equipment": "Equipment",
+        "operation": "Operation",
+        "equipment_type": "Equipment type",
+        "product": "Product",
+        "is_active": "Active"
+      },
+      "check_log": {
+        "lot": "Lot",
+        "trigger": "Trigger",
+        "route_step": "Route step",
+        "equipment": "Equipment",
+        "check_rule": "Check rule",
+        "check_plan": "Check plan",
+        "check_type": "Check type",
+        "severity": "Severity",
+        "result": "Result",
+        "message": "Message",
+        "context": "Context",
+        "override_reason": "Override reason",
+        "user_email": "User"
+      },
+      "material_lot": {
+        "code": "Material lot no.",
+        "material": "Material",
+        "qty_remaining": "Qty remaining",
+        "initial_qty": "Received qty",
+        "uom": "Unit",
+        "expiry_date": "Expiry",
+        "location": "Location",
+        "ml_status": "Status",
+        "description": "Description"
+      },
+      "tool": {
+        "code": "Tool ID",
+        "fixture": "Tool type",
+        "serial_no": "Serial no.",
+        "usage_count": "Usage count",
+        "max_usage": "Max usage",
+        "warn_pct": "Warn at (% of life)",
+        "expiry_date": "Expiry",
+        "tool_status": "Status",
+        "equipment": "Mounted on",
+        "description": "Description"
+      },
+      "e10_auto_rule": {
+        "trigger": "Trigger",
+        "equipment_type": "Equipment type",
+        "to_state": "To state",
+        "is_active": "Active"
+      },
+      "lot_hold": {
+        "lot": "Lot",
+        "reason": "Reason code",
+        "hold_type": "Hold type",
+        "source": "Source",
+        "comment": "Comment",
+        "is_active": "Active",
+        "held_at": "Held at",
+        "held_by": "Held by",
+        "route_step": "Route step",
+        "released_at": "Released at",
+        "released_by": "Released by",
+        "release_reason": "Release reason",
+        "release_comment": "Release comment"
+      },
+      "lot_history": {
+        "lot": "Lot",
+        "unit": "Wafer / unit",
+        "action": "Action",
+        "route_step": "Route step",
+        "step_seq": "Seq.",
+        "operation": "Operation",
+        "equipment": "Equipment",
+        "recipe": "Recipe",
+        "qty": "Qty",
+        "from_status": "From",
+        "to_status": "To",
+        "reason": "Reason code",
+        "comment": "Comment",
+        "details": "Details",
+        "user_email": "User",
+        "at": "Time"
+      },
+      "dc_result": {
+        "lot": "Lot",
+        "unit": "Wafer / unit",
+        "route_step": "Route step",
+        "dc_plan": "DC plan",
+        "measurement_item": "Measurement item",
+        "site_no": "Site",
+        "value": "Value",
+        "is_oos": "OOS",
+        "oos_action": "OOS action",
+        "user_email": "User"
+      },
       "uom": {
         "code": "Code",
         "name": "Name",
@@ -175,6 +309,7 @@
         "name": "Name",
         "feature_nm": "Feature size (nm)",
         "wafer_size": "Wafer size",
+        "tracking_level": "Tracking level",
         "description": "Description"
       },
       "product_family": {
@@ -192,6 +327,9 @@
         "wafer_size": "Wafer size",
         "gross_die": "Gross die / wafer",
         "uom": "Unit",
+        "tracking_level": "Tracking level",
+        "serial_kind": "Serialized unit kind",
+        "unit_code_rule": "Unit serial rule",
         "description": "Description"
       },
       "material_type": {
@@ -286,6 +424,7 @@
         "workcenter": "Work center",
         "serial_no": "Serial no.",
         "initial_state": "Initial E10 state",
+        "e10_state": "Current E10 state",
         "is_active": "Active",
         "description": "Description"
       },
@@ -315,6 +454,11 @@
         "is_optional": "Optional",
         "branch_condition": "Branch condition",
         "branch_to_seq": "Branch to seq.",
+        "rework_return": "Rework returns to",
+        "auto_move_in": "Auto move in",
+        "auto_track_in": "Auto track in",
+        "auto_track_out": "Auto track out",
+        "auto_move_out": "Auto move out",
         "note": "Note"
       },
       "step_resource": {
@@ -327,7 +471,8 @@
         "fixture": "Fixture / tool",
         "recipe": "Recipe",
         "qty": "Quantity",
-        "uom": "Unit"
+        "uom": "Unit",
+        "qty_basis": "Quantity basis"
       },
       "product_route": {
         "product": "Product",
@@ -376,6 +521,8 @@
         "meas_type": "Data type",
         "uom": "Unit",
         "precision": "Decimals",
+        "oos_action": "OOS action",
+        "oos_reason": "OOS hold reason",
         "description": "Description"
       },
       "dc_plan": {
@@ -439,7 +586,7 @@
         "default_priority": "Default priority",
         "lot_id_rule": "Lot ID rule",
         "wafer_id_rule": "Wafer ID rule",
-        "max_wafers": "Max wafers / lot",
+        "max_wafers": "Max wafers / units per lot",
         "description": "Description"
       },
       "split_merge_rule": {
@@ -479,6 +626,7 @@
         "planned_qty": "Planned wafers",
         "over_start_limit_pct": "Over-start limit (%)",
         "started_qty": "Started wafers",
+        "completed_qty": "Completed qty",
         "planned_start": "Planned start",
         "due_date": "Due date",
         "customer": "Customer",
@@ -497,10 +645,21 @@
         "route": "Route",
         "lot_type": "Lot type",
         "priority": "Priority",
-        "qty": "Wafers",
+        "qty": "Qty",
+        "tracking_level": "Tracking level",
+        "scrapped_qty": "Scrapped",
         "site": "Site",
         "current_step": "Current step",
         "lot_status": "Status",
+        "on_hold": "On hold",
+        "equipment": "Equipment",
+        "recipe": "Recipe",
+        "step_in_at": "Arrived at step",
+        "stage_at": "Last action at",
+        "pending_rework": "Rework pending",
+        "route_stack": "Route stack",
+        "exec_ctx": "Execution context",
+        "completed_at": "Completed at",
         "carrier": "Carrier",
         "source_ref": "Source wafer / material batch",
         "started_at": "Started at",
@@ -510,9 +669,12 @@
       "wafer": {
         "code": "Wafer ID",
         "lot": "Lot",
+        "unit_kind": "Unit kind",
         "slot": "Slot",
         "wafer_status": "Status",
         "source_ref": "Source wafer",
+        "scrap_reason": "Scrap reason",
+        "rework_count": "Rework count",
         "description": "Description"
       }
     },
@@ -523,8 +685,20 @@
       "calendar_day": {
         "shifts": "Comma separated shift codes"
       },
+      "check_rule": {
+        "params": "e.g. {\"allowed\": [\"SBY\", \"PRD\"]} for E10; {\"days\": 7} for warn ahead"
+      },
+      "tool": {
+        "max_usage": "Blank: the tool type's max uses"
+      },
+      "e10_auto_rule": {
+        "equipment_type": "Blank: all types"
+      },
       "uom_conversion": {
         "factor": "to = from × factor"
+      },
+      "product": {
+        "tracking_level": "Blank: inherit from the technology node"
       },
       "route_step": {
         "branch_condition": "e.g. lot_type == 'ENG' — evaluated at execution time (not in this module)"
@@ -557,7 +731,13 @@
         "close": "Close",
         "cancel": "Cancel",
         "start": "Lot start",
-        "undo_start": "Undo start"
+        "undo_start": "Undo start",
+        "move_in": "Move in",
+        "track_in": "Track in",
+        "track_out": "Track out",
+        "move_out": "Move out",
+        "override": "Check override",
+        "e10": "E10 state change"
       },
       "seq_reset": {
         "never": "Never",
@@ -572,6 +752,7 @@
         "material": "Material lot",
         "equipment": "Equipment ID",
         "work_order": "Work order no.",
+        "unit": "Unit serial no.",
         "other": "Other"
       },
       "attr_type": {
@@ -598,6 +779,83 @@
         "workday": "Workday",
         "holiday": "Holiday",
         "maintenance": "Maintenance"
+      },
+      "exec_trigger": {
+        "move_in": "Move in",
+        "track_in": "Track in",
+        "track_out": "Track out",
+        "move_out": "Move out"
+      },
+      "check_type": {
+        "e10_available": "Equipment E10 state available",
+        "eqp_capability": "Equipment capability / recipe match",
+        "recipe_active": "Recipe active",
+        "reticle_available": "Reticle available",
+        "material_sufficient": "Material sufficient",
+        "tool_life": "Tool available + life",
+        "carrier_available": "Carrier available",
+        "qtime": "Q-Time",
+        "lot_hold": "Lot not on hold",
+        "wo_status": "Work order status",
+        "dc_complete": "DC completeness",
+        "oos": "Out of spec",
+        "sampling": "Sampling decision"
+      },
+      "check_severity": {
+        "block": "Block",
+        "warn": "Warn"
+      },
+      "check_result": {
+        "pass": "Pass",
+        "warn": "Warn",
+        "block": "Block",
+        "overridden": "Overridden"
+      },
+      "check_scope": {
+        "route_step": "Route step",
+        "equipment": "Equipment",
+        "operation": "Operation",
+        "equipment_type": "Equipment type",
+        "product": "Product"
+      },
+      "ml_status": {
+        "available": "Available",
+        "hold": "On hold",
+        "empty": "Used up",
+        "expired": "Expired"
+      },
+      "tool_status": {
+        "available": "Available",
+        "in_use": "In use",
+        "pending_maintenance": "Pending maintenance",
+        "expired": "Expired",
+        "retired": "Retired"
+      },
+      "e10_trigger": {
+        "track_in": "Track in",
+        "track_out": "Track out (no other running lots)"
+      },
+      "hold_type": {
+        "manual": "Manual",
+        "auto": "Automatic"
+      },
+      "history_action": {
+        "start": "Lot start",
+        "move_in": "Move in",
+        "track_in": "Track in",
+        "track_out": "Track out",
+        "move_out": "Move out",
+        "hold": "Hold",
+        "release": "Release",
+        "scrap": "Scrap",
+        "rework": "Rework",
+        "branch": "Branch",
+        "sub_route": "Enter sub-route",
+        "return": "Return from sub/rework route",
+        "complete": "Completed",
+        "override": "Check override",
+        "qtime": "Q-Time violation",
+        "oos": "Out of spec"
       },
       "uom_dimension": {
         "count": "Count",
@@ -670,6 +928,17 @@
         "port": "Port",
         "sub_unit": "Sub-unit"
       },
+      "tracking_level": {
+        "wafer": "Wafer (slots)",
+        "unit": "Serialized unit",
+        "quantity": "Quantity"
+      },
+      "serial_kind": {
+        "strip": "Strip",
+        "die": "Die",
+        "package": "Package",
+        "unit": "Unit"
+      },
       "e10_category": {
         "PRD": "PRD · Productive",
         "SBY": "SBY · Standby",
@@ -700,6 +969,14 @@
         "monitor": "Monitor",
         "clean": "Clean / seasoning",
         "rework": "Rework"
+      },
+      "rework_return": {
+        "same_step": "Same step (re-process)",
+        "next_step": "Next step"
+      },
+      "qty_basis": {
+        "per_lot": "Per lot",
+        "per_unit": "Per unit / wafer"
       },
       "resource_kind": {
         "equipment": "Equipment",
@@ -743,6 +1020,12 @@
         "hold": "Hold",
         "release": "Release"
       },
+      "oos_action": {
+        "warn": "Warn",
+        "rework": "Rework",
+        "auto_hold": "Auto hold",
+        "block": "Block track out"
+      },
       "qtime_action": {
         "warn": "Warn",
         "hold": "Hold lot",
@@ -760,15 +1043,25 @@
       },
       "lot_status": {
         "waiting": "Waiting",
-        "processing": "Processing",
-        "on_hold": "On hold",
+        "moved_in": "Moved in",
+        "running": "Running",
+        "tracked_out": "Tracked out",
         "completed": "Completed",
         "scrapped": "Scrapped"
       },
       "wafer_status": {
         "waiting": "Waiting",
         "processing": "Processing",
+        "rework": "Rework",
+        "completed": "Completed",
         "scrapped": "Scrapped"
+      },
+      "track_unit_kind": {
+        "wafer": "Wafer",
+        "strip": "Strip",
+        "die": "Die",
+        "package": "Package",
+        "unit": "Unit"
       }
     }
   },
@@ -780,7 +1073,9 @@
     "g-process": "Process Engineering",
     "g-quality": "Quality",
     "g-planning": "Production Planning",
+    "g-execution": "Production Execution",
     "g-lot": "Lot Management",
+    "g-check": "Check Control",
     "g-master": "Master Data",
     "g-system": "System",
     "dashboard": "Dashboard",
@@ -794,15 +1089,18 @@
     "mes-equipment_group": "Equipment Group",
     "mes-equipment_capability": "Capability",
     "mes-e10_state": "E10 State Model",
+    "mes-e10_auto_rule": "E10 Auto Transition",
     "mes-product": "Product",
     "mes-product_family": "Product Family",
     "mes-tech_node": "Technology Node",
     "mes-material": "Material",
     "mes-material_type": "Material Type",
+    "mes-material_lot": "Line-side Material Lot",
     "mes-carrier": "Carrier",
     "mes-carrier_type": "Carrier Type",
     "mes-reticle": "Reticle",
     "mes-fixture": "Fixture",
+    "mes-tool": "Tool Life",
     "mes-operation": "Operation",
     "mes-route": "Route",
     "mes-recipe": "Recipe",
@@ -813,14 +1111,22 @@
     "mes-sampling_rule": "Sampling Rule",
     "mes-defect_code": "Defect Code",
     "mes-reason_code": "Reason Code",
+    "mes-dc_result": "DC Data",
     "mes-work_order": "Work Order",
     "mes-lot-start": "Lot Start",
+    "mes-lot-console": "Lot Operation",
+    "mes-lot-trace": "Lot History",
+    "mes-lot_hold": "Hold Management",
     "mes-lot": "Lot",
     "mes-wafer": "Wafer",
     "mes-lot_type": "Lot Type",
     "mes-lot_priority": "Priority",
     "mes-split_merge_rule": "Split / Merge",
     "mes-qtime_rule": "Q-Time",
+    "mes-check_rule": "Check Rule",
+    "mes-check_plan": "Check Plan",
+    "mes-check_binding": "Check Binding",
+    "mes-check_log": "Check Log",
     "mes-dict_type": "Dictionary",
     "mes-code_rule": "Code Rule",
     "mes-uom": "UOM",

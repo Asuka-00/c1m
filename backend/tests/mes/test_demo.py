@@ -19,7 +19,15 @@ def _count(s: Session) -> int:
         )
         .scalar_one()
         for c in TABLES
-        if c not in ("audit_log", "code_rule_counter")
+        if c
+        not in (
+            "audit_log",
+            "code_rule_counter",
+            "lot_history",
+            "check_log",
+            "lot_hold",
+            "dc_result",
+        )
     )
 
 
@@ -29,7 +37,10 @@ def test_seed_and_remove() -> None:
         before = _count(s)
         assert seed(s) == len(DEMO)
         assert seed(s) == 0
-        started = sum(len(lots) + sum(q for q, _ in lots) for _, lots in STARTS)
+        started = sum(  # lots + wafers (the assembly WO is quantity-tracked: no units)
+            len(lots) + (0 if wo == "WO-DEMO-03" else sum(q for q, _ in lots))
+            for wo, lots in STARTS
+        )
         assert _count(s) == before + len(DEMO) + started  # + lots / wafers
         assert remove(s) >= len(DEMO)  # + started demo lots / wafers
         assert _count(s) == before

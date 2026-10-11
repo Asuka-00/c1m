@@ -8,7 +8,10 @@
       "process": "工艺",
       "quality": "质量",
       "lot": "批次与晶圆规则",
-      "wo": "工单"
+      "wo": "工单",
+      "exec": "生产执行",
+      "inventory": "物料与工具",
+      "check": "卡控"
     },
     "entity": {
       "dict_type": "数据字典",
@@ -22,6 +25,17 @@
       "shift": "班次",
       "work_calendar": "工作日历",
       "calendar_day": "日历日",
+      "check_rule": "卡控规则",
+      "check_plan": "卡控方案",
+      "check_plan_item": "方案规则",
+      "check_binding": "卡控绑定",
+      "check_log": "卡控记录",
+      "material_lot": "线边物料批",
+      "tool": "工具",
+      "e10_auto_rule": "E10 自动迁移",
+      "lot_hold": "批次 Hold",
+      "lot_history": "批次履历",
+      "dc_result": "量测数据",
       "uom": "计量单位",
       "uom_conversion": "单位换算",
       "tech_node": "工艺节点",
@@ -59,7 +73,7 @@
       "qtime_rule": "Q-Time 规则",
       "work_order": "工单",
       "lot": "批次",
-      "wafer": "晶圆"
+      "wafer": "晶圆 / 单元"
     },
     "field": {
       "dict_type": {
@@ -157,6 +171,126 @@
         "shifts": "班次",
         "note": "备注"
       },
+      "check_rule": {
+        "code": "编码",
+        "name": "名称",
+        "check_type": "卡控类型",
+        "severity": "严重度",
+        "params": "参数（JSON）",
+        "is_active": "启用",
+        "description": "描述"
+      },
+      "check_plan": {
+        "code": "编码",
+        "name": "名称",
+        "is_active": "启用",
+        "description": "描述"
+      },
+      "check_plan_item": {
+        "check_plan": "卡控方案",
+        "check_rule": "卡控规则",
+        "seq": "序号"
+      },
+      "check_binding": {
+        "check_plan": "卡控方案",
+        "trigger": "触发时机",
+        "scope": "范围",
+        "route_step": "流程步骤",
+        "equipment": "设备",
+        "operation": "工序",
+        "equipment_type": "设备类型",
+        "product": "产品",
+        "is_active": "启用"
+      },
+      "check_log": {
+        "lot": "批次",
+        "trigger": "触发时机",
+        "route_step": "流程步骤",
+        "equipment": "设备",
+        "check_rule": "卡控规则",
+        "check_plan": "卡控方案",
+        "check_type": "卡控类型",
+        "severity": "严重度",
+        "result": "结果",
+        "message": "信息",
+        "context": "上下文",
+        "override_reason": "放行原因",
+        "user_email": "用户"
+      },
+      "material_lot": {
+        "code": "物料批号",
+        "material": "物料",
+        "qty_remaining": "剩余数量",
+        "initial_qty": "收料数量",
+        "uom": "单位",
+        "expiry_date": "有效期",
+        "location": "库位",
+        "ml_status": "状态",
+        "description": "描述"
+      },
+      "tool": {
+        "code": "工具编号",
+        "fixture": "工具类型",
+        "serial_no": "序列号",
+        "usage_count": "使用次数",
+        "max_usage": "最大使用次数",
+        "warn_pct": "预警阈值（寿命%）",
+        "expiry_date": "有效期",
+        "tool_status": "状态",
+        "equipment": "安装设备",
+        "description": "描述"
+      },
+      "e10_auto_rule": {
+        "trigger": "触发时机",
+        "equipment_type": "设备类型",
+        "to_state": "目标状态",
+        "is_active": "启用"
+      },
+      "lot_hold": {
+        "lot": "批次",
+        "reason": "原因代码",
+        "hold_type": "Hold 类型",
+        "source": "来源",
+        "comment": "备注",
+        "is_active": "生效中",
+        "held_at": "Hold 时间",
+        "held_by": "Hold 人",
+        "route_step": "流程步骤",
+        "released_at": "解除时间",
+        "released_by": "解除人",
+        "release_reason": "解除原因",
+        "release_comment": "解除备注"
+      },
+      "lot_history": {
+        "lot": "批次",
+        "unit": "晶圆 / 单元",
+        "action": "操作",
+        "route_step": "流程步骤",
+        "step_seq": "序号",
+        "operation": "工序",
+        "equipment": "设备",
+        "recipe": "配方",
+        "qty": "数量",
+        "from_status": "原状态",
+        "to_status": "新状态",
+        "reason": "原因代码",
+        "comment": "备注",
+        "details": "详情",
+        "user_email": "用户",
+        "at": "时间"
+      },
+      "dc_result": {
+        "lot": "批次",
+        "unit": "晶圆 / 单元",
+        "route_step": "流程步骤",
+        "dc_plan": "数据收集计划",
+        "measurement_item": "量测项目",
+        "site_no": "测点",
+        "value": "值",
+        "is_oos": "超规",
+        "oos_action": "超规动作",
+        "user_email": "用户"
+      },
       "uom": {
         "code": "编码",
         "name": "名称",
@@ -175,6 +309,7 @@
         "name": "名称",
         "feature_nm": "特征尺寸（nm）",
         "wafer_size": "晶圆尺寸",
+        "tracking_level": "追踪层级",
         "description": "描述"
       },
       "product_family": {
@@ -192,6 +327,9 @@
         "wafer_size": "晶圆尺寸",
         "gross_die": "每片总晶粒数",
         "uom": "单位",
+        "tracking_level": "追踪层级",
+        "serial_kind": "序列化单元类型",
+        "unit_code_rule": "单元序列号规则",
         "description": "描述"
       },
       "material_type": {
@@ -286,6 +424,7 @@
         "workcenter": "工作中心",
         "serial_no": "序列号",
         "initial_state": "初始 E10 状态",
+        "e10_state": "当前 E10 状态",
         "is_active": "启用",
         "description": "描述"
       },
@@ -315,6 +454,11 @@
         "is_optional": "可选",
         "branch_condition": "分支条件",
         "branch_to_seq": "分支跳转序号",
+        "rework_return": "返工返回",
+        "auto_move_in": "自动进站",
+        "auto_track_in": "自动上机",
+        "auto_track_out": "自动下机",
+        "auto_move_out": "自动出站",
         "note": "备注"
       },
       "step_resource": {
@@ -327,7 +471,8 @@
         "fixture": "治具 / 工具",
         "recipe": "配方",
         "qty": "数量",
-        "uom": "单位"
+        "uom": "单位",
+        "qty_basis": "用量基准"
       },
       "product_route": {
         "product": "产品",
@@ -376,6 +521,8 @@
         "meas_type": "数据类型",
         "uom": "单位",
         "precision": "小数位",
+        "oos_action": "超规动作",
+        "oos_reason": "超规 Hold 原因",
         "description": "描述"
       },
       "dc_plan": {
@@ -439,7 +586,7 @@
         "default_priority": "默认优先级",
         "lot_id_rule": "批次号规则",
         "wafer_id_rule": "晶圆号规则",
-        "max_wafers": "每批最大片数",
+        "max_wafers": "每批最大片数/数量",
         "description": "描述"
       },
       "split_merge_rule": {
@@ -479,6 +626,7 @@
         "planned_qty": "计划片数",
         "over_start_limit_pct": "超投上限（%）",
         "started_qty": "已投片数",
+        "completed_qty": "完工数量",
         "planned_start": "计划开工",
         "due_date": "交期",
         "customer": "客户",
@@ -497,10 +645,21 @@
         "route": "流程",
         "lot_type": "批次类型",
         "priority": "优先级",
-        "qty": "片数",
+        "qty": "数量",
+        "tracking_level": "追踪层级",
+        "scrapped_qty": "报废数",
         "site": "工厂",
         "current_step": "当前步骤",
         "lot_status": "状态",
+        "on_hold": "Hold 中",
+        "equipment": "设备",
+        "recipe": "配方",
+        "step_in_at": "到站时间",
+        "stage_at": "最近操作",
+        "pending_rework": "待返工",
+        "route_stack": "流程栈",
+        "exec_ctx": "作业上下文",
+        "completed_at": "完成时间",
         "carrier": "载具",
         "source_ref": "来源晶圆 / 物料批次",
         "started_at": "投产时间",
@@ -510,9 +669,12 @@
       "wafer": {
         "code": "晶圆号",
         "lot": "批次",
+        "unit_kind": "单元类型",
         "slot": "槽位",
         "wafer_status": "状态",
         "source_ref": "来源晶圆",
+        "scrap_reason": "报废原因",
+        "rework_count": "返工次数",
         "description": "描述"
       }
     },
@@ -523,8 +685,20 @@
       "calendar_day": {
         "shifts": "逗号分隔的班次编码"
       },
+      "check_rule": {
+        "params": "例如 E10 用 {\"allowed\": [\"SBY\", \"PRD\"]}"
+      },
+      "tool": {
+        "max_usage": "留空则使用工具类型的最大使用次数"
+      },
+      "e10_auto_rule": {
+        "equipment_type": "留空表示所有类型"
+      },
       "uom_conversion": {
         "factor": "目标 = 源 × 系数"
+      },
+      "product": {
+        "tracking_level": "留空则继承工艺节点"
       },
       "route_step": {
         "branch_condition": "例如 lot_type == 'ENG'，执行时判定（不在本模块）"
@@ -557,7 +731,13 @@
         "close": "关闭",
         "cancel": "取消",
         "start": "投产",
-        "undo_start": "撤销投产"
+        "undo_start": "撤销投产",
+        "move_in": "进站",
+        "track_in": "上机",
+        "track_out": "下机",
+        "move_out": "出站",
+        "override": "卡控放行",
+        "e10": "E10 状态变更"
       },
       "seq_reset": {
         "never": "不重置",
@@ -572,6 +752,7 @@
         "material": "物料批号",
         "equipment": "设备编号",
         "work_order": "工单号",
+        "unit": "单元序列号",
         "other": "其他"
       },
       "attr_type": {
@@ -598,6 +779,83 @@
         "workday": "工作日",
         "holiday": "节假日",
         "maintenance": "维护日"
+      },
+      "exec_trigger": {
+        "move_in": "进站",
+        "track_in": "上机",
+        "track_out": "下机",
+        "move_out": "出站"
+      },
+      "check_type": {
+        "e10_available": "设备 E10 状态可用",
+        "eqp_capability": "设备能力 / 配方匹配",
+        "recipe_active": "配方已生效",
+        "reticle_available": "光罩可用",
+        "material_sufficient": "物料充足",
+        "tool_life": "工具可用 + 寿命",
+        "carrier_available": "载具可用",
+        "qtime": "Q-Time",
+        "lot_hold": "批次未 Hold",
+        "wo_status": "工单状态",
+        "dc_complete": "数据收集完整",
+        "oos": "超规",
+        "sampling": "抽样判定"
+      },
+      "check_severity": {
+        "block": "拦截",
+        "warn": "预警"
+      },
+      "check_result": {
+        "pass": "通过",
+        "warn": "预警",
+        "block": "拦截",
+        "overridden": "强制放行"
+      },
+      "check_scope": {
+        "route_step": "流程步骤",
+        "equipment": "设备",
+        "operation": "工序",
+        "equipment_type": "设备类型",
+        "product": "产品"
+      },
+      "ml_status": {
+        "available": "可用",
+        "hold": "冻结",
+        "empty": "已用完",
+        "expired": "已过期"
+      },
+      "tool_status": {
+        "available": "可用",
+        "in_use": "使用中",
+        "pending_maintenance": "待保养",
+        "expired": "已过期",
+        "retired": "已报废"
+      },
+      "e10_trigger": {
+        "track_in": "上机",
+        "track_out": "下机（无其他加工批次）"
+      },
+      "hold_type": {
+        "manual": "手动",
+        "auto": "自动"
+      },
+      "history_action": {
+        "start": "投产",
+        "move_in": "进站",
+        "track_in": "上机",
+        "track_out": "下机",
+        "move_out": "出站",
+        "hold": "Hold",
+        "release": "解除 Hold",
+        "scrap": "报废",
+        "rework": "返工",
+        "branch": "分支",
+        "sub_route": "进入子流程",
+        "return": "子流程/返工返回",
+        "complete": "完成",
+        "override": "卡控放行",
+        "qtime": "Q-Time 超时",
+        "oos": "超规"
       },
       "uom_dimension": {
         "count": "数量",
@@ -670,6 +928,17 @@
         "port": "端口",
         "sub_unit": "子单元"
       },
+      "tracking_level": {
+        "wafer": "晶圆（槽位）",
+        "unit": "序列化单元",
+        "quantity": "数量"
+      },
+      "serial_kind": {
+        "strip": "条",
+        "die": "晶粒",
+        "package": "封装体",
+        "unit": "单元"
+      },
       "e10_category": {
         "PRD": "PRD · 生产",
         "SBY": "SBY · 待机",
@@ -700,6 +969,14 @@
         "monitor": "监控",
         "clean": "清洗 / 暖机",
         "rework": "返工"
+      },
+      "rework_return": {
+        "same_step": "原步骤（重做）",
+        "next_step": "下一步骤"
+      },
+      "qty_basis": {
+        "per_lot": "每批",
+        "per_unit": "每单元/片"
       },
       "resource_kind": {
         "equipment": "设备",
@@ -743,6 +1020,12 @@
         "hold": "冻结",
         "release": "解冻"
       },
+      "oos_action": {
+        "warn": "预警",
+        "rework": "返工",
+        "auto_hold": "自动 Hold",
+        "block": "禁止下机"
+      },
       "qtime_action": {
         "warn": "预警",
         "hold": "冻结批次",
@@ -760,15 +1043,25 @@
       },
       "lot_status": {
         "waiting": "等待",
-        "processing": "加工中",
-        "on_hold": "暂停",
+        "moved_in": "已进站",
+        "running": "加工中",
+        "tracked_out": "已下机",
         "completed": "已完成",
         "scrapped": "已报废"
       },
       "wafer_status": {
         "waiting": "等待",
         "processing": "加工中",
+        "rework": "返工",
+        "completed": "已完成",
         "scrapped": "已报废"
+      },
+      "track_unit_kind": {
+        "wafer": "晶圆",
+        "strip": "条",
+        "die": "晶粒",
+        "package": "封装体",
+        "unit": "单元"
       }
     }
   },
@@ -780,7 +1073,9 @@
     "g-process": "工艺管理",
     "g-quality": "质量管理",
     "g-planning": "生产计划",
+    "g-execution": "生产执行",
     "g-lot": "批次管理",
+    "g-check": "卡控管理",
     "g-master": "基础数据",
     "g-system": "系统管理",
     "dashboard": "仪表盘",
@@ -794,15 +1089,18 @@
     "mes-equipment_group": "设备组",
     "mes-equipment_capability": "设备能力",
     "mes-e10_state": "E10 状态模型",
+    "mes-e10_auto_rule": "E10 自动迁移",
     "mes-product": "产品",
     "mes-product_family": "产品族",
     "mes-tech_node": "工艺节点",
     "mes-material": "物料",
     "mes-material_type": "物料类型",
+    "mes-material_lot": "线边物料批",
     "mes-carrier": "载具",
     "mes-carrier_type": "载具类型",
     "mes-reticle": "光罩",
     "mes-fixture": "治具",
+    "mes-tool": "工具寿命",
     "mes-operation": "工序",
     "mes-route": "工艺流程",
     "mes-recipe": "配方",
@@ -813,14 +1111,22 @@
     "mes-sampling_rule": "抽样规则",
     "mes-defect_code": "缺陷代码",
     "mes-reason_code": "原因代码",
+    "mes-dc_result": "量测数据",
     "mes-work_order": "工单",
     "mes-lot-start": "投产",
+    "mes-lot-console": "批次作业",
+    "mes-lot-trace": "批次履历",
+    "mes-lot_hold": "Hold 管理",
     "mes-lot": "批次",
     "mes-wafer": "晶圆",
     "mes-lot_type": "批次类型",
     "mes-lot_priority": "优先级",
     "mes-split_merge_rule": "分批合批",
     "mes-qtime_rule": "Q-Time",
+    "mes-check_rule": "卡控规则",
+    "mes-check_plan": "卡控方案",
+    "mes-check_binding": "卡控绑定",
+    "mes-check_log": "卡控记录",
     "mes-dict_type": "数据字典",
     "mes-code_rule": "编码规则",
     "mes-uom": "计量单位",

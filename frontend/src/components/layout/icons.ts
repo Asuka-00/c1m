@@ -54,11 +54,27 @@ import {
   Timer,
   Workflow,
   Wrench,
+  ShieldAlert,
+  ListChecks,
+  Link,
+  PackageOpen,
+  Repeat,
+  LineChart,
+  PauseCircle,
+  ScrollText,
   type LucideIcon,
 } from 'lucide-react'
 
 /** Icon names the backend menu registry may reference (lucide names). */
 export const ICONS: Record<string, LucideIcon> = {
+  ShieldAlert,
+  ListChecks,
+  Link,
+  PackageOpen,
+  Repeat,
+  LineChart,
+  PauseCircle,
+  ScrollText,
   Activity,
   Aperture,
   Archive,

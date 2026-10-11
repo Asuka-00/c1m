@@ -400,8 +400,8 @@ def _lot_type(
         r = _get(s, tid, "code_rule", row.get(f"{k}_id"))
         if r and r["target"] != target:
             errs.append((k, f"{k}: must be a code rule for {target} IDs"))
-    if not 1 <= (row.get("max_wafers") or 0) <= 50:
-        errs.append(("max_wafers", "max_wafers: must be 1..50"))
+    if not 1 <= (row.get("max_wafers") or 0) <= 100000:
+        errs.append(("max_wafers", "max_wafers: must be 1..100000"))
     if errs:
         raise MesError(errs)
 

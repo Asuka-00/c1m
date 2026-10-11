@@ -8,7 +8,10 @@
       "process": "プロセス",
       "quality": "品質",
       "lot": "ロット・ウェーハ規則",
-      "wo": "作業指示"
+      "wo": "作業指示",
+      "exec": "生産実行",
+      "inventory": "資材・工具",
+      "check": "チェック"
     },
     "entity": {
       "dict_type": "データ辞書",
@@ -22,6 +25,17 @@
       "shift": "シフト",
       "work_calendar": "稼働カレンダー",
       "calendar_day": "カレンダー日",
+      "check_rule": "チェックルール",
+      "check_plan": "チェックプラン",
+      "check_plan_item": "プランルール",
+      "check_binding": "チェック割当",
+      "check_log": "チェック記録",
+      "material_lot": "ラインサイド資材ロット",
+      "tool": "工具",
+      "e10_auto_rule": "E10 自動遷移",
+      "lot_hold": "ロットホールド",
+      "lot_history": "ロット履歴",
+      "dc_result": "測定データ",
       "uom": "単位",
       "uom_conversion": "単位換算",
       "tech_node": "テクノロジーノード",
@@ -59,7 +73,7 @@
       "qtime_rule": "Q タイム規則",
       "work_order": "作業指示",
       "lot": "ロット",
-      "wafer": "ウェーハ"
+      "wafer": "ウェーハ・ユニット"
     },
     "field": {
       "dict_type": {
@@ -157,6 +171,126 @@
         "shifts": "シフト",
         "note": "備考"
       },
+      "check_rule": {
+        "code": "コード",
+        "name": "名称",
+        "check_type": "チェック種別",
+        "severity": "重大度",
+        "params": "パラメータ（JSON）",
+        "is_active": "有効",
+        "description": "説明"
+      },
+      "check_plan": {
+        "code": "コード",
+        "name": "名称",
+        "is_active": "有効",
+        "description": "説明"
+      },
+      "check_plan_item": {
+        "check_plan": "チェックプラン",
+        "check_rule": "チェックルール",
+        "seq": "順番"
+      },
+      "check_binding": {
+        "check_plan": "チェックプラン",
+        "trigger": "トリガー",
+        "scope": "スコープ",
+        "route_step": "ルートステップ",
+        "equipment": "設備",
+        "operation": "工程",
+        "equipment_type": "設備タイプ",
+        "product": "製品",
+        "is_active": "有効"
+      },
+      "check_log": {
+        "lot": "ロット",
+        "trigger": "トリガー",
+        "route_step": "ルートステップ",
+        "equipment": "設備",
+        "check_rule": "チェックルール",
+        "check_plan": "チェックプラン",
+        "check_type": "チェック種別",
+        "severity": "重大度",
+        "result": "結果",
+        "message": "メッセージ",
+        "context": "コンテキスト",
+        "override_reason": "強制解除理由",
+        "user_email": "ユーザー"
+      },
+      "material_lot": {
+        "code": "資材ロット番号",
+        "material": "資材",
+        "qty_remaining": "残数量",
+        "initial_qty": "受入数量",
+        "uom": "単位",
+        "expiry_date": "有効期限",
+        "location": "ロケーション",
+        "ml_status": "状態",
+        "description": "説明"
+      },
+      "tool": {
+        "code": "工具 ID",
+        "fixture": "工具タイプ",
+        "serial_no": "シリアル番号",
+        "usage_count": "使用回数",
+        "max_usage": "最大使用回数",
+        "warn_pct": "警告しきい値（寿命%）",
+        "expiry_date": "有効期限",
+        "tool_status": "状態",
+        "equipment": "装着設備",
+        "description": "説明"
+      },
+      "e10_auto_rule": {
+        "trigger": "トリガー",
+        "equipment_type": "設備タイプ",
+        "to_state": "遷移先",
+        "is_active": "有効"
+      },
+      "lot_hold": {
+        "lot": "ロット",
+        "reason": "理由コード",
+        "hold_type": "ホールド種別",
+        "source": "発生元",
+        "comment": "コメント",
+        "is_active": "有効",
+        "held_at": "ホールド日時",
+        "held_by": "ホールド者",
+        "route_step": "ルートステップ",
+        "released_at": "解除日時",
+        "released_by": "解除者",
+        "release_reason": "解除理由",
+        "release_comment": "解除コメント"
+      },
+      "lot_history": {
+        "lot": "ロット",
+        "unit": "ウェーハ・ユニット",
+        "action": "操作",
+        "route_step": "ルートステップ",
+        "step_seq": "順番",
+        "operation": "工程",
+        "equipment": "設備",
+        "recipe": "レシピ",
+        "qty": "数量",
+        "from_status": "変更前",
+        "to_status": "変更後",
+        "reason": "理由コード",
+        "comment": "コメント",
+        "details": "詳細",
+        "user_email": "ユーザー",
+        "at": "日時"
+      },
+      "dc_result": {
+        "lot": "ロット",
+        "unit": "ウェーハ・ユニット",
+        "route_step": "ルートステップ",
+        "dc_plan": "データ収集計画",
+        "measurement_item": "測定項目",
+        "site_no": "測定点",
+        "value": "値",
+        "is_oos": "規格外",
+        "oos_action": "規格外処置",
+        "user_email": "ユーザー"
+      },
       "uom": {
         "code": "コード",
         "name": "名称",
@@ -175,6 +309,7 @@
         "name": "名称",
         "feature_nm": "最小寸法（nm）",
         "wafer_size": "ウェーハサイズ",
+        "tracking_level": "追跡レベル",
         "description": "説明"
       },
       "product_family": {
@@ -192,6 +327,9 @@
         "wafer_size": "ウェーハサイズ",
         "gross_die": "ウェーハ当たりダイ数",
         "uom": "単位",
+        "tracking_level": "追跡レベル",
+        "serial_kind": "シリアル単位種別",
+        "unit_code_rule": "ユニット採番ルール",
         "description": "説明"
       },
       "material_type": {
@@ -286,6 +424,7 @@
         "workcenter": "ワークセンター",
         "serial_no": "シリアル番号",
         "initial_state": "初期 E10 状態",
+        "e10_state": "現在 E10 状態",
         "is_active": "有効",
         "description": "説明"
       },
@@ -315,6 +454,11 @@
         "is_optional": "任意",
         "branch_condition": "分岐条件",
         "branch_to_seq": "分岐先順番",
+        "rework_return": "リワーク復帰先",
+        "auto_move_in": "自動ムーブイン",
+        "auto_track_in": "自動トラックイン",
+        "auto_track_out": "自動トラックアウト",
+        "auto_move_out": "自動ムーブアウト",
         "note": "備考"
       },
       "step_resource": {
@@ -327,7 +471,8 @@
         "fixture": "治具・工具",
         "recipe": "レシピ",
         "qty": "数量",
-        "uom": "単位"
+        "uom": "単位",
+        "qty_basis": "数量基準"
       },
       "product_route": {
         "product": "製品",
@@ -376,6 +521,8 @@
         "meas_type": "データ型",
         "uom": "単位",
         "precision": "小数桁",
+        "oos_action": "規格外処置",
+        "oos_reason": "規格外ホールド理由",
         "description": "説明"
       },
       "dc_plan": {
@@ -439,7 +586,7 @@
         "default_priority": "既定優先度",
         "lot_id_rule": "ロット ID ルール",
         "wafer_id_rule": "ウェーハ ID ルール",
-        "max_wafers": "ロット最大枚数",
+        "max_wafers": "ロット最大枚数・数量",
         "description": "説明"
       },
       "split_merge_rule": {
@@ -479,6 +626,7 @@
         "planned_qty": "計画枚数",
         "over_start_limit_pct": "超過投入上限（%）",
         "started_qty": "投入済枚数",
+        "completed_qty": "完了数量",
         "planned_start": "計画開始日",
         "due_date": "納期",
         "customer": "顧客",
@@ -497,10 +645,21 @@
         "route": "ルート",
         "lot_type": "ロットタイプ",
         "priority": "優先度",
-        "qty": "枚数",
+        "qty": "数量",
+        "tracking_level": "追跡レベル",
+        "scrapped_qty": "廃棄数",
         "site": "工場",
         "current_step": "現在ステップ",
         "lot_status": "状態",
+        "on_hold": "ホールド中",
+        "equipment": "設備",
+        "recipe": "レシピ",
+        "step_in_at": "ステップ到着",
+        "stage_at": "最終操作",
+        "pending_rework": "リワーク待ち",
+        "route_stack": "ルートスタック",
+        "exec_ctx": "実行コンテキスト",
+        "completed_at": "完了日時",
         "carrier": "キャリア",
         "source_ref": "元ウェーハ・資材ロット",
         "started_at": "投入日時",
@@ -510,9 +669,12 @@
       "wafer": {
         "code": "ウェーハ ID",
         "lot": "ロット",
+        "unit_kind": "ユニット種別",
         "slot": "スロット",
         "wafer_status": "状態",
         "source_ref": "元ウェーハ",
+        "scrap_reason": "廃棄理由",
+        "rework_count": "リワーク回数",
         "description": "説明"
       }
     },
@@ -523,8 +685,20 @@
       "calendar_day": {
         "shifts": "カンマ区切りのシフトコード"
       },
+      "check_rule": {
+        "params": "例：E10 は {\"allowed\": [\"SBY\", \"PRD\"]}"
+      },
+      "tool": {
+        "max_usage": "空欄：工具タイプの最大使用回数"
+      },
+      "e10_auto_rule": {
+        "equipment_type": "空欄：全タイプ"
+      },
       "uom_conversion": {
         "factor": "換算先 = 換算元 × 係数"
+      },
+      "product": {
+        "tracking_level": "空欄：テクノロジーノードを継承"
       },
       "route_step": {
         "branch_condition": "例：lot_type == 'ENG'（実行時に判定。本モジュール対象外）"
@@ -557,7 +731,13 @@
         "close": "クローズ",
         "cancel": "取消",
         "start": "投入",
-        "undo_start": "投入取消"
+        "undo_start": "投入取消",
+        "move_in": "ムーブイン",
+        "track_in": "トラックイン",
+        "track_out": "トラックアウト",
+        "move_out": "ムーブアウト",
+        "override": "チェック強制解除",
+        "e10": "E10 状態変更"
       },
       "seq_reset": {
         "never": "リセットしない",
@@ -572,6 +752,7 @@
         "material": "資材ロット",
         "equipment": "設備 ID",
         "work_order": "作業指示番号",
+        "unit": "ユニットシリアル",
         "other": "その他"
       },
       "attr_type": {
@@ -598,6 +779,83 @@
         "workday": "稼働日",
         "holiday": "休日",
         "maintenance": "保全日"
+      },
+      "exec_trigger": {
+        "move_in": "ムーブイン",
+        "track_in": "トラックイン",
+        "track_out": "トラックアウト",
+        "move_out": "ムーブアウト"
+      },
+      "check_type": {
+        "e10_available": "設備 E10 状態使用可",
+        "eqp_capability": "設備能力・レシピ整合",
+        "recipe_active": "レシピ有効",
+        "reticle_available": "レチクル使用可",
+        "material_sufficient": "資材充足",
+        "tool_life": "工具使用可・寿命",
+        "carrier_available": "キャリア使用可",
+        "qtime": "Q タイム",
+        "lot_hold": "ロット非ホールド",
+        "wo_status": "作業指示状態",
+        "dc_complete": "データ収集完了",
+        "oos": "規格外",
+        "sampling": "サンプリング判定"
+      },
+      "check_severity": {
+        "block": "ブロック",
+        "warn": "警告"
+      },
+      "check_result": {
+        "pass": "合格",
+        "warn": "警告",
+        "block": "ブロック",
+        "overridden": "強制解除"
+      },
+      "check_scope": {
+        "route_step": "ルートステップ",
+        "equipment": "設備",
+        "operation": "工程",
+        "equipment_type": "設備タイプ",
+        "product": "製品"
+      },
+      "ml_status": {
+        "available": "使用可",
+        "hold": "保留",
+        "empty": "使用済",
+        "expired": "期限切れ"
+      },
+      "tool_status": {
+        "available": "使用可",
+        "in_use": "使用中",
+        "pending_maintenance": "保全待ち",
+        "expired": "期限切れ",
+        "retired": "廃棄"
+      },
+      "e10_trigger": {
+        "track_in": "トラックイン",
+        "track_out": "トラックアウト（他の処理ロットなし）"
+      },
+      "hold_type": {
+        "manual": "手動",
+        "auto": "自動"
+      },
+      "history_action": {
+        "start": "投入",
+        "move_in": "ムーブイン",
+        "track_in": "トラックイン",
+        "track_out": "トラックアウト",
+        "move_out": "ムーブアウト",
+        "hold": "ホールド",
+        "release": "ホールド解除",
+        "scrap": "スクラップ",
+        "rework": "リワーク",
+        "branch": "分岐",
+        "sub_route": "サブルート開始",
+        "return": "サブ・リワーク復帰",
+        "complete": "完了",
+        "override": "チェック強制解除",
+        "qtime": "Q タイム違反",
+        "oos": "規格外"
       },
       "uom_dimension": {
         "count": "数量",
@@ -670,6 +928,17 @@
         "port": "ポート",
         "sub_unit": "サブユニット"
       },
+      "tracking_level": {
+        "wafer": "ウェーハ（スロット）",
+        "unit": "シリアル管理ユニット",
+        "quantity": "数量"
+      },
+      "serial_kind": {
+        "strip": "ストリップ",
+        "die": "ダイ",
+        "package": "パッケージ",
+        "unit": "ユニット"
+      },
       "e10_category": {
         "PRD": "PRD · 生産",
         "SBY": "SBY · 待機",
@@ -700,6 +969,14 @@
         "monitor": "モニター",
         "clean": "洗浄 / シーズニング",
         "rework": "リワーク"
+      },
+      "rework_return": {
+        "same_step": "同一ステップ（再処理）",
+        "next_step": "次ステップ"
+      },
+      "qty_basis": {
+        "per_lot": "ロット当たり",
+        "per_unit": "ユニット・ウェーハ当たり"
       },
       "resource_kind": {
         "equipment": "設備",
@@ -743,6 +1020,12 @@
         "hold": "ホールド",
         "release": "リリース"
       },
+      "oos_action": {
+        "warn": "警告",
+        "rework": "リワーク",
+        "auto_hold": "自動ホールド",
+        "block": "トラックアウト禁止"
+      },
       "qtime_action": {
         "warn": "警告",
         "hold": "ロット保留",
@@ -760,15 +1043,25 @@
       },
       "lot_status": {
         "waiting": "待機",
-        "processing": "処理中",
-        "on_hold": "保留中",
+        "moved_in": "ムーブイン済",
+        "running": "処理中",
+        "tracked_out": "トラックアウト済",
         "completed": "完了",
         "scrapped": "廃棄"
       },
       "wafer_status": {
         "waiting": "待機",
         "processing": "処理中",
+        "rework": "リワーク",
+        "completed": "完了",
         "scrapped": "廃棄"
+      },
+      "track_unit_kind": {
+        "wafer": "ウェーハ",
+        "strip": "ストリップ",
+        "die": "ダイ",
+        "package": "パッケージ",
+        "unit": "ユニット"
       }
     }
   },
@@ -780,7 +1073,9 @@
     "g-process": "工程管理",
     "g-quality": "品質管理",
     "g-planning": "生産計画",
+    "g-execution": "生産実行",
     "g-lot": "ロット管理",
+    "g-check": "チェック管理",
     "g-master": "基準データ",
     "g-system": "システム管理",
     "dashboard": "ダッシュボード",
@@ -794,15 +1089,18 @@
     "mes-equipment_group": "設備グループ",
     "mes-equipment_capability": "設備能力",
     "mes-e10_state": "E10 状態モデル",
+    "mes-e10_auto_rule": "E10 自動遷移",
     "mes-product": "製品",
     "mes-product_family": "製品ファミリー",
     "mes-tech_node": "テクノロジーノード",
     "mes-material": "資材",
     "mes-material_type": "資材タイプ",
+    "mes-material_lot": "ラインサイド資材ロット",
     "mes-carrier": "キャリア",
     "mes-carrier_type": "キャリアタイプ",
     "mes-reticle": "レチクル",
     "mes-fixture": "治具",
+    "mes-tool": "工具寿命",
     "mes-operation": "工程",
     "mes-route": "ルート",
     "mes-recipe": "レシピ",
@@ -813,14 +1111,22 @@
     "mes-sampling_rule": "サンプリング規則",
     "mes-defect_code": "欠陥コード",
     "mes-reason_code": "理由コード",
+    "mes-dc_result": "測定データ",
     "mes-work_order": "作業指示",
     "mes-lot-start": "ロット投入",
+    "mes-lot-console": "ロット作業",
+    "mes-lot-trace": "ロット履歴",
+    "mes-lot_hold": "ホールド管理",
     "mes-lot": "ロット",
     "mes-wafer": "ウェーハ",
     "mes-lot_type": "ロットタイプ",
     "mes-lot_priority": "優先度",
     "mes-split_merge_rule": "分割・統合",
     "mes-qtime_rule": "Q タイム",
+    "mes-check_rule": "チェックルール",
+    "mes-check_plan": "チェックプラン",
+    "mes-check_binding": "チェック割当",
+    "mes-check_log": "チェック記録",
     "mes-dict_type": "データ辞書",
     "mes-code_rule": "採番ルール",
     "mes-uom": "単位",

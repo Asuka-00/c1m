@@ -42,6 +42,8 @@ MODULES: dict[str, tuple[str, int]] = {
 EXTRA_PERMISSIONS: dict[str, str] = {
     "mes.wo:release": "MES work orders: release / hold / close / cancel",
     "mes.lot:start": "MES lots: start / undo start",
+    "mes.exec:override": "MES execution: force-override blocking checks",
+    "mes.exec:hold": "MES execution: hold / release lots",
 }
 
 
@@ -112,6 +114,7 @@ class Entity:
     code_label: str | None = None
     code_auto: bool = False  # code generated from a code rule when blank
     perm_module: str | None = None  # permissions of another module
+    menu: bool = True  # own menu entry (False: reached from another page)
 
     @property
     def pmod(self) -> str:

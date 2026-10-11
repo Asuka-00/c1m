@@ -15,7 +15,9 @@ GROUPS: list[tuple[str, str, str, int]] = [
     ("g-process", "Process Engineering|工艺管理|工程管理", "Workflow", 40),
     ("g-quality", "Quality|质量管理|品質管理", "BadgeCheck", 50),
     ("g-planning", "Production Planning|生产计划|生産計画", "ClipboardList", 60),
+    ("g-execution", "Production Execution|生产执行|生産実行", "PlayCircle", 65),
     ("g-lot", "Lot Management|批次管理|ロット管理", "Layers", 70),
+    ("g-check", "Check Control|卡控管理|チェック管理", "ShieldAlert", 75),
     ("g-master", "Master Data|基础数据|基準データ", "BookOpen", 80),
     ("g-system", "System|系统管理|システム管理", "Shield", 90),
 ]
@@ -36,6 +38,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-equipment_group", "Equipment Group|设备组|設備グループ"),
         ("mes-equipment_capability", "Capability|设备能力|設備能力"),
         ("mes-e10_state", "E10 State Model|E10 状态模型|E10 状態モデル"),
+        ("mes-e10_auto_rule", "E10 Auto Transition|E10 自动迁移|E10 自動遷移"),
     ],
     "g-product": [
         ("mes-product", "Product|产品|製品"),
@@ -43,10 +46,15 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-tech_node", "Technology Node|工艺节点|テクノロジーノード"),
         ("mes-material", "Material|物料|資材"),
         ("mes-material_type", "Material Type|物料类型|資材タイプ"),
+        (
+            "mes-material_lot",
+            "Line-side Material Lot|线边物料批|ラインサイド資材ロット",
+        ),
         ("mes-carrier", "Carrier|载具|キャリア"),
         ("mes-carrier_type", "Carrier Type|载具类型|キャリアタイプ"),
         ("mes-reticle", "Reticle|光罩|レチクル"),
         ("mes-fixture", "Fixture|治具|治具"),
+        ("mes-tool", "Tool Life|工具寿命|工具寿命"),
     ],
     "g-process": [
         ("mes-operation", "Operation|工序|工程"),
@@ -61,10 +69,16 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-sampling_rule", "Sampling Rule|抽样规则|サンプリング規則"),
         ("mes-defect_code", "Defect Code|缺陷代码|欠陥コード"),
         ("mes-reason_code", "Reason Code|原因代码|理由コード"),
+        ("mes-dc_result", "DC Data|量测数据|測定データ"),
     ],
     "g-planning": [
         ("mes-work_order", "Work Order|工单|作業指示"),
         ("mes-lot-start", "Lot Start|投产|ロット投入"),
+    ],
+    "g-execution": [
+        ("mes-lot-console", "Lot Operation|批次作业|ロット作業"),
+        ("mes-lot-trace", "Lot History|批次履历|ロット履歴"),
+        ("mes-lot_hold", "Hold Management|Hold 管理|ホールド管理"),
     ],
     "g-lot": [
         ("mes-lot", "Lot|批次|ロット"),
@@ -73,6 +87,12 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-lot_priority", "Priority|优先级|優先度"),
         ("mes-split_merge_rule", "Split / Merge|分批合批|分割・統合"),
         ("mes-qtime_rule", "Q-Time|Q-Time|Q タイム"),
+    ],
+    "g-check": [
+        ("mes-check_rule", "Check Rule|卡控规则|チェックルール"),
+        ("mes-check_plan", "Check Plan|卡控方案|チェックプラン"),
+        ("mes-check_binding", "Check Binding|卡控绑定|チェック割当"),
+        ("mes-check_log", "Check Log|卡控记录|チェック記録"),
     ],
     "g-master": [
         ("mes-dict_type", "Dictionary|数据字典|データ辞書"),

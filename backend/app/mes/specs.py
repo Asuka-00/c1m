@@ -2,6 +2,7 @@
 
 from app.mes import (  # noqa: F401  (registers entities)
     specs_common,
+    specs_exec,
     specs_p2,
     specs_p3,
     specs_p4,

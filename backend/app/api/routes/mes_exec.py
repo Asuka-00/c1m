@@ -1,0 +1,141 @@
+"""Lot execution: stages, check preview, holds.
+
+Permissions: mes.exec:read (context / preview), mes.exec:write (stages),
+mes.exec:override (force past blocking checks, reason required),
+mes.exec:hold (manual hold / release).  A blocked stage answers 409
+{"detail": {"code": "check_blocked", "results": [...]}}.
+"""
+
+import uuid
+from typing import Any, Literal
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
+
+from app.api.deps import CurrentTenant, SessionDep
+from app.mes import execution as svc
+from app.mes.checks import one
+from app.mes.core import ENTITIES
+from app.mes.service import serialize
+from app.tenancy import TenantContext
+
+router = APIRouter(prefix="/mes/exec", tags=["mes"])
+Stage = Literal["move_in", "track_in", "track_out", "move_out"]
+
+
+def _need(ctx: TenantContext, p: str) -> None:
+    if not ctx.can(p):
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+
+class DcIn(BaseModel):
+    measurement_item_id: uuid.UUID
+    unit_id: uuid.UUID | None = None
+    site_no: int = Field(default=1, ge=1)
+    value: float | None = None
+
+
+class ScrapIn(BaseModel):
+    reason_id: uuid.UUID
+    unit_id: uuid.UUID | None = None
+    qty: int | None = Field(default=None, ge=1)
+
+
+class ReworkUnitIn(BaseModel):
+    reason_id: uuid.UUID
+    unit_id: uuid.UUID
+
+
+class StageIn(BaseModel):
+    equipment_id: uuid.UUID | None = None
+    recipe_id: uuid.UUID | None = None
+    reticle_id: uuid.UUID | None = None
+    carrier_id: uuid.UUID | None = None
+    tool_ids: list[uuid.UUID] | None = None
+    material_lot_ids: list[uuid.UUID] | None = None
+    dc: list[DcIn] | None = None
+    scrap: list[ScrapIn] | None = None
+    rework_units: list[ReworkUnitIn] | None = None
+    branch: bool = False
+    rework: bool = False
+    override: bool = False
+    override_reason: str | None = Field(default=None, max_length=300)
+
+
+class HoldIn(BaseModel):
+    reason_id: uuid.UUID
+    comment: str | None = Field(default=None, max_length=300)
+
+
+class ReleaseIn(BaseModel):
+    reason_id: uuid.UUID | None = None
+    comment: str | None = Field(default=None, max_length=300)
+
+
+@router.get("/lots/{lot_id}")
+def lot_context(session: SessionDep, ctx: CurrentTenant, lot_id: uuid.UUID) -> Any:
+    _need(ctx, "mes.exec:read")
+    return svc.context(session, ctx.id, lot_id)
+
+
+@router.post("/lots/{lot_id}/preview/{stage}")
+def lot_preview(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    lot_id: uuid.UUID,
+    stage: Stage,
+    body: StageIn,
+) -> Any:
+    """Evaluate the bound checks for a stage without executing it (logged as preview)."""
+    _need(ctx, "mes.exec:read")
+    return {
+        "results": svc.preview(
+            session, ctx.id, lot_id, stage, body.model_dump(), ctx.user
+        )
+    }
+
+
+@router.post("/lots/{lot_id}/hold")
+def lot_hold(
+    session: SessionDep, ctx: CurrentTenant, lot_id: uuid.UUID, body: HoldIn
+) -> Any:
+    _need(ctx, "mes.exec:hold")
+    lot = svc.manual_hold(
+        session, ctx.id, lot_id, body.reason_id, body.comment, ctx.user
+    )
+    return serialize(
+        session,
+        ctx.id,
+        ENTITIES["lot"],
+        [one(session, ctx.id, "lot", lot["id"]) or lot],
+    )[0]
+
+
+@router.post("/holds/{hold_id}/release")
+def hold_release(
+    session: SessionDep, ctx: CurrentTenant, hold_id: uuid.UUID, body: ReleaseIn
+) -> Any:
+    _need(ctx, "mes.exec:hold")
+    lot = svc.release_hold(
+        session, ctx.id, hold_id, ctx.user, body.reason_id, body.comment
+    )
+    return serialize(
+        session,
+        ctx.id,
+        ENTITIES["lot"],
+        [one(session, ctx.id, "lot", lot["id"]) or lot],
+    )[0]
+
+
+@router.post("/lots/{lot_id}/{stage}")
+def lot_stage(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    lot_id: uuid.UUID,
+    stage: Stage,
+    body: StageIn,
+) -> Any:
+    _need(ctx, "mes.exec:write")
+    if body.override:
+        _need(ctx, "mes.exec:override")
+    return svc.run_stage(session, ctx.id, lot_id, stage, body.model_dump(), ctx.user)

@@ -39,6 +39,12 @@ ENUMS.update(
             ("hold", "Hold|冻结|ホールド"),
             ("release", "Release|解冻|リリース"),
         ],
+        "oos_action": [
+            ("warn", "Warn|预警|警告"),
+            ("rework", "Rework|返工|リワーク"),
+            ("auto_hold", "Auto hold|自动 Hold|自動ホールド"),
+            ("block", "Block track out|禁止下机|トラックアウト禁止"),
+        ],
         "qtime_action": [
             ("warn", "Warn|预警|警告"),
             ("hold", "Hold lot|冻结批次|ロット保留"),
@@ -65,6 +71,21 @@ register(
             ),
             F("uom", "ref", ref="uom", required_when={"meas_type": ("numeric",)}),
             F("precision", "int", "Decimals|小数位|小数桁", default=3),
+            F(
+                "oos_action",
+                "enum",
+                "OOS action|超规动作|規格外処置",
+                required=True,
+                enum="oos_action",
+                default="auto_hold",
+            ),
+            F(
+                "oos_reason",
+                "ref",
+                "OOS hold reason|超规 Hold 原因|規格外ホールド理由",
+                ref="reason_code",
+                list=False,
+            ),
         ],
         phase=4,
         icon="Ruler",
@@ -271,7 +292,7 @@ register(
             F(
                 "max_wafers",
                 "int",
-                "Max wafers / lot|每批最大片数|ロット最大枚数",
+                "Max wafers / units per lot|每批最大片数/数量|ロット最大枚数・数量",
                 default=25,
             ),
         ],

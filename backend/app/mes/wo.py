@@ -18,7 +18,7 @@ import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
-from app.mes import coderule
+from app.mes import coderule, execution
 from app.mes.core import ENTITIES, TABLES, Entity
 from app.mes.service import (
     MesError,
@@ -422,9 +422,13 @@ def start(
     step, site = first_step(s, tid, wo["route_id"])
     if not step:
         raise http_422([("route", "route: has no steps")])
+    stack: list[Row] = []
+    step = execution._enter(s, tid, step, stack, [])
+    if not step:
+        raise http_422([("route", "route: has no operation steps")])
+    prod = _one(s, tid, "product", wo["product_id"]) or {}
     lot_nos = coderule.generate(s, tid, lr, len(lots), commit=False)
     at, c, out = now(), conn(s), []
-    seq_wafer = "{SEQ" in wr["pattern"]
     tag = {"_demo": True} if demo else {}
     for lot_no, x in zip(lot_nos, lots, strict=True):
         lid = uuid.uuid4()
@@ -447,6 +451,11 @@ def start(
                 qty=int(x["qty"]),
                 site_id=site,
                 current_step_id=step["id"],
+                route_stack=list(stack),
+                step_in_at=at,
+                on_hold=False,
+                scrapped_qty=0,
+                pending_rework=False,
                 lot_status="waiting",
                 carrier_id=x.get("carrier_id"),
                 source_ref=x.get("source_ref") or None,
@@ -457,25 +466,15 @@ def start(
             )
         )
         srcs = x.get("wafer_sources") or [None] * int(x["qty"])
-        for k, src in zip(x["slots"], srcs, strict=True):
-            ctx = {"LOT": lot_no, "SLOT": int(k)}
-            wid = (
-                coderule.generate(s, tid, wr, 1, ctx, commit=False)[0]
-                if seq_wafer
-                else coderule.render(wr, int(k), at, ctx)
-            )
-            c.execute(
-                sa.insert(TABLES["wafer"]).values(
-                    id=uuid.uuid4(),
-                    code=wid,
-                    lot_id=lid,
-                    slot=int(k),
-                    wafer_status="waiting",
-                    source_ref=src or None,
-                    attrs=dict(tag),
-                    **sysv,
-                )
-            )
+        lot0 = {"id": lid, "code": lot_no}
+        level = execution.create_units(
+            s, tid, lot0, prod, list(x["slots"]), list(srcs), wr, user, tag
+        )
+        c.execute(
+            sa.update(TABLES["lot"])
+            .where(TABLES["lot"].c.id == lid)
+            .values(tracking_level=level)
+        )
         lot = get_row(s, LOT, tid, lid)
         audit(
             s,
@@ -485,6 +484,9 @@ def start(
             lot,
             user,
             {"work_order": (None, wo["code"]), "qty": (None, lot["qty"])},
+        )
+        execution.history(
+            s, tid, lot, "start", user, step=step, details={"work_order": wo["code"]}
         )
         out.append(lot)
     _set(
@@ -526,11 +528,22 @@ def undo_start(
     lots = [dict(r) for r in conn(s).execute(stmt).mappings()]
     if not lots:
         raise http_422([("lots", "lots: nothing to undo")])
-    step, _ = first_step(s, tid, wo["route_id"])
+    h = TABLES["lot_history"]
+    acted = set(
+        conn(s)
+        .execute(
+            sa.select(h.c.lot_id).where(
+                h.c.tenant_id == tid,
+                h.c.lot_id.in_([x["id"] for x in lots]),
+                h.c.action != "start",
+            )
+        )
+        .scalars()
+    )
     busy = [
         x["code"]
         for x in lots
-        if x["lot_status"] != "waiting" or x["current_step_id"] != (step and step["id"])
+        if x["lot_status"] != "waiting" or x["on_hold"] or x["id"] in acted
     ]
     if busy:
         raise http_422([("lots", f"lots: already processed: {', '.join(busy)}")])

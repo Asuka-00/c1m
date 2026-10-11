@@ -55,6 +55,12 @@ ENUMS.update(
             ("cancel", "Cancel|取消|取消"),
             ("start", "Lot start|投产|投入"),
             ("undo_start", "Undo start|撤销投产|投入取消"),
+            ("move_in", "Move in|进站|ムーブイン"),
+            ("track_in", "Track in|上机|トラックイン"),
+            ("track_out", "Track out|下机|トラックアウト"),
+            ("move_out", "Move out|出站|ムーブアウト"),
+            ("override", "Check override|卡控放行|チェック強制解除"),
+            ("e10", "E10 state change|E10 状态变更|E10 状態変更"),
         ],
         "seq_reset": [
             ("never", "Never|不重置|リセットしない"),
@@ -69,6 +75,7 @@ ENUMS.update(
             ("material", "Material lot|物料批号|資材ロット"),
             ("equipment", "Equipment ID|设备编号|設備 ID"),
             ("work_order", "Work order no.|工单号|作業指示番号"),
+            ("unit", "Unit serial no.|单元序列号|ユニットシリアル"),
             ("other", "Other|其他|その他"),
         ],
         "attr_type": [

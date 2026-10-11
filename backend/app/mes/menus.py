@@ -10,6 +10,18 @@ from app.mes.core import ENTITIES, perm
 ItemDef = tuple[str, str | None, str, str | None]
 
 PAGES: dict[str, ItemDef] = {
+    "mes-lot-console": (
+        "/mes/lot-console",
+        "Gauge",
+        "mes-page:lot-console",
+        "mes.exec:read",
+    ),
+    "mes-lot-trace": (
+        "/mes/lot-trace",
+        "History",
+        "mes-page:lot-trace",
+        "mes.exec:read",
+    ),
     "mes-lot-start": (
         "/mes/lot-start",
         "PlayCircle",
@@ -28,7 +40,7 @@ def mes_items() -> dict[str, ItemDef]:
             perm(e.pmod, "read"),
         )
         for e in ENTITIES.values()
-        if not e.internal and not e.parent
+        if not e.internal and not e.parent and e.menu
     }
     out.update(PAGES)
     return out
