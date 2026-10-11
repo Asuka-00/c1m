@@ -443,7 +443,12 @@ def dc_plan_for(s: Session, tid: uuid.UUID, op_id: Any) -> Row | None:
 def sampling(s: Session, tid: uuid.UUID, lot: Row, step: Row, us: list[Row]) -> Row:
     op_id = step["operation_id"]
     if not op_id:
-        return {"sampled": False, "items": [], "message": "no operation"}
+        return {
+            "sampled": False,
+            "items": [],
+            "unit_ids": [],
+            "message": "no operation",
+        }
     rules = [
         r
         for r in find(s, tid, "sampling_rule", operation_id=op_id)
@@ -457,7 +462,7 @@ def sampling(s: Session, tid: uuid.UUID, lot: Row, step: Row, us: list[Row]) -> 
         else None
     ) or dc_plan_for(s, tid, op_id)
     if not plan:
-        return {"sampled": False, "items": [], "message": "no DC plan"}
+        return {"sampled": False, "items": [], "unit_ids": [], "message": "no DC plan"}
     sampled, unit_ids, msg = True, [], "every lot (no sampling rule)"
     if rule:
         h = TABLES["lot_history"]

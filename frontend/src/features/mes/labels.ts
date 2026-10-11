@@ -24,3 +24,7 @@ export const rowLabel = (r: Record<string, unknown>, labelField = 'code') => {
     s += ` · ${String(r.operation_label).split(' · ')[0]}`
   return s
 }
+
+/** `code · name` of a simple option object. */
+export const optLabel = (o: { code: string; name?: string }) =>
+  o.name ? `${o.code} · ${o.name}` : o.code

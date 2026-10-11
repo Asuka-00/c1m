@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 from app.api.deps import CurrentTenant, SessionDep
 from app.api.pagination import ListParamsDep
 from app.mes import coderule
-from app.mes.core import ENTITIES, EXTRA_PERMISSIONS, Entity, perm
+from app.mes.core import ENTITIES, EXTRA_PERMISSIONS, MODULES, Entity, perm
 from app.mes.excel import export_xlsx, import_xlsx
 from app.mes.meta import all_meta
 from app.mes.routing import reorder_steps
@@ -57,7 +57,10 @@ def mes_meta(ctx: CurrentTenant) -> Any:
     """Entity metadata (fields, enums, refs, flags) the frontend renders from;
     each entity carries `can_read` / `can_write` for the current user."""
     meta = all_meta()
-    meta["perms"] = [p for p in EXTRA_PERMISSIONS if ctx.can(p)]
+    codes = [*EXTRA_PERMISSIONS] + [
+        perm(m, a) for m in MODULES for a in ("read", "write")
+    ]
+    meta["perms"] = [p for p in codes if ctx.can(p)]
     for m in meta["entities"]:
         m["can_read"] = ctx.can(m["read"])
         m["can_write"] = ctx.can(m["write"])

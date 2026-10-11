@@ -24,6 +24,8 @@ export function LotDetail({ row }: { row: MesRow }) {
     'route',
     'qty',
     'lot_status',
+    'on_hold',
+    'tracking_level',
     'current_step',
     'site',
     'carrier',
@@ -47,7 +49,11 @@ export function LotDetail({ row }: { row: MesRow }) {
         <RouteFlow
           row={route.data}
           readOnly
-          highlight={String(row.current_step_id ?? '')}
+          highlight={String(
+            (row.route_stack as { step_id: string }[] | null)?.[0]?.step_id ??
+              row.current_step_id ??
+              ''
+          )}
         />
       ) : (
         <Loader2 className='animate-spin' />

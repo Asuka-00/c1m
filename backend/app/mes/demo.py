@@ -1077,11 +1077,11 @@ for c, mat, qty, u, exp, loc in _rows(
         location=loc,
     )
 add("fixture", code="PAD-CMP", name="CMP polishing pad", kind="tool", max_uses=500)
-for c, sn, used, _mx, exp in _rows(
+for c, sn, used, mx, exp in _rows(
     [
-        ("PAD-0001", "IC1010-A1", 120, None, "2027-06-30"),
-        ("PAD-0002", "IC1010-A2", 470, None, "2027-06-30"),
-        ("PAD-0003", "IC1010-A3", 500, None, "2027-06-30"),
+        ("PAD-0001", "IC1010-A1", 120, 500, "2027-06-30"),
+        ("PAD-0002", "IC1010-A2", 470, 500, "2026-10-15"),
+        ("PAD-0003", "IC1010-A3", 500, 500, "2027-06-30"),
     ]
 ):
     add(
@@ -1090,6 +1090,7 @@ for c, sn, used, _mx, exp in _rows(
         fixture=("fixture", "PAD-CMP"),
         serial_no=sn,
         usage_count=used,
+        max_usage=mx,
         expiry_date=exp,
         tool_status="pending_maintenance" if used >= 500 else "available",
     )

@@ -313,13 +313,14 @@ def test_permissions_rls_readonly(client: TestClient, db: Session) -> None:
             == 403
         )
     meta = client.get(f"{API}/_meta", headers=hm).json()
-    assert meta["perms"] == []
-    assert set(client.get(f"{API}/_meta", headers=m.h).json()["perms"]) == {
+    assert meta["perms"] and all(p.endswith(":read") for p in meta["perms"])
+    assert {
         "mes.wo:release",
         "mes.lot:start",
         "mes.exec:override",
         "mes.exec:hold",
-    }
+        "mes.exec:write",
+    } <= set(client.get(f"{API}/_meta", headers=m.h).json()["perms"])
     # lots / wafers are read-only through the generic API
     assert client.post(m.url("lot"), headers=m.h, json={"code": "L"}).status_code == 405
     f.act(w, "release")

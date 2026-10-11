@@ -1,4 +1,5 @@
 import type { MesRow } from '@/lib/api/mes'
+import { ToolLife } from './exec-actions'
 import { WoProgress } from './wo-actions'
 
 /** Entity-specific cell renderers: entity -> field -> cell. */
@@ -7,6 +8,7 @@ export const CELLS: Record<
   Record<string, (r: MesRow) => React.ReactNode>
 > = {
   work_order: { started_qty: (r) => <WoProgress row={r} /> },
+  tool: { usage_count: (r) => <ToolLife row={r} /> },
 }
 
 /** Entity-specific edit / delete rules (on top of permissions + versioning). */

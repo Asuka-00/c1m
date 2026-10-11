@@ -1,5 +1,6 @@
 import type { MesRow } from '@/lib/api/mes'
 import { CodeRulePreview } from './code-rule-preview'
+import { HoldActions, LotActions } from './exec-actions'
 import { LotDetail } from './lot-detail'
 import { LotTypePreview } from './lot-type-preview'
 import { RouteFlow } from './route-flow'
@@ -21,4 +22,6 @@ export const ROW_PANELS: Record<
 /** Entity-specific extra row action buttons. */
 export const EXTRA_ACTIONS: Record<string, (r: MesRow) => React.ReactNode> = {
   work_order: (r) => <WoActions row={r} />,
+  lot: (r) => <LotActions row={r} />,
+  lot_hold: (r) => <HoldActions row={r} />,
 }
