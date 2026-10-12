@@ -88,7 +88,8 @@ def _carrier_cap(s: Session, tid: uuid.UUID, carrier_id: Any) -> tuple[Row, int 
     if not car:
         raise http_422([("carrier_id", "carrier_id: not found")])
     ct = one(s, tid, "carrier_type", car["carrier_type_id"])
-    return car, (ct and ct.get("capacity")) or None
+    cap = ct.get("capacity") if ct else None
+    return car, int(cap) if cap else None
 
 
 def _carrier_busy(s: Session, tid: uuid.UUID, carrier_id: Any, but: Any = None) -> bool:
