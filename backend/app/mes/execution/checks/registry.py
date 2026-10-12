@@ -158,6 +158,42 @@ def resolve(ctx: Ctx) -> list[tuple[Row, Row]]:
     return out
 
 
+def enabled(ctx: Ctx, check: str) -> bool:
+    """某类管控在当前上下文是否开启（内置管控的统一开关）。
+
+    在所有命中的有效绑定中，按作用域由具体到宽泛查找包含该检查类型的有效规则，
+    第一条命中规则的严重度决定开关：``off`` 为关闭，其余为开启；无任何命中时默认开启。
+
+    Args:
+        ctx: 检查上下文（使用其触发时机与工步 / 设备 / 产品）。
+        check: 检查类型编码。
+
+    Returns:
+        是否开启。
+    """
+    bs = sorted(
+        (
+            b
+            for b in find(
+                ctx.s, ctx.tid, "check_binding", trigger=ctx.trigger, is_active=True
+            )
+            if _matches(b, ctx)
+        ),
+        key=lambda b: -SPECIFICITY[b["scope"]],
+    )
+    for b in bs:
+        plan = one(ctx.s, ctx.tid, "check_plan", b["check_plan_id"])
+        if not plan or not plan["is_active"]:
+            continue
+        for it in find(
+            ctx.s, ctx.tid, "check_plan_item", order="seq", check_plan_id=plan["id"]
+        ):
+            rule = one(ctx.s, ctx.tid, "check_rule", it["check_rule_id"])
+            if rule and rule["is_active"] and rule["check_type"] == check:
+                return bool(rule["severity"] != "off")
+    return True
+
+
 # ---------------- evaluation ----------------
 class CheckBlocked(HTTPException):
     """存在未被放行的阻断检查结果（409，detail.code = check_blocked）。"""
@@ -220,6 +256,18 @@ def run(ctx: Ctx) -> list[Row]:
                     rule["check_type"],
                     "warn",
                     "check type not implemented",
+                    rule=rule,
+                    plan=plan,
+                )
+            )
+            continue
+        if rule["severity"] == "off":
+            out.append(
+                result(
+                    rule["check_type"],
+                    "na",
+                    f"control disabled by rule {rule['code']}",
+                    severity="warn",
                     rule=rule,
                     plan=plan,
                 )

@@ -40,6 +40,7 @@ ENUMS.update(
         "check_severity": [
             ("block", "Block|拦截|ブロック"),
             ("warn", "Warn|预警|警告"),
+            ("off", "Off (control disabled)|关闭（不管控）|無効（管控なし）"),
         ],
         "check_result": [
             ("pass", "Pass|通过|合格"),

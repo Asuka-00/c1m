@@ -121,13 +121,18 @@ def track_out(
     if errs:
         raise http_422(errs)
     ctx.dc = dc
-    # 物料：硬性要求（不可强制放行）
+    # 内置管控开关（卡控规则 severity = off 时关闭，见 checks.enabled）
+    oos_on = ck.enabled(ctx, "oos")
+    if not oos_on:
+        for d in dc:
+            d["oos_action"] = None
+    # 物料：硬性要求（不可强制放行；material_sufficient 关闭时不拦截）
     short = [
         n
         for n in ctx.material_needs
         if sum(a["qty"] for a in n["allocation"]) + 1e-9 < n["need"]
     ]
-    if short:
+    if short and ck.enabled(ctx, "material_sufficient"):
         raise http_422(
             [
                 (
@@ -139,7 +144,7 @@ def track_out(
                 )
             ]
         )
-    oos = [d for d in dc if d["is_oos"]]
+    oos = [d for d in dc if d["is_oos"] and oos_on]
     worst = max(
         (d["oos_action"] for d in oos), key=lambda a: OOS_RANK.get(a, 0), default=None
     )
@@ -177,7 +182,7 @@ def track_out(
             site_no=d["site_no"],
             value=d["value"],
             is_oos=d["is_oos"],
-            oos_action=d["oos_action"] if d["is_oos"] else None,
+            oos_action=d["oos_action"] if d["is_oos"] and oos_on else None,
             user_email=email,
         )
     consumed = _consume(s, tid, ctx.material_needs, user)

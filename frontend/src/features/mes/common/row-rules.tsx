@@ -10,6 +10,20 @@ export const CELLS: Record<
 > = {
   work_order: { started_qty: (r) => <WoProgress row={r} /> },
   tool: { usage_count: (r) => <ToolLife row={r} /> },
+  // 量测数据：超规值以红色高亮
+  dc_result: {
+    value: (r) => (
+      <span
+        className={
+          r.is_oos
+            ? 'font-semibold text-destructive tabular-nums'
+            : 'tabular-nums'
+        }
+      >
+        {r.value == null ? '—' : String(r.value)}
+      </span>
+    ),
+  },
 }
 
 /** 父实体 -> 子表是否锁定（只读）的判断（在后端校验之外隐藏新增 / 编辑 / 删除）。 */

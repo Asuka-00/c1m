@@ -882,7 +882,8 @@
       },
       "check_severity": {
         "block": "ブロック",
-        "warn": "警告"
+        "warn": "警告",
+        "off": "無効（管控なし）"
       },
       "check_result": {
         "pass": "合格",

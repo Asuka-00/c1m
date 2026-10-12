@@ -882,7 +882,8 @@
       },
       "check_severity": {
         "block": "拦截",
-        "warn": "预警"
+        "warn": "预警",
+        "off": "关闭（不管控）"
       },
       "check_result": {
         "pass": "通过",

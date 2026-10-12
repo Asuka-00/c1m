@@ -22,6 +22,9 @@ from app.mes.execution.checks.registry import (
     check_type as check_type,
 )
 from app.mes.execution.checks.registry import (
+    enabled as enabled,
+)
+from app.mes.execution.checks.registry import (
     evaluate as evaluate,
 )
 from app.mes.execution.checks.registry import (

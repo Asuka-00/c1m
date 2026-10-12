@@ -882,7 +882,8 @@
       },
       "check_severity": {
         "block": "Block",
-        "warn": "Warn"
+        "warn": "Warn",
+        "off": "Off (control disabled)"
       },
       "check_result": {
         "pass": "Pass",
