@@ -1,7 +1,11 @@
 import { useState } from 'react'
 import { t } from '@/i18n'
 import { Check, ShieldAlert, TriangleAlert, X, Zap } from 'lucide-react'
-import { EXEC_STAGES, type CheckResult, type ExecStage } from '@/lib/api/mes'
+import {
+  EXEC_STAGES,
+  type CheckResult,
+  type ExecStage,
+} from '@/lib/api/mes/execution'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'

@@ -8,7 +8,7 @@ import {
   type MesEntity,
   type MesField,
   type MesRow,
-} from '@/lib/api/mes'
+} from '@/lib/api/mes/common'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {

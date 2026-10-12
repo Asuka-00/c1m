@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
 import { Loader2 } from 'lucide-react'
-import { mesApi, type MesRow } from '@/lib/api/mes'
+import { mesApi, type MesRow } from '@/lib/api/mes/common'
 
 /** Next lot ID of this lot type + the wafer IDs it would get (preview only). */
 export function LotTypePreview({ row }: { row: MesRow }) {

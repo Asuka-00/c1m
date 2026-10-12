@@ -10,7 +10,8 @@ import {
   Undo2,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { woApi, type MesRow } from '@/lib/api/mes'
+import { type MesRow } from '@/lib/api/mes/common'
+import { woApi } from '@/lib/api/mes/planning'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,

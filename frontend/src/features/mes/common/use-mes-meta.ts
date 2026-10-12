@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useTenantKey } from '@/lib/api/hooks'
-import { mesApi } from '@/lib/api/mes'
+import { mesApi } from '@/lib/api/mes/common'
 
 export function useMesMeta() {
   const tk = useTenantKey()

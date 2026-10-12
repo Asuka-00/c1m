@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
 import { Loader2 } from 'lucide-react'
-import { mesApi, type MesRow } from '@/lib/api/mes'
+import { mesApi, type MesRow } from '@/lib/api/mes/common'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 

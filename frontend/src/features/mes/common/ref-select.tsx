@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
 import { Check, ChevronsUpDown, X } from 'lucide-react'
 import { useTenantKey } from '@/lib/api/hooks'
-import { mesApi } from '@/lib/api/mes'
+import { mesApi } from '@/lib/api/mes/common'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {

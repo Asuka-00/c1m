@@ -1,4 +1,4 @@
-import type { MesRow } from '@/lib/api/mes'
+import type { MesRow } from '@/lib/api/mes/common'
 import type { MesExtensions } from '@/features/mes/common/types'
 import { HoldActions, LotActions } from './exec-actions'
 

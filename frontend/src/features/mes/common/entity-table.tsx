@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTenantKey } from '@/lib/api/hooks'
-import { mesApi, type MesEntity, type MesRow } from '@/lib/api/mes'
+import { mesApi, type MesEntity, type MesRow } from '@/lib/api/mes/common'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {

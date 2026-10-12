@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { t } from '@/i18n'
-import { mesApi, type MesEntity } from '@/lib/api/mes'
+import { mesApi, type MesEntity } from '@/lib/api/mes/common'
 import { boolOptions, searchFilter, type FilterDef } from '@/components/crud'
 import { enumLabel, fieldLabel, rowLabel, statusLabel } from './labels'
 

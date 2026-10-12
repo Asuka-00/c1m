@@ -1,5 +1,5 @@
 import { t } from '@/i18n'
-import type { MesEntity, MesField } from '@/lib/api/mes'
+import type { MesEntity, MesField } from '@/lib/api/mes/common'
 
 /** Labels come from the generated bundles (locales/mes/*.json). */
 export const entityLabel = (code: string) =>

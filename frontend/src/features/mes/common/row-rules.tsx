@@ -1,4 +1,4 @@
-import type { MesRow } from '@/lib/api/mes'
+import type { MesRow } from '@/lib/api/mes/common'
 import { ToolLife } from '@/features/mes/execution/exec-actions'
 import { WoProgress } from '@/features/mes/planning/wo-actions'
 

@@ -1,5 +1,5 @@
 import { fmtDateTime, t } from '@/i18n'
-import type { MesEntity, MesRow } from '@/lib/api/mes'
+import type { MesEntity, MesRow } from '@/lib/api/mes/common'
 import { Badge } from '@/components/ui/badge'
 import { enumLabel } from './labels'
 

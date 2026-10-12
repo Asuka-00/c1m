@@ -1,5 +1,5 @@
 import type { ComponentType, ReactNode } from 'react'
-import type { MesRow } from '@/lib/api/mes'
+import type { MesRow } from '@/lib/api/mes/common'
 
 /** What a MES domain module contributes to the generic entity pages. */
 export interface MesExtensions {

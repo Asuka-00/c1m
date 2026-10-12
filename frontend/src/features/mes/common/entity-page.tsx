@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { t } from '@/i18n'
 import { Loader2 } from 'lucide-react'
-import type { MesRow } from '@/lib/api/mes'
+import type { MesRow } from '@/lib/api/mes/common'
 import {
   Dialog,
   DialogContent,

@@ -1,0 +1,42 @@
+/** Tenants, members and tenant roles. */
+import { del, get, patch, post, put, type ListQuery } from '../request'
+import type { Member, Message, MyTenant, Paged, Role, Tenant } from '../types'
+
+export const myTenantsApi = {
+  myTenants: () => get<Paged<MyTenant>>('/tenants/me'),
+}
+
+export const tenantsApi = {
+  list: (q: ListQuery) => get<Paged<Tenant>>('/tenants/', q),
+  create: (b: { name: string; slug: string }) => post<Tenant>('/tenants/', b),
+  update: (id: string, b: { name?: string; status?: string }) =>
+    patch<Tenant>(`/tenants/${id}`, b),
+  remove: (id: string) => del<Message>(`/tenants/${id}`),
+  members: (id: string, q: ListQuery) =>
+    get<Paged<Member>>(`/tenants/${id}/members`, q),
+  addMember: (id: string, b: { email: string; roles: string[] }) =>
+    post<Member>(`/tenants/${id}/members`, b),
+  setMemberRoles: (id: string, userId: string, roles: string[]) =>
+    put<Member>(`/tenants/${id}/members/${userId}/roles`, { roles }),
+  removeMember: (id: string, userId: string) =>
+    del<Message>(`/tenants/${id}/members/${userId}`),
+  roles: (id: string, q: ListQuery) =>
+    get<Paged<Role>>(`/tenants/${id}/roles`, q),
+  createRole: (
+    id: string,
+    b: {
+      name: string
+      description?: string | null
+      permission_codes?: string[]
+    }
+  ) => post<Role>(`/tenants/${id}/roles`, b),
+  updateRole: (
+    id: string,
+    roleId: string,
+    b: { name?: string; description?: string | null }
+  ) => patch<Role>(`/tenants/${id}/roles/${roleId}`, b),
+  removeRole: (id: string, roleId: string) =>
+    del<Message>(`/tenants/${id}/roles/${roleId}`),
+  setRolePermissions: (id: string, roleId: string, codes: string[]) =>
+    put<Role>(`/tenants/${id}/roles/${roleId}/permissions`, { codes }),
+}

@@ -1,7 +1,7 @@
 import { AxiosError } from 'axios'
 import { t } from '@/i18n'
 import { errorMessage } from '@/lib/api/client'
-import type { MesEntity, MesField } from '@/lib/api/mes'
+import type { MesEntity, MesField } from '@/lib/api/mes/common'
 import { entityLabel, enumLabel, fieldLabel } from './labels'
 
 type V = Record<string, unknown>
