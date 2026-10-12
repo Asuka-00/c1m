@@ -48,3 +48,21 @@ export const boolOptions = (yes: string, no: string): FilterOption[] => [
   { value: 'true', label: yes },
   { value: 'false', label: no },
 ]
+
+/** 选项缓存键的专用后缀：保证与同前缀的数据查询（如 ['notifications', 'meta']）不冲突。 */
+export const FILTER_OPTIONS_SUFFIX = '__filter-options'
+
+/**
+ * 下拉筛选选项的 react-query key：调用方的 `optionsKey`（缺省 ['filter-options', name]）
+ * 末尾追加专用后缀。保留前缀以便按前缀失效，同时避免与页面中同键的数据查询共享缓存
+ * （否则缓存中的非数组数据会被当作选项，导致渲染异常）。
+ */
+export function filterOptionsKey(def: {
+  name: string
+  optionsKey?: unknown[]
+}): unknown[] {
+  return [
+    ...(def.optionsKey ?? ['filter-options', def.name]),
+    FILTER_OPTIONS_SUFFIX,
+  ]
+}

@@ -25,7 +25,7 @@ export default function NotificationsPage() {
       type: 'select',
       name: 'event_type',
       label: t('notify.allTypes'),
-      optionsKey: ['notifications', 'meta'],
+      optionsKey: ['notifications', 'event-types'],
       loadOptions: () =>
         api.notifications.meta().then((m) =>
           m.event_types.map((e) => ({

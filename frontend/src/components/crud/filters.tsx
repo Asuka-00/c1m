@@ -11,7 +11,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { type FilterDef, SEARCH_DEBOUNCE_MS } from './filter-defs'
+import {
+  type FilterDef,
+  filterOptionsKey,
+  SEARCH_DEBOUNCE_MS,
+} from './filter-defs'
 import type { ListParams } from './use-list-params'
 
 /** 表格筛选工具栏：按筛选定义渲染文本框 / 下拉框，并提供重置按钮。 */
@@ -114,9 +118,8 @@ function SelectFilter({
   params: ListParams
 }) {
   // 由调用方提供的 key 标识 loadOptions
-  // eslint-disable-next-line @tanstack/query/exhaustive-deps
   const loaded = useQuery({
-    queryKey: def.optionsKey ?? ['filter-options', def.name],
+    queryKey: filterOptionsKey(def),
     queryFn: () => def.loadOptions!(),
     enabled: !!def.loadOptions,
     staleTime: 60_000,
