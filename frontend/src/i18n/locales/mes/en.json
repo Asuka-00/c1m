@@ -547,6 +547,7 @@
         "recipe": "Recipe",
         "equipment": "Equipment",
         "eqp_recipe": "Equipment recipe name",
+        "ideal_uph": "Ideal throughput (UPH)",
         "is_enabled": "Enabled"
       },
       "param_spec": {
@@ -816,6 +817,9 @@
         "branch_condition": "e.g. lot_type == 'ENG' — evaluated at execution time (not in this module)",
         "max_rework": "Blank: unlimited (check type rework_limit can switch it off)"
       },
+      "recipe_equipment": {
+        "ideal_uph": "Optional; overrides the equipment UPH for OEE"
+      },
       "uom_conversion": {
         "factor": "to = from × factor"
       },
@@ -941,6 +945,7 @@
         "oos": "Out of spec",
         "sampling": "Sampling decision",
         "split_merge_rule": "Split / merge rule",
+        "recipe_match": "Recipe ↔ equipment mapping",
         "pm_due": "Equipment PM not overdue",
         "rework_limit": "Rework count limit",
         "qty_adjust_limit": "Scrap / bonus qty limit"

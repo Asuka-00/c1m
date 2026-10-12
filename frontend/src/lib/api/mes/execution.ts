@@ -209,6 +209,8 @@ export interface ExecContext {
 export interface StageBody {
   equipment_id?: string | null
   recipe_id?: string | null
+  /** 设备上报 / 扫描的设备端配方名 */
+  eqp_recipe?: string | null
   reticle_id?: string | null
   carrier_id?: string | null
   tool_ids?: string[]

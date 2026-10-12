@@ -111,6 +111,40 @@ def _recipe(ctx: Ctx, _p: Row) -> Outcome:
     return "pass", f"recipe {rc['code']} v{rc['version']} active", {}
 
 
+@check_type("recipe_match")
+def _recipe_match(ctx: Ctx, p: Row) -> Outcome:
+    """配方-设备映射：所选配方须在该设备上启用；设备上报的设备端配方名须一致。
+
+    参数：``require_report``（bool）为真时必须上报设备端配方名。
+    """
+    rc, eq = ctx.recipe, ctx.equipment
+    if not rc or not eq:
+        return "na", "no recipe / equipment", {}
+    m = next(
+        (
+            x
+            for x in find(ctx.s, ctx.tid, "recipe_equipment", recipe_id=rc["id"])
+            if x["equipment_id"] == eq["id"]
+        ),
+        None,
+    )
+    if not m or not m["is_enabled"]:
+        return "fail", f"recipe {rc['code']} is not enabled on {eq['code']}", {}
+    expect = m["eqp_recipe"] or rc["code"]
+    got = ctx.eqp_recipe
+    if not got:
+        if (p or {}).get("require_report"):
+            return "fail", f"equipment recipe not reported (expect {expect})", {}
+        return "pass", f"recipe {rc['code']} enabled on {eq['code']}", {}
+    if got.strip() != expect:
+        return (
+            "fail",
+            f"equipment recipe {got} differs from {expect}",
+            {"expect": expect, "got": got},
+        )
+    return "pass", f"equipment recipe {got} matches", {}
+
+
 @check_type("pm_due")
 def _pm_due(ctx: Ctx, _p: Row) -> Outcome:
     """设备 PM 未超期：任一适用 PM 计划到期即失败（预警仅提示）。"""

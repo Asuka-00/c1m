@@ -547,6 +547,7 @@
         "recipe": "配方",
         "equipment": "设备",
         "eqp_recipe": "设备端配方名",
+        "ideal_uph": "理论产能（UPH）",
         "is_enabled": "启用"
       },
       "param_spec": {
@@ -816,6 +817,9 @@
         "branch_condition": "例如 lot_type == 'ENG'，执行时判定（不在本模块）",
         "max_rework": "留空不限（可用卡控类型「返工次数上限」关闭）"
       },
+      "recipe_equipment": {
+        "ideal_uph": "可选，OEE 计算优先于设备 UPH"
+      },
       "uom_conversion": {
         "factor": "目标 = 源 × 系数"
       },
@@ -941,6 +945,7 @@
         "oos": "超规",
         "sampling": "抽样判定",
         "split_merge_rule": "分批合批规则",
+        "recipe_match": "配方设备映射",
         "pm_due": "设备 PM 未超期",
         "rework_limit": "返工次数上限",
         "qty_adjust_limit": "报废 / 补数数量上限"

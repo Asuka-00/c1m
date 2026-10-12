@@ -620,7 +620,9 @@
       "nextAction": "下一操作",
       "slot": "槽位",
       "disposition": "处置",
-      "oosAction": "超规动作"
+      "oosAction": "超规动作",
+      "eqpRecipe": "设备端配方名",
+      "eqpRecipeHint": "设备上报或扫码（可选）"
     },
     "trace": {
       "hint": "批次及其单元的每一个操作：时间、用户、步骤、设备、配方、数量与卡控结果。",

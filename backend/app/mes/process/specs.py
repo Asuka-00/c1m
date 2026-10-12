@@ -340,6 +340,13 @@ register(
                 max_length=120,
                 search=True,
             ),
+            F(
+                "ideal_uph",
+                "float",
+                "Ideal throughput (UPH)|理论产能（UPH）|理論スループット（UPH）",
+                help="Optional; overrides the equipment UPH for OEE|可选，OEE 计算优先于设备 UPH|任意。OEE 計算で設備 UPH より優先",
+                list=False,
+            ),
             F("is_enabled", "bool", "Enabled|启用|有効", default=True),
         ],
         phase=3,

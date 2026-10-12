@@ -620,7 +620,9 @@
       "nextAction": "Next action",
       "slot": "Slot",
       "disposition": "Disposition",
-      "oosAction": "OOS action"
+      "oosAction": "OOS action",
+      "eqpRecipe": "Equipment recipe",
+      "eqpRecipeHint": "Reported / scanned (optional)"
     },
     "trace": {
       "hint": "Every action on the lot and its units with time, user, step, equipment, recipe, qty and check results.",

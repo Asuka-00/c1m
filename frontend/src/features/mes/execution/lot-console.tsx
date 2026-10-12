@@ -157,6 +157,7 @@ function Console({ cx, perms }: { cx: ExecContext; perms: string[] }) {
   const [recipe, setRecipe] = useState(
     String(lot.recipe_id ?? (cx.recipes?.length === 1 ? cx.recipes[0].id : ''))
   )
+  const [eqpRecipe, setEqpRecipe] = useState('')
   const [reticle, setReticle] = useState(
     String(
       xc.reticle_id ?? (cx.reticles?.length === 1 ? cx.reticles[0].id : '')
@@ -196,6 +197,7 @@ function Console({ cx, perms }: { cx: ExecContext; perms: string[] }) {
       b.equipment_id = equipment || null
     if (stage === 'track_in') {
       b.recipe_id = recipe || null
+      b.eqp_recipe = eqpRecipe.trim() || null
       b.reticle_id = reticle || null
       b.carrier_id = carrier
       b.tool_ids = Object.values(tools).filter(Boolean)
@@ -451,6 +453,8 @@ function Console({ cx, perms }: { cx: ExecContext; perms: string[] }) {
                   cx={cx}
                   recipe={recipe}
                   setRecipe={setRecipe}
+                  eqpRecipe={eqpRecipe}
+                  setEqpRecipe={setEqpRecipe}
                   reticle={reticle}
                   setReticle={setReticle}
                   carrier={carrier}
@@ -610,6 +614,8 @@ function TrackInInputs(p: {
   cx: ExecContext
   recipe: string
   setRecipe: (v: string) => void
+  eqpRecipe: string
+  setEqpRecipe: (v: string) => void
   reticle: string
   setReticle: (v: string) => void
   carrier: string | null
@@ -634,6 +640,15 @@ function TrackInInputs(p: {
             label: `${optLabel(r)} v${r.version} (${enumLabel('status', r.status)})`,
           }))}
         />
+        <div className='grid gap-1'>
+          <Label htmlFor='ex-eqp-recipe'>{t('mes.exec.eqpRecipe')}</Label>
+          <Input
+            id='ex-eqp-recipe'
+            placeholder={t('mes.exec.eqpRecipeHint')}
+            value={p.eqpRecipe}
+            onChange={(e) => p.setEqpRecipe(e.target.value)}
+          />
+        </div>
         {(cx.reticles?.length ?? 0) > 0 && (
           <Pick
             id='ex-reticle'

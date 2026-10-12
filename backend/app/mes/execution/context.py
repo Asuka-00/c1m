@@ -59,6 +59,7 @@ def build_ctx(s: Session, tid: uuid.UUID, lot: Row, trigger: str, body: Row) -> 
         wo=one(s, tid, "work_order", lot["work_order_id"]),
         equipment=eq,
         recipe=rc,
+        eqp_recipe=body.get("eqp_recipe") or None,
         reticle=rt,
         carrier=car,
         tools=tools,

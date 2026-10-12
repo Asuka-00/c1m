@@ -32,6 +32,7 @@ class Ctx:
         step: 当前工步。
         op / product / wo: 工序、产品、工单（可为空）。
         equipment / recipe / reticle / carrier: 本次选定的资源（可为空）。
+        eqp_recipe: 设备上报 / 扫描的设备端配方名（可为空）。
         tools / material_lots: 选定的工具与线边批次。
         dc: 录入的 DC 值。
         sampling: 抽样判定结果。
@@ -49,6 +50,7 @@ class Ctx:
     wo: Row | None = None
     equipment: Row | None = None
     recipe: Row | None = None
+    eqp_recipe: str | None = None  # 设备上报 / 扫描的设备端配方名
     reticle: Row | None = None
     carrier: Row | None = None
     tools: list[Row] = field(default_factory=list)

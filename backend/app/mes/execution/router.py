@@ -51,6 +51,7 @@ class ReworkUnitIn(BaseModel):
 class StageIn(BaseModel):
     equipment_id: uuid.UUID | None = None
     recipe_id: uuid.UUID | None = None
+    eqp_recipe: str | None = Field(default=None, max_length=200)
     reticle_id: uuid.UUID | None = None
     carrier_id: uuid.UUID | None = None
     tool_ids: list[uuid.UUID] | None = None

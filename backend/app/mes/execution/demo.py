@@ -28,6 +28,8 @@ CHECK_RULES: list[tuple[str, str, str, str, dict[str, Any]]] = [
     ("CR-TOOL", "Tool available + life", "tool_life", "block", {"expiry_warn_days": 7}),
     ("CR-CARR", "Carrier usable", "carrier_available", "warn", {}),
     ("CR-QT", "Q-Time window", "qtime", "block", {}),
+    ("CR-PM", "Equipment PM not overdue", "pm_due", "block", {}),
+    ("CR-RCP-MAP", "Recipe ↔ equipment mapping", "recipe_match", "warn", {}),
     ("CR-HOLD", "Lot not on hold", "lot_hold", "block", {}),
     ("CR-WO", "Work order active", "wo_status", "block", {}),
     ("CR-DC", "DC data complete", "dc_complete", "block", {}),

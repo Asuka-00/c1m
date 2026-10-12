@@ -547,6 +547,7 @@
         "recipe": "レシピ",
         "equipment": "設備",
         "eqp_recipe": "装置レシピ名",
+        "ideal_uph": "理論スループット（UPH）",
         "is_enabled": "有効"
       },
       "param_spec": {
@@ -816,6 +817,9 @@
         "branch_condition": "例：lot_type == 'ENG'（実行時に判定。本モジュール対象外）",
         "max_rework": "空欄：無制限"
       },
+      "recipe_equipment": {
+        "ideal_uph": "任意。OEE 計算で設備 UPH より優先"
+      },
       "uom_conversion": {
         "factor": "換算先 = 換算元 × 係数"
       },
@@ -941,6 +945,7 @@
         "oos": "規格外",
         "sampling": "サンプリング判定",
         "split_merge_rule": "分割・統合規則",
+        "recipe_match": "レシピ・設備対応",
         "pm_due": "設備 PM 期限内",
         "rework_limit": "リワーク回数上限",
         "qty_adjust_limit": "廃棄・追加数量上限"

@@ -251,3 +251,42 @@ def test_pm_due_check_and_switch(client: TestClient, db: Session) -> None:
         },
         422,
     )
+
+
+# ---------------- phase 6: recipe ↔ equipment control ----------------
+def test_recipe_match_and_switch(client: TestClient, db: Session) -> None:
+    f = Line(client, db)
+    f.bind("track_in", ("recipe_match", "block", {"require_report": True}))
+    a, b, c = f.start(1, 1, 1)
+    rc = f.recipe["id"]
+    for x in (a, b, c):
+        f.stage(x, "move_in", equipment_id=f.eq["id"])
+    # 未映射到设备
+    bad = f.stage(a, "track_in", 409, equipment_id=f.eq["id"], recipe_id=rc)
+    assert "not enabled on EQ1" in _msgs(bad)
+    f.sql(
+        "INSERT INTO mes_recipe_equipment (id, tenant_id, recipe_id, equipment_id,"
+        " eqp_recipe, is_enabled, ideal_uph) VALUES (gen_random_uuid(), :t, :r, :e,"
+        " 'EQ-RC-01', true, 25)",
+        t=f.m.tid,
+        r=rc,
+        e=f.eq["id"],
+    )
+    # 必须上报设备端配方名；不一致阻断
+    assert "not reported" in _msgs(
+        f.stage(a, "track_in", 409, equipment_id=f.eq["id"], recipe_id=rc)
+    )
+    assert "differs" in _msgs(
+        f.stage(
+            a, "track_in", 409, equipment_id=f.eq["id"], recipe_id=rc, eqp_recipe="X"
+        )
+    )
+    f.stage(a, "track_in", equipment_id=f.eq["id"], recipe_id=rc, eqp_recipe="EQ-RC-01")
+    # 开关：工步级 off
+    f.bind(
+        "track_in",
+        ("recipe_match", "off", {}),
+        scope="route_step",
+        route_step_id=f.steps[10]["id"],
+    )
+    f.stage(b, "track_in", equipment_id=f.eq["id"], recipe_id=rc, eqp_recipe="X")

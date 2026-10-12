@@ -620,7 +620,9 @@
       "nextAction": "次の操作",
       "slot": "スロット",
       "disposition": "処置",
-      "oosAction": "規格外処置"
+      "oosAction": "規格外処置",
+      "eqpRecipe": "装置レシピ名",
+      "eqpRecipeHint": "装置報告またはスキャン（任意）"
     },
     "trace": {
       "hint": "ロットとユニットの全操作（日時・ユーザー・ステップ・設備・レシピ・数量・チェック結果）。",
