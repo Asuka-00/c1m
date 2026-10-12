@@ -178,7 +178,11 @@ export function EntityTable({
           },
         ]
       : []),
-    ...(e.code === 'audit_log'
+    // 日志类实体（按创建时间排序且无其它时间列）显示时间列
+    ...(e.sort_default === 'created_at' &&
+    !e.fields.some(
+      (f) => f.list && (f.type === 'datetime' || f.type === 'date')
+    )
       ? [
           {
             header: t('mes.at'),

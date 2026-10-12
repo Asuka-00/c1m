@@ -10,6 +10,7 @@ import {
 } from '@tanstack/react-table'
 import { t } from '@/i18n'
 import { Loader2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -78,7 +79,15 @@ export function DataTable<T>({
           <DataTableColumnHeader column={column} title={c.header} />
         ),
         cell: ({ row }) => c.cell(row.original),
-        meta: { className: c.className },
+        // 末列为空表头的操作列：固定在右侧，宽表横向滚动时始终可见
+        meta: {
+          className: cn(
+            c.className,
+            i === columns.length - 1 &&
+              !c.header &&
+              'sticky end-0 z-10 bg-background shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.15)]'
+          ),
+        },
       })),
     [columns]
   )

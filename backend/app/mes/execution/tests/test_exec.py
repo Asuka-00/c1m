@@ -4,13 +4,14 @@ override, E10 auto transitions, material consumption, tool life, DC + OOS
 actions, Q-Time actions, holds, tracking levels, permissions."""
 
 import uuid
-from datetime import date, timedelta
+from datetime import timedelta
 from typing import Any
 
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlmodel import Session
 
+from app.core.spec.base import now
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
 from app.testing.mes import API, Mes
@@ -626,7 +627,9 @@ def test_material_sufficiency_and_consumption(client: TestClient, db: Session) -
             "material_id": f.mat["id"],
             "qty_remaining": 10,
             "uom_id": m.fx("uom"),
-            "expiry_date": str(date.today() - timedelta(days=1)),
+            "expiry_date": str(
+                now().date() - timedelta(days=1)
+            ),  # 与应用时钟（UTC）一致,
         },
     )
     assert ml1["initial_qty"] == 3
@@ -672,7 +675,9 @@ def test_tool_life(client: TestClient, db: Session) -> None:
         {
             "code": "T2",
             "fixture_id": f.fixture["id"],
-            "expiry_date": str(date.today() - timedelta(days=1)),
+            "expiry_date": str(
+                now().date() - timedelta(days=1)
+            ),  # 与应用时钟（UTC）一致,
         },
     )
     f.bind("track_in", ("tool_life", "block", {}))

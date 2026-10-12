@@ -42,13 +42,35 @@ export function useMesFilters(e: MesEntity | undefined, hide: string[] = []) {
           name: f.column,
           label: t('mes.allOf', { field: fieldLabel(e, f) }),
           optionsKey: ['mes', f.ref, 'filter-options'],
-          loadOptions: async () =>
-            (await mesApi.list(f.ref!, { page_size: 100 })).data.map((r) => ({
-              value: r.id,
-              label: rowLabel(r),
-            })),
+          // 远程搜索：数据量大时不受单页条数限制
+          search: async (q) =>
+            (
+              await mesApi.list(f.ref!, { q: q || undefined, page_size: 30 })
+            ).data.map((r) => ({ value: r.id, label: rowLabel(r) })),
+          resolve: async (id) => rowLabel(await mesApi.get(f.ref!, id)),
         })
     }
+    // 日期范围：首个列表中显示的日期 / 时间字段；日志类实体（按 created_at 排序）用创建时间
+    const df = e.fields.find(
+      (f) =>
+        f.list &&
+        (f.type === 'date' || f.type === 'datetime') &&
+        !hide.includes(f.column)
+    )
+    if (df)
+      defs.splice(1, 0, {
+        type: 'daterange',
+        name: df.column,
+        label: fieldLabel(e, df),
+        kind: df.type === 'date' ? 'date' : 'datetime',
+      })
+    else if (e.sort_default === 'created_at')
+      defs.splice(1, 0, {
+        type: 'daterange',
+        name: 'created_at',
+        label: t('mes.at'),
+        kind: 'datetime',
+      })
     if (e.versioned)
       defs.push({
         type: 'select',

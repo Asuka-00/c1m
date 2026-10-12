@@ -1,6 +1,11 @@
 import { QueryClient } from '@tanstack/react-query'
 import { describe, expect, it } from 'vitest'
-import { filterOptionsKey, FILTER_OPTIONS_SUFFIX } from './filter-defs'
+import {
+  filterKeys,
+  filterOptionsKey,
+  FILTER_OPTIONS_SUFFIX,
+  rangeParam,
+} from './filter-defs'
 
 describe('filterOptionsKey', () => {
   it('appends a dedicated suffix and keeps the caller prefix', () => {
@@ -27,5 +32,23 @@ describe('filterOptionsKey', () => {
     expect(
       qc.getQueryCache().findAll({ queryKey: ['notifications'] }).length
     ).toBe(2)
+  })
+})
+
+describe('date range filters', () => {
+  it('expands to _from / _to URL keys', () => {
+    expect(filterKeys({ type: 'daterange', name: 'at', label: 'x' })).toEqual([
+      'at_from',
+      'at_to',
+    ])
+    expect(filterKeys({ type: 'text', name: 'q' })).toEqual(['q'])
+  })
+
+  it('converts local days to inclusive instants for datetime fields', () => {
+    const a = new Date(rangeParam('2026-10-01', false))
+    const b = new Date(rangeParam('2026-10-01', true))
+    expect([a.getHours(), a.getMinutes(), a.getDate()]).toEqual([0, 0, 1])
+    expect([b.getHours(), b.getMinutes(), b.getDate()]).toEqual([23, 59, 1])
+    expect(rangeParam('2026-10-01', true, 'date')).toBe('2026-10-01')
   })
 })

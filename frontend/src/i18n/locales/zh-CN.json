@@ -65,7 +65,20 @@
     "allParents": "全部分组",
     "allSuperuser": "超级管理员：全部",
     "allVisibility": "显示与隐藏",
-    "visible": "显示"
+    "visible": "显示",
+    "moreFilters": "更多筛选",
+    "recordFilter": "指定记录",
+    "clearRecordFilter": "显示全部记录",
+    "searchOptions": "搜索选项…",
+    "range": {
+      "today": "今天",
+      "last7": "近 7 天",
+      "last30": "近 30 天",
+      "thisMonth": "本月",
+      "from": "开始日期",
+      "to": "结束日期",
+      "clear": "清除日期"
+    }
   },
   "theme": {
     "toggle": "切换主题",

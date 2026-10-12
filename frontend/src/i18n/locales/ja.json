@@ -65,7 +65,20 @@
     "allParents": "すべてのグループ",
     "allSuperuser": "スーパーユーザー：すべて",
     "allVisibility": "表示・非表示すべて",
-    "visible": "表示"
+    "visible": "表示",
+    "moreFilters": "その他の条件",
+    "recordFilter": "指定レコード",
+    "clearRecordFilter": "すべて表示",
+    "searchOptions": "検索…",
+    "range": {
+      "today": "今日",
+      "last7": "過去 7 日",
+      "last30": "過去 30 日",
+      "thisMonth": "今月",
+      "from": "開始日",
+      "to": "終了日",
+      "clear": "期間をクリア"
+    }
   },
   "theme": {
     "toggle": "テーマ切替",

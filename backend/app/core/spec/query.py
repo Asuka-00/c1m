@@ -1,6 +1,7 @@
 """通用租户范围查询：列表 / 筛选 / 搜索 / 排序、单行、全部行、树。"""
 
 import uuid
+from datetime import date, datetime
 from typing import Any
 
 import sqlalchemy as sa
@@ -30,6 +31,16 @@ def sortable(e: Entity) -> dict[str, Any]:
     return out
 
 
+def default_order(e: Entity, key: str) -> str:
+    """默认排序方向：时间 / 日期类字段（含 created_at）默认降序（最新在前），其它升序。"""
+    f = e.field(key)
+    return (
+        "desc"
+        if key == "created_at" or (f and f.type in ("date", "datetime"))
+        else "asc"
+    )
+
+
 def base_select(e: Entity, tenant_id: uuid.UUID) -> sa.Select[Any]:
     """租户范围内的基础查询。"""
     t = table(e)
@@ -46,6 +57,16 @@ def apply_filters(
             stmt = stmt.where(t.c.status == raw)
             continue
         f = e.field(name) or next((x for x in e.all_fields if x.column == name), None)
+        if not f and name == "id":
+            try:
+                ids = [uuid.UUID(x) for x in raw.split(",") if x]
+            except ValueError as ex:
+                raise http_422([("id", "id: invalid uuid")]) from ex
+            stmt = stmt.where(t.c.id.in_(ids))
+            continue
+        if not f and name.endswith(("_from", "_to")):
+            stmt = _range(e, stmt, name, raw)
+            continue
         if not f or f.type in ("json", "text"):
             continue
         if f.type == "ref" and raw == "null":
@@ -57,6 +78,30 @@ def apply_filters(
             raise http_422([(name, f"{name} {ex}")]) from ex
         stmt = stmt.where(t.c[f.column] == v)
     return stmt
+
+
+def _range(e: Entity, stmt: sa.Select[Any], name: str, raw: str) -> sa.Select[Any]:
+    """时间 / 日期范围筛选：``<字段>_from`` 为下限（含），``<字段>_to`` 为上限（含）。
+
+    支持 date / datetime 字段及 ``created_at``；其它名称忽略。
+    """
+    t = table(e)
+    base, bound = name.rsplit("_", 1)
+    f = e.field(base) or next((x for x in e.all_fields if x.column == base), None)
+    kind = f.type if f else ("datetime" if base == "created_at" else None)
+    col = base if f is None else f.column
+    if kind not in ("date", "datetime") or col not in t.c:
+        return stmt
+    try:
+        v: Any = (
+            date.fromisoformat(raw[:10])
+            if kind == "date"
+            else datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        )
+    except ValueError as ex:
+        raise http_422([(name, f"{name}: invalid date")]) from ex
+    c = t.c[col]
+    return stmt.where(c >= v if bound == "from" else c <= v)
 
 
 def search(e: Entity, stmt: sa.Select[Any], q: str | None) -> sa.Select[Any]:
@@ -100,7 +145,7 @@ def list_rows(
         raise HTTPException(
             status_code=422, detail=f"sort_by must be one of: {', '.join(sorted(cols))}"
         )
-    order = sort_order if sort_by else ("desc" if key in ("created_at",) else "asc")
+    order = sort_order if sort_by else default_order(e, key)
     col = cols[key]
     stmt = stmt.order_by(
         col.desc().nulls_last() if order == "desc" else col.asc().nulls_last(),

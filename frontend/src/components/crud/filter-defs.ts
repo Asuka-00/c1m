@@ -22,7 +22,52 @@ export type FilterDef =
       loadOptions?: () => Promise<FilterOption[]>
       /** loadOptions 的 react-query key（默认 ['filter-options', name]） */
       optionsKey?: unknown[]
+      /** 远程搜索选项（数据量大的引用字段）：按输入关键字分页查询 */
+      search?: (q: string) => Promise<FilterOption[]>
+      /** 远程模式下解析当前值的显示标签 */
+      resolve?: (value: string) => Promise<string>
     }
+  | {
+      /** 日期范围：URL 参数为 `<name>_from` / `<name>_to`（YYYY-MM-DD） */
+      type: 'daterange'
+      name: string
+      label: string
+      /** 字段类型：datetime 时按本地时区转换为当日起止时刻发送 */
+      kind?: 'date' | 'datetime'
+    }
+
+/** 筛选定义对应的 URL 参数名（日期范围展开为起止两个参数）。 */
+export function filterKeys(def: FilterDef): string[] {
+  return def.type === 'daterange'
+    ? [`${def.name}_from`, `${def.name}_to`]
+    : [def.name]
+}
+
+/** 本地日期（YYYY-MM-DD）。 */
+export function ymd(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
+/**
+ * 日期范围参数转换为接口参数：datetime 字段把本地日期转为当日 00:00 / 23:59:59.999 的 ISO 时刻。
+ *
+ * @param v - YYYY-MM-DD
+ * @param end - 是否为上限
+ * @param kind - 字段类型
+ */
+export function rangeParam(
+  v: string,
+  end: boolean,
+  kind: 'date' | 'datetime' = 'datetime'
+): string {
+  if (kind === 'date') return v
+  const [y, m, d] = v.split('-').map(Number)
+  const dt = end
+    ? new Date(y, m - 1, d, 23, 59, 59, 999)
+    : new Date(y, m - 1, d, 0, 0, 0, 0)
+  return dt.toISOString()
+}
 
 /** 所有表格的默认筛选：一个绑定 ?q= 的关键字搜索框 */
 export const DEFAULT_FILTERS: FilterDef[] = [{ type: 'text', name: 'q' }]
