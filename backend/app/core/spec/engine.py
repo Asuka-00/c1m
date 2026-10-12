@@ -79,6 +79,7 @@ class F:
     auto: bool = False  # 为空时由后端生成（如编码规则）
     system: bool = False  # 仅由后端设置，从不取自请求载荷
     depends: str | None = None  # 引用选项按此同级引用过滤（目标上同名字段）
+    ref_filter: dict[str, str] | None = None  # 引用选项的固定筛选（如只列待入库批次）
 
     @property
     def column(self) -> str:

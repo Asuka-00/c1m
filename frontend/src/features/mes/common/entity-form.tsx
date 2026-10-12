@@ -356,8 +356,15 @@ function FieldInput({
           value={(val as string) || null}
           label={v[`${f.name}_label`] as string | null}
           filters={
-            f.depends
-              ? { [`${f.depends}_id`]: String(v[`${f.depends}_id`] ?? '') }
+            f.depends || f.ref_filter
+              ? {
+                  ...f.ref_filter,
+                  ...(f.depends
+                    ? {
+                        [`${f.depends}_id`]: String(v[`${f.depends}_id`] ?? ''),
+                      }
+                    : {}),
+                }
               : undefined
           }
           disabled={!!f.depends && !v[`${f.depends}_id`]}

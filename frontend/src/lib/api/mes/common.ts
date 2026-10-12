@@ -42,6 +42,8 @@ export interface MesField {
   help: boolean
   /** 引用选项按该同级引用字段过滤（如 route） */
   depends: string | null
+  /** 引用选项的固定筛选（如只列待入库批次） */
+  ref_filter?: Record<string, string> | null
 }
 
 /** MES 实体元数据。 */

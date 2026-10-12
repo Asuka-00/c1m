@@ -39,6 +39,7 @@ def field_meta(e: Entity) -> list[dict[str, Any]]:
                 "max_length": f.max_length if f.type == "str" else None,
                 "help": bool(f.help),
                 "depends": f.depends,
+                "ref_filter": f.ref_filter,
             }
         )
     return out
