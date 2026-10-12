@@ -4,7 +4,7 @@ Grouping/titles live in app.menu_layout; this only supplies path, icon,
 component key and required permission per menu key.
 """
 
-from app.mes.core import ENTITIES, perm
+from app.core.spec.engine import ENTITIES, perm
 
 # key -> (path, icon, component, permission)
 ItemDef = tuple[str, str | None, str, str | None]

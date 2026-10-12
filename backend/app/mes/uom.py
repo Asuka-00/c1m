@@ -8,8 +8,8 @@ import sqlalchemy as sa
 from fastapi import HTTPException
 from sqlmodel import Session
 
-from app.mes.core import TABLES
-from app.mes.service import conn
+from app.core.spec.engine import TABLES
+from app.core.spec.service import conn
 
 Edge = tuple[float, float]  # to = from * factor + offset
 

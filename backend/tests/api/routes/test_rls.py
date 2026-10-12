@@ -9,11 +9,12 @@ from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 from sqlmodel import Session
 
-from app import crud
 from app.core.db import admin_engine, engine
-from app.models import UserCreate
-from app.rls import disable_tenant_rls_sql, enable_tenant_rls_sql
-from app.tenancy import create_personal_tenant, set_tenant
+from app.core.rls import disable_tenant_rls_sql, enable_tenant_rls_sql
+from app.core.tenant import set_tenant
+from app.platform.tenants.service import create_personal_tenant
+from app.platform.users import service as crud
+from app.platform.users.schemas import UserCreate
 from tests.utils.utils import random_email, random_lower_string
 
 TABLE = "rls_probe"

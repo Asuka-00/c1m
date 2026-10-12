@@ -11,8 +11,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlmodel import Session
 
-from app import crud
-from app.models import UserCreate
+from app.platform.users import service as crud
+from app.platform.users.schemas import UserCreate
 from tests.mes.helpers import API, Mes
 from tests.utils.utils import random_email, random_lower_string
 
@@ -1013,10 +1013,10 @@ def test_unit_tracking_inherits_and_serializes(client: TestClient, db: Session) 
         "tech_node", {"code": "BE", "name": "be", "tracking_level": "quantity"}
     )
     p = m.post("product", {"code": "P2", "name": "p2", "tech_node_id": node["id"]})
-    from app.mes.core import ENTITIES
+    from app.core.spec.engine import ENTITIES
+    from app.core.spec.service import get_row
+    from app.core.tenant import set_tenant
     from app.mes.execution import tracking_level
-    from app.mes.service import get_row
-    from app.tenancy import set_tenant
 
     set_tenant(db, uuid.UUID(m.tid))
     row = get_row(db, ENTITIES["product"], uuid.UUID(m.tid), uuid.UUID(p["id"]))

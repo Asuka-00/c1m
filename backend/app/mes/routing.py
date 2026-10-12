@@ -7,8 +7,8 @@ import sqlalchemy as sa
 from fastapi import HTTPException
 from sqlmodel import Session
 
-from app.mes.core import ENTITIES, TABLES, Entity
-from app.mes.service import audit, check_editable, conn, get_row, now, serialize
+from app.core.spec.engine import ENTITIES, TABLES, Entity
+from app.core.spec.service import audit, check_editable, conn, get_row, now, serialize
 
 STEP = 10
 

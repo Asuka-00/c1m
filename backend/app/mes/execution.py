@@ -19,11 +19,8 @@ import sqlalchemy as sa
 from fastapi import HTTPException
 from sqlmodel import Session
 
-from app.mes import checks as ck
-from app.mes import coderule
-from app.mes.checks import Ctx, find, one
-from app.mes.core import ENTITIES, TABLES, Entity
-from app.mes.service import (
+from app.core.spec.engine import ENTITIES, TABLES, Entity
+from app.core.spec.service import (
     MesError,
     audit,
     conn,
@@ -33,6 +30,9 @@ from app.mes.service import (
     to_json,
     validator,
 )
+from app.mes import checks as ck
+from app.mes import coderule
+from app.mes.checks import Ctx, find, one
 from app.mes.uom import convert
 
 Row = dict[str, Any]

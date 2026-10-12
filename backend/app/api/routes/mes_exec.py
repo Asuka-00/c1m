@@ -12,13 +12,14 @@ from typing import Any, Literal
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from app.api.deps import CurrentTenant, SessionDep
+from app.core.deps import SessionDep
+from app.core.spec.engine import ENTITIES
+from app.core.spec.service import serialize
 from app.mes import execution as svc
 from app.mes import splitmerge as sm
 from app.mes.checks import one
-from app.mes.core import ENTITIES
-from app.mes.service import serialize
-from app.tenancy import TenantContext
+from app.platform.auth.deps import CurrentTenant
+from app.platform.tenants.service import TenantContext
 
 router = APIRouter(prefix="/mes/exec", tags=["mes"])
 Stage = Literal["move_in", "track_in", "track_out", "move_out"]

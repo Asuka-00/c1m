@@ -1,10 +1,13 @@
 from fastapi.testclient import TestClient
 from sqlmodel import Session, col, select
 
-from app import crud
 from app.core.config import settings
-from app.models import Role, User, UserCreate
-from app.rbac import DEFAULT_PERMISSIONS, has_permissions
+from app.platform.rbac.models import Role
+from app.platform.rbac.permissions import DEFAULT_PERMISSIONS
+from app.platform.rbac.service import has_permissions
+from app.platform.users import service as crud
+from app.platform.users.models import User
+from app.platform.users.schemas import UserCreate
 from tests.utils.utils import random_email, random_lower_string
 
 API = settings.API_V1_STR

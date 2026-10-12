@@ -1,6 +1,6 @@
 """Phase 2: product & material, equipment (incl. SEMI E10 state model)."""
 
-from app.mes.core import ENUMS, Entity, F, register
+from app.core.spec.engine import ENUMS, Entity, F, register
 
 ENUMS.update(
     {

@@ -53,8 +53,9 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, text
 
+from app.bootstrap import init_db
 from app.core.config import settings
-from app.core.db import admin_engine, engine, init_db
+from app.core.db import admin_engine, engine
 from app.main import app
 from tests.utils.user import authentication_token_from_email
 from tests.utils.utils import get_superuser_token_headers

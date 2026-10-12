@@ -1,7 +1,7 @@
 """Phase 1: shared labels/enums, common base (dictionary, code rules, custom
 attributes, audit log) and organization."""
 
-from app.mes.core import ENUMS, FIELD_LABELS, Entity, F, register
+from app.core.spec.engine import ENUMS, FIELD_LABELS, Entity, F, register
 
 FIELD_LABELS.update(
     {

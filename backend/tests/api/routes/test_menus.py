@@ -1,9 +1,9 @@
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from app import crud
 from app.core.config import settings
-from app.models import UserCreate
+from app.platform.users import service as crud
+from app.platform.users.schemas import UserCreate
 from tests.utils.utils import random_email, random_lower_string
 
 API = settings.API_V1_STR
@@ -203,9 +203,9 @@ def test_role_permission_bulk_and_tenant_roles(
 def test_menu_layout_complete_and_synced(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
-    from app.menu_layout import GROUPS, ITEMS
-    from app.menus import SYSTEM_ITEMS
     from app.mes.menus import mes_items
+    from app.platform.menus.layout import GROUPS, ITEMS
+    from app.platform.menus.service import SYSTEM_ITEMS
 
     placed = [k for items in ITEMS.values() for k, _ in items]
     assert len(placed) == len(set(placed))  # each item once
@@ -223,8 +223,8 @@ def test_menu_layout_complete_and_synced(
 def test_sync_moves_and_drops_legacy_groups(db: Session) -> None:
     from sqlmodel import select
 
-    from app.menus import seed_menus
-    from app.models import Menu
+    from app.platform.menus.models import Menu
+    from app.platform.menus.service import seed_menus
 
     legacy = Menu(key="mes-g-legacy", title="MES · Legacy", sort_order=1)
     db.add(legacy)

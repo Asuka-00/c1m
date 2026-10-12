@@ -5,9 +5,10 @@ import uuid
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from app import crud
 from app.core.config import settings
-from app.models import Tenant, UserCreate
+from app.platform.tenants.models import Tenant
+from app.platform.users import service as crud
+from app.platform.users.schemas import UserCreate
 from tests.utils.utils import random_email, random_lower_string
 
 API = settings.API_V1_STR

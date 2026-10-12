@@ -10,10 +10,11 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from app.api.deps import CurrentTenant, SessionDep
+from app.core.deps import SessionDep
+from app.core.spec.service import serialize
 from app.mes import wo as svc
-from app.mes.service import serialize
-from app.tenancy import TenantContext
+from app.platform.auth.deps import CurrentTenant
+from app.platform.tenants.service import TenantContext
 
 router = APIRouter(prefix="/mes/work-order", tags=["mes"])
 

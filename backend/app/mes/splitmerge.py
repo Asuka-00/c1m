@@ -18,10 +18,11 @@ import sqlalchemy as sa
 from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core.spec.engine import TABLES
+from app.core.spec.service import audit, conn, http_422, now, serialize
 from app.mes import checks as ck
 from app.mes import coderule
 from app.mes.checks import find, one
-from app.mes.core import TABLES
 from app.mes.execution import (
     LOT,
     _brief,
@@ -33,7 +34,6 @@ from app.mes.execution import (
     lock_lot,
     units,
 )
-from app.mes.service import audit, conn, http_422, now, serialize
 
 Row = dict[str, Any]
 SPLIT_STATES = ("waiting", "moved_in")

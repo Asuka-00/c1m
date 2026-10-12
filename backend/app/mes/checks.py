@@ -18,8 +18,8 @@ import sqlalchemy as sa
 from fastapi import HTTPException
 from sqlmodel import Session
 
-from app.mes.core import ENTITIES, ENUMS, TABLES
-from app.mes.service import audit, conn, now, to_json
+from app.core.spec.engine import ENTITIES, ENUMS, TABLES
+from app.core.spec.service import audit, conn, now, to_json
 
 Row = dict[str, Any]
 Outcome = tuple[str, str, Row]  # ("pass" | "fail" | "warn" | "na", message, data)

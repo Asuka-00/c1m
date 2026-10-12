@@ -1,5 +1,6 @@
 """Loads every MES spec module (in phase order) and builds the tables."""
 
+from app.core.spec.engine import ENTITIES, ENUMS, build_all
 from app.mes import (  # noqa: F401  (registers entities)
     specs_common,
     specs_exec,
@@ -8,7 +9,6 @@ from app.mes import (  # noqa: F401  (registers entities)
     specs_p4,
     specs_wo,
 )
-from app.mes.core import ENTITIES, ENUMS, build_all
 
 ENUMS["entity_type"][:] = [
     (e.code, e.label) for e in ENTITIES.values() if not e.internal

@@ -14,8 +14,8 @@ from typing import Any
 import sqlalchemy as sa
 from sqlmodel import Session
 
-from app.mes.core import TABLES
-from app.mes.service import MesError, conn, now
+from app.core.spec.engine import TABLES
+from app.core.spec.service import MesError, conn, now
 
 TOKEN = re.compile(r"\{([A-Z0-9]+)(?::(\d+))?\}")
 KNOWN = {"YYYY", "YY", "MM", "DD", "JJJ", "SEQ", "SEQ36", "LOT", "SLOT"}

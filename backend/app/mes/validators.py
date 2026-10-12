@@ -6,9 +6,9 @@ from typing import Any
 import sqlalchemy as sa
 from sqlmodel import Session
 
+from app.core.spec.engine import TABLES, Entity
+from app.core.spec.service import MesError, conn, validator
 from app.mes.coderule import check_pattern
-from app.mes.core import TABLES, Entity
-from app.mes.service import MesError, conn, validator
 
 Row = dict[str, Any]
 

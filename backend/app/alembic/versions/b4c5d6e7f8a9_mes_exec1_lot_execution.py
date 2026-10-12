@@ -6,7 +6,7 @@ Create Date: 2026-10-11 10:50:15.138302
 
 """
 from alembic import op
-from app.mes.migrate import add_permissions, disable_rls, enable_rls, remove_permissions
+from app.core.migrate import add_permissions, disable_rls, enable_rls, remove_permissions
 import sqlalchemy as sa
 import sqlmodel.sql.sqltypes
 

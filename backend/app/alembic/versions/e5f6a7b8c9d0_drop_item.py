@@ -11,7 +11,7 @@ Create Date: 2026-10-10 17:50:00
 import sqlalchemy as sa
 from alembic import op
 
-from app.rls import disable_tenant_rls_sql, enable_tenant_rls_sql
+from app.core.rls import disable_tenant_rls_sql, enable_tenant_rls_sql
 
 revision = "e5f6a7b8c9d0"
 down_revision = "d4e5f6a7b8c9"

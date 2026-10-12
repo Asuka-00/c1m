@@ -13,10 +13,11 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
-from app.mes.core import ENTITIES, TABLES
-from app.mes.service import coerce, conn, create_row, set_status
-from app.models import Tenant, User
-from app.tenancy import set_tenant
+from app.core.spec.engine import ENTITIES, TABLES
+from app.core.spec.service import coerce, conn, create_row, set_status
+from app.core.tenant import set_tenant
+from app.platform.tenants.models import Tenant
+from app.platform.users.models import User
 
 Ref = tuple[str, str]  # (entity, natural key "CODE" / "CODE@v")
 DEMO: list[tuple[str, dict[str, Any]]] = []

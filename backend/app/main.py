@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 
+from app import models as _models  # noqa: F401  (registers tables + MES specs first)
 from app.api.main import api_router
 from app.core.config import settings
 

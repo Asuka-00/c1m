@@ -7,8 +7,8 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from app.core.config import settings
-from app.files_gc import cleanup_unreferenced, upload_dir
-from app.models import UploadedFile
+from app.platform.files.models import UploadedFile
+from app.platform.files.service import cleanup_unreferenced, upload_dir
 from tests.api.routes.test_config import PNG, _owner
 
 API = settings.API_V1_STR

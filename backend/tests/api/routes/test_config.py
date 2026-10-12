@@ -9,11 +9,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlmodel import Session
 
-from app import crud
 from app.core.config import settings
 from app.core.db import engine
-from app.models import UserCreate
-from app.tenancy import set_tenant
+from app.core.tenant import set_tenant
+from app.platform.users import service as crud
+from app.platform.users.schemas import UserCreate
 from tests.utils.utils import random_email, random_lower_string
 
 API = settings.API_V1_STR

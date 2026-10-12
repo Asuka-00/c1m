@@ -1,6 +1,6 @@
 """Phase 4: quality (no SPC) + lot/wafer rules."""
 
-from app.mes.core import ENUMS, Entity, F, register
+from app.core.spec.engine import ENUMS, Entity, F, register
 
 ENUMS.update(
     {

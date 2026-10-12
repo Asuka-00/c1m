@@ -11,14 +11,11 @@ from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
-from app.api.deps import CurrentTenant, SessionDep
-from app.api.pagination import ListParamsDep
-from app.mes import coderule
-from app.mes.core import ENTITIES, EXTRA_PERMISSIONS, MODULES, Entity, perm
-from app.mes.excel import export_xlsx, import_xlsx
-from app.mes.meta import all_meta
-from app.mes.routing import reorder_steps
-from app.mes.service import (
+from app.core.deps import SessionDep
+from app.core.pagination import ListParamsDep
+from app.core.spec.engine import ENTITIES, EXTRA_PERMISSIONS, MODULES, Entity, perm
+from app.core.spec.excel import export_xlsx, import_xlsx
+from app.core.spec.service import (
     attr_defs,
     attr_options,
     create_row,
@@ -32,8 +29,12 @@ from app.mes.service import (
     tree,
     update_row,
 )
+from app.mes import coderule
+from app.mes.meta import all_meta
+from app.mes.routing import reorder_steps
 from app.mes.uom import convert
-from app.tenancy import TenantContext
+from app.platform.auth.deps import CurrentTenant
+from app.platform.tenants.service import TenantContext
 
 router = APIRouter(prefix="/mes", tags=["mes"])
 RESERVED = {"page", "page_size", "skip", "limit", "sort_by", "sort_order", "q"}

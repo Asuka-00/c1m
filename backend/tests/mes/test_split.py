@@ -8,8 +8,8 @@ from typing import Any
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from app import crud
-from app.models import UserCreate
+from app.platform.users import service as crud
+from app.platform.users.schemas import UserCreate
 from tests.mes.test_exec import EXEC, Line, _msgs
 from tests.utils.utils import random_email, random_lower_string
 

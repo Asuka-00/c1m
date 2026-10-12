@@ -1,7 +1,7 @@
 """Lot execution: check rules/plans/bindings, line-side material lots, tools,
 E10 auto transitions, lot history, holds, DC results, check log."""
 
-from app.mes.core import ENUMS, FIELD_LABELS, MODULES, Entity, F, register
+from app.core.spec.engine import ENUMS, FIELD_LABELS, MODULES, Entity, F, register
 
 MODULES.update(
     {

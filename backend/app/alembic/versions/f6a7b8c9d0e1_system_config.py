@@ -12,7 +12,7 @@ from alembic import op
 import sqlalchemy as sa
 import sqlmodel.sql.sqltypes
 
-from app.rls import disable_tenant_rls_sql, enable_tenant_rls_sql
+from app.core.rls import disable_tenant_rls_sql, enable_tenant_rls_sql
 
 
 # revision identifiers, used by Alembic.

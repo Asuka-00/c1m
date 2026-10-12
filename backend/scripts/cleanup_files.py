@@ -13,7 +13,7 @@ from datetime import timedelta
 from sqlmodel import Session
 
 from app.core.db import engine
-from app.files_gc import cleanup_unreferenced
+from app.platform.files.service import cleanup_unreferenced
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("cleanup_files")

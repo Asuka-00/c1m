@@ -4,7 +4,7 @@ import sqlalchemy as sa
 from sqlmodel import Session
 
 from app.core.db import engine
-from app.mes.core import TABLES
+from app.core.spec.engine import TABLES
 from app.mes.demo import DEMO, STARTS, default_tenant, remove, seed
 
 

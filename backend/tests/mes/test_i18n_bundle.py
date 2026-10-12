@@ -3,7 +3,7 @@ frontend bundles are up to date."""
 
 import pytest
 
-from app.mes.core import ENTITIES, ENUMS, MODULES, split_label
+from app.core.spec.engine import ENTITIES, ENUMS, MODULES, split_label
 from app.mes.meta import LANGS
 from scripts.export_mes_i18n import OUT, render
 

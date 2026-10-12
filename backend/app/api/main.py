@@ -1,20 +1,16 @@
 from fastapi import APIRouter
 
-from app.api.routes import (
-    config,
-    files,
-    login,
-    menus,
-    mes,
-    mes_exec,
-    mes_wo,
-    private,
-    rbac,
-    tenants,
-    users,
-    utils,
-)
+from app.api.routes import mes, mes_exec, mes_wo
 from app.core.config import settings
+from app.platform.auth import router as login
+from app.platform.auth import router_utils as utils
+from app.platform.config import router as config
+from app.platform.files import router as files
+from app.platform.menus import router as menus
+from app.platform.rbac import router as rbac
+from app.platform.tenants import router as tenants
+from app.platform.users import router as users
+from app.platform.users import router_private as private
 
 api_router = APIRouter()
 api_router.include_router(login.router)

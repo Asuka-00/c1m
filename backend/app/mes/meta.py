@@ -3,8 +3,7 @@ the "en|zh|ja" labels in the specs)."""
 
 from typing import Any
 
-from app.menu_layout import titles
-from app.mes.core import (
+from app.core.spec.engine import (
     ENTITIES,
     ENUMS,
     MODULES,
@@ -13,6 +12,7 @@ from app.mes.core import (
     perm,
     split_label,
 )
+from app.platform.menus.layout import titles
 
 LANGS = ("zh-CN", "ja", "en")
 

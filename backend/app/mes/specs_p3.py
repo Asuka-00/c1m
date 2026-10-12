@@ -2,7 +2,7 @@
 rework / branches, product-route binding, versioned recipes + equipment
 mapping, parameter specs, per-step resources, equipment capability)."""
 
-from app.mes.core import ENTITIES, ENUMS, Entity, F, register
+from app.core.spec.engine import ENTITIES, ENUMS, Entity, F, register
 
 ENUMS.update(
     {

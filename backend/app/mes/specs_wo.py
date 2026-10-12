@@ -1,6 +1,6 @@
 """Work orders + lot start (execution entry point; no track-in/out)."""
 
-from app.mes.core import ENUMS, Entity, F, register
+from app.core.spec.engine import ENUMS, Entity, F, register
 
 ENUMS.update(
     {

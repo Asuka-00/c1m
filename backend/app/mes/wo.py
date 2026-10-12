@@ -18,9 +18,8 @@ import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
-from app.mes import coderule, execution
-from app.mes.core import ENTITIES, TABLES, Entity
-from app.mes.service import (
+from app.core.spec.engine import ENTITIES, TABLES, Entity
+from app.core.spec.service import (
     MesError,
     audit,
     conn,
@@ -29,6 +28,7 @@ from app.mes.service import (
     now,
     validator,
 )
+from app.mes import coderule, execution
 
 Row = dict[str, Any]
 WO, LOT, WAFER = (ENTITIES[c] for c in ("work_order", "lot", "wafer"))

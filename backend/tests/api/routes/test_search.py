@@ -3,10 +3,10 @@
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from app import crud
 from app.core.config import settings
-from app.models import UserCreate, UserUpdate
-from app.rbac import TENANT_PERMISSIONS
+from app.platform.rbac.permissions import TENANT_PERMISSIONS
+from app.platform.users import service as crud
+from app.platform.users.schemas import UserCreate, UserUpdate
 from tests.utils.utils import random_lower_string
 
 API = settings.API_V1_STR
