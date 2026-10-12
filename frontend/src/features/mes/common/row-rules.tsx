@@ -1,6 +1,6 @@
 import type { MesRow } from '@/lib/api/mes'
-import { ToolLife } from './exec-actions'
-import { WoProgress } from './wo-actions'
+import { ToolLife } from '@/features/mes/execution/exec-actions'
+import { WoProgress } from '@/features/mes/planning/wo-actions'
 
 /** Entity-specific cell renderers: entity -> field -> cell. */
 export const CELLS: Record<

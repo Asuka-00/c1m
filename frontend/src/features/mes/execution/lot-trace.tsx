@@ -30,9 +30,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Page } from '@/components/crud'
+import { enumLabel } from '@/features/mes/common/labels'
+import { RefSelect } from '@/features/mes/common/ref-select'
 import { ResultBadge } from './exec-parts'
-import { enumLabel } from './labels'
-import { RefSelect } from './ref-select'
 import { GenealogyList } from './split-merge'
 
 const ICON: Record<string, [LucideIcon, string]> = {

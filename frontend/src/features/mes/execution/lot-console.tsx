@@ -62,12 +62,12 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { Page } from '@/components/crud'
 import { DescItem, DescList, EmptyState } from '@/components/desc-list'
+import { enumLabel, optLabel } from '@/features/mes/common/labels'
+import { RefSelect } from '@/features/mes/common/ref-select'
+import { mesErrorMessage } from '@/features/mes/common/required'
+import { useMesEntity, useMesMeta } from '@/features/mes/common/use-mes-meta'
 import { CheckPanel, Pick, StageBar } from './exec-parts'
-import { enumLabel, optLabel } from './labels'
-import { RefSelect } from './ref-select'
-import { mesErrorMessage } from './required'
 import { SplitMergeCard } from './split-merge'
-import { useMesEntity, useMesMeta } from './use-mes-meta'
 
 type Dc = Record<string, string> // `${item}|${unit}|${site}` -> value
 type Scrap = { unit_id?: string; qty?: string; reason_id: string }

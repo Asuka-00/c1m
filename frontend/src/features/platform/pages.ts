@@ -1,0 +1,15 @@
+import { lazy } from 'react'
+import type { Pages } from '@/features/shell/dynamic/types'
+
+/** Platform pages (menu component keys from the backend menu registry). */
+export const pages: Pages = {
+  users: lazy(() => import('./users')),
+  roles: lazy(() => import('./rbac/roles')),
+  'tenant-roles': lazy(() => import('./rbac/roles/tenant-roles')),
+  permissions: lazy(() => import('./rbac/permissions')),
+  tenants: lazy(() => import('./tenants')),
+  members: lazy(() => import('./tenants/members')),
+  menus: lazy(() => import('./menus')),
+  settings: lazy(() => import('./settings')),
+  config: lazy(() => import('./config')),
+}

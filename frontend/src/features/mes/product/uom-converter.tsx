@@ -5,8 +5,8 @@ import { errorMessage } from '@/lib/api/client'
 import { mesApi, type MesRow } from '@/lib/api/mes'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { rowLabel } from './labels'
-import { RefSelect } from './ref-select'
+import { rowLabel } from '@/features/mes/common/labels'
+import { RefSelect } from '@/features/mes/common/ref-select'
 
 /** Convert from this unit to another one (direct / inverse / multi-hop). */
 export function UomConverter({ row }: { row: MesRow }) {

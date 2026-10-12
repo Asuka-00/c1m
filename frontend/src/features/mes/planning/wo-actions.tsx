@@ -20,8 +20,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ConfirmDialog } from '@/components/crud'
-import { mesErrorMessage } from './required'
-import { useMesEntity, useMesMeta } from './use-mes-meta'
+import { mesErrorMessage } from '@/features/mes/common/required'
+import { useMesEntity, useMesMeta } from '@/features/mes/common/use-mes-meta'
 
 /** action -> statuses it is offered in (mirrors app/mes/wo.py) */
 const ACTIONS: [string, string[]][] = [

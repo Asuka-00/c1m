@@ -6,8 +6,8 @@ import { Gauge, History, PlayCircle } from 'lucide-react'
 import { useTenantKey } from '@/lib/api/hooks'
 import { mesApi, type MesRow } from '@/lib/api/mes'
 import { Button } from '@/components/ui/button'
+import { useMesMeta } from '@/features/mes/common/use-mes-meta'
 import { ReleaseDialog } from './lot-console'
-import { useMesMeta } from './use-mes-meta'
 
 const pageLink = (page: string, lot: unknown) => ({
   to: '/$' as const,

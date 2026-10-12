@@ -4,10 +4,10 @@ import { Loader2 } from 'lucide-react'
 import { useTenantKey } from '@/lib/api/hooks'
 import { mesApi, type MesRow } from '@/lib/api/mes'
 import { DescItem, DescList } from '@/components/desc-list'
-import { cellValue } from './cells'
-import { fieldLabel } from './labels'
-import { RouteFlow } from './route-flow'
-import { useMesEntity } from './use-mes-meta'
+import { cellValue } from '@/features/mes/common/cells'
+import { fieldLabel } from '@/features/mes/common/labels'
+import { useMesEntity } from '@/features/mes/common/use-mes-meta'
+import { RouteFlow } from '@/features/mes/process/route-flow'
 
 /** Lot detail: header facts + route flow with the current step highlighted
  *  (wafers are the second tab, from the generic child table). */

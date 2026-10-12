@@ -46,9 +46,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { EmptyState } from '@/components/desc-list'
+import { mesErrorMessage } from '@/features/mes/common/required'
+import { useMesEntity } from '@/features/mes/common/use-mes-meta'
 import { CheckPanel } from './exec-parts'
-import { mesErrorMessage } from './required'
-import { useMesEntity } from './use-mes-meta'
 
 const lotLink = (page: string, id: string) => ({
   to: '/$' as const,

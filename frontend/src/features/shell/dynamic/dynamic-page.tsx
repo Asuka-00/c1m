@@ -2,9 +2,9 @@ import { Suspense } from 'react'
 import { Loader2 } from 'lucide-react'
 import type { MenuNode } from '@/lib/api'
 import { useMyMenus } from '@/lib/api/hooks'
-import { ForbiddenError } from '@/features/errors/forbidden'
-import { NotFoundError } from '@/features/errors/not-found-error'
-import { MesEntityPage } from '@/features/mes/entity-page'
+import { MesEntityPage } from '@/features/mes/common/entity-page'
+import { ForbiddenError } from '@/features/shell/errors/forbidden'
+import { NotFoundError } from '@/features/shell/errors/not-found-error'
 import { COMPONENTS } from './registry'
 
 function flatten(nodes: MenuNode[]): MenuNode[] {

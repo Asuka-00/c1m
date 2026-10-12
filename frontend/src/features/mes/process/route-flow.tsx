@@ -40,11 +40,11 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ConfirmDialog } from '@/components/crud'
-import { EntityForm } from './entity-form'
-import { StatusBadge } from './entity-table'
-import { enumLabel } from './labels'
-import { mesErrorMessage } from './required'
-import { useMesEntity } from './use-mes-meta'
+import { EntityForm } from '@/features/mes/common/entity-form'
+import { StatusBadge } from '@/features/mes/common/entity-table'
+import { enumLabel } from '@/features/mes/common/labels'
+import { mesErrorMessage } from '@/features/mes/common/required'
+import { useMesEntity } from '@/features/mes/common/use-mes-meta'
 
 type StepData = { step: MesRow; selected: boolean; current?: boolean }
 type RefData = {

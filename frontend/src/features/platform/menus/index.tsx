@@ -19,7 +19,7 @@ import {
   boolOptions,
 } from '@/components/crud'
 import { ICONS } from '@/components/layout/icons'
-import { COMPONENTS } from '@/features/dynamic/registry'
+import { COMPONENTS } from '@/features/shell/dynamic/registry'
 
 export default function MenusPage() {
   const filters: FilterDef[] = [

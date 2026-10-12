@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { enumLabel } from './labels'
+import { enumLabel } from '@/features/mes/common/labels'
 
 const NONE = '__none'
 
