@@ -5,6 +5,7 @@ import { extensions as lot } from './lot/extensions'
 import { extensions as planning } from './planning/extensions'
 import { extensions as process } from './process/extensions'
 import { extensions as product } from './product/extensions'
+import { extensions as warehouse } from './warehouse/extensions'
 
 /**
  * MES UI 模块的组合根（与后端 app/modules.py 对应）：
@@ -18,6 +19,7 @@ const MODULES: MesExtensions[] = [
   process,
   lot,
   planning,
+  warehouse,
   execution,
 ]
 

@@ -21,4 +21,9 @@ export const ROW_RULES: Record<
     edit: (r) => !['closed', 'cancelled'].includes(String(r.wo_status)),
     remove: (r) => r.wo_status === 'draft',
   },
+  // 入库单仅草稿可改 / 删（明细的锁定由后端校验）
+  receipt: {
+    edit: (r) => r.receipt_status === 'draft',
+    remove: (r) => r.receipt_status === 'draft',
+  },
 }

@@ -63,11 +63,17 @@ import {
   PauseCircle,
   ScrollText,
   GitFork,
+  MapPin,
+  PackageCheck,
+  Warehouse,
   type LucideIcon,
 } from 'lucide-react'
 
 /** 后端菜单注册表可引用的图标名（lucide 名称）。 */
 export const ICONS: Record<string, LucideIcon> = {
+  MapPin,
+  PackageCheck,
+  Warehouse,
   ShieldAlert,
   ListChecks,
   Link,

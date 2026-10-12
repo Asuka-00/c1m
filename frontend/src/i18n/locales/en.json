@@ -498,7 +498,7 @@
         "hold": "Put {{code}} on hold? No lots can be started while on hold.",
         "resume": "Resume {{code}}?",
         "complete": "Mark {{code}} as completed? No further lots can be started.",
-        "close": "Close {{code}}? This is final.",
+        "close": "Close {{code}}? All of its lots must be stored, scrapped or merged. This cannot be undone.",
         "cancel": "Cancel {{code}}? This is final.",
         "undo": "Undo every lot started on {{code}}? Only possible while all lots still wait at the first step; lots and wafers are deleted."
       }
@@ -672,6 +672,29 @@
       "maxLots": "Max lots",
       "usedLots": "{{n}} used",
       "minQty": "Min qty / lot"
+    },
+    "receipt": {
+      "actions": "Receipt actions",
+      "noActions": "No actions available",
+      "confirmBtn": "Confirm",
+      "action": {
+        "submit": "Submit",
+        "reject": "Reject",
+        "confirm": "Confirm receipt",
+        "cancel": "Cancel receipt"
+      },
+      "done": {
+        "submit": "Receipt submitted",
+        "reject": "Receipt returned to draft",
+        "confirm": "Receipt confirmed",
+        "cancel": "Receipt cancelled"
+      },
+      "confirm": {
+        "submit": "Submit {{code}}? Lines can no longer be changed and the quantities are reserved.",
+        "reject": "Return {{code}} to draft?",
+        "confirm": "Confirm receipt {{code}}? Lot received quantities and work-order completed quantities are increased; fully received lots are closed.",
+        "cancel": "Cancel {{code}}? This cannot be undone."
+      }
     }
   }
 }
