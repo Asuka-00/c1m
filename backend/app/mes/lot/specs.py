@@ -169,6 +169,13 @@ register(
             F("min_minutes", "int", "Min (min)|最短（分钟）|最短（分）"),
             F("max_minutes", "int", "Max (min)|最长（分钟）|最長（分）"),
             F(
+                "warn_minutes",
+                "int",
+                "Warn at (min)|预警阈值（分钟）|事前警告（分）",
+                help="Pre-expiry warning when elapsed ≥ this (blank: none)|已用时间达到该值即预警（留空不预警）|経過がこの値以上で事前警告（空欄：なし）",
+                list=False,
+            ),
+            F(
                 "action",
                 "enum",
                 "On violation|超时动作|違反時処置",

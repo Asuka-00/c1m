@@ -714,7 +714,7 @@
       "adjusted": "Adjusted"
     },
     "qtime": {
-      "hint": "Q-Time clocks of waiting lots at their current step. The sweep applies violation actions (hold / rework / scrap) once per violation; switch off per step via a qtime rule.",
+      "hint": "Q-Time clocks of waiting lots at their current step. Lots past the warn threshold are flagged; violations are handled by the background sweep (QTIME_SWEEP_SECONDS) or \"Sweep now\" (hold / rework / scrap, once per violation; switch off per step via a qtime rule).",
       "refresh": "Refresh",
       "sweep": "Sweep violations now",
       "swept": "Checked {{checked}} lot(s), acted on {{acted}}",
@@ -735,7 +735,9 @@
         "hold": "Hold",
         "rework": "Rework",
         "scrap": "Scrap"
-      }
+      },
+      "warnAt": "Warn (min)",
+      "warn": "Expiring soon"
     },
     "eqp": {
       "hint": "Current E10 state and PM due status of main equipment. State changes follow the E10 transition table; overdue PM can block track-in via the pm_due check (switchable per step).",

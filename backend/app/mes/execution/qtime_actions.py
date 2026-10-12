@@ -129,7 +129,7 @@ def qtime_monitor(s: Session, tid: uuid.UUID) -> list[Row]:
     """Q-Time 监控：等待中批次在当前工步（终点）上的各条 Q-Time 规则计时。
 
     Returns:
-        每批次每规则一行：批次、工步、规则、已用 / 上限分钟、剩余分钟、是否超时、处置动作。
+        每批次每规则一行：批次、工步、规则、已用 / 上限分钟、剩余分钟、是否超时、是否预警（达到预警阈值）、处置动作。
     """
     at = now()
     out: list[Row] = []
@@ -152,6 +152,8 @@ def qtime_monitor(s: Session, tid: uuid.UUID) -> list[Row]:
                     "max_minutes": mx,
                     "remaining": round(mx - x["minutes"], 1) if mx else None,
                     "exceeded": x["exceeded"],
+                    "warn": x["warn"],
+                    "warn_minutes": r.get("warn_minutes"),
                     "action": r["action"] or "hold",
                 }
             )
@@ -178,3 +180,50 @@ def sweep_qtime(s: Session, tid: uuid.UUID, user: Any) -> Row:
             acted.append({"lot": lot["code"], "action": a})
     s.commit()
     return {"checked": len(lots), "actions": acted}
+
+
+def sweep_all_tenants(only: list[uuid.UUID] | None = None) -> Row:
+    """全部租户的 Q-Time 超时扫描（后台定时任务调用）。
+
+    通过 Postgres 事务级咨询锁保证多进程 / 多实例下同一时刻只有一个执行者；
+    每个租户独立会话（设置 RLS 租户上下文），单租户失败不影响其他租户。
+
+    Args:
+        only: 仅扫描这些租户（测试 / 手工补跑用），None 为全部。
+
+    Returns:
+        ``{"tenants": 扫描租户数, "actions": 处置条数}``，未取得锁时 ``{"skipped": True}``。
+    """
+    import logging
+
+    from sqlmodel import select
+
+    from app.core.db import engine
+    from app.core.tenant import set_tenant
+    from app.platform.tenants.models import Tenant
+
+    log = logging.getLogger(__name__)
+    with Session(engine) as lock_s:
+        got = (
+            lock_s.connection()
+            .execute(sa.text("SELECT pg_try_advisory_xact_lock(:k)"), {"k": QTIME_LOCK})
+            .scalar()
+        )
+        if not got:
+            return {"skipped": True}
+        tids = list(lock_s.exec(select(Tenant.id)).all())
+        if only is not None:
+            tids = [t for t in tids if t in set(only)]
+        n = 0
+        for tid in tids:
+            with Session(engine) as s:
+                set_tenant(s, tid)
+                try:
+                    n += len(sweep_qtime(s, tid, None)["actions"])
+                except Exception:  # noqa: BLE001 - 单租户失败只记录日志
+                    log.exception("qtime sweep failed for tenant %s", tid)
+        return {"tenants": len(tids), "actions": n}
+
+
+#: Q-Time 扫描咨询锁键
+QTIME_LOCK = 72_160_401

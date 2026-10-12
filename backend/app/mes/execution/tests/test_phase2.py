@@ -375,3 +375,46 @@ def test_active_holds_and_batch_release(client: TestClient, db: Session) -> None
     )
     assert r["released"] == [rows[2]["id"]] and len(r["failed"]) == 1
     assert not any(f.lot(x)["on_hold"] for x in (a, b, c))
+
+
+# ---------------- Q-Time additions: pre-expiry warning + background sweep ----------------
+def test_qtime_warn_and_all_tenant_sweep(client: TestClient, db: Session) -> None:
+    from app.mes.execution.service import sweep_all_tenants
+
+    f = Line(client, db)
+    f.m.post(
+        "qtime_rule",
+        {
+            "code": "QW",
+            "name": "q",
+            "route_id": f.route["id"],
+            "from_step_id": f.steps[10]["id"],
+            "to_step_id": f.steps[20]["id"],
+            "max_minutes": 60,
+            "warn_minutes": 45,
+            "reason_id": f.reasons["hold"]["id"],
+        },
+    )
+    a, b = f.start(1, 1)
+    for x in (a, b):
+        f.run_step(x)
+    f.sql(
+        "UPDATE mes_lot_history SET at = at - interval '50 minutes' WHERE lot_id = :a AND action = 'move_out'",
+        a=a["id"],
+    )
+    f.sql(
+        "UPDATE mes_lot_history SET at = at - interval '2 hours' WHERE lot_id = :b AND action = 'move_out'",
+        b=b["id"],
+    )
+    mon = client.get(f"{EXEC}/qtime/monitor", headers=f.m.h).json()["data"]
+    row = {r["lot"]: r for r in mon}
+    assert row[a["code"]]["warn"] and not row[a["code"]]["exceeded"]
+    assert row[b["code"]]["exceeded"] and not row[b["code"]]["warn"]
+    assert f.ctx(a)["qtime"][0]["warn"]
+    # 后台扫描（全部租户）：超时批次自动 Hold，预警批次不处置
+    import uuid as _uuid
+
+    r = sweep_all_tenants([_uuid.UUID(str(f.m.tid))])
+    assert r["tenants"] == 1
+    assert r["actions"] >= 1
+    assert f.lot(b)["on_hold"] and not f.lot(a)["on_hold"]

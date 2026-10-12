@@ -84,6 +84,8 @@ export interface QtimeRow {
   max_minutes: number | null
   remaining: number | null
   exceeded: boolean
+  warn: boolean
+  warn_minutes: number | null
   action: string
 }
 export interface ExecUnit {

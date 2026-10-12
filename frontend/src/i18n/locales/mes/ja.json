@@ -367,6 +367,7 @@
         "product": "製品",
         "min_minutes": "最短（分）",
         "max_minutes": "最長（分）",
+        "warn_minutes": "事前警告（分）",
         "action": "違反時処置",
         "reason": "理由コード",
         "description": "説明"
@@ -808,6 +809,9 @@
       },
       "calendar_day": {
         "shifts": "カンマ区切りのシフトコード"
+      },
+      "qtime_rule": {
+        "warn_minutes": "経過がこの値以上で事前警告（空欄：なし）"
       },
       "work_order": {
         "priority": "空欄：ロットタイプの既定優先度",

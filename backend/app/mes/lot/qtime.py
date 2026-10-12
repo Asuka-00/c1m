@@ -63,7 +63,7 @@ def qtime_status(
     """以 ``step`` 为终点的 Q-Time 规则状态。
 
     Returns:
-        每条规则的 ``{起点、已用分钟、上限、是否超时、处置动作}``。
+        每条规则的 ``{起点、已用分钟、上限、是否超时、是否预警、处置动作}``。
     """
     out = []
     for r in find(s, tid, "qtime_rule", to_step_id=step["id"]):
@@ -80,6 +80,11 @@ def qtime_status(
                 "minutes": round(mins, 1),
                 "too_early": bool(r["min_minutes"] and mins < r["min_minutes"]),
                 "exceeded": bool(r["max_minutes"] and mins > r["max_minutes"]),
+                "warn": bool(
+                    r.get("warn_minutes")
+                    and mins >= r["warn_minutes"]
+                    and not (r["max_minutes"] and mins > r["max_minutes"])
+                ),
             }
         )
     return out

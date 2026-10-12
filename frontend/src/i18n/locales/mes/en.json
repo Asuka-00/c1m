@@ -367,6 +367,7 @@
         "product": "Product",
         "min_minutes": "Min (min)",
         "max_minutes": "Max (min)",
+        "warn_minutes": "Warn at (min)",
         "action": "On violation",
         "reason": "Reason code",
         "description": "Description"
@@ -808,6 +809,9 @@
       },
       "calendar_day": {
         "shifts": "Comma separated shift codes"
+      },
+      "qtime_rule": {
+        "warn_minutes": "Pre-expiry warning when elapsed ≥ this (blank: none)"
       },
       "work_order": {
         "priority": "Blank: the lot type's default priority",

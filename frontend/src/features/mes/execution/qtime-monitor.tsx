@@ -77,6 +77,9 @@ export default function QtimeMonitor() {
               <TableHead className='text-right'>
                 {t('mes.qtime.elapsed')}
               </TableHead>
+              <TableHead className='text-right'>
+                {t('mes.qtime.warnAt')}
+              </TableHead>
               <TableHead className='text-right'>{t('mes.qtime.max')}</TableHead>
               <TableHead className='text-right'>
                 {t('mes.qtime.remaining')}
@@ -89,7 +92,7 @@ export default function QtimeMonitor() {
             {view.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={9}
+                  colSpan={10}
                   className='h-20 text-center text-muted-foreground'
                 >
                   {q.isLoading ? t('common.loading') : t('common.noResults')}
@@ -113,13 +116,18 @@ export default function QtimeMonitor() {
                 <TableCell>{fmtDateTime(r.since)}</TableCell>
                 <TableCell className='text-right'>{r.minutes}</TableCell>
                 <TableCell className='text-right'>
+                  {r.warn_minutes ?? '—'}
+                </TableCell>
+                <TableCell className='text-right'>
                   {r.max_minutes ?? '—'}
                 </TableCell>
                 <TableCell
                   className={
                     r.exceeded
                       ? 'text-right font-medium text-destructive'
-                      : 'text-right'
+                      : r.warn
+                        ? 'text-right font-medium text-amber-600'
+                        : 'text-right'
                   }
                 >
                   {r.remaining ?? '—'}
@@ -131,6 +139,10 @@ export default function QtimeMonitor() {
                   ) : r.exceeded ? (
                     <Badge variant='destructive'>
                       {t('mes.qtime.exceeded')}
+                    </Badge>
+                  ) : r.warn ? (
+                    <Badge className='bg-amber-500 text-white'>
+                      {t('mes.qtime.warn')}
                     </Badge>
                   ) : (
                     <Badge variant='outline'>{t('mes.qtime.ok')}</Badge>

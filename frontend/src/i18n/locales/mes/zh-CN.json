@@ -367,6 +367,7 @@
         "product": "产品",
         "min_minutes": "最短（分钟）",
         "max_minutes": "最长（分钟）",
+        "warn_minutes": "预警阈值（分钟）",
         "action": "超时动作",
         "reason": "原因代码",
         "description": "描述"
@@ -808,6 +809,9 @@
       },
       "calendar_day": {
         "shifts": "逗号分隔的班次编码"
+      },
+      "qtime_rule": {
+        "warn_minutes": "已用时间达到该值即预警（留空不预警）"
       },
       "work_order": {
         "priority": "留空则使用批次类型的默认优先级",

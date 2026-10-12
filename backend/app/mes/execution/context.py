@@ -255,6 +255,7 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
             "min": x["rule"]["min_minutes"],
             "max": x["rule"]["max_minutes"],
             "exceeded": x["exceeded"],
+            "warn": x.get("warn", False),
             "too_early": x["too_early"],
         }
         for x in ck.qtime_status(s, tid, lot, step, at)
