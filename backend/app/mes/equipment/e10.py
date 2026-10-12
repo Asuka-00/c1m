@@ -9,7 +9,7 @@ from app.core.spec.base import conn
 from app.core.spec.engine import ENTITIES, TABLES
 from app.mes.common.query import find, one
 from app.mes.common.rows import _upd
-from app.mes.execution.checks import service as ck
+from app.mes.equipment.status import e10_current
 
 Row = dict[str, Any]
 
@@ -41,7 +41,7 @@ def e10_apply(
     ) or next((r for r in rules if r["equipment_type_id"] is None), None)
     if not rule:
         return None
-    cur = ck.e10_current(s, tid, eq)
+    cur = e10_current(s, tid, eq)
     to = one(s, tid, "e10_state", rule["to_state_id"])
     if not to or (cur and cur["id"] == to["id"]):
         return None

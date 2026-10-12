@@ -29,7 +29,7 @@ from app.mes.common.rows import _ins, _upd
 from app.mes.execution.checks import service as ck
 from app.mes.execution.context import build_ctx
 from app.mes.execution.stages import LOT, _brief, _ov
-from app.mes.lot.lots import history, lock_lot, units
+from app.mes.lot.service import history, lock_lot, units
 
 Row = dict[str, Any]
 SPLIT_STATES = ("waiting", "moved_in")

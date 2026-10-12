@@ -12,7 +12,7 @@ from app.core.spec.engine import (
     perm,
     split_label,
 )
-from app.platform.menus.layout import titles
+from app.platform.menus.service import titles
 
 LANGS = ("zh-CN", "ja", "en")
 

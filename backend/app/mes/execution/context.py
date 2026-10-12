@@ -13,9 +13,9 @@ from app.mes.execution.checks import service as ck
 from app.mes.execution.checks.registry import Ctx
 from app.mes.execution.constants import NEXT_STAGE, STAGES
 from app.mes.execution.consumption import candidate_lots, material_needs
-from app.mes.lot.lots import TERMINAL, units
-from app.mes.process.navigation import _after
-from app.mes.quality.dc import sampling
+from app.mes.lot.service import TERMINAL, units
+from app.mes.process.service import step_after
+from app.mes.quality.service import sampling
 
 Row = dict[str, Any]
 LOT = ENTITIES["lot"]
@@ -122,7 +122,8 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
         "rework_route": rw and f"{rw['code']} v{rw['version']}",
         "rework_return": step["rework_return"],
         "auto": {k: bool(step[f"auto_{k}"]) for k in STAGES},
-        "is_last": _after(s, tid, step) is None and not (lot.get("route_stack") or []),
+        "is_last": step_after(s, tid, step) is None
+        and not (lot.get("route_stack") or []),
     }
     res = find(s, tid, "step_resource", route_step_id=step["id"])
     ctx = Ctx(s=s, tid=tid, trigger="move_in", lot=lot, step=step, op=op)

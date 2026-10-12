@@ -114,7 +114,7 @@ def sampling(s: Session, tid: uuid.UUID, lot: Row, step: Row, us: list[Row]) -> 
     }
 
 
-def _oos(it: Row, v: float) -> bool:
+def out_of_spec(it: Row, v: float) -> bool:
     return (it["lsl"] is not None and v < it["lsl"]) or (
         it["usl"] is not None and v > it["usl"]
     )

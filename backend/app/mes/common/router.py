@@ -29,7 +29,6 @@ from app.core.spec.write import (
 from app.mes.common import coderule
 from app.mes.common.meta import all_meta
 from app.mes.common.uom import convert
-from app.mes.process.routing import reorder_steps
 from app.platform.auth.deps import CurrentTenant
 from app.platform.tenants.service import TenantContext
 
@@ -37,7 +36,9 @@ router = APIRouter(prefix="/mes", tags=["mes"])
 RESERVED = {"page", "page_size", "skip", "limit", "sort_by", "sort_order", "q"}
 
 
-def _ent(ctx: TenantContext, code: str, action: Literal["read", "write"]) -> Entity:
+def require_entity(
+    ctx: TenantContext, code: str, action: Literal["read", "write"]
+) -> Entity:
     e = get_entity(code)
     if not ctx.can(perm(e.pmod, action)):
         raise HTTPException(status_code=403, detail="Not enough permissions")
@@ -68,7 +69,7 @@ def mes_meta(ctx: CurrentTenant) -> Any:
 @router.get("/_attrs/{entity}")
 def mes_attr_defs(session: SessionDep, ctx: CurrentTenant, entity: str) -> Any:
     """Custom attribute definitions of an entity type (with resolved options)."""
-    e = _ent(ctx, entity, "read")
+    e = require_entity(ctx, entity, "read")
     return [
         {
             "code": d["code"],
@@ -91,7 +92,7 @@ def code_rule_preview(
     session: SessionDep, ctx: CurrentTenant, rid: uuid.UUID, body: CodeGenIn
 ) -> Any:
     """Next codes without reserving them."""
-    e = _ent(ctx, "code_rule", "read")
+    e = require_entity(ctx, "code_rule", "read")
     rule = get_row(session, e, ctx.id, rid)
     return {"codes": coderule.preview(session, ctx.id, rule, body.count, body.context)}
 
@@ -101,7 +102,7 @@ def code_rule_generate(
     session: SessionDep, ctx: CurrentTenant, rid: uuid.UUID, body: CodeGenIn
 ) -> Any:
     """Reserve codes (atomically increments the rule's counter)."""
-    e = _ent(ctx, "code_rule", "write")
+    e = require_entity(ctx, "code_rule", "write")
     rule = get_row(session, e, ctx.id, rid)
     return {"codes": coderule.generate(session, ctx.id, rule, body.count, body.context)}
 
@@ -115,21 +116,8 @@ def uom_convert(
     value: float = 1.0,
 ) -> Any:
     """Convert `value` between units (direct, inverse or multi-hop conversions)."""
-    _ent(ctx, "uom", "read")
+    require_entity(ctx, "uom", "read")
     return convert(session, ctx.id, from_uom, to_uom, value)
-
-
-class ReorderIn(BaseModel):
-    step_ids: list[uuid.UUID]
-
-
-@router.post("/route/{rid}/reorder")
-def route_reorder(
-    session: SessionDep, ctx: CurrentTenant, rid: uuid.UUID, body: ReorderIn
-) -> Any:
-    """Renumber a draft route's steps (10, 20, 30, ...) in the given order."""
-    e = _ent(ctx, "route_step", "write")
-    return {"data": reorder_steps(session, ctx.id, rid, body.step_ids, ctx.user, e)}
 
 
 @router.get("/{entity}")
@@ -142,7 +130,7 @@ def mes_list(
 ) -> Any:
     """Paginated list (20/page default) with ?q= search, ?sort_by=, and filters
     on any enum/bool/ref field (`?site_id=<uuid>`, `?status=active`, ...)."""
-    e = _ent(ctx, entity, "read")
+    e = require_entity(ctx, entity, "read")
     filters = {
         k: v for k, v in request.query_params.items() if k not in RESERVED and v != ""
     }
@@ -162,13 +150,13 @@ def mes_list(
 
 @router.get("/{entity}/tree")
 def mes_tree(session: SessionDep, ctx: CurrentTenant, entity: str) -> Any:
-    e = _ent(ctx, entity, "read")
+    e = require_entity(ctx, entity, "read")
     return tree(session, ctx.id, e)
 
 
 @router.get("/{entity}/export")
 def mes_export(session: SessionDep, ctx: CurrentTenant, entity: str) -> Response:
-    e = _ent(ctx, entity, "read")
+    e = require_entity(ctx, entity, "read")
     return Response(
         export_xlsx(session, ctx.id, e),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -184,7 +172,7 @@ async def mes_import(
     file: Annotated[UploadFile, File()],
 ) -> Any:
     """Upsert rows from an .xlsx (same columns as the export); all-or-nothing."""
-    e = _ent(ctx, entity, "write")
+    e = require_entity(ctx, entity, "write")
     data = await file.read(10 * 1024 * 1024 + 1)
     if len(data) > 10 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="File too large")
@@ -195,7 +183,7 @@ async def mes_import(
 def mes_get(
     session: SessionDep, ctx: CurrentTenant, entity: str, rid: uuid.UUID
 ) -> Any:
-    e = _ent(ctx, entity, "read")
+    e = require_entity(ctx, entity, "read")
     return _one(session, ctx, e, get_row(session, e, ctx.id, rid))
 
 
@@ -203,7 +191,7 @@ def mes_get(
 def mes_create(
     session: SessionDep, ctx: CurrentTenant, entity: str, body: dict[str, Any]
 ) -> Any:
-    e = _ent(ctx, entity, "write")
+    e = require_entity(ctx, entity, "write")
     return _one(session, ctx, e, create_row(session, ctx.id, e, body, ctx.user))
 
 
@@ -215,7 +203,7 @@ def mes_update(
     rid: uuid.UUID,
     body: dict[str, Any],
 ) -> Any:
-    e = _ent(ctx, entity, "write")
+    e = require_entity(ctx, entity, "write")
     return _one(session, ctx, e, update_row(session, ctx.id, e, rid, body, ctx.user))
 
 
@@ -223,7 +211,7 @@ def mes_update(
 def mes_delete(
     session: SessionDep, ctx: CurrentTenant, entity: str, rid: uuid.UUID
 ) -> Any:
-    e = _ent(ctx, entity, "write")
+    e = require_entity(ctx, entity, "write")
     delete_row(session, ctx.id, e, rid, ctx.user)
     return {"message": "Deleted"}
 
@@ -238,7 +226,7 @@ def mes_status(
 ) -> Any:
     """Versioned data: draft -> active -> inactive (-> active); activating a
     version deactivates the other active version of the same code."""
-    e = _ent(ctx, entity, "write")
+    e = require_entity(ctx, entity, "write")
     return _one(
         session, ctx, e, set_status(session, ctx.id, e, rid, body.status, ctx.user)
     )
@@ -249,7 +237,7 @@ def mes_new_version(
     session: SessionDep, ctx: CurrentTenant, entity: str, rid: uuid.UUID
 ) -> Any:
     """Copy a version (incl. child rows such as route steps) as a new draft."""
-    e = _ent(ctx, entity, "write")
+    e = require_entity(ctx, entity, "write")
     return _one(session, ctx, e, new_version(session, ctx.id, e, rid, ctx.user))
 
 

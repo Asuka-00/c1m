@@ -2,9 +2,9 @@ import uuid
 from typing import Any
 
 from app.mes.common.query import find, one
-from app.mes.equipment.status import e10_current, tool_life
+from app.mes.equipment.service import e10_current, tool_life
 from app.mes.execution.checks.registry import Ctx, check_type
-from app.mes.lot.qtime import qtime_status
+from app.mes.lot.service import qtime_status
 
 Row = dict[str, Any]
 Outcome = tuple[str, str, Row]  # ("pass" | "fail" | "warn" | "na", message, data)

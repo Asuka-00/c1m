@@ -8,9 +8,8 @@ from sqlmodel import Session
 from app.core.spec.base import conn, now
 from app.core.spec.engine import TABLES
 from app.mes.common import coderule
-from app.mes.common.query import find, one
+from app.mes.common.query import find, jsonable, one
 from app.mes.common.rows import _ins
-from app.mes.execution.checks import service as ck
 
 Row = dict[str, Any]
 TERMINAL = ("completed", "scrapped", "merged")
@@ -35,7 +34,7 @@ def history(
     kw.setdefault("qty", lot["qty"])
     kw.setdefault("to_status", lot["lot_status"])
     if "details" in kw:
-        kw["details"] = ck.jsonable(kw["details"])
+        kw["details"] = jsonable(kw["details"])
     _ins(
         s,
         tid,

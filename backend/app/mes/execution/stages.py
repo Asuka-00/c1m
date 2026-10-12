@@ -12,15 +12,15 @@ from app.core.spec.errors import http_422
 from app.core.spec.serialize import serialize
 from app.mes.common.query import one
 from app.mes.common.rows import _ins, _upd
-from app.mes.equipment.e10 import e10_apply
+from app.mes.equipment.service import e10_apply
 from app.mes.execution.checks import service as ck
 from app.mes.execution.constants import FROM_STATUS, NEXT_STAGE, OOS_RANK
 from app.mes.execution.consumption import _consume
 from app.mes.execution.context import build_ctx
 from app.mes.execution.hold import default_reason, hold_lot
-from app.mes.lot.lots import TERMINAL, history, lock_lot, units
-from app.mes.process.navigation import next_location
-from app.mes.quality.dc import _oos
+from app.mes.lot.service import TERMINAL, history, lock_lot, units
+from app.mes.process.service import next_location
+from app.mes.quality.service import out_of_spec
 
 Row = dict[str, Any]
 LOT = ENTITIES["lot"]
@@ -356,7 +356,7 @@ def track_out(
                 "unit_id": uuid.UUID(str(uid)) if uid else None,
                 "site_no": int(d.get("site_no") or 1),
                 "value": v,
-                "is_oos": _oos(it, v),
+                "is_oos": out_of_spec(it, v),
                 "oos_action": it["oos_action"],
                 "code": it["code"],
             }

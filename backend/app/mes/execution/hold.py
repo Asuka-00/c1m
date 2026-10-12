@@ -10,7 +10,7 @@ from app.core.spec.engine import ENTITIES
 from app.core.spec.errors import http_422
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
-from app.mes.lot.lots import TERMINAL, history, lock_lot
+from app.mes.lot.service import TERMINAL, history, lock_lot
 
 Row = dict[str, Any]
 LOT = ENTITIES["lot"]

@@ -1,10 +1,17 @@
+from collections.abc import Callable
 from typing import Any
 
 from sqlmodel import Session, func, select
 
 from app.core.security import get_password_hash, verify_password
+from app.platform.rbac.permissions import ADMIN_ROLE, DEFAULT_USER_ROLE
+from app.platform.rbac.service import assign_role
 from app.platform.users.models import User
 from app.platform.users.schemas import UserCreate, UserUpdate
+
+#: hooks run after a user is created (registered by higher-level modules,
+#: e.g. tenants creates the personal workspace); args: session, user
+USER_CREATED_HOOKS: list[Callable[[Session, User], None]] = []
 
 
 def create_user(
@@ -17,18 +24,14 @@ def create_user(
     session.commit()
     session.refresh(db_obj)
     # RBAC: every new user gets the default role; superusers also get admin
-    from app.platform.rbac.permissions import ADMIN_ROLE, DEFAULT_USER_ROLE
-    from app.platform.rbac.service import assign_role
-
     assign_role(
         session, db_obj, ADMIN_ROLE if db_obj.is_superuser else DEFAULT_USER_ROLE
     )
     # Multi-tenancy: every new user (signup or admin-created) gets a personal tenant
     # where they are the owner. They can be invited to other tenants afterwards.
     if with_personal_tenant:
-        from app.platform.tenants.service import create_personal_tenant
-
-        create_personal_tenant(session, db_obj)
+        for hook in USER_CREATED_HOOKS:
+            hook(session, db_obj)
         session.refresh(db_obj)
     return db_obj
 

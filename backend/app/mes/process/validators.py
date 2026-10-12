@@ -9,6 +9,7 @@ from app.core.spec.engine import TABLES, Entity
 from app.core.spec.errors import MesError
 from app.core.spec.validate import validator
 from app.mes.common.validators import Row, _get
+from app.mes.equipment.service import check_recipe_equipment_type
 
 
 # ---------------- phase 3 ----------------
@@ -149,25 +150,8 @@ def _product_route(
             )
 
 
-def _type_match(s: Session, tid: uuid.UUID, recipe_id: Any, equipment_id: Any) -> None:
-    rec, eqp = (
-        _get(s, tid, "recipe", recipe_id),
-        _get(s, tid, "equipment", equipment_id),
-    )
-    if (
-        rec
-        and eqp
-        and rec["equipment_type_id"]
-        and eqp["equipment_type_id"]
-        and rec["equipment_type_id"] != eqp["equipment_type_id"]
-    ):
-        raise MesError(
-            [("equipment", "equipment: type differs from the recipe's equipment type")]
-        )
-
-
 @validator("recipe_equipment")
 def _recipe_eqp(
     s: Session, tid: uuid.UUID, _e: Entity, row: Row, _old: Row | None
 ) -> None:
-    _type_match(s, tid, row.get("recipe_id"), row.get("equipment_id"))
+    check_recipe_equipment_type(s, tid, row.get("recipe_id"), row.get("equipment_id"))

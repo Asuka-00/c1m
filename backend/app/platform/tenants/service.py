@@ -9,6 +9,7 @@ from app.platform.rbac.models import Permission, Role
 from app.platform.rbac.permissions import TENANT_ROLES
 from app.platform.tenants.models import Tenant, TenantMember
 from app.platform.users.models import User
+from app.platform.users.service import USER_CREATED_HOOKS
 
 DEFAULT_TENANT_SLUG = "default"
 
@@ -108,6 +109,15 @@ def create_personal_tenant(session: Session, user: User) -> Tenant:
     base = slugify(user.email.split("@")[0])
     slug = f"{base}-{secrets.token_hex(3)}"
     return create_tenant(session, f"{user.email}'s workspace", slug, owner=user)
+
+
+# every new user (signup or admin-created) gets a personal tenant where they
+# are the owner; they can be invited to other tenants afterwards
+def _on_user_created(session: Session, user: User) -> None:
+    create_personal_tenant(session, user)
+
+
+USER_CREATED_HOOKS.append(_on_user_created)
 
 
 def ensure_default_tenant(session: Session) -> Tenant:

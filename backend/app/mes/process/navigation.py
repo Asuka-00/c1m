@@ -14,14 +14,14 @@ def route_steps(s: Session, tid: uuid.UUID, route_id: Any) -> list[Row]:
     return find(s, tid, "route_step", order="seq", route_id=route_id)
 
 
-def _after(s: Session, tid: uuid.UUID, step: Row) -> Row | None:
+def step_after(s: Session, tid: uuid.UUID, step: Row) -> Row | None:
     return next(
         (x for x in route_steps(s, tid, step["route_id"]) if x["seq"] > step["seq"]),
         None,
     )
 
 
-def _enter(
+def enter_route(
     s: Session, tid: uuid.UUID, step: Row | None, stack: list[Row], ev: list[Row]
 ) -> Row | None:
     """Descend into sub-routes until an operation step is reached."""
@@ -30,7 +30,7 @@ def _enter(
         sub = route_steps(s, tid, step["sub_route_id"])
         rt = one(s, tid, "route", step["sub_route_id"])
         if not sub:
-            step = _after(s, tid, step)
+            step = step_after(s, tid, step)
             continue
         stack.append(
             {
@@ -42,11 +42,13 @@ def _enter(
         ev.append({"action": "sub_route", "route": rt and rt["code"], "step": step})
         step, depth = sub[0], depth + 1
     if step is None and stack:
-        return _pop(s, tid, stack, ev)
+        return pop_route(s, tid, stack, ev)
     return step
 
 
-def _pop(s: Session, tid: uuid.UUID, stack: list[Row], ev: list[Row]) -> Row | None:
+def pop_route(
+    s: Session, tid: uuid.UUID, stack: list[Row], ev: list[Row]
+) -> Row | None:
     """Leave the current sub/rework route (end reached)."""
     while stack:
         fr = stack.pop()
@@ -56,9 +58,9 @@ def _pop(s: Session, tid: uuid.UUID, stack: list[Row], ev: list[Row]) -> Row | N
         ev.append({"action": "return", "kind": fr["kind"], "step": caller})
         if fr["kind"] == "rework" and fr.get("return", "same_step") == "same_step":
             return caller
-        nxt = _after(s, tid, caller)
+        nxt = step_after(s, tid, caller)
         if nxt is not None:
-            return _enter(s, tid, nxt, stack, ev)
+            return enter_route(s, tid, nxt, stack, ev)
     return None
 
 
@@ -83,7 +85,7 @@ def next_location(
             }
         )
         ev.append({"action": "rework", "route": rt and rt["code"], "step": step})
-        return _enter(s, tid, steps[0], stack, ev), stack, ev
+        return enter_route(s, tid, steps[0], stack, ev), stack, ev
     if branch:
         if step["branch_to_seq"] is None:
             raise http_422([("branch", "branch: this step has no branch")])
@@ -107,8 +109,8 @@ def next_location(
                 "step": step,
             }
         )
-        return _enter(s, tid, tgt, stack, ev), stack, ev
-    nxt = _after(s, tid, step)
+        return enter_route(s, tid, tgt, stack, ev), stack, ev
+    nxt = step_after(s, tid, step)
     if nxt is not None:
-        return _enter(s, tid, nxt, stack, ev), stack, ev
-    return _pop(s, tid, stack, ev), stack, ev
+        return enter_route(s, tid, nxt, stack, ev), stack, ev
+    return pop_route(s, tid, stack, ev), stack, ev

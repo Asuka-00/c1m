@@ -25,7 +25,8 @@ from app.core.spec.errors import MesError, http_422
 from app.core.spec.query import get_row
 from app.core.spec.validate import validator
 from app.mes.common import coderule
-from app.mes.execution import service as execution
+from app.mes.lot import service as lot_svc
+from app.mes.process import service as process_svc
 
 Row = dict[str, Any]
 WO, LOT, WAFER = (ENTITIES[c] for c in ("work_order", "lot", "wafer"))
@@ -420,7 +421,7 @@ def start(
     if not step:
         raise http_422([("route", "route: has no steps")])
     stack: list[Row] = []
-    step = execution._enter(s, tid, step, stack, [])
+    step = process_svc.enter_route(s, tid, step, stack, [])
     if not step:
         raise http_422([("route", "route: has no operation steps")])
     prod = _one(s, tid, "product", wo["product_id"]) or {}
@@ -464,7 +465,7 @@ def start(
         )
         srcs = x.get("wafer_sources") or [None] * int(x["qty"])
         lot0 = {"id": lid, "code": lot_no}
-        level = execution.create_units(
+        level = lot_svc.create_units(
             s, tid, lot0, prod, list(x["slots"]), list(srcs), wr, user, tag
         )
         c.execute(
@@ -482,7 +483,7 @@ def start(
             user,
             {"work_order": (None, wo["code"]), "qty": (None, lot["qty"])},
         )
-        execution.history(
+        lot_svc.history(
             s, tid, lot, "start", user, step=step, details={"work_order": wo["code"]}
         )
         out.append(lot)

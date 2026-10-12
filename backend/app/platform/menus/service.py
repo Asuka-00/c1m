@@ -4,6 +4,7 @@ from sqlmodel import Session, select
 
 from app.core import registry
 from app.platform.menus.layout import GROUPS, ITEMS, OBSOLETE_KEYS, OBSOLETE_PREFIXES
+from app.platform.menus.layout import titles as titles
 from app.platform.menus.models import Menu
 from app.platform.menus.schemas import MenuNode
 

@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 from sqlmodel import Session, col, select
 
 from app.platform.rbac.models import Permission, Role
@@ -6,7 +8,9 @@ from app.platform.rbac.permissions import (
     DEFAULT_ROLES,
     TENANT_PERMISSIONS,
 )
-from app.platform.users.models import User
+
+if TYPE_CHECKING:
+    from app.platform.users.models import User
 
 
 def seed_rbac(session: Session) -> None:
