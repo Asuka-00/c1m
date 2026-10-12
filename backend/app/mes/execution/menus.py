@@ -33,4 +33,16 @@ MENUS: dict[str, MenuItem] = {
         "mes-page:hold-release",
         "mes.exec:read",
     ),
+    "mes-wip-dashboard": (
+        "/mes/wip-dashboard",
+        "LayoutDashboard",
+        "mes-page:wip-dashboard",
+        "mes.exec:read",
+    ),
+    "mes-oee-report": (
+        "/mes/oee-report",
+        "Gauge",
+        "mes-page:oee-report",
+        "mes.exec:read",
+    ),
 }

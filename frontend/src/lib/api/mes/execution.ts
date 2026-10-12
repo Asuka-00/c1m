@@ -44,6 +44,56 @@ export interface DcItem {
   oos_action: string
 }
 /** 批次单元（晶圆 / 序列号）。 */
+/** WIP 看板汇总。 */
+export interface WipSummary {
+  total_lots: number
+  total_qty: number
+  on_hold: number
+  by_status: { status: string; lots: number; qty: number }[]
+  by_step: {
+    route: string | null
+    step_seq: number | null
+    operation: string | null
+    lots: number
+    qty: number
+    on_hold: number
+  }[]
+  by_product: { product: string | null; lots: number; qty: number }[]
+  aging: {
+    id: string
+    lot: string
+    status: string
+    on_hold: boolean
+    step_seq: number | null
+    qty: number
+    since: string | null
+    hours: number | null
+  }[]
+}
+/** 产出日报行。 */
+export interface DailyOutput {
+  day: string
+  moves: number
+  move_qty: number
+  scrap_qty: number
+  completed: number
+}
+/** 设备 OEE 行（无法计算的指标为 null）。 */
+export interface OeeRow {
+  id: string
+  equipment: string
+  name: string
+  hours: Record<string, number>
+  loading_h: number
+  prd_h: number
+  availability: number | null
+  performance: number | null
+  quality: number | null
+  oee: number | null
+  good: number
+  scrap: number
+  uph_missing: boolean
+}
 /** 生效中的 Hold 行。 */
 export interface ActiveHold {
   id: string
@@ -294,6 +344,18 @@ export const execApi = {
     http
       .post<StageResult>(`/mes/exec/lots/${lotId}/${stage}`, body)
       .then((r) => r.data),
+  /** WIP 看板汇总。 */
+  wip: () => http.get<WipSummary>('/mes/exec/reports/wip').then((r) => r.data),
+  /** 产出日报。 */
+  output: (p: { date_from?: string; date_to?: string }) =>
+    http
+      .get<{ data: DailyOutput[] }>('/mes/exec/reports/output', { params: p })
+      .then((r) => r.data.data),
+  /** 设备 OEE。 */
+  oee: (p: { date_from?: string; date_to?: string }) =>
+    http
+      .get<{ data: OeeRow[] }>('/mes/exec/reports/oee', { params: p })
+      .then((r) => r.data.data),
   /** 生效中的 Hold（按原因 / 来源 / 产品筛选）。 */
   activeHolds: (f: {
     reason_id?: string

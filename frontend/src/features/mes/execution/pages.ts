@@ -7,6 +7,8 @@ export const pages: Pages = {
   'mes-page:lot-console': lazy(() => import('./lot-console')),
   'mes-page:qtime-monitor': lazy(() => import('./qtime-monitor')),
   'mes-page:hold-release': lazy(() => import('./hold-release')),
+  'mes-page:wip-dashboard': lazy(() => import('./wip-dashboard')),
+  'mes-page:oee-report': lazy(() => import('./oee-report')),
   'mes-page:trace': lazy(() => import('./trace')),
   'mes-page:lot-trace': lazy(() => import('./lot-trace')),
 }

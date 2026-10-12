@@ -37,6 +37,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-equipment_group", "Equipment Group|设备组|設備グループ"),
         ("mes-equipment_capability", "Capability|设备能力|設備能力"),
         ("mes-eqp-board", "Equipment Status Board|设备状态看板|設備状態ボード"),
+        ("mes-oee-report", "Equipment OEE|设备 OEE|設備 OEE"),
         ("mes-e10_state", "E10 State Model|E10 状态模型|E10 状態モデル"),
         ("mes-e10_history", "E10 History|E10 状态履历|E10 状態履歴"),
         ("mes-pm_plan", "PM Plan|PM 计划|PM 計画"),
@@ -79,6 +80,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-lot-start", "Lot Start|投产|ロット投入"),
     ],
     "g-execution": [
+        ("mes-wip-dashboard", "WIP Dashboard|WIP 看板|WIP ダッシュボード"),
         ("mes-lot-console", "Lot Operation|批次作业|ロット作業"),
         ("mes-lot-trace", "Lot History|批次履历|ロット履歴"),
         ("mes-trace", "Traceability|追溯查询|トレーサビリティ"),

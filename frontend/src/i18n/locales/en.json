@@ -818,6 +818,43 @@
         "oos": "Out of spec",
         "split": "Split (inherited)"
       }
+    },
+    "report": {
+      "hint": "WIP by status / step / product, longest-waiting lots and daily output (auto refresh every minute).",
+      "lots": "WIP lots",
+      "qty": "WIP qty",
+      "onHold": "Lots on hold",
+      "byStatus": "By status",
+      "byStep": "By step",
+      "byProduct": "By product",
+      "aging": "Aging top 20",
+      "output": "Daily output",
+      "status": "Status",
+      "route": "Route",
+      "step": "Step",
+      "operation": "Operation",
+      "product": "Product",
+      "lot": "Lot",
+      "hours": "Idle (h)",
+      "since": "Last event",
+      "day": "Day",
+      "moves": "Moves",
+      "moveQty": "Move qty",
+      "scrapQty": "Scrap qty",
+      "completed": "Lots finished",
+      "to": "To",
+      "oeeHint": "OEE = availability (PRD / loading time excl. NST) × performance (ideal time / PRD; UPH from recipe↔equipment, else equipment) × quality. Performance and OEE are not computed when UPH is missing.",
+      "equipment": "Equipment",
+      "loading": "Loading (h)",
+      "prd": "PRD (h)",
+      "availability": "Availability",
+      "performance": "Performance",
+      "quality": "Quality",
+      "oee": "OEE",
+      "good": "Good",
+      "scrap": "Scrap",
+      "uphMissing": "No UPH",
+      "from": "From"
     }
   }
 }

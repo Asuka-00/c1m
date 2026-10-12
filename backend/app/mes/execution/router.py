@@ -7,6 +7,7 @@ mes.exec:jump（跳站）、mes.exec:adjust（在制报废 / 补数）。
 """
 
 import uuid
+from datetime import date, datetime, time, timedelta
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException
@@ -214,6 +215,56 @@ class JumpIn(BaseModel):
     comment: str | None = Field(default=None, max_length=300)
     override: bool = False
     override_reason: str | None = Field(default=None, max_length=300)
+
+
+def _window(
+    date_from: date | None, date_to: date | None, days: int
+) -> tuple[datetime, datetime]:
+    """统计区间 [起始日 00:00, 结束日次日 00:00)（服务器时区），默认最近 ``days`` 天。"""
+    tz = datetime.now().astimezone().tzinfo
+    end_d = date_to or datetime.now(tz).date()
+    start_d = date_from or end_d - timedelta(days=days - 1)
+    if start_d > end_d:
+        raise HTTPException(status_code=422, detail="date_from after date_to")
+    if (end_d - start_d).days > 366:
+        raise HTTPException(status_code=422, detail="range too long (max 366 days)")
+    return (
+        datetime.combine(start_d, time.min, tz),
+        datetime.combine(end_d + timedelta(days=1), time.min, tz),
+    )
+
+
+@router.get("/reports/wip")
+def report_wip(session: SessionDep, ctx: CurrentTenant) -> Any:
+    """WIP summary by status / step / product, with lot aging."""
+    _need(ctx, "mes.exec:read")
+    return svc.wip_summary(session, ctx.id)
+
+
+@router.get("/reports/output")
+def report_output(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    date_from: date | None = None,
+    date_to: date | None = None,
+) -> Any:
+    """Daily moves / output / scrap."""
+    _need(ctx, "mes.exec:read")
+    a, b = _window(date_from, date_to, 7)
+    return {"data": svc.daily_output(session, ctx.id, a, b)}
+
+
+@router.get("/reports/oee")
+def report_oee(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    date_from: date | None = None,
+    date_to: date | None = None,
+) -> Any:
+    """Equipment OEE (availability × performance × quality) over the window."""
+    _need(ctx, "mes.exec:read")
+    a, b = _window(date_from, date_to, 7)
+    return {"data": svc.oee(session, ctx.id, a, b), "from": a, "to": b}
 
 
 @router.get("/trace")

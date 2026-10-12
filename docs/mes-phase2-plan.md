@@ -81,3 +81,10 @@
 2. 返工次数上限按「工步」还是按「批次累计」？当前方案按工步，另记批次累计数供报表。
 3. Q-Time 扫描是否需要「将超时预警」通知（当前仅在监控页标黄）？
 4. OEE 的性能稼动率需要标准节拍（UPH），是否在设备 / 配方上维护？
+
+## 5. 已确认决策（2026-10-12）
+
+- 补数：晶圆级批次不允许补数（仅数量批次）。
+- 返工上限：按工步计数（`route_step.max_rework`）。
+- Q-Time：增加预警阈值 `qtime_rule.warn_minutes`（监控页“即将超时”）；内置后台定时扫描 `QTIME_SWEEP_SECONDS`（0 关闭，Postgres 咨询锁保证单实例执行）。
+- OEE 理论产能：`recipe_equipment.ideal_uph` 优先，其次 `equipment.ideal_uph`；区间内缺少 UPH 时不计算性能稼动率与 OEE。

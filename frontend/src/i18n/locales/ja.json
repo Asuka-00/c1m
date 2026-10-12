@@ -818,6 +818,43 @@
         "oos": "規格外",
         "split": "分割継承"
       }
+    },
+    "report": {
+      "hint": "状態 / 工程 / 製品別の仕掛、滞留の長いロット、日次産出（毎分自動更新）。",
+      "lots": "仕掛ロット",
+      "qty": "仕掛数量",
+      "onHold": "ホールドロット",
+      "byStatus": "状態別",
+      "byStep": "工程別",
+      "byProduct": "製品別",
+      "aging": "滞留 Top 20",
+      "output": "日次産出",
+      "status": "状態",
+      "route": "ルート",
+      "step": "工程",
+      "operation": "オペレーション",
+      "product": "製品",
+      "lot": "ロット",
+      "hours": "滞留(時間)",
+      "since": "最終操作",
+      "day": "日付",
+      "moves": "ムーブアウト回数",
+      "moveQty": "ムーブアウト数量",
+      "scrapQty": "廃棄数量",
+      "completed": "完了ロット",
+      "to": "終了日",
+      "oeeHint": "OEE = 時間稼働率（PRD / 負荷時間、NST 除く）× 性能稼働率（理論時間 / PRD、UPH はレシピ設備対応、次に設備）× 良品率。UPH 未設定時は性能と OEE を計算しません。",
+      "equipment": "設備",
+      "loading": "負荷(時間)",
+      "prd": "PRD(時間)",
+      "availability": "時間稼働率",
+      "performance": "性能稼働率",
+      "quality": "良品率",
+      "oee": "OEE",
+      "good": "良品",
+      "scrap": "廃棄",
+      "uphMissing": "UPH なし",
+      "from": "開始日"
     }
   }
 }

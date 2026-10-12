@@ -418,3 +418,30 @@ def test_qtime_warn_and_all_tenant_sweep(client: TestClient, db: Session) -> Non
     assert r["tenants"] == 1
     assert r["actions"] >= 1
     assert f.lot(b)["on_hold"] and not f.lot(a)["on_hold"]
+
+
+# ---------------- phase 9: WIP dashboard / output / OEE ----------------
+def test_wip_output_oee_reports(client: TestClient, db: Session) -> None:
+    f = Line(client, db)
+    a, b = f.start(2, 3)
+    f.run_step(a)
+    f.post(f"{EXEC}/lots/{b['id']}/hold", {"reason_id": f.reasons["hold"]["id"]})
+    g = lambda u, **p: client.get(f"{EXEC}/reports/{u}", headers=f.m.h, params=p)  # noqa: E731
+    w = g("wip").json()
+    assert w["total_lots"] == 2 and w["total_qty"] == 5 and w["on_hold"] == 1
+    assert {x["step_seq"] for x in w["by_step"]} == {10, 20}
+    assert w["aging"][0]["lot"] in (a["code"], b["code"])
+    out = g("output").json()["data"]
+    assert len(out) == 7 and sum(d["moves"] for d in out) == 1
+    assert sum(d["move_qty"] for d in out) == 2
+    # OEE：UPH 缺失时不计算性能稼动率
+    rows = {r["equipment"]: r for r in g("oee").json()["data"]}
+    eq1 = rows["EQ1"]
+    assert eq1["good"] == 2 and eq1["quality"] == 1.0
+    assert eq1["uph_missing"] and eq1["performance"] is None and eq1["oee"] is None
+    assert eq1["availability"] is not None and 0 <= eq1["availability"] <= 1
+    # 设备 UPH 维护后可计算
+    f.m.patch("equipment", f.eq["id"], {"ideal_uph": 3600})
+    eq1 = {r["equipment"]: r for r in g("oee").json()["data"]}["EQ1"]
+    assert eq1["performance"] is not None and eq1["oee"] is not None
+    assert g("oee", date_from="2026-10-10", date_to="2026-10-01").status_code == 422

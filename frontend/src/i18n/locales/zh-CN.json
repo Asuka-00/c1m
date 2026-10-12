@@ -818,6 +818,43 @@
         "oos": "超规",
         "split": "分批继承"
       }
+    },
+    "report": {
+      "hint": "在制批次按状态 / 工步 / 产品分布，滞留时间最长的批次与每日产出（每分钟自动刷新）。",
+      "lots": "在制批次",
+      "qty": "在制数量",
+      "onHold": "Hold 批次",
+      "byStatus": "按状态",
+      "byStep": "按工步",
+      "byProduct": "按产品",
+      "aging": "滞留 Top 20",
+      "output": "产出日报",
+      "status": "状态",
+      "route": "流程",
+      "step": "工步",
+      "operation": "工序",
+      "product": "产品",
+      "lot": "批次",
+      "hours": "滞留(小时)",
+      "since": "最近操作",
+      "day": "日期",
+      "moves": "出站次数",
+      "moveQty": "出站数量",
+      "scrapQty": "报废数量",
+      "completed": "完工批次",
+      "to": "结束日期",
+      "oeeHint": "OEE = 时间稼动率（PRD / 负荷时间，扣除 NST）× 性能稼动率（理论时间 / PRD，UPH 取配方设备映射，其次设备）× 良品率。缺少 UPH 时不计算性能与 OEE。",
+      "equipment": "设备",
+      "loading": "负荷(小时)",
+      "prd": "PRD(小时)",
+      "availability": "时间稼动率",
+      "performance": "性能稼动率",
+      "quality": "良品率",
+      "oee": "OEE",
+      "good": "良品",
+      "scrap": "报废",
+      "uphMissing": "缺 UPH",
+      "from": "开始日期"
     }
   }
 }
