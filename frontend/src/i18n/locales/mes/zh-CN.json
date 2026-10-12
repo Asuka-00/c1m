@@ -339,6 +339,7 @@
         "qty": "数量",
         "tracking_level": "追踪层级",
         "scrapped_qty": "报废数",
+        "bonus_qty": "补数",
         "rework_count": "返工次数",
         "site": "工厂",
         "current_step": "当前步骤",
@@ -866,7 +867,8 @@
         "move_out": "出站",
         "split": "分批",
         "merge": "合批",
-        "jump": "跳站"
+        "jump": "跳站",
+        "adjust": "报废 / 补数"
       },
       "check_type": {
         "e10_available": "设备 E10 状态可用",
@@ -883,7 +885,8 @@
         "oos": "超规",
         "sampling": "抽样判定",
         "split_merge_rule": "分批合批规则",
-        "rework_limit": "返工次数上限"
+        "rework_limit": "返工次数上限",
+        "qty_adjust_limit": "报废 / 补数数量上限"
       },
       "check_severity": {
         "block": "拦截",
@@ -944,7 +947,8 @@
         "oos": "超规",
         "split": "分批",
         "merge": "合批",
-        "jump": "跳站"
+        "jump": "跳站",
+        "bonus": "补数"
       },
       "genealogy_relation": {
         "split": "分批",
@@ -1149,7 +1153,8 @@
         "rework": "返工",
         "hold": "冻结",
         "release": "解冻",
-        "jump": "跳站"
+        "jump": "跳站",
+        "bonus": "补数"
       },
       "oos_action": {
         "warn": "预警",

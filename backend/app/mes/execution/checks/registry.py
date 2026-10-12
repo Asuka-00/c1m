@@ -158,19 +158,8 @@ def resolve(ctx: Ctx) -> list[tuple[Row, Row]]:
     return out
 
 
-def enabled(ctx: Ctx, check: str) -> bool:
-    """某类管控在当前上下文是否开启（内置管控的统一开关）。
-
-    在所有命中的有效绑定中，按作用域由具体到宽泛查找包含该检查类型的有效规则，
-    第一条命中规则的严重度决定开关：``off`` 为关闭，其余为开启；无任何命中时默认开启。
-
-    Args:
-        ctx: 检查上下文（使用其触发时机与工步 / 设备 / 产品）。
-        check: 检查类型编码。
-
-    Returns:
-        是否开启。
-    """
+def control_rule(ctx: Ctx, check: str) -> Row | None:
+    """当前上下文中决定某类内置管控的规则（最具体作用域优先），无则 None。"""
     bs = sorted(
         (
             b
@@ -190,8 +179,25 @@ def enabled(ctx: Ctx, check: str) -> bool:
         ):
             rule = one(ctx.s, ctx.tid, "check_rule", it["check_rule_id"])
             if rule and rule["is_active"] and rule["check_type"] == check:
-                return bool(rule["severity"] != "off")
-    return True
+                return rule
+    return None
+
+
+def enabled(ctx: Ctx, check: str) -> bool:
+    """某类管控在当前上下文是否开启（内置管控的统一开关）。
+
+    在所有命中的有效绑定中，按作用域由具体到宽泛查找包含该检查类型的有效规则，
+    第一条命中规则的严重度决定开关：``off`` 为关闭，其余为开启；无任何命中时默认开启。
+
+    Args:
+        ctx: 检查上下文（使用其触发时机与工步 / 设备 / 产品）。
+        check: 检查类型编码。
+
+    Returns:
+        是否开启。
+    """
+    rule = control_rule(ctx, check)
+    return rule is None or rule["severity"] != "off"
 
 
 # ---------------- evaluation ----------------

@@ -277,6 +277,12 @@ def _rework_limit(_ctx: Ctx, _p: Row) -> Outcome:
     return "na", "evaluated when entering a rework route", {}
 
 
+@check_type("qty_adjust_limit")
+def _qty_adjust_limit(_ctx: Ctx, _p: Row) -> Outcome:
+    # 内置于报废 / 补数逻辑（参数 max_pct，默认 10）；此处仅作为开关存在
+    return "na", "evaluated by scrap / bonus", {}
+
+
 @check_type("split_merge_rule")
 def _split_merge(_ctx: Ctx, _p: Row) -> Outcome:
     # 拆 / 合批时由拆合批逻辑内置强制执行

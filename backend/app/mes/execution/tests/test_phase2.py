@@ -89,3 +89,48 @@ def test_jump_step(client: TestClient, db: Session) -> None:
     f.bind("jump", ("wo_status", "block", {}))
     f.post(f"/api/v1/mes/work-order/{f.wo['id']}/transition", {"action": "hold"})
     assert f.post(f"/api/v1/mes/exec/lots/{b['id']}/jump", body, 409)
+
+
+# ---------------- phase 3: in-process scrap / bonus ----------------
+def test_in_process_scrap_bonus(client: TestClient, db: Session) -> None:
+    f = Line(client, db)
+    (a,) = f.start(10)
+    url = f"/api/v1/mes/exec/lots/{a['id']}/adjust"
+    sc = f.reasons["scrap"]["id"]
+    ws = f.m.list("wafer", lot=a["id"], sort_by="code", sort_order="asc")["data"]
+    # 晶圆级：按片报废；补数不支持
+    r = f.post(url, {"kind": "scrap", "unit_ids": [ws[0]["id"]], "reason_id": sc})
+    assert r["lot"]["qty"] == 9 and r["lot"]["scrapped_qty"] == 1
+    bad = f.post(url, {"kind": "bonus", "qty": 1, "reason_id": sc}, 422)
+    assert "bonus" in _msgs(bad)
+    # 原因代码类型必须匹配
+    hold = f.reasons["hold"]["id"]
+    f.post(url, {"kind": "scrap", "unit_ids": [ws[1]["id"]], "reason_id": hold}, 422)
+    # 数量上限（默认 10%）：一次报废 2 片超限，阻断可放行
+    two = [ws[1]["id"], ws[2]["id"]]
+    assert "exceeds" in _msgs(
+        f.post(url, {"kind": "scrap", "unit_ids": two, "reason_id": sc}, 409)
+    )
+    body = {"kind": "scrap", "unit_ids": two, "reason_id": sc}
+    r = f.post(url, {**body, "override": True, "override_reason": "MRB"})
+    assert r["lot"]["qty"] == 7
+    # 开关：adjust 触发时机绑定 qty_adjust_limit = off
+    f.bind("adjust", ("qty_adjust_limit", "off", {}))
+    rest = [w["id"] for w in ws[3:]]
+    r = f.post(url, {"kind": "scrap", "unit_ids": rest, "reason_id": sc})
+    assert r["lot"]["lot_status"] == "scrapped" and r["lot"]["qty"] == 0
+    hs = f.m.list("lot_history", lot=a["id"], action="scrap")["count"]
+    assert hs == 3
+
+
+def test_bonus_quantity_lot(client: TestClient, db: Session) -> None:
+    f = Line(client, db, {"product": {"tracking_level": "quantity"}})
+    (a,) = f.start(100)
+    bonus = f.m.post("reason_code", {"code": "BN", "name": "b", "reason_type": "bonus"})
+    url = f"/api/v1/mes/exec/lots/{a['id']}/adjust"
+    r = f.post(url, {"kind": "bonus", "qty": 5, "reason_id": bonus["id"]})
+    assert r["lot"]["qty"] == 105 and f.lot(a)["bonus_qty"] == 5
+    sc = f.reasons["scrap"]["id"]
+    r = f.post(url, {"kind": "scrap", "qty": 3, "reason_id": sc})
+    assert r["lot"]["qty"] == 102
+    assert f.m.list("lot_history", lot=a["id"], action="bonus")["count"] == 1

@@ -1,5 +1,6 @@
 """执行模块公开 API（阶段作业、Hold、拆合批）。"""
 
+from app.mes.execution.adjust import adjust as adjust
 from app.mes.execution.context import (
     build_ctx as build_ctx,
 )

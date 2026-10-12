@@ -43,6 +43,7 @@ ENUMS.update(
             ("hold", "Hold|冻结|ホールド"),
             ("release", "Release|解冻|リリース"),
             ("jump", "Jump step|跳站|ステップジャンプ"),
+            ("bonus", "Bonus (qty added)|补数|追加"),
         ],
         "oos_action": [
             ("warn", "Warn|预警|警告"),

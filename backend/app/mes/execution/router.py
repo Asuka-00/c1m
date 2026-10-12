@@ -2,7 +2,7 @@
 
 权限：mes.exec:read（上下文 / 预览）、mes.exec:write（阶段作业）、mes.exec:override
 （强制放行阻断检查，须填原因）、mes.exec:hold（手工 Hold / 释放）、mes.exec:split / mes.exec:merge、
-mes.exec:jump（跳站）。
+mes.exec:jump（跳站）、mes.exec:adjust（在制报废 / 补数）。
 阶段被阻断时返回 409 ``{"detail": {"code": "check_blocked", "results": [...]}}``。
 """
 
@@ -194,6 +194,27 @@ def lot_jump(
     if body.override:
         _need(ctx, "mes.exec:override")
     return svc.jump(session, ctx.id, lot_id, body.model_dump(), ctx.user)
+
+
+class AdjustIn(BaseModel):
+    kind: Literal["scrap", "bonus"]
+    qty: int | None = Field(default=None, ge=1)
+    unit_ids: list[uuid.UUID] | None = Field(default=None, max_length=1000)
+    reason_id: uuid.UUID
+    comment: str | None = Field(default=None, max_length=300)
+    override: bool = False
+    override_reason: str | None = Field(default=None, max_length=300)
+
+
+@router.post("/lots/{lot_id}/adjust")
+def lot_adjust(
+    session: SessionDep, ctx: CurrentTenant, lot_id: uuid.UUID, body: AdjustIn
+) -> Any:
+    """In-process scrap / bonus with a reason code."""
+    _need(ctx, "mes.exec:adjust")
+    if body.override:
+        _need(ctx, "mes.exec:override")
+    return svc.adjust(session, ctx.id, lot_id, body.model_dump(), ctx.user)
 
 
 @router.post("/lots/{lot_id}/{stage}")

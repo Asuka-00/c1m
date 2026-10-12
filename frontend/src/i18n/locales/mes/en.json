@@ -339,6 +339,7 @@
         "qty": "Qty",
         "tracking_level": "Tracking level",
         "scrapped_qty": "Scrapped",
+        "bonus_qty": "Bonus",
         "rework_count": "Reworks",
         "site": "Site",
         "current_step": "Current step",
@@ -866,7 +867,8 @@
         "move_out": "Move out",
         "split": "Split",
         "merge": "Merge",
-        "jump": "Jump step"
+        "jump": "Jump step",
+        "adjust": "Scrap / bonus"
       },
       "check_type": {
         "e10_available": "Equipment E10 state available",
@@ -883,7 +885,8 @@
         "oos": "Out of spec",
         "sampling": "Sampling decision",
         "split_merge_rule": "Split / merge rule",
-        "rework_limit": "Rework count limit"
+        "rework_limit": "Rework count limit",
+        "qty_adjust_limit": "Scrap / bonus qty limit"
       },
       "check_severity": {
         "block": "Block",
@@ -944,7 +947,8 @@
         "oos": "Out of spec",
         "split": "Split",
         "merge": "Merge",
-        "jump": "Jump step"
+        "jump": "Jump step",
+        "bonus": "Bonus"
       },
       "genealogy_relation": {
         "split": "Split",
@@ -1149,7 +1153,8 @@
         "rework": "Rework",
         "hold": "Hold",
         "release": "Release",
-        "jump": "Jump step"
+        "jump": "Jump step",
+        "bonus": "Bonus (qty added)"
       },
       "oos_action": {
         "warn": "Warn",

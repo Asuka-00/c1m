@@ -339,6 +339,7 @@
         "qty": "数量",
         "tracking_level": "追跡レベル",
         "scrapped_qty": "廃棄数",
+        "bonus_qty": "追加数",
         "rework_count": "リワーク回数",
         "site": "工場",
         "current_step": "現在ステップ",
@@ -866,7 +867,8 @@
         "move_out": "ムーブアウト",
         "split": "分割",
         "merge": "統合",
-        "jump": "ステップジャンプ"
+        "jump": "ステップジャンプ",
+        "adjust": "廃棄・追加"
       },
       "check_type": {
         "e10_available": "設備 E10 状態使用可",
@@ -883,7 +885,8 @@
         "oos": "規格外",
         "sampling": "サンプリング判定",
         "split_merge_rule": "分割・統合規則",
-        "rework_limit": "リワーク回数上限"
+        "rework_limit": "リワーク回数上限",
+        "qty_adjust_limit": "廃棄・追加数量上限"
       },
       "check_severity": {
         "block": "ブロック",
@@ -944,7 +947,8 @@
         "oos": "規格外",
         "split": "分割",
         "merge": "統合",
-        "jump": "ステップジャンプ"
+        "jump": "ステップジャンプ",
+        "bonus": "追加"
       },
       "genealogy_relation": {
         "split": "分割",
@@ -1149,7 +1153,8 @@
         "rework": "リワーク",
         "hold": "ホールド",
         "release": "リリース",
-        "jump": "ステップジャンプ"
+        "jump": "ステップジャンプ",
+        "bonus": "追加"
       },
       "oos_action": {
         "warn": "警告",

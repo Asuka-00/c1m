@@ -271,6 +271,7 @@ register(
                 list=False,
             ),
             F("scrapped_qty", "int", "Scrapped|报废数|廃棄数", default=0, list=False),
+            F("bonus_qty", "int", "Bonus|补数|追加数", default=0, list=False),
             F(
                 "rework_count",
                 "int",

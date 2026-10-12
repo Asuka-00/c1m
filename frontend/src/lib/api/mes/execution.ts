@@ -124,7 +124,10 @@ export interface ExecContext {
   tracking_level: 'wafer' | 'unit' | 'quantity'
   units: ExecUnit[]
   holds: MesRow[]
-  reasons: Record<'hold' | 'release' | 'scrap' | 'rework' | 'jump', Opt[]>
+  reasons: Record<
+    'hold' | 'release' | 'scrap' | 'rework' | 'jump' | 'bonus',
+    Opt[]
+  >
   /** 当前流程的工序工步（跳站目标） */
   route_steps?: { id: string; seq: number; operation: string | null }[]
   stack: { kind: string; route_id: string; step_id: string }[]
@@ -244,6 +247,22 @@ export const execApi = {
   stage: (lotId: string, stage: ExecStage, body: StageBody) =>
     http
       .post<StageResult>(`/mes/exec/lots/${lotId}/${stage}`, body)
+      .then((r) => r.data),
+  /** 在制报废 / 补数。 */
+  adjust: (
+    id: string,
+    body: {
+      kind: 'scrap' | 'bonus'
+      reason_id: string
+      qty?: number
+      unit_ids?: string[]
+      comment?: string
+      override?: boolean
+      override_reason?: string
+    }
+  ) =>
+    http
+      .post<StageResult>(`/mes/exec/lots/${id}/adjust`, body)
       .then((r) => r.data),
   jump: (
     lotId: string,

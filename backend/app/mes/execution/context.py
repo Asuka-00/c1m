@@ -111,7 +111,7 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
             for r in find(s, tid, "reason_code", order="code", reason_type=k)
             if r["is_active"]
         ]
-        for k in ("hold", "release", "scrap", "rework", "jump")
+        for k in ("hold", "release", "scrap", "rework", "jump", "bonus")
     }
     out["stack"] = lot.get("route_stack") or []
     if not step:

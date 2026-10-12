@@ -703,7 +703,13 @@
       "jumpDesc": "Move a waiting lot to another operation step of the same route.",
       "toStep": "Target step",
       "jumped": "Lot jumped",
-      "override": "Override blocking checks (enter a reason)"
+      "override": "Override blocking checks (enter a reason)",
+      "adjust": "Scrap/Bonus",
+      "adjustDesc": "Scrap or bonus WIP; adjustments above the limit require override (switchable per step).",
+      "scrap": "Scrap",
+      "bonus": "Bonus",
+      "qty": "Quantity",
+      "adjusted": "Adjusted"
     }
   }
 }
