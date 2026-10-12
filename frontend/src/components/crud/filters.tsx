@@ -32,7 +32,7 @@ import {
   SEARCH_DEBOUNCE_MS,
   ymd,
 } from './filter-defs'
-import type { ListParams } from './use-list-params'
+import { filterDefaults, type ListParams } from './use-list-params'
 
 /** 默认直接显示的下拉 / 日期筛选个数，其余收进“更多筛选”。 */
 export const VISIBLE_FILTERS = 4
@@ -53,16 +53,24 @@ export function FilterToolbar({
   const [more, setMore] = useState(false)
   if (!filters.length && !children) return null
   const text = filters.filter((f) => f.type === 'text')
-  const rest = filters.filter((f) => f.type !== 'text')
+  // 有默认值的筛选始终可见（避免默认条件藏在“更多筛选”中）
+  const rest = filters
+    .filter((f) => f.type !== 'text')
+    .sort(
+      (a, b) =>
+        Number(b.type === 'select' && !!b.defaultValue) -
+        Number(a.type === 'select' && !!a.defaultValue)
+    )
   const shown = rest.slice(0, VISIBLE_FILTERS)
   const hidden = rest.slice(VISIBLE_FILTERS)
-  const hiddenActive = hidden.filter((f) =>
-    filterKeys(f).some((k) => params.filters[k])
-  ).length
-  const resetAll = () =>
-    ['id', ...filters.flatMap(filterKeys)].forEach((k) =>
-      params.setFilter(k, '')
-    )
+  const defaults = filterDefaults(filters)
+  // 与默认值不同的筛选才算“已筛选”
+  const changed = (k: string) =>
+    (params.filters[k] ?? '') !== (defaults[k] ?? '')
+  const hiddenActive = hidden.filter((f) => filterKeys(f).some(changed)).length
+  const keys = ['id', ...filters.flatMap(filterKeys)]
+  // 重置：恢复各筛选的默认值
+  const resetAll = () => keys.forEach((k) => params.setFilter(k, undefined))
   const render = (f: FilterDef) =>
     f.type === 'text' ? (
       <TextFilter key={f.name} def={f} params={params} />
@@ -107,7 +115,7 @@ export function FilterToolbar({
           </Button>
         )}
         {children}
-        {Object.keys(params.filters).length > 1 && (
+        {keys.filter(changed).length > 1 && (
           <Button variant='ghost' size='sm' onClick={resetAll}>
             {t('table.resetFilters')}
           </Button>

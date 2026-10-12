@@ -29,6 +29,8 @@ export interface BoardRow {
   code: string
   name: string
   is_active: boolean
+  workcenter: string | null
+  workcenter_name: string | null
   state: BoardState | null
   next: {
     id: string

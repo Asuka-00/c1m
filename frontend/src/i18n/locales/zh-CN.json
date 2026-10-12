@@ -752,7 +752,14 @@
         "scrap": "报废"
       },
       "warnAt": "预警(分)",
-      "warn": "即将超时"
+      "warn": "即将超时",
+      "search": "搜索批次号 / 规则",
+      "allStates": "全部状态",
+      "allProducts": "全部产品",
+      "allRoutes": "全部工艺路线",
+      "product": "产品",
+      "route": "工艺路线",
+      "autoRefresh": "自动刷新"
     },
     "eqp": {
       "hint": "主设备当前 E10 状态与 PM 到期情况；状态变更受 E10 迁移表约束，PM 到期可在上机检查 pm_due 中阻断（可按工步关闭）。",
@@ -773,7 +780,15 @@
       "toState": "目标状态",
       "pmRecorded": "PM 已登记",
       "pmDesc": "登记完成后，该设备该计划的天数 / 批次周期重新起算。",
-      "result": "结果"
+      "result": "结果",
+      "search": "搜索设备编码 / 名称",
+      "allWorkcenters": "全部工作中心",
+      "allStates": "全部 E10 状态",
+      "allPm": "全部 PM 状态",
+      "pmWarn": "PM 即将到期",
+      "allDown": "全部（停机与否）",
+      "notDown": "未停机",
+      "workcenter": "工作中心"
     },
     "traceq": {
       "hint": "输入批次 / 晶圆 / 设备 / 物料批编码：反向追溯来源批次、经过的设备与消耗的物料，正向追溯下游产出。",
@@ -870,6 +885,27 @@
       "scrap": "报废",
       "uphMissing": "缺 UPH",
       "from": "开始日期"
+    },
+    "queue": {
+      "scan": "扫码 / 输入批次号回车",
+      "notFound": "未找到批次 {{code}}",
+      "search": "搜索批次号 / 产品",
+      "allStatuses": "全部状态",
+      "allProducts": "全部产品",
+      "allOperations": "全部工序",
+      "allHold": "Hold：全部",
+      "notHeld": "未 Hold",
+      "held": "已 Hold",
+      "empty": "暂无在制批次",
+      "lot": "批次",
+      "priority": "优先级",
+      "product": "产品",
+      "step": "工步 · 工序",
+      "status": "状态",
+      "qty": "数量",
+      "qtime": "Q-Time 剩余(分)",
+      "hours": "滞留(小时)",
+      "open": "作业"
     }
   },
   "notify": {
@@ -958,5 +994,18 @@
         }
       }
     }
+  },
+  "home": {
+    "wip": "在制批次",
+    "wipQty": "总数量 {{n}}",
+    "hold": "Hold 批次",
+    "holdHint": "前往 Hold 释放",
+    "qtime": "Q-Time 超时 / 预警",
+    "qtimeHint": "等待中批次的当前工步计时",
+    "equipment": "设备 E10 状态",
+    "pm": "PM 超期 / 即将到期",
+    "pmHint": "主设备 PM 计划",
+    "trackOuts": "今日出站",
+    "trackOutsHint": "批次出站操作次数"
   }
 }

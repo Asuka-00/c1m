@@ -1,6 +1,9 @@
 /** 文本筛选的防抖时长（毫秒）。 */
 export const SEARCH_DEBOUNCE_MS = 300
 
+/** 有默认值的筛选被用户显式选择“全部”时在 URL 中的取值。 */
+export const ALL_VALUE = '*'
+
 /** 下拉筛选的选项。 */
 export interface FilterOption {
   value: string
@@ -26,6 +29,8 @@ export type FilterDef =
       search?: (q: string) => Promise<FilterOption[]>
       /** 远程模式下解析当前值的显示标签 */
       resolve?: (value: string) => Promise<string>
+      /** 默认值：URL 无此参数时生效；选择“全部”时以 ALL_VALUE 显式记录 */
+      defaultValue?: string
     }
   | {
       /** 日期范围：URL 参数为 `<name>_from` / `<name>_to`（YYYY-MM-DD） */

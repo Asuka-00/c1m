@@ -752,7 +752,14 @@
         "scrap": "Scrap"
       },
       "warnAt": "Warn (min)",
-      "warn": "Expiring soon"
+      "warn": "Expiring soon",
+      "search": "Search lot / rule",
+      "allStates": "All states",
+      "allProducts": "All products",
+      "allRoutes": "All routes",
+      "product": "Product",
+      "route": "Route",
+      "autoRefresh": "Auto refresh"
     },
     "eqp": {
       "hint": "Current E10 state and PM due status of main equipment. State changes follow the E10 transition table; overdue PM can block track-in via the pm_due check (switchable per step).",
@@ -773,7 +780,15 @@
       "toState": "To state",
       "pmRecorded": "PM recorded",
       "pmDesc": "The day / lot interval of this plan restarts for this equipment.",
-      "result": "Result"
+      "result": "Result",
+      "search": "Search equipment code / name",
+      "allWorkcenters": "All work centers",
+      "allStates": "All E10 states",
+      "allPm": "All PM",
+      "pmWarn": "PM due soon",
+      "allDown": "All (down or not)",
+      "notDown": "Not down",
+      "workcenter": "Work center"
     },
     "traceq": {
       "hint": "Enter a lot / wafer / equipment / material lot code: backward to source lots, equipment and consumed materials; forward to downstream outputs.",
@@ -870,6 +885,27 @@
       "scrap": "Scrap",
       "uphMissing": "No UPH",
       "from": "From"
+    },
+    "queue": {
+      "scan": "Scan / enter lot ID, Enter",
+      "notFound": "Lot {{code}} not found",
+      "search": "Search lot / product",
+      "allStatuses": "All statuses",
+      "allProducts": "All products",
+      "allOperations": "All operations",
+      "allHold": "Hold: all",
+      "notHeld": "Not on hold",
+      "held": "On hold",
+      "empty": "No lots in WIP",
+      "lot": "Lot",
+      "priority": "Priority",
+      "product": "Product",
+      "step": "Step · operation",
+      "status": "Status",
+      "qty": "Qty",
+      "qtime": "Q-Time left (min)",
+      "hours": "Since last move (h)",
+      "open": "Operate"
     }
   },
   "notify": {
@@ -958,5 +994,18 @@
         }
       }
     }
+  },
+  "home": {
+    "wip": "WIP lots",
+    "wipQty": "Total qty {{n}}",
+    "hold": "Lots on hold",
+    "holdHint": "Go to hold release",
+    "qtime": "Q-Time exceeded / warning",
+    "qtimeHint": "Waiting lots at current step",
+    "equipment": "Equipment E10 states",
+    "pm": "PM overdue / due soon",
+    "pmHint": "Main equipment PM plans",
+    "trackOuts": "Track-outs today",
+    "trackOutsHint": "Lot track-out operations"
   }
 }

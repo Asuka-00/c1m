@@ -17,6 +17,7 @@ from app.core.deps import SessionDep
 from app.core.spec.engine import ENTITIES
 from app.core.spec.serialize import serialize
 from app.mes.common.query import one
+from app.mes.execution import dispatch
 from app.mes.execution import service as sm
 from app.mes.execution import service as svc
 from app.platform.auth.deps import CurrentTenant
@@ -284,6 +285,38 @@ def qtime_monitor(session: SessionDep, ctx: CurrentTenant) -> Any:
     """Q-Time monitor: running clocks of waiting lots at their current step."""
     _need(ctx, "mes.exec:read")
     return {"data": svc.qtime_monitor(session, ctx.id)}
+
+
+@router.get("/queue")
+def dispatch_queue(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    q: str | None = None,
+    lot_status: str | None = None,
+    operation_id: uuid.UUID | None = None,
+    product_id: uuid.UUID | None = None,
+    on_hold: bool | None = None,
+) -> Any:
+    """Dispatch queue: active lots ordered by hold / priority / Q-Time / aging."""
+    _need(ctx, "mes.exec:read")
+    return {
+        "data": dispatch.queue(
+            session,
+            ctx.id,
+            q=q,
+            lot_status=lot_status,
+            operation_id=operation_id,
+            product_id=product_id,
+            on_hold=on_hold,
+        )
+    }
+
+
+@router.get("/home")
+def home_summary(session: SessionDep, ctx: CurrentTenant) -> Any:
+    """Home KPIs: WIP, holds, Q-Time, equipment states, PM due, today's track-outs."""
+    _need(ctx, "mes.exec:read")
+    return dispatch.home(session, ctx.id)
 
 
 @router.post("/qtime/sweep")

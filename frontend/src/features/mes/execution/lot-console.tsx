@@ -67,6 +67,7 @@ import { enumLabel, optLabel } from '@/features/mes/common/labels'
 import { RefSelect } from '@/features/mes/common/ref-select'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity, useMesMeta } from '@/features/mes/common/use-mes-meta'
+import { DispatchQueue, LotScan } from './dispatch-queue'
 import { CheckPanel, Pick, StageBar } from './exec-parts'
 import { SplitMergeCard } from './split-merge'
 import { WipActionsCard } from './wip-actions'
@@ -112,15 +113,18 @@ export default function LotConsolePage() {
         )
       }
     >
-      <div className='flex max-w-xl items-center gap-2'>
+      <div className='flex flex-wrap items-center gap-2'>
+        <LotScan onLot={setLot} />
         <Label className='shrink-0'>{t('mes.entity.lot')}</Label>
-        <RefSelect
-          id='console-lot'
-          target='lot'
-          value={lotId || null}
-          label={ctx.data ? String(ctx.data.lot.code) : null}
-          onChange={(id) => setLot(id)}
-        />
+        <div className='w-72'>
+          <RefSelect
+            id='console-lot'
+            target='lot'
+            value={lotId || null}
+            label={ctx.data ? String(ctx.data.lot.code) : null}
+            onChange={(id) => setLot(id)}
+          />
+        </div>
         {lotId && (
           <Button
             size='icon'
@@ -132,9 +136,7 @@ export default function LotConsolePage() {
           </Button>
         )}
       </div>
-      {!lotId && (
-        <p className='text-muted-foreground'>{t('mes.exec.pickLot')}</p>
-      )}
+      {!lotId && <DispatchQueue onLot={setLot} />}
       {ctx.isLoading && <Loader2 className='animate-spin' />}
       {ctx.data && (
         <Console

@@ -5,6 +5,11 @@ import { mesApi, type MesEntity } from '@/lib/api/mes/common'
 import { boolOptions, searchFilter, type FilterDef } from '@/components/crud'
 import { enumLabel, fieldLabel, rowLabel, statusLabel } from './labels'
 
+/** 各实体筛选的默认值（仍可切换为“全部”）：Hold 默认只看生效中。 */
+const FILTER_DEFAULTS: Record<string, Record<string, string>> = {
+  lot_hold: { is_active: 'true' },
+}
+
 /**
  * 由实体元数据生成表格筛选：关键字搜索 + 可筛选字段（枚举 / 布尔 / 引用）。
  *
@@ -35,6 +40,7 @@ export function useMesFilters(e: MesEntity | undefined, hide: string[] = []) {
           name: f.column,
           label: t('mes.allOf', { field: fieldLabel(e, f) }),
           options: boolOptions(t('common.yes'), t('common.no')),
+          defaultValue: FILTER_DEFAULTS[e.code]?.[f.column],
         })
       else if (f.type === 'ref')
         defs.push({

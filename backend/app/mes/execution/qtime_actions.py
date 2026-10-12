@@ -146,7 +146,7 @@ def qtime_monitor(s: Session, tid: uuid.UUID) -> list[Row]:
     """Q-Time 监控：等待中批次在当前工步（终点）上的各条 Q-Time 规则计时。
 
     Returns:
-        每批次每规则一行：批次、工步、规则、已用 / 上限分钟、剩余分钟、是否超时、是否预警（达到预警阈值）、处置动作。
+        每批次每规则一行：批次、产品、工艺路线、工步、规则、已用 / 上限分钟、剩余分钟、是否超时、是否预警（达到预警阈值）、处置动作。
     """
     at = now()
     out: list[Row] = []
@@ -154,6 +154,8 @@ def qtime_monitor(s: Session, tid: uuid.UUID) -> list[Row]:
         step = one(s, tid, "route_step", lot["current_step_id"])
         if not step:
             continue
+        prod = one(s, tid, "product", lot["product_id"])
+        route = one(s, tid, "route", step["route_id"])
         for x in ck.qtime_status(s, tid, lot, step, at):
             r = x["rule"]
             mx = r["max_minutes"]
@@ -162,6 +164,8 @@ def qtime_monitor(s: Session, tid: uuid.UUID) -> list[Row]:
                     "lot_id": str(lot["id"]),
                     "lot": lot["code"],
                     "on_hold": bool(lot["on_hold"]),
+                    "product": prod and prod["code"],
+                    "route": route and route["code"],
                     "step_seq": step["seq"],
                     "rule": r["code"],
                     "since": x["since"].isoformat(),

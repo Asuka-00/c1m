@@ -752,7 +752,14 @@
         "scrap": "廃棄"
       },
       "warnAt": "警告(分)",
-      "warn": "まもなく超過"
+      "warn": "まもなく超過",
+      "search": "ロット / ルールを検索",
+      "allStates": "全状態",
+      "allProducts": "全製品",
+      "allRoutes": "全工程ルート",
+      "product": "製品",
+      "route": "工程ルート",
+      "autoRefresh": "自動更新"
     },
     "eqp": {
       "hint": "主設備の現在の E10 状態と PM 期限。状態変更は E10 遷移表に従い、期限切れ PM は pm_due チェックでトラックインを阻止できます（工程ごとに無効化可）。",
@@ -773,7 +780,15 @@
       "toState": "遷移先",
       "pmRecorded": "PM を記録しました",
       "pmDesc": "記録後、この設備・計画の日数 / ロット周期が再起算されます。",
-      "result": "結果"
+      "result": "結果",
+      "search": "設備コード / 名称を検索",
+      "allWorkcenters": "全ワークセンター",
+      "allStates": "全 E10 状態",
+      "allPm": "全 PM 状態",
+      "pmWarn": "PM 期限間近",
+      "allDown": "全て（停止有無）",
+      "notDown": "停止なし",
+      "workcenter": "ワークセンター"
     },
     "traceq": {
       "hint": "ロット / ウェーハ / 設備 / 資材ロットのコードを入力：逆方向は元ロット・設備・消費資材、順方向は下流の産出を追跡します。",
@@ -870,6 +885,27 @@
       "scrap": "廃棄",
       "uphMissing": "UPH なし",
       "from": "開始日"
+    },
+    "queue": {
+      "scan": "ロット ID をスキャン / 入力して Enter",
+      "notFound": "ロット {{code}} が見つかりません",
+      "search": "ロット / 製品を検索",
+      "allStatuses": "全ステータス",
+      "allProducts": "全製品",
+      "allOperations": "全工程",
+      "allHold": "Hold：全て",
+      "notHeld": "Hold なし",
+      "held": "Hold 中",
+      "empty": "仕掛ロットはありません",
+      "lot": "ロット",
+      "priority": "優先度",
+      "product": "製品",
+      "step": "ステップ · 工程",
+      "status": "ステータス",
+      "qty": "数量",
+      "qtime": "Q-Time 残り(分)",
+      "hours": "滞留(時間)",
+      "open": "作業"
     }
   },
   "notify": {
@@ -958,5 +994,18 @@
         }
       }
     }
+  },
+  "home": {
+    "wip": "仕掛ロット",
+    "wipQty": "総数量 {{n}}",
+    "hold": "Hold ロット",
+    "holdHint": "Hold 解除へ",
+    "qtime": "Q-Time 超過 / 警告",
+    "qtimeHint": "待機ロットの現在ステップ",
+    "equipment": "設備 E10 状態",
+    "pm": "PM 超過 / 期限間近",
+    "pmHint": "主設備の PM 計画",
+    "trackOuts": "本日のトラックアウト",
+    "trackOutsHint": "ロットのトラックアウト回数"
   }
 }

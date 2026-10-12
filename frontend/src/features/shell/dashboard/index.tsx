@@ -19,6 +19,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Page } from '@/components/crud'
+import { HomeKpis } from '@/features/mes/execution/home-kpis'
 
 function Stat({
   title,
@@ -62,6 +63,7 @@ export default function Dashboard() {
       title={t('dashboard.title')}
       description={t('dashboard.signedInAs', { email: me?.email ?? '…' })}
     >
+      {can('mes.exec:read') && current && <HomeKpis />}
       <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
         <Stat
           title={t('dashboard.currentTenant')}

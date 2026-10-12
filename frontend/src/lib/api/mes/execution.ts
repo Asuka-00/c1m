@@ -127,6 +127,8 @@ export interface QtimeRow {
   lot_id: string
   lot: string
   on_hold: boolean
+  product: string | null
+  route: string | null
   step_seq: number
   rule: string
   since: string
@@ -137,6 +139,35 @@ export interface QtimeRow {
   warn: boolean
   warn_minutes: number | null
   action: string
+}
+/** 派工队列行。 */
+export interface QueueRow {
+  id: string
+  code: string
+  product: string | null
+  step_seq: number | null
+  operation: string | null
+  operation_name: string | null
+  lot_status: string
+  qty: number
+  priority: string | null
+  priority_level: number | null
+  priority_color: string | null
+  on_hold: boolean
+  qtime_remaining: number | null
+  hours: number | null
+}
+/** 首页概览指标。 */
+export interface HomeSummary {
+  wip_lots: number
+  wip_qty: number
+  on_hold: number
+  qtime_warn: number
+  qtime_exceeded: number
+  equipment: { category: string; color: string | null; count: number }[]
+  pm_due: number
+  pm_warn: number
+  track_outs_today: number
 }
 export interface ExecUnit {
   id: string
@@ -382,6 +413,11 @@ export const execApi = {
     http
       .get<TraceResult>('/mes/exec/trace', { params: { kind, code } })
       .then((r) => r.data),
+  /** 派工队列（在制批次，按 Hold / 优先级 / Q-Time / 滞留排序）。 */
+  queue: () =>
+    http.get<{ data: QueueRow[] }>('/mes/exec/queue').then((r) => r.data.data),
+  /** 首页概览指标。 */
+  home: () => http.get<HomeSummary>('/mes/exec/home').then((r) => r.data),
   /** Q-Time 监控（等待中批次的计时）。 */
   qtimeMonitor: () =>
     http

@@ -253,8 +253,10 @@ def equipment_board(s: Session, tid: uuid.UUID) -> list[Row]:
     open_dt = {
         d["equipment_id"] for d in find(s, tid, "downtime") if d["end_at"] is None
     }
+    wcs = {w["id"]: w for w in find(s, tid, "workcenter")}
     out = []
     for eq in find(s, tid, "equipment", order="code", unit_kind="main"):
+        wc = wcs.get(eq.get("workcenter_id"))
         cur = e10_current(s, tid, eq)
         nxt = [t for t in trans if cur is None or t["from_state_id"] == cur["id"]]
         pm = pm_status(s, tid, eq)
@@ -264,6 +266,8 @@ def equipment_board(s: Session, tid: uuid.UUID) -> list[Row]:
                 "code": eq["code"],
                 "name": eq["name"],
                 "is_active": eq["is_active"],
+                "workcenter": wc and wc["code"],
+                "workcenter_name": wc and wc["name"],
                 "state": cur
                 and {
                     "id": str(cur["id"]),
