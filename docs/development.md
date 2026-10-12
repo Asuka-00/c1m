@@ -94,12 +94,45 @@ core  <-  platform.*  <-  mes.common  <-  mes.<domain>  <-  mes.execution
 - 规格中的标签可用 `backend/scripts/export_mes_i18n.py` 导出到前端文案。
 - `pnpm i18n:check` 校验缺失 / 多余键（构建时自动执行）。
 
+## 注释规范
+
+注释用中文，标识符保持英文；只解释“为什么 / 业务规则”，不复述代码。
+
+**后端（Python）**：PEP 257 + Google 风格文档字符串，由 `ruff` 的 pydocstyle（`D` 规则，
+`convention = "google"`）强制检查。
+
+- 每个模块文件开头写模块文档字符串：职责 / 包含内容。
+- 公开类写类文档字符串，关键字段放在 `Attributes:`；公开函数 / 方法写摘要行，
+  非平凡的服务函数补充 `Args:` / `Returns:` / `Raises:`（列出 HTTP 状态码）。
+- 行内 `# 中文` 注释只用于不直观的业务规则：RLS 与租户解析、检查绑定优先级、Q-Time 时钟、
+  拆合批继承、E10 迁移、扣料 FEFO、版本锁定等。
+- 例外（`pyproject.toml` 中 per-file-ignores）：Pydantic / SQLModel 模型（`models.py`、
+  `schemas.py`）与路由函数（`router*.py`）的文档字符串会进入 OpenAPI，为保持 API 契约不变不强制
+  D101 / D103，模型用 `#` 注释说明；摘要以「。」结尾，故忽略 D415；`tests/`、`app/testing/`、
+  `alembic/`、`scripts/` 不检查。
+
+```python
+def resolve(ctx: Ctx) -> list[tuple[Row, Row]]:
+    """解析当前上下文生效的 (检查方案, 检查规则) 列表。
+
+    仅保留最具体作用域的绑定（工步 > 设备 > 工序 > 设备类型 > 产品）。
+    """
+```
+
+**前端（TS / React）**：TSDoc / JSDoc（`/** ... */`），中文。
+
+- 导出的组件、Hook、工具函数、API 客户端与类型写 `/** ... */`；参数含义不直观时用
+  `@param` / `@returns`。
+- 功能模块文件（`src/features/**`）开头写一行文件头注释说明用途。
+- 行内 `//` 注释只用于不直观的逻辑；`components/ui/`（shadcn 生成代码）保持原样。
+- JSDoc 放在 `// eslint-disable-next-line` 之上，避免破坏 disable 指令。
+
 ## 检查命令
 
 后端（`backend/`）：
 
 ```bash
-uv run ruff check app scripts conftest.py && uv run ruff format --check app scripts conftest.py
+uv run ruff check app scripts conftest.py && uv run ruff format --check app scripts conftest.py   # 含 pydocstyle（D）
 uv run mypy app && uv run ty check app
 uv run alembic check            # 模型与迁移一致
 bash scripts/test.sh            # pytest（含导入规则测试）+ coverage，使用 app_test 数据库
