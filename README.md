@@ -71,6 +71,25 @@ pnpm dev                      # http://localhost:5173
 cd backend && bash scripts/test.sh
 ```
 
+## 项目结构
+
+模块化单体：后端与前端按相同的领域划分。
+
+```
+backend/app/
+  core/       配置、数据库、安全、RLS、分页、规格引擎（core/spec）、模块注册表
+  platform/   auth · users · rbac · tenants · menus · config · files · audit
+  mes/        common · factory · product · equipment · process · quality · lot · planning · execution
+  modules.py  模块清单（组合根），main.py 据此自动挂载路由 / 权限 / 菜单 / 规格
+frontend/src/
+  features/platform/   auth · users · rbac · tenants · menus · config · settings
+  features/mes/        common · product · process · lot · planning · execution
+  features/shell/      dashboard · errors · 动态页面注册表
+  lib/api/             按领域拆分的 API 客户端（platform/*、mes/*）
+```
+
+分层规则（`core ← platform ← mes.common ← mes.<领域> ← mes.execution`）由 `backend/app/tests/test_architecture.py` 强制执行，详见 [开发指南](docs/development.md)。
+
 ## 文档
 
 - [开发指南](docs/development.md)：架构、多租户与 RLS、RBAC、动态菜单、MES 规格系统、i18n、检查命令
