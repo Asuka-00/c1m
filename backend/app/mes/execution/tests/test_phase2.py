@@ -346,3 +346,32 @@ def test_trace_backward_forward(client: TestClient, db: Session) -> None:
     assert tr("wafer", w["code"])["target"]["lot"] == ch["code"]
     r = client.get(f"{EXEC}/trace", headers=m.h, params={"kind": "lot", "code": "NOPE"})
     assert r.status_code == 404
+
+
+# ---------------- phase 8: hold filter / batch release ----------------
+def test_active_holds_and_batch_release(client: TestClient, db: Session) -> None:
+    f = Line(client, db)
+    a, b, c = f.start(1, 1, 1)
+    hr = f.reasons["hold"]["id"]
+    for x in (a, b, c):
+        f.post(f"{EXEC}/lots/{x['id']}/hold", {"reason_id": hr})
+    rows = client.get(f"{EXEC}/holds/active", headers=f.m.h).json()["data"]
+    assert len(rows) == 3 and rows[0]["source"] == "manual"
+    other = f.m.post("reason_code", {"code": "HX", "name": "x", "reason_type": "hold"})
+    q = client.get(
+        f"{EXEC}/holds/active", headers=f.m.h, params={"reason_id": other["id"]}
+    )
+    assert q.json()["data"] == []
+    ids = [r["id"] for r in rows[:2]]
+    # 需要释放类原因代码
+    f.post(f"{EXEC}/holds/release-batch", {"hold_ids": ids, "reason_id": hr}, 422)
+    rel = f.reasons["release"]["id"]
+    r = f.post(f"{EXEC}/holds/release-batch", {"hold_ids": ids, "reason_id": rel})
+    assert len(r["released"]) == 2 and r["failed"] == []
+    # 已释放的再次释放：逐条失败，不影响其他
+    r = f.post(
+        f"{EXEC}/holds/release-batch",
+        {"hold_ids": [ids[0], rows[2]["id"]], "reason_id": rel},
+    )
+    assert r["released"] == [rows[2]["id"]] and len(r["failed"]) == 1
+    assert not any(f.lot(x)["on_hold"] for x in (a, b, c))

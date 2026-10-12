@@ -1312,6 +1312,7 @@
     "mes-lot-trace": "ロット履歴",
     "mes-trace": "トレーサビリティ",
     "mes-lot_hold": "ホールド管理",
+    "mes-hold-release": "ホールド一括解除",
     "mes-qtime-monitor": "Q タイム監視",
     "mes-receipt": "完成品入庫",
     "mes-warehouse": "倉庫",

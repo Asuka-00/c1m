@@ -794,6 +794,28 @@
         "consumed": "消耗",
         "downstream": "下游产出"
       }
+    },
+    "holdrel": {
+      "hint": "生效中的 Hold 按原因 / 来源 / 产品筛选，勾选后批量释放（须释放原因代码，原因要求时须填备注）。",
+      "reason": "Hold 原因",
+      "source": "来源",
+      "product": "产品",
+      "all": "全部",
+      "release": "批量释放",
+      "selected": "已选 {{n}} 条",
+      "released": "已释放 {{ok}} 条，失败 {{bad}} 条",
+      "lot": "批次",
+      "step": "工步",
+      "heldAt": "Hold 时间",
+      "heldBy": "Hold 人",
+      "hours": "已 Hold(小时)",
+      "comment": "备注",
+      "src": {
+        "manual": "手动",
+        "qtime": "Q-Time",
+        "dc": "量测",
+        "check": "卡控"
+      }
     }
   }
 }

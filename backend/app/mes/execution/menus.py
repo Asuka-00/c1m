@@ -27,4 +27,10 @@ MENUS: dict[str, MenuItem] = {
         "mes-page:trace",
         "mes.exec:read",
     ),
+    "mes-hold-release": (
+        "/mes/hold-release",
+        "ListChecks",
+        "mes-page:hold-release",
+        "mes.exec:read",
+    ),
 }

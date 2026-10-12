@@ -794,6 +794,28 @@
         "consumed": "Consumed",
         "downstream": "Downstream"
       }
+    },
+    "holdrel": {
+      "hint": "Filter active holds by reason / source / product and release the selected ones at once (release reason code required; comment when the reason demands it).",
+      "reason": "Hold reason",
+      "source": "Source",
+      "product": "Product",
+      "all": "All",
+      "release": "Release selected",
+      "selected": "{{n}} selected",
+      "released": "Released {{ok}}, failed {{bad}}",
+      "lot": "Lot",
+      "step": "Step",
+      "heldAt": "Held at",
+      "heldBy": "Held by",
+      "hours": "Held (h)",
+      "comment": "Comment",
+      "src": {
+        "manual": "Manual",
+        "qtime": "Q-Time",
+        "dc": "DC",
+        "check": "Check"
+      }
     }
   }
 }

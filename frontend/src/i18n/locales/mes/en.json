@@ -1312,6 +1312,7 @@
     "mes-lot-trace": "Lot History",
     "mes-trace": "Traceability",
     "mes-lot_hold": "Hold Management",
+    "mes-hold-release": "Batch Hold Release",
     "mes-qtime-monitor": "Q-Time Monitor",
     "mes-receipt": "Finished Goods Receipt",
     "mes-warehouse": "Warehouse",

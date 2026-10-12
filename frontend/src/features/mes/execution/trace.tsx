@@ -18,6 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Page } from '@/components/crud'
+import { enumLabel } from '@/features/mes/common/labels'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { Pick } from './exec-parts'
 
@@ -27,6 +28,7 @@ const KINDS: TraceKind[] = ['lot', 'wafer', 'equipment', 'material_lot']
 function cell(col: string, v: unknown): React.ReactNode {
   if (v === null || v === undefined || v === '') return '—'
   if (col === 'at') return fmtDateTime(String(v))
+  if (col === 'relation') return enumLabel('genealogy_relation', String(v))
   if (Array.isArray(v))
     return v.length
       ? v

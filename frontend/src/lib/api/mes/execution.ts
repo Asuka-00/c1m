@@ -44,6 +44,22 @@ export interface DcItem {
   oos_action: string
 }
 /** 批次单元（晶圆 / 序列号）。 */
+/** 生效中的 Hold 行。 */
+export interface ActiveHold {
+  id: string
+  lot_id: string
+  lot: string
+  product: string | null
+  step_seq: number | null
+  reason: string | null
+  reason_name: string | null
+  source: string
+  hold_type: string
+  held_at: string | null
+  held_by: string | null
+  hours: number | null
+  comment: string | null
+}
 /** 追溯对象类型。 */
 export type TraceKind = 'lot' | 'wafer' | 'equipment' | 'material_lot'
 /** 追溯行（各列按场景出现）。 */
@@ -275,6 +291,27 @@ export const execApi = {
   stage: (lotId: string, stage: ExecStage, body: StageBody) =>
     http
       .post<StageResult>(`/mes/exec/lots/${lotId}/${stage}`, body)
+      .then((r) => r.data),
+  /** 生效中的 Hold（按原因 / 来源 / 产品筛选）。 */
+  activeHolds: (f: {
+    reason_id?: string
+    source?: string
+    product_id?: string
+  }) =>
+    http
+      .get<{ data: ActiveHold[] }>('/mes/exec/holds/active', { params: f })
+      .then((r) => r.data.data),
+  /** 批量释放 Hold。 */
+  releaseBatch: (body: {
+    hold_ids: string[]
+    reason_id: string
+    comment?: string
+  }) =>
+    http
+      .post<{
+        released: string[]
+        failed: { id: string; error: string }[]
+      }>('/mes/exec/holds/release-batch', body)
       .then((r) => r.data),
   /** 追溯查询（批次 / 晶圆 / 设备 / 物料批）。 */
   trace: (kind: TraceKind, code: string) =>

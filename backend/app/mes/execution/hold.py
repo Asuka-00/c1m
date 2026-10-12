@@ -189,3 +189,80 @@ def manual_hold(
     hold_lot(s, tid, lot, user, r, comment=comment)
     s.commit()
     return lot
+
+
+def active_holds(
+    s: Session,
+    tid: uuid.UUID,
+    reason_id: Any = None,
+    source: str | None = None,
+    product_id: Any = None,
+) -> list[Row]:
+    """生效中的 Hold 列表（可按原因 / 来源 / 产品筛选），按 Hold 时间倒序。
+
+    Returns:
+        每条 ``{id, lot_id, lot, product, step_seq, reason, source, hold_type,
+        held_at, held_by, hours, comment}``。
+    """
+    at = now()
+    out = []
+    for h in find(s, tid, "lot_hold", is_active=True):
+        if reason_id and str(h["reason_id"]) != str(reason_id):
+            continue
+        if source and (h["source"] or "manual") != source:
+            continue
+        lot = one(s, tid, "lot", h["lot_id"])
+        if not lot or (product_id and str(lot["product_id"]) != str(product_id)):
+            continue
+        rc = one(s, tid, "reason_code", h["reason_id"])
+        pr = one(s, tid, "product", lot["product_id"])
+        st = one(s, tid, "route_step", h["route_step_id"])
+        out.append(
+            {
+                "id": str(h["id"]),
+                "lot_id": str(lot["id"]),
+                "lot": lot["code"],
+                "product": pr and pr["code"],
+                "step_seq": st and st["seq"],
+                "reason": rc and rc["code"],
+                "reason_name": rc and rc["name"],
+                "source": h["source"] or "manual",
+                "hold_type": h["hold_type"],
+                "held_at": h["held_at"] and h["held_at"].isoformat(),
+                "held_by": h["held_by"],
+                "hours": h["held_at"]
+                and round((at - h["held_at"]).total_seconds() / 3600, 1),
+                "comment": h["comment"],
+            }
+        )
+    out.sort(key=lambda r: str(r["held_at"] or ""), reverse=True)
+    return out
+
+
+def release_batch(
+    s: Session,
+    tid: uuid.UUID,
+    hold_ids: list[uuid.UUID],
+    user: Any,
+    reason_id: Any,
+    comment: str | None,
+) -> Row:
+    """批量释放 Hold（须释放原因代码；原因要求备注时必须填写）。
+
+    逐条释放，单条失败（已释放 / 不存在）不影响其他条目。
+
+    Returns:
+        ``{"released": [hold_id], "failed": [{"id", "error"}]}``。
+    """
+    r = _reason(s, tid, reason_id, "release", "reason_id")
+    if r["comment_required"] and not (comment or "").strip():
+        raise http_422([("comment", "comment: required for this reason code")])
+    ok: list[str] = []
+    bad: list[Row] = []
+    for hid in dict.fromkeys(hold_ids):
+        try:
+            release_hold(s, tid, hid, user, r["id"], comment)
+            ok.append(str(hid))
+        except HTTPException as e:  # 校验失败发生在任何写入之前
+            bad.append({"id": str(hid), "error": str(e.detail)})
+    return {"released": ok, "failed": bad}

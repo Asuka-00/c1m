@@ -83,6 +83,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-lot-trace", "Lot History|批次履历|ロット履歴"),
         ("mes-trace", "Traceability|追溯查询|トレーサビリティ"),
         ("mes-lot_hold", "Hold Management|Hold 管理|ホールド管理"),
+        ("mes-hold-release", "Batch Hold Release|批量释放 Hold|ホールド一括解除"),
         ("mes-qtime-monitor", "Q-Time Monitor|Q-Time 监控|Q タイム監視"),
     ],
     "g-warehouse": [

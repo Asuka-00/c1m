@@ -118,6 +118,36 @@ def lot_hold(
     )[0]
 
 
+@router.get("/holds/active")
+def holds_active(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    reason_id: uuid.UUID | None = None,
+    source: str | None = None,
+    product_id: uuid.UUID | None = None,
+) -> Any:
+    """Active holds filtered by reason / source / product."""
+    _need(ctx, "mes.exec:read")
+    return {"data": svc.active_holds(session, ctx.id, reason_id, source, product_id)}
+
+
+class BatchReleaseIn(BaseModel):
+    hold_ids: list[uuid.UUID] = Field(min_length=1, max_length=500)
+    reason_id: uuid.UUID
+    comment: str | None = Field(default=None, max_length=300)
+
+
+@router.post("/holds/release-batch")
+def holds_release_batch(
+    session: SessionDep, ctx: CurrentTenant, body: BatchReleaseIn
+) -> Any:
+    """Release several holds at once (release reason code required)."""
+    _need(ctx, "mes.exec:hold")
+    return svc.release_batch(
+        session, ctx.id, body.hold_ids, ctx.user, body.reason_id, body.comment
+    )
+
+
 @router.post("/holds/{hold_id}/release")
 def hold_release(
     session: SessionDep, ctx: CurrentTenant, hold_id: uuid.UUID, body: ReleaseIn
