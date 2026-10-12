@@ -813,8 +813,8 @@
       "src": {
         "manual": "手动",
         "qtime": "Q-Time",
-        "dc": "量测",
-        "check": "卡控"
+        "oos": "超规",
+        "split": "分批继承"
       }
     }
   }

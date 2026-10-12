@@ -813,8 +813,8 @@
       "src": {
         "manual": "Manual",
         "qtime": "Q-Time",
-        "dc": "DC",
-        "check": "Check"
+        "oos": "Out of spec",
+        "split": "Split (inherited)"
       }
     }
   }

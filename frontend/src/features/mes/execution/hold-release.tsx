@@ -36,7 +36,7 @@ import { useMesMeta } from '@/features/mes/common/use-mes-meta'
 import { Pick } from './exec-parts'
 
 const PAGE = 20
-const SOURCES = ['manual', 'qtime', 'dc', 'check']
+const SOURCES = ['manual', 'qtime', 'oos', 'split']
 
 /** 批量释放 Hold。 */
 export default function HoldReleasePage() {
