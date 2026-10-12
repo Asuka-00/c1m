@@ -145,6 +145,7 @@ pnpm exec tsc -b
 pnpm lint
 pnpm format:check
 pnpm i18n:check
+pnpm test                        # vitest 组件 / 单元测试（无头 Chromium；首次需 pnpm exec playwright install chromium-headless-shell）
 pnpm build
 ```
 

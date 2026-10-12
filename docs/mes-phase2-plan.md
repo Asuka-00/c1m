@@ -73,7 +73,7 @@
 - WIP：按工步 / 工序 / 状态的在制数量；产出：按日 / 工单；良率：报废与产出；OEE：基于 E10 时间（可用率 × 性能 × 良率）。
 
 ## 3. 交付与验收
-每阶段：迁移（含 RLS / 权限）、菜单、三语、测试、全量检查（pytest / ruff / mypy / ty / alembic check / tsc / eslint / prettier / i18n / build）、
+每阶段：迁移（含 RLS / 权限）、菜单、三语、测试、全量检查（pytest / ruff / mypy / ty / alembic check / tsc / eslint / prettier / i18n / vitest / build）、
 本地提交（不推送）、中文截图 `/workspace/screenshots/phase2/<n>-*`；演示数据改动后恢复开发库。
 
 ## 4. 待确认问题
