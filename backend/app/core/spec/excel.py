@@ -17,16 +17,12 @@ from fastapi import HTTPException
 from openpyxl import Workbook, load_workbook
 from sqlmodel import Session
 
+from app.core.spec.base import conn, table
 from app.core.spec.engine import ENTITIES, Entity
-from app.core.spec.service import (
-    all_rows,
-    attr_defs,
-    conn,
-    create_row,
-    table,
-    to_json,
-    update_row,
-)
+from app.core.spec.query import all_rows
+from app.core.spec.serialize import to_json
+from app.core.spec.validate import attr_defs
+from app.core.spec.write import create_row, update_row
 
 MAX_ROWS = 5000
 

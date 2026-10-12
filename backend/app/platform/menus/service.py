@@ -2,6 +2,7 @@
 
 from sqlmodel import Session, select
 
+from app.core import registry
 from app.platform.menus.layout import GROUPS, ITEMS, OBSOLETE_KEYS, OBSOLETE_PREFIXES
 from app.platform.menus.models import Menu
 from app.platform.menus.schemas import MenuNode
@@ -27,9 +28,7 @@ MenuTuple = tuple[
 
 def registry_menus() -> list[MenuTuple]:
     """(key, parent, title, path, icon, component, order, permission), groups first."""
-    from app.mes.menus import mes_items
-
-    defs = {**SYSTEM_ITEMS, **mes_items()}
+    defs = {**SYSTEM_ITEMS, **registry.menu_items()}
     out: list[MenuTuple] = [
         (g, None, lbl.split("|")[0], None, icon, None, order, None)
         for g, lbl, icon, order in GROUPS

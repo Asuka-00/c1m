@@ -1,7 +1,11 @@
 """Platform + tenant permission codes and default roles."""
 
+from app.core import registry
 from app.core.spec.engine import EXTRA_PERMISSIONS as _MES_EXTRA
 from app.core.spec.engine import MODULES as _MES_MODULES
+
+# module permissions are declared by each feature module (module.py)
+registry.load_metadata()
 
 # Platform-level permissions (global, attached to platform roles via user_role)
 PLATFORM_PERMISSIONS: dict[str, str] = {

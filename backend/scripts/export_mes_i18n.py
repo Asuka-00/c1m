@@ -10,7 +10,7 @@ import json
 import sys
 from pathlib import Path
 
-from app.mes.meta import LANGS, i18n_bundle
+from app.mes.common.meta import LANGS, i18n_bundle
 
 OUT = Path(__file__).resolve().parents[2] / "frontend/src/i18n/locales/mes"
 

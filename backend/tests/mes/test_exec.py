@@ -1014,9 +1014,9 @@ def test_unit_tracking_inherits_and_serializes(client: TestClient, db: Session) 
     )
     p = m.post("product", {"code": "P2", "name": "p2", "tech_node_id": node["id"]})
     from app.core.spec.engine import ENTITIES
-    from app.core.spec.service import get_row
+    from app.core.spec.query import get_row
     from app.core.tenant import set_tenant
-    from app.mes.execution import tracking_level
+    from app.mes.lot.lots import tracking_level
 
     set_tenant(db, uuid.UUID(m.tid))
     row = get_row(db, ENTITIES["product"], uuid.UUID(m.tid), uuid.UUID(p["id"]))

@@ -10,7 +10,6 @@ Create Date: 2026-10-11 00:25:25.399978
 """
 from alembic import op
 import sqlalchemy as sa
-import sqlmodel.sql.sqltypes
 
 from app.core.migrate import add_permissions, disable_rls, enable_rls, remove_permissions
 

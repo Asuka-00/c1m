@@ -27,26 +27,11 @@ STATUS_TRANSITIONS = {
     "inactive": {"active"},
 }
 
-# module -> (permission suffix, label "en|zh|ja", sort order)
-MODULES: dict[str, tuple[str, int]] = {
-    "common": ("Common|通用|共通", 0),
-    "org": ("Organization|组织|組織", 10),
-    "equipment": ("Equipment|设备|設備", 20),
-    "product": ("Product & material|产品与物料|製品・資材", 30),
-    "process": ("Process|工艺|プロセス", 40),
-    "quality": ("Quality|质量|品質", 50),
-    "lot": ("Lot & wafer rules|批次与晶圆规则|ロット・ウェーハ規則", 60),
-    "wo": ("Work orders|工单|作業指示", 70),
-}
-# extra (non read/write) MES permissions
-EXTRA_PERMISSIONS: dict[str, str] = {
-    "mes.wo:release": "MES work orders: release / hold / close / cancel",
-    "mes.lot:start": "MES lots: start / undo start",
-    "mes.exec:override": "MES execution: force-override blocking checks",
-    "mes.exec:hold": "MES execution: hold / release lots",
-    "mes.exec:split": "MES execution: split lots",
-    "mes.exec:merge": "MES execution: merge lots",
-}
+# spec permission modules: code -> ("en|zh|ja" label, sort order) and extra
+# permission codes; both are filled by each module's module.py via
+# app.core.registry.register()
+MODULES: dict[str, tuple[str, int]] = {}
+EXTRA_PERMISSIONS: dict[str, str] = {}
 
 
 def perm(module: str, action: Literal["read", "write"]) -> str:

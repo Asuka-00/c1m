@@ -1,12 +1,12 @@
 from pathlib import Path
 
 import sentry_sdk
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 
 from app import models as _models  # noqa: F401  (registers tables + MES specs first)
-from app.api.main import api_router
+from app.core import registry
 from app.core.config import settings
 
 FRONTEND_DIR = Path(__file__).parent / "frontend"
@@ -33,5 +33,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+api_router = APIRouter()
+for _r in registry.routers(dev=settings.FASTAPI_ENV == "development"):
+    api_router.include_router(_r)
 app.include_router(api_router, prefix=settings.API_V1_STR)
 app.frontend("/", directory=FRONTEND_DIR)

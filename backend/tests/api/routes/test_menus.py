@@ -203,13 +203,13 @@ def test_role_permission_bulk_and_tenant_roles(
 def test_menu_layout_complete_and_synced(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
-    from app.mes.menus import mes_items
+    from app.core.registry import menu_items
     from app.platform.menus.layout import GROUPS, ITEMS
     from app.platform.menus.service import SYSTEM_ITEMS
 
     placed = [k for items in ITEMS.values() for k, _ in items]
     assert len(placed) == len(set(placed))  # each item once
-    assert set(placed) == set(SYSTEM_ITEMS) | set(mes_items())  # nothing missing
+    assert set(placed) == set(SYSTEM_ITEMS) | set(menu_items())  # nothing missing
     assert [g for g, *_ in GROUPS] == list(ITEMS)
     tree = client.get(f"{API}/menus/me", headers=superuser_token_headers).json()
     top = [n["key"] for n in tree["menus"]]

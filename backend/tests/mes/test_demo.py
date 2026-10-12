@@ -5,7 +5,9 @@ from sqlmodel import Session
 
 from app.core.db import engine
 from app.core.spec.engine import TABLES
-from app.mes.demo import DEMO, STARTS, default_tenant, remove, seed
+from app.mes.common.demo import DEMO, default_tenant
+from app.mes.demo import remove, seed
+from app.mes.planning.demo import STARTS
 
 
 def _count(s: Session) -> int:
