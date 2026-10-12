@@ -1,0 +1,21 @@
+.vscode/*
+!.vscode/extensions.json
+node_modules/
+backend/app/frontend/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# local env
+.env
+!*.env.example
+
+# build / runtime artifacts
+__pycache__/
+.venv/
+frontend/dist/
+backend/data/
+data/uploads/
+screenshots/
+*.log

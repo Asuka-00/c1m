@@ -1,0 +1,126 @@
+"""File uploads (branding images, ...). Ownership: platform (tenant_id NULL) or a
+tenant. Files are served publicly by id so branding renders on the sign-in page."""
+
+import uuid
+from datetime import timedelta
+from typing import Annotated, Any, Literal
+
+from fastapi import APIRouter, File, Header, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse
+
+from app.api.deps import CurrentUser, SessionDep, TokenPayloadDep, get_current_tenant
+from app.core.config import settings
+from app.files_gc import cleanup_unreferenced, upload_dir
+from app.models import FileUploadPublic, Message, UploadedFile
+from app.rbac import has_permissions
+
+router = APIRouter(prefix="/files", tags=["files"])
+
+# allowed upload types -> stored extension
+IMAGE_TYPES = {
+    "image/png": ".png",
+    "image/jpeg": ".jpg",
+    "image/svg+xml": ".svg",
+    "image/webp": ".webp",
+    "image/x-icon": ".ico",
+    "image/vnd.microsoft.icon": ".ico",
+}
+CHUNK = 64 * 1024
+
+
+@router.post("/upload", response_model=FileUploadPublic)
+async def upload_file(
+    session: SessionDep,
+    current_user: CurrentUser,
+    token_data: TokenPayloadDep,
+    file: Annotated[UploadFile, File()],
+    scope: Annotated[Literal["tenant", "platform"], Query()] = "tenant",
+    x_tenant_id: Annotated[uuid.UUID | None, Header()] = None,
+) -> Any:
+    """Upload an image (png/jpg/svg/webp/ico, max MAX_UPLOAD_BYTES).
+    scope=tenant (default): owned by the current tenant, needs tenant config:write.
+    scope=platform: platform-owned, needs platform config:write."""
+    tenant_id: uuid.UUID | None = None
+    if scope == "platform":
+        if not has_permissions(current_user, "config:write"):
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+    else:
+        ctx = get_current_tenant(session, current_user, token_data, x_tenant_id)
+        if not ctx.can("config:write"):
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+        tenant_id = ctx.id
+    ext = IMAGE_TYPES.get((file.content_type or "").lower())
+    if not ext:
+        raise HTTPException(status_code=415, detail="Unsupported file type")
+    fid = uuid.uuid4()
+    stored = f"{fid.hex}{ext}"
+    dest = upload_dir() / stored
+    size = 0
+    try:
+        with dest.open("wb") as out:
+            while chunk := await file.read(CHUNK):
+                size += len(chunk)
+                if size > settings.MAX_UPLOAD_BYTES:
+                    raise HTTPException(status_code=413, detail="File too large")
+                out.write(chunk)
+    except HTTPException:
+        dest.unlink(missing_ok=True)
+        raise
+    if size == 0:
+        dest.unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail="Empty file")
+    rec = UploadedFile(
+        id=fid,
+        tenant_id=tenant_id,
+        uploaded_by=current_user.id,
+        filename=(file.filename or stored)[:255],
+        stored_name=stored,
+        content_type=file.content_type or "application/octet-stream",
+        size=size,
+    )
+    session.add(rec)
+    session.commit()
+    return FileUploadPublic(
+        id=fid,
+        url=f"{settings.API_V1_STR}/files/{fid}",
+        filename=rec.filename,
+        content_type=rec.content_type,
+        size=size,
+        tenant_id=tenant_id,
+    )
+
+
+@router.post("/cleanup", response_model=Message)
+def cleanup_files(
+    session: SessionDep,
+    current_user: CurrentUser,
+    older_than_hours: Annotated[float, Query(ge=1)] = 24,
+    dry_run: bool = False,
+) -> Any:
+    """Platform admins: delete uploads no config references, older than the grace
+    period (default 24h, min 1h so in-progress uploads survive)."""
+    if not has_permissions(current_user, "config:write"):
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    victims = cleanup_unreferenced(
+        session, timedelta(hours=older_than_hours), dry_run=dry_run
+    )
+    verb = "Would delete" if dry_run else "Deleted"
+    return Message(message=f"{verb} {len(victims)} unreferenced file(s)")
+
+
+@router.get("/{file_id}")
+def get_file(session: SessionDep, file_id: uuid.UUID) -> FileResponse:
+    """Public download (branding assets). SVGs are sent with a CSP sandbox."""
+    rec = session.get(UploadedFile, file_id)
+    path = upload_dir() / rec.stored_name if rec else None
+    if not rec or not path or not path.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(
+        path,
+        media_type=rec.content_type,
+        headers={
+            "Cache-Control": "public, max-age=86400, immutable",
+            "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
