@@ -158,6 +158,9 @@ for c, n, tp, area, cmt in _rows(
         ("JP-ENG", "Engineering skip (approved)", "jump", None, True),
         ("JP-RW", "Return after offline rework", "jump", None, False),
         ("BN-REC", "Recount surplus", "bonus", None, False),
+        ("EQ-PM", "Start preventive maintenance", "e10", None, False),
+        ("EQ-ALM", "Equipment alarm", "e10", None, True),
+        ("DT-ALM", "Alarm downtime", "downtime", None, False),
     ]
 ):
     add(

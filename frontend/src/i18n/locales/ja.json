@@ -734,6 +734,27 @@
         "rework": "リワーク",
         "scrap": "廃棄"
       }
+    },
+    "eqp": {
+      "hint": "主設備の現在の E10 状態と PM 期限。状態変更は E10 遷移表に従い、期限切れ PM は pm_due チェックでトラックインを阻止できます（工程ごとに無効化可）。",
+      "refresh": "更新",
+      "code": "設備コード",
+      "name": "設備名",
+      "state": "E10 状態",
+      "pm": "PM 計画",
+      "actions": "操作",
+      "down": "停止中",
+      "nextDue": "次回期限",
+      "pmDue": "期限切れ",
+      "daysLeft": "残り {{n}} 日",
+      "changeState": "状態変更",
+      "pmDone": "PM 完了",
+      "changed": "状態を変更しました",
+      "current": "現在の状態",
+      "toState": "遷移先",
+      "pmRecorded": "PM を記録しました",
+      "pmDesc": "記録後、この設備・計画の日数 / ロット周期が再起算されます。",
+      "result": "結果"
     }
   }
 }

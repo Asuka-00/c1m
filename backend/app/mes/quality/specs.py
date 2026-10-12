@@ -41,6 +41,8 @@ ENUMS.update(
             ("scrap", "Scrap|报废|スクラップ"),
             ("rework", "Rework|返工|リワーク"),
             ("hold", "Hold|冻结|ホールド"),
+            ("e10", "Equipment state change|设备状态变更|設備状態変更"),
+            ("downtime", "Equipment downtime|设备停机|設備停止"),
             ("release", "Release|解冻|リリース"),
             ("jump", "Jump step|跳站|ステップジャンプ"),
             ("bonus", "Bonus (qty added)|补数|追加"),

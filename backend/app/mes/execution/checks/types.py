@@ -4,7 +4,7 @@ import uuid
 from typing import Any
 
 from app.mes.common.query import find, one
-from app.mes.equipment.service import e10_current, tool_life
+from app.mes.equipment.service import e10_current, pm_status, tool_life
 from app.mes.execution.checks.registry import Ctx, check_type
 from app.mes.lot.service import qtime_status
 
@@ -109,6 +109,22 @@ def _recipe(ctx: Ctx, _p: Row) -> Outcome:
         ):
             return "fail", f"recipe {rc['code']} is not enabled on {eq['code']}", {}
     return "pass", f"recipe {rc['code']} v{rc['version']} active", {}
+
+
+@check_type("pm_due")
+def _pm_due(ctx: Ctx, _p: Row) -> Outcome:
+    """设备 PM 未超期：任一适用 PM 计划到期即失败（预警仅提示）。"""
+    eq = ctx.equipment
+    if not eq:
+        return "na", "no equipment", {}
+    st = pm_status(ctx.s, ctx.tid, eq, ctx.at)
+    due = [x["plan"] for x in st if x["due"]]
+    if due:
+        return "fail", f"{eq['code']} PM overdue: {', '.join(due)}", {"pm": st}
+    warn = [x["plan"] for x in st if x["warn"]]
+    if warn:
+        return "pass", f"{eq['code']} PM due soon: {', '.join(warn)}", {"pm": st}
+    return ("pass", f"{eq['code']} PM ok", {}) if st else ("na", "no PM plan", {})
 
 
 @check_type("reticle_available")

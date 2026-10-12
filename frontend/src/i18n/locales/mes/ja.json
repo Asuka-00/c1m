@@ -27,6 +27,10 @@
       "equipment_capability": "設備能力",
       "tool": "工具",
       "e10_auto_rule": "E10 自動遷移",
+      "e10_history": "E10 状態履歴",
+      "pm_plan": "PM 計画",
+      "pm_record": "PM 実施記録",
+      "downtime": "停止記録",
       "check_rule": "チェックルール",
       "check_plan": "チェックプラン",
       "check_plan_item": "プランルール",
@@ -159,6 +163,7 @@
         "serial_no": "シリアル番号",
         "initial_state": "初期 E10 状態",
         "e10_state": "現在 E10 状態",
+        "ideal_uph": "理論スループット（UPH）",
         "is_active": "有効",
         "description": "説明"
       },
@@ -186,6 +191,43 @@
         "equipment_type": "設備タイプ",
         "to_state": "遷移先",
         "is_active": "有効"
+      },
+      "e10_history": {
+        "equipment": "設備",
+        "from_state": "遷移元",
+        "to_state": "遷移先",
+        "source": "ソース",
+        "reason": "理由コード",
+        "comment": "コメント",
+        "user_email": "ユーザー",
+        "at": "日時"
+      },
+      "pm_plan": {
+        "code": "コード",
+        "name": "名称",
+        "equipment": "設備",
+        "equipment_type": "設備タイプ",
+        "interval_days": "周期（日）",
+        "interval_lots": "周期（ロット数）",
+        "warn_days": "事前警告（日）",
+        "is_active": "有効",
+        "description": "説明"
+      },
+      "pm_record": {
+        "pm_plan": "PM 計画",
+        "equipment": "設備",
+        "result": "結果",
+        "comment": "コメント",
+        "user_email": "ユーザー",
+        "done_at": "実施日時"
+      },
+      "downtime": {
+        "equipment": "設備",
+        "start_at": "開始",
+        "end_at": "終了",
+        "reason": "理由コード",
+        "e10_state": "E10 状態",
+        "comment": "コメント"
       },
       "check_rule": {
         "code": "コード",
@@ -748,11 +790,17 @@
       "code_rule": {
         "pattern": "トークン：{YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}"
       },
+      "equipment": {
+        "ideal_uph": "任意。OEE 性能稼働率用に予約"
+      },
       "tool": {
         "max_usage": "空欄：工具タイプの最大使用回数"
       },
       "e10_auto_rule": {
         "equipment_type": "空欄：全タイプ"
+      },
+      "pm_plan": {
+        "equipment": "空欄：タイプの全設備"
       },
       "check_rule": {
         "params": "例：E10 は {\"allowed\": [\"SBY\", \"PRD\"]}"
@@ -860,6 +908,14 @@
         "holiday": "休日",
         "maintenance": "保全日"
       },
+      "e10_source": {
+        "manual": "手動",
+        "auto": "自動"
+      },
+      "pm_result": {
+        "ok": "合格",
+        "ng": "不合格"
+      },
       "exec_trigger": {
         "move_in": "ムーブイン",
         "track_in": "トラックイン",
@@ -885,6 +941,7 @@
         "oos": "規格外",
         "sampling": "サンプリング判定",
         "split_merge_rule": "分割・統合規則",
+        "pm_due": "設備 PM 期限内",
         "rework_limit": "リワーク回数上限",
         "qty_adjust_limit": "廃棄・追加数量上限"
       },
@@ -1152,6 +1209,8 @@
         "scrap": "スクラップ",
         "rework": "リワーク",
         "hold": "ホールド",
+        "e10": "設備状態変更",
+        "downtime": "設備停止",
         "release": "リリース",
         "jump": "ステップジャンプ",
         "bonus": "追加"
@@ -1214,7 +1273,11 @@
     "mes-equipment_type": "設備タイプ",
     "mes-equipment_group": "設備グループ",
     "mes-equipment_capability": "設備能力",
+    "mes-eqp-board": "設備状態ボード",
     "mes-e10_state": "E10 状態モデル",
+    "mes-e10_history": "E10 状態履歴",
+    "mes-pm_plan": "PM 計画",
+    "mes-downtime": "停止記録",
     "mes-e10_auto_rule": "E10 自動遷移",
     "mes-product": "製品",
     "mes-product_family": "製品ファミリー",

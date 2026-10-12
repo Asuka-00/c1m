@@ -34,6 +34,7 @@ CHECK_TYPES = [
     ("oos", "Out of spec|超规|規格外"),
     ("sampling", "Sampling decision|抽样判定|サンプリング判定"),
     ("split_merge_rule", "Split / merge rule|分批合批规则|分割・統合規則"),
+    ("pm_due", "Equipment PM not overdue|设备 PM 未超期|設備 PM 期限内"),
     ("rework_limit", "Rework count limit|返工次数上限|リワーク回数上限"),
     (
         "qty_adjust_limit",

@@ -36,7 +36,11 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-equipment_type", "Equipment Type|设备类型|設備タイプ"),
         ("mes-equipment_group", "Equipment Group|设备组|設備グループ"),
         ("mes-equipment_capability", "Capability|设备能力|設備能力"),
+        ("mes-eqp-board", "Equipment Status Board|设备状态看板|設備状態ボード"),
         ("mes-e10_state", "E10 State Model|E10 状态模型|E10 状態モデル"),
+        ("mes-e10_history", "E10 History|E10 状态履历|E10 状態履歴"),
+        ("mes-pm_plan", "PM Plan|PM 计划|PM 計画"),
+        ("mes-downtime", "Downtime|停机记录|停止記録"),
         ("mes-e10_auto_rule", "E10 Auto Transition|E10 自动迁移|E10 自動遷移"),
     ],
     "g-product": [

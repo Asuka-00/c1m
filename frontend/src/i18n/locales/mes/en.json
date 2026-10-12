@@ -27,6 +27,10 @@
       "equipment_capability": "Equipment capability",
       "tool": "Tool",
       "e10_auto_rule": "E10 auto transition",
+      "e10_history": "E10 history",
+      "pm_plan": "PM plan",
+      "pm_record": "PM record",
+      "downtime": "Downtime",
       "check_rule": "Check rule",
       "check_plan": "Check plan",
       "check_plan_item": "Plan rule",
@@ -159,6 +163,7 @@
         "serial_no": "Serial no.",
         "initial_state": "Initial E10 state",
         "e10_state": "Current E10 state",
+        "ideal_uph": "Ideal throughput (UPH)",
         "is_active": "Active",
         "description": "Description"
       },
@@ -186,6 +191,43 @@
         "equipment_type": "Equipment type",
         "to_state": "To state",
         "is_active": "Active"
+      },
+      "e10_history": {
+        "equipment": "Equipment",
+        "from_state": "From state",
+        "to_state": "To state",
+        "source": "Source",
+        "reason": "Reason code",
+        "comment": "Comment",
+        "user_email": "User",
+        "at": "Time"
+      },
+      "pm_plan": {
+        "code": "Code",
+        "name": "Name",
+        "equipment": "Equipment",
+        "equipment_type": "Equipment type",
+        "interval_days": "Interval (days)",
+        "interval_lots": "Interval (lots)",
+        "warn_days": "Warn before (days)",
+        "is_active": "Active",
+        "description": "Description"
+      },
+      "pm_record": {
+        "pm_plan": "PM plan",
+        "equipment": "Equipment",
+        "result": "Result",
+        "comment": "Comment",
+        "user_email": "User",
+        "done_at": "Done at"
+      },
+      "downtime": {
+        "equipment": "Equipment",
+        "start_at": "Start",
+        "end_at": "End",
+        "reason": "Reason code",
+        "e10_state": "E10 state",
+        "comment": "Comment"
       },
       "check_rule": {
         "code": "Code",
@@ -748,11 +790,17 @@
       "code_rule": {
         "pattern": "Tokens: {YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}"
       },
+      "equipment": {
+        "ideal_uph": "Optional; reserved for OEE performance rate"
+      },
       "tool": {
         "max_usage": "Blank: the tool type's max uses"
       },
       "e10_auto_rule": {
         "equipment_type": "Blank: all types"
+      },
+      "pm_plan": {
+        "equipment": "Blank: all equipment of the type"
       },
       "check_rule": {
         "params": "e.g. {\"allowed\": [\"SBY\", \"PRD\"]} for E10; {\"days\": 7} for warn ahead"
@@ -860,6 +908,14 @@
         "holiday": "Holiday",
         "maintenance": "Maintenance"
       },
+      "e10_source": {
+        "manual": "Manual",
+        "auto": "Automatic"
+      },
+      "pm_result": {
+        "ok": "OK",
+        "ng": "NG"
+      },
       "exec_trigger": {
         "move_in": "Move in",
         "track_in": "Track in",
@@ -885,6 +941,7 @@
         "oos": "Out of spec",
         "sampling": "Sampling decision",
         "split_merge_rule": "Split / merge rule",
+        "pm_due": "Equipment PM not overdue",
         "rework_limit": "Rework count limit",
         "qty_adjust_limit": "Scrap / bonus qty limit"
       },
@@ -1152,6 +1209,8 @@
         "scrap": "Scrap",
         "rework": "Rework",
         "hold": "Hold",
+        "e10": "Equipment state change",
+        "downtime": "Equipment downtime",
         "release": "Release",
         "jump": "Jump step",
         "bonus": "Bonus (qty added)"
@@ -1214,7 +1273,11 @@
     "mes-equipment_type": "Equipment Type",
     "mes-equipment_group": "Equipment Group",
     "mes-equipment_capability": "Capability",
+    "mes-eqp-board": "Equipment Status Board",
     "mes-e10_state": "E10 State Model",
+    "mes-e10_history": "E10 History",
+    "mes-pm_plan": "PM Plan",
+    "mes-downtime": "Downtime",
     "mes-e10_auto_rule": "E10 Auto Transition",
     "mes-product": "Product",
     "mes-product_family": "Product Family",

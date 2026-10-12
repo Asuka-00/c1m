@@ -734,6 +734,27 @@
         "rework": "Rework",
         "scrap": "Scrap"
       }
+    },
+    "eqp": {
+      "hint": "Current E10 state and PM due status of main equipment. State changes follow the E10 transition table; overdue PM can block track-in via the pm_due check (switchable per step).",
+      "refresh": "Refresh",
+      "code": "Equipment",
+      "name": "Name",
+      "state": "E10 state",
+      "pm": "PM plan",
+      "actions": "Actions",
+      "down": "Down",
+      "nextDue": "Next due",
+      "pmDue": "overdue",
+      "daysLeft": "{{n}} d left",
+      "changeState": "Change state",
+      "pmDone": "PM done",
+      "changed": "State changed",
+      "current": "Current state",
+      "toState": "To state",
+      "pmRecorded": "PM recorded",
+      "pmDesc": "The day / lot interval of this plan restarts for this equipment.",
+      "result": "Result"
     }
   }
 }

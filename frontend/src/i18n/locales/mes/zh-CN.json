@@ -27,6 +27,10 @@
       "equipment_capability": "设备能力",
       "tool": "工具",
       "e10_auto_rule": "E10 自动迁移",
+      "e10_history": "E10 状态履历",
+      "pm_plan": "PM 计划",
+      "pm_record": "PM 执行记录",
+      "downtime": "停机记录",
       "check_rule": "卡控规则",
       "check_plan": "卡控方案",
       "check_plan_item": "方案规则",
@@ -159,6 +163,7 @@
         "serial_no": "序列号",
         "initial_state": "初始 E10 状态",
         "e10_state": "当前 E10 状态",
+        "ideal_uph": "理论产能（UPH）",
         "is_active": "启用",
         "description": "描述"
       },
@@ -186,6 +191,43 @@
         "equipment_type": "设备类型",
         "to_state": "目标状态",
         "is_active": "启用"
+      },
+      "e10_history": {
+        "equipment": "设备",
+        "from_state": "源状态",
+        "to_state": "目标状态",
+        "source": "来源",
+        "reason": "原因代码",
+        "comment": "备注",
+        "user_email": "用户",
+        "at": "时间"
+      },
+      "pm_plan": {
+        "code": "编码",
+        "name": "名称",
+        "equipment": "设备",
+        "equipment_type": "设备类型",
+        "interval_days": "周期（天）",
+        "interval_lots": "周期（批次数）",
+        "warn_days": "提前预警（天）",
+        "is_active": "启用",
+        "description": "描述"
+      },
+      "pm_record": {
+        "pm_plan": "PM 计划",
+        "equipment": "设备",
+        "result": "结果",
+        "comment": "备注",
+        "user_email": "用户",
+        "done_at": "完成时间"
+      },
+      "downtime": {
+        "equipment": "设备",
+        "start_at": "开始时间",
+        "end_at": "结束时间",
+        "reason": "原因代码",
+        "e10_state": "E10 状态",
+        "comment": "备注"
       },
       "check_rule": {
         "code": "编码",
@@ -748,11 +790,17 @@
       "code_rule": {
         "pattern": "占位符：{YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}"
       },
+      "equipment": {
+        "ideal_uph": "可选，预留给 OEE 性能稼动率"
+      },
       "tool": {
         "max_usage": "留空则使用工具类型的最大使用次数"
       },
       "e10_auto_rule": {
         "equipment_type": "留空表示所有类型"
+      },
+      "pm_plan": {
+        "equipment": "留空则适用该类型全部设备"
       },
       "check_rule": {
         "params": "例如 E10 用 {\"allowed\": [\"SBY\", \"PRD\"]}"
@@ -860,6 +908,14 @@
         "holiday": "节假日",
         "maintenance": "维护日"
       },
+      "e10_source": {
+        "manual": "手动",
+        "auto": "自动"
+      },
+      "pm_result": {
+        "ok": "合格",
+        "ng": "不合格"
+      },
       "exec_trigger": {
         "move_in": "进站",
         "track_in": "上机",
@@ -885,6 +941,7 @@
         "oos": "超规",
         "sampling": "抽样判定",
         "split_merge_rule": "分批合批规则",
+        "pm_due": "设备 PM 未超期",
         "rework_limit": "返工次数上限",
         "qty_adjust_limit": "报废 / 补数数量上限"
       },
@@ -1152,6 +1209,8 @@
         "scrap": "报废",
         "rework": "返工",
         "hold": "冻结",
+        "e10": "设备状态变更",
+        "downtime": "设备停机",
         "release": "解冻",
         "jump": "跳站",
         "bonus": "补数"
@@ -1214,7 +1273,11 @@
     "mes-equipment_type": "设备类型",
     "mes-equipment_group": "设备组",
     "mes-equipment_capability": "设备能力",
+    "mes-eqp-board": "设备状态看板",
     "mes-e10_state": "E10 状态模型",
+    "mes-e10_history": "E10 状态履历",
+    "mes-pm_plan": "PM 计划",
+    "mes-downtime": "停机记录",
     "mes-e10_auto_rule": "E10 自动迁移",
     "mes-product": "产品",
     "mes-product_family": "产品族",

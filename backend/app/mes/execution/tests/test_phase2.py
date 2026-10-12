@@ -177,3 +177,77 @@ def test_qtime_sweep_and_switch(client: TestClient, db: Session) -> None:
     assert r["actions"] == [{"lot": a["code"], "action": "hold"}]
     assert f.lot(a)["on_hold"] and not f.lot(b)["on_hold"]
     assert f.post(f"{EXEC}/qtime/sweep", {})["actions"] == []
+
+
+# ---------------- phase 5: equipment E10 manual / PM / downtime ----------------
+EQP = "/api/v1/mes/eqp"
+
+
+def test_e10_manual_change_and_history(client: TestClient, db: Session) -> None:
+    f = Line(client, db)
+    url = f"{EQP}/{f.eq['id']}/e10"
+    r = f.post(url, {"to_state_id": f.st["DOWN"]["id"]})
+    assert (r["from"], r["to"]) == ("SBY", "DOWN")
+    # 迁移表外：DOWN -> PRD 不允许
+    assert "not allowed" in _msgs(f.post(url, {"to_state_id": f.st["PRD"]["id"]}, 422))
+    # 迁移要求原因：需要 e10 类型原因代码
+    f.sql(
+        "UPDATE mes_e10_transition SET reason_required = true WHERE to_state_id = :s",
+        s=f.st["SBY"]["id"],
+    )
+    f.post(url, {"to_state_id": f.st["SBY"]["id"]}, 422)
+    rc = f.m.post("reason_code", {"code": "E10R", "name": "r", "reason_type": "e10"})
+    f.post(url, {"to_state_id": f.st["SBY"]["id"], "reason_id": rc["id"]})
+    # 自动迁移同样记履历
+    (a,) = f.start(1)
+    f.run_step(a)
+    hs = f.m.list("e10_history", equipment=f.eq["id"], sort_by="at", sort_order="asc")
+    assert [h["source"] for h in hs["data"]] == ["manual", "manual", "auto", "auto"]
+    board = client.get(f"{EQP}/board", headers=f.m.h).json()["data"]
+    row = next(b for b in board if b["code"] == "EQ1")
+    assert row["state"]["code"] == "SBY" and {n["code"] for n in row["next"]} == {
+        "PRD",
+        "DOWN",
+    }
+
+
+def test_pm_due_check_and_switch(client: TestClient, db: Session) -> None:
+    f = Line(client, db)
+    plan = f.m.post(
+        "pm_plan",
+        {"code": "PM-L", "name": "pm", "equipment_id": f.eq["id"], "interval_lots": 1},
+    )
+    f.m.post("pm_plan", {"code": "PM-X", "name": "x"}, 422)  # 无设备 / 周期
+    f.bind("track_in", ("pm_due", "block", {}))
+    a, b = f.start(1, 1)
+    f.run_step(a)  # 第 1 批：0 < 1，未到期
+    f.stage(b, "move_in", equipment_id=f.eq["id"])
+    bad = f.stage(b, "track_in", 409, equipment_id=f.eq["id"])
+    assert "PM overdue" in _msgs(bad)
+    # 登记 PM 后放行
+    r = f.post(f"{EQP}/pm/{plan['id']}/complete", {"equipment_id": f.eq["id"]})
+    assert not r["pm"][0]["due"]
+    f.stage(b, "track_in", equipment_id=f.eq["id"])
+    # 开关：同一工步绑定 pm_due = off
+    (c,) = f.start(1)
+    f.stage(c, "move_in", equipment_id=f.eq["id"])
+    f.sql("UPDATE mes_pm_record SET done_at = done_at - interval '1 day'")
+    f.bind(
+        "track_in",
+        ("pm_due", "off", {}),
+        scope="route_step",
+        route_step_id=f.steps[10]["id"],
+    )
+    f.stage(c, "track_in", equipment_id=f.eq["id"])
+    # 停机记录：结束须晚于开始
+    rc = f.m.post("reason_code", {"code": "DT", "name": "d", "reason_type": "downtime"})
+    f.m.post(
+        "downtime",
+        {
+            "equipment_id": f.eq["id"],
+            "start_at": "2026-10-01T10:00:00Z",
+            "end_at": "2026-10-01T09:00:00Z",
+            "reason_id": rc["id"],
+        },
+        422,
+    )

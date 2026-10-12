@@ -26,6 +26,7 @@ def _count(s: Session) -> int:
             "audit_log",
             "code_rule_counter",
             "lot_history",
+            "e10_history",
             "check_log",
             "lot_hold",
             "dc_result",

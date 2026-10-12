@@ -734,6 +734,27 @@
         "rework": "返工",
         "scrap": "报废"
       }
+    },
+    "eqp": {
+      "hint": "主设备当前 E10 状态与 PM 到期情况；状态变更受 E10 迁移表约束，PM 到期可在上机检查 pm_due 中阻断（可按工步关闭）。",
+      "refresh": "刷新",
+      "code": "设备编码",
+      "name": "设备名称",
+      "state": "E10 状态",
+      "pm": "PM 计划",
+      "actions": "操作",
+      "down": "停机中",
+      "nextDue": "下次到期",
+      "pmDue": "已到期",
+      "daysLeft": "剩 {{n}} 天",
+      "changeState": "改状态",
+      "pmDone": "PM 完成",
+      "changed": "状态已变更",
+      "current": "当前状态",
+      "toState": "目标状态",
+      "pmRecorded": "PM 已登记",
+      "pmDesc": "登记完成后，该设备该计划的天数 / 批次周期重新起算。",
+      "result": "结果"
     }
   }
 }

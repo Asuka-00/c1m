@@ -1,6 +1,6 @@
 """设备实体规格：类型、组、E10 状态/迁移/自动规则、能力、工具。"""
 
-from app.core.spec.engine import Entity, F, register
+from app.core.spec.engine import ENUMS, Entity, F, register
 
 register(
     # ---------------- equipment ----------------
@@ -156,6 +156,13 @@ register(
                 ref="e10_state",
                 system=True,
             ),
+            F(
+                "ideal_uph",
+                "float",
+                "Ideal throughput (UPH)|理论产能（UPH）|理論スループット（UPH）",
+                help="Optional; reserved for OEE performance rate|可选，预留给 OEE 性能稼动率|任意。OEE 性能稼働率用に予約",
+                list=False,
+            ),
             F("is_active", "bool", default=True),
         ],
         phase=2,
@@ -293,5 +300,142 @@ register(
         order=6,
         sort_default="trigger",
         label_field="trigger",
+    ),
+)
+
+
+ENUMS.update(
+    {
+        "e10_source": [
+            ("manual", "Manual|手动|手動"),
+            ("auto", "Automatic|自动|自動"),
+        ],
+        "pm_result": [
+            ("ok", "OK|合格|合格"),
+            ("ng", "NG|不合格|不合格"),
+        ],
+    }
+)
+
+
+# ---------------- E10 履历 / PM / 停机（二期阶段 5） ----------------
+register(
+    Entity(
+        "e10_history",
+        "equipment",
+        "E10 history|E10 状态履历|E10 状態履歴",
+        [
+            F("equipment", "ref", required=True, ref="equipment", cascade=True),
+            F("from_state", "ref", "From state|源状态|遷移元", ref="e10_state"),
+            F("to_state", "ref", "To state|目标状态|遷移先", ref="e10_state"),
+            F("source", "enum", "Source|来源|ソース", enum="e10_source"),
+            F("reason", "ref", "Reason code|原因代码|理由コード", ref="reason_code"),
+            F("comment", "str", "Comment|备注|コメント", max_length=300, search=True),
+            F("user_email", "str", "User|用户|ユーザー", max_length=255, search=True),
+            F("at", "datetime", "Time|时间|日時"),
+        ],
+        phase=6,
+        has_code=False,
+        readonly=True,
+        icon="History",
+        order=7,
+        sort_default="at",
+        label_field="at",
+    ),
+)
+
+
+register(
+    Entity(
+        "pm_plan",
+        "equipment",
+        "PM plan|PM 计划|PM 計画",
+        [
+            F(
+                "equipment",
+                "ref",
+                ref="equipment",
+                help="Blank: all equipment of the type|留空则适用该类型全部设备|空欄：タイプの全設備",
+            ),
+            F("equipment_type", "ref", ref="equipment_type"),
+            F("interval_days", "int", "Interval (days)|周期（天）|周期（日）"),
+            F(
+                "interval_lots",
+                "int",
+                "Interval (lots)|周期（批次数）|周期（ロット数）",
+            ),
+            F(
+                "warn_days",
+                "int",
+                "Warn before (days)|提前预警（天）|事前警告（日）",
+                default=3,
+            ),
+            F("is_active", "bool", default=True),
+        ],
+        phase=6,
+        icon="CalendarClock",
+        order=8,
+        children=["pm_record"],
+    ),
+)
+
+
+register(
+    Entity(
+        "pm_record",
+        "equipment",
+        "PM record|PM 执行记录|PM 実施記録",
+        [
+            F(
+                "pm_plan",
+                "ref",
+                "PM plan|PM 计划|PM 計画",
+                required=True,
+                ref="pm_plan",
+                cascade=True,
+            ),
+            F("equipment", "ref", required=True, ref="equipment"),
+            F("result", "enum", "Result|结果|結果", enum="pm_result", default="ok"),
+            F("comment", "str", "Comment|备注|コメント", max_length=300),
+            F("user_email", "str", "User|用户|ユーザー", max_length=255),
+            F("done_at", "datetime", "Done at|完成时间|実施日時"),
+        ],
+        phase=6,
+        has_code=False,
+        parent="pm_plan",
+        readonly=True,
+        icon="ClipboardCheck",
+        order=9,
+        sort_default="done_at",
+        label_field="done_at",
+    ),
+)
+
+
+register(
+    Entity(
+        "downtime",
+        "equipment",
+        "Downtime|停机记录|停止記録",
+        [
+            F("equipment", "ref", required=True, ref="equipment"),
+            F("start_at", "datetime", "Start|开始时间|開始", required=True),
+            F("end_at", "datetime", "End|结束时间|終了"),
+            F(
+                "reason",
+                "ref",
+                "Reason code|原因代码|理由コード",
+                ref="reason_code",
+                required=True,
+            ),
+            F("e10_state", "ref", "E10 state|E10 状态|E10 状態", ref="e10_state"),
+            F("comment", "str", "Comment|备注|コメント", max_length=300, search=True),
+        ],
+        phase=6,
+        has_code=False,
+        icon="PowerOff",
+        order=10,
+        sort_default="start_at",
+        label_field="start_at",
     ),
 )
