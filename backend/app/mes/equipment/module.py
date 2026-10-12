@@ -9,7 +9,11 @@ register(
         name="mes.equipment",
         perm_modules=PERM_MODULES,
         permissions=PERMISSIONS,
-        specs=("app.mes.equipment.specs", "app.mes.equipment.validators"),
+        specs=(
+            "app.mes.equipment.specs",
+            "app.mes.equipment.validators",
+            "app.mes.equipment.events",
+        ),
         routers=("app.mes.equipment.router:router",),
         menus=MENUS,
     )

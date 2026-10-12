@@ -16,6 +16,7 @@ from app.mes.execution.checks import service as ck
 from app.mes.execution.constants import OOS_RANK
 from app.mes.execution.consumption import _consume
 from app.mes.execution.context import build_ctx
+from app.mes.execution.events import OOS, notify_lot
 from app.mes.execution.hold import default_reason, hold_lot
 from app.mes.execution.stage_common import _brief, _guard, _ov, _result
 from app.mes.lot.service import history, lock_lot, units
@@ -310,6 +311,15 @@ def track_out(
                 "action": worst,
                 "values": [{"item": d["code"], "value": d["value"]} for d in oos],
             },
+        )
+        oos_items = ", ".join(f"{d['code']}={d['value']:g}" for d in oos[:5])
+        notify_lot(
+            s,
+            tid,
+            OOS,
+            lot,
+            f"OOS on {lot['code']} step {ctx.step['seq']}: {oos_items} ({worst})",
+            {"step": ctx.step["seq"], "items": oos_items, "action": worst or ""},
         )
     if worst == "auto_hold" and status != "scrapped":
         mi = one(

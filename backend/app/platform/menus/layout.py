@@ -123,6 +123,8 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("menus", "Menus|菜单|メニュー"),
         ("config", "Configuration|系统配置|システム設定"),
         ("mes-audit_log", "Audit Log|审计日志|監査ログ"),
+        ("notifications", "Message Center|消息中心|メッセージセンター"),
+        ("notify-subscriptions", "Notification Subscriptions|通知订阅|通知購読"),
         ("settings", "Profile|个人设置|個人設定"),
     ],
 }

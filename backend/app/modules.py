@@ -19,6 +19,7 @@ from app.platform.auth import module as _auth  # noqa: F401
 from app.platform.config import module as _config  # noqa: F401
 from app.platform.files import module as _files  # noqa: F401
 from app.platform.menus import module as _menus  # noqa: F401
+from app.platform.notification import module as _notification  # noqa: F401
 from app.platform.rbac import module as _rbac  # noqa: F401
 from app.platform.tenants import module as _tenants  # noqa: F401
 from app.platform.users import module as _users  # noqa: F401

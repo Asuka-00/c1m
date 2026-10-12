@@ -11,6 +11,7 @@ from app.core.spec.engine import TABLES, Entity
 from app.core.spec.errors import MesError
 from app.core.spec.validate import validator
 from app.mes.common.validators import Row, _get
+from app.mes.equipment.maint import downtime_notify
 
 
 def check_recipe_equipment_type(
@@ -115,9 +116,11 @@ def _pm_plan(
 
 @validator("downtime")
 def _downtime(
-    _s: Session, _t: uuid.UUID, _e: Entity, row: Row, _old: Row | None
+    s: Session, tid: uuid.UUID, _e: Entity, row: Row, old: Row | None
 ) -> None:
-    """停机记录：结束时间须晚于开始时间。"""
+    """停机记录：结束时间须晚于开始时间；新建时发送停机通知（与记录同事务）。"""
     a, b = row.get("start_at"), row.get("end_at")
     if a and b and b <= a:
         raise MesError([("end_at", "end_at: must be after start_at")])
+    if old is None:
+        downtime_notify(s, tid, row)

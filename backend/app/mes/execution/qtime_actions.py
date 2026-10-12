@@ -14,8 +14,10 @@ from app.core.spec.base import conn, now
 from app.core.spec.engine import TABLES
 from app.mes.common.query import find, one
 from app.mes.common.rows import _upd
+from app.mes.equipment.service import pm_notify
 from app.mes.execution.checks import service as ck
 from app.mes.execution.context import build_ctx
+from app.mes.execution.events import QTIME_EXCEEDED, QTIME_WARN, notify_lot
 from app.mes.execution.hold import default_reason, hold_lot
 from app.mes.execution.stage_common import _relocate
 from app.mes.lot.service import history, units
@@ -58,6 +60,21 @@ def _qtime_actions(
             "action": action,
         }
         history(s, tid, lot, "qtime", user, reason_id=r["reason_id"], details=det)
+        notify_lot(
+            s,
+            tid,
+            QTIME_EXCEEDED,
+            lot,
+            f"Q-Time {r['code']} exceeded on {lot['code']}: "
+            f"{x['minutes']:g} > {r['max_minutes']} min ({action})",
+            {
+                "rule": r["code"],
+                "minutes": x["minutes"],
+                "max": r["max_minutes"],
+                "action": action,
+            },
+            f"qtime_exceeded:{lot['id']}:{r['id']}:{x['since'].isoformat()}",
+        )
         if action == "warn":
             continue
         if action == "rework" and step["rework_route_id"]:
@@ -161,6 +178,34 @@ def qtime_monitor(s: Session, tid: uuid.UUID) -> list[Row]:
     return out
 
 
+def _qtime_warn(s: Session, tid: uuid.UUID, lot: Row, step: Row) -> int:
+    """Q-Time 预警通知：达到预警阈值且未超时的规则各通知一次（按计时起点去重）。"""
+    sts = [x for x in ck.qtime_status(s, tid, lot, step, now()) if x["warn"]]
+    if not sts or not ck.enabled(build_ctx(s, tid, lot, "move_in", {}), "qtime"):
+        return 0
+    n = 0
+    for x in sts:
+        r = x["rule"]
+        left = (r["max_minutes"] or 0) - x["minutes"]
+        n += bool(
+            notify_lot(
+                s,
+                tid,
+                QTIME_WARN,
+                lot,
+                f"Q-Time {r['code']} on {lot['code']} expires in {left:g} min",
+                {
+                    "rule": r["code"],
+                    "minutes": x["minutes"],
+                    "max": r["max_minutes"],
+                    "left": round(left, 1),
+                },
+                f"qtime_warn:{lot['id']}:{r['id']}:{x['since'].isoformat()}",
+            )
+        )
+    return n
+
+
 def sweep_qtime(s: Session, tid: uuid.UUID, user: Any) -> Row:
     """Q-Time 超时扫描：对等待中、未 Hold 的超时批次立即执行处置（幂等）。
 
@@ -175,6 +220,7 @@ def sweep_qtime(s: Session, tid: uuid.UUID, user: Any) -> Row:
         step = one(s, tid, "route_step", lot["current_step_id"])
         if not step:
             continue
+        _qtime_warn(s, tid, lot, step)
         a = _qtime_actions(s, tid, lot, step, user)
         if a:
             acted.append({"lot": lot["code"], "action": a})
@@ -183,7 +229,7 @@ def sweep_qtime(s: Session, tid: uuid.UUID, user: Any) -> Row:
 
 
 def sweep_all_tenants(only: list[uuid.UUID] | None = None) -> Row:
-    """全部租户的 Q-Time 超时扫描（后台定时任务调用）。
+    """全部租户的定时扫描（后台任务调用）：Q-Time 预警 / 超时处置、PM 到期通知。
 
     通过 Postgres 事务级咨询锁保证多进程 / 多实例下同一时刻只有一个执行者；
     每个租户独立会话（设置 RLS 租户上下文），单租户失败不影响其他租户。
@@ -220,6 +266,8 @@ def sweep_all_tenants(only: list[uuid.UUID] | None = None) -> Row:
                 set_tenant(s, tid)
                 try:
                     n += len(sweep_qtime(s, tid, None)["actions"])
+                    n += pm_notify(s, tid)
+                    s.commit()
                 except Exception:  # noqa: BLE001 - 单租户失败只记录日志
                     log.exception("qtime sweep failed for tenant %s", tid)
         return {"tenants": len(tids), "actions": n}

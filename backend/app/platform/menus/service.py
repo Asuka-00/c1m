@@ -20,6 +20,13 @@ SYSTEM_ITEMS: dict[str, tuple[str, str | None, str, str | None]] = {
     "menus": ("/menus", "Menu", "menus", "roles:write"),
     "config": ("/config", "SlidersHorizontal", "config", "config:read"),
     "settings": ("/settings", "Settings", "settings", None),
+    "notifications": ("/notifications", "Bell", "notifications", None),
+    "notify-subscriptions": (
+        "/notify-subscriptions",
+        "BellRing",
+        "notify-subscriptions",
+        "notify:config",
+    ),
 }
 
 MenuTuple = tuple[

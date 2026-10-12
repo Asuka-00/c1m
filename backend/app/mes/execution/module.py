@@ -13,6 +13,7 @@ register(
             "app.mes.execution.specs",
             "app.mes.execution.validators",
             "app.mes.execution.checks.types",
+            "app.mes.execution.events",
         ),
         routers=("app.mes.execution.router:router",),
         menus=MENUS,

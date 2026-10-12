@@ -13,6 +13,9 @@ from app.mes.equipment.maint import (
     pm_complete as pm_complete,
 )
 from app.mes.equipment.maint import (
+    pm_notify as pm_notify,
+)
+from app.mes.equipment.maint import (
     pm_status as pm_status,
 )
 from app.mes.equipment.status import (

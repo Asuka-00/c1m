@@ -14,9 +14,18 @@ from app.core.spec.engine import ENTITIES, TABLES
 from app.core.spec.errors import http_422
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
+from app.mes.equipment.events import (
+    DOWNTIME,
+    EQP_DOWN,
+    PM_DUE,
+    PM_OVERDUE,
+    notify_eqp,
+)
 from app.mes.equipment.status import e10_current
 
 Row = dict[str, Any]
+#: 视为宕机（触发设备宕机通知）的 E10 类别：计划 / 非计划停机
+DOWN_CATEGORIES = ("UDT", "SDT")
 
 
 def e10_log(
@@ -109,6 +118,20 @@ def e10_change(
         user,
         {"e10_state": (cur and cur["code"], to["code"])},
     )
+    if to["e10_category"] in DOWN_CATEGORIES:
+        notify_eqp(
+            s,
+            tid,
+            EQP_DOWN,
+            eq,
+            f"Equipment {eq['code']} down: {to['code']} {to['name']}",
+            {
+                "state": to["code"],
+                "state_name": to["name"],
+                "reason": reason["code"] if reason else "",
+                "comment": body.get("comment") or "",
+            },
+        )
     s.commit()
     return {"equipment": eq["code"], "from": cur and cur["code"], "to": to["code"]}
 
@@ -266,3 +289,53 @@ def equipment_board(s: Session, tid: uuid.UUID) -> list[Row]:
             }
         )
     return out
+
+
+def pm_notify(s: Session, tid: uuid.UUID) -> int:
+    """PM 到期通知：即将到期 / 已超期各在每个周期内通知一次（按上次 PM 时间去重），返回发送数。"""
+    n = 0
+    for eq in find(s, tid, "equipment", unit_kind="main", is_active=True):
+        for x in pm_status(s, tid, eq):
+            if not (x["due"] or x["warn"]):
+                continue
+            ev = PM_OVERDUE if x["due"] else PM_DUE
+            base = x["last_done"] or "initial"
+            title = (
+                f"PM {x['plan']} overdue on {eq['code']}"
+                if x["due"]
+                else f"PM {x['plan']} on {eq['code']} due soon"
+            )
+            n += bool(
+                notify_eqp(
+                    s,
+                    tid,
+                    ev,
+                    eq,
+                    title,
+                    {
+                        "plan": x["plan"],
+                        "days_left": x["days_left"] or 0,
+                        "lots": x["lots_since"],
+                    },
+                    f"{ev}:{eq['id']}:{x['plan_id']}:{base}",
+                )
+            )
+    return n
+
+
+def downtime_notify(s: Session, tid: uuid.UUID, row: Row) -> None:
+    """新建停机记录通知（按设备 + 开始时间去重）。"""
+    eq = one(s, tid, "equipment", row.get("equipment_id"))
+    if not eq:
+        return
+    rc = one(s, tid, "reason_code", row.get("reason_id"))
+    start = row.get("start_at")
+    notify_eqp(
+        s,
+        tid,
+        DOWNTIME,
+        eq,
+        f"Downtime on {eq['code']}: {rc['code'] if rc else ''}",
+        {"reason": rc["code"] if rc else "", "start": str(start or "")},
+        f"downtime:{eq['id']}:{start}",
+    )

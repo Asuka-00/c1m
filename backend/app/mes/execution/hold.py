@@ -12,6 +12,7 @@ from app.core.spec.engine import ENTITIES
 from app.core.spec.errors import http_422
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
+from app.mes.execution.events import LOT_HOLD, notify_lot
 from app.mes.lot.service import TERMINAL, history, lock_lot
 
 Row = dict[str, Any]
@@ -110,6 +111,17 @@ def hold_lot(
         user,
         {"reason": (None, reason["code"]), "source": (None, source)},
     )
+    # 自动 Hold 通知（Q-Time 超时已由 qtime 事件通知；分批继承的 Hold 不重复通知）
+    if hold_type == "auto" and source not in ("qtime", "split"):
+        notify_lot(
+            s,
+            tid,
+            LOT_HOLD,
+            lot,
+            f"Lot {lot['code']} auto hold ({source}): {reason['code']}",
+            {"source": source, "reason": reason["code"], "comment": comment or ""},
+            f"lot_hold:{hid}",
+        )
     return hid
 
 
