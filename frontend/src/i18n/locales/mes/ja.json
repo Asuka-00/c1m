@@ -1310,6 +1310,7 @@
     "mes-lot-start": "ロット投入",
     "mes-lot-console": "ロット作業",
     "mes-lot-trace": "ロット履歴",
+    "mes-trace": "トレーサビリティ",
     "mes-lot_hold": "ホールド管理",
     "mes-qtime-monitor": "Q タイム監視",
     "mes-receipt": "完成品入庫",

@@ -186,6 +186,18 @@ class JumpIn(BaseModel):
     override_reason: str | None = Field(default=None, max_length=300)
 
 
+@router.get("/trace")
+def trace(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    kind: Literal["lot", "wafer", "equipment", "material_lot"],
+    code: str,
+) -> Any:
+    """Traceability: backward (sources, equipment, materials) and forward (outputs)."""
+    _need(ctx, "mes.exec:read")
+    return svc.trace(session, ctx.id, kind, code)
+
+
 @router.get("/qtime/monitor")
 def qtime_monitor(session: SessionDep, ctx: CurrentTenant) -> Any:
     """Q-Time monitor: running clocks of waiting lots at their current step."""

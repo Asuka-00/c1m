@@ -757,6 +757,43 @@
       "pmRecorded": "PM recorded",
       "pmDesc": "The day / lot interval of this plan restarts for this equipment.",
       "result": "Result"
+    },
+    "traceq": {
+      "hint": "Enter a lot / wafer / equipment / material lot code: backward to source lots, equipment and consumed materials; forward to downstream outputs.",
+      "kind": "Object",
+      "code": "Code",
+      "search": "Search",
+      "backward": "Backward trace",
+      "forward": "Forward trace",
+      "srcLots": "Source lots",
+      "steps": "Processing (track in)",
+      "materials": "Consumed materials",
+      "outLots": "Output lots",
+      "lots": "Related lots",
+      "k": {
+        "lot": "Lot",
+        "wafer": "Wafer",
+        "equipment": "Equipment",
+        "material_lot": "Material lot"
+      },
+      "c": {
+        "code": "Lot",
+        "lot": "Lot",
+        "relation": "Relation",
+        "qty": "Qty",
+        "via": "Via",
+        "level": "Level",
+        "at": "Time",
+        "step_seq": "Step",
+        "operation": "Operation",
+        "equipment": "Equipment",
+        "recipe": "Recipe",
+        "user": "User",
+        "material_lot": "Material lot",
+        "product": "Product",
+        "consumed": "Consumed",
+        "downstream": "Downstream"
+      }
     }
   }
 }

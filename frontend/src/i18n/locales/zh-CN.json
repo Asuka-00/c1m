@@ -757,6 +757,43 @@
       "pmRecorded": "PM 已登记",
       "pmDesc": "登记完成后，该设备该计划的天数 / 批次周期重新起算。",
       "result": "结果"
+    },
+    "traceq": {
+      "hint": "输入批次 / 晶圆 / 设备 / 物料批编码：反向追溯来源批次、经过的设备与消耗的物料，正向追溯下游产出。",
+      "kind": "对象",
+      "code": "编码",
+      "search": "查询",
+      "backward": "反向追溯",
+      "forward": "正向追溯",
+      "srcLots": "来源批次",
+      "steps": "加工经历（上机）",
+      "materials": "消耗物料",
+      "outLots": "产出批次",
+      "lots": "相关批次",
+      "k": {
+        "lot": "批次",
+        "wafer": "晶圆",
+        "equipment": "设备",
+        "material_lot": "物料批"
+      },
+      "c": {
+        "code": "批次",
+        "lot": "批次",
+        "relation": "关系",
+        "qty": "数量",
+        "via": "经由",
+        "level": "层级",
+        "at": "时间",
+        "step_seq": "工步",
+        "operation": "工序",
+        "equipment": "设备",
+        "recipe": "配方",
+        "user": "操作人",
+        "material_lot": "物料批",
+        "product": "产品",
+        "consumed": "消耗",
+        "downstream": "下游产出"
+      }
     }
   }
 }

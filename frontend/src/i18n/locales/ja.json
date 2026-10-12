@@ -757,6 +757,43 @@
       "pmRecorded": "PM を記録しました",
       "pmDesc": "記録後、この設備・計画の日数 / ロット周期が再起算されます。",
       "result": "結果"
+    },
+    "traceq": {
+      "hint": "ロット / ウェーハ / 設備 / 資材ロットのコードを入力：逆方向は元ロット・設備・消費資材、順方向は下流の産出を追跡します。",
+      "kind": "対象",
+      "code": "コード",
+      "search": "検索",
+      "backward": "逆方向トレース",
+      "forward": "順方向トレース",
+      "srcLots": "元ロット",
+      "steps": "処理履歴（トラックイン）",
+      "materials": "消費資材",
+      "outLots": "産出ロット",
+      "lots": "関連ロット",
+      "k": {
+        "lot": "ロット",
+        "wafer": "ウェーハ",
+        "equipment": "設備",
+        "material_lot": "資材ロット"
+      },
+      "c": {
+        "code": "ロット",
+        "lot": "ロット",
+        "relation": "関係",
+        "qty": "数量",
+        "via": "経由",
+        "level": "階層",
+        "at": "日時",
+        "step_seq": "工程",
+        "operation": "工程",
+        "equipment": "設備",
+        "recipe": "レシピ",
+        "user": "ユーザー",
+        "material_lot": "資材ロット",
+        "product": "製品",
+        "consumed": "消費",
+        "downstream": "下流産出"
+      }
     }
   }
 }

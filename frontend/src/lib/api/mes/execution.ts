@@ -44,6 +44,18 @@ export interface DcItem {
   oos_action: string
 }
 /** 批次单元（晶圆 / 序列号）。 */
+/** 追溯对象类型。 */
+export type TraceKind = 'lot' | 'wafer' | 'equipment' | 'material_lot'
+/** 追溯行（各列按场景出现）。 */
+export type TraceRow = Record<string, unknown>
+/** 追溯结果。 */
+export interface TraceResult {
+  kind: TraceKind
+  target: { id: string; code: string; lot?: string; lot_id?: string }
+  backward?: { lots: TraceRow[]; steps: TraceRow[]; materials: TraceRow[] }
+  forward?: { lots: TraceRow[] }
+  lots?: TraceRow[]
+}
 /** Q-Time 监控行。 */
 export interface QtimeRow {
   lot_id: string
@@ -263,6 +275,11 @@ export const execApi = {
   stage: (lotId: string, stage: ExecStage, body: StageBody) =>
     http
       .post<StageResult>(`/mes/exec/lots/${lotId}/${stage}`, body)
+      .then((r) => r.data),
+  /** 追溯查询（批次 / 晶圆 / 设备 / 物料批）。 */
+  trace: (kind: TraceKind, code: string) =>
+    http
+      .get<TraceResult>('/mes/exec/trace', { params: { kind, code } })
       .then((r) => r.data),
   /** Q-Time 监控（等待中批次的计时）。 */
   qtimeMonitor: () =>

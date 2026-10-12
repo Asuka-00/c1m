@@ -1310,6 +1310,7 @@
     "mes-lot-start": "Lot Start",
     "mes-lot-console": "Lot Operation",
     "mes-lot-trace": "Lot History",
+    "mes-trace": "Traceability",
     "mes-lot_hold": "Hold Management",
     "mes-qtime-monitor": "Q-Time Monitor",
     "mes-receipt": "Finished Goods Receipt",

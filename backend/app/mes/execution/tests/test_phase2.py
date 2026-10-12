@@ -290,3 +290,59 @@ def test_recipe_match_and_switch(client: TestClient, db: Session) -> None:
         route_step_id=f.steps[10]["id"],
     )
     f.stage(b, "track_in", equipment_id=f.eq["id"], recipe_id=rc, eqp_recipe="X")
+
+
+# ---------------- phase 7: traceability ----------------
+def test_trace_backward_forward(client: TestClient, db: Session) -> None:
+    from app.mes.execution.tests.test_split_merge import _line, split, uid
+
+    f = _line(client, db)
+    m = f.m
+    f.sql(
+        "INSERT INTO mes_step_resource (id, tenant_id, route_step_id, resource_kind,"
+        " material_id, qty, uom_id, qty_basis) VALUES (gen_random_uuid(), :t, :s,"
+        " 'material', :m, 1, :u, 'per_unit')",
+        t=m.tid,
+        s=f.steps[10]["id"],
+        m=f.mat["id"],
+        u=m.fx("uom"),
+    )
+    m.post(
+        "material_lot",
+        {
+            "code": "MLT",
+            "material_id": f.mat["id"],
+            "qty_remaining": 100,
+            "uom_id": m.fx("uom"),
+            "expiry_date": "2030-01-01",
+        },
+    )
+    (lot,) = f.start(4)
+    f.run_step(lot)
+    f.stage(lot, "move_in", equipment_id=f.eq2["id"])
+    (ch,) = split(f, lot, [{"unit_ids": uid(f, lot, 0, 1)}])["children"]
+
+    def tr(kind: str, code: str) -> Any:
+        r = client.get(
+            f"{EXEC}/trace", headers=m.h, params={"kind": kind, "code": code}
+        )
+        assert r.status_code == 200, r.text
+        return r.json()
+
+    # 子批反向：来源母批、经过的设备、消耗的物料
+    t = tr("lot", ch["code"])
+    assert [x["code"] for x in t["backward"]["lots"]] == [lot["code"]]
+    assert {s["equipment"] for s in t["backward"]["steps"]} == {"EQ1"}
+    assert t["backward"]["materials"][0]["material_lot"] == "MLT"
+    # 母批正向：产出子批
+    assert [x["code"] for x in tr("lot", lot["code"])["forward"]["lots"]] == [
+        ch["code"]
+    ]
+    # 物料批：消耗它的批次及其下游
+    u = tr("material_lot", "MLT")["lots"]
+    assert u[0]["code"] == lot["code"] and u[0]["forward"][0]["code"] == ch["code"]
+    assert [x["code"] for x in tr("equipment", "EQ1")["lots"]] == [lot["code"]]
+    w = m.list("wafer", lot=ch["id"])["data"][0]
+    assert tr("wafer", w["code"])["target"]["lot"] == ch["code"]
+    r = client.get(f"{EXEC}/trace", headers=m.h, params={"kind": "lot", "code": "NOPE"})
+    assert r.status_code == 404
