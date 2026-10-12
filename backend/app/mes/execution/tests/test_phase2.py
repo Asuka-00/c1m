@@ -5,7 +5,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from app.mes.execution.tests.test_exec import Line, _dc, _dc_line, _msgs
+from app.mes.execution.tests.test_exec import EXEC, Line, _dc, _dc_line, _msgs
 
 
 def _ready(f: Line, *lots: dict[str, Any]) -> None:
@@ -134,3 +134,46 @@ def test_bonus_quantity_lot(client: TestClient, db: Session) -> None:
     r = f.post(url, {"kind": "scrap", "qty": 3, "reason_id": sc})
     assert r["lot"]["qty"] == 102
     assert f.m.list("lot_history", lot=a["id"], action="bonus")["count"] == 1
+
+
+# ---------------- phase 4: Q-Time monitor / sweep / switch ----------------
+def test_qtime_sweep_and_switch(client: TestClient, db: Session) -> None:
+    f = Line(client, db)
+    f.m.post(
+        "qtime_rule",
+        {
+            "code": "QT",
+            "name": "q",
+            "route_id": f.route["id"],
+            "from_step_id": f.steps[10]["id"],
+            "to_step_id": f.steps[20]["id"],
+            "max_minutes": 30,
+            "reason_id": f.reasons["hold"]["id"],
+        },
+    )
+    a, b = f.start(1, 1)
+    for x in (a, b):
+        f.run_step(x)
+    f.sql(
+        "UPDATE mes_lot_history SET at = at - interval '2 hours' WHERE lot_id = :a AND action = 'move_out'",
+        a=a["id"],
+    )
+    mon = client.get(f"{EXEC}/qtime/monitor", headers=f.m.h).json()["data"]
+    row = {r["lot"]: r for r in mon}
+    assert row[a["code"]]["exceeded"] and not row[b["code"]]["exceeded"]
+    assert row[b["code"]]["remaining"] > 0
+    # 开关关闭（工步级 off）：扫描不处置
+    f.bind(
+        "move_in",
+        ("qtime", "off", {}),
+        scope="route_step",
+        route_step_id=f.steps[20]["id"],
+    )
+    r = f.post(f"{EXEC}/qtime/sweep", {})
+    assert r["actions"] == [] and not f.lot(a)["on_hold"]
+    # 打开后：扫描自动 Hold，且幂等
+    f.sql("UPDATE mes_check_binding SET is_active = false")
+    r = f.post(f"{EXEC}/qtime/sweep", {})
+    assert r["actions"] == [{"lot": a["code"], "action": "hold"}]
+    assert f.lot(a)["on_hold"] and not f.lot(b)["on_hold"]
+    assert f.post(f"{EXEC}/qtime/sweep", {})["actions"] == []

@@ -710,6 +710,30 @@
       "bonus": "Bonus",
       "qty": "Quantity",
       "adjusted": "Adjusted"
+    },
+    "qtime": {
+      "hint": "Q-Time clocks of waiting lots at their current step. The sweep applies violation actions (hold / rework / scrap) once per violation; switch off per step via a qtime rule.",
+      "refresh": "Refresh",
+      "sweep": "Sweep violations now",
+      "swept": "Checked {{checked}} lot(s), acted on {{acted}}",
+      "lot": "Lot",
+      "step": "Step",
+      "rule": "Rule",
+      "since": "Since",
+      "elapsed": "Elapsed (min)",
+      "max": "Max (min)",
+      "remaining": "Remaining (min)",
+      "action": "Violation action",
+      "state": "State",
+      "held": "On hold",
+      "exceeded": "Exceeded",
+      "ok": "Running",
+      "act": {
+        "warn": "Warn",
+        "hold": "Hold",
+        "rework": "Rework",
+        "scrap": "Scrap"
+      }
     }
   }
 }

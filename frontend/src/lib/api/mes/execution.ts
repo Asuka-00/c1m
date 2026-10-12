@@ -44,6 +44,20 @@ export interface DcItem {
   oos_action: string
 }
 /** 批次单元（晶圆 / 序列号）。 */
+/** Q-Time 监控行。 */
+export interface QtimeRow {
+  lot_id: string
+  lot: string
+  on_hold: boolean
+  step_seq: number
+  rule: string
+  since: string
+  minutes: number
+  max_minutes: number | null
+  remaining: number | null
+  exceeded: boolean
+  action: string
+}
 export interface ExecUnit {
   id: string
   code: string
@@ -247,6 +261,19 @@ export const execApi = {
   stage: (lotId: string, stage: ExecStage, body: StageBody) =>
     http
       .post<StageResult>(`/mes/exec/lots/${lotId}/${stage}`, body)
+      .then((r) => r.data),
+  /** Q-Time 监控（等待中批次的计时）。 */
+  qtimeMonitor: () =>
+    http
+      .get<{ data: QtimeRow[] }>('/mes/exec/qtime/monitor')
+      .then((r) => r.data.data),
+  /** 立即执行 Q-Time 超时扫描（自动 Hold 等处置）。 */
+  qtimeSweep: () =>
+    http
+      .post<{
+        checked: number
+        actions: { lot: string; action: string }[]
+      }>('/mes/exec/qtime/sweep', {})
       .then((r) => r.data),
   /** 在制报废 / 补数。 */
   adjust: (

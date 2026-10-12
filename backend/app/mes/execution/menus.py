@@ -15,4 +15,10 @@ MENUS: dict[str, MenuItem] = {
         "mes-page:lot-trace",
         "mes.exec:read",
     ),
+    "mes-qtime-monitor": (
+        "/mes/qtime-monitor",
+        "Timer",
+        "mes-page:qtime-monitor",
+        "mes.exec:read",
+    ),
 }

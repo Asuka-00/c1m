@@ -78,6 +78,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-lot-console", "Lot Operation|批次作业|ロット作業"),
         ("mes-lot-trace", "Lot History|批次履历|ロット履歴"),
         ("mes-lot_hold", "Hold Management|Hold 管理|ホールド管理"),
+        ("mes-qtime-monitor", "Q-Time Monitor|Q-Time 监控|Q タイム監視"),
     ],
     "g-warehouse": [
         ("mes-receipt", "Finished Goods Receipt|完工入库|完成品入庫"),

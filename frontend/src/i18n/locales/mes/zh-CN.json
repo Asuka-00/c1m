@@ -1243,6 +1243,7 @@
     "mes-lot-console": "批次作业",
     "mes-lot-trace": "批次履历",
     "mes-lot_hold": "Hold 管理",
+    "mes-qtime-monitor": "Q-Time 监控",
     "mes-receipt": "完工入库",
     "mes-warehouse": "仓库",
     "mes-storage_location": "库位",

@@ -185,6 +185,20 @@ class JumpIn(BaseModel):
     override_reason: str | None = Field(default=None, max_length=300)
 
 
+@router.get("/qtime/monitor")
+def qtime_monitor(session: SessionDep, ctx: CurrentTenant) -> Any:
+    """Q-Time monitor: running clocks of waiting lots at their current step."""
+    _need(ctx, "mes.exec:read")
+    return {"data": svc.qtime_monitor(session, ctx.id)}
+
+
+@router.post("/qtime/sweep")
+def qtime_sweep(session: SessionDep, ctx: CurrentTenant) -> Any:
+    """Apply Q-Time violation actions (auto hold, ...) to waiting lots now."""
+    _need(ctx, "mes.exec:hold")
+    return svc.sweep_qtime(session, ctx.id, ctx.user)
+
+
 @router.post("/lots/{lot_id}/jump")
 def lot_jump(
     session: SessionDep, ctx: CurrentTenant, lot_id: uuid.UUID, body: JumpIn
