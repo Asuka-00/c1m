@@ -1,13 +1,15 @@
-/** MES planning: work order transitions and lot start. */
+/** MES 计划：工单状态迁移与开批。 */
 import { http } from '../client'
 import type { MesRow } from './common'
 
+/** 开批计划中的一个批次（预览的批次号与晶圆号）。 */
 export interface StartPlanLot {
   lot_no: string
   qty: number
   slots: number[]
   wafer_ids: string[]
 }
+/** 开批计划（不占用任何资源）。 */
 export interface StartPlan {
   work_order_id: string
   wo_status: string
@@ -22,6 +24,7 @@ export interface StartPlan {
   site_id: string | null
   lots: StartPlanLot[]
 }
+/** 开批请求中的一个批次。 */
 export interface StartLotIn {
   qty: number
   carrier_id?: string | null
@@ -29,6 +32,7 @@ export interface StartLotIn {
   source_ref?: string | null
 }
 
+/** 工单接口：状态迁移、开批计划、开批与撤销开批。 */
 export const woApi = {
   transition: (id: string, action: string) =>
     http

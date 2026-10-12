@@ -7,8 +7,8 @@ import { myTenantsApi, tenantsApi } from './platform/tenants'
 import { usersApi } from './platform/users'
 
 /**
- * Typed API client for the FastAPI backend, composed from the per-domain
- * clients in lib/api/platform/* (MES clients live in lib/api/mes/*).
+ * FastAPI 后端的类型化 API 客户端，由各业务域客户端
+ * lib/api/platform/* 组合而成（MES 客户端位于 lib/api/mes/*）。
  */
 export const api = {
   ...authApi,

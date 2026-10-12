@@ -11,6 +11,7 @@ type PasswordInputProps = Omit<
   ref?: React.Ref<HTMLInputElement>
 }
 
+/** 带显示 / 隐藏切换按钮的密码输入框。 */
 export function PasswordInput({
   className,
   disabled,

@@ -12,7 +12,7 @@ type NavLink = BaseNavItem & {
 }
 
 type NavCollapsible = BaseNavItem & {
-  /** stable id used to persist expand/collapse state */
+  /** 用于持久化展开 / 折叠状态的稳定 id */
   key?: string
   items: (BaseNavItem & { url: LinkProps['to'] | (string & {}) })[]
   url?: never

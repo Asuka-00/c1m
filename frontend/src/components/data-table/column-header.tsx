@@ -22,6 +22,7 @@ type DataTableColumnHeaderProps<TData, TValue> =
     title: string
   }
 
+/** 可排序的表格列头（升序 / 降序 / 隐藏列菜单）。 */
 export function DataTableColumnHeader<TData, TValue>({
   column,
   title,

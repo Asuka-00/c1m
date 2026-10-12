@@ -33,6 +33,7 @@ import {
   type NavGroup as NavGroupProps,
 } from './types'
 
+/** 侧栏中的一组菜单（标题 + 菜单项）。 */
 export function NavGroup({ title, items }: NavGroupProps) {
   const { state, isMobile } = useSidebar()
   const href = useLocation({ select: (location) => location.href })
@@ -89,7 +90,7 @@ const readGroups = (): Record<string, boolean> => {
     return {}
   }
 }
-/** true if the current path is one of the group's children (or below it) */
+/** 当前路径属于该分组的子项（或其下级）时为 true */
 const containsActive = (href: string, item: NavCollapsible) => {
   const path = href.split('?')[0]
   return item.items.some(
@@ -99,8 +100,8 @@ const containsActive = (href: string, item: NavCollapsible) => {
   )
 }
 
-/** Collapsible menu group: collapsed by default, auto-expands when it holds the
- *  active route; the user's explicit expand/collapse is kept in localStorage. */
+/** 可折叠菜单分组：默认折叠，包含当前路由时自动展开；
+ *  用户手动的展开 / 折叠状态保存在 localStorage。 */
 function SidebarMenuCollapsible({
   item,
   href,
@@ -112,7 +113,7 @@ function SidebarMenuCollapsible({
   const id = item.key ?? item.title
   const active = containsActive(href, item)
   const [open, setOpen] = useState(() => active || readGroups()[id] === true)
-  // navigating into a group expands it (state adjusted during render, no effect)
+  // 导航进入分组时自动展开（在渲染期间调整状态，不使用 effect）
   const [wasActive, setWasActive] = useState(active)
   if (active !== wasActive) {
     setWasActive(active)
@@ -212,9 +213,9 @@ function SidebarMenuCollapsedDropdown({
 
 function checkIsActive(href: string, item: NavItem, mainNav = false) {
   return (
-    href === item.url || // /endpint?search=param
-    href.split('?')[0] === item.url || // endpoint
-    !!item?.items?.filter((i) => i.url === href).length || // if child nav is active
+    href === item.url || // /endpoint?search=param 完全匹配
+    href.split('?')[0] === item.url || // 忽略查询参数匹配
+    !!item?.items?.filter((i) => i.url === href).length || // 子菜单处于激活状态
     (mainNav &&
       href.split('/')[1] !== '' &&
       href.split('/')[1] === item?.url?.split('/')[1])

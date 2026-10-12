@@ -5,7 +5,7 @@ import { applyAccent } from '@/lib/accent'
 import type { Branding } from '@/lib/branding'
 import { cn } from '@/lib/utils'
 
-/** Applies branding to the document: title, favicon and accent colour. */
+/** 把品牌应用到文档：标题、favicon 与强调色。 */
 export function BrandingHead({
   branding,
   page,
@@ -32,6 +32,7 @@ export function BrandingHead({
   return null
 }
 
+/** 品牌 Logo：有配置的 Logo 图片时显示图片，否则显示默认图标。 */
 export function BrandLogo({
   branding,
   className,
@@ -50,6 +51,7 @@ export function BrandLogo({
   )
 }
 
+/** 品牌页脚文本（配置项 footer_text），未配置时不渲染。 */
 export function BrandFooter({
   branding,
   className,

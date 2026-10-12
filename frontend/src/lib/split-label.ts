@@ -1,4 +1,4 @@
-/** Splits "CODE · Name" labels into code and name. */
+/** 把 "CODE · Name" 形式的标签拆分为编码与名称。 */
 export function splitLabel(s: unknown): [string, string] {
   const v = s == null ? '' : String(s)
   const i = v.indexOf(' · ')

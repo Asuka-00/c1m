@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-/** Language switcher (persisted to localStorage by i18next's detector cache). */
+/** 语言切换器（由 i18next 检测器缓存持久化到 localStorage）。 */
 export function LanguageSwitch() {
   const { t, i18n } = useTranslation()
   return (

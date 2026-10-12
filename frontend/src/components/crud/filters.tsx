@@ -14,6 +14,7 @@ import {
 import { type FilterDef, SEARCH_DEBOUNCE_MS } from './filter-defs'
 import type { ListParams } from './use-list-params'
 
+/** 表格筛选工具栏：按筛选定义渲染文本框 / 下拉框，并提供重置按钮。 */
 export function FilterToolbar({
   filters,
   params,
@@ -56,7 +57,7 @@ function TextFilter({
 }) {
   const current = params.filters[def.name] ?? ''
   const [value, setValue] = useState(current)
-  // keep the box in sync when the URL changes elsewhere (back/forward, reset)
+  // URL 在别处变化时（前进 / 后退、重置）同步输入框
   const [synced, setSynced] = useState(current)
   if (current !== synced) {
     setSynced(current)
@@ -112,7 +113,7 @@ function SelectFilter({
   def: Extract<FilterDef, { type: 'select' }>
   params: ListParams
 }) {
-  // the caller-supplied key identifies loadOptions
+  // 由调用方提供的 key 标识 loadOptions
   // eslint-disable-next-line @tanstack/query/exhaustive-deps
   const loaded = useQuery({
     queryKey: def.optionsKey ?? ['filter-options', def.name],

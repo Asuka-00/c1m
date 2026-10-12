@@ -8,6 +8,7 @@ type HeaderProps = React.HTMLAttributes<HTMLElement> & {
   ref?: React.Ref<HTMLElement>
 }
 
+/** 页面顶部栏：侧栏开关与右侧工具；滚动时显示阴影，可固定。 */
 export function Header({ className, fixed, children, ...props }: HeaderProps) {
   const [offset, setOffset] = useState(0)
 
@@ -16,10 +17,10 @@ export function Header({ className, fixed, children, ...props }: HeaderProps) {
       setOffset(document.body.scrollTop || document.documentElement.scrollTop)
     }
 
-    // Add scroll listener to the body
+    // 为 body 添加滚动监听
     document.addEventListener('scroll', onScroll, { passive: true })
 
-    // Clean up the event listener on unmount
+    // 卸载时移除事件监听
     return () => document.removeEventListener('scroll', onScroll)
   }, [])
 

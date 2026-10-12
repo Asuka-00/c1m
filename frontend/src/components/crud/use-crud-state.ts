@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-/** Dialog state for a CRUD page: which row is being edited/deleted. */
+/** CRUD 页面的对话框状态：当前正在编辑 / 删除的行。 */
 export function useCrudState<T>() {
   const [editing, setEditing] = useState<T | null>(null)
   const [creating, setCreating] = useState(false)

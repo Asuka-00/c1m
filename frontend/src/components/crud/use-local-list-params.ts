@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { DEFAULT_PAGE_SIZE, type ListParams } from './use-list-params'
 
-/** Same contract as useListParams() but kept in component state (for tables
- *  embedded in dialogs/sheets, where the URL belongs to the page). */
+/** 与 useListParams() 约定相同，但状态保存在组件内（用于
+ *  嵌在对话框 / 抽屉中的表格，此时 URL 属于所在页面）。 */
 export function useLocalListParams(
   initialPageSize = DEFAULT_PAGE_SIZE
 ): ListParams {

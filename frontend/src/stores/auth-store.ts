@@ -11,7 +11,7 @@ interface AuthState {
   reset: () => void
 }
 
-/** Access token + currently selected tenant (sent as X-Tenant-ID). */
+/** 访问令牌 + 当前所选租户（作为 X-Tenant-ID 发送）。 */
 export const useAuthStore = create<AuthState>()((set) => ({
   accessToken: localStorage.getItem(TOKEN_KEY) ?? '',
   tenantId: localStorage.getItem(TENANT_KEY),

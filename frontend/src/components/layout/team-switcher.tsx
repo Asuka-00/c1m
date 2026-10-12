@@ -20,12 +20,12 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 
-/** Tenant switcher: lists GET /tenants/me, selection is sent as X-Tenant-ID. */
+/** 租户切换器：列出 GET /tenants/me，所选租户作为 X-Tenant-ID 发送。 */
 export function TeamSwitcher() {
   const { isMobile } = useSidebar()
   const { data } = useMyTenants()
   const current = useCurrentTenant()
-  // header shows the current tenant's branding (app name + logo)
+  // 头部显示当前租户的品牌（应用名 + Logo）
   const branding = useBranding(current?.tenant.slug)
   const setTenantId = useAuthStore((s) => s.setTenantId)
   const qc = useQueryClient()
@@ -33,7 +33,7 @@ export function TeamSwitcher() {
 
   const switchTo = (id: string) => {
     setTenantId(id)
-    // everything tenant-scoped must be refetched (menus, members, roles ...)
+    // 所有租户范围的数据都需重新获取（菜单、成员、角色等）
     qc.invalidateQueries()
     navigate({ to: '/' })
   }

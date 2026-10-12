@@ -20,9 +20,13 @@ function deepMerge(a: Tree, b: Tree): Tree {
   return out
 }
 
+/** 支持的语言列表。 */
 export const LANGUAGES = ['zh-CN', 'ja', 'en'] as const
+/** 语言代码。 */
 export type Language = (typeof LANGUAGES)[number]
+/** 默认语言。 */
 export const DEFAULT_LANGUAGE: Language = 'zh-CN'
+/** 保存所选语言的 localStorage 键。 */
 export const LANGUAGE_STORAGE_KEY = 'lang'
 
 void i18n
@@ -63,12 +67,14 @@ export const currentLanguage = (): Language =>
 /** Translate outside React components (toasts, schemas, helpers). */
 export const t = i18n.t.bind(i18n)
 
+/** 按当前语言格式化日期，空值显示 '—'。 */
 export const fmtDate = (v: string | number | Date | null | undefined) =>
   v
     ? new Intl.DateTimeFormat(currentLanguage(), {
         dateStyle: 'medium',
       }).format(new Date(v))
     : ''
+/** 按当前语言格式化日期时间，空值显示 '—'。 */
 export const fmtDateTime = (v: string | number | Date | null | undefined) =>
   v
     ? new Intl.DateTimeFormat(currentLanguage(), {
@@ -76,6 +82,7 @@ export const fmtDateTime = (v: string | number | Date | null | undefined) =>
         timeStyle: 'short',
       }).format(new Date(v))
     : ''
+/** 按当前语言格式化数字，空值显示 '—'。 */
 export const fmtNumber = (v: number | null | undefined) =>
   v == null ? '—' : new Intl.NumberFormat(currentLanguage()).format(v)
 

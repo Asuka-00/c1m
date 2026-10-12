@@ -1,19 +1,20 @@
-/** System configuration (platform defaults, tenant overrides, public branding). */
+/** 系统配置接口（平台默认值、租户覆盖值、公开品牌）。 */
 import { del, get, patch } from '../request'
 import type { ConfigGroup, Paged, PublicConfig } from '../types'
 
+/** 系统配置接口。 */
 export const configApi = {
-  /** platform defaults (platform config:read) */
+  /** 平台默认值（需平台权限 config:read） */
   platform: () => get<Paged<ConfigGroup>>('/config/groups'),
   updatePlatform: (code: string, values: Record<string, unknown>) =>
     patch<ConfigGroup>(`/config/groups/${code}`, { values }),
-  /** current tenant (X-Tenant-ID): effective values + inheritance info */
+  /** 当前租户（X-Tenant-ID）：有效值 + 继承信息 */
   tenant: () => get<Paged<ConfigGroup>>('/tenants/current/config'),
   updateTenant: (code: string, values: Record<string, unknown>) =>
     patch<ConfigGroup>(`/tenants/current/config/${code}`, { values }),
   resetTenantItem: (code: string, item: string) =>
     del<ConfigGroup>(`/tenants/current/config/${code}/${item}`),
-  /** unauthenticated branding; tenant slug optional */
+  /** 无需登录的品牌信息；租户 slug 可选 */
   public: (tenant?: string) =>
     get<PublicConfig>('/config/public', tenant ? { tenant } : undefined),
 }

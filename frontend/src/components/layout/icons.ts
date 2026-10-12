@@ -66,7 +66,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
-/** Icon names the backend menu registry may reference (lucide names). */
+/** 后端菜单注册表可引用的图标名（lucide 名称）。 */
 export const ICONS: Record<string, LucideIcon> = {
   ShieldAlert,
   ListChecks,
@@ -132,17 +132,24 @@ export const ICONS: Record<string, LucideIcon> = {
   UserCog,
   Users,
 }
-/** Fallback icons for menu groups that have none in the registry. */
+/** 注册表中未指定图标的菜单分组的后备图标。 */
 const GROUP_ICONS: Record<string, LucideIcon> = {
   general: LayoutDashboard,
   tenant: Building2,
   admin: ShieldCheck,
   other: Settings,
 }
+/**
+ * 菜单分组图标：注册表中的图标优先，否则使用按分组 key 的后备图标。
+ *
+ * @param key - 分组 key
+ * @param name - 后端返回的图标名
+ */
 export const groupIconFor = (
   key: string,
   name: string | null | undefined
 ): LucideIcon => (name && ICONS[name]) || GROUP_ICONS[key] || Circle
 
+/** 按 lucide 名称取图标组件，未知名称回退为圆点图标。 */
 export const iconFor = (name: string | null | undefined): LucideIcon =>
   (name && ICONS[name]) || Circle

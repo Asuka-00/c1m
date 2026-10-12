@@ -11,11 +11,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
+/** 主题切换菜单（亮色 / 暗色 / 跟随系统）。 */
 export function ThemeSwitch() {
   const { theme, setTheme } = useTheme()
 
-  /* Update theme-color meta tag
-   * when theme is updated */
+  /* 主题变化时
+   * 同步更新 theme-color meta 标签 */
   useEffect(() => {
     const themeColor = theme === 'dark' ? '#020817' : '#fff'
     const metaThemeColor = document.querySelector("meta[name='theme-color']")

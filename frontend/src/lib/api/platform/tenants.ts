@@ -1,11 +1,13 @@
-/** Tenants, members and tenant roles. */
+/** 租户、成员与租户角色接口。 */
 import { del, get, patch, post, put, type ListQuery } from '../request'
 import type { Member, Message, MyTenant, Paged, Role, Tenant } from '../types'
 
+/** 当前用户可访问的租户。 */
 export const myTenantsApi = {
   myTenants: () => get<Paged<MyTenant>>('/tenants/me'),
 }
 
+/** 租户、成员与租户角色管理接口。 */
 export const tenantsApi = {
   list: (q: ListQuery) => get<Paged<Tenant>>('/tenants/', q),
   create: (b: { name: string; slug: string }) => post<Tenant>('/tenants/', b),

@@ -28,6 +28,15 @@ type ConfirmDialogProps = {
   | { form?: undefined; handleConfirm: () => void }
 )
 
+/**
+ * 通用确认对话框（基于 AlertDialog）。
+ *
+ * @param props.title - 标题
+ * @param props.desc - 说明内容
+ * @param props.handleConfirm - 点击确认时的回调（或用 props.form 提交指定表单）
+ * @param props.destructive - 是否为危险操作（确认按钮显示为红色）
+ * @param props.isLoading - 处理中时禁用按钮
+ */
 export function ConfirmDialog(props: ConfirmDialogProps) {
   const {
     title,

@@ -27,18 +27,19 @@ import { DEFAULT_FILTERS, type FilterDef } from './filter-defs'
 import { FilterToolbar } from './filters'
 import type { ListParams } from './use-list-params'
 
+/** DataTable 列定义。 */
 export interface Column<T> {
   header: string
   cell: (row: T) => React.ReactNode
-  /** backend sort_by key; makes the column header sortable */
+  /** 后端 sort_by 键；设置后列头可排序 */
   sortKey?: string
   className?: string
 }
 
 /**
- * THE shared table: server-side pagination + sorting (TanStack Table manual mode),
- * default 20 rows/page, page-size selector, sortable headers, state in the URL.
- * Feed it `params` from useListParams() and the {data, count} page from the API.
+ * 共享表格组件：服务端分页 + 排序（TanStack Table 手动模式），
+ * 默认每页 20 条，可选每页条数，列头可排序，状态保存在 URL。
+ * 传入 useListParams() 返回的 `params` 及 API 返回的 {data, count}。
  */
 export function DataTable<T>({
   rows,
@@ -58,18 +59,18 @@ export function DataTable<T>({
   params: ListParams
   loading?: boolean
   empty?: string
-  /** declarative filters (text / select) shown in the toolbar and kept in the
-   *  URL; default: keyword search `q`. Pass [] to hide. Give the same defs to
-   *  useListParams(). */
+  /** 声明式筛选（文本 / 下拉），显示在工具栏并保存在
+   *  URL；默认为关键字搜索 `q`，传 [] 隐藏。需向
+   *  useListParams() 传入相同定义。 */
   filters?: FilterDef[]
-  /** extra toolbar content (filters) rendered next to the search box */
+  /** 渲染在搜索框旁的额外工具栏内容（筛选） */
   toolbar?: React.ReactNode
 }) {
   const defs = useMemo<ColumnDef<T>[]>(
     () =>
       columns.map((c, i) => ({
         id: c.sortKey ?? `col${i}`,
-        // accessorFn is required for getCanSort(); sorting itself happens server-side
+        // getCanSort() 需要 accessorFn；实际排序在服务端完成
         accessorFn: () => null,
         enableSorting: !!c.sortKey,
         enableHiding: false,
@@ -88,8 +89,8 @@ export function DataTable<T>({
   const sorting: SortingState = params.sortBy
     ? [{ id: params.sortBy, desc: params.sortOrder === 'desc' }]
     : []
-  // TanStack Table returns functions the React Compiler cannot memoize; this is a
-  // known, harmless incompatibility (the component simply isn't auto-memoized).
+  // TanStack Table 返回的函数无法被 React Compiler 记忆化；这是
+  // 已知且无害的不兼容（组件只是不会被自动记忆化）。
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: rows ?? [],

@@ -1,3 +1,4 @@
+/** 无障碍“跳到主内容”链接（键盘聚焦时显示）。 */
 export function SkipToMain() {
   return (
     <a

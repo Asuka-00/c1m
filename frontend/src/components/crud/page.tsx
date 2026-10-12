@@ -3,6 +3,7 @@ import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { ThemeSwitch } from '@/components/theme-switch'
 
+/** 标准页面骨架：头部（标题、说明、操作按钮）+ 主内容区。 */
 export function Page({
   title,
   description,

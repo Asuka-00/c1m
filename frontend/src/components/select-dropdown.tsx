@@ -20,6 +20,7 @@ type SelectDropdownProps = {
   isControlled?: boolean
 }
 
+/** 简单下拉选择（支持加载中状态与占位文本），用于 react-hook-form。 */
 export function SelectDropdown({
   defaultValue,
   onValueChange,

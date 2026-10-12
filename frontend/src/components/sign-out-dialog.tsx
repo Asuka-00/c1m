@@ -9,6 +9,7 @@ interface SignOutDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+/** 退出登录确认对话框：确认后清除会话并跳转登录页（保留当前地址以便返回）。 */
 export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -18,7 +19,7 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
   const handleSignOut = () => {
     reset()
     qc.clear()
-    // Preserve current location for redirect after sign-in
+    // 保留当前地址，登录后跳回
     const currentPath = location.href
     navigate({
       to: '/sign-in',

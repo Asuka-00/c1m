@@ -5,7 +5,7 @@ import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
 type Font = (typeof fonts)[number]
 
 const FONT_COOKIE_NAME = 'font'
-const FONT_COOKIE_MAX_AGE = 60 * 60 * 24 * 365 // 1 year
+const FONT_COOKIE_MAX_AGE = 60 * 60 * 24 * 365 // 1 年
 
 type FontContextType = {
   font: Font
@@ -15,6 +15,7 @@ type FontContextType = {
 
 const FontContext = createContext<FontContextType | null>(null)
 
+/** 字体上下文，持久化到 Cookie 并应用到根元素。 */
 export function FontProvider({ children }: { children: React.ReactNode }) {
   const [font, _setFont] = useState<Font>(() => {
     const savedFont = getCookie(FONT_COOKIE_NAME)
@@ -48,6 +49,7 @@ export function FontProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
+/** 读取字体上下文。 */
 // eslint-disable-next-line react-refresh/only-export-components
 export const useFont = () => {
   const context = useContext(FontContext)

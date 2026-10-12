@@ -21,9 +21,12 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 
+/** 表单字段值。 */
 export type FieldValue = string | boolean | string[]
+/** 表单值：字段名 -> 值。 */
 export type Values = Record<string, FieldValue>
 
+/** FormDialog 的字段定义（类型、标签、必填、选项等）。 */
 export interface Field {
   name: string
   label: string
@@ -42,7 +45,7 @@ export interface Field {
   hidden?: boolean
 }
 
-/** Generic create/edit dialog driven by a field list. */
+/** 由字段列表驱动的通用新增 / 编辑对话框。 */
 export function FormDialog({
   open,
   onOpenChange,

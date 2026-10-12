@@ -7,6 +7,7 @@ import type {
 
 type SearchRecord = Record<string, unknown>
 
+/** 更新 URL 查询参数的导航函数。 */
 export type NavigateFn = (opts: {
   search:
     | true
@@ -34,7 +35,7 @@ type UseTableUrlStateParams = {
         columnId: string
         searchKey: string
         type?: 'string'
-        // Optional transformers for custom types
+        // 自定义类型的可选转换函数
         serialize?: (value: unknown) => unknown
         deserialize?: (value: unknown) => unknown
       }
@@ -49,22 +50,23 @@ type UseTableUrlStateParams = {
 }
 
 type UseTableUrlStateReturn = {
-  // Global filter
+  // 全局筛选
   globalFilter?: string
   onGlobalFilterChange?: OnChangeFn<string>
-  // Column filters
+  // 列筛选
   columnFilters: ColumnFiltersState
   onColumnFiltersChange: OnChangeFn<ColumnFiltersState>
-  // Pagination
+  // 分页
   pagination: PaginationState
   onPaginationChange: OnChangeFn<PaginationState>
-  // Helpers
+  // 辅助函数
   ensurePageInRange: (
     pageCount: number,
     opts?: { resetTo?: 'first' | 'last' }
   ) => void
 }
 
+/** 把表格的分页、全局筛选与列筛选同步到 URL 查询参数（客户端表格使用）。 */
 export function useTableUrlState(
   params: UseTableUrlStateParams
 ): UseTableUrlStateReturn {
@@ -85,7 +87,7 @@ export function useTableUrlState(
   const globalFilterEnabled = globalFilterCfg?.enabled ?? true
   const trimGlobal = globalFilterCfg?.trim ?? true
 
-  // Build initial column filters from the current search params
+  // 根据当前 URL 查询参数构建初始列筛选
   const initialColumnFilters: ColumnFiltersState = useMemo(() => {
     const collected: ColumnFiltersState = []
     for (const cfg of columnFiltersCfg) {
@@ -97,7 +99,7 @@ export function useTableUrlState(
           collected.push({ id: cfg.columnId, value })
         }
       } else {
-        // default to array type
+        // 默认为数组类型
         const value = (deserialize(raw) as unknown[]) ?? []
         if (Array.isArray(value) && value.length > 0) {
           collected.push({ id: cfg.columnId, value })

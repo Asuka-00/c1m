@@ -18,6 +18,7 @@ type LongTextProps = {
   contentClassName?: string
 }
 
+/** 单行省略的长文本：溢出时可悬停（桌面）或点击（移动端）查看全文。 */
 export function LongText({
   children,
   className = '',
@@ -26,7 +27,7 @@ export function LongText({
   const ref = useRef<HTMLDivElement>(null)
   const [isOverflown, setIsOverflown] = useState(false)
 
-  // Use ref callback to check overflow when element is mounted
+  // 元素挂载时通过 ref 回调检测是否溢出
   const refCallback = (node: HTMLDivElement | null) => {
     ref.current = node
     if (node && checkOverflow(node)) {

@@ -21,6 +21,7 @@ type DataTablePaginationProps<TData> = {
   className?: string
 }
 
+/** 表格分页栏：每页条数选择、页码与翻页按钮。 */
 export function DataTablePagination<TData>({
   table,
   className,

@@ -1,14 +1,17 @@
-/** MES lot execution: stages, checks, holds, split/merge. */
+/** MES 批次执行：阶段作业、检查、Hold、拆合批。 */
 import { http } from '../client'
 import type { MesRow } from './common'
 
+/** 执行阶段。 */
 export type ExecStage = 'move_in' | 'track_in' | 'track_out' | 'move_out'
+/** 四个执行阶段（按顺序）。 */
 export const EXEC_STAGES: ExecStage[] = [
   'move_in',
   'track_in',
   'track_out',
   'move_out',
 ]
+/** 一条检查结果（规则、严重度、结果、是否可放行等）。 */
 export interface CheckResult {
   check_type: string
   rule_id: string | null
@@ -21,12 +24,14 @@ export interface CheckResult {
   message: string
   overridable: boolean
 }
+/** 简单选项（id + 标签）。 */
 export interface Opt {
   id: string
   code: string
   name?: string
   [k: string]: unknown
 }
+/** DC 量测项（含规格上下限与抽样单元）。 */
 export interface DcItem {
   measurement_item_id: string
   code: string
@@ -38,6 +43,7 @@ export interface DcItem {
   sites: number | null
   oos_action: string
 }
+/** 批次单元（晶圆 / 序列号）。 */
 export interface ExecUnit {
   id: string
   code: string
@@ -46,6 +52,7 @@ export interface ExecUnit {
   unit_kind: string
   rework_count: number
 }
+/** 谱系关系（拆批 / 合批）。 */
 export interface GenealogyLink {
   relation: 'split' | 'merge'
   parent_id: string
@@ -57,6 +64,7 @@ export interface GenealogyLink {
   at: string | null
   user: string | null
 }
+/** 优先级引用。 */
 export interface PrioRef {
   id: string
   code: string
@@ -64,6 +72,7 @@ export interface PrioRef {
   level: number
   color: string | null
 }
+/** 拆合批上下文（规则摘要、可拆 / 可合、候选批次）。 */
 export interface SmContext {
   priority: PrioRef | null
   rule: {
@@ -87,23 +96,27 @@ export interface SmContext {
   }[]
   genealogy: GenealogyLink[]
 }
+/** 拆批的一个子批定义（单元或数量、载具）。 */
 export interface SplitChild {
   unit_ids?: string[]
   qty?: number
   carrier_id?: string | null
 }
+/** 拆批 / 合批请求体。 */
 export interface SmBody {
   comment?: string
   override?: boolean
   override_reason?: string
   preview?: boolean
 }
+/** 拆批 / 合批结果。 */
 export interface SmResult {
   results: CheckResult[]
   children?: { id: string; code: string; qty: number; units: string[] }[]
   merged?: { code: string; qty: number }[]
   lot?: MesRow
 }
+/** 批次操作台上下文（`GET /mes/exec/lots/{id}/context`）。 */
 export interface ExecContext {
   lot: MesRow
   sm?: SmContext
@@ -173,6 +186,7 @@ export interface ExecContext {
   }[]
   exec_ctx: Record<string, unknown>
 }
+/** 阶段作业请求体（设备、配方、工具、物料、DC、报废 / 返工、放行等）。 */
 export interface StageBody {
   equipment_id?: string | null
   recipe_id?: string | null
@@ -193,6 +207,7 @@ export interface StageBody {
   override?: boolean
   override_reason?: string
 }
+/** 阶段作业结果（批次、检查结果、事件、自动阶段）。 */
 export interface StageResult {
   lot: MesRow
   results: CheckResult[]
@@ -203,6 +218,7 @@ export interface StageResult {
   next_step?: { id: string; seq: number } | null
 }
 
+/** 批次执行接口：上下文、阶段作业、检查预览、Hold、拆合批、履历。 */
 export const execApi = {
   split: (lotId: string, children: SplitChild[], body: SmBody) =>
     http
@@ -240,7 +256,7 @@ export const execApi = {
       .then((r) => r.data),
 }
 
-/** Check results of a blocked stage (409 check_blocked), else null. */
+/** 被阻断阶段的检查结果（409 check_blocked），否则为 null。 */
 export function blockedResults(err: unknown): CheckResult[] | null {
   const r = (
     err as { response?: { status?: number; data?: { detail?: unknown } } }

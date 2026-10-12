@@ -6,7 +6,7 @@ type ResolvedTheme = Exclude<Theme, 'system'>
 
 const DEFAULT_THEME = 'system'
 const THEME_COOKIE_NAME = 'vite-ui-theme'
-const THEME_COOKIE_MAX_AGE = 60 * 60 * 24 * 365 // 1 year
+const THEME_COOKIE_MAX_AGE = 60 * 60 * 24 * 365 // 1 年
 
 type ThemeProviderProps = {
   children: React.ReactNode
@@ -32,6 +32,7 @@ const initialState: ThemeProviderState = {
 
 const ThemeContext = createContext<ThemeProviderState>(initialState)
 
+/** 主题上下文（light / dark / system），持久化到 Cookie 并应用到根元素。 */
 export function ThemeProvider({
   children,
   defaultTheme = DEFAULT_THEME,
@@ -42,7 +43,7 @@ export function ThemeProvider({
     () => (getCookie(storageKey) as Theme) || defaultTheme
   )
 
-  // Optimized: Memoize the resolved theme calculation to prevent unnecessary re-computations
+  // 缓存解析后的主题，避免不必要的重复计算
   const resolvedTheme = useMemo((): ResolvedTheme => {
     if (theme === 'system') {
       return window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -57,8 +58,8 @@ export function ThemeProvider({
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
 
     const applyTheme = (currentResolvedTheme: ResolvedTheme) => {
-      root.classList.remove('light', 'dark') // Remove existing theme classes
-      root.classList.add(currentResolvedTheme) // Add the new theme class
+      root.classList.remove('light', 'dark') // 移除已有的主题类
+      root.classList.add(currentResolvedTheme) // 添加新的主题类
     }
 
     const handleChange = () => {
@@ -100,6 +101,7 @@ export function ThemeProvider({
   )
 }
 
+/** 读取主题上下文。 */
 // eslint-disable-next-line react-refresh/only-export-components
 export const useTheme = () => {
   const context = useContext(ThemeContext)

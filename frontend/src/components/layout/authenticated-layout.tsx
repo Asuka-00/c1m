@@ -14,9 +14,10 @@ type AuthenticatedLayoutProps = {
   children?: React.ReactNode
 }
 
+/** 登录后的应用布局：侧栏 + 内容区，应用当前租户品牌。 */
 export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   const defaultOpen = getCookie('sidebar_state') !== 'false'
-  // branding of the CURRENT tenant (follows the tenant switcher)
+  // 当前租户的品牌（随租户切换器变化）
   const slug = useCurrentTenant()?.tenant.slug
   const branding = useBranding(slug)
   useEffect(() => rememberBrandTenant(slug), [slug])
@@ -28,15 +29,15 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
         <AppSidebar />
         <SidebarInset
           className={cn(
-            // Set content container, so we can use container queries
+            // 设为内容容器，以便使用容器查询
             '@container/content',
 
-            // If layout is fixed, set the height
-            // to 100svh to prevent overflow
+            // 固定布局时设置高度
+            // 为 100svh，防止溢出
             'has-data-[layout=fixed]:h-svh',
 
-            // If layout is fixed and sidebar is inset,
-            // set the height to 100svh - spacing (total margins) to prevent overflow
+            // 固定布局且侧栏为 inset 时，
+            // 高度设为 100svh 减去间距（总外边距），防止溢出
             'peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100svh-(var(--spacing)*4))]'
           )}
         >

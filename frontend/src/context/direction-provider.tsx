@@ -2,11 +2,12 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { DirectionProvider as RdxDirProvider } from '@radix-ui/react-direction'
 import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
 
+/** 文字方向。 */
 export type Direction = 'ltr' | 'rtl'
 
 const DEFAULT_DIRECTION = 'ltr'
 const DIRECTION_COOKIE_NAME = 'dir'
-const DIRECTION_COOKIE_MAX_AGE = 60 * 60 * 24 * 365 // 1 year
+const DIRECTION_COOKIE_MAX_AGE = 60 * 60 * 24 * 365 // 1 年
 
 type DirectionContextType = {
   defaultDir: Direction
@@ -17,6 +18,7 @@ type DirectionContextType = {
 
 const DirectionContext = createContext<DirectionContextType | null>(null)
 
+/** 文字方向（ltr / rtl）上下文，持久化到 Cookie。 */
 export function DirectionProvider({ children }: { children: React.ReactNode }) {
   const [dir, _setDir] = useState<Direction>(
     () => (getCookie(DIRECTION_COOKIE_NAME) as Direction) || DEFAULT_DIRECTION
@@ -51,6 +53,7 @@ export function DirectionProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
+/** 读取文字方向上下文。 */
 // eslint-disable-next-line react-refresh/only-export-components
 export function useDirection() {
   const context = useContext(DirectionContext)

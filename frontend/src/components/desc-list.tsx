@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 
-/** Responsive description list: labels above values, auto-fit columns. */
+/** 响应式描述列表：标签在值上方，列数自适应。 */
 export function DescList({
   className,
   min = 180,
@@ -23,8 +23,8 @@ export function DescList({
   )
 }
 
-/** One fact: muted label, bold primary value (may wrap to 2 lines) and an
- *  optional secondary line (e.g. the name behind a code). */
+/** 单个信息项：弱化的标签、加粗的主值（最多换行 2 行）及
+ *  可选的次要行（如编码对应的名称）。 */
 export function DescItem({
   label,
   value,
@@ -63,7 +63,7 @@ export function DescItem({
   )
 }
 
-/** Centered empty state with icon. */
+/** 带图标的居中空状态。 */
 export function EmptyState({
   icon: Icon,
   children,

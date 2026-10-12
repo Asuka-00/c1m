@@ -2,6 +2,7 @@ import { useNavigate, useSearch } from '@tanstack/react-router'
 import type { ListQuery } from '@/lib/api'
 import { DEFAULT_FILTERS, type FilterDef } from './filter-defs'
 
+/** 默认每页条数（与后端默认值一致）。 */
 export const DEFAULT_PAGE_SIZE = 20
 
 type Patch = Partial<{
@@ -11,26 +12,27 @@ type Patch = Partial<{
   sortOrder: 'asc' | 'desc'
 }>
 
+/** useListParams 的返回值：分页、排序、筛选状态及其更新函数。 */
 export interface ListParams {
   page: number
   pageSize: number
   sortBy?: string
   sortOrder: 'asc' | 'desc'
-  /** free-text search (?q=), '' when none */
+  /** 自由文本搜索（?q=），无则为 '' */
   q: string
-  /** current filter values from the URL, by filter name (incl. q) */
+  /** URL 中的当前筛选值，按筛选名索引（含 q） */
   filters: Record<string, string>
-  /** set one filter (resets to page 1); '' / undefined removes it */
+  /** 设置一个筛选（回到第 1 页）；'' / undefined 表示移除 */
   setFilter: (name: string, value: string | undefined) => void
-  /** query params for the API client */
+  /** 传给 API 客户端的查询参数 */
   query: ListQuery
   set: (patch: Patch) => void
 }
 
-/** Pagination + sorting + filter state kept in the URL
- *  (?page=&pageSize=&sortBy=&sortOrder=&q=&<filter>=). Pass the same filter defs
- *  you give the DataTable (default: one `q` keyword search).
- *  Default: page 1, 20 rows, backend default sort. */
+/** 保存在 URL 中的分页 + 排序 + 筛选状态
+ *  （?page=&pageSize=&sortBy=&sortOrder=&q=&<filter>=）。传入与 DataTable 相同的筛选定义
+ *  （默认：一个 `q` 关键字搜索）。
+ *  默认：第 1 页、每页 20 条、后端默认排序。 */
 export function useListParams(
   filterDefs: FilterDef[] = DEFAULT_FILTERS
 ): ListParams {
@@ -72,7 +74,7 @@ export function useListParams(
       update((next) => {
         delete next.page
         if (value == null || value === '') delete next[name]
-        // store booleans as such so the URL reads ?is_active=false, not ?is_active=%22false%22
+        // 布尔值按布尔存储，使 URL 为 ?is_active=false 而非 ?is_active=%22false%22
         else
           next[name] =
             value === 'true' ? true : value === 'false' ? false : value

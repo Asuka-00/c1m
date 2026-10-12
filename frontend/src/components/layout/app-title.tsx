@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/sidebar'
 import { Button } from '../ui/button'
 
+/** 侧栏顶部的应用标题（模板备用组件，当前侧栏使用租户切换器）。 */
 export function AppTitle() {
   const { setOpenMobile } = useSidebar()
   return (

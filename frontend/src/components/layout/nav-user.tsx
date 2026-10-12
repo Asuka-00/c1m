@@ -28,7 +28,7 @@ const initials = (s: string) =>
     .map((x) => x[0]!.toUpperCase())
     .join('')
 
-/** Sidebar footer with the real /users/me data. */
+/** 侧栏底部用户信息（来自 /users/me）。 */
 export function NavUser() {
   const { isMobile } = useSidebar()
   const [open, setOpen] = useDialogState()
