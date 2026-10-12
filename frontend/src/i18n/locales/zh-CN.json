@@ -884,7 +884,9 @@
       "good": "良品",
       "scrap": "报废",
       "uphMissing": "缺 UPH",
-      "from": "开始日期"
+      "from": "开始日期",
+      "oeeTrend": "日趋势",
+      "allLotTypes": "全部批次类型"
     },
     "queue": {
       "scan": "扫码 / 输入批次号回车",
@@ -906,7 +908,15 @@
       "qtime": "Q-Time 剩余(分)",
       "hours": "滞留(小时)",
       "open": "作业"
-    }
+    },
+    "due": {
+      "overdue": "逾期",
+      "expired": "过期",
+      "expiring": "临期",
+      "ongoing": "进行中",
+      "hours": "{{n}} 小时"
+    },
+    "exportHint": "按当前搜索与筛选条件导出"
   },
   "notify": {
     "bell": "通知",

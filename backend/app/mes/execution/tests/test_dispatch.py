@@ -43,3 +43,29 @@ def test_queue_home_and_qtime_columns(client: TestClient, db: Session) -> None:
     assert home["qtime_exceeded"] == 1
     mon = client.get(f"{EXEC}/qtime/monitor", headers=h).json()["data"]
     assert mon[0]["product"] and mon[0]["route"] == f.route["code"]
+
+
+def test_wip_filters_and_oee_trend(client: TestClient, db: Session) -> None:
+    f = Line(client, db)
+    f.start(1, 1)
+    h = f.m.h
+    w = client.get(f"{EXEC}/reports/wip", headers=h).json()
+    assert w["total_lots"] == 2 and w["by_product"][0]["product_id"]
+    pid = w["by_product"][0]["product_id"]
+    assert (
+        client.get(f"{EXEC}/reports/wip", headers=h, params={"product_id": pid}).json()[
+            "total_lots"
+        ]
+        == 2
+    )
+    other = "00000000-0000-0000-0000-000000000000"
+    w2 = client.get(f"{EXEC}/reports/wip", headers=h, params={"product_id": other})
+    assert w2.json()["total_lots"] == 0
+    tr = client.get(f"{EXEC}/reports/oee-trend", headers=h).json()["data"]
+    assert len(tr) == 7 and {"day", "availability", "oee"} <= set(tr[0])
+    long = client.get(
+        f"{EXEC}/reports/oee-trend",
+        headers=h,
+        params={"date_from": "2026-01-01", "date_to": "2026-06-30"},
+    )
+    assert long.status_code == 422

@@ -11,6 +11,27 @@ const FILTER_DEFAULTS: Record<string, Record<string, string>> = {
 }
 
 /**
+ * 引用型下拉筛选：远程搜索目标实体（数据量大时不受单页条数限制）。
+ *
+ * @param ref - 目标实体编码
+ * @param name - 筛选名（URL / 查询参数）
+ * @param label - “全部”选项标签
+ */
+export function refFilter(ref: string, name: string, label: string): FilterDef {
+  return {
+    type: 'select',
+    name,
+    label,
+    optionsKey: ['mes', ref, 'filter-options'],
+    search: async (q) =>
+      (await mesApi.list(ref, { q: q || undefined, page_size: 30 })).data.map(
+        (r) => ({ value: r.id, label: rowLabel(r) })
+      ),
+    resolve: async (id) => rowLabel(await mesApi.get(ref, id)),
+  }
+}
+
+/**
  * 由实体元数据生成表格筛选：关键字搜索 + 可筛选字段（枚举 / 布尔 / 引用）。
  *
  * @param e - 实体元数据
@@ -42,19 +63,28 @@ export function useMesFilters(e: MesEntity | undefined, hide: string[] = []) {
           options: boolOptions(t('common.yes'), t('common.no')),
           defaultValue: FILTER_DEFAULTS[e.code]?.[f.column],
         })
-      else if (f.type === 'ref')
+      else if (f.type === 'str')
+        // 文本字段：远程去重取值
         defs.push({
           type: 'select',
           name: f.column,
           label: t('mes.allOf', { field: fieldLabel(e, f) }),
-          optionsKey: ['mes', f.ref, 'filter-options'],
-          // 远程搜索：数据量大时不受单页条数限制
+          optionsKey: ['mes', e.code, 'distinct', f.column],
           search: async (q) =>
-            (
-              await mesApi.list(f.ref!, { q: q || undefined, page_size: 30 })
-            ).data.map((r) => ({ value: r.id, label: rowLabel(r) })),
-          resolve: async (id) => rowLabel(await mesApi.get(f.ref!, id)),
+            (await mesApi.distinct(e.code, f.column, q)).map((v) => ({
+              value: v,
+              label: v,
+            })),
+          resolve: async (v) => v,
         })
+      else if (f.type === 'ref')
+        defs.push(
+          refFilter(
+            f.ref!,
+            f.column,
+            t('mes.allOf', { field: fieldLabel(e, f) })
+          )
+        )
     }
     // 日期范围：首个列表中显示的日期 / 时间字段；日志类实体（按 created_at 排序）用创建时间
     const df = e.fields.find(

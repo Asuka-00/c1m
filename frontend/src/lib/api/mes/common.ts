@@ -123,9 +123,19 @@ export const mesApi = {
       .then((r) => r.data),
   newVersion: (code: string, id: string) =>
     http.post<MesRow>(`${base(code)}/${id}/new-version`).then((r) => r.data),
-  exportXlsx: async (code: string) => {
+  /** 文本型筛选字段的去重取值（下拉筛选选项）。 */
+  distinct: (code: string, field: string, q?: string) =>
+    http
+      .get<{ data: string[] }>(`${base(code)}/distinct/${field}`, {
+        params: { q: q || undefined },
+      })
+      .then((r) => r.data.data),
+  /** 导出 xlsx；传入列表查询参数时按当前关键字 / 筛选导出（忽略分页）。 */
+  exportXlsx: async (code: string, query: Record<string, unknown> = {}) => {
+    const { page: _p, page_size: _s, ...params } = query
     const r = await http.get<Blob>(`${base(code)}/export`, {
       responseType: 'blob',
+      params,
     })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(r.data)

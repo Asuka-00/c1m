@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fmtDateTime, t } from '@/i18n'
-import { RefreshCw, ScanSearch } from 'lucide-react'
+import { Download, RefreshCw, ScanSearch } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTenantKey } from '@/lib/api/hooks'
 import { execApi, type QtimeRow } from '@/lib/api/mes/execution'
@@ -14,6 +14,7 @@ import {
   DataTable,
   Page,
   clientList,
+  downloadCsv,
   useListParams,
   type FilterDef,
 } from '@/components/crud'
@@ -106,6 +107,42 @@ export default function QtimeMonitor() {
               {t('mes.qtime.autoRefresh')}
             </Label>
           </div>
+          <Button
+            variant='outline'
+            disabled={!view.total}
+            onClick={() =>
+              downloadCsv(
+                'qtime_monitor',
+                [
+                  t('mes.qtime.lot'),
+                  t('mes.qtime.product'),
+                  t('mes.qtime.route'),
+                  t('mes.qtime.step'),
+                  t('mes.qtime.rule'),
+                  t('mes.qtime.since'),
+                  t('mes.qtime.elapsed'),
+                  t('mes.qtime.max'),
+                  t('mes.qtime.remaining'),
+                  t('mes.qtime.state'),
+                ],
+                view.filtered.map((r) => [
+                  r.lot,
+                  r.product,
+                  r.route,
+                  r.step_seq,
+                  r.rule,
+                  fmtDateTime(r.since),
+                  r.minutes,
+                  r.max_minutes,
+                  r.remaining,
+                  t(`mes.qtime.${stateOf(r)}`),
+                ])
+              )
+            }
+          >
+            <Download className='size-4' />
+            {t('mes.export')}
+          </Button>
           <Button variant='outline' onClick={() => q.refetch()}>
             <RefreshCw className='size-4' />
             {t('mes.qtime.refresh')}

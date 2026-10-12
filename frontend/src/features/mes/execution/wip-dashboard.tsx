@@ -6,8 +6,14 @@ import { fmtDateTime, t } from '@/i18n'
 import { useTenantKey } from '@/lib/api/hooks'
 import { execApi } from '@/lib/api/mes/execution'
 import { Badge } from '@/components/ui/badge'
-import { Page } from '@/components/crud'
+import {
+  FilterToolbar,
+  Page,
+  useListParams,
+  type FilterDef,
+} from '@/components/crud'
 import { enumLabel } from '@/features/mes/common/labels'
+import { refFilter } from '@/features/mes/common/use-mes-filters'
 import { DataCard, DateRange, Kpi } from './report-parts'
 import { isoDay } from './report-utils'
 
@@ -16,11 +22,40 @@ export default function WipDashboard() {
   const tk = useTenantKey()
   const [from, setFrom] = useState(isoDay(-6))
   const [to, setTo] = useState(isoDay())
+  const filters: FilterDef[] = [
+    refFilter('product', 'product_id', t('mes.queue.allProducts')),
+    refFilter('route', 'route_id', t('mes.qtime.allRoutes')),
+    refFilter('lot_type', 'lot_type_id', t('mes.report.allLotTypes')),
+  ]
+  const lp = useListParams(filters)
+  const f = lp.filters
   const w = useQuery({
-    queryKey: ['mes', 'exec', tk, 'report-wip'],
-    queryFn: execApi.wip,
+    queryKey: ['mes', 'exec', tk, 'report-wip', f],
+    queryFn: () =>
+      execApi.wip({
+        product_id: f.product_id,
+        route_id: f.route_id,
+        lot_type_id: f.lot_type_id,
+      }),
     refetchInterval: 60_000,
   })
+  // 钻取：带上看板筛选跳转批次列表
+  const lotLink = (extra: Record<string, string>, label: React.ReactNode) => (
+    <Link
+      to='/$'
+      params={{ _splat: 'mes/lot' }}
+      search={
+        {
+          ...(f.product_id ? { product_id: f.product_id } : {}),
+          ...(f.lot_type_id ? { lot_type_id: f.lot_type_id } : {}),
+          ...extra,
+        } as never
+      }
+      className='text-blue-600 underline-offset-2 hover:underline dark:text-blue-400'
+    >
+      {label}
+    </Link>
+  )
   const o = useQuery({
     queryKey: ['mes', 'exec', tk, 'report-output', from, to],
     queryFn: () => execApi.output({ date_from: from, date_to: to }),
@@ -34,15 +69,23 @@ export default function WipDashboard() {
       description={t('mes.report.hint')}
     >
       <div className='grid gap-4'>
+        <FilterToolbar filters={filters} params={lp} />
         <div className='grid gap-4 sm:grid-cols-3'>
-          <Kpi label={t('mes.report.lots')} value={d?.total_lots ?? '—'} />
+          <Kpi
+            label={t('mes.report.lots')}
+            value={d ? lotLink({}, d.total_lots) : '—'}
+          />
           <Kpi label={t('mes.report.qty')} value={d?.total_qty ?? '—'} />
-          <Kpi label={t('mes.report.onHold')} value={d?.on_hold ?? '—'} />
+          <Kpi
+            label={t('mes.report.onHold')}
+            value={d ? lotLink({ on_hold: 'true' }, d.on_hold) : '—'}
+          />
         </div>
         <div className='grid gap-4 lg:grid-cols-2'>
           <DataCard
             title={t('mes.report.byStep')}
             rows={d?.by_step ?? []}
+            exportName='wip_by_step'
             cols={[
               { head: t('mes.report.route'), get: (r) => r.route ?? '—' },
               { head: t('mes.report.step'), get: (r) => r.step_seq ?? '—' },
@@ -50,7 +93,24 @@ export default function WipDashboard() {
                 head: t('mes.report.operation'),
                 get: (r) => r.operation ?? '—',
               },
-              { head: t('mes.report.lots'), get: (r) => r.lots, right: true },
+              {
+                head: t('mes.report.lots'),
+                right: true,
+                text: (r) => r.lots,
+                get: (r) =>
+                  r.operation ? (
+                    <Link
+                      to='/$'
+                      params={{ _splat: 'mes/lot-console' }}
+                      search={{ operation: r.operation } as never}
+                      className='text-blue-600 underline-offset-2 hover:underline dark:text-blue-400'
+                    >
+                      {r.lots}
+                    </Link>
+                  ) : (
+                    r.lots
+                  ),
+              },
               {
                 head: t('mes.report.qty'),
                 right: true,
@@ -80,7 +140,12 @@ export default function WipDashboard() {
                   head: t('mes.report.status'),
                   get: (r) => enumLabel('lot_status', r.status),
                 },
-                { head: t('mes.report.lots'), get: (r) => r.lots, right: true },
+                {
+                  head: t('mes.report.lots'),
+                  right: true,
+                  text: (r) => r.lots,
+                  get: (r) => lotLink({ lot_status: r.status }, r.lots),
+                },
                 { head: t('mes.report.qty'), get: (r) => r.qty, right: true },
               ]}
             />
@@ -89,7 +154,15 @@ export default function WipDashboard() {
               rows={d?.by_product ?? []}
               cols={[
                 { head: t('mes.report.product'), get: (r) => r.product ?? '—' },
-                { head: t('mes.report.lots'), get: (r) => r.lots, right: true },
+                {
+                  head: t('mes.report.lots'),
+                  right: true,
+                  text: (r) => r.lots,
+                  get: (r) =>
+                    r.product_id
+                      ? lotLink({ product_id: r.product_id }, r.lots)
+                      : r.lots,
+                },
                 { head: t('mes.report.qty'), get: (r) => r.qty, right: true },
               ]}
             />
@@ -98,6 +171,7 @@ export default function WipDashboard() {
         <DataCard
           title={t('mes.report.aging')}
           rows={d?.aging ?? []}
+          exportName='wip_aging'
           cols={[
             {
               head: t('mes.report.lot'),
@@ -106,11 +180,12 @@ export default function WipDashboard() {
                   to='/$'
                   params={{ _splat: 'mes/lot-console' }}
                   search={{ lot: r.id } as never}
-                  className='font-mono underline-offset-2 hover:underline'
+                  className='font-mono text-blue-600 underline-offset-2 hover:underline dark:text-blue-400'
                 >
                   {r.lot}
                 </Link>
               ),
+              text: (r) => r.lot,
             },
             {
               head: t('mes.report.status'),
@@ -141,6 +216,7 @@ export default function WipDashboard() {
         <DataCard
           title={t('mes.report.output')}
           rows={o.data ?? []}
+          exportName={`output_${from}_${to}`}
           max={366}
           cols={[
             { head: t('mes.report.day'), get: (r) => r.day },

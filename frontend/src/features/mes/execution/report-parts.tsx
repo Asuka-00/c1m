@@ -1,5 +1,7 @@
 /** 报表页公共组件：KPI 卡片、简单数据表、日期区间。 */
 import { t } from '@/i18n'
+import { Download } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,6 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { downloadCsv } from '@/components/crud'
+import { isoDay } from './report-utils'
 
 /** KPI 卡片。 */
 export function Kpi({
@@ -35,6 +39,15 @@ export interface Col<T> {
   head: string
   get: (r: T) => React.ReactNode
   right?: boolean
+  /** 导出用的纯文本值（缺省时取 get 的字符串 / 数字结果） */
+  text?: (r: T) => unknown
+}
+
+/** 列值的导出文本。 */
+function plain<T>(c: Col<T>, r: T): unknown {
+  if (c.text) return c.text(r)
+  const v = c.get(r)
+  return typeof v === 'string' || typeof v === 'number' ? v : ''
 }
 
 /** 带标题卡片的简单数据表（最多显示 ``max`` 行）。 */
@@ -43,16 +56,36 @@ export function DataCard<T>({
   rows,
   cols,
   max = 20,
+  exportName,
 }: {
   title: string
   rows: T[]
   cols: Col<T>[]
   max?: number
+  /** 设置后显示“导出”按钮（CSV，导出全部行） */
+  exportName?: string
 }) {
   return (
     <Card className='gap-3'>
-      <CardHeader>
+      <CardHeader className='flex flex-row items-center justify-between'>
         <CardTitle className='text-base'>{title}</CardTitle>
+        {exportName && (
+          <Button
+            size='sm'
+            variant='outline'
+            disabled={!rows.length}
+            onClick={() =>
+              downloadCsv(
+                exportName,
+                cols.map((c) => c.head),
+                rows.map((r) => cols.map((c) => plain(c, r)))
+              )
+            }
+          >
+            <Download className='size-4' />
+            {t('mes.export')}
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         <Table>
@@ -107,8 +140,30 @@ export function DateRange({
   setFrom: (v: string) => void
   setTo: (v: string) => void
 }) {
+  const today = isoDay()
+  const presets: [string, string, string][] = [
+    [t('table.range.today'), today, today],
+    [t('table.range.last7'), isoDay(-6), today],
+    [t('table.range.last30'), isoDay(-29), today],
+    [t('table.range.thisMonth'), `${today.slice(0, 8)}01`, today],
+  ]
   return (
-    <div className='flex items-end gap-3'>
+    <div className='flex flex-wrap items-end gap-3'>
+      <div className='flex gap-1'>
+        {presets.map(([l, a, b]) => (
+          <Button
+            key={l}
+            size='sm'
+            variant={from === a && to === b ? 'secondary' : 'ghost'}
+            onClick={() => {
+              setFrom(a)
+              setTo(b)
+            }}
+          >
+            {l}
+          </Button>
+        ))}
+      </div>
       <div className='grid gap-1'>
         <Label htmlFor='rp-from'>{t('mes.report.from')}</Label>
         <Input

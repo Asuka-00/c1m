@@ -884,7 +884,9 @@
       "good": "良品",
       "scrap": "廃棄",
       "uphMissing": "UPH なし",
-      "from": "開始日"
+      "from": "開始日",
+      "oeeTrend": "日次トレンド",
+      "allLotTypes": "全ロット種別"
     },
     "queue": {
       "scan": "ロット ID をスキャン / 入力して Enter",
@@ -906,7 +908,15 @@
       "qtime": "Q-Time 残り(分)",
       "hours": "滞留(時間)",
       "open": "作業"
-    }
+    },
+    "due": {
+      "overdue": "納期遅れ",
+      "expired": "期限切れ",
+      "expiring": "期限間近",
+      "ongoing": "継続中",
+      "hours": "{{n}} 時間"
+    },
+    "exportHint": "現在の検索・フィルター条件で出力"
   },
   "notify": {
     "bell": "通知",

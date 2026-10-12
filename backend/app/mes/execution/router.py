@@ -236,10 +236,22 @@ def _window(
 
 
 @router.get("/reports/wip")
-def report_wip(session: SessionDep, ctx: CurrentTenant) -> Any:
-    """WIP summary by status / step / product, with lot aging."""
+def report_wip(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    product_id: uuid.UUID | None = None,
+    lot_type_id: uuid.UUID | None = None,
+    route_id: uuid.UUID | None = None,
+) -> Any:
+    """WIP summary by status / step / product, with lot aging (optional filters)."""
     _need(ctx, "mes.exec:read")
-    return svc.wip_summary(session, ctx.id)
+    return svc.wip_summary(
+        session,
+        ctx.id,
+        product_id=product_id,
+        lot_type_id=lot_type_id,
+        route_id=route_id,
+    )
 
 
 @router.get("/reports/output")
@@ -266,6 +278,22 @@ def report_oee(
     _need(ctx, "mes.exec:read")
     a, b = _window(date_from, date_to, 7)
     return {"data": svc.oee(session, ctx.id, a, b), "from": a, "to": b}
+
+
+@router.get("/reports/oee-trend")
+def report_oee_trend(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    workcenter: str | None = None,
+) -> Any:
+    """Daily OEE trend (availability, quality, loading-weighted OEE)."""
+    _need(ctx, "mes.exec:read")
+    a, b = _window(date_from, date_to, 7)
+    if (b - a).days > 92:
+        raise HTTPException(status_code=422, detail="range too long (max 92 days)")
+    return {"data": svc.oee_trend(session, ctx.id, a, b, workcenter)}
 
 
 @router.get("/trace")

@@ -34,17 +34,42 @@ def _rows(s: Session, q: Any) -> list[Row]:
     return [dict(r) for r in conn(s).execute(q).mappings().all()]
 
 
-def wip_summary(s: Session, tid: uuid.UUID) -> Row:
+def wip_summary(
+    s: Session,
+    tid: uuid.UUID,
+    *,
+    product_id: uuid.UUID | None = None,
+    lot_type_id: uuid.UUID | None = None,
+    route_id: uuid.UUID | None = None,
+) -> Row:
     """在制看板：按状态 / 工步 / 产品分布、Hold 数、滞留时间最长的批次。
+
+    Args:
+        s: 数据库会话。
+        tid: 租户 id。
+        product_id: 仅统计该产品。
+        lot_type_id: 仅统计该批次类型。
+        route_id: 仅统计当前工步属于该工艺路线的批次。
 
     Returns:
         ``{total_lots, total_qty, on_hold, by_status, by_step, by_product, aging}``。
     """
     t = TABLES["lot"]
-    lots = _rows(
-        s,
-        sa.select(t).where(t.c.tenant_id == tid, t.c.lot_status.not_in(TERMINAL)),
-    )
+    stmt = sa.select(t).where(t.c.tenant_id == tid, t.c.lot_status.not_in(TERMINAL))
+    if product_id:
+        stmt = stmt.where(t.c.product_id == product_id)
+    if lot_type_id:
+        stmt = stmt.where(t.c.lot_type_id == lot_type_id)
+    if route_id:
+        rs = TABLES["route_step"]
+        stmt = stmt.where(
+            t.c.current_step_id.in_(
+                sa.select(rs.c.id).where(
+                    rs.c.tenant_id == tid, rs.c.route_id == route_id
+                )
+            )
+        )
+    lots = _rows(s, stmt)
     h = TABLES["lot_history"]
     last = {
         r["lot_id"]: r["at"]
@@ -84,7 +109,12 @@ def wip_summary(s: Session, tid: uuid.UUID) -> Row:
         pk = lot["product_id"]
         if pk not in by_product:
             pr = one(s, tid, "product", pk)
-            by_product[pk] = {"product": pr and pr["code"], "lots": 0, "qty": 0}
+            by_product[pk] = {
+                "product_id": pk and str(pk),
+                "product": pr and pr["code"],
+                "lots": 0,
+                "qty": 0,
+            }
         by_product[pk]["lots"] += 1
         by_product[pk]["qty"] += q
         since = last.get(lot["id"]) or lot.get("created_at")
@@ -204,6 +234,7 @@ def oee(s: Session, tid: uuid.UUID, start: datetime, end: datetime) -> list[Row]
     end = min(end, now())
     h = TABLES["lot_history"]
     out = []
+    wcs = {w["id"]: w["code"] for w in find(s, tid, "workcenter")}
     for eq in find(s, tid, "equipment", order="code", unit_kind="main"):
         cats: dict[str, float] = defaultdict(float)
         for st, sec in _segments(s, tid, eq, start, end):
@@ -265,6 +296,7 @@ def oee(s: Session, tid: uuid.UUID, start: datetime, end: datetime) -> list[Row]
                 "id": str(eq["id"]),
                 "equipment": eq["code"],
                 "name": eq["name"],
+                "workcenter": wcs.get(eq.get("workcenter_id")),
                 "hours": {k: round(v / 3600, 2) for k, v in cats.items()},
                 "loading_h": round(loading / 3600, 2),
                 "prd_h": round(prd / 3600, 2),
@@ -277,4 +309,47 @@ def oee(s: Session, tid: uuid.UUID, start: datetime, end: datetime) -> list[Row]
                 "uph_missing": missing,
             }
         )
+    return out
+
+
+def oee_trend(
+    s: Session,
+    tid: uuid.UUID,
+    start: datetime,
+    end: datetime,
+    workcenter: str | None = None,
+) -> list[Row]:
+    """OEE 日趋势：逐日汇总各主设备（可按工作中心过滤）的时间稼动率、良品率与 OEE。
+
+    时间稼动率 = ΣPRD / Σ负荷时间；良品率 = Σ良品 / Σ(良品 + 报废)；
+    OEE 为当日可计算设备按负荷时间加权的平均值。
+
+    Returns:
+        每日 ``{day, availability, quality, oee, loading_h}``。
+    """
+    out: list[Row] = []
+    day = start
+    while day < min(end, now()):
+        nxt = day + timedelta(days=1)
+        rows = [
+            r
+            for r in oee(s, tid, day, nxt)
+            if not workcenter or r["workcenter"] == workcenter
+        ]
+        load = sum(r["loading_h"] for r in rows)
+        prd = sum(r["prd_h"] for r in rows)
+        good = sum(r["good"] for r in rows)
+        scrap = sum(r["scrap"] for r in rows)
+        ow = [(r["oee"], r["loading_h"]) for r in rows if r["oee"] is not None]
+        wsum = sum(w for _, w in ow)
+        out.append(
+            {
+                "day": day.date().isoformat(),
+                "availability": r3(prd / load if load else None),
+                "quality": r3(good / (good + scrap) if good + scrap else None),
+                "oee": r3(sum(v * w for v, w in ow) / wsum if wsum else None),
+                "loading_h": round(load, 2),
+            }
+        )
+        day = nxt
     return out

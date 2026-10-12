@@ -29,6 +29,7 @@ from app.mes.execution.qtime_actions import sweep_all_tenants as sweep_all_tenan
 from app.mes.execution.qtime_actions import sweep_qtime as sweep_qtime
 from app.mes.execution.reports import daily_output as daily_output
 from app.mes.execution.reports import oee as oee
+from app.mes.execution.reports import oee_trend as oee_trend
 from app.mes.execution.reports import wip_summary as wip_summary
 from app.mes.execution.rework import jump as jump
 from app.mes.execution.split import split as split

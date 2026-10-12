@@ -884,7 +884,9 @@
       "good": "Good",
       "scrap": "Scrap",
       "uphMissing": "No UPH",
-      "from": "From"
+      "from": "From",
+      "oeeTrend": "Daily trend",
+      "allLotTypes": "All lot types"
     },
     "queue": {
       "scan": "Scan / enter lot ID, Enter",
@@ -906,7 +908,15 @@
       "qtime": "Q-Time left (min)",
       "hours": "Since last move (h)",
       "open": "Operate"
-    }
+    },
+    "due": {
+      "overdue": "Overdue",
+      "expired": "Expired",
+      "expiring": "Expiring",
+      "ongoing": "Ongoing",
+      "hours": "{{n}} h"
+    },
+    "exportHint": "Export rows matching the current search and filters"
   },
   "notify": {
     "bell": "Notifications",

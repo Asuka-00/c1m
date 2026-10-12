@@ -14,13 +14,13 @@ export interface ClientListOptions<T> {
  * @param rows 全部行
  * @param p 列表参数（useListParams / useLocalListParams）
  * @param opts 搜索与筛选规则
- * @returns 当前页的行与筛选后的总数
+ * @returns 当前页的行、筛选后的总数与全部筛选结果（用于导出）
  */
 export function clientList<T>(
   rows: T[],
   p: ListParams,
   opts: ClientListOptions<T> = {}
-): { rows: T[]; total: number } {
+): { rows: T[]; total: number; filtered: T[] } {
   const q = (p.filters.q ?? '').trim().toLowerCase()
   let out = rows.filter((r) => {
     if (q && !(opts.text?.(r) ?? '').toLowerCase().includes(q)) return false
@@ -46,5 +46,9 @@ export function clientList<T>(
     })
   }
   const start = (p.page - 1) * p.pageSize
-  return { rows: out.slice(start, start + p.pageSize), total: out.length }
+  return {
+    rows: out.slice(start, start + p.pageSize),
+    total: out.length,
+    filtered: out,
+  }
 }

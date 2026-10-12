@@ -16,7 +16,7 @@ from app.core.pagination import ListParamsDep
 from app.core.spec.base import get_entity
 from app.core.spec.engine import ENTITIES, EXTRA_PERMISSIONS, MODULES, Entity, perm
 from app.core.spec.excel import export_xlsx, import_xlsx
-from app.core.spec.query import get_row, list_rows, tree
+from app.core.spec.query import distinct_values, get_row, list_rows, tree
 from app.core.spec.serialize import serialize
 from app.core.spec.validate import attr_defs, attr_options
 from app.core.spec.write import (
@@ -153,6 +153,19 @@ def mes_list(
     return {"data": serialize(session, ctx.id, e, rows), "count": count}
 
 
+@router.get("/{entity}/distinct/{field}")
+def mes_distinct(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    entity: str,
+    field: str,
+    q: str | None = None,
+) -> Any:
+    """Distinct values of a text filter field (dropdown filter options)."""
+    e = require_entity(ctx, entity, "read")
+    return {"data": distinct_values(session, e, ctx.id, field, q)}
+
+
 @router.get("/{entity}/tree")
 def mes_tree(session: SessionDep, ctx: CurrentTenant, entity: str) -> Any:
     e = require_entity(ctx, entity, "read")
@@ -160,10 +173,20 @@ def mes_tree(session: SessionDep, ctx: CurrentTenant, entity: str) -> Any:
 
 
 @router.get("/{entity}/export")
-def mes_export(session: SessionDep, ctx: CurrentTenant, entity: str) -> Response:
+def mes_export(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    entity: str,
+    request: Request,
+    q: str | None = None,
+) -> Response:
+    """Export as xlsx, honouring the same ?q= and filters as the list."""
     e = require_entity(ctx, entity, "read")
+    filters = {
+        k: v for k, v in request.query_params.items() if k not in RESERVED and v != ""
+    }
     return Response(
-        export_xlsx(session, ctx.id, e),
+        export_xlsx(session, ctx.id, e, q=q, filters=filters),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{e.code}.xlsx"'},
     )

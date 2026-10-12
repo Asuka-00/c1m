@@ -175,14 +175,46 @@ def get_row(session: Session, e: Entity, tenant_id: uuid.UUID, rid: uuid.UUID) -
 
 
 def all_rows(
-    session: Session, e: Entity, tenant_id: uuid.UUID, limit: int = 5000
+    session: Session,
+    e: Entity,
+    tenant_id: uuid.UUID,
+    limit: int = 5000,
+    *,
+    q: str | None = None,
+    filters: dict[str, str] | None = None,
 ) -> list[Row]:
-    """读取全部行（带上限，用于选项与导出）。"""
+    """读取全部行（带上限，用于选项与导出；可按关键字 / 筛选过滤，约定同列表）。"""
     t = table(e)
-    stmt = base_select(e, tenant_id).order_by(
-        t.c[sortable(e).get(e.sort_default, t.c.id).name], t.c.id
-    )
+    stmt = base_select(e, tenant_id)
+    if filters:
+        stmt = apply_filters(e, stmt, filters)
+    if q:
+        stmt = search(e, stmt, q)
+    stmt = stmt.order_by(t.c[sortable(e).get(e.sort_default, t.c.id).name], t.c.id)
     return [dict(r) for r in conn(session).execute(stmt.limit(limit)).mappings()]
+
+
+def distinct_values(
+    session: Session,
+    e: Entity,
+    tenant_id: uuid.UUID,
+    name: str,
+    q: str | None = None,
+    limit: int = 50,
+) -> list[str]:
+    """文本型筛选字段的去重取值（用于下拉筛选选项，可按关键字模糊匹配）。
+
+    仅允许声明了 ``filter=True`` 的 str 字段，其它字段返回 422。
+    """
+    f = e.field(name)
+    if not f or f.type != "str" or not f.filterable:
+        raise HTTPException(status_code=422, detail=f"{name} is not a text filter")
+    sub = base_select(e, tenant_id).subquery()
+    stmt = sa.select(sub.c[f.column]).where(sub.c[f.column].is_not(None)).distinct()
+    if q:
+        stmt = stmt.where(sub.c[f.column].ilike(f"%{q}%"))
+    stmt = stmt.order_by(sub.c[f.column]).limit(limit)
+    return [r[0] for r in conn(session).execute(stmt)]
 
 
 def tree(session: Session, tenant_id: uuid.UUID, e: Entity) -> list[Row]:

@@ -263,7 +263,8 @@ export function EntityTable({
       <Button
         variant='outline'
         size='sm'
-        onClick={() => mesApi.exportXlsx(e.code).catch(onErr)}
+        title={t('mes.exportHint')}
+        onClick={() => mesApi.exportXlsx(e.code, params.query).catch(onErr)}
       >
         <Download />
         {t('mes.export')}

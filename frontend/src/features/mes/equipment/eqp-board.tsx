@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fmtDateTime, t } from '@/i18n'
-import { RefreshCw } from 'lucide-react'
+import { Download, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTenantKey } from '@/lib/api/hooks'
 import { mesApi } from '@/lib/api/mes/common'
@@ -25,6 +25,7 @@ import {
   Page,
   boolOptions,
   clientList,
+  downloadCsv,
   useListParams,
   type FilterDef,
 } from '@/components/crud'
@@ -114,10 +115,44 @@ export default function EqpBoard() {
       title={t('menu.mes-eqp-board')}
       description={t('mes.eqp.hint')}
       actions={
-        <Button variant='outline' onClick={() => q.refetch()}>
-          <RefreshCw className='size-4' />
-          {t('mes.eqp.refresh')}
-        </Button>
+        <>
+          <Button
+            variant='outline'
+            disabled={!view.total}
+            onClick={() =>
+              downloadCsv(
+                'equipment_board',
+                [
+                  t('mes.eqp.workcenter'),
+                  t('mes.eqp.code'),
+                  t('mes.eqp.name'),
+                  t('mes.eqp.state'),
+                  t('mes.eqp.down'),
+                  t('mes.eqp.pm'),
+                ],
+                view.filtered.map((r) => [
+                  r.workcenter,
+                  r.code,
+                  r.name,
+                  r.state ? `${r.state.code} · ${r.state.name}` : '',
+                  r.down ? t('common.yes') : '',
+                  r.pm
+                    .map(
+                      (p) => `${p.plan}${p.due ? ` ${t('mes.eqp.pmDue')}` : ''}`
+                    )
+                    .join('; '),
+                ])
+              )
+            }
+          >
+            <Download className='size-4' />
+            {t('mes.export')}
+          </Button>
+          <Button variant='outline' onClick={() => q.refetch()}>
+            <RefreshCw className='size-4' />
+            {t('mes.eqp.refresh')}
+          </Button>
+        </>
       }
     >
       <div className='flex flex-wrap gap-2' data-testid='e10-summary'>

@@ -40,3 +40,23 @@ def test_id_range_and_default_desc(client: TestClient, db: Session) -> None:
     assert [x["start_at"][:7] for x in r["data"]] == ["2026-02"]
     bad = client.get(m.url("downtime"), headers=m.h, params={"start_at_from": "nope"})
     assert bad.status_code == 422
+
+
+def test_export_honours_filters_and_distinct(client: TestClient, db: Session) -> None:
+    import io
+
+    from openpyxl import load_workbook
+
+    m = Mes(client, db)
+    for c in ("EX-A", "EX-B", "EY-C"):
+        m.post("site", {"code": c, "name": c})
+    r = client.get(m.url("site", "export"), headers=m.h, params={"q": "EX-"})
+    ws = load_workbook(io.BytesIO(r.content)).active
+    assert ws is not None
+    codes = sorted(str(x[0].value) for x in ws.iter_rows(min_row=2) if x[0].value)
+    assert [c for c in codes if c.startswith("E")] == ["EX-A", "EX-B"]
+    # 文本筛选去重取值：仅 filter=True 的 str 字段
+    d = client.get(m.url("audit_log", "distinct", "user_email"), headers=m.h)
+    assert d.status_code == 200 and d.json()["data"]
+    bad = client.get(m.url("site", "distinct", "name"), headers=m.h)
+    assert bad.status_code == 422

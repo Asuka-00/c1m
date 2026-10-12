@@ -58,7 +58,12 @@ export interface WipSummary {
     qty: number
     on_hold: number
   }[]
-  by_product: { product: string | null; lots: number; qty: number }[]
+  by_product: {
+    product_id: string | null
+    product: string | null
+    lots: number
+    qty: number
+  }[]
   aging: {
     id: string
     lot: string
@@ -83,6 +88,7 @@ export interface OeeRow {
   id: string
   equipment: string
   name: string
+  workcenter: string | null
   hours: Record<string, number>
   loading_h: number
   prd_h: number
@@ -95,6 +101,13 @@ export interface OeeRow {
   uph_missing: boolean
 }
 /** 生效中的 Hold 行。 */
+export interface OeeTrendRow {
+  day: string
+  availability: number | null
+  quality: number | null
+  oee: number | null
+  loading_h: number
+}
 export interface ActiveHold {
   id: string
   lot_id: string
@@ -376,7 +389,21 @@ export const execApi = {
       .post<StageResult>(`/mes/exec/lots/${lotId}/${stage}`, body)
       .then((r) => r.data),
   /** WIP 看板汇总。 */
-  wip: () => http.get<WipSummary>('/mes/exec/reports/wip').then((r) => r.data),
+  wip: (p: { product_id?: string; lot_type_id?: string; route_id?: string }) =>
+    http
+      .get<WipSummary>('/mes/exec/reports/wip', { params: p })
+      .then((r) => r.data),
+  /** OEE 日趋势。 */
+  oeeTrend: (p: {
+    date_from?: string
+    date_to?: string
+    workcenter?: string
+  }) =>
+    http
+      .get<{ data: OeeTrendRow[] }>('/mes/exec/reports/oee-trend', {
+        params: p,
+      })
+      .then((r) => r.data.data),
   /** 产出日报。 */
   output: (p: { date_from?: string; date_to?: string }) =>
     http
