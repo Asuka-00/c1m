@@ -13,4 +13,6 @@ export const pages: Pages = {
   menus: lazy(() => import('./menus')),
   settings: lazy(() => import('./settings')),
   config: lazy(() => import('./config')),
+  notifications: lazy(() => import('./notifications')),
+  'notify-subscriptions': lazy(() => import('./notifications/subscriptions')),
 }

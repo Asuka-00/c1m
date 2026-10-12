@@ -104,7 +104,9 @@
     "tenants": "テナント",
     "menus": "メニュー",
     "settings": "設定",
-    "config": "システム設定"
+    "config": "システム設定",
+    "notifications": "メッセージセンター",
+    "notify-subscriptions": "通知購読"
   },
   "auth": {
     "appName": "FastAPI 管理画面",
@@ -855,6 +857,93 @@
       "scrap": "廃棄",
       "uphMissing": "UPH なし",
       "from": "開始日"
+    }
+  },
+  "notify": {
+    "bell": "通知",
+    "title": "通知",
+    "unreadCount": "未読 {{count}} 件",
+    "markAllRead": "すべて既読にする",
+    "empty": "通知はありません",
+    "viewAll": "メッセージセンターですべて表示",
+    "center": "メッセージセンター",
+    "centerDesc": "購読したイベントからの通知",
+    "search": "タイトル・対象を検索…",
+    "allTypes": "すべての種類",
+    "allRead": "既読・未読すべて",
+    "allSeverities": "すべての重要度",
+    "unread": "未読",
+    "read": "既読",
+    "time": "日時",
+    "severityCol": "重要度",
+    "type": "イベント種類",
+    "content": "内容",
+    "object": "関連対象",
+    "open": "開く",
+    "readAt": "既読日時",
+    "severity": {
+      "info": "情報",
+      "warning": "警告",
+      "critical": "重大"
+    },
+    "sub": {
+      "title": "通知購読",
+      "desc": "各イベントを受け取るロール・ユーザーを設定",
+      "new": "購読を追加",
+      "edit": "購読を編集",
+      "delete": "購読を削除",
+      "deleteDesc": "購読「{{name}}」を削除しますか？",
+      "created": "購読を作成しました",
+      "updated": "購読を更新しました",
+      "deleted": "購読を削除しました",
+      "search": "名前を検索…",
+      "allStatus": "すべての状態",
+      "enabled": "有効",
+      "disabled": "無効",
+      "name": "名前",
+      "roles": "ロール",
+      "users": "ユーザー",
+      "channels": "チャネル",
+      "status": "状態"
+    },
+    "channel": {
+      "in_app": "アプリ内"
+    },
+    "event": {
+      "mes": {
+        "qtime_warn": {
+          "label": "Q タイム事前警告",
+          "title": "ロット {{lot}} の Q タイム {{rule}} が {{left}} 分後に超過します"
+        },
+        "qtime_exceeded": {
+          "label": "Q タイム超過",
+          "title": "ロット {{lot}} の Q タイム {{rule}} 超過：{{minutes}} > {{max}} 分（{{action}}）"
+        },
+        "lot_hold": {
+          "label": "ロット自動ホールド",
+          "title": "ロット {{lot}} が自動ホールドされました（{{source}}）：{{reason}}"
+        },
+        "oos": {
+          "label": "規格外（OOS）",
+          "title": "ロット {{lot}} の工程 {{step}} で規格外：{{items}}（{{action}}）"
+        },
+        "pm_due": {
+          "label": "PM 期限間近",
+          "title": "設備 {{equipment}} の PM {{plan}} の期限が近づいています"
+        },
+        "pm_overdue": {
+          "label": "PM 期限切れ",
+          "title": "設備 {{equipment}} の PM {{plan}} が期限切れです"
+        },
+        "eqp_down": {
+          "label": "設備ダウン",
+          "title": "設備 {{equipment}} ダウン：{{state}} {{state_name}}"
+        },
+        "downtime": {
+          "label": "停止記録",
+          "title": "設備 {{equipment}} の停止を記録：{{reason}}"
+        }
+      }
     }
   }
 }

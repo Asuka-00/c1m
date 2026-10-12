@@ -1346,6 +1346,8 @@
     "menus": "菜单",
     "config": "系统配置",
     "mes-audit_log": "审计日志",
+    "notifications": "消息中心",
+    "notify-subscriptions": "通知订阅",
     "settings": "个人设置"
   }
 }

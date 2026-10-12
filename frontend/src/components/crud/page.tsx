@@ -1,6 +1,7 @@
 import { LanguageSwitch } from '@/components/language-switch'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
+import { NotificationBell } from '@/components/notify/notification-bell'
 import { ThemeSwitch } from '@/components/theme-switch'
 
 /** 标准页面骨架：头部（标题、说明、操作按钮）+ 主内容区。 */
@@ -19,6 +20,7 @@ export function Page({
     <>
       <Header fixed>
         <div className='ms-auto flex items-center gap-2'>
+          <NotificationBell />
           <LanguageSwitch />
           <ThemeSwitch />
         </div>
