@@ -12,6 +12,11 @@ export const CELLS: Record<
   tool: { usage_count: (r) => <ToolLife row={r} /> },
 }
 
+/** 父实体 -> 子表是否锁定（只读）的判断（在后端校验之外隐藏新增 / 编辑 / 删除）。 */
+export const CHILD_LOCKS: Record<string, (parent: MesRow) => boolean> = {
+  receipt: (p) => p.receipt_status !== 'draft',
+}
+
 /** 实体专用的编辑 / 删除规则（在权限与版本锁定之上）。 */
 export const ROW_RULES: Record<
   string,

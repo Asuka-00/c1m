@@ -86,7 +86,12 @@ function Detail({ code, row }: { code: string; row: MesRow }) {
         )}
         {kids.map((k) => (
           <TabsContent key={k.code} value={k.code}>
-            <ChildTable code={k.code} parentCode={code} parentId={row.id} />
+            <ChildTable
+              code={k.code}
+              parentCode={code}
+              parentId={row.id}
+              parentRow={row}
+            />
           </TabsContent>
         ))}
       </Tabs>

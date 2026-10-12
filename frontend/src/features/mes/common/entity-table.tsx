@@ -61,6 +61,7 @@ export function EntityTable({
   fixed = {},
   extraActions,
   onOpenChildren,
+  readOnly = false,
 }: {
   entity: MesEntity
   params: ListParams
@@ -68,6 +69,8 @@ export function EntityTable({
   fixed?: Record<string, string>
   extraActions?: (r: MesRow) => React.ReactNode
   onOpenChildren?: (r: MesRow) => void
+  /** 只读：隐藏新增 / 导入 / 编辑 / 删除（如父级已锁定的子表） */
+  readOnly?: boolean
 }) {
   const qc = useQueryClient()
   const tk = useTenantKey()
@@ -147,7 +150,10 @@ export function EntityTable({
     }
   }
   const editable = (r: MesRow) =>
-    e.can_write && !e.readonly && (!e.versioned || r.status === 'draft')
+    !readOnly &&
+    e.can_write &&
+    !e.readonly &&
+    (!e.versioned || r.status === 'draft')
 
   const columns: Column<MesRow>[] = [
     ...e.fields
@@ -258,7 +264,7 @@ export function EntityTable({
         <Download />
         {t('mes.export')}
       </Button>
-      {e.can_write && !e.readonly && (
+      {!readOnly && e.can_write && !e.readonly && (
         <>
           <input
             ref={fileRef}
