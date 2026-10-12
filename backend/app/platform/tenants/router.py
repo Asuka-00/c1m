@@ -1,3 +1,5 @@
+"""租户、成员与租户角色接口。"""
+
 import uuid
 from datetime import timedelta
 from typing import Annotated, Any, Literal

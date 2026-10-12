@@ -1,3 +1,5 @@
+"""RBAC 数据模型：权限、角色（平台 / 租户）及用户-角色、成员-角色、角色-权限关联表。"""
+
 import uuid
 from typing import TYPE_CHECKING
 
@@ -43,7 +45,7 @@ class RolePermission(SQLModel, table=True):
 class PermissionBase(SQLModel):
     code: str = Field(unique=True, index=True, max_length=100)
     description: str | None = Field(default=None, max_length=255)
-    # "platform" (global roles) or "tenant" (usable in tenant-scoped roles)
+    # "platform"（全局角色）或 "tenant"（可用于租户角色）
     scope: str = Field(default="platform", max_length=20)
 
 
@@ -60,7 +62,7 @@ class RoleBase(SQLModel):
 
 
 class Role(RoleBase, table=True):
-    # (tenant_id, name) unique; NULL tenant_id = platform role (NULLS NOT DISTINCT)
+    # (tenant_id, name) 唯一；tenant_id 为空即平台角色（NULLS NOT DISTINCT）
     __table_args__ = (
         UniqueConstraint(
             "tenant_id",

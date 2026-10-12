@@ -1,3 +1,5 @@
+"""菜单接口：当前用户菜单树与菜单管理。"""
+
 import uuid
 from typing import Annotated, Any
 

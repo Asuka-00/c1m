@@ -1,3 +1,5 @@
+"""租户接口模型：租户、成员、成员角色及“我的租户”。"""
+
 import uuid
 from datetime import datetime
 

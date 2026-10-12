@@ -1,4 +1,4 @@
-"""Generic writes: create / update / delete, status transitions, versioning."""
+"""通用写操作：新增 / 更新 / 删除、状态迁移、版本化。"""
 
 import uuid
 from typing import Any
@@ -31,6 +31,19 @@ def create_row(
     *,
     commit: bool = True,
 ) -> Row:
+    """新增一行（校验 → 插入 → 审计）。
+
+    Args:
+        session: 数据库会话。
+        tenant_id: 租户 id。
+        e: 实体规格。
+        data: 载荷。
+        user: 操作人。
+        commit: 是否提交事务。
+
+    Returns:
+        序列化后的新行。
+    """
     if e.readonly:
         raise HTTPException(status_code=405, detail="Read-only entity")
     values = validate(session, tenant_id, e, data, None)
@@ -86,6 +99,21 @@ def update_row(
     commit: bool = True,
     action: str = "update",
 ) -> Row:
+    """更新一行（锁定检查 → 校验 → 更新 → 审计差异）。
+
+    Args:
+        session: 数据库会话。
+        tenant_id: 租户 id。
+        e: 实体规格。
+        rid: 行 id。
+        data: 部分载荷。
+        user: 操作人。
+        commit: 是否提交事务。
+        action: 审计动作名。
+
+    Returns:
+        序列化后的行。
+    """
     old = get_row(session, e, tenant_id, rid)
     check_editable(session, tenant_id, e, old)
     values = validate(session, tenant_id, e, data, old)
@@ -114,6 +142,11 @@ def update_row(
 def delete_row(
     session: Session, tenant_id: uuid.UUID, e: Entity, rid: uuid.UUID, user: Any
 ) -> None:
+    """删除一行（锁定检查 → 删除前校验 → 删除 → 审计）。
+
+    Raises:
+        HTTPException: 被引用或已锁定时（409）。
+    """
     old = get_row(session, e, tenant_id, rid)
     check_editable(session, tenant_id, e, old)
     for fn in VALIDATORS.get(f"{e.code}:delete", []):
@@ -155,6 +188,13 @@ def set_status(
     status: str,
     user: Any,
 ) -> Row:
+    """切换版本化数据状态（按 STATUS_TRANSITIONS）。
+
+    激活时运行 ``<code>:activate`` 校验器，并把同编码的其他 active 版本置为 inactive。
+
+    Raises:
+        HTTPException: 非法状态迁移（409）或激活校验失败（422）。
+    """
     if not e.versioned:
         raise HTTPException(status_code=404, detail="Entity is not versioned")
     if status not in STATUSES:
@@ -173,7 +213,8 @@ def set_status(
                 fn(session, tenant_id, e, old, old)
             except MesError as ex:
                 raise http_422(ex.errors) from ex
-        # one active version per code
+        # 激活新版本即锁定该版本（之后只能新建版本修改），旧 active 版本转为 inactive
+        # 同一编码仅允许一个 active 版本
         for r in c.execute(
             sa.select(t.c.id, t.c.version).where(
                 t.c.tenant_id == tenant_id,
@@ -243,7 +284,7 @@ def _copy_children(
 def new_version(
     session: Session, tenant_id: uuid.UUID, e: Entity, rid: uuid.UUID, user: Any
 ) -> Row:
-    """Copy a version (with its child rows) as the next draft version."""
+    """复制某版本（含子表行）为下一个 draft 版本。"""
     if not e.versioned:
         raise HTTPException(status_code=404, detail="Entity is not versioned")
     old = get_row(session, e, tenant_id, rid)

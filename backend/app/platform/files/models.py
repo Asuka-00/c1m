@@ -1,3 +1,5 @@
+"""上传文件数据模型（归属平台或租户）。"""
+
 import uuid
 from datetime import datetime
 

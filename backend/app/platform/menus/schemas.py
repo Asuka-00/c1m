@@ -1,3 +1,5 @@
+"""菜单接口模型：菜单 CRUD、菜单树节点、当前用户菜单。"""
+
 import uuid
 
 from sqlmodel import Field, SQLModel
@@ -42,7 +44,7 @@ class MenuNode(SQLModel):
 
 class MyMenus(SQLModel):
     menus: list[MenuNode]
-    # known route paths the caller may NOT open (frontend shows 403 instead of 404)
+    # 调用者无权打开的已知路径（前端显示 403 而非 404）
     forbidden_paths: list[str] = []
     permissions: list[str]
     tenant_id: uuid.UUID | None = None

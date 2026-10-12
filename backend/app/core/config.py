@@ -1,3 +1,5 @@
+"""应用配置：从环境变量 / 上级目录 ``.env`` 读取（pydantic-settings）。"""
+
 import warnings
 from typing import Literal, Self
 
@@ -13,8 +15,19 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    """全局配置项。
+
+    Attributes:
+        DATABASE_URL: 运行时连接串（``app_user``，非表 owner、NOBYPASSRLS）。
+        MIGRATION_DATABASE_URL: 迁移 / 维护用连接串（表 owner），缺省回退到 DATABASE_URL。
+        SECRET_KEY: JWT 签名密钥，生产环境必须修改。
+        FIRST_SUPERUSER: 首个超级用户邮箱（init_db 创建）。
+        FASTAPI_ENV: 运行环境；``development`` 时挂载 private 路由。
+        UPLOAD_DIR: 上传文件目录（相对路径基于 backend/）。
+    """
+
     model_config = SettingsConfigDict(
-        # Use top level .env file (one level above ./backend/)
+        # 使用顶层 .env 文件（./backend/ 的上一级）
         env_file="../.env",
         env_ignore_empty=True,
         extra="ignore",
@@ -27,17 +40,18 @@ class Settings(BaseSettings):
     FASTAPI_ENV: Literal["development"] | None = None
 
     PROJECT_NAME: str
-    # uploaded files (branding images, ...) - relative paths are under backend/
+    # 上传文件（品牌图片等）目录，相对路径基于 backend/
     UPLOAD_DIR: str = "data/uploads"
     MAX_UPLOAD_BYTES: int = 5 * 1024 * 1024
     SENTRY_DSN: HttpUrl | None = None
     DATABASE_URL: PostgresDsn
-    # Privileged URL (table owner) used for migrations / role setup. The app itself
-    # connects with DATABASE_URL as a non-owner role so Postgres RLS is enforced.
+    # 特权连接串（表 owner），用于迁移 / 角色初始化。应用本身
+    # 以非 owner 角色经 DATABASE_URL 连接，从而强制 Postgres RLS。
     MIGRATION_DATABASE_URL: PostgresDsn | None = None
 
     @property
     def migration_database_url(self) -> str:
+        """迁移用连接串：MIGRATION_DATABASE_URL，未配置时回退到 DATABASE_URL。"""
         return str(self.MIGRATION_DATABASE_URL or self.DATABASE_URL)
 
     @field_validator("DATABASE_URL", "MIGRATION_DATABASE_URL", mode="before")
@@ -71,6 +85,7 @@ class Settings(BaseSettings):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def emails_enabled(self) -> bool:
+        """是否已配置 SMTP 与发件人（决定是否发送邮件）。"""
         return bool(self.SMTP_HOST and self.EMAILS_FROM_EMAIL)
 
     EMAIL_TEST_USER: EmailStr = "test@example.com"

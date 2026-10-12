@@ -1,3 +1,5 @@
+"""RBAC 接口模型：权限与角色的 CRUD 及用户权限输出。"""
+
 import uuid
 
 from sqlmodel import Field, SQLModel

@@ -1,4 +1,4 @@
-"""Module registration (see app.core.registry)."""
+"""文件模块注册（见 app.core.registry）。"""
 
 from app.core.registry import Module, register
 

@@ -1,3 +1,5 @@
+"""租户数据模型：租户与成员关系。"""
+
 import uuid
 from datetime import datetime
 

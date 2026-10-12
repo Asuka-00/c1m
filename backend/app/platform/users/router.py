@@ -1,3 +1,5 @@
+"""用户管理与个人资料接口。"""
+
 import uuid
 from typing import Any
 

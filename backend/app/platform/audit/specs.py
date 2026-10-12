@@ -1,4 +1,4 @@
-"""Audit log entity (written by app.core.spec.audit)."""
+"""审计日志实体规格（由 app.core.spec.audit 写入）。"""
 
 from app.core.spec.engine import Entity, F, register
 

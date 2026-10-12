@@ -1,4 +1,4 @@
-"""System configuration: platform defaults, per-tenant overrides, public branding."""
+"""系统配置接口：平台默认值、租户覆盖值、公开品牌配置。"""
 
 import uuid
 from typing import Annotated, Any
@@ -40,6 +40,7 @@ def _get_group(session: Session, code: str) -> ConfigGroup:
 
 
 def platform_value(item: ConfigItem) -> Any:
+    """配置项的平台值（未设置时回退默认值）。"""
     return item.value if item.value is not None else item.default_value
 
 
@@ -93,7 +94,7 @@ def _apply(
             continue
         try:
             if raw is None:
-                out.append((item, None))  # reset
+                out.append((item, None))  # 重置
                 continue
             v = validate_value(item, raw)
             _check_file(session, item, v, tenant_id)
@@ -153,7 +154,7 @@ def update_platform_config(
         item.value = item.default_value if value is None else value
         session.add(item)
     session.commit()
-    release_values(session, old, None)  # replaced/removed uploads
+    release_values(session, old, None)  # 回收被替换 / 删除的上传文件
     session.refresh(group)
     return ConfigGroupPublic.model_validate(
         group, update={"items": [_item_public(i) for i in group.items]}
@@ -204,7 +205,7 @@ def update_tenant_config(
     group = _get_group(session, code)
     changes = _apply(session, group, body.values, ctx.id)
     ovs = _overrides(session, ctx.id)
-    set_tenant(session, ctx.id)  # RLS WITH CHECK for inserts
+    set_tenant(session, ctx.id)  # 插入需要 RLS 的 WITH CHECK 租户上下文
     old: list[Any] = []
     for item, value in changes:
         ov = ovs.get(item.id)
@@ -221,7 +222,7 @@ def update_tenant_config(
                 TenantConfigValue(tenant_id=ctx.id, item_id=item.id, value=value)
             )
     session.commit()
-    release_values(session, old, ctx.id)  # replaced/removed/reset uploads
+    release_values(session, old, ctx.id)  # 回收被替换 / 删除 / 重置的上传文件
     return next(
         (g for g in _tenant_groups(session, ctx.id) if g.code == code),
         ConfigGroupPublic.model_validate(group, update={"items": []}),

@@ -1,11 +1,9 @@
-"""System configuration: default registry (seeded idempotently) + value validation.
+"""系统配置：默认配置注册表（幂等同步）与值校验。
 
-Two layers: platform values (ConfigItem.value, falling back to default_value) and
-per-tenant overrides (TenantConfigValue, RLS) for items with tenant_overridable.
-Effective value = tenant override ?? platform value ?? default.
-Settings are grouped into ConfigGroups. Add a group/item by extending
-DEFAULT_CONFIG; `seed_config` only inserts what is missing and never overwrites
-values an admin has changed (names/descriptions/options are refreshed).
+两层：平台值（ConfigItem.value，回退 default_value）与租户覆盖值（TenantConfigValue，受 RLS
+保护，仅 tenant_overridable 的配置项）。有效值 = 租户覆盖 ?? 平台值 ?? 默认值。
+新增分组 / 配置项时扩展 DEFAULT_CONFIG；``seed_config`` 只补缺失项，不覆盖管理员修改过的值
+（名称 / 描述 / 选项会刷新）。
 """
 
 import json
@@ -18,11 +16,11 @@ from app.platform.config.models import ConfigGroup, ConfigItem, ConfigValueType
 
 T = ConfigValueType
 
-# groups whose items tenants may override
+# 租户可覆盖其配置项的分组
 TENANT_OVERRIDABLE_GROUPS = {"branding"}
 
-# group code -> (name, name_key, description, order, items)
-# item: (code, name, type, default, is_public, options, validation, description)
+# 分组编码 -> (名称, name_key, 描述, 排序, 配置项)
+# 配置项：(编码, 名称, 类型, 默认值, 是否公开, 选项, 校验, 描述)
 DEFAULT_CONFIG: dict[str, tuple[str, str, str, int, list[tuple[Any, ...]]]] = {
     "branding": (
         "产品品牌",
@@ -168,6 +166,7 @@ DEFAULT_CONFIG: dict[str, tuple[str, str, str, int, list[tuple[Any, ...]]]] = {
 
 
 def seed_config(session: Session) -> None:
+    """幂等同步默认配置分组与配置项（保留已设置的值）。"""
     groups = {g.code: g for g in session.exec(select(ConfigGroup)).all()}
     for gcode, (name, name_key, desc, order, items) in DEFAULT_CONFIG.items():
         g = groups.get(gcode)
@@ -214,11 +213,24 @@ _URL = re.compile(r"^(https?://[^\s]+|/[^\s]*)$")
 
 
 class ConfigValidationError(ValueError):
+    """配置值校验失败。"""
+
     pass
 
 
 def validate_value(item: ConfigItem, value: Any) -> Any:
-    """Coerce/validate a new value for `item`; None means 'reset to default'."""
+    """校验并转换配置项的新值。
+
+    Args:
+        item: 配置项。
+        value: 新值；None 表示恢复默认。
+
+    Returns:
+        规范化后的值。
+
+    Raises:
+        ConfigValidationError: 类型、范围、选项或格式不符。
+    """
     rules = item.validation or {}
     t = item.value_type
     if value is None:
@@ -253,7 +265,7 @@ def validate_value(item: ConfigItem, value: Any) -> Any:
             raise ConfigValidationError("must be true or false")
         return value
     if t == T.json:
-        if isinstance(value, str):  # accept a JSON document as text too
+        if isinstance(value, str):  # 也接受文本形式的 JSON 文档
             try:
                 return json.loads(value)
             except json.JSONDecodeError as e:

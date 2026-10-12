@@ -1,3 +1,5 @@
+"""租户服务：成员关系、租户角色、租户创建与默认租户。"""
+
 import re
 import secrets
 import uuid
@@ -16,6 +18,15 @@ DEFAULT_TENANT_SLUG = "default"
 
 @dataclass
 class TenantContext:
+    """一次请求的租户上下文。
+
+    Attributes:
+        tenant: 当前租户。
+        user: 当前用户。
+        member: 成员关系（平台管理员访问非成员租户时为 None）。
+        permissions: 有效权限（平台权限 ∪ 租户角色权限）。
+    """
+
     tenant: Tenant
     user: User
     member: TenantMember | None
@@ -23,14 +34,17 @@ class TenantContext:
 
     @property
     def id(self) -> uuid.UUID:
+        """租户 id。"""
         return self.tenant.id
 
     def can(self, *codes: str) -> bool:
+        """是否具备全部给定权限（超级用户恒为 True）。"""
         return self.user.is_superuser or set(codes) <= self.permissions
 
 
 # ---------- tenants / members ----------
 def member_permission_codes(member: TenantMember | None) -> set[str]:
+    """成员在租户内的角色权限编码。"""
     if not member:
         return set()
     return {p.code for r in member.roles for p in r.permissions}
@@ -39,6 +53,7 @@ def member_permission_codes(member: TenantMember | None) -> set[str]:
 def get_membership(
     session: Session, tenant_id: uuid.UUID, user_id: uuid.UUID
 ) -> TenantMember | None:
+    """查询用户在租户的成员关系。"""
     return session.exec(
         select(TenantMember).where(
             TenantMember.tenant_id == tenant_id, TenantMember.user_id == user_id
@@ -47,12 +62,14 @@ def get_membership(
 
 
 def tenant_role(session: Session, tenant_id: uuid.UUID, name: str) -> Role | None:
+    """按名称获取租户角色。"""
     return session.exec(
         select(Role).where(Role.tenant_id == tenant_id, Role.name == name)
     ).first()
 
 
 def seed_tenant_roles(session: Session, tenant: Tenant) -> None:
+    """幂等创建 / 同步租户默认角色（owner / admin / member）及其权限。"""
     perms = {p.code: p for p in session.exec(select(Permission)).all()}
     for name, (desc, codes) in TENANT_ROLES.items():
         role = tenant_role(session, tenant.id, name)
@@ -68,6 +85,7 @@ def seed_tenant_roles(session: Session, tenant: Tenant) -> None:
 def add_member(
     session: Session, tenant: Tenant, user: User, roles: list[str]
 ) -> TenantMember:
+    """添加成员并分配租户角色。"""
     member = get_membership(session, tenant.id, user.id)
     if not member:
         member = TenantMember(tenant_id=tenant.id, user_id=user.id)
@@ -77,6 +95,7 @@ def add_member(
 
 
 def set_member_roles(session: Session, member: TenantMember, roles: list[str]) -> None:
+    """替换成员的租户角色。"""
     resolved = []
     for name in roles:
         role = tenant_role(session, member.tenant_id, name)
@@ -88,6 +107,7 @@ def set_member_roles(session: Session, member: TenantMember, roles: list[str]) -
 
 
 def create_tenant(session: Session, name: str, slug: str, owner: User | None) -> Tenant:
+    """创建租户及默认角色，可指定 owner。"""
     tenant = Tenant(name=name, slug=slug)
     session.add(tenant)
     session.flush()
@@ -101,18 +121,20 @@ def create_tenant(session: Session, name: str, slug: str, owner: User | None) ->
 
 
 def slugify(value: str) -> str:
+    """把名称转换为 URL 友好的 slug。"""
     s = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
     return (s or "t")[:40]
 
 
 def create_personal_tenant(session: Session, user: User) -> Tenant:
+    """为用户创建个人工作区租户（用户为 owner）。"""
     base = slugify(user.email.split("@")[0])
     slug = f"{base}-{secrets.token_hex(3)}"
     return create_tenant(session, f"{user.email}'s workspace", slug, owner=user)
 
 
-# every new user (signup or admin-created) gets a personal tenant where they
-# are the owner; they can be invited to other tenants afterwards
+# 每个新用户（注册或管理员创建）都会获得一个个人租户并作为 owner，
+# 之后可被邀请加入其他租户
 def _on_user_created(session: Session, user: User) -> None:
     create_personal_tenant(session, user)
 
@@ -121,6 +143,7 @@ USER_CREATED_HOOKS.append(_on_user_created)
 
 
 def ensure_default_tenant(session: Session) -> Tenant:
+    """确保默认租户（slug=default）存在。"""
     tenant = session.exec(
         select(Tenant).where(Tenant.slug == DEFAULT_TENANT_SLUG)
     ).first()
@@ -133,6 +156,7 @@ def ensure_default_tenant(session: Session) -> Tenant:
 
 
 def owner_count(session: Session, tenant_id: uuid.UUID) -> int:
+    """租户的 owner 数量（防止移除最后一个 owner）。"""
     return sum(
         1
         for m in session.exec(

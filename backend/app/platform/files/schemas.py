@@ -1,3 +1,5 @@
+"""文件上传接口模型。"""
+
 import uuid
 
 from sqlmodel import SQLModel

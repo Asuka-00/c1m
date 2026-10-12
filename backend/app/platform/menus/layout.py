@@ -1,12 +1,10 @@
-"""Navigation layout: business-domain menu groups and item titles ("en|zh|ja").
+"""导航布局：业务域菜单分组与菜单标题（"en|zh|ja"）。
 
-Pure data (no DB/model imports) so both the menu sync (app.menus) and the
-i18n bundle export (app.mes.meta) can use it. Each item key appears once;
-paths / icons / components / permissions come from app.menus (system pages)
-and app.mes.menus (MES entities + pages).
+纯数据（不导入数据库 / 模型），供菜单同步与 i18n 包导出共同使用。每个菜单 key 只出现一次；
+路径 / 图标 / 组件 / 权限由各模块的菜单定义提供。
 """
 
-# group key, title, icon, sort order
+# 分组 key、标题、图标、排序
 GROUPS: list[tuple[str, str, str, int]] = [
     ("g-workspace", "Workspace|工作台|ワークスペース", "LayoutDashboard", 0),
     ("g-factory", "Factory Modeling|工厂建模|工場モデリング", "Factory", 10),
@@ -22,7 +20,7 @@ GROUPS: list[tuple[str, str, str, int]] = [
     ("g-system", "System|系统管理|システム管理", "Shield", 90),
 ]
 
-# group key -> [(item key, title)] in display order
+# 分组 key -> [(菜单 key, 标题)]，按显示顺序
 ITEMS: dict[str, list[tuple[str, str]]] = {
     "g-workspace": [("dashboard", "Dashboard|仪表盘|ダッシュボード")],
     "g-factory": [
@@ -114,13 +112,17 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
     ],
 }
 
-# keys of retired system groups (removed by the sync)
+# 已废弃系统分组的 key（同步时删除）
 OBSOLETE_PREFIXES = ("mes-g-",)
 OBSOLETE_KEYS = {"general", "tenant", "admin", "other"}
 
 
 def titles(lang_index: int) -> dict[str, str]:
-    """menu key -> title (0 = en, 1 = zh-CN, 2 = ja)."""
+    """菜单 key → 标题。
+
+    Args:
+        lang_index: 0 = en，1 = zh-CN，2 = ja。
+    """
     out = {k: lbl.split("|")[lang_index] for k, lbl, _, _ in GROUPS}
     for items in ITEMS.values():
         out.update({k: lbl.split("|")[lang_index] for k, lbl in items})

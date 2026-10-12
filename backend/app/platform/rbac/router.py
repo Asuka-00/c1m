@@ -1,3 +1,5 @@
+"""权限、角色及用户角色分配接口。"""
+
 import uuid
 from typing import Any, Literal
 

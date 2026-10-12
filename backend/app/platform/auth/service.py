@@ -1,3 +1,5 @@
+"""认证服务：邮件模板渲染与发送、密码重置令牌。"""
+
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -18,11 +20,19 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class EmailData:
+    """待发送邮件。
+
+    Attributes:
+        html_content: HTML 正文。
+        subject: 主题。
+    """
+
     html_content: str
     subject: str
 
 
 def render_email_template(*, template_name: str, context: dict[str, Any]) -> str:
+    """用 Jinja2 渲染 email-templates/build 下的模板。"""
     template_str = (
         Path(__file__).parent / "email-templates" / template_name
     ).read_text()
@@ -37,8 +47,13 @@ def send_email(
     subject: str = "",
     html_content: str = "",
 ) -> None:
+    """发送邮件（需已配置 SMTP）。
+
+    Raises:
+        AssertionError: 未配置邮件发送。
+    """
     assert settings.emails_enabled, "no provided configuration for email variables"
-    assert settings.EMAILS_FROM_EMAIL  # For type checker
+    assert settings.EMAILS_FROM_EMAIL  # 供类型检查器使用
     message = emails.message.Message(
         subject=subject,
         html=html_content,
@@ -58,6 +73,7 @@ def send_email(
 
 
 def generate_test_email(email_to: str) -> EmailData:
+    """生成测试邮件。"""
     project_name = settings.PROJECT_NAME
     subject = f"{project_name} - Test email"
     html_content = render_email_template(
@@ -68,6 +84,7 @@ def generate_test_email(email_to: str) -> EmailData:
 
 
 def generate_reset_password_email(email_to: str, email: str, token: str) -> EmailData:
+    """生成密码重置邮件（含带令牌的链接）。"""
     project_name = settings.PROJECT_NAME
     subject = f"{project_name} - Password recovery for user {email}"
     link = f"{settings.FRONTEND_HOST}/reset-password?token={token}"
@@ -87,6 +104,7 @@ def generate_reset_password_email(email_to: str, email: str, token: str) -> Emai
 def generate_new_account_email(
     email_to: str, username: str, password: str
 ) -> EmailData:
+    """生成新账号通知邮件。"""
     project_name = settings.PROJECT_NAME
     subject = f"{project_name} - New account for user {username}"
     html_content = render_email_template(
@@ -103,6 +121,7 @@ def generate_new_account_email(
 
 
 def generate_password_reset_token(email: str) -> str:
+    """签发密码重置令牌（有效期见配置）。"""
     delta = timedelta(hours=settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS)
     now = datetime.now(UTC)
     expires = now + delta
@@ -116,6 +135,7 @@ def generate_password_reset_token(email: str) -> str:
 
 
 def verify_password_reset_token(token: str) -> str | None:
+    """校验密码重置令牌，返回邮箱；无效返回 None。"""
     try:
         decoded_token = jwt.decode(
             token, settings.SECRET_KEY, algorithms=[security.ALGORITHM]

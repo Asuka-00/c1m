@@ -1,3 +1,5 @@
+"""FastAPI 应用入口：CORS、Sentry、按模块注册表挂载全部 API 路由并托管前端静态文件。"""
+
 from pathlib import Path
 
 import sentry_sdk
@@ -13,6 +15,14 @@ FRONTEND_DIR = Path(__file__).parent / "frontend"
 
 
 def custom_generate_unique_id(route: APIRoute) -> str:
+    """生成 OpenAPI operationId：``<首个 tag>-<路由函数名>``（前端客户端生成依赖此格式）。
+
+    Args:
+        route: FastAPI 路由。
+
+    Returns:
+        唯一的 operationId 字符串。
+    """
     return f"{route.tags[0]}-{route.name}"
 
 

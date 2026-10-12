@@ -1,5 +1,4 @@
-"""File uploads (branding images, ...). Ownership: platform (tenant_id NULL) or a
-tenant. Files are served publicly by id so branding renders on the sign-in page."""
+"""文件上传接口（品牌图片等）。归属为平台（tenant_id 为空）或租户；文件按 id 公开访问，以便登录页渲染品牌。"""
 
 import uuid
 from datetime import timedelta
@@ -19,7 +18,7 @@ from app.platform.rbac.service import has_permissions
 
 router = APIRouter(prefix="/files", tags=["files"])
 
-# allowed upload types -> stored extension
+# 允许的上传类型 -> 存储扩展名
 IMAGE_TYPES = {
     "image/png": ".png",
     "image/jpeg": ".jpg",

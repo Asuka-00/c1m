@@ -1,10 +1,8 @@
-"""xlsx export / import per entity (openpyxl).
+"""按实体导出 / 导入 xlsx（openpyxl）。
 
-Sheet layout: row 1 = column keys (field names, `version`/`status` for versioned
-data, `attr:<code>` for custom attributes). References are written/read as the
-target's code (`CODE` = active-or-latest version, `CODE@2` = exact version);
-targets without a code use their id. Import upserts by the natural key and is
-all-or-nothing.
+工作表布局：第 1 行为列键（字段名，版本化数据加 ``version``/``status``，自定义属性为
+``attr:<code>``）。引用以目标编码读写（``CODE`` = 激活或最新版本，``CODE@2`` = 指定版本），
+无编码的目标使用 id。导入按业务唯一键新增或更新，全部成功或全部回滚。
 """
 
 import io
@@ -47,6 +45,7 @@ def _ref_code(
 
 
 def columns(session: Session, tenant_id: uuid.UUID, e: Entity) -> list[str]:
+    """导出/导入的列键：字段名、版本化实体的 version/status、自定义属性 ``attr:<code>``。"""
     cols = [f.name for f in e.all_fields]
     if e.versioned:
         cols += ["version", "status"]
@@ -55,6 +54,11 @@ def columns(session: Session, tenant_id: uuid.UUID, e: Entity) -> list[str]:
 
 
 def export_xlsx(session: Session, tenant_id: uuid.UUID, e: Entity) -> bytes:
+    """导出实体全部行为 xlsx。
+
+    Returns:
+        xlsx 文件字节。
+    """
     rows = all_rows(session, e, tenant_id, MAX_ROWS)
     cols = columns(session, tenant_id, e)
     refs = {
@@ -117,6 +121,21 @@ def _resolve(session: Session, tenant_id: uuid.UUID, target: Entity, raw: str) -
 def import_xlsx(
     session: Session, tenant_id: uuid.UUID, e: Entity, data: bytes, user: Any
 ) -> dict[str, int]:
+    """从 xlsx 导入（按业务唯一键新增或更新）。
+
+    Args:
+        session: 数据库会话。
+        tenant_id: 租户 id。
+        e: 实体规格。
+        data: xlsx 文件字节。
+        user: 操作人。
+
+    Returns:
+        ``{"created": n, "updated": m}``。
+
+    Raises:
+        HTTPException: 任一行校验失败（422，消息带行号）。
+    """
     if e.readonly:
         raise HTTPException(status_code=405, detail="Read-only entity")
     try:

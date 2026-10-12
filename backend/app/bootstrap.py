@@ -1,8 +1,8 @@
-"""Idempotent bootstrap: RBAC, first superuser, menus, config, default tenant."""
+"""系统初始化（幂等）：RBAC、首个超级用户、菜单、系统配置、默认租户。"""
 
 from sqlmodel import Session, select
 
-# all tables / relationships / MES specs must be registered first
+# 必须先注册全部表 / 关系 / MES 规格
 from app import models as _models  # noqa: F401
 from app.core.config import settings
 from app.platform.users import service as crud
@@ -11,12 +11,21 @@ from app.platform.users.schemas import UserCreate
 
 
 def init_db(session: Session) -> None:
-    # Tables should be created with Alembic migrations
-    # But if you don't want to use migrations, create
-    # the tables un-commenting the next lines
+    """初始化基础数据，可重复执行。
+
+    依次：同步默认权限与平台角色 → 创建/补全首个超级用户并授予 admin →
+    同步菜单注册表 → 同步系统配置 → 确保默认租户且超级用户为 owner →
+    同步每个租户的默认租户角色（新增权限自动下发）。
+
+    Args:
+        session: 数据库会话（使用 owner 或已设置租户上下文的连接）。
+    """
+    # 表应通过 Alembic 迁移创建
+    # 如不使用迁移，可取消下面几行注释直接建表
+    # （仅用于本地试验）
     # from sqlmodel import SQLModel
 
-    # This works because the models are already imported and registered from app.models
+    # 模型已由 app.models 导入并注册，所以可以直接 create_all
     # SQLModel.metadata.create_all(engine)
 
     from app.platform.rbac.permissions import ADMIN_ROLE
@@ -41,7 +50,7 @@ def init_db(session: Session) -> None:
         session.add(user)
         session.commit()
     assign_role(session, user, ADMIN_ROLE)
-    # Multi-tenancy: default tenant, FIRST_SUPERUSER is its owner
+    # 多租户：默认租户，FIRST_SUPERUSER 为其 owner
     from app.platform.menus.service import seed_menus
     from app.platform.tenants.service import (
         add_member,
@@ -57,7 +66,7 @@ def init_db(session: Session) -> None:
     if not get_membership(session, tenant.id, user.id):
         add_member(session, tenant, user, ["owner"])
         session.commit()
-    # keep every tenant's default roles in sync with new default permissions
+    # 让每个租户的默认角色同步新增的默认权限
     from app.platform.tenants.models import Tenant
     from app.platform.tenants.service import seed_tenant_roles
 

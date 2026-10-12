@@ -54,18 +54,36 @@ select = [
     "UP",  # pyupgrade
     "ARG001", # unused arguments in functions
     "T201",   # print statements are not allowed
+    "D",      # pydocstyle (Google 风格中文文档字符串，见 docs/development.md「注释规范」)
 ]
 ignore = [
     "E501",  # line too long, handled by black
     "B008",  # do not perform function calls in argument defaults
     "W191",  # indentation contains tabs
     "B904",  # Allow raising exceptions without from e, for HTTPException
+    "D415",  # 中文摘要以「。」结尾，D415 只认 . ! ?
+    "D105",  # 魔术方法无需文档字符串
 ]
 
 [tool.ruff.lint.per-file-ignores]
 # conftest must point the settings at the separate test database (env vars) and
 # migrate it BEFORE importing `app`, so its later imports are intentionally not at the top.
-"conftest.py" = ["E402"]
+"conftest.py" = ["E402", "D"]
+# 测试、测试工具、迁移与脚本不强制文档字符串
+"**/tests/**" = ["D"]
+"app/testing/**" = ["D"]
+"app/alembic/**" = ["D"]
+"scripts/**" = ["D"]
+# Pydantic / SQLModel 模型的类文档字符串会进入 OpenAPI schema 的 description；
+# 为保持 API 契约不变，这些类用 `#` 注释说明，不强制 D101。路由函数的文档字符串
+# 同样会成为 OpenAPI 的 description，接口说明由路径 / summary 承担，不强制 D103。
+# 已有的接口 / schema 文档字符串保持原样（含格式），避免 OpenAPI 文本变化。
+"**/models.py" = ["D101", "D106", "D200", "D205", "D209", "D212"]
+"**/schemas.py" = ["D101", "D106", "D200", "D205", "D209", "D212"]
+"**/router*.py" = ["D101", "D103", "D200", "D202", "D205", "D209", "D212", "D403"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.ruff.lint.pyupgrade]
 # Preserve types, even if a file imports `from __future__ import annotations`.

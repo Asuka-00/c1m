@@ -1,13 +1,13 @@
-"""Platform + tenant permission codes and default roles."""
+"""平台与租户权限编码及默认角色（MES 权限由各模块 module.py 声明后汇总）。"""
 
 from app.core import registry
 from app.core.spec.engine import EXTRA_PERMISSIONS as _MES_EXTRA
 from app.core.spec.engine import MODULES as _MES_MODULES
 
-# module permissions are declared by each feature module (module.py)
+# 模块权限由各功能模块的 module.py 声明
 registry.load_metadata()
 
-# Platform-level permissions (global, attached to platform roles via user_role)
+# 平台级权限（全局，经 user_role 关联到平台角色）
 PLATFORM_PERMISSIONS: dict[str, str] = {
     "users:read": "Read any user",
     "users:write": "Create/update any user",
@@ -17,7 +17,7 @@ PLATFORM_PERMISSIONS: dict[str, str] = {
     "tenants:read": "Read any tenant (platform)",
     "tenants:write": "Manage any tenant (platform)",
 }
-# Tenant-level permissions (attached to tenant roles via member_role)
+# 租户级权限（经 member_role 关联到租户角色）
 TENANT_PERMISSIONS: dict[str, str] = {
     "tenant:manage": "Update/delete the tenant",
     "members:read": "List tenant members",
@@ -25,7 +25,7 @@ TENANT_PERMISSIONS: dict[str, str] = {
     "config:read": "Read system configuration (tenant overrides; platform defaults with a platform role)",
     "config:write": "Edit system configuration (tenant overrides; platform defaults with a platform role)",
 }
-# MES master data: read/write per module (tenant scope)
+# MES 主数据：每个模块 read/write（租户作用域）
 
 MES_PERMISSIONS: dict[str, str] = {
     f"mes.{m}:{a}": f"MES {lbl.split('|')[0]}: {a}"

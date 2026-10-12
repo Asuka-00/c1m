@@ -1,3 +1,5 @@
+"""系统配置接口模型：配置项 / 分组的输出与批量更新。"""
+
 import uuid
 from typing import Any
 
@@ -19,7 +21,7 @@ class ConfigItemPublic(SQLModel):
     is_public: bool
     tenant_overridable: bool
     sort_order: int
-    # tenant view only: platform value it inherits, and whether it is overridden
+    # 仅租户视图：继承的平台值及是否已覆盖
     platform_value: Any | None = None
     overridden: bool = False
 

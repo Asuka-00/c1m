@@ -1,4 +1,4 @@
-"""Public API facade."""
+"""规格服务公开 API（门面），汇总 base / query / write / validate / serialize / audit / errors。"""
 
 from app.core.spec.audit import (
     audit as audit,

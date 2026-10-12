@@ -1,7 +1,7 @@
-"""Composition root: the ordered list of feature modules.
+"""组合根：功能模块的有序清单。
 
-Order matters: spec registration (and thus table/menu order), demo seeding and
-router mounting follow it (routers additionally by ``router_priority``).
+顺序即规格注册顺序（决定表/菜单/实体类型的顺序）与路由挂载顺序
+（路由另按 ``router_priority`` 稳定排序）。新增模块需在此按依赖顺序导入其 ``module.py``。
 """
 
 from app.mes.common import module as _mes_common  # noqa: F401

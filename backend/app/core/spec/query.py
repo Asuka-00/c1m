@@ -1,4 +1,4 @@
-"""Generic tenant-scoped queries: list/filter/search/sort, get, all rows, tree."""
+"""通用租户范围查询：列表 / 筛选 / 搜索 / 排序、单行、全部行、树。"""
 
 import uuid
 from typing import Any
@@ -17,6 +17,7 @@ from app.core.spec.serialize import coerce, serialize
 
 # ---------------- queries ----------------
 def sortable(e: Entity) -> dict[str, Any]:
+    """实体允许排序的 ``{名称: 列}``。"""
     t = table(e)
     out = {
         f.name: t.c[f.column]
@@ -30,6 +31,7 @@ def sortable(e: Entity) -> dict[str, Any]:
 
 
 def base_select(e: Entity, tenant_id: uuid.UUID) -> sa.Select[Any]:
+    """租户范围内的基础查询。"""
     t = table(e)
     return sa.select(t).where(t.c.tenant_id == tenant_id)
 
@@ -37,6 +39,7 @@ def base_select(e: Entity, tenant_id: uuid.UUID) -> sa.Select[Any]:
 def apply_filters(
     e: Entity, stmt: sa.Select[Any], filters: dict[str, str]
 ) -> sa.Select[Any]:
+    """按字段等值 / 引用 id / 状态等条件过滤。"""
     t = table(e)
     for name, raw in filters.items():
         if name == "status" and e.versioned:
@@ -57,6 +60,7 @@ def apply_filters(
 
 
 def search(e: Entity, stmt: sa.Select[Any], q: str | None) -> sa.Select[Any]:
+    """按实体文本字段做不区分大小写的模糊搜索。"""
     if not q:
         return stmt
     t = table(e)
@@ -79,6 +83,11 @@ def list_rows(
     offset: int,
     limit: int,
 ) -> tuple[list[Row], int]:
+    """分页查询实体行。
+
+    Returns:
+        ``(当前页行, 过滤后总数)``。
+    """
     t = table(e)
     stmt = search(e, apply_filters(e, base_select(e, tenant_id), filters), q)
     c = conn(session)
@@ -103,6 +112,11 @@ def list_rows(
 
 
 def get_row(session: Session, e: Entity, tenant_id: uuid.UUID, rid: uuid.UUID) -> Row:
+    """读取单行。
+
+    Raises:
+        HTTPException: 行不存在或不属于当前租户（404）。
+    """
     t = table(e)
     r = (
         conn(session)
@@ -118,6 +132,7 @@ def get_row(session: Session, e: Entity, tenant_id: uuid.UUID, rid: uuid.UUID) -
 def all_rows(
     session: Session, e: Entity, tenant_id: uuid.UUID, limit: int = 5000
 ) -> list[Row]:
+    """读取全部行（带上限，用于选项与导出）。"""
     t = table(e)
     stmt = base_select(e, tenant_id).order_by(
         t.c[sortable(e).get(e.sort_default, t.c.id).name], t.c.id
@@ -126,6 +141,7 @@ def all_rows(
 
 
 def tree(session: Session, tenant_id: uuid.UUID, e: Entity) -> list[Row]:
+    """以嵌套 children 形式返回树形实体的全部节点。"""
     if not e.tree:
         raise HTTPException(status_code=404, detail="Entity is not hierarchical")
     rows = serialize(session, tenant_id, e, all_rows(session, e, tenant_id))

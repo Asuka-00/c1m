@@ -1,3 +1,5 @@
+"""系统配置数据模型：配置值类型、配置分组、配置项（平台值）、租户覆盖值（受 RLS 保护）。"""
+
 import uuid
 from datetime import datetime
 from enum import StrEnum
@@ -28,7 +30,7 @@ class ConfigGroup(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     code: str = Field(unique=True, index=True, max_length=100)
     name: str = Field(max_length=255)
-    name_key: str | None = Field(default=None, max_length=255)  # optional i18n key
+    name_key: str | None = Field(default=None, max_length=255)  # 可选的 i18n key
     description: str | None = Field(default=None, max_length=1000)
     sort_order: int = 0
     items: list[ConfigItem] = Relationship(
@@ -56,7 +58,7 @@ class ConfigItem(SQLModel, table=True):
             nullable=False,
         ),
     )
-    # values are stored JSON-encoded so every type round-trips (str, number, bool, object)
+    # 值以 JSON 编码存储，各类型（字符串、数字、布尔、对象）可无损往返
     value: Any | None = Field(default=None, sa_column=Column(JSON, nullable=True))
     default_value: Any | None = Field(
         default=None, sa_column=Column(JSON, nullable=True)
@@ -68,7 +70,7 @@ class ConfigItem(SQLModel, table=True):
         default=None, sa_column=Column(JSON, nullable=True)
     )
     is_public: bool = False
-    # tenants may override this item (TenantConfigValue); else platform-only
+    # 租户可覆盖此项（TenantConfigValue）；否则仅平台级
     tenant_overridable: bool = False
     sort_order: int = 0
     group: ConfigGroup | None = Relationship(back_populates="items")

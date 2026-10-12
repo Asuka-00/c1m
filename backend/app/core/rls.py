@@ -1,33 +1,18 @@
-"""Generic Postgres row-level-security (RLS) helpers for tenant-scoped tables.
+"""通用 Postgres 行级安全（RLS）工具，用于租户表。
 
-How tenant isolation works (two layers):
+租户隔离分两层：
 
-1. App layer — routes filter by tenant explicitly (``tenancy.tenant_scoped``).
-2. DB backstop — RLS. Every request sets the per-transaction setting
-   ``app.current_tenant`` (``tenancy.set_tenant`` + the Session ``after_begin`` hook,
-   i.e. ``SET LOCAL``), and each tenant table carries a policy that only exposes /
-   accepts rows whose ``tenant_id`` equals it. With no tenant set, nothing is visible.
+1. 应用层：路由显式按租户过滤（``tenant_scoped``）。
+2. 数据库兜底：RLS。每个请求设置事务级参数 ``app.current_tenant``（``set_tenant`` +
+   Session ``after_begin`` 钩子，即 ``SET LOCAL``），租户表的策略只暴露 / 接受
+   ``tenant_id`` 与之相等的行；未设置租户时看不到任何行。
 
-The running app connects as a NON-owner role without BYPASSRLS (``app_user``, created
-by ``scripts/setup_db_roles.py`` with DML default privileges); migrations run as the
-owner. ``FORCE ROW LEVEL SECURITY`` additionally applies the policy to the owner.
+运行时以非 owner、无 BYPASSRLS 的角色（``app_user``，由 ``scripts/setup_db_roles.py`` 创建）
+连接；迁移以 owner 运行。``FORCE ROW LEVEL SECURITY`` 使策略对 owner 同样生效。
 
-Adding a new tenant-scoped table (e.g. ``invoice``):
-
-* model: ``tenant_id: uuid.UUID = Field(foreign_key="tenant.id", nullable=False,
-  ondelete="CASCADE", index=True)``
-* migration, after ``op.create_table(...)``::
-
-      from app.rls import enable_tenant_rls_sql, disable_tenant_rls_sql
-      for stmt in enable_tenant_rls_sql("invoice"):
-          op.execute(stmt)
-      # downgrade: for stmt in disable_tenant_rls_sql("invoice"): op.execute(stmt)
-
-* in routes use ``tenant_scoped(select(Invoice), Invoice, ctx.id)`` and call
-  ``set_tenant(session, ctx.id)`` before inserts (the policy's WITH CHECK needs it).
-
-``tests/api/routes/test_rls.py`` proves enforcement with a throw-away table built
-by these same helpers.
+新增租户表时：模型加 ``tenant_id`` 外键列（ondelete CASCADE、索引）；迁移在建表后执行
+:func:`enable_tenant_rls_sql` 返回的语句（降级用 :func:`disable_tenant_rls_sql`）；路由中用
+``tenant_scoped`` 查询，插入前调用 ``set_tenant``（策略的 WITH CHECK 需要）。
 """
 
 RLS_POLICY = "tenant_isolation"
@@ -35,6 +20,15 @@ RLS_EXPR = "tenant_id = NULLIF(current_setting('app.current_tenant', true), ''):
 
 
 def enable_tenant_rls_sql(table: str, policy: str = RLS_POLICY) -> list[str]:
+    """生成为租户表启用 RLS 的 SQL 语句。
+
+    Args:
+        table: 表名。
+        policy: 策略名。
+
+    Returns:
+        依次执行的 SQL 语句列表（ENABLE/FORCE RLS + 按 ``app.current_tenant`` 过滤的策略）。
+    """
     return [
         f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY",
         f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY",
@@ -43,6 +37,7 @@ def enable_tenant_rls_sql(table: str, policy: str = RLS_POLICY) -> list[str]:
 
 
 def disable_tenant_rls_sql(table: str, policy: str = RLS_POLICY) -> list[str]:
+    """生成删除租户 RLS 策略并关闭 RLS 的 SQL 语句。"""
     return [
         f"DROP POLICY IF EXISTS {policy} ON {table}",
         f"ALTER TABLE {table} NO FORCE ROW LEVEL SECURITY",

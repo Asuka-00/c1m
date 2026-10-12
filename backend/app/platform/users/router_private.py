@@ -1,3 +1,5 @@
+"""仅开发环境的私有接口（直接创建用户，供测试 / 脚本使用）。"""
+
 from typing import Any
 
 from fastapi import APIRouter

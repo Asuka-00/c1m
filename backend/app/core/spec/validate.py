@@ -1,4 +1,4 @@
-"""Generic validation: field rules, custom attributes, CRUD validator registry, edit locks."""
+"""通用校验：字段规则、自定义属性、CRUD 校验器注册表、编辑锁（版本锁定）。"""
 
 import uuid
 from collections.abc import Callable
@@ -23,6 +23,15 @@ VALIDATORS: dict[str, list[Validator]] = {}
 
 
 def validator(*codes: str) -> Callable[[Validator], Validator]:
+    """注册实体的 CRUD 校验器（装饰器）。
+
+    编码可带阶段后缀：``"route:activate"``（激活时）、``"work_order:prefill"``（预填）、
+    ``"x:delete"``（删除前）。
+
+    Args:
+        *codes: 实体编码（可带后缀）。
+    """
+
     def deco(fn: Validator) -> Validator:
         for c in codes:
             VALIDATORS.setdefault(c, []).append(fn)
@@ -39,7 +48,24 @@ def validate(
     data: Row,
     existing: Row | None,
 ) -> Row:
-    """API payload (field names, `<ref>_id` or `<ref>`) -> column values; 422 on error."""
+    """校验 API 载荷并转换为列值。
+
+    接受字段名、``<ref>_id`` 或 ``<ref>``（编码）形式；检查必填、类型、枚举、引用存在、
+    自定义属性，并运行已注册的实体校验器。
+
+    Args:
+        session: 数据库会话。
+        tenant_id: 租户 id。
+        e: 实体规格。
+        data: 载荷。
+        existing: 更新时的原行（新增为 None）。
+
+    Returns:
+        列值字典。
+
+    Raises:
+        HTTPException: 校验失败（422，字段错误列表）。
+    """
     errors: list[tuple[str, str]] = []
     values: Row = {}
     for f in e.all_fields:
@@ -82,7 +108,7 @@ def validate(
             if active:
                 cond = "set" if "*" in allowed else str(cur)
                 errors.append((f.name, f"{f.name}: required when {k} = {cond}"))
-    # refs must exist in this tenant (RLS would hide others anyway)
+    # 引用目标必须属于本租户（其他租户的行本来也被 RLS 隐藏）
     for f in e.all_fields:
         v = values.get(f.column)
         if f.type == "ref" and v is not None:
@@ -97,7 +123,7 @@ def validate(
             if not hit:
                 errors.append((f.name, f"{f.name}: referenced record not found"))
     if e.tree and values.get("parent_id") is not None and existing is not None:
-        # no cycles: walk up from the new parent
+        # 禁止成环：从新的父节点向上遍历
         seen, cur = {existing["id"]}, values["parent_id"]
         t = table(e)
         while cur is not None:
@@ -118,7 +144,7 @@ def validate(
                 fn(session, tenant_id, e, merged, existing)
             except MesError as ex:
                 errors += ex.errors
-        # validators may derive values (e.g. inherited equipment type)
+        # 校验器可推导字段值（如继承的设备类型）
         for k, v in merged.items():
             if before.get(k) != v:
                 values[k] = v
@@ -128,6 +154,7 @@ def validate(
 
 
 def attr_defs(session: Session, tenant_id: uuid.UUID, e: Entity) -> list[Row]:
+    """租户为该实体定义的自定义属性。"""
     ad = ENTITIES.get("attr_def")
     if not ad or ad.code not in TABLES:
         return []
@@ -145,6 +172,7 @@ def attr_defs(session: Session, tenant_id: uuid.UUID, e: Entity) -> list[Row]:
 
 
 def dict_values(session: Session, tenant_id: uuid.UUID, dict_type_id: Any) -> list[str]:
+    """数据字典的有效取值。"""
     t = TABLES["dict_item"]
     return [
         r[0]
@@ -159,6 +187,7 @@ def dict_values(session: Session, tenant_id: uuid.UUID, dict_type_id: Any) -> li
 
 
 def attr_options(session: Session, tenant_id: uuid.UUID, d: Row) -> list[str]:
+    """自定义属性的可选值（字典或固定选项）。"""
     if d.get("dict_type_id"):
         return dict_values(session, tenant_id, d["dict_type_id"])
     return [o.strip() for o in (d.get("options") or "").split(",") if o.strip()]
@@ -167,7 +196,7 @@ def attr_options(session: Session, tenant_id: uuid.UUID, d: Row) -> list[str]:
 def validate_attrs(
     session: Session, tenant_id: uuid.UUID, e: Entity, attrs: Any
 ) -> list[tuple[str, str]]:
-    """Custom attribute values (row.attrs JSON) against the tenant's attr_defs."""
+    """按租户自定义属性定义校验 ``row.attrs``，返回字段错误列表。"""
     if e.code in ("attr_def", "audit_log"):
         return []
     attrs = attrs or {}
@@ -176,7 +205,7 @@ def validate_attrs(
     defs = {d["code"]: d for d in attr_defs(session, tenant_id, e)}
     errs: list[tuple[str, str]] = []
     for k in attrs:
-        if k not in defs and not k.startswith("_"):  # "_x": system tags (demo)
+        if k not in defs and not k.startswith("_"):  # "_x"：系统标记（如演示数据）
             errs.append((f"attrs.{k}", f"attrs.{k}: unknown attribute"))
     for code, d in defs.items():
         v = attrs.get(code)
@@ -210,7 +239,7 @@ def validate_attrs(
 def locking_parent(
     session: Session, tenant_id: uuid.UUID, e: Entity, row: Row
 ) -> tuple[Entity, Row] | None:
-    """Nearest versioned ancestor via cascade refs (e.g. step -> route)."""
+    """沿级联引用找到最近的版本化祖先（如 工步 → 路线），无则 None。"""
     for f in e.all_fields:
         if f.type == "ref" and f.cascade and f.name != "parent" and row.get(f.column):
             pe = ENTITIES[f.ref or ""]
@@ -222,6 +251,13 @@ def locking_parent(
 
 
 def check_editable(session: Session, tenant_id: uuid.UUID, e: Entity, row: Row) -> None:
+    """检查行是否可编辑。
+
+    版本化数据仅 draft 可改；子表随其版本化祖先锁定。
+
+    Raises:
+        HTTPException: 已激活 / 停用的版本不可修改（409）。
+    """
     if e.readonly:
         raise HTTPException(status_code=405, detail="Read-only entity")
     if e.versioned and row.get("status", "draft") != "draft":

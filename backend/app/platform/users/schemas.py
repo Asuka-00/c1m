@@ -1,3 +1,5 @@
+"""用户接口模型：创建、注册、更新、改密与输出。"""
+
 import uuid
 from datetime import datetime
 from typing import Annotated
@@ -8,13 +10,13 @@ from sqlmodel import Field, SQLModel
 from app.platform.users.models import USERNAME_RE, UserBase
 
 
-# Properties to receive via API on creation
+# 创建时通过 API 接收的属性
 class UserCreate(UserBase):
     username: Username | None = Field(default=None, max_length=50)
     password: str = Field(min_length=8, max_length=128)
 
 
-# stored lower-case so the unique index is effectively case-insensitive
+# 以小写存储，使唯一索引实际上不区分大小写
 Username = Annotated[
     str, StringConstraints(pattern=USERNAME_RE), AfterValidator(str.lower)
 ]
@@ -26,7 +28,7 @@ class UserRegister(SQLModel):
     full_name: str | None = Field(default=None, max_length=255)
 
 
-# Properties to receive via API on update, all are optional
+# 更新时通过 API 接收的属性，均为可选
 class UserUpdate(SQLModel):
     email: EmailStr | None = Field(default=None, max_length=255)
     username: Username | None = Field(default=None, max_length=50)
@@ -47,7 +49,7 @@ class UpdatePassword(SQLModel):
     new_password: str = Field(min_length=8, max_length=128)
 
 
-# Properties to return via API, id is always required
+# 通过 API 返回的属性，id 必有
 class UserPublic(UserBase):
     id: uuid.UUID
     created_at: datetime | None = None

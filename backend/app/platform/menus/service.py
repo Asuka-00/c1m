@@ -1,4 +1,4 @@
-"""Default menu registry (seeded idempotently by init_db) and tree building."""
+"""默认菜单注册表（init_db 幂等同步）与菜单树构建。"""
 
 from sqlmodel import Session, select
 
@@ -8,7 +8,7 @@ from app.platform.menus.layout import titles as titles
 from app.platform.menus.models import Menu
 from app.platform.menus.schemas import MenuNode
 
-# system pages: key -> (path, icon, component, permission)
+# 系统页面：key -> (路径, 图标, 组件, 权限)
 SYSTEM_ITEMS: dict[str, tuple[str, str | None, str, str | None]] = {
     "dashboard": ("/", "LayoutDashboard", "dashboard", None),
     "users": ("/users", "UserCog", "users", "users:read"),
@@ -28,7 +28,7 @@ MenuTuple = tuple[
 
 
 def registry_menus() -> list[MenuTuple]:
-    """(key, parent, title, path, icon, component, order, permission), groups first."""
+    """注册表菜单 ``(key, parent, title, path, icon, component, order, permission)``，分组在前。"""
     defs = {**SYSTEM_ITEMS, **registry.menu_items()}
     out: list[MenuTuple] = [
         (g, None, lbl.split("|")[0], None, icon, None, order, None)
@@ -42,8 +42,7 @@ def registry_menus() -> list[MenuTuple]:
 
 
 def seed_menus(session: Session) -> None:
-    """Create / re-sync every registry menu (keeps `hidden` and custom menus);
-    retired system groups are removed (their custom children move to top level)."""
+    """创建 / 同步注册表菜单（保留 hidden 与自定义菜单）；移除已废弃的系统分组（其自定义子项移到顶层）。"""
     existing = {m.key: m for m in session.exec(select(Menu)).all()}
     for key, parent, title, path, icon, comp, order, p in registry_menus():
         m = existing.get(key)
@@ -70,6 +69,17 @@ def seed_menus(session: Session) -> None:
 
 
 def build_tree(menus: list[Menu], allowed: set[str], superuser: bool) -> list[MenuNode]:
+    """按权限构建菜单树。
+
+    Args:
+        menus: 全部菜单。
+        allowed: 用户拥有的权限编码。
+        superuser: 是否超级用户（可见全部）。
+
+    Returns:
+        可见的菜单节点树（空分组被剔除）。
+    """
+
     def visible(m: Menu) -> bool:
         return not m.hidden and (
             superuser or m.permission is None or m.permission in allowed
@@ -87,7 +97,7 @@ def build_tree(menus: list[Menu], allowed: set[str], superuser: bool) -> list[Me
             if not visible(m):
                 continue
             children = build(m.id)
-            if m.path is None and not children:  # empty group
+            if m.path is None and not children:  # 空分组
                 continue
             out.append(
                 MenuNode(
@@ -106,6 +116,7 @@ def build_tree(menus: list[Menu], allowed: set[str], superuser: bool) -> list[Me
 
 
 def forbidden_paths(menus: list[Menu], tree: list[MenuNode]) -> list[str]:
+    """存在但对当前用户不可见的页面路径（前端据此显示 403 而非 404）。"""
     allowed: set[str] = set()
 
     def walk(nodes: list[MenuNode]) -> None:

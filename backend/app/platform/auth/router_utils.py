@@ -1,3 +1,5 @@
+"""工具接口：健康检查、测试邮件。"""
+
 from fastapi import APIRouter, Depends
 from pydantic.networks import EmailStr
 

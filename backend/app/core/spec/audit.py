@@ -1,4 +1,4 @@
-"""Audit trail of spec-entity writes (audit_log rows + field diffs)."""
+"""规格实体写操作的审计：写入 audit_log 并记录字段差异。"""
 
 import uuid
 from typing import Any
@@ -24,6 +24,17 @@ def audit(
     user: Any,
     changes: Row | None = None,
 ) -> None:
+    """写一条审计记录。
+
+    Args:
+        session: 数据库会话。
+        tenant_id: 租户 id。
+        e: 实体规格。
+        action: 动作（create / update / delete / status / split / merge 等）。
+        row: 当前行。
+        user: 操作人。
+        changes: 字段差异，缺省为空。
+    """
     if e.code == "audit_log":
         return
     code = row.get("code") or row.get(e.label_field) or row.get("id")
@@ -48,6 +59,11 @@ def audit(
 
 
 def diff(old: Row | None, new: Row) -> Row:
+    """计算新旧行的字段差异。
+
+    Returns:
+        ``{字段: [旧值, 新值]}``（系统列不计入）。
+    """
     return {
         k: (None if old is None else old.get(k), v)
         for k, v in new.items()

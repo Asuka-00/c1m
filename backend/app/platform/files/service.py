@@ -1,16 +1,12 @@
-"""Uploaded-file garbage collection.
+"""上传文件回收。
 
-A file is *referenced* when a platform config value/default or a tenant override
-of an image/file item points at ``/api/v1/files/<id>``. Ownership limits where a
-reference can live (see config routes): a tenant file only in that tenant's
-overrides (or nowhere else), a platform file in platform values or ANY tenant's
-overrides. Tenant overrides are read under RLS, one tenant at a time.
+当平台配置值 / 默认值或租户覆盖值中的图片 / 文件项指向 ``/api/v1/files/<id>`` 时文件即被引用。
+租户文件只能被该租户的覆盖值引用；平台文件可被平台值或任意租户覆盖值引用。租户覆盖值在
+RLS 下逐个租户读取。
 
-- ``release_values``: called after a value is replaced/removed/reset; deletes the
-  old files right away when nothing references them any more.
-- ``cleanup_unreferenced``: periodic sweep (scripts/cleanup_files.py or
-  POST /files/cleanup) for files never saved into config, older than a grace
-  period so in-progress uploads survive.
+- ``release_values``：值被替换 / 删除 / 重置后调用，旧文件无人引用即删除。
+- ``cleanup_unreferenced``：定期清理（scripts/cleanup_files.py 或 POST /files/cleanup）
+  从未保存进配置且超过宽限期的文件。
 """
 
 import logging
@@ -35,6 +31,7 @@ FILE_TYPES = ("image", "file")
 
 
 def upload_dir() -> Path:
+    """上传目录（相对路径基于 backend/），不存在时创建。"""
     p = Path(settings.UPLOAD_DIR)
     if not p.is_absolute():
         p = Path(__file__).resolve().parents[3] / p  # backend/<UPLOAD_DIR>
@@ -43,6 +40,7 @@ def upload_dir() -> Path:
 
 
 def file_id(value: Any) -> uuid.UUID | None:
+    """从 ``/api/v1/files/<id>`` 形式的值中提取文件 id，否则 None。"""
     if isinstance(value, str) and value.startswith(FILE_PREFIX):
         try:
             return uuid.UUID(value.removeprefix(FILE_PREFIX))
@@ -60,8 +58,7 @@ def _file_items(session: Session) -> list[ConfigItem]:
 
 
 def referenced_ids(session: Session, tenant_ids: Iterable[uuid.UUID]) -> set[uuid.UUID]:
-    """Ids referenced by platform values and by the given tenants' overrides.
-    Changes the session's RLS tenant; callers restore it."""
+    """平台配置值与给定租户覆盖值引用的文件 id。注意：会切换会话的 RLS 租户，调用方需恢复。"""
     items = _file_items(session)
     refs = {
         fid for i in items for v in (i.value, i.default_value) if (fid := file_id(v))
@@ -91,8 +88,11 @@ def _delete(session: Session, f: UploadedFile) -> None:
 def release_values(
     session: Session, old_values: Iterable[Any], restore_tenant: uuid.UUID | None
 ) -> int:
-    """Delete files formerly referenced by `old_values` that are now unreferenced.
-    Call after the config change is committed."""
+    """删除旧配置值引用、现已无人引用的文件（配置变更提交后调用）。
+
+    Returns:
+        删除的文件数。
+    """
     files = [
         f
         for v in old_values
@@ -115,7 +115,17 @@ def cleanup_unreferenced(
     tenant_id: uuid.UUID | None = None,
     dry_run: bool = False,
 ) -> list[UploadedFile]:
-    """Remove unreferenced files older than `grace` (optionally only one tenant's)."""
+    """删除超过宽限期且未被引用的文件。
+
+    Args:
+        session: 数据库会话。
+        grace: 宽限期（新上传但尚未保存到配置的文件不删）。
+        tenant_id: 仅清理某租户的文件；None 为全部。
+        dry_run: 只返回不删除。
+
+    Returns:
+        被（将被）删除的文件。
+    """
     cutoff = datetime.now(UTC) - grace
     stmt = select(UploadedFile).where(col(UploadedFile.created_at) < cutoff)
     if tenant_id:

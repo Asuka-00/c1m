@@ -1,3 +1,5 @@
+"""登录与密码找回接口。"""
+
 from datetime import timedelta
 from typing import Annotated, Any
 
@@ -62,8 +64,8 @@ def recover_password(email: str, session: SessionDep) -> Message:
     """
     user = crud.get_user_by_email(session=session, email=email)
 
-    # Always return the same response to prevent email enumeration attacks
-    # Only send email if user actually exists
+    # 始终返回相同响应，防止邮箱枚举攻击
+    # 仅当用户存在时才发送邮件
     if user:
         password_reset_token = generate_password_reset_token(email=email)
         email_data = generate_reset_password_email(
@@ -89,7 +91,7 @@ def reset_password(session: SessionDep, body: NewPassword) -> Message:
         raise HTTPException(status_code=400, detail="Invalid token")
     user = crud.get_user_by_email(session=session, email=email)
     if not user:
-        # Don't reveal that the user doesn't exist - use same error as invalid token
+        # 不暴露用户是否存在：与令牌无效返回相同错误
         raise HTTPException(status_code=400, detail="Invalid token")
     elif not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")

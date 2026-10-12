@@ -1,4 +1,4 @@
-"""(De)serialization of spec rows: value coercion, ref labels, JSON output."""
+"""规格行的（反）序列化：值转换、引用标签、JSON 输出。"""
 
 import uuid
 from datetime import date, datetime, time
@@ -18,6 +18,7 @@ from app.core.spec.engine import (
 
 # ---------------- (de)serialization ----------------
 def to_json(v: Any) -> Any:
+    """把数据库值转换为 JSON 可序列化值（UUID / 日期 / Decimal）。"""
     if isinstance(v, uuid.UUID):
         return str(v)
     if isinstance(v, datetime | date | time):
@@ -26,7 +27,11 @@ def to_json(v: Any) -> Any:
 
 
 def coerce(f: F, v: Any) -> Any:
-    """Raw JSON/xlsx value -> python value for column `f` (raises ValueError)."""
+    """把原始 JSON / xlsx 值转换为字段对应的 Python 值。
+
+    Raises:
+        ValueError: 值不符合字段类型。
+    """
     if v is None or (isinstance(v, str) and v.strip() == "" and f.type != "json"):
         return None
     match f.type:
@@ -76,6 +81,7 @@ def coerce(f: F, v: Any) -> Any:
 def ref_labels(
     session: Session, tenant_id: uuid.UUID, target: Entity, ids: set[Any]
 ) -> dict[Any, str]:
+    """批量查询引用目标的显示标签 ``{id: 「CODE · 名称」}``。"""
     if not ids:
         return {}
     t = table(target)
@@ -120,6 +126,7 @@ def ref_labels(
 def serialize(
     session: Session, tenant_id: uuid.UUID, e: Entity, rows: list[Row]
 ) -> list[Row]:
+    """序列化行：值转 JSON，并为引用字段附加 ``<name>`` 显示标签。"""
     out = [{k: to_json(v) for k, v in r.items() if k != "tenant_id"} for r in rows]
     for f in e.all_fields:
         if f.type != "ref":
