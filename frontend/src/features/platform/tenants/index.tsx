@@ -1,3 +1,4 @@
+/** 租户管理页面。 */
 import { useQuery } from '@tanstack/react-query'
 import { fmtDate, t } from '@/i18n'
 import { Plus } from 'lucide-react'
@@ -17,6 +18,7 @@ import {
   searchFilter,
 } from '@/components/crud'
 
+/** 租户管理（平台管理员）：租户 CRUD 与启停。 */
 export default function TenantsPage() {
   const can = useCan()
   const filters: FilterDef[] = [

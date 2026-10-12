@@ -1,11 +1,13 @@
+/** 权限分组工具。 */
 import type { Permission } from '@/lib/api'
 
+/** 权限树的资源分组节点。 */
 export interface TreeGroup {
   resource: string
   perms: Permission[]
 }
 
-/** Group permission codes by resource prefix: "users:read" -> users. */
+/** 按资源前缀对权限编码分组："users:read" -> users。 */
 export function groupPermissions(perms: Permission[]): TreeGroup[] {
   const m = new Map<string, Permission[]>()
   for (const p of perms) {

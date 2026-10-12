@@ -1,3 +1,4 @@
+/** 工单行操作与开批进度。 */
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
@@ -24,7 +25,7 @@ import { ConfirmDialog } from '@/components/crud'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity, useMesMeta } from '@/features/mes/common/use-mes-meta'
 
-/** action -> statuses it is offered in (mirrors app/mes/wo.py) */
+/** 动作 -> 可用的工单状态（与后端 mes/planning/service.py 一致） */
 const ACTIONS: [string, string[]][] = [
   ['release', ['draft']],
   ['hold', ['released', 'in_progress']],
@@ -34,7 +35,7 @@ const ACTIONS: [string, string[]][] = [
   ['cancel', ['draft', 'released']],
 ]
 
-/** Work-order row actions: lifecycle transitions, start lots, undo start. */
+/** 工单行操作：生命周期迁移、开批、撤销开批。 */
 export function WoActions({ row }: { row: MesRow }) {
   const qc = useQueryClient()
   const nav = useNavigate()
@@ -161,7 +162,7 @@ export function WoActions({ row }: { row: MesRow }) {
   )
 }
 
-/** "started / planned" with a progress bar (over-start shown in amber). */
+/** "已开批 / 计划数" 进度条（超投显示为琥珀色）。 */
 export function WoProgress({ row }: { row: MesRow }) {
   const started = Number(row.started_qty ?? 0)
   const planned = Number(row.planned_qty ?? 0) || 1

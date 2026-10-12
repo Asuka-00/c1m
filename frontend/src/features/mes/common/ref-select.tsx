@@ -1,3 +1,4 @@
+/** MES 引用字段选择器。 */
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
@@ -21,7 +22,7 @@ import {
 } from '@/components/ui/popover'
 import { rowLabel } from './labels'
 
-/** Searchable reference picker (server-side search on the target entity). */
+/** 可搜索的引用选择器（在目标实体上做服务端搜索）。 */
 export function RefSelect({
   target,
   labelField = 'code',
@@ -35,10 +36,10 @@ export function RefSelect({
   target: string
   labelField?: string
   value: string | null
-  /** label of the current value (from `<field>_label`) */
+  /** 当前值的显示标签（来自 `<field>_label`） */
   label?: string | null
   onChange: (id: string | null, label: string | null) => void
-  /** extra list filters, e.g. {route_id: '...'} */
+  /** 额外的列表筛选条件，如 {route_id: '...'} */
   filters?: Record<string, string>
   id?: string
   disabled?: boolean

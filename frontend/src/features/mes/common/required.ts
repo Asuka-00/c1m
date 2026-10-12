@@ -1,3 +1,4 @@
+/** MES 表单必填规则与 422 错误消息翻译（与后端 required / required_when 一致）。 */
 import { AxiosError } from 'axios'
 import { t } from '@/i18n'
 import { errorMessage } from '@/lib/api/client'
@@ -7,9 +8,9 @@ import { entityLabel, enumLabel, fieldLabel } from './labels'
 type V = Record<string, unknown>
 const blank = (x: unknown) => x == null || x === ''
 
-/** The condition (sibling field + current value) that makes `f` required, or
- *  `true` when unconditionally required, `null` when optional. Mirrors the
- *  backend's `required` / `required_when` checks. */
+/** 使 `f` 必填的条件（同级字段 + 当前值）；
+ *  无条件必填时为 `true`，可选时为 `null`。与后端的
+ *  `required` / `required_when` 校验保持一致。 */
 export function requiredBy(
   e: MesEntity,
   f: MesField,
@@ -34,7 +35,7 @@ const condText = (e: MesEntity, c: { field: MesField; value: unknown }) =>
       : t('mes.err.isSet'),
   })
 
-/** Client-side required check; field name -> message. */
+/** 前端必填校验；返回 字段名 -> 错误消息。 */
 export function validateRequired(e: MesEntity, v: V, skip: Set<string>) {
   const errs: Record<string, string> = {}
   for (const f of e.fields) {
@@ -53,7 +54,7 @@ export function validateRequired(e: MesEntity, v: V, skip: Set<string>) {
   return errs
 }
 
-/** Hint shown next to the asterisk for conditional requirements. */
+/** 条件必填时显示在星号旁的提示。 */
 export const requiredHint = (e: MesEntity, f: MesField, v: V) => {
   const by = requiredBy(e, f, v)
   return by && by !== true ? condText(e, by) : ''
@@ -66,7 +67,7 @@ const KNOWN: Record<string, string> = {
     'mes.err.productNeedsDefaultRoute',
 }
 
-/** Translate MES 422 details ("field: message") with entity field labels. */
+/** 用实体字段标签翻译 MES 422 错误详情（"field: message"）。 */
 export function mesErrorMessage(err: unknown, e: MesEntity | undefined) {
   const d =
     err instanceof AxiosError && err.response?.status === 422

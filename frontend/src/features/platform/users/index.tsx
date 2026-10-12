@@ -1,3 +1,4 @@
+/** 用户管理页面。 */
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
@@ -72,6 +73,7 @@ function UserRolesDialog({
   )
 }
 
+/** 用户管理（平台）：用户 CRUD、启停与平台角色分配。 */
 export default function UsersPage() {
   const can = useCan()
   const { data: me } = useMe()

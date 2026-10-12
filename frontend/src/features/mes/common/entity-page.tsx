@@ -1,3 +1,4 @@
+/** MES 实体通用页面（菜单组件 `mes:<code>`）。 */
 import { useState } from 'react'
 import { t } from '@/i18n'
 import { Loader2 } from 'lucide-react'
@@ -19,7 +20,7 @@ import { entityLabel, rowLabel } from './labels'
 import { useMesFilters } from './use-mes-filters'
 import { useMesEntity, useMesMeta } from './use-mes-meta'
 
-/** Backend-driven page for one MES entity (menu component `mes:<code>`). */
+/** 单个 MES 实体的后端驱动页面（菜单组件 `mes:<code>`）。 */
 export function MesEntityPage({ code }: { code: string }) {
   const { entity, isLoading } = useMesEntity(code)
   const filters = useMesFilters(entity)

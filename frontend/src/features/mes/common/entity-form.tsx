@@ -1,3 +1,4 @@
+/** MES 实体新增 / 编辑表单。 */
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
@@ -78,7 +79,7 @@ function toPayload(e: MesEntity, v: V, hidden: Set<string>): V {
   return out
 }
 
-/** Create/edit dialog rendered from entity metadata (+ custom attributes). */
+/** 根据实体元数据（含自定义属性）渲染的新增 / 编辑对话框。 */
 export function EntityForm({
   entity: e,
   row,
@@ -93,9 +94,9 @@ export function EntityForm({
   row: MesRow | null
   open: boolean
   onOpenChange: (o: boolean) => void
-  /** initial values for new rows (fields stay visible) */
+  /** 新增行的初始值（字段仍可见） */
   defaults?: V
-  /** fixed values (e.g. parent id) for new rows; those fields are hidden */
+  /** 新增行的固定值（如父级 id），这些字段会被隐藏 */
   preset?: V
   onSubmit: (body: V) => Promise<unknown>
   pending?: boolean
@@ -401,6 +402,7 @@ function FieldInput({
   }
 }
 
+/** 枚举下拉（选项标签按当前语言翻译）。 */
 export function EnumSelect({
   en,
   value,

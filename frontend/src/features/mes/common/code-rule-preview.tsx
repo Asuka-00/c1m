@@ -1,3 +1,4 @@
+/** 编码规则预览面板。 */
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
@@ -6,7 +7,7 @@ import { mesApi, type MesRow } from '@/lib/api/mes/common'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-/** Next codes of a rule (preview only; nothing is reserved). */
+/** 编码规则的后续编码预览（仅预览，不占用计数器）。 */
 export function CodeRulePreview({ row }: { row: MesRow }) {
   const [lot, setLot] = useState('LT2610A001')
   const needsLot = String(row.pattern ?? '').includes('{LOT}')

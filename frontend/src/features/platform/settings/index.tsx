@@ -1,3 +1,4 @@
+/** 个人设置页面。 */
 import { useState } from 'react'
 import { t } from '@/i18n'
 import { api, type User } from '@/lib/api'
@@ -16,6 +17,7 @@ import { Page } from '@/components/crud'
 import { LanguageSwitch } from '@/components/language-switch'
 import { PasswordInput } from '@/components/password-input'
 
+/** 个人设置：资料、密码与语言。 */
 export default function SettingsPage() {
   const { data: me } = useMe()
   const [pw, setPw] = useState({

@@ -1,3 +1,4 @@
+/** 权限复选框树。 */
 import { useState } from 'react'
 import { t } from '@/i18n'
 import { ChevronDown, ChevronRight, Folder } from 'lucide-react'
@@ -6,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { groupPermissions } from './permission-groups'
 
-/** Checkbox tree: resource nodes (tri-state) with permission leaves. */
+/** 复选框树：资源节点（三态）+ 权限叶子节点。 */
 export function PermissionTree({
   perms,
   value,

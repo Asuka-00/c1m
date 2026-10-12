@@ -1,3 +1,4 @@
+/** 拆批 / 合批卡片与对话框、谱系列表。 */
 import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
@@ -56,7 +57,7 @@ const lotLink = (page: string, id: string) => ({
   search: { lot: id } as never,
 })
 
-/** Genealogy list: split parents / children, merge sources / targets. */
+/** 谱系列表：拆批母批 / 子批，合批源批次 / 目标批次。 */
 export function GenealogyList({
   lotId,
   links,
@@ -120,7 +121,7 @@ export function GenealogyList({
   )
 }
 
-/** Console card: rule summary, split / merge buttons, genealogy. */
+/** 操作台卡片：规则摘要、拆批 / 合批按钮、谱系。 */
 export function SplitMergeCard({
   cx,
   perms,
@@ -280,7 +281,7 @@ function SplitDialog({
   const qtyMode = cx.tracking_level === 'quantity'
   const active = cx.units.filter((u) => u.status !== 'scrapped')
   const [n, setN] = useState(1)
-  const [pick, setPick] = useState<Record<string, number>>({}) // unit -> child #
+  const [pick, setPick] = useState<Record<string, number>>({}) // 单元 -> 子批序号
   const [qtys, setQtys] = useState<string[]>([''])
   const [comment, setComment] = useState('')
   const lotQty = Number(cx.lot.qty ?? 0)

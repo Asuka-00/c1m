@@ -1,3 +1,4 @@
+/** 租户成员页面。 */
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
 import { UserPlus } from 'lucide-react'
@@ -22,6 +23,7 @@ import {
   searchFilter,
 } from '@/components/crud'
 
+/** 租户成员管理：添加成员、分配租户角色、移除成员。 */
 export default function MembersPage() {
   const can = useCan()
   const { data: me } = useMe()

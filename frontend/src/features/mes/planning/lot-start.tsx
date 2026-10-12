@@ -1,3 +1,4 @@
+/** 开批向导页面。 */
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearch } from '@tanstack/react-router'
@@ -36,7 +37,7 @@ type LotDraft = {
   source_ref: string
 }
 
-/** "1-3,7" -> [1,2,3,7]; null when malformed. */
+/** "1-3,7" -> [1,2,3,7]；格式错误时返回 null。 */
 function parseSlots(s: string): number[] | null {
   const out: number[] = []
   for (const part of s
@@ -74,7 +75,7 @@ function Steps({ step }: { step: number }) {
   )
 }
 
-/** 3-step lot start: choose WO -> split + carriers -> confirm. */
+/** 三步开批向导：选择工单 -> 拆分批次并分配载具 -> 确认。 */
 export default function LotStartPage() {
   const search = useSearch({ strict: false }) as Record<string, unknown>
   const tk = useTenantKey()
@@ -135,7 +136,7 @@ export default function LotStartPage() {
     },
     onError: (e) => toast.error(mesErrorMessage(e, woE)),
   })
-  // wizard opened with ?wo=: load its plan once
+  // 通过 ?wo= 打开向导时：只加载一次该工单的计划
   if (step === 2 && woId && !plan && !loadPlan.isPending && !loadPlan.isError)
     loadPlan.mutate({ id: woId })
 
@@ -607,7 +608,7 @@ export default function LotStartPage() {
   )
 }
 
-/** Grid cell that keeps one line; full text in the tooltip. */
+/** 保持单行的网格单元格；完整文本显示在提示中。 */
 function TruncCell({ children }: { children: React.ReactNode }) {
   return (
     <span

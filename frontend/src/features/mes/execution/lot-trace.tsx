@@ -1,3 +1,4 @@
+/** 批次履历页面（时间线 + 谱系）。 */
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { fmtDateTime, t } from '@/i18n'
@@ -145,8 +146,8 @@ function Details({ d }: { d: Record<string, unknown> }) {
   )
 }
 
-/** Lot history timeline: every action with time, user, step, equipment,
- *  recipe, qty, reason and check results. */
+/** 批次履历时间线：每个动作的时间、操作人、工步、设备、
+ *  配方、数量、原因与检查结果。 */
 export default function LotTracePage() {
   const search = useSearch({ strict: false }) as Record<string, unknown>
   const nav = useNavigate()

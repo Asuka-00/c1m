@@ -1,3 +1,4 @@
+/** 首页。 */
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
 import { Building2, KeyRound, Users } from 'lucide-react'
@@ -44,6 +45,7 @@ function Stat({
   )
 }
 
+/** 首页仪表盘。 */
 export default function Dashboard() {
   const { data: me } = useMe()
   const menus = useMyMenus()

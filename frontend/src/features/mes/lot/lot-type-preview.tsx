@@ -1,9 +1,10 @@
+/** 批次类型编号预览面板。 */
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
 import { Loader2 } from 'lucide-react'
 import { mesApi, type MesRow } from '@/lib/api/mes/common'
 
-/** Next lot ID of this lot type + the wafer IDs it would get (preview only). */
+/** 该批次类型的下一个批次号及对应晶圆号（仅预览）。 */
 export function LotTypePreview({ row }: { row: MesRow }) {
   const lotRule = row.lot_id_rule_id as string | null
   const waferRule = row.wafer_id_rule_id as string | null

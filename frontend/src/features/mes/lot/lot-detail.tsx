@@ -1,3 +1,4 @@
+/** 批次详情面板。 */
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
 import { Loader2 } from 'lucide-react'
@@ -9,8 +10,8 @@ import { fieldLabel } from '@/features/mes/common/labels'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
 import { RouteFlow } from '@/features/mes/process/route-flow'
 
-/** Lot detail: header facts + route flow with the current step highlighted
- *  (wafers are the second tab, from the generic child table). */
+/** 批次详情：头部信息 + 高亮当前工步的路线流程图
+ *  （晶圆在第二个标签页，由通用子表渲染）。 */
 export function LotDetail({ row }: { row: MesRow }) {
   const tk = useTenantKey()
   const { entity } = useMesEntity('lot')

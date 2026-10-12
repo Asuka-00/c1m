@@ -1,8 +1,16 @@
+/** MES 通用表格的单元格渲染。 */
 import { fmtDateTime, t } from '@/i18n'
 import type { MesEntity, MesRow } from '@/lib/api/mes/common'
 import { Badge } from '@/components/ui/badge'
 import { enumLabel } from './labels'
 
+/**
+ * 按字段类型渲染单元格（枚举标签、布尔、日期、引用标签、实体专用渲染器）。
+ *
+ * @param e - 实体元数据
+ * @param row - 行数据
+ * @param f - 字段元数据
+ */
 export function cellValue(
   e: MesEntity,
   row: MesRow,

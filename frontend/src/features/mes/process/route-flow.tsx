@@ -1,3 +1,4 @@
+/** 路线可视化编辑器。 */
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { t } from '@/i18n'
@@ -162,7 +163,7 @@ function layout(nodes: Node[], edges: Edge[]): Node[] {
           : H
     g.setNode(n.id, { width: n.type === 'term' ? 100 : W, height: h })
   }
-  // only the main chain + calls shape the layout; loops are drawn on top
+  // 只有主链与子路线调用参与布局；返工回路叠加绘制
   for (const e of edges) if (e.data?.layout) g.setEdge(e.source, e.target)
   dagre.layout(g)
   return nodes.map((n) => {
@@ -185,10 +186,10 @@ function useRouteSteps(routeId: string | undefined) {
   })
 }
 
-/** Visual route editor (React Flow + dagre auto-layout): steps in order, main
- *  flow, sub-route calls, rework loops and labelled branches. Draft: connect a
- *  step to another step (branch) or to a rework route, delete edges, add /
- *  edit / delete / reorder steps in the side panel. Active/Inactive: read-only. */
+/** 可视化路线编辑器（React Flow + dagre 自动布局）：按顺序展示工步、主流程、
+ *  子路线调用、返工回路与带标签的分支。草稿：可把工步连到
+ *  另一工步（分支）或返工路线、删除连线，并在侧栏新增 /
+ *  编辑 / 删除 / 重排工步。已激活 / 已停用：只读。 */
 export function RouteFlow({
   row,
   readOnly = false,
@@ -196,7 +197,7 @@ export function RouteFlow({
 }: {
   row: MesRow
   readOnly?: boolean
-  /** route step id to highlight (e.g. a lot's current step) */
+  /** 需高亮的工步 id（如批次的当前工步） */
   highlight?: string | null
 }) {
   const qc = useQueryClient()
@@ -423,7 +424,7 @@ export function RouteFlow({
       markerEnd: arrow,
       data: { layout: true, kind: 'main' },
     })
-    // draft: unlinked active rework routes are connect targets
+    // 草稿：未关联的已激活返工路线可作为连线目标
     if (editable)
       for (const r of reworks.data?.data ?? []) {
         const rid = `rw-${r.id}`

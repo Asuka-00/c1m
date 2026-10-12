@@ -1,3 +1,4 @@
+/** 权限管理页面。 */
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
@@ -29,6 +30,7 @@ import { PermissionTree } from './permission-tree'
 
 type Scope = 'platform' | 'tenant'
 
+/** 权限管理：按资源分组的权限列表与 CRUD。 */
 export default function PermissionsPage() {
   const can = useCan()
   const current = useCurrentTenant()
@@ -70,7 +72,7 @@ export default function PermissionsPage() {
       ? platformRoles.data?.data
       : tenantRoles.data?.data) ?? []
   const role = roles.find((r) => r.id === roleId) ?? roles[0]
-  // tenant roles may only hold tenant-scope permissions
+  // 租户角色只能包含租户作用域的权限
   const visiblePerms = useMemo(
     () =>
       (perms.data?.data ?? []).filter(
@@ -84,7 +86,7 @@ export default function PermissionsPage() {
     (scope === 'platform'
       ? can('roles:write')
       : can('tenant:manage') && role.name !== 'owner')
-  // permission CRUD
+  // 权限 CRUD
   const s = useCrudState<Permission>()
   const create = useApiMutation(
     api.permissions.create,

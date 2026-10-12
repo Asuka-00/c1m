@@ -1,9 +1,10 @@
+/** 通用错误页。 */
 import { useNavigate, useRouter } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 
-/** Shared, translated error page (code -> errors.<code>.title/desc). */
+/** 共享的多语言错误页（code -> errors.<code>.title/desc）。 */
 export function ErrorPage({
   code,
   minimal,

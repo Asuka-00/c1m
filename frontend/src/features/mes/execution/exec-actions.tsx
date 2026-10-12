@@ -1,3 +1,4 @@
+/** 执行模块的行操作与工具寿命组件。 */
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
@@ -15,7 +16,7 @@ const pageLink = (page: string, lot: unknown) => ({
   search: { lot: String(lot) } as never,
 })
 
-/** Lot row actions: open in the operation console / history timeline. */
+/** 批次行操作：在操作台 / 履历时间线中打开。 */
 export function LotActions({ row }: { row: MesRow }) {
   return (
     <>
@@ -49,7 +50,7 @@ export function LotActions({ row }: { row: MesRow }) {
   )
 }
 
-/** Hold management row action: release an active hold. */
+/** Hold 管理行操作：释放生效中的 Hold。 */
 export function HoldActions({ row }: { row: MesRow }) {
   const [open, setOpen] = useState(false)
   const tk = useTenantKey()
@@ -100,7 +101,7 @@ export function HoldActions({ row }: { row: MesRow }) {
   )
 }
 
-/** Tool life bar: usage / max (warn threshold colours). */
+/** 工具寿命条：已用 / 上限（按预警阈值着色）。 */
 export function ToolLife({ row }: { row: MesRow }) {
   const used = Number(row.usage_count ?? 0)
   const max = Number(row.max_usage ?? 0)

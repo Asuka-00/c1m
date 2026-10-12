@@ -1,8 +1,9 @@
+/** 实体专用的单元格渲染与行编辑 / 删除规则。 */
 import type { MesRow } from '@/lib/api/mes/common'
 import { ToolLife } from '@/features/mes/execution/exec-actions'
 import { WoProgress } from '@/features/mes/planning/wo-actions'
 
-/** Entity-specific cell renderers: entity -> field -> cell. */
+/** 实体专用单元格渲染器：实体 -> 字段 -> 单元格。 */
 export const CELLS: Record<
   string,
   Record<string, (r: MesRow) => React.ReactNode>
@@ -11,7 +12,7 @@ export const CELLS: Record<
   tool: { usage_count: (r) => <ToolLife row={r} /> },
 }
 
-/** Entity-specific edit / delete rules (on top of permissions + versioning). */
+/** 实体专用的编辑 / 删除规则（在权限与版本锁定之上）。 */
 export const ROW_RULES: Record<
   string,
   { edit?: (r: MesRow) => boolean; remove?: (r: MesRow) => boolean }

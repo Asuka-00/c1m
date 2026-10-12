@@ -1,5 +1,6 @@
+/** MES 页面汇总。 */
 import { pages as execution } from './execution/pages'
 import { pages as planning } from './planning/pages'
 
-/** All MES pages (composition of the domain modules' pages). */
+/** 全部 MES 页面（由各业务域模块的页面组合而成）。 */
 export const pages = { ...planning, ...execution }

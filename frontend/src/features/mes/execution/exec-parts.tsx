@@ -1,3 +1,4 @@
+/** 批次操作台的通用部件：选择框、阶段步骤条、检查结果面板。 */
 import { useState } from 'react'
 import { t } from '@/i18n'
 import { Check, ShieldAlert, TriangleAlert, X, Zap } from 'lucide-react'
@@ -22,7 +23,7 @@ import { enumLabel } from '@/features/mes/common/labels'
 
 const NONE = '__none'
 
-/** Labelled select over simple options (id/label); '' = none. */
+/** 带标签的简单选项下拉（id/label）；'' 表示未选择。 */
 export function Pick({
   id,
   label,
@@ -69,8 +70,8 @@ export function Pick({
   )
 }
 
-/** Move In -> Track In -> Track Out -> Move Out with the next stage active. */
-/** Non-interactive stage stepper: done / current / pending + connectors. */
+/** Move In -> Track In -> Track Out -> Move Out，突出下一阶段。 */
+/** 不可交互的阶段步骤条：已完成 / 当前 / 待执行 + 连接线。 */
 export function StageBar({
   next,
   status,
@@ -153,6 +154,7 @@ const RESULT_STYLE: Record<string, string> = {
   overridden: 'border-violet-500 text-violet-700 dark:text-violet-400',
 }
 
+/** 检查结果徽标（pass / warn / block）。 */
 export function ResultBadge({ r }: { r: string }) {
   const Icon =
     r === 'pass'
@@ -170,7 +172,7 @@ export function ResultBadge({ r }: { r: string }) {
   )
 }
 
-/** Check results of the last attempt / preview; override form on blocks. */
+/** 上次执行 / 预览的检查结果；存在阻断时显示强制放行表单。 */
 export function CheckPanel({
   results,
   blocked,

@@ -1,7 +1,8 @@
+/** 平台页面注册。 */
 import { lazy } from 'react'
 import type { Pages } from '@/features/shell/dynamic/types'
 
-/** Platform pages (menu component keys from the backend menu registry). */
+/** 平台页面（菜单组件 key 来自后端菜单注册表）。 */
 export const pages: Pages = {
   users: lazy(() => import('./users')),
   roles: lazy(() => import('./rbac/roles')),

@@ -1,3 +1,4 @@
+/** 菜单管理页面。 */
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
 import { Plus } from 'lucide-react'
@@ -21,6 +22,7 @@ import {
 import { ICONS } from '@/components/layout/icons'
 import { COMPONENTS } from '@/features/shell/dynamic/registry'
 
+/** 菜单管理：树形列表，编辑标题 / 图标 / 排序 / 隐藏，新增自定义菜单。 */
 export default function MenusPage() {
   const filters: FilterDef[] = [
     searchFilter(t('table.searchMenus')),

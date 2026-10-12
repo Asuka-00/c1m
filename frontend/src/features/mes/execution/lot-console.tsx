@@ -1,3 +1,4 @@
+/** 批次操作台页面：批次头部信息、阶段步骤条、作业面板、检查 / Hold / 拆合批卡片。 */
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
@@ -69,10 +70,10 @@ import { useMesEntity, useMesMeta } from '@/features/mes/common/use-mes-meta'
 import { CheckPanel, Pick, StageBar } from './exec-parts'
 import { SplitMergeCard } from './split-merge'
 
-type Dc = Record<string, string> // `${item}|${unit}|${site}` -> value
+type Dc = Record<string, string> // `${item}|${unit}|${site}` -> 录入值
 type Scrap = { unit_id?: string; qty?: string; reason_id: string }
 
-/** Lot operation console: pick a lot, run the next stage with its inputs. */
+/** 批次操作台：选择批次，填写输入并执行下一阶段。 */
 export default function LotConsolePage() {
   const search = useSearch({ strict: false }) as Record<string, unknown>
   const nav = useNavigate()
@@ -164,7 +165,7 @@ function Console({ cx, perms }: { cx: ExecContext; perms: string[] }) {
     (lot.carrier_id as string) ?? null
   )
   const [tools, setTools] = useState<Record<string, string>>(() => {
-    // default: the tool already mounted (track out) or the first usable one
+    // 默认：已上机的工具（Track Out）或第一个可用工具
     const ids = (xc.tool_ids as string[]) ?? []
     const out: Record<string, string> = {}
     for (const g of cx.tools ?? []) {
@@ -1092,6 +1093,7 @@ function HoldDialog({
   )
 }
 
+/** 释放 Hold 对话框（选择原因代码并填写备注）。 */
 export function ReleaseDialog({
   hold,
   reasons,

@@ -1,3 +1,4 @@
+/** 系统配置项输入控件。 */
 import { useRef, useState } from 'react'
 import { t } from '@/i18n'
 import { ImageIcon, Loader2, Trash2, Upload } from 'lucide-react'
@@ -20,7 +21,7 @@ import { Textarea } from '@/components/ui/textarea'
 const IMAGE_ACCEPT =
   'image/png,image/jpeg,image/svg+xml,image/webp,image/x-icon,.ico'
 
-/** Input rendered by value_type. JSON items are edited as text (`value` is a string). */
+/** 按 value_type 渲染的输入控件；JSON 配置以文本编辑（`value` 为字符串）。 */
 export function ConfigField({
   item,
   value,

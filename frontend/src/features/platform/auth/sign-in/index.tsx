@@ -1,3 +1,4 @@
+/** 登录页。 */
 import { useSearch } from '@tanstack/react-router'
 import { t } from '@/i18n'
 import {
@@ -10,6 +11,7 @@ import {
 import { AuthLayout } from '@/features/platform/auth/auth-layout'
 import { UserAuthForm } from '@/features/platform/auth/sign-in/components/user-auth-form'
 
+/** 登录页：品牌布局 + 登录表单。 */
 export function SignIn() {
   const { redirect } = useSearch({ from: '/(auth)/sign-in' })
   return (

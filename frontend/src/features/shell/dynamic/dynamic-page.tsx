@@ -1,3 +1,4 @@
+/** 动态页面：按后端菜单树解析并渲染组件。 */
 import { Suspense } from 'react'
 import { Loader2 } from 'lucide-react'
 import type { MenuNode } from '@/lib/api'
@@ -17,8 +18,8 @@ const Spinner = () => (
   </div>
 )
 
-/** Resolve `path` against the backend menu tree and render its component.
- *  Path known but not permitted -> 403; otherwise unknown -> 404. */
+/** 在后端菜单树中解析 `path` 并渲染对应组件。
+ *  路径存在但无权限 -> 403；未知路径 -> 404。 */
 export function DynamicPage({ path }: { path: string }) {
   const { data, isLoading } = useMyMenus()
   if (isLoading || !data) return <Spinner />
@@ -29,7 +30,7 @@ export function DynamicPage({ path }: { path: string }) {
     ) : (
       <NotFoundError />
     )
-  // MES master data: one generic page per entity (component `mes:<entity>`)
+  // MES 主数据：每个实体一个通用页面（组件 `mes:<entity>`）
   if (node.component?.startsWith('mes:'))
     return <MesEntityPage key={node.component} code={node.component.slice(4)} />
   const Comp = node.component ? COMPONENTS[node.component] : undefined

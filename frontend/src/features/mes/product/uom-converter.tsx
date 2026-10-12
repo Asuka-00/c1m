@@ -1,3 +1,4 @@
+/** 单位换算面板。 */
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fmtNumber, t } from '@/i18n'
@@ -8,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { rowLabel } from '@/features/mes/common/labels'
 import { RefSelect } from '@/features/mes/common/ref-select'
 
-/** Convert from this unit to another one (direct / inverse / multi-hop). */
+/** 从当前单位换算到其他单位（直接 / 反向 / 多跳）。 */
 export function UomConverter({ row }: { row: MesRow }) {
   const [value, setValue] = useState('1')
   const [to, setTo] = useState<{ id: string | null; label: string | null }>({

@@ -1,9 +1,16 @@
+/** 根据实体元数据生成表格筛选定义。 */
 import { useMemo } from 'react'
 import { t } from '@/i18n'
 import { mesApi, type MesEntity } from '@/lib/api/mes/common'
 import { boolOptions, searchFilter, type FilterDef } from '@/components/crud'
 import { enumLabel, fieldLabel, rowLabel, statusLabel } from './labels'
 
+/**
+ * 由实体元数据生成表格筛选：关键字搜索 + 可筛选字段（枚举 / 布尔 / 引用）。
+ *
+ * @param e - 实体元数据
+ * @param hide - 不显示的筛选字段（如已固定的父级字段）
+ */
 export function useMesFilters(e: MesEntity | undefined, hide: string[] = []) {
   return useMemo<FilterDef[]>(() => {
     if (!e) return [searchFilter()]
@@ -53,7 +60,7 @@ export function useMesFilters(e: MesEntity | undefined, hide: string[] = []) {
         })),
       })
     return defs
-    // hide is a stable literal per call site
+    // hide 在每个调用处都是稳定的字面量
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [e])
 }

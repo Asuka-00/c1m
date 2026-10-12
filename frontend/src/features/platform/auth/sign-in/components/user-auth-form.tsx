@@ -1,3 +1,4 @@
+/** 登录表单。 */
 import { useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
@@ -24,7 +25,7 @@ import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
 
 const formSchema = z.object({
-  // username OR email; messages are functions so they follow the current language
+  // 用户名或邮箱；消息写成函数以跟随当前语言
   login: z
     .string()
     .trim()
@@ -43,7 +44,7 @@ interface UserAuthFormProps extends React.HTMLAttributes<HTMLFormElement> {
   redirectTo?: string
 }
 
-/** Sign in against POST /api/v1/login/access-token. */
+/** 登录表单：调用 POST /api/v1/login/access-token。 */
 export function UserAuthForm({
   className,
   redirectTo,
@@ -66,7 +67,7 @@ export function UserAuthForm({
       setAccessToken(access_token)
       setTenantId(null)
       qc.clear()
-      // multiple tenants -> preselect the first one (sent as X-Tenant-ID)
+      // 有多个租户时预选第一个（作为 X-Tenant-ID 发送）
       const mine = await api.myTenants()
       if (mine.count > 1)
         setTenantId(

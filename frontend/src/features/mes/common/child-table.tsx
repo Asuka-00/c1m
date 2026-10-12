@@ -1,8 +1,9 @@
+/** MES 子表组件（行详情抽屉中的子表标签页）。 */
 import { useLocalListParams } from '@/components/crud'
 import { EntityTable } from './entity-table'
 import { useMesEntity } from './use-mes-meta'
 
-/** Child rows of one parent (fixed parent filter, local paging state). */
+/** 某父级的子表行（固定父级筛选，本地分页状态）。 */
 export function ChildTable({
   code,
   parentCode,

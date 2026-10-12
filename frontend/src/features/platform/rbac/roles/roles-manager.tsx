@@ -1,3 +1,4 @@
+/** 角色管理组件（平台 / 租户共用）。 */
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
 import { Plus } from 'lucide-react'
@@ -17,7 +18,7 @@ import {
   searchFilter,
 } from '@/components/crud'
 
-/** CRUD for platform roles (/roles) or tenant roles (/tenants/{id}/roles). */
+/** 平台角色（/roles）或租户角色（/tenants/{id}/roles）的 CRUD。 */
 export function RolesManager({ scope }: { scope: 'platform' | 'tenant' }) {
   const can = useCan()
   const current = useCurrentTenant()

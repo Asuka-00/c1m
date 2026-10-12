@@ -1,3 +1,4 @@
+/** 系统配置分组卡片。 */
 import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { t } from '@/i18n'
@@ -26,7 +27,7 @@ import { ConfigField } from './config-field'
 
 type Scope = 'tenant' | 'platform'
 
-/** server value -> form value (JSON is edited as pretty text) */
+/** 服务端值 -> 表单值（JSON 以格式化文本编辑） */
 const toForm = (item: ConfigItem, v: unknown) =>
   item.value_type === 'json' ? JSON.stringify(v ?? null, null, 2) : (v ?? '')
 
@@ -39,9 +40,9 @@ const itemDesc = (g: ConfigGroup, i: ConfigItem) =>
     defaultValue: i.description ?? '',
   })
 
-/** One collapsible card per group (collapsed by default): edit + Save / Reset.
- *  No create/delete. In tenant scope each item shows whether it is inherited
- *  from the platform and can be reset to the platform value. */
+/** 每个分组一张可折叠卡片（默认折叠）：编辑后保存 / 重置。
+ *  不支持新增 / 删除。租户范围内每项会显示是否继承自平台，
+ *  并可重置为平台值。 */
 export function ConfigGroupCard({
   group,
   scope,
@@ -61,7 +62,7 @@ export function ConfigGroupCard({
   const [draft, setDraft] = useState<Record<string, unknown>>(initial)
   const [base, setBase] = useState(initial)
   if (base !== initial) {
-    // server data changed (saved / refetched): reset the form to it
+    // 服务端数据变化（已保存 / 重新获取）：以其重置表单
     setBase(initial)
     setDraft(initial)
   }
@@ -79,7 +80,7 @@ export function ConfigGroupCard({
     (i) => JSON.stringify(draft[i.code]) !== JSON.stringify(initial[i.code])
   )
   const done = () => {
-    // refresh lists AND the public branding (sidebar, title, favicon, footer)
+    // 同时刷新列表与公开品牌信息（侧栏、标题、favicon、页脚）
     qc.invalidateQueries({ queryKey: ['config'] })
   }
   const save = useMutation({

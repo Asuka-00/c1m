@@ -1,3 +1,4 @@
+/** 系统配置页面。 */
 import { useState } from 'react'
 import { AxiosError } from 'axios'
 import { useQuery } from '@tanstack/react-query'
@@ -11,8 +12,8 @@ import { ConfigGroupCard } from './config-group-card'
 
 type Scope = 'tenant' | 'platform'
 
-/** System configuration: the current tenant's settings (overrides on top of the
- *  platform values) and, for platform admins, the platform defaults. */
+/** 系统配置：当前租户的设置（在平台值之上的覆盖值），
+ *  平台管理员还可编辑平台默认值。 */
 export default function ConfigPage() {
   const can = useCan()
   const current = useCurrentTenant()
@@ -22,7 +23,7 @@ export default function ConfigPage() {
     queryFn: api.config.tenant,
     enabled: !!current && can('config:read'),
   })
-  // platform defaults: visible iff the platform endpoint allows us (platform role)
+  // 平台默认值：仅当平台接口允许（拥有平台角色）时显示
   const platformQ = useQuery({
     queryKey: ['config', 'platform'],
     queryFn: api.config.platform,

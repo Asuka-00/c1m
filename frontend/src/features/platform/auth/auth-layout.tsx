@@ -1,3 +1,4 @@
+/** 登录相关页面的布局。 */
 import { useEffect } from 'react'
 import { useSearch } from '@tanstack/react-router'
 import {
@@ -16,7 +17,7 @@ type AuthLayoutProps = {
   children: React.ReactNode
 }
 
-/** Sign-in layout, branded by ?tenant=<slug> (remembered) or platform defaults. */
+/** 登录页布局：按 ?tenant=<slug>（会记住）或平台默认值显示品牌。 */
 export function AuthLayout({ children }: AuthLayoutProps) {
   const search = useSearch({ strict: false }) as Record<string, unknown>
   const fromUrl = typeof search.tenant === 'string' ? search.tenant : null

@@ -1,3 +1,4 @@
+/** MES 实体通用表格。 */
 import { useRef } from 'react'
 import { AxiosError } from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -43,6 +44,7 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'outline'> = {
   inactive: 'secondary',
 }
 
+/** 版本状态徽标（draft / active / inactive）。 */
 export function StatusBadge({ status }: { status: string }) {
   return (
     <Badge variant={STATUS_VARIANT[status] ?? 'outline'}>
@@ -51,8 +53,8 @@ export function StatusBadge({ status }: { status: string }) {
   )
 }
 
-/** Generic MES table: paging/sort/search/filters, CRUD dialog, versioning,
- *  xlsx import/export and per-row extra actions. */
+/** 通用 MES 表格：分页 / 排序 / 搜索 / 筛选、CRUD 对话框、版本管理、
+ *  xlsx 导入导出及每行的额外操作。 */
 export function EntityTable({
   entity: e,
   params,
@@ -62,7 +64,7 @@ export function EntityTable({
 }: {
   entity: MesEntity
   params: ListParams
-  /** fixed filter + preset for new rows (e.g. {route_id}) */
+  /** 固定筛选条件，同时作为新增行的预设值（如 {route_id}） */
   fixed?: Record<string, string>
   extraActions?: (r: MesRow) => React.ReactNode
   onOpenChildren?: (r: MesRow) => void
