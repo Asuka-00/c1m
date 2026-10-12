@@ -2,6 +2,7 @@
 import { Link } from '@tanstack/react-router'
 import type { MenuNode } from '@/lib/api'
 import { useMyMenus } from '@/lib/api/hooks'
+import { cn } from '@/lib/utils'
 import { useMesMeta } from './use-mes-meta'
 
 const paths = (ns: MenuNode[]): string[] =>
@@ -14,15 +15,19 @@ const paths = (ns: MenuNode[]): string[] =>
  * @param target - 目标实体编码
  * @param id - 目标记录 id
  * @param label - 显示文本
+ * @param mono - 是否等宽字体
  */
 export function RefLink({
   target,
   id,
   label,
+  mono = false,
 }: {
   target: string
   id: string
   label: string
+  /** 等宽字体（批次号等编码） */
+  mono?: boolean
 }) {
   const { data } = useMesMeta()
   const menus = useMyMenus()
@@ -37,7 +42,10 @@ export function RefLink({
       to='/$'
       params={{ _splat: path }}
       search={(target === 'lot' ? { lot: id } : { id }) as never}
-      className='text-blue-600 underline-offset-2 hover:underline dark:text-blue-400'
+      className={cn(
+        'text-blue-600 underline-offset-2 hover:underline dark:text-blue-400',
+        mono && 'font-mono'
+      )}
       onClick={(ev) => ev.stopPropagation()}
     >
       {label}

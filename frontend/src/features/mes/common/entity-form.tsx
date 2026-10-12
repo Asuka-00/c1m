@@ -61,6 +61,11 @@ function toPayload(e: MesEntity, v: V, hidden: Set<string>): V {
   const out: V = {}
   for (const f of e.fields) {
     if (f.system || (hidden.has(f.column) && v[f.column] === '')) continue
+    // 条件字段未满足条件时清空（如切换卡控绑定范围后残留的旧范围值）
+    if (f.only_when_required && !requiredBy(e, f, v)) {
+      out[f.column] = null
+      continue
+    }
     const x = v[f.column]
     if (f.type === 'json') {
       out[f.column] = x === '' ? null : JSON.parse(String(x))
@@ -171,7 +176,12 @@ function FormBody({
     if (!row) Object.assign(body, preset)
     await onSubmit(body)
   }
-  const fields = e.fields.filter((f) => !hidden.has(f.column) && !f.system)
+  const fields = e.fields.filter(
+    (f) =>
+      !hidden.has(f.column) &&
+      !f.system &&
+      (!f.only_when_required || !!requiredBy(e, f, v))
+  )
   return (
     <form onSubmit={submit} noValidate className='space-y-4'>
       <DialogHeader>

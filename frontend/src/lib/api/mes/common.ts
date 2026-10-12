@@ -26,6 +26,8 @@ export interface MesField {
   required: boolean
   /** 条件必填：{同级字段名: 取值}；'*' 表示任意值 */
   required_when: Record<string, unknown[]> | null
+  /** 仅在条件必填满足时显示于表单 */
+  only_when_required?: boolean
   /** 为空时后端复制该同级字段（如 code） */
   default_from: string | null
   /** 为空时由后端生成 */

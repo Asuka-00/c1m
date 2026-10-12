@@ -123,7 +123,13 @@ ENUMS.update(
 
 
 def _scope_ref(name: str, ref: str) -> F:
-    return F(name, "ref", ref=ref, required_when={"scope": (name,)})
+    return F(
+        name,
+        "ref",
+        ref=ref,
+        required_when={"scope": (name,)},
+        only_when_required=True,
+    )
 
 
 FIELD_LABELS.setdefault("route_step", "Route step|流程步骤|ルートステップ")

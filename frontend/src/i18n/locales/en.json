@@ -209,7 +209,9 @@
     "superuserHint": "superuser: can access any tenant",
     "effective": "Effective permissions",
     "effectiveDesc": "Platform roles + your roles in the current tenant (from GET /menus/me)",
-    "bypass": "superuser (bypass)"
+    "bypass": "superuser (bypass)",
+    "showPerms": "Show",
+    "hidePerms": "Hide"
   },
   "users": {
     "title": "Users",
@@ -549,7 +551,9 @@
       "previewNote": "Lot numbers are previews; the final numbers are assigned on confirmation.",
       "confirmStart": "Start {{count}} lot(s) / {{total}} wafers",
       "done": "{{count}} lot(s) started",
-      "again": "Start more"
+      "again": "Start more",
+      "searchWo": "Search work order / product / route / customer",
+      "woMore": "{{n}} matches, showing first {{show}}; refine the search"
     },
     "exec": {
       "stage": {
@@ -759,7 +763,8 @@
       "allRoutes": "All routes",
       "product": "Product",
       "route": "Route",
-      "autoRefresh": "Auto refresh"
+      "autoRefresh": "Auto refresh",
+      "sweepConfirm": "Scan all waiting lots now and apply the configured action (hold / rework / scrap) to those that exceeded Q-Time?"
     },
     "eqp": {
       "hint": "Current E10 state and PM due status of main equipment. State changes follow the E10 transition table; overdue PM can block track-in via the pm_due check (switchable per step).",
@@ -916,7 +921,16 @@
       "ongoing": "Ongoing",
       "hours": "{{n}} h"
     },
-    "exportHint": "Export rows matching the current search and filters"
+    "exportHint": "Export rows matching the current search and filters",
+    "pmStatus": {
+      "title": "Due status",
+      "due": "{{n}} overdue",
+      "warn": "{{n}} due soon",
+      "ok": "OK",
+      "next": "Next {{d}}"
+    },
+    "fieldIs": "{{field}}: {{value}}",
+    "treeToggle": "Expand / collapse"
   },
   "notify": {
     "bell": "Notifications",

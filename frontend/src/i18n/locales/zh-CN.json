@@ -209,7 +209,9 @@
     "superuserHint": "超级管理员：可访问任意租户",
     "effective": "有效权限",
     "effectiveDesc": "平台角色 + 你在当前租户中的角色（来自 GET /menus/me）",
-    "bypass": "超级管理员（全部放行）"
+    "bypass": "超级管理员（全部放行）",
+    "showPerms": "展开",
+    "hidePerms": "收起"
   },
   "users": {
     "title": "用户",
@@ -549,7 +551,9 @@
       "previewNote": "批次号为预览，确认投产时正式分配。",
       "confirmStart": "投产 {{count}} 个批次 / {{total}} 片",
       "done": "已投产 {{count}} 个批次",
-      "again": "继续投产"
+      "again": "继续投产",
+      "searchWo": "搜索工单号 / 产品 / 流程 / 客户",
+      "woMore": "共 {{n}} 条，显示前 {{show}} 条，请输入关键字缩小范围"
     },
     "exec": {
       "stage": {
@@ -759,7 +763,8 @@
       "allRoutes": "全部工艺路线",
       "product": "产品",
       "route": "工艺路线",
-      "autoRefresh": "自动刷新"
+      "autoRefresh": "自动刷新",
+      "sweepConfirm": "立即扫描所有等待中批次，并对已超时批次执行规则配置的处置（Hold / 返工 / 报废）？"
     },
     "eqp": {
       "hint": "主设备当前 E10 状态与 PM 到期情况；状态变更受 E10 迁移表约束，PM 到期可在上机检查 pm_due 中阻断（可按工步关闭）。",
@@ -916,7 +921,16 @@
       "ongoing": "进行中",
       "hours": "{{n}} 小时"
     },
-    "exportHint": "按当前搜索与筛选条件导出"
+    "exportHint": "按当前搜索与筛选条件导出",
+    "pmStatus": {
+      "title": "到期状态",
+      "due": "{{n}} 台超期",
+      "warn": "{{n}} 台即将到期",
+      "ok": "正常",
+      "next": "最近到期 {{d}}"
+    },
+    "fieldIs": "{{field}}：{{value}}",
+    "treeToggle": "展开 / 收起"
   },
   "notify": {
     "bell": "通知",

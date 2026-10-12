@@ -1,9 +1,10 @@
 /** 实体专用的单元格渲染与行编辑 / 删除规则。 */
 import { t } from '@/i18n'
 import type { MesRow } from '@/lib/api/mes/common'
+import { Badge } from '@/components/ui/badge'
 import { ToolLife } from '@/features/mes/execution/exec-actions'
 import { WoProgress } from '@/features/mes/planning/wo-actions'
-import { DowntimeEnd, DueCell } from './due-cells'
+import { DowntimeEnd, DueCell, HeldAt } from './due-cells'
 import { RefLink } from './ref-link'
 
 /** 实体专用单元格渲染器：实体 -> 字段 -> 单元格。 */
@@ -33,6 +34,35 @@ export const CELLS: Record<
         warnLabel={t('mes.due.expiring')}
       />
     ),
+  },
+  // 批次：批次号进入批次作业；Hold 中红色徽标
+  lot: {
+    code: (r) => <RefLink target='lot' id={r.id} label={String(r.code)} mono />,
+    on_hold: (r) =>
+      r.on_hold ? (
+        <Badge variant='destructive'>Hold</Badge>
+      ) : (
+        <span className='text-muted-foreground'>—</span>
+      ),
+  },
+  // Hold：生效中的显示已持续时长
+  lot_hold: {
+    held_at: (r) => <HeldAt row={r} />,
+  },
+  // 优先级：颜色色块
+  lot_priority: {
+    color: (r) =>
+      r.color ? (
+        <span className='inline-flex items-center gap-2'>
+          <span
+            className='size-3 rounded-sm border'
+            style={{ background: String(r.color) }}
+          />
+          <code className='text-xs'>{String(r.color)}</code>
+        </span>
+      ) : (
+        '—'
+      ),
   },
   // 审计日志：记录跳转到被修改对象
   audit_log: {

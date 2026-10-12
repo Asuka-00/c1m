@@ -60,7 +60,14 @@ export function useMesFilters(e: MesEntity | undefined, hide: string[] = []) {
           type: 'select',
           name: f.column,
           label: t('mes.allOf', { field: fieldLabel(e, f) }),
-          options: boolOptions(t('common.yes'), t('common.no')),
+          // 选项带字段名（如“生效中：是”），选中后仍可辨认
+          options: boolOptions(
+            t('mes.fieldIs', {
+              field: fieldLabel(e, f),
+              value: t('common.yes'),
+            }),
+            t('mes.fieldIs', { field: fieldLabel(e, f), value: t('common.no') })
+          ),
           defaultValue: FILTER_DEFAULTS[e.code]?.[f.column],
         })
       else if (f.type === 'str')

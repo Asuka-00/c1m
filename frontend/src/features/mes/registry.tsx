@@ -1,5 +1,6 @@
 import { extensions as common } from './common/extensions'
 import type { MesExtensions } from './common/types'
+import { extensions as equipment } from './equipment/extensions'
 import { extensions as execution } from './execution/extensions'
 import { extensions as lot } from './lot/extensions'
 import { extensions as planning } from './planning/extensions'
@@ -10,7 +11,7 @@ import { extensions as warehouse } from './warehouse/extensions'
 /**
  * MES UI 模块的组合根（与后端 app/modules.py 对应）：
  * 各业务域向通用实体页面提供实体专用的面板 / 操作。
- * 没有定制 UI 的业务域（factory、equipment、quality）
+ * 没有定制 UI 的业务域（factory、quality）
  * 完全由后端规格渲染。
  */
 const MODULES: MesExtensions[] = [
@@ -21,6 +22,7 @@ const MODULES: MesExtensions[] = [
   planning,
   warehouse,
   execution,
+  equipment,
 ]
 
 /** 实体专用详情面板（行详情抽屉的第一个标签页）。 */
@@ -34,3 +36,9 @@ export const EXTRA_ACTIONS = Object.assign(
   {},
   ...MODULES.map((m) => m.extraActions ?? {})
 ) as NonNullable<MesExtensions['extraActions']>
+
+/** 实体专用的额外计算列。 */
+export const EXTRA_COLUMNS = Object.assign(
+  {},
+  ...MODULES.map((m) => m.extraColumns ?? {})
+) as NonNullable<MesExtensions['extraColumns']>

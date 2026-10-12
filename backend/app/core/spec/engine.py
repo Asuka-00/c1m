@@ -75,6 +75,8 @@ class F:
     help: str | None = None
     # 条件必填：{其他字段: (取值...)}；"*" 表示任意非空值
     required_when: dict[str, tuple[Any, ...]] | None = None
+    # 仅在 required_when 条件满足时显示于表单（如卡控绑定的范围字段）
+    only_when_required: bool = False
     default_from: str | None = None  # 为空时复制该同级字段（如 code）
     auto: bool = False  # 为空时由后端生成（如编码规则）
     system: bool = False  # 仅由后端设置，从不取自请求载荷

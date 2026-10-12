@@ -3,7 +3,7 @@
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from app.testing.mes import Mes
+from app.testing.mes import API, Mes
 
 
 def test_id_range_and_default_desc(client: TestClient, db: Session) -> None:
@@ -60,3 +60,14 @@ def test_export_honours_filters_and_distinct(client: TestClient, db: Session) ->
     assert d.status_code == 200 and d.json()["data"]
     bad = client.get(m.url("site", "distinct", "name"), headers=m.h)
     assert bad.status_code == 422
+
+
+def test_meta_conditional_scope_fields(client: TestClient, db: Session) -> None:
+    m = Mes(client, db)
+    meta = client.get(f"{API}/_meta", headers=m.h).json()
+    e = next(x for x in meta["entities"] if x["code"] == "check_binding")
+    f = {x["name"]: x for x in e["fields"]}
+    assert f["equipment"]["only_when_required"] is True
+    assert f["trigger"]["only_when_required"] is False
+    smr = next(x for x in meta["entities"] if x["code"] == "split_merge_rule")
+    assert not any(x["filter"] for x in smr["fields"] if x["type"] == "bool")

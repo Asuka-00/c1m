@@ -65,3 +65,20 @@ export function DowntimeEnd({ row }: { row: MesRow }) {
     </span>
   )
 }
+
+/** Hold 时间 + 生效中 Hold 的已持续时长（小时）。 */
+export function HeldAt({ row }: { row: MesRow }) {
+  const [now] = useState(() => Date.now())
+  if (!row.held_at) return <>—</>
+  const h = ((now - Date.parse(String(row.held_at))) / 3_600_000).toFixed(1)
+  return (
+    <span className='inline-flex items-center gap-1'>
+      {fmtDateTime(String(row.held_at))}
+      {!!row.is_active && (
+        <span className='text-amber-600 tabular-nums'>
+          ({t('mes.due.hours', { n: h })})
+        </span>
+      )}
+    </span>
+  )
+}

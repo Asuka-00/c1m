@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import {
+  ConfirmDialog,
   DataTable,
   Page,
   clientList,
@@ -44,6 +45,7 @@ export default function QtimeMonitor() {
   const tk = useTenantKey()
   const qc = useQueryClient()
   const [auto, setAuto] = useState(true)
+  const [confirm, setConfirm] = useState(false)
   const q = useQuery({
     queryKey: ['mes', 'exec', tk, 'qtime-monitor'],
     queryFn: execApi.qtimeMonitor,
@@ -82,6 +84,7 @@ export default function QtimeMonitor() {
   const sweep = useMutation({
     mutationFn: execApi.qtimeSweep,
     onSuccess: (r) => {
+      setConfirm(false)
       toast.success(
         t('mes.qtime.swept', { checked: r.checked, acted: r.actions.length })
       )
@@ -148,7 +151,7 @@ export default function QtimeMonitor() {
             {t('mes.qtime.refresh')}
           </Button>
           <Button
-            onClick={() => sweep.mutate()}
+            onClick={() => setConfirm(true)}
             disabled={sweep.isPending}
             data-testid='qtime-sweep'
           >
@@ -158,6 +161,15 @@ export default function QtimeMonitor() {
         </>
       }
     >
+      <ConfirmDialog
+        open={confirm}
+        onOpenChange={setConfirm}
+        title={t('mes.qtime.sweep')}
+        desc={t('mes.qtime.sweepConfirm')}
+        confirmText={t('mes.qtime.sweep')}
+        isLoading={sweep.isPending}
+        handleConfirm={() => sweep.mutate()}
+      />
       <DataTable
         rows={view.rows}
         total={view.total}

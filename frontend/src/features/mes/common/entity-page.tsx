@@ -12,7 +12,11 @@ import {
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Page, useListParams } from '@/components/crud'
-import { EXTRA_ACTIONS, ROW_PANELS } from '@/features/mes/registry'
+import {
+  EXTRA_ACTIONS,
+  EXTRA_COLUMNS,
+  ROW_PANELS,
+} from '@/features/mes/registry'
 import { NotFoundError } from '@/features/shell/errors/not-found-error'
 import { ChildTable } from './child-table'
 import { EntityTable } from './entity-table'
@@ -30,14 +34,12 @@ export function MesEntityPage({ code }: { code: string }) {
   if (!entity) return <NotFoundError />
   const hasDetail = entity.children.length > 0 || !!ROW_PANELS[code]
   return (
-    <Page
-      title={entityLabel(code)}
-      description={t(`mes.module.${entity.module}`)}
-    >
+    <Page title={entityLabel(code)}>
       <EntityTable
         entity={entity}
         params={params}
         extraActions={EXTRA_ACTIONS[code]}
+        extraColumns={EXTRA_COLUMNS[code]}
         onOpenChildren={hasDetail ? setDetail : undefined}
       />
       <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>

@@ -1,4 +1,5 @@
 /** 首页。 */
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
 import { Building2, KeyRound, Users } from 'lucide-react'
@@ -11,8 +12,10 @@ import {
   useMyTenants,
 } from '@/lib/api/hooks'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -53,6 +56,8 @@ export default function Dashboard() {
   const tenants = useMyTenants()
   const current = useCurrentTenant()
   const can = useCan()
+  // 权限码列表默认折叠（对业务用户意义不大）
+  const [showPerms, setShowPerms] = useState(false)
   const members = useQuery({
     queryKey: ['members', current?.tenant.id, 'count'],
     queryFn: () => api.tenants.members(current!.tenant.id, { page_size: 1 }),
@@ -94,8 +99,18 @@ export default function Dashboard() {
         <CardHeader>
           <CardTitle>{t('dashboard.effective')}</CardTitle>
           <CardDescription>{t('dashboard.effectiveDesc')}</CardDescription>
+          <CardAction>
+            <Button
+              variant='ghost'
+              size='sm'
+              onClick={() => setShowPerms(!showPerms)}
+              data-testid='toggle-perms'
+            >
+              {showPerms ? t('dashboard.hidePerms') : t('dashboard.showPerms')}
+            </Button>
+          </CardAction>
         </CardHeader>
-        <CardContent className='flex flex-wrap gap-2'>
+        <CardContent className={showPerms ? 'flex flex-wrap gap-2' : 'hidden'}>
           {me?.is_superuser && <Badge>{t('dashboard.bypass')}</Badge>}
           {menus.data?.permissions.map((p) => (
             <Badge key={p} variant='secondary'>

@@ -1,5 +1,5 @@
 /** MES 实体通用表格。 */
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { AxiosError } from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fmtDateTime, t } from '@/i18n'
@@ -33,9 +33,11 @@ import {
 } from '@/components/crud'
 import { cellValue } from './cells'
 import { EntityForm } from './entity-form'
+import { EntityTree } from './entity-tree'
 import { entityLabel, fieldLabel, rowLabel, statusLabel } from './labels'
 import { mesErrorMessage } from './required'
 import { CELLS, ROW_RULES } from './row-rules'
+import type { MesExtraColumn } from './types'
 import { useMesFilters } from './use-mes-filters'
 
 const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'outline'> = {
@@ -60,6 +62,7 @@ export function EntityTable({
   params,
   fixed = {},
   extraActions,
+  extraColumns = [],
   onOpenChildren,
   readOnly = false,
 }: {
@@ -68,11 +71,15 @@ export function EntityTable({
   /** 固定筛选条件，同时作为新增行的预设值（如 {route_id}） */
   fixed?: Record<string, string>
   extraActions?: (r: MesRow) => React.ReactNode
+  /** 额外计算列（显示在操作列之前） */
+  extraColumns?: MesExtraColumn[]
   onOpenChildren?: (r: MesRow) => void
   /** 只读：隐藏新增 / 导入 / 编辑 / 删除（如父级已锁定的子表） */
   readOnly?: boolean
 }) {
   const qc = useQueryClient()
+  // 树形实体可切换 表格 / 树形 视图
+  const [view, setView] = useState<'table' | 'tree'>('table')
   const tk = useTenantKey()
   const s = useCrudState<MesRow>()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -161,6 +168,11 @@ export function EntityTable({
       .map((f) => ({
         header: fieldLabel(e, f),
         sortKey: ['json', 'ref', 'text'].includes(f.type) ? undefined : f.name,
+        // 数值列右对齐
+        className:
+          f.type === 'int' || f.type === 'float'
+            ? 'text-right tabular-nums'
+            : undefined,
         cell: (r: MesRow) =>
           CELLS[e.code]?.[f.name]?.(r) ?? cellValue(e, r, f.name),
       })),
@@ -191,6 +203,7 @@ export function EntityTable({
           },
         ]
       : []),
+    ...extraColumns.map((c) => ({ header: c.header(), cell: c.cell })),
     {
       header: '',
       className: 'w-0',
@@ -297,17 +310,38 @@ export function EntityTable({
 
   return (
     <>
-      <DataTable
-        rows={list.data?.data}
-        total={list.data?.count}
-        loading={list.isLoading}
-        rowKey={(r) => r.id}
-        params={params}
-        filters={filters}
-        columns={columns}
-        toolbar={toolbar}
-        empty={t('mes.empty', { entity: entityLabel(e.code) })}
-      />
+      {e.tree && (
+        <div className='flex justify-end'>
+          <div className='inline-flex rounded-md border p-0.5'>
+            {(['table', 'tree'] as const).map((v) => (
+              <Button
+                key={v}
+                size='sm'
+                variant={view === v ? 'secondary' : 'ghost'}
+                onClick={() => setView(v)}
+                data-testid={`view-${v}`}
+              >
+                {v === 'tree' ? t('mes.treeView') : t('mes.tableView')}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+      {view === 'tree' ? (
+        <EntityTree entity={e} columns={columns} />
+      ) : (
+        <DataTable
+          rows={list.data?.data}
+          total={list.data?.count}
+          loading={list.isLoading}
+          rowKey={(r) => r.id}
+          params={params}
+          filters={filters}
+          columns={columns}
+          toolbar={toolbar}
+          empty={t('mes.empty', { entity: entityLabel(e.code) })}
+        />
+      )}
       <EntityForm
         entity={e}
         row={s.editing}

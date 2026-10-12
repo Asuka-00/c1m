@@ -209,7 +209,9 @@
     "superuserHint": "スーパーユーザー：全テナントにアクセス可能",
     "effective": "有効な権限",
     "effectiveDesc": "プラットフォームロール + 現在のテナントでのロール（GET /menus/me より）",
-    "bypass": "スーパーユーザー（全権限）"
+    "bypass": "スーパーユーザー（全権限）",
+    "showPerms": "表示",
+    "hidePerms": "非表示"
   },
   "users": {
     "title": "ユーザー",
@@ -549,7 +551,9 @@
       "previewNote": "ロット番号はプレビューです。確定時に正式採番されます。",
       "confirmStart": "{{count}} ロット / {{total}} 枚を投入",
       "done": "{{count}} ロットを投入しました",
-      "again": "続けて投入"
+      "again": "続けて投入",
+      "searchWo": "作業指示 / 製品 / ルート / 顧客を検索",
+      "woMore": "{{n}} 件中先頭 {{show}} 件を表示。キーワードで絞り込んでください"
     },
     "exec": {
       "stage": {
@@ -759,7 +763,8 @@
       "allRoutes": "全工程ルート",
       "product": "製品",
       "route": "工程ルート",
-      "autoRefresh": "自動更新"
+      "autoRefresh": "自動更新",
+      "sweepConfirm": "待機中の全ロットを今すぐスキャンし、Q-Time 超過ロットに設定済みの処置（Hold / リワーク / スクラップ）を実行しますか？"
     },
     "eqp": {
       "hint": "主設備の現在の E10 状態と PM 期限。状態変更は E10 遷移表に従い、期限切れ PM は pm_due チェックでトラックインを阻止できます（工程ごとに無効化可）。",
@@ -916,7 +921,16 @@
       "ongoing": "継続中",
       "hours": "{{n}} 時間"
     },
-    "exportHint": "現在の検索・フィルター条件で出力"
+    "exportHint": "現在の検索・フィルター条件で出力",
+    "pmStatus": {
+      "title": "期限状態",
+      "due": "{{n}} 台超過",
+      "warn": "{{n}} 台期限間近",
+      "ok": "正常",
+      "next": "次回 {{d}}"
+    },
+    "fieldIs": "{{field}}：{{value}}",
+    "treeToggle": "展開 / 折りたたみ"
   },
   "notify": {
     "bell": "通知",

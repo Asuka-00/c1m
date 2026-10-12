@@ -24,7 +24,7 @@ import {
   DataTableColumnHeader,
   DataTablePagination,
 } from '@/components/data-table'
-import { DEFAULT_FILTERS, type FilterDef } from './filter-defs'
+import { DEFAULT_FILTERS, filterKeys, type FilterDef } from './filter-defs'
 import { FilterToolbar } from './filters'
 import type { ListParams } from './use-list-params'
 
@@ -187,7 +187,9 @@ export function DataTable<T>({
                         variant='outline'
                         size='sm'
                         onClick={() =>
-                          filters.forEach((f) => params.setFilter(f.name, ''))
+                          ['id', ...filters.flatMap(filterKeys)].forEach((k) =>
+                            params.setFilter(k, undefined)
+                          )
                         }
                       >
                         {t('table.resetFilters')}
