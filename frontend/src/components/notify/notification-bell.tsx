@@ -3,8 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { fmtDateTime, t } from '@/i18n'
 import { Bell } from 'lucide-react'
-import { useAuthStore } from '@/stores/auth-store'
 import { api, type Notification } from '@/lib/api'
+import { useCurrentTenant } from '@/lib/api/hooks'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -20,7 +20,7 @@ export const POLL_MS = 30_000
 
 /** 通知铃铛：显示未读数，下拉列出最新通知，可全部标为已读、跳转消息中心。 */
 export function NotificationBell() {
-  const tenant = useAuthStore((s) => s.tenantId)
+  const tenant = useCurrentTenant()?.tenant.id
   const qc = useQueryClient()
   const nav = useNavigate()
   const q = useQuery({

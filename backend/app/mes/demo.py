@@ -32,6 +32,8 @@ DEMO_SUB = "[demo] "
 
 def _demo_subscriptions(session: Session, tid: Any) -> None:
     """演示通知订阅：租户 admin / owner 角色订阅全部 MES 事件（幂等）。"""
+    import app.mes.equipment.events  # noqa: F401  （登记事件类型）
+    import app.mes.execution.events  # noqa: F401
     from app.platform.notification.models import NotificationSubscription
     from app.platform.notification.service import event_types
     from app.platform.rbac.models import Role
@@ -59,7 +61,7 @@ def _demo_subscriptions(session: Session, tid: Any) -> None:
                     role_ids=[str(r) for r in roles],
                 )
             )
-    session.flush()
+    session.commit()
 
 
 def seed(session: Session) -> int:

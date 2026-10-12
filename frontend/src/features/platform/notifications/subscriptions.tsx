@@ -2,9 +2,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
 import { Plus } from 'lucide-react'
-import { useAuthStore } from '@/stores/auth-store'
 import { ALL, api, type Subscription, type SubscriptionIn } from '@/lib/api'
-import { useApiMutation, useCan } from '@/lib/api/hooks'
+import { useApiMutation, useCan, useCurrentTenant } from '@/lib/api/hooks'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -24,7 +23,7 @@ import { eventLabel } from '@/components/notify/utils'
 
 /** 通知订阅：列表 + 新建 / 编辑 / 删除（需 notify:config 权限）。 */
 export default function SubscriptionsPage() {
-  const tid = useAuthStore((s) => s.tenantId) ?? ''
+  const tid = useCurrentTenant()?.tenant.id ?? ''
   const can = useCan()('notify:config')
   const meta = useQuery({
     queryKey: ['notifications', 'meta'],
