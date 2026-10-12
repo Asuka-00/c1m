@@ -308,7 +308,7 @@ def _run_exec(session: Session, tid: uuid.UUID, admin: Any) -> None:
                 ]
         ex.run_stage(session, tid, lot["id"], stage, body, admin)
     if len(lots) > 3:  # split / merge example on the second assembly lot
-        from app.mes.execution import splitmerge as sm
+        from app.mes.execution import service as sm
 
         lot = lots[3]
         r = sm.split(

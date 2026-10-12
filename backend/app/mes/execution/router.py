@@ -16,8 +16,8 @@ from app.core.deps import SessionDep
 from app.core.spec.engine import ENTITIES
 from app.core.spec.serialize import serialize
 from app.mes.common.query import one
+from app.mes.execution import service as sm
 from app.mes.execution import service as svc
-from app.mes.execution import splitmerge as sm
 from app.platform.auth.deps import CurrentTenant
 from app.platform.tenants.service import TenantContext
 
