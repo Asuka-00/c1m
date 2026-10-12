@@ -18,6 +18,7 @@ from app.mes.execution.checks import service as ck
 from app.mes.execution.constants import NEXT_STAGE
 from app.mes.execution.context import build_ctx
 from app.mes.execution.qtime_actions import _qtime_actions
+from app.mes.execution.rework import rework_limit_result
 from app.mes.execution.stage_common import _brief, _guard, _ov, _relocate, _result
 from app.mes.execution.track_out import track_out
 from app.mes.lot.service import history, lock_lot, units
@@ -181,9 +182,11 @@ def move_out(
     _guard(lot, "move_out")
     ctx = build_ctx(s, tid, lot, "move_out", body)
     rework = bool(body.get("rework")) or bool(lot["pending_rework"])
+    lim = rework_limit_result(ctx) if rework else None
     results = ck.evaluate(
         ctx,
         user,
+        extra=[lim] if lim else None,
         override=body.get("override", False),
         reason=body.get("override_reason"),
     )
@@ -196,6 +199,10 @@ def move_out(
         branch=bool(body.get("branch")) and not rework,
         rework=rework,
     )
+    if rework:
+        n = (lot.get("rework_count") or 0) + 1
+        _upd(s, tid, "lot", lot["id"], user, rework_count=n)
+        lot["rework_count"] = n
     audit(
         s,
         tid,

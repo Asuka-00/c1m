@@ -157,6 +157,13 @@ register(
             ),
             F("branch_to_seq", "int", "Branch to seq.|分支跳转序号|分岐先順番"),
             F(
+                "max_rework",
+                "int",
+                "Max reworks|最大返工次数|最大リワーク回数",
+                help="Blank: unlimited (check type rework_limit can switch it off)|留空不限（可用卡控类型「返工次数上限」关闭）|空欄：無制限",
+                list=False,
+            ),
+            F(
                 "rework_return",
                 "enum",
                 "Rework returns to|返工返回|リワーク復帰先",

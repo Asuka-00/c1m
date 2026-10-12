@@ -695,6 +695,15 @@
         "confirm": "Confirm receipt {{code}}? Lot received quantities and work-order completed quantities are increased; fully received lots are closed.",
         "cancel": "Cancel {{code}}? This cannot be undone."
       }
+    },
+    "wip": {
+      "title": "WIP adjustments",
+      "hint": "Jump, in-process scrap / bonus need a reason code and are governed by check rules (can be switched off per step in check bindings).",
+      "jump": "Jump step",
+      "jumpDesc": "Move a waiting lot to another operation step of the same route.",
+      "toStep": "Target step",
+      "jumped": "Lot jumped",
+      "override": "Override blocking checks (enter a reason)"
     }
   }
 }

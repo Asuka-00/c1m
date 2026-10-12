@@ -42,6 +42,7 @@ ENUMS.update(
             ("rework", "Rework|返工|リワーク"),
             ("hold", "Hold|冻结|ホールド"),
             ("release", "Release|解冻|リリース"),
+            ("jump", "Jump step|跳站|ステップジャンプ"),
         ],
         "oos_action": [
             ("warn", "Warn|预警|警告"),

@@ -1,7 +1,8 @@
 """批次执行接口：阶段作业、检查预览、Hold、拆合批。
 
 权限：mes.exec:read（上下文 / 预览）、mes.exec:write（阶段作业）、mes.exec:override
-（强制放行阻断检查，须填原因）、mes.exec:hold（手工 Hold / 释放）、mes.exec:split / mes.exec:merge。
+（强制放行阻断检查，须填原因）、mes.exec:hold（手工 Hold / 释放）、mes.exec:split / mes.exec:merge、
+mes.exec:jump（跳站）。
 阶段被阻断时返回 409 ``{"detail": {"code": "check_blocked", "results": [...]}}``。
 """
 
@@ -174,6 +175,25 @@ def lot_merge(
 ) -> Any:
     _sm_perm(ctx, "mes.exec:merge", body)
     return sm.merge(session, ctx.id, lot_id, body.model_dump(), ctx.user)
+
+
+class JumpIn(BaseModel):
+    to_step_id: uuid.UUID
+    reason_id: uuid.UUID
+    comment: str | None = Field(default=None, max_length=300)
+    override: bool = False
+    override_reason: str | None = Field(default=None, max_length=300)
+
+
+@router.post("/lots/{lot_id}/jump")
+def lot_jump(
+    session: SessionDep, ctx: CurrentTenant, lot_id: uuid.UUID, body: JumpIn
+) -> Any:
+    """Jump a waiting lot to another step of the same route (reason required)."""
+    _need(ctx, "mes.exec:jump")
+    if body.override:
+        _need(ctx, "mes.exec:override")
+    return svc.jump(session, ctx.id, lot_id, body.model_dump(), ctx.user)
 
 
 @router.post("/lots/{lot_id}/{stage}")

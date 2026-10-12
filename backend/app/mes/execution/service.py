@@ -17,6 +17,7 @@ from app.mes.execution.hold import (
 )
 from app.mes.execution.merge import merge as merge
 from app.mes.execution.merge import merge_candidates as merge_candidates
+from app.mes.execution.rework import jump as jump
 from app.mes.execution.split import split as split
 from app.mes.execution.splitmerge import sm_context as sm_context
 from app.mes.execution.stages import preview as preview

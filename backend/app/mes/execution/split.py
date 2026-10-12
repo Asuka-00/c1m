@@ -149,6 +149,7 @@ def split(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
             qty=qtys[i],
             scrapped_qty=0,
             received_qty=0,
+            rework_count=0,
             on_hold=bool(holds),
             carrier_id=carriers[i],
             **vals,

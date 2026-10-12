@@ -339,6 +339,7 @@
         "qty": "数量",
         "tracking_level": "追跡レベル",
         "scrapped_qty": "廃棄数",
+        "rework_count": "リワーク回数",
         "site": "工場",
         "current_step": "現在ステップ",
         "lot_status": "状態",
@@ -462,6 +463,7 @@
         "is_optional": "任意",
         "branch_condition": "分岐条件",
         "branch_to_seq": "分岐先順番",
+        "max_rework": "最大リワーク回数",
         "rework_return": "リワーク復帰先",
         "auto_move_in": "自動ムーブイン",
         "auto_track_in": "自動トラックイン",
@@ -762,7 +764,8 @@
         "over_start_limit_pct": "投入枚数が計画を超えてよい割合"
       },
       "route_step": {
-        "branch_condition": "例：lot_type == 'ENG'（実行時に判定。本モジュール対象外）"
+        "branch_condition": "例：lot_type == 'ENG'（実行時に判定。本モジュール対象外）",
+        "max_rework": "空欄：無制限"
       },
       "uom_conversion": {
         "factor": "換算先 = 換算元 × 係数"
@@ -862,7 +865,8 @@
         "track_out": "トラックアウト",
         "move_out": "ムーブアウト",
         "split": "分割",
-        "merge": "統合"
+        "merge": "統合",
+        "jump": "ステップジャンプ"
       },
       "check_type": {
         "e10_available": "設備 E10 状態使用可",
@@ -878,7 +882,8 @@
         "dc_complete": "データ収集完了",
         "oos": "規格外",
         "sampling": "サンプリング判定",
-        "split_merge_rule": "分割・統合規則"
+        "split_merge_rule": "分割・統合規則",
+        "rework_limit": "リワーク回数上限"
       },
       "check_severity": {
         "block": "ブロック",
@@ -938,7 +943,8 @@
         "qtime": "Q タイム違反",
         "oos": "規格外",
         "split": "分割",
-        "merge": "統合"
+        "merge": "統合",
+        "jump": "ステップジャンプ"
       },
       "genealogy_relation": {
         "split": "分割",
@@ -1142,7 +1148,8 @@
         "scrap": "スクラップ",
         "rework": "リワーク",
         "hold": "ホールド",
-        "release": "リリース"
+        "release": "リリース",
+        "jump": "ステップジャンプ"
       },
       "oos_action": {
         "warn": "警告",

@@ -9,6 +9,7 @@ TRIGGERS = [
     ("move_out", "Move out|出站|ムーブアウト"),
     ("split", "Split|分批|分割"),
     ("merge", "Merge|合批|統合"),
+    ("jump", "Jump step|跳站|ステップジャンプ"),
 ]
 # built-in check types (app.mes.checks implements them; plugins may add more)
 CHECK_TYPES = [
@@ -32,6 +33,7 @@ CHECK_TYPES = [
     ("oos", "Out of spec|超规|規格外"),
     ("sampling", "Sampling decision|抽样判定|サンプリング判定"),
     ("split_merge_rule", "Split / merge rule|分批合批规则|分割・統合規則"),
+    ("rework_limit", "Rework count limit|返工次数上限|リワーク回数上限"),
 ]
 ENUMS.update(
     {
@@ -102,6 +104,7 @@ ENUMS.update(
             ("oos", "Out of spec|超规|規格外"),
             ("split", "Split|分批|分割"),
             ("merge", "Merge|合批|統合"),
+            ("jump", "Jump step|跳站|ステップジャンプ"),
         ],
         "genealogy_relation": [
             ("split", "Split|分批|分割"),

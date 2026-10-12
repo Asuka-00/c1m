@@ -271,6 +271,13 @@ register(
                 list=False,
             ),
             F("scrapped_qty", "int", "Scrapped|报废数|廃棄数", default=0, list=False),
+            F(
+                "rework_count",
+                "int",
+                "Reworks|返工次数|リワーク回数",
+                default=0,
+                list=False,
+            ),
             F("site", "ref", ref="site"),
             F(
                 "current_step",

@@ -69,6 +69,7 @@ import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity, useMesMeta } from '@/features/mes/common/use-mes-meta'
 import { CheckPanel, Pick, StageBar } from './exec-parts'
 import { SplitMergeCard } from './split-merge'
+import { WipActionsCard } from './wip-actions'
 
 type Dc = Record<string, string> // `${item}|${unit}|${site}` -> 录入值
 type Scrap = { unit_id?: string; qty?: string; reason_id: string }
@@ -598,6 +599,7 @@ function Console({ cx, perms }: { cx: ExecContext; perms: string[] }) {
           </CardContent>
         </Card>
         <SplitMergeCard cx={cx} perms={perms} />
+        <WipActionsCard cx={cx} perms={perms} />
       </div>
       <HoldDialog cx={cx} open={holdOpen} onOpenChange={setHoldOpen} />
     </div>

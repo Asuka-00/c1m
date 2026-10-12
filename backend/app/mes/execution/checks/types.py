@@ -271,6 +271,12 @@ def _sampling(ctx: Ctx, _p: Row) -> Outcome:
 
 
 # ---------------- resolution ----------------
+@check_type("rework_limit")
+def _rework_limit(_ctx: Ctx, _p: Row) -> Outcome:
+    # 内置于 Move Out 返工逻辑（工步 max_rework）；此处仅作为开关存在
+    return "na", "evaluated when entering a rework route", {}
+
+
 @check_type("split_merge_rule")
 def _split_merge(_ctx: Ctx, _p: Row) -> Outcome:
     # 拆 / 合批时由拆合批逻辑内置强制执行

@@ -515,6 +515,7 @@ def start(
                 on_hold=False,
                 scrapped_qty=0,
                 received_qty=0,
+                rework_count=0,
                 pending_rework=False,
                 lot_status="waiting",
                 carrier_id=x.get("carrier_id"),

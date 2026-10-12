@@ -155,6 +155,8 @@ for c, n, tp, area, cmt in _rows(
         ("HD-ENG", "Engineering request", "hold", None, True),
         ("RL-OK", "Disposition OK", "release", None, False),
         ("RL-ENG", "Engineering release", "release", None, True),
+        ("JP-ENG", "Engineering skip (approved)", "jump", None, True),
+        ("JP-RW", "Return after offline rework", "jump", None, False),
     ]
 ):
     add(

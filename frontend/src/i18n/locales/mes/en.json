@@ -339,6 +339,7 @@
         "qty": "Qty",
         "tracking_level": "Tracking level",
         "scrapped_qty": "Scrapped",
+        "rework_count": "Reworks",
         "site": "Site",
         "current_step": "Current step",
         "lot_status": "Status",
@@ -462,6 +463,7 @@
         "is_optional": "Optional",
         "branch_condition": "Branch condition",
         "branch_to_seq": "Branch to seq.",
+        "max_rework": "Max reworks",
         "rework_return": "Rework returns to",
         "auto_move_in": "Auto move in",
         "auto_track_in": "Auto track in",
@@ -762,7 +764,8 @@
         "over_start_limit_pct": "Started wafers may exceed the plan by at most this percentage"
       },
       "route_step": {
-        "branch_condition": "e.g. lot_type == 'ENG' — evaluated at execution time (not in this module)"
+        "branch_condition": "e.g. lot_type == 'ENG' — evaluated at execution time (not in this module)",
+        "max_rework": "Blank: unlimited (check type rework_limit can switch it off)"
       },
       "uom_conversion": {
         "factor": "to = from × factor"
@@ -862,7 +865,8 @@
         "track_out": "Track out",
         "move_out": "Move out",
         "split": "Split",
-        "merge": "Merge"
+        "merge": "Merge",
+        "jump": "Jump step"
       },
       "check_type": {
         "e10_available": "Equipment E10 state available",
@@ -878,7 +882,8 @@
         "dc_complete": "DC completeness",
         "oos": "Out of spec",
         "sampling": "Sampling decision",
-        "split_merge_rule": "Split / merge rule"
+        "split_merge_rule": "Split / merge rule",
+        "rework_limit": "Rework count limit"
       },
       "check_severity": {
         "block": "Block",
@@ -938,7 +943,8 @@
         "qtime": "Q-Time violation",
         "oos": "Out of spec",
         "split": "Split",
-        "merge": "Merge"
+        "merge": "Merge",
+        "jump": "Jump step"
       },
       "genealogy_relation": {
         "split": "Split",
@@ -1142,7 +1148,8 @@
         "scrap": "Scrap",
         "rework": "Rework",
         "hold": "Hold",
-        "release": "Release"
+        "release": "Release",
+        "jump": "Jump step"
       },
       "oos_action": {
         "warn": "Warn",

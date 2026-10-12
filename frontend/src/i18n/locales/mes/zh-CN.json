@@ -339,6 +339,7 @@
         "qty": "数量",
         "tracking_level": "追踪层级",
         "scrapped_qty": "报废数",
+        "rework_count": "返工次数",
         "site": "工厂",
         "current_step": "当前步骤",
         "lot_status": "状态",
@@ -462,6 +463,7 @@
         "is_optional": "可选",
         "branch_condition": "分支条件",
         "branch_to_seq": "分支跳转序号",
+        "max_rework": "最大返工次数",
         "rework_return": "返工返回",
         "auto_move_in": "自动进站",
         "auto_track_in": "自动上机",
@@ -762,7 +764,8 @@
         "over_start_limit_pct": "投产片数最多可超出计划片数的百分比"
       },
       "route_step": {
-        "branch_condition": "例如 lot_type == 'ENG'，执行时判定（不在本模块）"
+        "branch_condition": "例如 lot_type == 'ENG'，执行时判定（不在本模块）",
+        "max_rework": "留空不限（可用卡控类型「返工次数上限」关闭）"
       },
       "uom_conversion": {
         "factor": "目标 = 源 × 系数"
@@ -862,7 +865,8 @@
         "track_out": "下机",
         "move_out": "出站",
         "split": "分批",
-        "merge": "合批"
+        "merge": "合批",
+        "jump": "跳站"
       },
       "check_type": {
         "e10_available": "设备 E10 状态可用",
@@ -878,7 +882,8 @@
         "dc_complete": "数据收集完整",
         "oos": "超规",
         "sampling": "抽样判定",
-        "split_merge_rule": "分批合批规则"
+        "split_merge_rule": "分批合批规则",
+        "rework_limit": "返工次数上限"
       },
       "check_severity": {
         "block": "拦截",
@@ -938,7 +943,8 @@
         "qtime": "Q-Time 超时",
         "oos": "超规",
         "split": "分批",
-        "merge": "合批"
+        "merge": "合批",
+        "jump": "跳站"
       },
       "genealogy_relation": {
         "split": "分批",
@@ -1142,7 +1148,8 @@
         "scrap": "报废",
         "rework": "返工",
         "hold": "冻结",
-        "release": "解冻"
+        "release": "解冻",
+        "jump": "跳站"
       },
       "oos_action": {
         "warn": "预警",

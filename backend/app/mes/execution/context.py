@@ -111,12 +111,24 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
             for r in find(s, tid, "reason_code", order="code", reason_type=k)
             if r["is_active"]
         ]
-        for k in ("hold", "release", "scrap", "rework")
+        for k in ("hold", "release", "scrap", "rework", "jump")
     }
     out["stack"] = lot.get("route_stack") or []
     if not step:
         return out
     rt = one(s, tid, "route", step["route_id"])
+    # 同一流程的工序工步（跳站目标）
+    out["route_steps"] = [
+        {
+            "id": str(x["id"]),
+            "seq": x["seq"],
+            "operation": (one(s, tid, "operation", x["operation_id"]) or {}).get(
+                "code"
+            ),
+        }
+        for x in find(s, tid, "route_step", order="seq", route_id=step["route_id"])
+        if x["operation_id"]
+    ]
     op = one(s, tid, "operation", step["operation_id"])
     rw = one(s, tid, "route", step["rework_route_id"])
     out["step"] = {
