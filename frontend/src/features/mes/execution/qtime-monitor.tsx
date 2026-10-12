@@ -143,7 +143,7 @@ export default function QtimeMonitor() {
       </div>
       <div className='mt-3 flex items-center justify-end gap-2 text-sm'>
         <span className='text-muted-foreground'>
-          {t('common.total')}: {rows.length}
+          {t('common.total', { count: rows.length })}
         </span>
         <Button
           size='sm'
