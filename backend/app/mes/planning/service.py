@@ -6,7 +6,7 @@
     hold      released|in_progress -> on_hold
     resume    on_hold -> Hold 前的状态
     complete  in_progress -> completed
-    close     completed -> closed
+    close     completed -> closed            （手动结案；批次须已全部入库 / 报废 / 合批）
     cancel    draft|released（未开批）-> cancelled
 
 开批使工单 released → in_progress；撤销全部开批后回到 released。
@@ -283,6 +283,33 @@ def transition(
         extra = {"held_from": wo["wo_status"]}
     elif action == "resume":
         to, extra = wo["held_from"] or "released", {"held_from": None}
+    elif action == "close":
+        t = TABLES["lot"]
+        open_lots = (
+            conn(s)
+            .execute(
+                sa.select(t.c.code)
+                .where(
+                    t.c.tenant_id == tid,
+                    t.c.work_order_id == wo["id"],
+                    t.c.lot_status.notin_(["stored", "scrapped", "merged"]),
+                )
+                .order_by(t.c.code)
+                .limit(5)
+            )
+            .scalars()
+            .all()
+        )
+        if open_lots:
+            raise http_422(
+                [
+                    (
+                        "wo_status",
+                        "wo_status: lots still in process or awaiting receipt: "
+                        + ", ".join(open_lots),
+                    )
+                ]
+            )
     elif action == "cancel" and wo["started_qty"]:
         raise http_422([("wo_status", "wo_status: lots were started; undo them first")])
     new = _set(s, tid, wo, user, action, wo_status=to, **extra)
@@ -344,7 +371,7 @@ def _carrier_busy(s: Session, tid: uuid.UUID, carrier_id: Any) -> bool:
             sa.select(t.c.id).where(
                 t.c.tenant_id == tid,
                 t.c.carrier_id == carrier_id,
-                t.c.lot_status.notin_(["completed", "scrapped", "merged"]),
+                t.c.lot_status.notin_(["completed", "stored", "scrapped", "merged"]),
             )
         )
         .first()
@@ -487,6 +514,7 @@ def start(
                 step_in_at=at,
                 on_hold=False,
                 scrapped_qty=0,
+                received_qty=0,
                 pending_rework=False,
                 lot_status="waiting",
                 carrier_id=x.get("carrier_id"),

@@ -14,7 +14,7 @@ from app.mes.common.query import find, jsonable, one
 from app.mes.common.rows import _ins
 
 Row = dict[str, Any]
-TERMINAL = ("completed", "scrapped", "merged")
+TERMINAL = ("completed", "stored", "scrapped", "merged")
 
 
 def history(

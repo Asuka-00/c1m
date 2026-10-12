@@ -22,6 +22,7 @@ from app.mes.quality import demo as _quality  # noqa: F401  # isort: skip
 from app.mes.lot import demo as _lot  # noqa: F401  # isort: skip
 from app.mes.planning import demo as _planning  # noqa: F401  # isort: skip
 from app.mes.execution import demo as _execution  # noqa: F401  # isort: skip
+from app.mes.warehouse import demo as _warehouse  # noqa: F401  # isort: skip
 from app.mes.common.demo import ACTIVATE, DEMO, _exists, _resolve, default_tenant
 from app.mes.execution.demo import _run_exec
 from app.mes.planning.demo import STARTS

@@ -11,7 +11,8 @@
       "wo": "作業指示",
       "process": "プロセス",
       "product": "製品・資材",
-      "quality": "品質"
+      "quality": "品質",
+      "wh": "倉庫"
     },
     "entity": {
       "dict_type": "データ辞書",
@@ -74,6 +75,10 @@
       "defect_code": "欠陥コード",
       "reason_code": "理由コード",
       "dc_result": "測定データ",
+      "warehouse": "倉庫",
+      "storage_location": "ロケーション",
+      "receipt": "完成品入庫伝票",
+      "receipt_line": "入庫明細",
       "audit_log": "監査ログ"
     },
     "field": {
@@ -346,6 +351,8 @@
         "route_stack": "ルートスタック",
         "exec_ctx": "実行コンテキスト",
         "completed_at": "完了日時",
+        "received_qty": "入庫済数（良品 + 廃棄）",
+        "stored_at": "入庫完了日時",
         "carrier": "キャリア",
         "source_ref": "元ウェーハ・資材ロット",
         "started_at": "投入日時",
@@ -682,6 +689,49 @@
         "oos_action": "規格外処置",
         "user_email": "ユーザー"
       },
+      "warehouse": {
+        "code": "コード",
+        "name": "名称",
+        "site": "工場",
+        "warehouse_type": "倉庫種別",
+        "address": "住所",
+        "keeper": "倉庫管理者",
+        "is_active": "有効",
+        "description": "説明"
+      },
+      "storage_location": {
+        "code": "コード",
+        "name": "名称",
+        "warehouse": "倉庫",
+        "location_type": "ロケーション種別",
+        "capacity": "容量（ロット）",
+        "is_active": "有効",
+        "description": "説明"
+      },
+      "receipt": {
+        "code": "入庫伝票番号",
+        "warehouse": "倉庫",
+        "location": "ロケーション",
+        "receipt_status": "状態",
+        "lot_count": "ロット数",
+        "total_good": "良品数",
+        "total_scrap": "廃棄数",
+        "remarks": "備考",
+        "submitted_at": "提出日時",
+        "submitted_by": "提出者",
+        "confirmed_at": "確認日時",
+        "confirmed_by": "確認者",
+        "description": "説明"
+      },
+      "receipt_line": {
+        "receipt": "入庫伝票",
+        "lot": "ロット",
+        "work_order": "作業指示",
+        "product": "製品",
+        "good_qty": "良品数",
+        "scrap_qty": "廃棄数",
+        "remarks": "備考"
+      },
       "audit_log": {
         "entity_type": "エンティティ",
         "action": "操作",
@@ -722,6 +772,12 @@
       },
       "sampling_rule": {
         "fixed_slots": "カンマ区切りのスロット番号（例：1,13,25）"
+      },
+      "storage_location": {
+        "capacity": "空欄：無制限"
+      },
+      "receipt_line": {
+        "lot": "入庫待ちロットのみ"
       }
     },
     "enum": {
@@ -741,6 +797,10 @@
         "hold": "保留",
         "resume": "再開",
         "complete": "完了",
+        "submit": "提出",
+        "confirm": "確認",
+        "reject": "差戻し",
+        "receive": "入庫",
         "close": "クローズ",
         "cancel": "取消",
         "start": "投入",
@@ -767,6 +827,7 @@
         "material": "資材ロット",
         "equipment": "設備 ID",
         "work_order": "作業指示番号",
+        "receipt": "入庫伝票番号",
         "unit": "ユニットシリアル",
         "other": "その他"
       },
@@ -870,7 +931,8 @@
         "branch": "分岐",
         "sub_route": "サブルート開始",
         "return": "サブ・リワーク復帰",
-        "complete": "完了",
+        "complete": "完了（入庫待ち）",
+        "receive": "入庫",
         "override": "チェック強制解除",
         "qtime": "Q タイム違反",
         "oos": "規格外",
@@ -895,7 +957,8 @@
         "moved_in": "ムーブイン済",
         "running": "処理中",
         "tracked_out": "トラックアウト済",
-        "completed": "完了",
+        "completed": "入庫待ち",
+        "stored": "入庫済",
         "scrapped": "廃棄",
         "merged": "統合済（終了）"
       },
@@ -1091,6 +1154,26 @@
         "hold": "ロット保留",
         "rework": "リワーク",
         "scrap": "スクラップ"
+      },
+      "warehouse_type": {
+        "finished_goods": "完成品倉庫",
+        "semi_finished": "半製品倉庫",
+        "raw_material": "原材料倉庫",
+        "quarantine": "隔離倉庫",
+        "scrap": "廃棄品倉庫"
+      },
+      "location_type": {
+        "rack": "ラック",
+        "shelf": "棚",
+        "bin": "ビン",
+        "dry_cabinet": "ドライ・N2 キャビネット",
+        "floor": "平置き"
+      },
+      "receipt_status": {
+        "draft": "下書き",
+        "submitted": "提出済",
+        "confirmed": "確認済",
+        "cancelled": "取消"
       }
     }
   },
@@ -1103,6 +1186,7 @@
     "g-quality": "品質管理",
     "g-planning": "生産計画",
     "g-execution": "生産実行",
+    "g-warehouse": "倉庫管理",
     "g-lot": "ロット管理",
     "g-check": "チェック管理",
     "g-master": "基準データ",
@@ -1146,6 +1230,9 @@
     "mes-lot-console": "ロット作業",
     "mes-lot-trace": "ロット履歴",
     "mes-lot_hold": "ホールド管理",
+    "mes-receipt": "完成品入庫",
+    "mes-warehouse": "倉庫",
+    "mes-storage_location": "ロケーション",
     "mes-lot": "ロット",
     "mes-wafer": "ウェーハ",
     "mes-lot_type": "ロットタイプ",

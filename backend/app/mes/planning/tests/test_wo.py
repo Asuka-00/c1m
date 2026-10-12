@@ -155,7 +155,8 @@ def test_transitions(client: TestClient, db: Session) -> None:
     assert f.act(w, "resume")["wo_status"] == "in_progress"
     assert f.act(w, "complete")["wo_status"] == "completed"
     f.call(w, "start", {"lots": [{"qty": 1}]}, 422)
-    assert f.act(w, "close")["wo_status"] == "closed"
+    # 手动结案：批次未全部入库 / 报废 / 合批前不可关闭（入库流程见 mes/warehouse）
+    assert "awaiting receipt" in _msgs(f.act(w, "close", 422))
     f.act(w, "resume", 422)
     d = f.wo()
     assert f.act(d, "cancel")["wo_status"] == "cancelled"

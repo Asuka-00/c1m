@@ -11,7 +11,8 @@
       "wo": "工单",
       "process": "工艺",
       "product": "产品与物料",
-      "quality": "质量"
+      "quality": "质量",
+      "wh": "仓储"
     },
     "entity": {
       "dict_type": "数据字典",
@@ -74,6 +75,10 @@
       "defect_code": "缺陷代码",
       "reason_code": "原因代码",
       "dc_result": "量测数据",
+      "warehouse": "仓库",
+      "storage_location": "库位",
+      "receipt": "完工入库单",
+      "receipt_line": "入库明细",
       "audit_log": "审计日志"
     },
     "field": {
@@ -346,6 +351,8 @@
         "route_stack": "流程栈",
         "exec_ctx": "作业上下文",
         "completed_at": "完成时间",
+        "received_qty": "已入库数（良品 + 报废）",
+        "stored_at": "入库完成时间",
         "carrier": "载具",
         "source_ref": "来源晶圆 / 物料批次",
         "started_at": "投产时间",
@@ -682,6 +689,49 @@
         "oos_action": "超规动作",
         "user_email": "用户"
       },
+      "warehouse": {
+        "code": "编码",
+        "name": "名称",
+        "site": "工厂",
+        "warehouse_type": "仓库类型",
+        "address": "地址",
+        "keeper": "仓管员",
+        "is_active": "启用",
+        "description": "描述"
+      },
+      "storage_location": {
+        "code": "编码",
+        "name": "名称",
+        "warehouse": "仓库",
+        "location_type": "库位类型",
+        "capacity": "容量（批）",
+        "is_active": "启用",
+        "description": "描述"
+      },
+      "receipt": {
+        "code": "入库单号",
+        "warehouse": "仓库",
+        "location": "库位",
+        "receipt_status": "状态",
+        "lot_count": "批次数",
+        "total_good": "良品数",
+        "total_scrap": "报废数",
+        "remarks": "备注",
+        "submitted_at": "提交时间",
+        "submitted_by": "提交人",
+        "confirmed_at": "确认时间",
+        "confirmed_by": "确认人",
+        "description": "描述"
+      },
+      "receipt_line": {
+        "receipt": "入库单",
+        "lot": "批次",
+        "work_order": "工单",
+        "product": "产品",
+        "good_qty": "良品数",
+        "scrap_qty": "报废数",
+        "remarks": "备注"
+      },
       "audit_log": {
         "entity_type": "实体",
         "action": "操作",
@@ -722,6 +772,12 @@
       },
       "sampling_rule": {
         "fixed_slots": "逗号分隔的槽位号，例如 1,13,25"
+      },
+      "storage_location": {
+        "capacity": "留空表示不限"
+      },
+      "receipt_line": {
+        "lot": "仅可选择待入库的批次"
       }
     },
     "enum": {
@@ -741,6 +797,10 @@
         "hold": "暂停",
         "resume": "恢复",
         "complete": "完工",
+        "submit": "提交",
+        "confirm": "确认",
+        "reject": "退回",
+        "receive": "入库",
         "close": "关闭",
         "cancel": "取消",
         "start": "投产",
@@ -767,6 +827,7 @@
         "material": "物料批号",
         "equipment": "设备编号",
         "work_order": "工单号",
+        "receipt": "入库单号",
         "unit": "单元序列号",
         "other": "其他"
       },
@@ -870,7 +931,8 @@
         "branch": "分支",
         "sub_route": "进入子流程",
         "return": "子流程/返工返回",
-        "complete": "完成",
+        "complete": "完工待入库",
+        "receive": "入库",
         "override": "卡控放行",
         "qtime": "Q-Time 超时",
         "oos": "超规",
@@ -895,7 +957,8 @@
         "moved_in": "已进站",
         "running": "加工中",
         "tracked_out": "已下机",
-        "completed": "已完成",
+        "completed": "待入库",
+        "stored": "已入库",
         "scrapped": "已报废",
         "merged": "已合批（终止）"
       },
@@ -1091,6 +1154,26 @@
         "hold": "冻结批次",
         "rework": "返工",
         "scrap": "报废"
+      },
+      "warehouse_type": {
+        "finished_goods": "成品仓",
+        "semi_finished": "半成品仓",
+        "raw_material": "原材料仓",
+        "quarantine": "待检隔离仓",
+        "scrap": "废品仓"
+      },
+      "location_type": {
+        "rack": "货架",
+        "shelf": "层板",
+        "bin": "料箱",
+        "dry_cabinet": "干燥柜 / 氮气柜",
+        "floor": "地面区"
+      },
+      "receipt_status": {
+        "draft": "草稿",
+        "submitted": "已提交",
+        "confirmed": "已确认",
+        "cancelled": "已取消"
       }
     }
   },
@@ -1103,6 +1186,7 @@
     "g-quality": "质量管理",
     "g-planning": "生产计划",
     "g-execution": "生产执行",
+    "g-warehouse": "仓储管理",
     "g-lot": "批次管理",
     "g-check": "卡控管理",
     "g-master": "基础数据",
@@ -1146,6 +1230,9 @@
     "mes-lot-console": "批次作业",
     "mes-lot-trace": "批次履历",
     "mes-lot_hold": "Hold 管理",
+    "mes-receipt": "完工入库",
+    "mes-warehouse": "仓库",
+    "mes-storage_location": "库位",
     "mes-lot": "批次",
     "mes-wafer": "晶圆",
     "mes-lot_type": "批次类型",

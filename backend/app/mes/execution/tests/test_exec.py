@@ -297,7 +297,8 @@ def test_stage_sequence_history_and_completion(client: TestClient, db: Session) 
     assert f.ctx(lot)["step"]["is_last"]
     r = f.run_step(lot)
     assert r["lot"]["lot_status"] == "completed" and r["next_step"] is None
-    assert f.m.list("work_order")["data"][0]["completed_qty"] == 2
+    # 完工 = 待入库；工单完工数在入库确认时才累加
+    assert f.m.list("work_order")["data"][0]["completed_qty"] == 0
     acts = [
         h["action"]
         for h in f.m.list(

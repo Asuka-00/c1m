@@ -81,18 +81,9 @@ def _relocate(
     }
     if nxt is None:
         vals.update(lot_status="completed", completed_at=at)
+        # 完工 = 待入库；工单完工数在入库单确认时累加（见 app.mes.warehouse）
         for u in units(s, tid, lot["id"]):
             _upd(s, tid, "wafer", u["id"], user, wafer_status="completed")
-        wo = one(s, tid, "work_order", lot["work_order_id"])
-        if wo:
-            _upd(
-                s,
-                tid,
-                "work_order",
-                wo["id"],
-                user,
-                completed_qty=(wo["completed_qty"] or 0) + lot["qty"],
-            )
     else:
         vals.update(lot_status="waiting", current_step_id=nxt["id"], step_in_at=at)
         for u in units(s, tid, lot["id"]):

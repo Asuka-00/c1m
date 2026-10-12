@@ -14,6 +14,7 @@ GROUPS: list[tuple[str, str, str, int]] = [
     ("g-quality", "Quality|质量管理|品質管理", "BadgeCheck", 50),
     ("g-planning", "Production Planning|生产计划|生産計画", "ClipboardList", 60),
     ("g-execution", "Production Execution|生产执行|生産実行", "PlayCircle", 65),
+    ("g-warehouse", "Warehouse Management|仓储管理|倉庫管理", "Warehouse", 68),
     ("g-lot", "Lot Management|批次管理|ロット管理", "Layers", 70),
     ("g-check", "Check Control|卡控管理|チェック管理", "ShieldAlert", 75),
     ("g-master", "Master Data|基础数据|基準データ", "BookOpen", 80),
@@ -77,6 +78,11 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-lot-console", "Lot Operation|批次作业|ロット作業"),
         ("mes-lot-trace", "Lot History|批次履历|ロット履歴"),
         ("mes-lot_hold", "Hold Management|Hold 管理|ホールド管理"),
+    ],
+    "g-warehouse": [
+        ("mes-receipt", "Finished Goods Receipt|完工入库|完成品入庫"),
+        ("mes-warehouse", "Warehouse|仓库|倉庫"),
+        ("mes-storage_location", "Storage Location|库位|ロケーション"),
     ],
     "g-lot": [
         ("mes-lot", "Lot|批次|ロット"),
