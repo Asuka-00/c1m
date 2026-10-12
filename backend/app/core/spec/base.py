@@ -1,3 +1,5 @@
+"""Spec service basics: entity lookup, table/connection access, clock."""
+
 import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime

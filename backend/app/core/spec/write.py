@@ -1,3 +1,5 @@
+"""Generic writes: create / update / delete, status transitions, versioning."""
+
 import uuid
 from typing import Any
 

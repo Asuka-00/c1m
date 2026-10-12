@@ -1,3 +1,5 @@
+"""Planning demo data (work orders, lot starts)."""
+
 from app.mes.common.demo import add
 
 # ---------------- work orders + lot start ----------------

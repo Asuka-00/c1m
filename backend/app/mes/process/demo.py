@@ -1,3 +1,5 @@
+"""Process demo data (operations, routes, recipes, parameter specs)."""
+
 from typing import Any
 
 from app.mes.common.demo import ACTIVATE, _rows, add

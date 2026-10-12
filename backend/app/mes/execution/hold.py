@@ -1,3 +1,5 @@
+"""Lot holds: hold / release / manual hold, reason codes."""
+
 import uuid
 from typing import Any
 

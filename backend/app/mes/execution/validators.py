@@ -1,3 +1,5 @@
+"""CRUD validators of execution-related entities."""
+
 import uuid
 from typing import Any
 

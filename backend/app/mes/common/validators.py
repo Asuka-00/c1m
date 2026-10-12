@@ -1,3 +1,5 @@
+"""CRUD validators of common entities (+ shared lookup helper)."""
+
 import uuid
 from typing import Any
 

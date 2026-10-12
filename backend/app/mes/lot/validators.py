@@ -1,3 +1,5 @@
+"""CRUD validators of lot rule entities."""
+
 import uuid
 
 from sqlmodel import Session

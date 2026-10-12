@@ -1,3 +1,5 @@
+"""Tenant session context: sets `app.current_tenant` for Postgres RLS."""
+
 import uuid
 from typing import Any
 

@@ -1,3 +1,5 @@
+"""Execution demo data (check rules/plans, line-side material, tools, assembly line) and demo runs."""
+
 import uuid
 from typing import Any
 

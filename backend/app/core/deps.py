@@ -1,3 +1,5 @@
+"""Core FastAPI dependencies (DB session)."""
+
 from collections.abc import Generator
 from typing import Annotated
 

@@ -1,3 +1,5 @@
+"""CRUD validators of quality entities."""
+
 import uuid
 
 from sqlmodel import Session

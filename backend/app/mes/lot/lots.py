@@ -1,3 +1,5 @@
+"""Lot primitives: history, locking, units (wafers/serials), unit creation at start."""
+
 import uuid
 from typing import Any
 

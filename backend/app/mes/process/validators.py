@@ -1,3 +1,5 @@
+"""CRUD validators of process entities."""
+
 import uuid
 from typing import Any
 

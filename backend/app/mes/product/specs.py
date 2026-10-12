@@ -1,3 +1,5 @@
+"""Product & material entities (UoM, products, materials, carriers, reticles, fixtures, line-side lots)."""
+
 from app.core.spec.engine import ENUMS, Entity, F, register
 
 ENUMS.update(

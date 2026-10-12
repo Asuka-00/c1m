@@ -1,3 +1,5 @@
+"""CRUD validators of product entities."""
+
 import uuid
 
 import sqlalchemy as sa

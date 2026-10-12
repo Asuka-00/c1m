@@ -1,3 +1,5 @@
+"""Spec service errors and their HTTP mapping (422 field errors, integrity)."""
+
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 

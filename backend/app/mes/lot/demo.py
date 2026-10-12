@@ -1,3 +1,5 @@
+"""Lot rule demo data (priorities, lot types, split/merge and Q-time rules)."""
+
 from app.mes.common.demo import ACTIVATE, _rows, add
 
 for c, n, lvl, col, hot in _rows(

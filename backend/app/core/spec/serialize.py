@@ -1,3 +1,5 @@
+"""(De)serialization of spec rows: value coercion, ref labels, JSON output."""
+
 import uuid
 from datetime import date, datetime, time
 from typing import Any

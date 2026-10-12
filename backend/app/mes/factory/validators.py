@@ -1,3 +1,5 @@
+"""CRUD validators of factory entities."""
+
 import uuid
 
 from sqlmodel import Session

@@ -1,3 +1,5 @@
+"""The four execution stages (Move In, Track In, Track Out, Move Out) and Q-time actions."""
+
 import uuid
 from typing import Any
 

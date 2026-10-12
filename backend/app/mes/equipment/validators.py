@@ -1,3 +1,5 @@
+"""CRUD validators of equipment entities."""
+
 import uuid
 from typing import Any
 

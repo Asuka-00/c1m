@@ -1,3 +1,5 @@
+"""Execution entities: check rules/plans/bindings/logs."""
+
 from app.core.spec.engine import ENUMS, FIELD_LABELS, Entity, F, register
 
 TRIGGERS = [

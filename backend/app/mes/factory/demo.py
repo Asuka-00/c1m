@@ -1,3 +1,5 @@
+"""Factory demo data (dictionaries, code rules, sites, areas, work centers, shifts, calendars)."""
+
 from app.mes.common.demo import _rows, add
 
 # ---------------- P1: common + org ----------------

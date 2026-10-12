@@ -1,3 +1,5 @@
+"""Product demo data (UoM, tech nodes, products, materials, carriers, reticles)."""
+
 from app.mes.common.demo import _rows, add
 
 # ---------------- P2: product/material + equipment ----------------

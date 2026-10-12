@@ -1,3 +1,5 @@
+"""Demo dataset engine: rows are collected with add() by every module's demo.py."""
+
 import uuid
 from typing import Any
 

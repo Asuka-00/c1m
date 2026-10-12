@@ -1,13 +1,13 @@
+"""Idempotent bootstrap: RBAC, first superuser, menus, config, default tenant."""
+
 from sqlmodel import Session, select
 
+# all tables / relationships / MES specs must be registered first
+from app import models as _models  # noqa: F401
 from app.core.config import settings
 from app.platform.users import service as crud
 from app.platform.users.models import User
 from app.platform.users.schemas import UserCreate
-
-# make sure all SQLModel models are imported (app.models) before initializing DB
-# otherwise, SQLModel might fail to initialize relationships properly
-# for more details: https://github.com/fastapi/full-stack-fastapi-template/issues/28
 
 
 def init_db(session: Session) -> None:

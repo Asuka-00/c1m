@@ -1,3 +1,5 @@
+"""Route navigation: step order, sub-route enter/return, next location."""
+
 import uuid
 from typing import Any
 

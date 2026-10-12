@@ -1,3 +1,5 @@
+"""Audit log entity (written by app.core.spec.audit)."""
+
 from app.core.spec.engine import Entity, F, register
 
 register(

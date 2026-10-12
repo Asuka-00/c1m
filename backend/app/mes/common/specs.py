@@ -1,3 +1,5 @@
+"""MES common entities: dictionaries, code rules, custom attributes."""
+
 from app.core.spec.engine import ENUMS, FIELD_LABELS, Entity, F, register
 
 FIELD_LABELS.update(

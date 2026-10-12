@@ -1,3 +1,5 @@
+"""Equipment entities: types, groups, E10 states/transitions/auto rules, capability, tools."""
+
 from app.core.spec.engine import Entity, F, register
 
 register(

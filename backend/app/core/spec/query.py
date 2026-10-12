@@ -1,3 +1,5 @@
+"""Generic tenant-scoped queries: list/filter/search/sort, get, all rows, tree."""
+
 import uuid
 from typing import Any
 

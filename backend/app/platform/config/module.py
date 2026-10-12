@@ -1,3 +1,5 @@
+"""Module registration (see app.core.registry)."""
+
 from app.core.registry import Module, register
 
 # config before tenants: /tenants/current/config must win over /tenants/{tenant_id}/...

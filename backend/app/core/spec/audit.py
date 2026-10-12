@@ -1,3 +1,5 @@
+"""Audit trail of spec-entity writes (audit_log rows + field diffs)."""
+
 import uuid
 from typing import Any
 

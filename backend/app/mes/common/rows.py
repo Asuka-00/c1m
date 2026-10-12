@@ -1,3 +1,5 @@
+"""Low-level row helpers for MES services (system columns, update, insert)."""
+
 import uuid
 from datetime import datetime
 from typing import Any

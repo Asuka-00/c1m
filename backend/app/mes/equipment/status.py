@@ -1,3 +1,5 @@
+"""Equipment status queries: current E10 state, tool life."""
+
 import uuid
 from typing import Any
 

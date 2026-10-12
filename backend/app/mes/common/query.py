@@ -1,3 +1,5 @@
+"""Tiny tenant-scoped query helpers shared by MES modules."""
+
 import uuid
 from typing import Any
 

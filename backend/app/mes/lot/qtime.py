@@ -1,3 +1,5 @@
+"""Q-time clocks (inherited across genealogy) and status."""
+
 import uuid
 from datetime import datetime
 from typing import Any

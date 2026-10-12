@@ -1,3 +1,5 @@
+"""Built-in check types (equipment, recipe, reticle, material, tool, carrier, Q-time, hold, WO, DC, sampling)."""
+
 import uuid
 from typing import Any
 

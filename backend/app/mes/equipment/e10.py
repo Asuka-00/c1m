@@ -1,3 +1,5 @@
+"""E10 automatic state transitions triggered by execution events."""
+
 import uuid
 from typing import Any
 

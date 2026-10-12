@@ -1,3 +1,5 @@
+"""Configurable checks: context, check-type registry, binding resolution, evaluation."""
+
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field

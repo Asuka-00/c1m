@@ -1,3 +1,5 @@
+"""Execution context: check context building and the lot console payload."""
+
 import uuid
 from typing import Any
 

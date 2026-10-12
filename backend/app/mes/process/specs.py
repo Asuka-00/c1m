@@ -1,3 +1,5 @@
+"""Process entities: operations, routes, steps, resources, recipes, parameter specs."""
+
 from app.core.spec.engine import ENTITIES, ENUMS, Entity, F, register
 
 ENUMS.update(

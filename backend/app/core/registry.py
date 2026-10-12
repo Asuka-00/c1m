@@ -92,6 +92,7 @@ def routers(dev: bool = False) -> list[Any]:
 
 
 def menu_items() -> dict[str, MenuItem]:
+    load()  # entity menus need the specs
     out: dict[str, MenuItem] = {}
     for m in modules():
         out.update(m.menus)

@@ -1,3 +1,5 @@
+"""Module registration (see app.core.registry)."""
+
 from app.core.registry import Module, register
 from app.mes.planning.menus import MENUS
 from app.mes.planning.permissions import PERM_MODULES, PERMISSIONS

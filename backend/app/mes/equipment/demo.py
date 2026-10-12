@@ -1,3 +1,5 @@
+"""Equipment demo data (types, groups, E10 states, tools)."""
+
 from app.mes.common.demo import _rows, add
 
 for c, n, et, area in _rows(

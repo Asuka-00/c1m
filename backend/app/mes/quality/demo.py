@@ -1,3 +1,5 @@
+"""Quality demo data (measurement items, DC plans, sampling, defect/reason codes)."""
+
 from app.mes.common.demo import ACTIVATE, _rows, add
 
 # ---------------- P4: quality + lot/wafer rules ----------------

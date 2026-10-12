@@ -1,3 +1,5 @@
+"""Quality entities: measurement items, DC plans, sampling, defect/reason codes, DC results."""
+
 from app.core.spec.engine import ENUMS, Entity, F, register
 
 ENUMS.update(

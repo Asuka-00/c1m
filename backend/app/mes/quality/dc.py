@@ -1,3 +1,5 @@
+"""Data collection: DC plan lookup, sampling, spec-limit checks."""
+
 import random
 import uuid
 from typing import Any

@@ -1,3 +1,5 @@
+"""Lot execution stage machine constants."""
+
 STAGES = ["move_in", "track_in", "track_out", "move_out"]
 FROM_STATUS = {
     "move_in": "waiting",

@@ -1,3 +1,5 @@
+"""Module registration (see app.core.registry)."""
+
 from app.core.registry import Module, register
 from app.mes.quality.permissions import PERM_MODULES, PERMISSIONS
 

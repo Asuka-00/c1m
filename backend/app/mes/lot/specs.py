@@ -1,3 +1,5 @@
+"""Lot entities: lots, wafers, lot rules, holds, history, genealogy."""
+
 from app.core.spec.engine import ENUMS, Entity, F, register
 
 register(

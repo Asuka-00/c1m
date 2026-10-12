@@ -10,4 +10,4 @@ alembic upgrade head
 python scripts/setup_db_roles.py
 
 # Create initial data in DB (as the app role)
-python app/initial_data.py
+python -m app.initial_data

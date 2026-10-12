@@ -1,3 +1,5 @@
+"""Generic validation: field rules, custom attributes, CRUD validator registry, edit locks."""
+
 import uuid
 from collections.abc import Callable
 from datetime import date

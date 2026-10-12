@@ -1,3 +1,5 @@
+"""Material needs, line-side lot candidates and consumption at Track Out."""
+
 import uuid
 from datetime import date, datetime
 from typing import Any

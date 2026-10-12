@@ -1,3 +1,5 @@
+"""Planning entities: work orders."""
+
 from app.core.spec.engine import Entity, F, register
 
 register(

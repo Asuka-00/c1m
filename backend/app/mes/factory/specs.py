@@ -1,3 +1,5 @@
+"""Factory model entities: sites, areas, work centers, shifts, calendars."""
+
 from app.core.spec.engine import Entity, F, register
 
 register(
