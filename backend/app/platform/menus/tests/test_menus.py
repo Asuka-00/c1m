@@ -217,6 +217,12 @@ def test_menu_layout_complete_and_synced(
     by = {n["key"]: [c["key"] for c in n["children"]] for n in tree["menus"]}
     assert by["g-planning"] == ["mes-work_order", "mes-lot-start"]
     assert "mes-audit_log" in by["g-system"] and "mes-uom" in by["g-master"]
+    # 业务流顺序：工作台 → 执行 → 在制报表 … 主数据 → 系统；组内日常作业在前
+    assert top[:3] == ["g-workspace", "g-execution", "g-wip"] and top[-1] == "g-system"
+    assert by["g-workspace"][:2] == ["dashboard", "notifications"]
+    assert by["g-execution"][0] == "mes-lot-console"
+    assert by["g-equipment"][0] == "mes-eqp-board"
+    assert "mes-equipment" in by["g-eqp-master"]
     assert not {"general", "admin", "other", "tenant"} & set(top)
 
 
@@ -234,7 +240,11 @@ def test_sync_moves_and_drops_legacy_groups(db: Session) -> None:
     )
     dash = db.exec(select(Menu).where(Menu.key == "dashboard")).one()
     dash.parent_id, dash.title = legacy.id, "old"
-    db.add_all([custom, dash])
+    # 旧库中的错位 / 旧排序在重新同步后被纠正
+    wip = db.exec(select(Menu).where(Menu.key == "mes-wip-dashboard")).one()
+    sysg = db.exec(select(Menu).where(Menu.key == "g-system")).one()
+    wip.parent_id, wip.sort_order, sysg.sort_order = sysg.id, 999, -5
+    db.add_all([custom, dash, wip, sysg])
     db.commit()
     seed_menus(db)
     keys = {m.key: m for m in db.exec(select(Menu)).all()}
@@ -242,5 +252,8 @@ def test_sync_moves_and_drops_legacy_groups(db: Session) -> None:
     assert keys["custom-under-legacy"].parent_id is None
     assert keys["dashboard"].parent_id == keys["g-workspace"].id
     assert keys["dashboard"].title == "Dashboard"
+    assert keys["mes-wip-dashboard"].parent_id == keys["g-wip"].id
+    assert keys["mes-wip-dashboard"].sort_order == 0
+    assert keys["g-system"].sort_order == 110
     db.delete(keys["custom-under-legacy"])
     db.commit()

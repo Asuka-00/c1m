@@ -262,9 +262,7 @@ def test_enumerable_filters(
         "menus",
         "config",
         "mes-audit_log",
-        "notifications",
         "notify-subscriptions",
-        "settings",
     }
     assert (
         client.get(
