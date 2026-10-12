@@ -1,4 +1,4 @@
-"""Execution entities: check rules/plans/bindings/logs."""
+"""执行实体规格：检查规则 / 方案 / 绑定 / 日志。"""
 
 from app.core.spec.engine import ENUMS, FIELD_LABELS, Entity, F, register
 

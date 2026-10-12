@@ -1,4 +1,4 @@
-"""Product demo data (UoM, tech nodes, products, materials, carriers, reticles)."""
+"""产品演示数据（单位、技术节点、产品、物料、载具、光罩）。"""
 
 from app.mes.common.demo import _rows, add
 

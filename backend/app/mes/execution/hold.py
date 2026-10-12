@@ -1,4 +1,4 @@
-"""Lot holds: hold / release / manual hold, reason codes."""
+"""批次 Hold：自动 Hold、释放、手工 Hold 与原因代码。"""
 
 import uuid
 from typing import Any
@@ -20,6 +20,11 @@ LOT = ENTITIES["lot"]
 
 # ---------------- holds ----------------
 def default_reason(s: Session, tid: uuid.UUID, rtype: str) -> Row:
+    """指定类型的默认原因代码（按编码排序的第一个启用项）。
+
+    Raises:
+        HTTPException: 未配置该类型的启用原因代码（422）。
+    """
     rs = [
         r
         for r in find(s, tid, "reason_code", order="code", reason_type=rtype)
@@ -53,6 +58,22 @@ def hold_lot(
     comment: str | None = None,
     details: Row | None = None,
 ) -> uuid.UUID:
+    """对批次加 Hold，并写历史。
+
+    Args:
+        s: 数据库会话。
+        tid: 租户 id。
+        lot: 批次行。
+        user: 操作人。
+        reason: 原因代码行。
+        hold_type: Hold 类型。
+        source: 来源（manual / qtime / dc / check ...）。
+        comment: 备注。
+        details: 附加信息。
+
+    Returns:
+        新建 Hold 的 id。
+    """
     hid = _ins(
         s,
         tid,
@@ -100,6 +121,11 @@ def release_hold(
     reason_id: Any,
     comment: str | None,
 ) -> Row:
+    """释放一条 Hold；批次无其他未释放 Hold 时恢复为非 Hold 状态。
+
+    Raises:
+        HTTPException: Hold 不存在（404）或已释放（422）。
+    """
     h = one(s, tid, "lot_hold", hold_id)
     if not h:
         raise HTTPException(status_code=404, detail="Record not found")
@@ -153,6 +179,7 @@ def manual_hold(
     comment: str | None,
     user: Any,
 ) -> Row:
+    """手工 Hold（需原因代码），返回最新批次。"""
     lot = lock_lot(s, tid, lot_id)
     if lot["lot_status"] in TERMINAL:
         raise http_422([("lot_status", f"lot_status: lot is {lot['lot_status']}")])

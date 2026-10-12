@@ -1,7 +1,7 @@
-"""Work orders: lifecycle transitions and lot start / undo.
+"""工单接口：生命周期迁移与开批 / 撤销开批。
 
-Permissions: mes.wo:release (transitions), mes.lot:start (plan/start/undo).
-Plain CRUD of work orders goes through the generic /mes/work-order API.
+权限：mes.wo:release（状态迁移）、mes.lot:start（计划 / 开批 / 撤销）。
+工单的普通 CRUD 走通用接口 /mes/work-order。
 """
 
 import uuid

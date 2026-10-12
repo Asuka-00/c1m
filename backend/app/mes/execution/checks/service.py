@@ -1,4 +1,4 @@
-"""Check engine API used inside the execution module."""
+"""检查引擎在执行模块内部使用的 API。"""
 
 from app.mes.equipment.service import (
     e10_current as e10_current,

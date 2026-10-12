@@ -1,4 +1,4 @@
-"""Split/merge context for the lot console."""
+"""批次操作台的拆合批上下文。"""
 
 import uuid
 from typing import Any
@@ -22,6 +22,7 @@ Row = dict[str, Any]
 
 # ---------------- console context ----------------
 def sm_context(s: Session, tid: uuid.UUID, lot: Row) -> Row:
+    """拆合批上下文：是否可拆 / 可合、规则摘要、可选单元、合批候选。"""
     rule = rule_for(s, tid, lot)
     g = TABLES["lot_genealogy"]
     L = TABLES["lot"]

@@ -1,4 +1,4 @@
-"""Q-time clocks (inherited across genealogy) and status."""
+"""Q-Time 时钟（沿谱系继承）与状态。"""
 
 import uuid
 from datetime import datetime
@@ -17,10 +17,21 @@ Row = dict[str, Any]
 def qtime_clock(
     s: Session, tid: uuid.UUID, lot_id: Any, step_id: Any, until: datetime | None
 ) -> datetime | None:
-    """Start of a Q-Time clock: the lot's last move-out of `step_id`, inherited
-    through genealogy (split parent / merge sources, before the event). An own
-    move-out after the event supersedes it; otherwise the earliest (strictest)
-    start wins."""
+    """Q-Time 时钟起点。
+
+    取批次在 ``step_id`` 最后一次 Move Out 的时间，并沿谱系继承（拆批母批 / 合批源批次，
+    取事件之前的时间）。事件之后自身的 Move Out 优先；否则取最早（最严格）的起点。
+
+    Args:
+        s: 数据库会话。
+        tid: 租户 id。
+        lot_id: 批次 id。
+        step_id: 起始工步 id。
+        until: 只考虑此时间之前的记录。
+
+    Returns:
+        时钟起点，无记录时为 None。
+    """
     h, g = TABLES["lot_history"], TABLES["lot_genealogy"]
     q = sa.select(sa.func.max(h.c.at)).where(
         h.c.tenant_id == tid,
@@ -49,7 +60,11 @@ def qtime_clock(
 def qtime_status(
     s: Session, tid: uuid.UUID, lot: Row, step: Row, at: datetime
 ) -> list[Row]:
-    """Q-Time rules ending at `step`: elapsed minutes since move-out of from_step."""
+    """以 ``step`` 为终点的 Q-Time 规则状态。
+
+    Returns:
+        每条规则的 ``{起点、已用分钟、上限、是否超时、处置动作}``。
+    """
     out = []
     for r in find(s, tid, "qtime_rule", to_step_id=step["id"]):
         if r["product_id"] and r["product_id"] != lot["product_id"]:

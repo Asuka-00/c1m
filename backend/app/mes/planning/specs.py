@@ -1,4 +1,4 @@
-"""Planning entities: work orders."""
+"""计划实体规格：工单。"""
 
 from app.core.spec.engine import Entity, F, register
 

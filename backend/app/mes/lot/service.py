@@ -1,4 +1,4 @@
-"""Public API of the lot module (used by planning / execution)."""
+"""批次模块公开 API（供 planning / execution 使用）。"""
 
 from app.mes.lot.lots import (
     TERMINAL as TERMINAL,

@@ -1,4 +1,4 @@
-"""Material needs, line-side lot candidates and consumption at Track Out."""
+"""物料需求、线边批次候选与 Track Out 扣料。"""
 
 import uuid
 from datetime import date, datetime
@@ -18,14 +18,34 @@ Row = dict[str, Any]
 def material_needs(
     s: Session, tid: uuid.UUID, step: Row, lot: Row, chosen: list[Row], at: datetime
 ) -> list[Row]:
+    """计算当前工步的物料需求及分配方案。
+
+    需求量 = 工步资源数量 ×（按单元计时乘以批次数量）。优先使用操作员选择的线边批次，
+    否则按先到期先出（FEFO）自动分配；跳过不可用 / 已过期批次，单位不同时换算。
+
+    Args:
+        s: 数据库会话。
+        tid: 租户 id。
+        step: 当前工步。
+        lot: 批次。
+        chosen: 操作员选择的线边批次。
+        at: 参考时间（判断过期）。
+
+    Returns:
+        每种物料的 ``{需求、可用、分配明细、是否足够}``。
+    """
     out = []
     for r in find(s, tid, "step_resource", route_step_id=step["id"]):
         if r["resource_kind"] != "material" or not r["material_id"] or not r["qty"]:
             continue
+        # per_unit：用量 × 批次数量；否则为每批固定用量
         need = float(r["qty"]) * (lot["qty"] if r["qty_basis"] == "per_unit" else 1)
         mat = one(s, tid, "material", r["material_id"])
         cands = [
-            m for m in chosen if m["material_id"] == r["material_id"]
+            m
+            for m in chosen
+            if m["material_id"] == r["material_id"]
+            # 操作员指定的线边批次优先，否则按先到期先出（FEFO）自动分配
         ] or candidate_lots(s, tid, r["material_id"], at)
         alloc, have, total = [], 0.0, 0.0
         for m in cands:
@@ -70,7 +90,7 @@ def material_needs(
 def candidate_lots(
     s: Session, tid: uuid.UUID, material_id: Any, at: datetime
 ) -> list[Row]:
-    """Usable lots of a material, first-expiry-first-out."""
+    """物料的可用线边批次，按先到期先出（FEFO）排序。"""
     ls = [
         m
         for m in find(s, tid, "material_lot", material_id=material_id)

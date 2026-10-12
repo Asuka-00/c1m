@@ -1,12 +1,12 @@
-"""Permissions of the MES execution module."""
+"""执行模块权限（exec:read/write/override/hold/split/merge）。"""
 
-# spec permission modules: code -> ("en|zh|ja" label, sort order)
+# 规格权限模块：编码 -> ("en|zh|ja" 标签, 排序)
 PERM_MODULES: dict[str, tuple[str, int]] = {
     "exec": ("Execution|生产执行|生産実行", 80),
     "inventory": ("Line-side material & tools|物料与工具|資材・工具", 85),
     "check": ("Checks|卡控|チェック", 90),
 }
-# extra (non read/write) permission codes
+# 额外权限编码（read/write 以外）
 PERMISSIONS: dict[str, str] = {
     "mes.exec:override": "MES execution: force-override blocking checks",
     "mes.exec:hold": "MES execution: hold / release lots",

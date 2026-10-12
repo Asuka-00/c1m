@@ -1,4 +1,4 @@
-"""Track Out: DC entry, OOS actions, consumption, scrap/rework, E10, tool usage."""
+"""Track Out：DC 录入、超规处置、扣料、报废/返工、E10、工具使用次数。"""
 
 import uuid
 from typing import Any
@@ -28,13 +28,28 @@ LOT = ENTITIES["lot"]
 def track_out(
     s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any
 ) -> Row:
+    """Track Out：完成加工。
+
+    依次处理报废 / 返工单元、DC 数据（超规按计划处置）、物料扣减（硬性要求，不可放行）、
+    工具使用次数、E10 迁移，并写历史。
+
+    Args:
+        s: 数据库会话。
+        tid: 租户 id。
+        lot_id: 批次 id。
+        body: ``{dc, scrap, rework_units, materials, ...}``。
+        user: 操作人。
+
+    Returns:
+        阶段结果。
+    """
     lot = lock_lot(s, tid, lot_id)
     _guard(lot, "track_out")
     ctx = build_ctx(s, tid, lot, "track_out", body)
     level = lot["tracking_level"] or "wafer"
     us = {str(u["id"]): u for u in units(s, tid, lot["id"])}
     errs: list[tuple[str, str]] = []
-    # scrap / rework
+    # 报废 / 返工
     scrap_units: list[tuple[Row, Row]] = []
     scrap_qty: list[tuple[int, Row]] = []
     for i, x in enumerate(body.get("scrap") or [], 1):
@@ -72,7 +87,7 @@ def track_out(
             )
         else:
             rework_units.append((u, r))
-    # DC values
+    # DC 数据
     smp = ctx.sampling or {}
     items = {it["measurement_item_id"]: it for it in smp.get("items") or []}
     dc: list[Row] = []
@@ -106,7 +121,7 @@ def track_out(
     if errs:
         raise http_422(errs)
     ctx.dc = dc
-    # material: hard requirement (cannot be overridden)
+    # 物料：硬性要求（不可强制放行）
     short = [
         n
         for n in ctx.material_needs

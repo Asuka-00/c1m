@@ -1,4 +1,4 @@
-"""Quality demo data (measurement items, DC plans, sampling, defect/reason codes)."""
+"""质量演示数据（量测项、DC 计划、抽样、缺陷 / 原因代码）。"""
 
 from app.mes.common.demo import ACTIVATE, _rows, add
 

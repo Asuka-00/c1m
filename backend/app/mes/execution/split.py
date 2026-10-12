@@ -1,4 +1,4 @@
-"""Lot split."""
+"""批次拆批。"""
 
 import uuid
 from typing import Any
@@ -34,7 +34,26 @@ Row = dict[str, Any]
 
 # ---------------- split ----------------
 def split(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -> Row:
-    """body: children=[{unit_ids?|qty?, carrier_id?}], comment, override(_reason)."""
+    """拆批：从母批拆出若干子批。
+
+    仅允许在 Waiting / MovedIn 状态；受批次类型拆合批规则约束（允许、最大子批数、最小数量）。
+    晶圆 / 单元模式按单元拆分，数量模式按数量拆分。子批继承产品、路线、当前工步与阶段、工单、
+    优先级、Q-Time 时钟、Hold 状态与属性；子批编码按批次类型规则生成；记录谱系、历史与审计。
+
+    Args:
+        s: 数据库会话。
+        tid: 租户 id。
+        lot_id: 母批 id。
+        body: ``{children: [{unit_ids? | qty?, carrier_id?}], comment, override, override_reason}``。
+        user: 操作人。
+
+    Returns:
+        拆批结果（母批、子批、检查结果）。
+
+    Raises:
+        HTTPException: 状态或规则不允许（422）。
+        CheckBlocked: 检查阻断。
+    """
     lot = lock_lot(s, tid, lot_id)
     rule = rule_for(s, tid, lot)
     qty_mode = (lot["tracking_level"] or "wafer") == "quantity"
@@ -74,7 +93,7 @@ def split(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
         take.append([active[x] for x in ids])
         qtys.append(len(ids))
     remain = lot["qty"] - sum(qtys)
-    # rule checks (not overridable)
+    # 规则校验（不可强制放行）
     errs: list[str] = []
     if lot["lot_status"] not in SPLIT_STATES:
         errs.append(f"cannot split a {lot['lot_status']} lot (only waiting / moved in)")

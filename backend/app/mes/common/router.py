@@ -1,7 +1,7 @@
-"""Generic MES master-data API: /mes/{entity}[...] for every spec in app.mes.
+"""MES 主数据通用接口：为每个规格实体提供 ``/mes/{entity}[...]``。
 
-Permissions: mes.<module>:read / mes.<module>:write in the current tenant
-(X-Tenant-ID). Tenant isolation: tenant_id filter + Postgres RLS.
+权限：当前租户（X-Tenant-ID）内的 ``mes.<module>:read`` / ``mes.<module>:write``。
+租户隔离：tenant_id 过滤 + Postgres RLS。
 """
 
 import uuid
@@ -39,6 +39,11 @@ RESERVED = {"page", "page_size", "skip", "limit", "sort_by", "sort_order", "q"}
 def require_entity(
     ctx: TenantContext, code: str, action: Literal["read", "write"]
 ) -> Entity:
+    """获取实体并校验当前租户上下文是否具备其模块权限。
+
+    Raises:
+        HTTPException: 实体不存在（404）或无权限（403）。
+    """
     e = get_entity(code)
     if not ctx.can(perm(e.pmod, action)):
         raise HTTPException(status_code=403, detail="Not enough permissions")

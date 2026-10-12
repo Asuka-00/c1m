@@ -1,4 +1,4 @@
-"""CRUD validators of execution-related entities."""
+"""执行相关实体的 CRUD 校验器。"""
 
 import uuid
 from typing import Any
@@ -52,6 +52,6 @@ def _check_rule(
 def _check_binding(
     _s: Session, _t: uuid.UUID, _e: Entity, row: Row, _o: Row | None
 ) -> None:
-    for sc in ck.SPECIFICITY:  # only the scope's reference is kept
+    for sc in ck.SPECIFICITY:  # 只保留与作用域对应的引用字段
         if sc != row.get("scope"):
             row[f"{sc}_id"] = None

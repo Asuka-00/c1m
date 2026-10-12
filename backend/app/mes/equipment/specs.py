@@ -1,4 +1,4 @@
-"""Equipment entities: types, groups, E10 states/transitions/auto rules, capability, tools."""
+"""设备实体规格：类型、组、E10 状态/迁移/自动规则、能力、工具。"""
 
 from app.core.spec.engine import Entity, F, register
 

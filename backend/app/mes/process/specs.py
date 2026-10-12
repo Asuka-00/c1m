@@ -1,4 +1,4 @@
-"""Process entities: operations, routes, steps, resources, recipes, parameter specs."""
+"""工艺实体规格：工序、路线、工步、资源、配方、参数规格。"""
 
 from app.core.spec.engine import ENTITIES, ENUMS, Entity, F, register
 

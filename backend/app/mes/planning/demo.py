@@ -1,4 +1,4 @@
-"""Planning demo data (work orders, lot starts)."""
+"""计划演示数据（工单、开批）。"""
 
 from app.mes.common.demo import add
 

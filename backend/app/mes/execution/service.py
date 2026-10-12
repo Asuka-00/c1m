@@ -1,4 +1,4 @@
-"""Public API of the execution module (stages, holds, split/merge)."""
+"""执行模块公开 API（阶段作业、Hold、拆合批）。"""
 
 from app.mes.execution.context import (
     build_ctx as build_ctx,

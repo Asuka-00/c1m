@@ -1,4 +1,4 @@
-"""CRUD validators of common entities (+ shared lookup helper)."""
+"""MES 公共实体的 CRUD 校验器（含共享查找工具）。"""
 
 import uuid
 from typing import Any

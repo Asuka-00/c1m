@@ -1,4 +1,4 @@
-"""Q-time violation actions applied at Move In (warn / hold / rework / scrap)."""
+"""Q-Time 超时处置：在 Move In 时执行（警告 / Hold / 返工 / 报废）。"""
 
 import uuid
 from typing import Any
@@ -21,7 +21,7 @@ Row = dict[str, Any]
 def _qtime_actions(
     s: Session, tid: uuid.UUID, lot: Row, step: Row, user: Any
 ) -> str | None:
-    """Apply max-Q-Time violation actions once per violation; returns outcome."""
+    """执行最大 Q-Time 超时处置（每次超时只执行一次），返回处置结果。"""
     h = TABLES["lot_history"]
     for x in ck.qtime_status(s, tid, lot, step, now()):
         if not x["exceeded"]:

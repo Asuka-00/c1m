@@ -1,4 +1,4 @@
-"""Public API of the process module (route navigation, step ordering)."""
+"""工艺模块公开 API（路线导航、工步排序）。"""
 
 from app.mes.process.navigation import (
     enter_route as enter_route,

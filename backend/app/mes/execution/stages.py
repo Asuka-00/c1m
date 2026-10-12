@@ -1,4 +1,4 @@
-"""Stage entry points: Move In, Track In, Move Out, the stage dispatcher and check preview."""
+"""阶段入口：Move In、Track In、Move Out、阶段分发与检查预览。"""
 
 import uuid
 from typing import Any
@@ -27,6 +27,18 @@ LOT = ENTITIES["lot"]
 
 
 def move_in(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -> Row:
+    """Move In：进站到当前工步（Q-Time 超时处置、move_in 检查）。
+
+    Args:
+        s: 数据库会话。
+        tid: 租户 id。
+        lot_id: 批次 id。
+        body: 请求载荷（放行标记与原因等）。
+        user: 操作人。
+
+    Returns:
+        阶段结果（批次、检查结果、事件）。
+    """
     lot = lock_lot(s, tid, lot_id)
     _guard(lot, "move_in")
     step = one(s, tid, "route_step", lot["current_step_id"])
@@ -75,6 +87,7 @@ def move_in(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any)
 def track_in(
     s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any
 ) -> Row:
+    """Track In：选定设备 / 配方 / 工具开始加工（track_in 检查、E10 迁移），批次进入 Running。"""
     lot = lock_lot(s, tid, lot_id)
     _guard(lot, "track_in")
     ctx = build_ctx(s, tid, lot, "track_in", body)
@@ -163,6 +176,7 @@ def track_in(
 def move_out(
     s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any
 ) -> Row:
+    """Move Out：出站并移动到下一工步（含子路线 / 返工路线返回）；最后一步完成时批次结束。"""
     lot = lock_lot(s, tid, lot_id)
     _guard(lot, "move_out")
     ctx = build_ctx(s, tid, lot, "move_out", body)
@@ -212,7 +226,23 @@ STAGE_FN = {
 def run_stage(
     s: Session, tid: uuid.UUID, lot_id: uuid.UUID, stage: str, body: Row, user: Any
 ) -> Row:
-    """Run a stage, then any auto stages configured on the (new) current step."""
+    """执行指定阶段，然后依次执行新当前工步上配置为自动的阶段。
+
+    Args:
+        s: 数据库会话。
+        tid: 租户 id。
+        lot_id: 批次 id。
+        stage: 阶段（move_in / track_in / track_out / move_out）。
+        body: 请求载荷。
+        user: 操作人。
+
+    Returns:
+        最后一个阶段的结果，附带自动阶段列表。
+
+    Raises:
+        HTTPException: 阶段与批次当前状态不符或批次已 Hold（422）。
+        CheckBlocked: 检查阻断。
+    """
     out = STAGE_FN[stage](s, tid, lot_id, body, user)
     if body.get("override") and any(
         r["result"] == "overridden" for r in out["results"]
@@ -261,6 +291,7 @@ def run_stage(
 def preview(
     s: Session, tid: uuid.UUID, lot_id: uuid.UUID, stage: str, body: Row, user: Any
 ) -> list[Row]:
+    """预览阶段检查结果（不执行、不写日志）。"""
     lot = one(s, tid, "lot", lot_id)
     if not lot:
         raise HTTPException(status_code=404, detail="Record not found")

@@ -1,4 +1,4 @@
-"""Product & material entities (UoM, products, materials, carriers, reticles, fixtures, line-side lots)."""
+"""产品与物料实体规格（单位、产品、物料、载具、光罩、治具、线边批次）。"""
 
 from app.core.spec.engine import ENUMS, Entity, F, register
 

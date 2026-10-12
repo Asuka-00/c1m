@@ -1,4 +1,4 @@
-"""Execution context: check context building and the lot console payload."""
+"""执行上下文：构建检查上下文与批次操作台数据。"""
 
 import uuid
 from typing import Any
@@ -29,6 +29,7 @@ def _rows(s: Session, tid: uuid.UUID, code: str, ids: list[Any] | None) -> list[
 
 
 def build_ctx(s: Session, tid: uuid.UUID, lot: Row, trigger: str, body: Row) -> Ctx:
+    """根据批次、触发点与请求载荷构建检查上下文。"""
     step = one(s, tid, "route_step", lot["current_step_id"])
     if not step:
         raise http_422([("lot", "lot: no current step")])
@@ -69,7 +70,13 @@ def build_ctx(s: Session, tid: uuid.UUID, lot: Row, trigger: str, body: Row) -> 
 
 
 def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
-    """Everything the operation console needs for the lot's current stage."""
+    """批次操作台所需的全部数据（当前阶段、工步、设备候选、物料/工具需求、DC、Hold、Q-Time、拆合批等）。
+
+    Args:
+        s: 数据库会话。
+        tid: 租户 id。
+        lot_id: 批次 id。
+    """
     lot = one(s, tid, "lot", lot_id)
     if not lot:
         raise HTTPException(status_code=404, detail="Record not found")

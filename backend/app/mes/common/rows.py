@@ -1,4 +1,4 @@
-"""Low-level row helpers for MES services (system columns, update, insert)."""
+"""MES 服务底层行工具：系统列、更新、插入。"""
 
 import uuid
 from datetime import datetime

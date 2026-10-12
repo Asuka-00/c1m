@@ -1,4 +1,4 @@
-"""Public API of the quality module (DC plans, sampling, spec limits)."""
+"""质量模块公开 API（DC 计划、抽样、规格界限）。"""
 
 from app.mes.quality.dc import (
     dc_plan_for as dc_plan_for,

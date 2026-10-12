@@ -1,4 +1,4 @@
-"""CRUD validators of lot rule entities."""
+"""批次规则实体的 CRUD 校验器。"""
 
 import uuid
 

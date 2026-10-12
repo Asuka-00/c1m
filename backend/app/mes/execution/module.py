@@ -1,4 +1,4 @@
-"""Module registration (see app.core.registry)."""
+"""执行模块注册（见 app.core.registry）。"""
 
 from app.core.registry import Module, register
 from app.mes.execution.menus import MENUS

@@ -1,4 +1,4 @@
-"""Factory model entities: sites, areas, work centers, shifts, calendars."""
+"""工厂模型实体规格：厂区、区域、工作中心、班次、日历。"""
 
 from app.core.spec.engine import Entity, F, register
 

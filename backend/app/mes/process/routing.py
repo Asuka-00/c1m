@@ -1,4 +1,4 @@
-"""Route helpers: atomic step re-ordering (seq renumbering)."""
+"""路线工具：原子化的工步重排（序号重编）。"""
 
 import uuid
 from typing import Any
@@ -25,6 +25,22 @@ def reorder_steps(
     user: Any,
     e: Entity,
 ) -> list[dict[str, Any]]:
+    """按给定顺序重排路线工步（仅 draft 路线）。
+
+    Args:
+        session: 数据库会话。
+        tid: 租户 id。
+        route_id: 路线 id。
+        ids: 全部工步 id 的新顺序。
+        user: 操作人。
+        e: 工步实体规格。
+
+    Returns:
+        重排后的工步。
+
+    Raises:
+        HTTPException: 路线非 draft（409）或 id 集合不一致（422）。
+    """
     route = get_row(session, ENTITIES["route"], tid, route_id)
     check_editable(session, tid, ENTITIES["route"], route)
     t = TABLES["route_step"]
@@ -42,7 +58,7 @@ def reorder_steps(
             status_code=422,
             detail="step_ids must list every step of the route exactly once",
         )
-    # two passes so the (route, seq) unique constraint never collides
+    # 分两轮更新（先临时序号再正式序号），避免 (route, seq) 唯一约束冲突
     for i, sid in enumerate(ids):
         c.execute(sa.update(t).where(t.c.id == sid).values(seq=-(i + 1)))
     for i, sid in enumerate(ids):

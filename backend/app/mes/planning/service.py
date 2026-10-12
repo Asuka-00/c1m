@@ -1,13 +1,15 @@
-"""Work-order lifecycle and lot start (no track-in/out, no inventory).
+"""工单生命周期与开批（不含 Track In/Out、库存）。
 
-Status machine (action: from -> to):
-  release   draft -> released          (product + default route active, ID rules, qty)
-  hold      released|in_progress -> on_hold
-  resume    on_hold -> status before the hold
-  complete  in_progress -> completed
-  close     completed -> closed
-  cancel    draft|released (nothing started) -> cancelled
-Lot start moves released -> in_progress; undoing every start moves it back.
+状态机（动作：从 → 到）::
+
+    release   draft -> released          （产品与默认路线已激活、编码规则、数量）
+    hold      released|in_progress -> on_hold
+    resume    on_hold -> Hold 前的状态
+    complete  in_progress -> completed
+    close     completed -> closed
+    cancel    draft|released（未开批）-> cancelled
+
+开批使工单 released → in_progress；撤销全部开批后回到 released。
 """
 
 import math
@@ -34,13 +36,13 @@ WO, LOT, WAFER = (ENTITIES[c] for c in ("work_order", "lot", "wafer"))
 TRANSITIONS: dict[str, tuple[set[str], str | None]] = {
     "release": ({"draft"}, "released"),
     "hold": ({"released", "in_progress"}, "on_hold"),
-    "resume": ({"on_hold"}, None),  # back to held_from
+    "resume": ({"on_hold"}, None),  # 恢复到 Hold 前的状态（held_from）
     "complete": ({"in_progress"}, "completed"),
     "close": ({"completed"}, "closed"),
     "cancel": ({"draft", "released"}, "cancelled"),
 }
 STARTABLE = {"released", "in_progress"}
-# fields that stay editable after release
+# 释放后仍可修改的字段
 LATE_EDIT = {"remarks", "due_date", "description", "attrs", "customer", "order_ref"}
 
 
@@ -126,7 +128,7 @@ def _wo_delete(
 
 # ---------------- helpers ----------------
 def cap(wo: Row) -> int:
-    """Max wafers that may be started: planned * (1 + limit%), rounded down."""
+    """可开批的最大晶圆数：计划数 ×（1 + 超投比例%），向下取整。"""
     return int(
         math.floor(
             float(wo["planned_qty"])
@@ -137,6 +139,7 @@ def cap(wo: Row) -> int:
 
 
 def default_route(s: Session, tid: uuid.UUID, product_id: Any) -> Row | None:
+    """产品的默认激活路线，无则 None。"""
     pr, rt = TABLES["product_route"], TABLES["route"]
     r = (
         conn(s)
@@ -171,7 +174,7 @@ def _steps(s: Session, tid: uuid.UUID, route_id: Any) -> list[Row]:
 
 
 def first_step(s: Session, tid: uuid.UUID, route_id: Any) -> tuple[Row | None, Any]:
-    """(first top-level step, site id of the first real operation)."""
+    """路线的首个顶层工步及首个实际工序所属厂区 id。"""
     steps = _steps(s, tid, route_id)
     if not steps:
         return None, None
@@ -221,6 +224,21 @@ def _set(
 def transition(
     s: Session, tid: uuid.UUID, wo_id: uuid.UUID, action: str, user: Any
 ) -> Row:
+    """执行工单状态迁移。
+
+    Args:
+        s: 数据库会话。
+        tid: 租户 id。
+        wo_id: 工单 id。
+        action: 动作（release / hold / resume / complete / close / cancel）。
+        user: 操作人。
+
+    Returns:
+        更新后的工单。
+
+    Raises:
+        HTTPException: 非法迁移或释放校验失败（422）。
+    """
     if action not in TRANSITIONS:
         raise http_422([("action", f"action: must be one of {', '.join(TRANSITIONS)}")])
     wo = get_row(s, WO, tid, wo_id)
@@ -276,7 +294,7 @@ def transition(
 def plan(
     s: Session, tid: uuid.UUID, wo_id: uuid.UUID, lot_size: int | None, qty: int | None
 ) -> Row:
-    """Proposed split (nothing is reserved): lot numbers / wafer IDs are previews."""
+    """开批计划预览（不占用任何资源）：批次号 / 晶圆号仅为预览。"""
     wo = get_row(s, WO, tid, wo_id)
     lt, lr, wr = _rules(s, tid, wo)
     size = lot_size or lt["max_wafers"] or 25
@@ -343,6 +361,22 @@ def start(
     *,
     demo: bool = False,
 ) -> list[Row]:
+    """开批：创建批次及单元，定位到路线首工步。
+
+    Args:
+        s: 数据库会话。
+        tid: 租户 id。
+        wo_id: 工单 id。
+        lots: 批次定义（数量、晶圆、载具等）。
+        user: 操作人。
+        demo: 是否标记为演示数据。
+
+    Returns:
+        新建批次列表。
+
+    Raises:
+        HTTPException: 超出可开批数量或工单状态不允许（422）。
+    """
     wo = get_row(s, WO, tid, wo_id)
     if wo["wo_status"] not in STARTABLE:
         raise http_422(
@@ -513,7 +547,7 @@ def undo_start(
     lot_ids: list[uuid.UUID] | None,
     user: Any,
 ) -> int:
-    """Delete started lots (+ wafers) that have not been processed yet."""
+    """撤销开批：删除尚未加工的批次（及单元），返回删除数量。"""
     wo = get_row(s, WO, tid, wo_id)
     if wo["wo_status"] not in STARTABLE:
         raise http_422(

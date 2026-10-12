@@ -1,9 +1,8 @@
-"""Code rule engine: patterns like ``LT{YY}{MM}{SEQ}`` -> ``LT26100001``.
+"""编码规则引擎：如 ``LT{YY}{MM}{SEQ}`` → ``LT26100001``。
 
-Tokens: {YYYY} {YY} {MM} {DD} {JJJ} (day of year), {SEQ} (decimal, zero padded
-to seq_width), {SEQ36} (base 36), {LOT} and {SLOT} / {SLOT:2} (wafer IDs, from
-the caller's context). Counters live in ``mes_code_rule_counter`` per rule and
-period (seq_reset: never / daily / monthly / yearly).
+占位符：{YYYY} {YY} {MM} {DD} {JJJ}（年内第几天）、{SEQ}（十进制，按 seq_width 补零）、
+{SEQ36}（36 进制）、{LOT} 与 {SLOT} / {SLOT:2}（晶圆号，由调用方上下文提供）。
+计数器按规则 + 周期保存在 ``mes_code_rule_counter``（seq_reset：never / daily / monthly / yearly）。
 """
 
 import re
@@ -24,6 +23,7 @@ B36 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 
 def check_pattern(pattern: str) -> list[tuple[str, str]]:
+    """校验编码模式，返回字段错误列表（未知占位符、缺少序号等）。"""
     errs: list[tuple[str, str]] = []
     tokens = [m.group(1) for m in TOKEN.finditer(pattern)]
     for tk in tokens:
@@ -37,6 +37,15 @@ def check_pattern(pattern: str) -> list[tuple[str, str]]:
 
 
 def period(reset: str | None, at: datetime) -> str:
+    """计数器周期键。
+
+    Args:
+        reset: 重置方式（never / daily / monthly / yearly）。
+        at: 参考时间。
+
+    Returns:
+        周期字符串，如 ``2026-10``；never 为空串。
+    """
     return {
         "daily": at.strftime("%Y%m%d"),
         "monthly": at.strftime("%Y%m"),
@@ -45,6 +54,7 @@ def period(reset: str | None, at: datetime) -> str:
 
 
 def b36(n: int, width: int) -> str:
+    """把整数转换为指定宽度的 36 进制字符串（左补零）。"""
     s = ""
     while n:
         n, r = divmod(n, 36)
@@ -55,6 +65,14 @@ def b36(n: int, width: int) -> str:
 def render(
     rule: dict[str, Any], seq: int, at: datetime, ctx: dict[str, Any] | None = None
 ) -> str:
+    """按规则与序号渲染一个编码。
+
+    Args:
+        rule: 编码规则行。
+        seq: 序号。
+        at: 参考时间（日期占位符）。
+        ctx: 上下文占位符值（如 LOT、SLOT）。
+    """
     ctx = ctx or {}
     width = int(rule.get("seq_width") or 4)
 
@@ -107,6 +125,7 @@ def preview(
     count: int,
     ctx: dict[str, Any] | None = None,
 ) -> list[str]:
+    """预览接下来的 ``count`` 个编码（不占用计数器）。"""
     at = now()
     c = _counter(
         session, tenant_id, rule, period(rule.get("seq_reset"), at), lock=False
@@ -124,7 +143,19 @@ def generate(
     *,
     commit: bool = True,
 ) -> list[str]:
-    """Reserve `count` codes (increments the counter atomically)."""
+    """占用并生成 ``count`` 个编码（行锁下原子递增计数器）。
+
+    Args:
+        session: 数据库会话。
+        tenant_id: 租户 id。
+        rule: 编码规则行。
+        count: 数量。
+        ctx: 上下文占位符值。
+        commit: 是否提交事务。
+
+    Returns:
+        生成的编码列表。
+    """
     at = now()
     per = period(rule.get("seq_reset"), at)
     t = TABLES["code_rule_counter"]

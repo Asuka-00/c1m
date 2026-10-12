@@ -1,4 +1,4 @@
-"""Lot entities: lots, wafers, lot rules, holds, history, genealogy."""
+"""批次实体规格：批次、晶圆、批次规则、Hold、历史、谱系。"""
 
 from app.core.spec.engine import ENUMS, Entity, F, register
 

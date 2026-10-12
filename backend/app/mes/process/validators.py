@@ -1,4 +1,4 @@
-"""CRUD validators of process entities."""
+"""工艺实体的 CRUD 校验器。"""
 
 import uuid
 from typing import Any

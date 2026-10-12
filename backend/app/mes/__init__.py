@@ -1,10 +1,8 @@
-"""Semiconductor MES feature modules.
+"""半导体 MES 功能模块。
 
-Each sub-package is one domain module (common, factory, product, equipment,
-process, quality, lot, planning, execution). Entities are declared in each
-module's ``specs.py`` (fields, labels in en/zh/ja, enums, refs, tree/version
-flags); ``app.core.spec`` turns every spec into a tenant-scoped table (RLS via
-``app.core.rls``) and provides the generic CRUD service; ``mes.common.router``
-exposes the generic CRUD / tree / version / import-export API. The frontend
-renders every entity from ``GET /mes/_meta``.
+每个子包是一个业务域模块（common、factory、product、equipment、process、quality、lot、
+planning、execution）。实体在各模块的 ``specs.py`` 中声明（字段、三语标签、枚举、引用、
+树形/版本标记）；``app.core.spec`` 把规格转换为租户表（RLS 见 ``app.core.rls``）并提供通用
+CRUD 服务；``mes.common.router`` 暴露通用 CRUD / 树 / 版本 / 导入导出接口；前端依据
+``GET /mes/_meta`` 渲染所有实体页面。
 """

@@ -1,6 +1,6 @@
-"""Permissions of the MES common module."""
+"""MES 公共模块权限。"""
 
-# spec permission modules: code -> ("en|zh|ja" label, sort order)
+# 规格权限模块：编码 -> ("en|zh|ja" 标签, 排序)
 PERM_MODULES: dict[str, tuple[str, int]] = {"common": ("Common|通用|共通", 0)}
-# extra (non read/write) permission codes
+# 额外权限编码（read/write 以外）
 PERMISSIONS: dict[str, str] = {}

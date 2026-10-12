@@ -1,4 +1,4 @@
-"""Equipment demo data (types, groups, E10 states, tools)."""
+"""设备演示数据（类型、组、E10 状态、工具）。"""
 
 from app.mes.common.demo import _rows, add
 

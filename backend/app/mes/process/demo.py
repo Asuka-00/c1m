@@ -1,4 +1,4 @@
-"""Process demo data (operations, routes, recipes, parameter specs)."""
+"""工艺演示数据（工序、路线、配方、参数规格）。"""
 
 from typing import Any
 

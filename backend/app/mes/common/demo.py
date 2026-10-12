@@ -1,4 +1,4 @@
-"""Demo dataset engine: rows are collected with add() by every module's demo.py."""
+"""演示数据引擎：各模块 demo.py 通过 :func:`add` 收集行，由 app.mes.demo 统一写入。"""
 
 import uuid
 from typing import Any
@@ -18,11 +18,12 @@ ACTIVATE: list[Ref] = []
 
 
 def _rows(rows: list[Any]) -> list[Any]:
-    """Heterogeneous literal tables (keeps the type checker out of the data)."""
+    """异构的字面量数据表（避免类型检查器推断数据结构）。"""
     return rows
 
 
 def add(entity: str, **values: Any) -> None:
+    """登记一行演示数据（写入时自动打上 ``attrs._demo`` 标记）。"""
     DEMO.append((entity, values))
 
 
@@ -72,6 +73,7 @@ def _exists(
 
 
 def default_tenant(session: Session) -> uuid.UUID:
+    """默认租户 id（演示数据写入目标）。"""
     t = session.exec(select(Tenant).where(Tenant.slug == "default")).one()
     set_tenant(session, t.id)
     return t.id

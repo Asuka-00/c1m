@@ -1,6 +1,6 @@
-"""Permissions of the MES quality module."""
+"""质量模块权限。"""
 
-# spec permission modules: code -> ("en|zh|ja" label, sort order)
+# 规格权限模块：编码 -> ("en|zh|ja" 标签, 排序)
 PERM_MODULES: dict[str, tuple[str, int]] = {"quality": ("Quality|质量|品質", 50)}
-# extra (non read/write) permission codes
+# 额外权限编码（read/write 以外）
 PERMISSIONS: dict[str, str] = {}

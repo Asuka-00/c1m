@@ -1,4 +1,4 @@
-"""CRUD validators of quality entities."""
+"""质量实体的 CRUD 校验器。"""
 
 import uuid
 

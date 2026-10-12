@@ -1,4 +1,4 @@
-"""Execution demo data (check rules/plans, line-side material, tools, assembly line) and demo runs."""
+"""执行演示数据（检查规则/方案、线边物料、工具、装配线）及演示作业。"""
 
 import uuid
 from typing import Any

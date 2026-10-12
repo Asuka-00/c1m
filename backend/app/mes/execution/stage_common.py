@@ -1,4 +1,4 @@
-"""Shared stage helpers: guards, results, overrides, relocation to the next step."""
+"""阶段共享工具：前置校验、结果构造、放行处理、移动到下一工步。"""
 
 import uuid
 from typing import Any

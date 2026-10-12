@@ -1,16 +1,13 @@
-"""MES menu items: one per (non-child) entity (pages come from each module).
-
-Grouping/titles live in app.platform.menus.layout; this only supplies path, icon,
-component key and required permission per menu key.
-"""
+"""MES 实体菜单：每个非子表实体一项（页面菜单由各模块提供）；分组与标题见 app.platform.menus.layout。"""
 
 from app.core.spec.engine import ENTITIES, perm
 
-# key -> (path, icon, component, permission)
+# key -> (路径, 图标, 组件, 权限)
 ItemDef = tuple[str, str | None, str, str | None]
 
 
 def mes_items() -> dict[str, ItemDef]:
+    """按规格生成实体菜单项 ``{key: (path, icon, component, permission)}``。"""
     out: dict[str, ItemDef] = {
         f"mes-{e.code}": (
             f"/mes/{e.url}",

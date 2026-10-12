@@ -1,4 +1,4 @@
-"""Split/merge rules and shared helpers (lot-type rule, carriers, child codes, genealogy, priority)."""
+"""拆合批规则与共享工具：批次类型规则、载具、子批编码、谱系、优先级。"""
 
 import uuid
 from typing import Any
@@ -44,6 +44,7 @@ COPY = (
 
 
 def rule_for(s: Session, tid: uuid.UUID, lot: Row) -> Row | None:
+    """批次所属批次类型的拆合批规则，未配置时为 None。"""
     rows = [
         r
         for r in find(s, tid, "split_merge_rule", lot_type_id=lot["lot_type_id"])
@@ -179,6 +180,6 @@ def _prio_json(p: Row | None) -> Row | None:
 
 
 def highest_priority(s: Session, tid: uuid.UUID, lots: list[Row]) -> Row | None:
-    """Level 1 = highest; ties keep the first (the target)."""
+    """多个批次中最高的优先级（level 越小越高；相同时保留第一个，即目标批次）。"""
     ps = [p for p in (_prio(s, tid, x["priority_id"]) for x in lots) if p]
     return min(ps, key=lambda p: p["level"]) if ps else None

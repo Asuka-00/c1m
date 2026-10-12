@@ -1,5 +1,4 @@
-"""Entity metadata for the frontend + i18n bundle generation (single source:
-the "en|zh|ja" labels in the specs)."""
+"""前端实体元数据与 i18n 包生成（唯一来源：规格中的三语标签）。"""
 
 from typing import Any
 
@@ -18,6 +17,7 @@ LANGS = ("zh-CN", "ja", "en")
 
 
 def field_meta(e: Entity) -> list[dict[str, Any]]:
+    """字段元数据（类型、标签、必填、枚举、引用等）。"""
     out = []
     for f in e.all_fields:
         out.append(
@@ -45,6 +45,7 @@ def field_meta(e: Entity) -> list[dict[str, Any]]:
 
 
 def entity_meta(e: Entity) -> dict[str, Any]:
+    """实体元数据（字段、权限模块、树/版本标记、子表等）。"""
     return {
         "code": e.code,
         "module": e.module,
@@ -65,6 +66,7 @@ def entity_meta(e: Entity) -> dict[str, Any]:
 
 
 def all_meta() -> dict[str, Any]:
+    """全部对外实体及枚举的元数据（``GET /mes/_meta``）。"""
     return {
         "modules": [
             {"code": m, "order": o}
@@ -76,7 +78,14 @@ def all_meta() -> dict[str, Any]:
 
 
 def i18n_bundle(lang: str) -> dict[str, Any]:
-    """{"mes": {...}, "menu": {...}} for one language (merged into the app locale)."""
+    """生成某语言的 i18n 包。
+
+    Args:
+        lang: 语言代码（en / zh-CN / ja）。
+
+    Returns:
+        ``{"mes": {...}, "menu": {...}}``，合并进前端语言包。
+    """
 
     def pick(s: str) -> str:
         return split_label(s)[lang]

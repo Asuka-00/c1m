@@ -1,4 +1,4 @@
-"""Route navigation: step order, sub-route enter/return, next location."""
+"""路线导航：工步顺序、子路线进入 / 返回、下一位置。"""
 
 import uuid
 from typing import Any
@@ -13,10 +13,12 @@ Row = dict[str, Any]
 
 # ---------------- route navigation ----------------
 def route_steps(s: Session, tid: uuid.UUID, route_id: Any) -> list[Row]:
+    """路线的工步，按序号排序。"""
     return find(s, tid, "route_step", order="seq", route_id=route_id)
 
 
 def step_after(s: Session, tid: uuid.UUID, step: Row) -> Row | None:
+    """同一路线中的下一工步，已是最后一步时为 None。"""
     return next(
         (x for x in route_steps(s, tid, step["route_id"]) if x["seq"] > step["seq"]),
         None,
@@ -26,7 +28,7 @@ def step_after(s: Session, tid: uuid.UUID, step: Row) -> Row | None:
 def enter_route(
     s: Session, tid: uuid.UUID, step: Row | None, stack: list[Row], ev: list[Row]
 ) -> Row | None:
-    """Descend into sub-routes until an operation step is reached."""
+    """逐层进入子路线，直到到达一个工序工步。"""
     depth = 0
     while step is not None and step["step_type"] == "sub_route" and depth < 10:
         sub = route_steps(s, tid, step["sub_route_id"])
@@ -51,7 +53,7 @@ def enter_route(
 def pop_route(
     s: Session, tid: uuid.UUID, stack: list[Row], ev: list[Row]
 ) -> Row | None:
-    """Leave the current sub/rework route (end reached)."""
+    """离开当前子路线 / 返工路线（已到末尾），按返回方式回到上层路线。"""
     while stack:
         fr = stack.pop()
         caller = one(s, tid, "route_step", uuid.UUID(fr["step_id"]))
@@ -69,6 +71,22 @@ def pop_route(
 def next_location(
     s: Session, tid: uuid.UUID, lot: Row, step: Row, *, branch: bool, rework: bool
 ) -> tuple[Row | None, list[Row], list[Row]]:
+    """计算批次的下一位置。
+
+    Args:
+        s: 数据库会话。
+        tid: 租户 id。
+        lot: 批次。
+        step: 当前工步。
+        branch: 是否走分支。
+        rework: 是否进入返工路线。
+
+    Returns:
+        ``(下一工步或 None（路线结束）, 新的路线栈, 事件列表)``。
+
+    Raises:
+        HTTPException: 请求分支 / 返工但工步未配置（422）。
+    """
     stack: list[Row] = list(lot.get("route_stack") or [])
     ev: list[Row] = []
     if rework:

@@ -1,4 +1,4 @@
-"""CRUD validators of factory entities."""
+"""工厂实体的 CRUD 校验器。"""
 
 import uuid
 

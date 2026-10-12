@@ -1,4 +1,4 @@
-"""Data collection: DC plan lookup, sampling, spec-limit checks."""
+"""数据采集（DC）：DC 计划查找、抽样、规格界限判断。"""
 
 import random
 import uuid
@@ -16,6 +16,7 @@ Row = dict[str, Any]
 
 # ---------------- sampling / DC ----------------
 def dc_plan_for(s: Session, tid: uuid.UUID, op_id: Any) -> Row | None:
+    """工序生效的 DC 计划，无则 None。"""
     ps = [
         p
         for p in find(s, tid, "dc_plan", operation_id=op_id)
@@ -25,6 +26,20 @@ def dc_plan_for(s: Session, tid: uuid.UUID, op_id: Any) -> Row | None:
 
 
 def sampling(s: Session, tid: uuid.UUID, lot: Row, step: Row, us: list[Row]) -> Row:
+    """计算批次在当前工步的抽样结果。
+
+    产品专用抽样规则优先于通用规则。
+
+    Args:
+        s: 数据库会话。
+        tid: 租户 id。
+        lot: 批次。
+        step: 当前工步。
+        us: 批次单元。
+
+    Returns:
+        ``{sampled, items, unit_ids, message}``；无工序 / 无计划时 ``unit_ids`` 为空列表。
+    """
     op_id = step["operation_id"]
     if not op_id:
         return {
@@ -117,6 +132,7 @@ def sampling(s: Session, tid: uuid.UUID, lot: Row, step: Row, us: list[Row]) -> 
 
 
 def out_of_spec(it: Row, v: float) -> bool:
+    """测量值是否超出量测项的规格上下限。"""
     return (it["lsl"] is not None and v < it["lsl"]) or (
         it["usl"] is not None and v > it["usl"]
     )

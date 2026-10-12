@@ -1,4 +1,4 @@
-"""Lot execution stage machine constants."""
+"""批次执行阶段状态机常量。"""
 
 STAGES = ["move_in", "track_in", "track_out", "move_out"]
 FROM_STATUS = {

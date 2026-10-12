@@ -1,4 +1,4 @@
-"""Quality entities: measurement items, DC plans, sampling, defect/reason codes, DC results."""
+"""质量实体规格：量测项、DC 计划、抽样、缺陷 / 原因代码、DC 结果。"""
 
 from app.core.spec.engine import ENUMS, Entity, F, register
 

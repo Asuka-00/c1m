@@ -1,9 +1,8 @@
-"""Lot execution: stages, check preview, holds.
+"""批次执行接口：阶段作业、检查预览、Hold、拆合批。
 
-Permissions: mes.exec:read (context / preview), mes.exec:write (stages),
-mes.exec:override (force past blocking checks, reason required),
-mes.exec:hold (manual hold / release), mes.exec:split / mes.exec:merge.  A blocked stage answers 409
-{"detail": {"code": "check_blocked", "results": [...]}}.
+权限：mes.exec:read（上下文 / 预览）、mes.exec:write（阶段作业）、mes.exec:override
+（强制放行阻断检查，须填原因）、mes.exec:hold（手工 Hold / 释放）、mes.exec:split / mes.exec:merge。
+阶段被阻断时返回 409 ``{"detail": {"code": "check_blocked", "results": [...]}}``。
 """
 
 import uuid

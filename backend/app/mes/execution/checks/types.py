@@ -1,4 +1,4 @@
-"""Built-in check types (equipment, recipe, reticle, material, tool, carrier, Q-time, hold, WO, DC, sampling)."""
+"""内置检查类型：设备、配方、光罩、物料、工具、载具、Q-Time、Hold、工单、DC、抽样。"""
 
 import uuid
 from typing import Any
@@ -9,10 +9,11 @@ from app.mes.execution.checks.registry import Ctx, check_type
 from app.mes.lot.service import qtime_status
 
 Row = dict[str, Any]
-Outcome = tuple[str, str, Row]  # ("pass" | "fail" | "warn" | "na", message, data)
+Outcome = tuple[str, str, Row]  # ("pass" | "fail" | "warn" | "na", 消息, 数据)
 
 
 def allowed_equipment_ids(ctx: Ctx) -> set[Any]:
+    """当前工步允许的设备 id（工步资源 / 工序设备组）。"""
     ids = {r["equipment_id"] for r in ctx.resources("equipment") if r["equipment_id"]}
     for r in ctx.resources("equipment_group"):
         if r["equipment_group_id"]:
@@ -272,5 +273,5 @@ def _sampling(ctx: Ctx, _p: Row) -> Outcome:
 # ---------------- resolution ----------------
 @check_type("split_merge_rule")
 def _split_merge(_ctx: Ctx, _p: Row) -> Outcome:
-    # enforced intrinsically by app.mes.splitmerge on split / merge
+    # 拆 / 合批时由拆合批逻辑内置强制执行
     return "na", "evaluated by the split / merge service", {}

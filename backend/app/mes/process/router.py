@@ -1,4 +1,4 @@
-"""Process-specific endpoints (the generic CRUD lives in mes.common.router)."""
+"""工艺专用接口（通用 CRUD 见 mes.common.router）。"""
 
 import uuid
 from typing import Any

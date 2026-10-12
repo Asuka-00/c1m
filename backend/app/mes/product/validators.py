@@ -1,4 +1,4 @@
-"""CRUD validators of product entities."""
+"""产品实体的 CRUD 校验器。"""
 
 import uuid
 
@@ -43,7 +43,7 @@ def _carrier_type(
 def _product_activate(
     s: Session, tid: uuid.UUID, _e: Entity, row: Row, _old: Row | None
 ) -> None:
-    """A product can go Active only with an Active route bound as default."""
+    """产品仅在绑定了 Active 默认路线时才能激活。"""
     pr, rt = TABLES["product_route"], TABLES["route"]
     ok = (
         conn(s)

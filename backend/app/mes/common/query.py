@@ -1,4 +1,4 @@
-"""Tiny tenant-scoped query helpers shared by MES modules."""
+"""MES 模块共享的租户范围轻量查询工具。"""
 
 import uuid
 from typing import Any
@@ -14,6 +14,7 @@ Row = dict[str, Any]
 
 
 def jsonable(v: Any) -> Any:
+    """把值转换为 JSON 可序列化形式（递归处理 dict / list）。"""
     if isinstance(v, dict):
         return {k: jsonable(x) for k, x in v.items()}
     if isinstance(v, (list, tuple)):
@@ -23,6 +24,7 @@ def jsonable(v: Any) -> Any:
 
 # ---------------- tiny query helpers ----------------
 def one(s: Session, tid: uuid.UUID, code: str, rid: Any) -> Row | None:
+    """按 id 读取实体行（限定租户），不存在返回 None。"""
     if rid is None:
         return None
     t = TABLES[code]
@@ -38,6 +40,15 @@ def one(s: Session, tid: uuid.UUID, code: str, rid: Any) -> Row | None:
 def find(
     s: Session, tid: uuid.UUID, code: str, order: str | None = None, **eq: Any
 ) -> list[Row]:
+    """按等值条件查询实体行（限定租户）。
+
+    Args:
+        s: 数据库会话。
+        tid: 租户 id。
+        code: 实体编码。
+        order: 排序列名。
+        **eq: 列等值条件。
+    """
     t = TABLES[code]
     stmt = sa.select(t).where(t.c.tenant_id == tid)
     for k, v in eq.items():

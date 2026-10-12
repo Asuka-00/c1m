@@ -1,4 +1,4 @@
-"""Demo dataset orchestration (seed / remove), composed from each module's demo.py."""
+"""演示数据编排（生成 / 清除），由各模块的 demo.py 组合而成。"""
 
 from typing import Any
 
@@ -28,6 +28,14 @@ from app.mes.planning.demo import STARTS
 
 
 def seed(session: Session) -> int:
+    """生成演示数据（先清除旧演示数据），按模块依赖顺序写入，最后运行执行示例。
+
+    Args:
+        session: 数据库会话。
+
+    Returns:
+        写入的行数。
+    """
     tid = default_tenant(session)
     admin = session.exec(select(User).where(User.is_superuser)).first()
     n = 0
@@ -90,7 +98,13 @@ def seed(session: Session) -> int:
 
 
 def remove(session: Session) -> int:
-    """Delete every row tagged attrs._demo (children first; retries for FKs)."""
+    """删除所有带 ``attrs._demo`` 标记的行。
+
+    按子表优先的顺序删除；遇外键冲突时多轮重试直至无进展。
+
+    Returns:
+        删除的行数。
+    """
     tid = default_tenant(session)
     c = conn(session)
     total = 0

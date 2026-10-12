@@ -1,4 +1,4 @@
-"""CRUD validators of equipment entities."""
+"""设备实体的 CRUD 校验器。"""
 
 import uuid
 from typing import Any
@@ -16,6 +16,11 @@ from app.mes.common.validators import Row, _get
 def check_recipe_equipment_type(
     s: Session, tid: uuid.UUID, recipe_id: Any, equipment_id: Any
 ) -> None:
+    """校验配方适用的设备类型与设备一致。
+
+    Raises:
+        HTTPException: 类型不匹配（422）。
+    """
     rec, eqp = (
         _get(s, tid, "recipe", recipe_id),
         _get(s, tid, "equipment", equipment_id),
@@ -72,7 +77,7 @@ def _equipment(
         raise MesError([("parent", f"parent: a {kind} needs a parent equipment")])
     if parent and parent["unit_kind"] not in ("main", "sub_unit"):
         raise MesError([("parent", "parent: must be a main equipment or sub-unit")])
-    if parent:  # sub-units inherit the parent's equipment type
+    if parent:  # 子设备继承父设备的设备类型
         pt, cur = parent["equipment_type_id"], row.get("equipment_type_id")
         if cur is None:
             row["equipment_type_id"] = pt

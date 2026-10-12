@@ -1,4 +1,4 @@
-"""Public API of the equipment module."""
+"""设备模块公开 API（E10 状态、工具寿命、配方-设备类型校验）。"""
 
 from app.mes.equipment.e10 import (
     e10_apply as e10_apply,

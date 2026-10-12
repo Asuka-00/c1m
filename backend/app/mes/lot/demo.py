@@ -1,4 +1,4 @@
-"""Lot rule demo data (priorities, lot types, split/merge and Q-time rules)."""
+"""批次规则演示数据（优先级、批次类型、拆合批与 Q-Time 规则）。"""
 
 from app.mes.common.demo import ACTIVATE, _rows, add
 

@@ -1,4 +1,4 @@
-"""Lot merge (candidates, validation, highest priority wins)."""
+"""批次合批：候选、校验，优先级取最高者。"""
 
 import uuid
 from typing import Any
@@ -36,6 +36,14 @@ Row = dict[str, Any]
 def merge_problems(
     target: Row, src: Row, rule: Row | None, src_rule: Row | None = None
 ) -> list[str]:
+    """检查源批次能否合入目标批次。
+
+    校验同产品、同路线及版本、同工步与阶段、同工单（规则允许时除外）、均未 Hold，
+    以及目标与源批次各自批次类型的合批规则（需允许合批；仅当规则显式要求时校验优先级相同）。
+
+    Returns:
+        不满足的原因列表（为空表示可合批）。
+    """
     c = src["code"]
     p: list[str] = []
     if src["id"] == target["id"]:
@@ -65,7 +73,7 @@ def merge_problems(
         and src["priority_id"] != target["priority_id"]
     ):
         p.append(f"{c}: different priority")
-    # the source's own lot-type rule must allow merging too
+    # 源批次自身批次类型的规则也必须允许合批
     if src_rule is None:
         p.append(f"{c}: no split/merge rule for its lot type")
     elif not src_rule["allow_merge"]:
@@ -74,6 +82,7 @@ def merge_problems(
 
 
 def merge_candidates(s: Session, tid: uuid.UUID, target: Row) -> list[Row]:
+    """目标批次可合入的候选批次，附带每个候选的不满足原因。"""
     t = TABLES["lot"]
     rows = (
         conn(s)
@@ -107,7 +116,25 @@ def merge_candidates(s: Session, tid: uuid.UUID, target: Row) -> list[Row]:
 
 
 def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -> Row:
-    """Merge body.source_lot_ids into lot `lot_id` (the surviving target)."""
+    """把 ``body.source_lot_ids`` 合入目标批次 ``lot_id``（目标存续）。
+
+    合并单元与数量，结果优先级取目标与源批次中最高者（历史记录新旧值）；Q-Time 时钟取
+    最早开始（最严格）；源批次置为 Merged 并终止；记录谱系、历史与审计；运行 merge 检查。
+
+    Args:
+        s: 数据库会话。
+        tid: 租户 id。
+        lot_id: 目标批次 id。
+        body: ``{source_lot_ids, carrier_id?, comment, override, override_reason}``。
+        user: 操作人。
+
+    Returns:
+        合批结果（目标批次、源批次、检查结果）。
+
+    Raises:
+        HTTPException: 规则不满足或载具容量不足（422）。
+        CheckBlocked: 检查阻断。
+    """
     ids = list(dict.fromkeys(str(x) for x in body.get("source_lot_ids") or []))
     if not ids:
         raise http_422([("source_lot_ids", "source_lot_ids: pick lots to merge")])

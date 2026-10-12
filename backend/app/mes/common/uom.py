@@ -1,4 +1,4 @@
-"""UOM conversion over the conversion graph (direct, inverse, multi-hop)."""
+"""单位换算：基于换算关系图（直接、反向、多跳）。"""
 
 import uuid
 from collections import deque
@@ -11,12 +11,27 @@ from sqlmodel import Session
 from app.core.spec.base import conn
 from app.core.spec.engine import TABLES
 
-Edge = tuple[float, float]  # to = from * factor + offset
+Edge = tuple[float, float]  # 目标值 = 源值 * factor + offset
 
 
 def convert(
     session: Session, tid: uuid.UUID, src: uuid.UUID, dst: uuid.UUID, value: float
 ) -> dict[str, Any]:
+    """单位换算。
+
+    Args:
+        session: 数据库会话。
+        tid: 租户 id。
+        src: 源单位 id。
+        dst: 目标单位 id。
+        value: 数值。
+
+    Returns:
+        ``{"value": 换算结果, "path": 换算路径}``。
+
+    Raises:
+        HTTPException: 无可用换算路径（422）。
+    """
     if src == dst:
         return {"value": value, "path": [str(src)]}
     t = TABLES["uom_conversion"]

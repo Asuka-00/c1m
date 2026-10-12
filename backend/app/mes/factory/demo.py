@@ -1,4 +1,4 @@
-"""Factory demo data (dictionaries, code rules, sites, areas, work centers, shifts, calendars)."""
+"""工厂演示数据（字典、编码规则、厂区、区域、工作中心、班次、日历）。"""
 
 from app.mes.common.demo import _rows, add
 

@@ -1,4 +1,4 @@
-"""MES common entities: dictionaries, code rules, custom attributes."""
+"""MES 公共实体规格：数据字典、编码规则、自定义属性。"""
 
 from app.core.spec.engine import ENUMS, FIELD_LABELS, Entity, F, register
 
