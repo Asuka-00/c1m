@@ -21,7 +21,75 @@ const field = (f: string, msg: string) => [
 ]
 const lotE = { code: 'lot', fields: [] } as unknown as MesEntity
 
-describe('mesErrorMessage：业务错误码', () => {
+describe('mesErrorMessage：N5 对象格式', () => {
+  it('on_hold / lot_status 按 code 识别，lot_status 用 action 与状态生成提示', () => {
+    expect(
+      mesErrorMessage(
+        axErr(422, {
+          code: 'on_hold',
+          message: 'lot is on hold',
+          action: 'move_out',
+        }),
+        lotE
+      )
+    ).toBe(t('mes.err.code.on_hold'))
+    expect(
+      mesErrorMessage(
+        axErr(422, {
+          code: 'lot_status',
+          action: 'track_in',
+          lot_status: 'waiting',
+        }),
+        undefined
+      )
+    ).toBe(
+      t('mes.err.code.lot_status_stage', {
+        stage: t('mes.exec.stage.track_in'),
+        status: enumLabel('lot_status', 'waiting'),
+      })
+    )
+    expect(
+      mesErrorMessage(
+        axErr(422, {
+          code: 'lot_status',
+          action: 'hold',
+          lot_status: 'scrapped',
+        }),
+        lotE
+      )
+    ).toBe(
+      t('mes.err.code.lot_status_is', {
+        status: enumLabel('lot_status', 'scrapped'),
+      })
+    )
+    expect(mesErrorMessage(axErr(422, { code: 'lot_status' }), lotE)).toBe(
+      t('mes.err.code.lot_status')
+    )
+  })
+
+  it('merge_source_invalid 优先按 code，即使 message 不含关键词', () => {
+    expect(
+      mesErrorMessage(
+        axErr(422, {
+          code: 'merge_source_invalid',
+          message: 'bad sources',
+          duplicates: ['L2'],
+          includes_target: false,
+        }),
+        lotE
+      )
+    ).toBe(t('mes.err.code.merge_source_invalid'))
+  })
+
+  it('幂等键错误码只认 detail.code，裸字符串不当作错误码', () => {
+    expect(mesCodeMessage(axErr(409, 'idempotency_in_progress'))).toBeNull()
+    expect(
+      mesCodeMessage(axErr(409, { code: 'idempotency_in_progress' }))
+    ).toBe(t('mes.err.code.idempotency_in_progress'))
+  })
+})
+
+describe('mesErrorMessage：旧格式兜底（后端按 N5 落地后可删）', () => {
   it('on_hold（422 字段错误）', () => {
     const e = axErr(
       422,
@@ -73,7 +141,7 @@ describe('mesErrorMessage：业务错误码', () => {
       'lot_status: sources include the target lot',
     ])
       expect(mesErrorMessage(axErr(422, field('lot_status', msg)), lotE)).toBe(
-        t('mes.err.code.merge_sources')
+        t('mes.err.code.merge_source_invalid')
       )
   })
 
@@ -83,9 +151,12 @@ describe('mesErrorMessage：业务错误码', () => {
     [409, 'idempotency_in_progress'],
     [422, 'idempotency_key_mismatch'],
     [422, 'idempotency_key_reused'],
-  ])('%i %s：字符串或 {code} 形式都能识别', (status, code) => {
+    [422, 'merge_source_invalid'],
+  ])('%i %s：按 detail.code 识别（N5）', (status, code) => {
     const want = t(`mes.err.code.${code}`)
-    expect(mesErrorMessage(axErr(status, code), lotE)).toBe(want)
+    expect(mesErrorMessage(axErr(status, { code, message: 'x' }), lotE)).toBe(
+      want
+    )
     expect(mesErrorMessage(axErr(status, { code, items: [] }), undefined)).toBe(
       want
     )
@@ -119,7 +190,7 @@ describe('mesErrorMessage：业务错误码', () => {
       'idempotency_in_progress',
       'idempotency_key_mismatch',
       'idempotency_key_reused',
-      'merge_sources',
+      'merge_source_invalid',
     ]
     for (const l of [zh, en, ja])
       for (const k of keys)

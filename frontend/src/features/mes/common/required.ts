@@ -3,6 +3,7 @@ import { AxiosError } from 'axios'
 import i18n, { t } from '@/i18n'
 import { errorMessage } from '@/lib/api/client'
 import type { MesEntity, MesField } from '@/lib/api/mes/common'
+import { TERMINAL_STATUSES } from '@/features/mes/execution/lot-rules'
 import { entityLabel, enumLabel, fieldLabel } from './labels'
 
 type V = Record<string, unknown>
@@ -67,12 +68,16 @@ const KNOWN: Record<string, string> = {
     'mes.err.productNeedsDefaultRoute',
 }
 
-/** 后端业务错误码（decisions P01/P02/P14/P16、lot-state-machine v0.2）。 */
+/**
+ * 后端业务错误码（decisions N5：`detail: {code, message?, ...}`；
+ * P01/P02/P14/P16、lot-state-machine v0.2）。
+ */
 export const MES_ERROR_CODES = [
   'on_hold',
   'lot_status',
   'lot_busy',
   'batch_blocked',
+  'merge_source_invalid',
   'idempotency_in_progress',
   'idempotency_key_mismatch',
   'idempotency_key_reused',
@@ -81,12 +86,35 @@ type MesErrorCode = (typeof MES_ERROR_CODES)[number]
 const isCode = (x: unknown): x is MesErrorCode =>
   typeof x === 'string' && (MES_ERROR_CODES as readonly string[]).includes(x)
 
-/** 合批源列表重复或包含目标（P14）：后端以 lot_status / source_lot_ids 字段返回。 */
+const stageLabel = (action: string) =>
+  i18n.exists(`mes.exec.stage.${action}`)
+    ? t(`mes.exec.stage.${action}`)
+    : action
+
+/** lot_status：有动作与当前状态时给出具体句子，否则通用提示。 */
+function lotStatusMessage(action?: unknown, status?: unknown) {
+  const st = typeof status === 'string' ? status : ''
+  if (st && (TERMINAL_STATUSES as readonly string[]).includes(st))
+    return t('mes.err.code.lot_status_is', {
+      status: enumLabel('lot_status', st),
+    })
+  if (st && typeof action === 'string' && action)
+    return t('mes.err.code.lot_status_stage', {
+      stage: stageLabel(action),
+      status: enumLabel('lot_status', st),
+    })
+  return t('mes.err.code.lot_status')
+}
+
+/**
+ * 兜底：旧格式的合批源校验原文（"duplicate lots or the target lot itself"）。
+ * 后端按 N5 全部改为 `merge_source_invalid` 后可删除本正则及其使用处。
+ */
 const MERGE_SOURCES = /duplicate|repeated|target|重复|目标/i
 
 /**
- * 字段级错误（422 `[{loc: ['body', 字段], msg}]`）中的业务错误码翻译。
- * 只处理 on_hold、lot_status 与合批源校验；其他字段返回 null 交给原逻辑。
+ * 兜底：旧格式字段级错误（422 `[{loc: ['body', 字段], msg}]`）中的业务错误翻译。
+ * 后端按 N5 统一为 `detail: {code}` 后可删除。
  */
 function fieldCodeMessage(name: string, rest: string): string | null {
   if (name === 'on_hold') return t('mes.err.code.on_hold')
@@ -94,40 +122,29 @@ function fieldCodeMessage(name: string, rest: string): string | null {
     (name === 'lot_status' || name === 'source_lot_ids') &&
     MERGE_SOURCES.test(rest)
   )
-    return t('mes.err.code.merge_sources')
+    return t('mes.err.code.merge_source_invalid')
   if (name !== 'lot_status') return null
   const stage = /^cannot (\w+) a (\w+) lot$/.exec(rest)
-  if (stage)
-    return t('mes.err.code.lot_status_stage', {
-      stage: i18n.exists(`mes.exec.stage.${stage[1]}`)
-        ? t(`mes.exec.stage.${stage[1]}`)
-        : stage[1],
-      status: enumLabel('lot_status', stage[2]),
-    })
+  if (stage) return lotStatusMessage(stage[1], stage[2])
   const is = /^lot is (\w+)$/.exec(rest)
-  if (is)
-    return t('mes.err.code.lot_status_is', {
-      status: enumLabel('lot_status', is[1]),
-    })
+  if (is) return lotStatusMessage(undefined, is[1])
   return t('mes.err.code.lot_status')
 }
 
 /**
- * 整体错误码翻译：`detail` 为错误码字符串或 `{code}` 对象时
- * （lot_busy 409、batch_blocked 409、幂等键 409/422 等）。
+ * 业务错误码翻译：按 `detail.code` 识别（N5）。
+ * `lot_status` 会用 `detail.action` / `detail.lot_status` 生成具体提示。
  *
  * @returns 本地化消息；不是已知错误码时为 null
  */
 export function mesCodeMessage(err: unknown): string | null {
   if (!(err instanceof AxiosError) || !err.response) return null
   const d = (err.response.data as { detail?: unknown })?.detail
-  const code =
-    typeof d === 'string'
-      ? d
-      : d && typeof d === 'object' && !Array.isArray(d)
-        ? (d as { code?: unknown }).code
-        : null
-  return isCode(code) ? t(`mes.err.code.${code}`) : null
+  if (!d || typeof d !== 'object' || Array.isArray(d)) return null
+  const { code, action, lot_status } = d as Record<string, unknown>
+  if (!isCode(code)) return null
+  if (code === 'lot_status') return lotStatusMessage(action, lot_status)
+  return t(`mes.err.code.${code}`)
 }
 
 /** 用实体字段标签翻译 MES 422 错误详情（"field: message"）。 */
