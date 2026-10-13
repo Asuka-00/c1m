@@ -44,6 +44,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-oee-report", "Equipment OEE|设备 OEE|設備 OEE"),
         ("mes-lot-history", "Lot History & Trace|批次履历与追溯|ロット履歴・トレース"),
         ("mes-check_log", "Check Log|卡控记录|チェック記録"),
+        ("mes-lot_recipe_run", "Recipe Run|配方执行记录|レシピ実行記録"),
     ],
     "g-planning": [
         ("mes-work_order", "Work Order|工单|作業指示"),

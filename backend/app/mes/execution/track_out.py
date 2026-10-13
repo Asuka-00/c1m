@@ -19,6 +19,7 @@ from app.mes.execution.consumption import _consume
 from app.mes.execution.context import build_ctx
 from app.mes.execution.events import OOS, notify_lot
 from app.mes.execution.hold import default_reason, hold_lot
+from app.mes.execution.recipe_run import close_run
 from app.mes.execution.stage_common import _brief, _guard, _ov, _result
 from app.mes.lot.service import history, lock_lot, units
 from app.mes.quality.service import out_of_spec
@@ -275,6 +276,7 @@ def track_out(
         pending_rework=pending and bool(ctx.step["rework_route_id"]),
     )
     lot.update(lot_status=status, qty=qty)
+    close_run(s, tid, lot, user)
     eq = one(s, tid, "equipment", lot["equipment_id"])
     e10 = e10_apply(s, tid, eq, "track_out", user, lot) if eq else None
     # 腔体：同腔体仍有其他运行中批次时不迁移

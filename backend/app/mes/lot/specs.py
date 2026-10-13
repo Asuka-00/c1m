@@ -553,6 +553,55 @@ register(
 
 register(
     Entity(
+        "lot_recipe_run",
+        "exec",
+        "Recipe run|配方执行记录|レシピ実行記録",
+        [
+            F("lot", "ref", "Lot|批次|ロット", required=True, ref="lot", cascade=True),
+            F("route_step", "ref", ref="route_step", list=False, filter=False),
+            F("operation", "ref", ref="operation"),
+            F("equipment", "ref", "Equipment|设备|設備", ref="equipment"),
+            F("recipe", "ref", "Recipe|配方|レシピ", ref="recipe"),
+            F("recipe_version", "int", "Recipe version|配方版本|レシピ版数"),
+            F(
+                "eqp_recipe",
+                "str",
+                "Equipment recipe|设备端配方|装置レシピ",
+                max_length=200,
+                search=True,
+            ),
+            F(
+                "chambers",
+                "str",
+                "Chambers|腔体|チャンバー",
+                max_length=300,
+                list=False,
+            ),
+            F("params", "json", "Parameters|参数|パラメータ", list=False),
+            F(
+                "param_specs",
+                "json",
+                "Parameter specs|参数规格|パラメータ規格",
+                list=False,
+            ),
+            F("qty", "int", "Qty|数量|数量"),
+            F("track_in_at", "datetime", "Track in|上机时间|着工日時"),
+            F("track_out_at", "datetime", "Track out|下机时间|完了日時"),
+            F("username", "str", "User|用户|ユーザー", max_length=255, search=True),
+        ],
+        phase=6,
+        has_code=False,
+        readonly=True,
+        icon="FileCode",
+        order=2,
+        sort_default="track_in_at",
+        label_field="track_in_at",
+    ),
+)
+
+
+register(
+    Entity(
         "lot_genealogy",
         "exec",
         "Lot genealogy|批次谱系|ロット系譜",

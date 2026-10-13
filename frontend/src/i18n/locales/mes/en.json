@@ -50,6 +50,7 @@
       "wafer": "Wafer / unit",
       "lot_hold": "Lot hold",
       "lot_history": "Lot history",
+      "lot_recipe_run": "Recipe run",
       "lot_genealogy": "Lot genealogy",
       "work_order": "Work order",
       "operation": "Operation / step",
@@ -447,6 +448,22 @@
         "details": "Details",
         "username": "User",
         "at": "Time"
+      },
+      "lot_recipe_run": {
+        "lot": "Lot",
+        "route_step": "Route step",
+        "operation": "Operation",
+        "equipment": "Equipment",
+        "recipe": "Recipe",
+        "recipe_version": "Recipe version",
+        "eqp_recipe": "Equipment recipe",
+        "chambers": "Chambers",
+        "params": "Parameters",
+        "param_specs": "Parameter specs",
+        "qty": "Qty",
+        "track_in_at": "Track in",
+        "track_out_at": "Track out",
+        "username": "User"
       },
       "lot_genealogy": {
         "parent_lot": "Parent / source lot",
@@ -1285,6 +1302,7 @@
     "mes-oee-report": "Equipment OEE",
     "mes-lot-history": "Lot History & Trace",
     "mes-check_log": "Check Log",
+    "mes-lot_recipe_run": "Recipe Run",
     "mes-work_order": "Work Order",
     "mes-lot-start": "Lot Start",
     "mes-receipt": "Finished Goods Receipt",

@@ -18,6 +18,7 @@ from app.mes.execution.checks import service as ck
 from app.mes.execution.constants import NEXT_STAGE
 from app.mes.execution.context import build_ctx
 from app.mes.execution.qtime_actions import _qtime_actions
+from app.mes.execution.recipe_run import open_run
 from app.mes.execution.rework import rework_limit_result
 from app.mes.execution.stage_common import _brief, _guard, _ov, _relocate, _result
 from app.mes.execution.track_out import track_out
@@ -152,6 +153,7 @@ def track_in(
         stage_at=now(),
     )
     lot.update(lot_status="running", equipment_id=eid)
+    open_run(ctx, user)
     e10 = e10_apply(s, tid, eq, "track_in", user, lot) if eq else None
     for c in ctx.chambers:
         e10_apply(s, tid, c, "track_in", user, lot)

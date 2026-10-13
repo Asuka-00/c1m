@@ -96,3 +96,41 @@ def test_chamber_select_checks_and_e10(client: TestClient, db: Session) -> None:
     f.sql("UPDATE mes_check_rule SET severity = 'off'")
     f.stage(c, "move_in", equipment_id=f.eq["id"])
     f.stage(c, "track_in", equipment_id=f.eq["id"])
+
+
+def test_recipe_run_snapshot(client: TestClient, db: Session) -> None:
+    from app.mes.execution.tests.test_exec import Line
+
+    f = Line(client, db)
+    f.sql(
+        """UPDATE mes_recipe SET body = '{"temp": 950, "time_s": 60}' WHERE id = :r""",
+        r=f.recipe["id"],
+    )
+    f.m.post(
+        "param_spec",
+        {
+            "code": "TEMP",
+            "name": "temp",
+            "recipe_id": f.recipe["id"],
+            "uom_id": f.m.fx("uom"),
+            "target": 950,
+            "lsl": 940,
+            "usl": 960,
+        },
+    )
+    (a,) = f.start(1)
+    f.stage(a, "move_in", equipment_id=f.eq["id"])
+    f.stage(a, "track_in", equipment_id=f.eq["id"], recipe_id=f.recipe["id"])
+    # 之后改动配方参数不影响已记录的快照
+    f.sql(
+        """UPDATE mes_recipe SET body = '{"temp": 999}' WHERE id = :r""",
+        r=f.recipe["id"],
+    )
+    run = f.m.list("lot_recipe_run", lot=a["id"])["data"]
+    assert len(run) == 1 and run[0]["track_out_at"] is None
+    assert run[0]["params"] == {"temp": 950, "time_s": 60}
+    assert run[0]["recipe_version"] == f.recipe["version"]
+    assert [p["code"] for p in run[0]["param_specs"]] == ["TEMP"]
+    f.stage(a, "track_out")
+    run = f.m.list("lot_recipe_run", lot=a["id"])["data"]
+    assert run[0]["track_out_at"] is not None

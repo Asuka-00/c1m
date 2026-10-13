@@ -50,6 +50,7 @@
       "wafer": "ウェーハ・ユニット",
       "lot_hold": "ロットホールド",
       "lot_history": "ロット履歴",
+      "lot_recipe_run": "レシピ実行記録",
       "lot_genealogy": "ロット系譜",
       "work_order": "作業指示",
       "operation": "工程",
@@ -447,6 +448,22 @@
         "details": "詳細",
         "username": "ユーザー",
         "at": "日時"
+      },
+      "lot_recipe_run": {
+        "lot": "ロット",
+        "route_step": "ルートステップ",
+        "operation": "工程",
+        "equipment": "設備",
+        "recipe": "レシピ",
+        "recipe_version": "レシピ版数",
+        "eqp_recipe": "装置レシピ",
+        "chambers": "チャンバー",
+        "params": "パラメータ",
+        "param_specs": "パラメータ規格",
+        "qty": "数量",
+        "track_in_at": "着工日時",
+        "track_out_at": "完了日時",
+        "username": "ユーザー"
       },
       "lot_genealogy": {
         "parent_lot": "親・元ロット",
@@ -1285,6 +1302,7 @@
     "mes-oee-report": "設備 OEE",
     "mes-lot-history": "ロット履歴・トレース",
     "mes-check_log": "チェック記録",
+    "mes-lot_recipe_run": "レシピ実行記録",
     "mes-work_order": "作業指示",
     "mes-lot-start": "ロット投入",
     "mes-receipt": "完成品入庫",

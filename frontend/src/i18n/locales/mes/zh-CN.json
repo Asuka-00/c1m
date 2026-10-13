@@ -50,6 +50,7 @@
       "wafer": "晶圆 / 单元",
       "lot_hold": "批次 Hold",
       "lot_history": "批次履历",
+      "lot_recipe_run": "配方执行记录",
       "lot_genealogy": "批次谱系",
       "work_order": "工单",
       "operation": "工序",
@@ -447,6 +448,22 @@
         "details": "详情",
         "username": "用户",
         "at": "时间"
+      },
+      "lot_recipe_run": {
+        "lot": "批次",
+        "route_step": "流程步骤",
+        "operation": "工序",
+        "equipment": "设备",
+        "recipe": "配方",
+        "recipe_version": "配方版本",
+        "eqp_recipe": "设备端配方",
+        "chambers": "腔体",
+        "params": "参数",
+        "param_specs": "参数规格",
+        "qty": "数量",
+        "track_in_at": "上机时间",
+        "track_out_at": "下机时间",
+        "username": "用户"
       },
       "lot_genealogy": {
         "parent_lot": "母批 / 来源批",
@@ -1285,6 +1302,7 @@
     "mes-oee-report": "设备 OEE",
     "mes-lot-history": "批次履历与追溯",
     "mes-check_log": "卡控记录",
+    "mes-lot_recipe_run": "配方执行记录",
     "mes-work_order": "工单",
     "mes-lot-start": "投产",
     "mes-receipt": "完工入库",
