@@ -1,6 +1,6 @@
 /** MES 表单必填规则与 422 错误消息翻译（与后端 required / required_when 一致）。 */
 import { AxiosError } from 'axios'
-import { t } from '@/i18n'
+import i18n, { t } from '@/i18n'
 import { errorMessage } from '@/lib/api/client'
 import type { MesEntity, MesField } from '@/lib/api/mes/common'
 import { entityLabel, enumLabel, fieldLabel } from './labels'
@@ -99,7 +99,9 @@ function fieldCodeMessage(name: string, rest: string): string | null {
   const stage = /^cannot (\w+) a (\w+) lot$/.exec(rest)
   if (stage)
     return t('mes.err.code.lot_status_stage', {
-      stage: t(`mes.exec.stage.${stage[1]}`),
+      stage: i18n.exists(`mes.exec.stage.${stage[1]}`)
+        ? t(`mes.exec.stage.${stage[1]}`)
+        : stage[1],
       status: enumLabel('lot_status', stage[2]),
     })
   const is = /^lot is (\w+)$/.exec(rest)
