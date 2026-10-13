@@ -39,3 +39,6 @@ from app.mes.lot.state import (
 from app.mes.lot.state import (
     lock_lots as lock_lots,
 )
+from app.mes.lot.state import (
+    lot_error as lot_error,
+)

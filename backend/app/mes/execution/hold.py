@@ -243,6 +243,8 @@ def list_holds(
     product_id: Any = None,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
+    *,
+    include_terminal: bool = False,
 ) -> list[Row]:
     """Hold 列表（Hold 管理页）：默认仅生效中，可切换历史（已解除）或全部。
 
@@ -255,9 +257,10 @@ def list_holds(
         product_id: 产品筛选。
         date_from: Hold 时间下限（含）。
         date_to: Hold 时间上限（不含）。
+        include_terminal: 是否包含终态批次的 Hold（默认排除，P15）。
 
     Returns:
-        每条 ``{id, lot_id, lot, product, step_seq, reason, reason_name, source,
+        每条 ``{id, lot_id, lot, lot_status, product, step_seq, reason, reason_name, source,
         hold_type, is_active, held_at, held_by, hours, comment, released_at,
         released_by, release_reason, release_comment}``，按 Hold 时间倒序。
     """
@@ -284,6 +287,8 @@ def list_holds(
         lot = one(s, tid, "lot", h["lot_id"])
         if not lot or (product_id and str(lot["product_id"]) != str(product_id)):
             continue
+        if not include_terminal and lot["lot_status"] in TERMINAL:
+            continue
         rc = one(s, tid, "reason_code", h["reason_id"])
         rr = h["release_reason_id"] and one(
             s, tid, "reason_code", h["release_reason_id"]
@@ -296,6 +301,7 @@ def list_holds(
                 "id": str(h["id"]),
                 "lot_id": str(lot["id"]),
                 "lot": lot["code"],
+                "lot_status": lot["lot_status"],
                 "product": pr and pr["code"],
                 "step_seq": st and st["seq"],
                 "reason": rc and rc["code"],

@@ -28,7 +28,7 @@ from app.mes.execution.sm_rules import (
 )
 from app.mes.execution.stage_common import _brief, _ov
 from app.mes.execution.stages import LOT
-from app.mes.lot.service import check_transition, history, lock_lots, units
+from app.mes.lot.service import check_transition, history, lock_lots, lot_error, units
 
 Row = dict[str, Any]
 
@@ -139,14 +139,16 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
     ids = [str(x) for x in body.get("source_lot_ids") or []]
     if not ids:
         raise http_422([("source_lot_ids", "source_lot_ids: pick lots to merge")])
-    if len(set(ids)) != len(ids) or str(lot_id) in ids:  # P14：不静默去重
-        raise http_422(
-            [
-                (
-                    "source_lot_ids",
-                    "source_lot_ids: duplicate lots or the target lot itself",
-                )
-            ]
+    dup = sorted({x for x in ids if ids.count(x) > 1})
+    if dup or str(lot_id) in ids:  # P14：不静默去重
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "merge_source_invalid",
+                "message": "source_lot_ids: duplicate lots or the target lot itself",
+                "duplicates": dup,
+                "includes_target": str(lot_id) in ids,
+            },
         )
     src_ids: list[uuid.UUID] = []
     for x in ids:
@@ -172,14 +174,14 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
     for src in sorted(srcs, key=lambda x: x["id"]):
         check_transition(src, "merge_source")
         if src["lot_status"] != target["lot_status"]:
-            raise http_422(
-                [
-                    (
-                        "lot_status",
-                        f"lot_status: {src['code']} is {src['lot_status']}, "
-                        f"target is {target['lot_status']}",
-                    )
-                ]
+            raise lot_error(
+                "lot_status",
+                f"{src['code']} is {src['lot_status']}, "
+                f"target is {target['lot_status']}",
+                src,
+                action="merge_source",
+                lot_status=src["lot_status"],
+                target_status=target["lot_status"],
             )
     rule = rule_for(s, tid, target)
     errs: list[str] = []

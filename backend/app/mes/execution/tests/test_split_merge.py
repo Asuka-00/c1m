@@ -199,7 +199,7 @@ def test_merge_back_and_terminate(client: TestClient, db: Session) -> None:
     (ch,) = split(f, lot, [{"unit_ids": uid(f, lot, 0, 1)}])["children"]
     cands = f.ctx(lot)["sm"]["candidates"]
     assert [c["code"] for c in cands] == [ch["code"]] and cands[0]["problems"] == []
-    assert "itself" in _msgs(merge(f, lot, [lot], 422))  # P14
+    assert merge(f, lot, [lot], 422)["detail"]["code"] == "merge_source_invalid"  # P14
     r = merge(f, lot, [ch], comment="rejoin")
     assert r["lot"]["qty"] == 6 and r["merged"][0]["code"] == ch["code"]
     c = f.lot(ch)

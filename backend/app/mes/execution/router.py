@@ -138,6 +138,7 @@ def holds_list(
     page_size: int = Query(default=20, ge=1, le=5000),
     sort_by: str = "held_at",
     sort_order: Literal["asc", "desc"] = "desc",
+    include_terminal: bool = False,
 ) -> Any:
     """Hold 管理页列表：服务端筛选、搜索、排序与分页，返回 ``{data, count}``。"""
     _need(ctx, "mes.exec:read")
@@ -150,6 +151,7 @@ def holds_list(
         product_id,
         date_from,
         date_to,
+        include_terminal=include_terminal,
     )
     if reason:
         rows = [r for r in rows if r["reason"] == reason]

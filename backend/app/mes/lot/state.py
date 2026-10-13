@@ -16,7 +16,6 @@ from sqlmodel import Session
 
 from app.core.spec.base import conn
 from app.core.spec.engine import TABLES
-from app.core.spec.errors import http_422
 
 Row = dict[str, Any]
 
@@ -83,6 +82,20 @@ RULES: dict[str, Rule] = {
 }
 
 
+def lot_error(
+    code: str, message: str, lot: Row | None = None, **extra: Any
+) -> HTTPException:
+    """批次业务错误（N5）：``detail = {code, message, lot_id?, lot_code?, ...}``，422。"""
+    d: Row = {"code": code, "message": message}
+    if lot is not None:
+        d.update(
+            lot_id=str(lot.get("id")) if lot.get("id") else None,
+            lot_code=lot.get("code"),
+        )
+    d.update(extra)
+    return HTTPException(status_code=422, detail=d)
+
+
 def check(lot: Row, action: str, to: str | None = None) -> LotStatus:
     """校验动作对批次是否合法，返回目标状态（不碰数据库）。
 
@@ -95,26 +108,27 @@ def check(lot: Row, action: str, to: str | None = None) -> LotStatus:
         目标状态；状态不变的动作返回当前状态。
 
     Raises:
-        HTTPException: 非法转移（422，字段 lot_status / on_hold）。
+        HTTPException: 非法转移（422，detail.code = lot_status / on_hold）。
         KeyError: 未定义的动作（编程错误）。
     """
     rule = RULES[action]
     cur = str(lot["lot_status"])
+    ctx = {"action": action, "lot_status": cur}
     if cur not in rule.from_:
         msg = f"lot is {cur}" if cur in TERMINAL else f"cannot {action} a {cur} lot"
-        raise http_422([("lot_status", f"lot_status: {msg}")])
+        raise lot_error("lot_status", msg, lot, **ctx)
     if lot.get("on_hold") and not rule.allow_hold:
-        raise http_422([("on_hold", "on_hold: lot is on hold; release it first")])
+        raise lot_error("on_hold", "lot is on hold; release it first", lot, **ctx)
     if not rule.targets:
         if to is not None and to != cur:
-            raise http_422([("lot_status", f"lot_status: {action} cannot go to {to}")])
+            raise lot_error("lot_status", f"{action} cannot go to {to}", lot, **ctx)
         return S(cur)
     if to is None:
         # 多目标且未指定时只校验起始状态与 Hold，目标由调用方随后再校验
         return next(iter(rule.targets)) if len(rule.targets) == 1 else S(cur)
     if to not in rule.targets:
-        raise http_422(
-            [("lot_status", f"lot_status: cannot {action} a {cur} lot to {to}")]
+        raise lot_error(
+            "lot_status", f"cannot {action} a {cur} lot to {to}", lot, **ctx
         )
     return S(to)
 

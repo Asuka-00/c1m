@@ -272,6 +272,8 @@ class Line:
 def _msgs(r: Any) -> str:
     d = r["detail"]
     if isinstance(d, dict):
+        if "results" not in d:  # N5：{code, message, ...}
+            return f"{d.get('code')}: {d.get('message', '')}"
         return " ".join(x["message"] for x in d["results"])
     return " ".join(x["msg"] for x in d)
 

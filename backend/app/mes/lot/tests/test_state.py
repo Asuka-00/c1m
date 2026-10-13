@@ -341,7 +341,7 @@ def test_matrix(
     with pytest.raises(HTTPException) as e:
         check(lot, act)
     assert e.value.status_code == 422
-    assert e.value.detail[0]["loc"][-1] == expect  # P01
+    assert e.value.detail["code"] == expect  # P01 / N5
 
 
 def test_u01_track_out_targets() -> None:

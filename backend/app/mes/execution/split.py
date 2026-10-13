@@ -27,7 +27,7 @@ from app.mes.execution.sm_rules import (
 )
 from app.mes.execution.stage_common import _brief, _ov
 from app.mes.execution.stages import LOT
-from app.mes.lot.service import check_transition, history, lock_lot, units
+from app.mes.lot.service import check_transition, history, lock_lot, lot_error, units
 
 Row = dict[str, Any]
 
@@ -95,7 +95,9 @@ def split(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
         qtys.append(len(ids))
     remain = lot["qty"] - sum(qtys)
     if remain < 1:  # 不能拆完，母批至少保留 1（P13）
-        raise http_422([("lot_status", "lot_status: parent lot must keep at least 1")])
+        raise lot_error(
+            "lot_status", "parent lot must keep at least 1", lot, action="split"
+        )
     # 规则校验（不可强制放行）
     errs: list[str] = []
     if lot["lot_status"] not in SPLIT_STATES:

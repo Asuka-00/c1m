@@ -249,8 +249,14 @@ def test_b11_b13_merge_duplicate_or_self_rejected(
     """B11 / B13（P14）：源含目标或重复 id → 422，不静默去重。"""
     f = _line(client, db)
     a, b = f.start(2, 2)
-    f.post(f"{EXEC}/lots/{a['id']}/merge", {"source_lot_ids": [b["id"], b["id"]]}, 422)
-    f.post(f"{EXEC}/lots/{a['id']}/merge", {"source_lot_ids": [a["id"]]}, 422)
+    url = f"{EXEC}/lots/{a['id']}/merge"
+    d = f.post(url, {"source_lot_ids": [b["id"], b["id"]]}, 422)["detail"]
+    assert d["code"] == "merge_source_invalid" and d["duplicates"] == [b["id"]]
+    assert not d["includes_target"] and d["message"]
+    d = f.post(url, {"source_lot_ids": [b["id"], a["id"]]}, 422)["detail"]  # B12
+    assert d["code"] == "merge_source_invalid" and d["includes_target"]
+    d = f.post(url, {"source_lot_ids": [a["id"]]}, 422)["detail"]  # B11
+    assert d["code"] == "merge_source_invalid"
     assert f.lot(b)["lot_status"] == "waiting" and f.lot(a)["qty"] == 2
 
 
@@ -293,7 +299,9 @@ def test_p15_scrap_to_zero_keeps_hold(client: TestClient, db: Session) -> None:
 
 
 def _field(r: Any) -> str:
-    return str(r["detail"][0]["loc"][-1])
+    d = r["detail"]
+    assert d["message"]  # N5：{code, message, ...}
+    return str(d["code"])
 
 
 def test_b08_merge_different_status_rejected(client: TestClient, db: Session) -> None:
@@ -333,7 +341,7 @@ def test_n4_target_first_then_sources_by_id(client: TestClient, db: Session) -> 
     _hold(f, hi)
     f.stage(lo, "move_in", equipment_id=f.eq["id"])
     r = merge(f, t_, [hi, lo], 422)  # 请求里高 id 在前，仍先报低 id 源
-    assert _field(r) == "lot_status" and lo["code"] in _msgs(r)
+    assert _field(r) == "lot_status" and r["detail"]["lot_code"] == lo["code"]
     _hold(f, t_)
     assert _field(merge(f, t_, [hi, lo], 422)) == "on_hold"  # 目标优先
 
@@ -354,7 +362,7 @@ def test_x03_duplicate_track_out_without_key(client: TestClient, db: Session) ->
     f.stage(lot, "track_in", equipment_id=f.eq["id"])
     f.stage(lot, "track_out")
     r = f.stage(lot, "track_out", 422)
-    assert r["detail"][0]["loc"][-1] == "lot_status"
+    assert r["detail"]["code"] == "lot_status"
     assert f.lot(lot)["lot_status"] == "tracked_out"
 
 
@@ -367,3 +375,43 @@ def test_ik01_same_key_returns_first_result(client: TestClient, db: Session) -> 
     h = {**f.m.h, "Idempotency-Key": "k1"}
     first = f.post(f"{EXEC}/lots/{lot['id']}/track_out", {}, 200, h)
     assert f.post(f"{EXEC}/lots/{lot['id']}/track_out", {}, 200, h) == first
+
+
+def test_hold_list_excludes_terminal_by_default(
+    client: TestClient, db: Session
+) -> None:
+    """N6：Hold 列表默认排除终态批次；include_terminal=true 包含；返回 lot_status，count 一致。"""
+    f = Line(client, db)
+    a, b = f.start(1, 1)
+    _hold(f, a)
+    _hold(f, b)
+    f.sql("UPDATE mes_lot SET lot_status='scrapped' WHERE id=:i", i=b["id"])
+
+    def get(**p: Any) -> Any:
+        r = f.c.get(f"{EXEC}/holds", headers=f.m.h, params=p)
+        assert r.status_code == 200, r.text
+        return r.json()
+
+    r = get()
+    assert r["count"] == len(r["data"]) == 1
+    assert r["data"][0]["lot"] == a["code"] and r["data"][0]["lot_status"] == "waiting"
+    r = get(include_terminal="true")
+    assert r["count"] == 2
+    assert {x["lot"]: x["lot_status"] for x in r["data"]} == {
+        a["code"]: "waiting",
+        b["code"]: "scrapped",
+    }
+    r = get(include_terminal="true", page_size=1)
+    assert r["count"] == 2 and len(r["data"]) == 1
+
+
+def test_n5_error_shapes(client: TestClient, db: Session) -> None:
+    """N5：本步新增 / 改动的错误为 detail {code, message, ...}。"""
+    f = Line(client, db)
+    (lot,) = f.start(1)
+    d = f.stage(lot, "track_in", 422)["detail"]
+    assert d["code"] == "lot_status" and d["action"] == "track_in"
+    assert d["lot_status"] == "waiting" and d["lot_id"] == lot["id"] and d["message"]
+    _hold(f, lot)
+    d = f.stage(lot, "move_in", 422, equipment_id=f.eq["id"])["detail"]
+    assert d["code"] == "on_hold" and d["message"]
