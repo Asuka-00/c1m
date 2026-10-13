@@ -1,10 +1,9 @@
-/** 角色管理组件（平台 / 租户共用）。 */
+/** 角色管理组件（平台 / 租户共用）：列表 + 含嵌入权限树的新增 / 编辑对话框。 */
 import { useQuery } from '@tanstack/react-query'
-import { t } from '@/i18n'
+import { fmtDateTime, t } from '@/i18n'
 import { Plus } from 'lucide-react'
 import { api, type Role } from '@/lib/api'
 import { useApiMutation, useCan, useCurrentTenant } from '@/lib/api/hooks'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   ConfirmDialog,
@@ -15,62 +14,79 @@ import {
   useCrudState,
   useListParams,
   type FilterDef,
-  searchFilter,
+  type Values,
 } from '@/components/crud'
+import { PermissionTreeSelect } from '../permission-tree-select'
+import { StatusBadge } from '../status'
+import { statusFilter, statusOptions } from '../status-options'
 
-/** 平台角色（/roles）或租户角色（/tenants/{id}/roles）的 CRUD。 */
+/** 平台角色（/platform/roles）或租户角色（/tenants/{id}/roles）的 CRUD；
+ *  权限在对话框内的三态权限树中勾选（租户仅显示租户作用域权限）。 */
 export function RolesManager({ scope }: { scope: 'platform' | 'tenant' }) {
   const can = useCan()
   const current = useCurrentTenant()
   const tid = current?.tenant.id
-  const filters: FilterDef[] = [searchFilter(t('table.searchRoles'))]
+  const platform = scope === 'platform'
+  const filters: FilterDef[] = [
+    { type: 'text', name: 'code', placeholder: t('rbac.roleCode') },
+    { type: 'text', name: 'title', placeholder: t('rbac.roleName') },
+    statusFilter(),
+  ]
   const lp = useListParams(filters)
   const q = useQuery({
-    queryKey:
-      scope === 'platform'
-        ? ['roles', lp.query]
-        : ['tenant-roles', tid, lp.query],
+    queryKey: platform ? ['roles', lp.query] : ['tenant-roles', tid, lp.query],
     queryFn: () =>
-      scope === 'platform'
-        ? api.roles.list(lp.query)
-        : api.tenants.roles(tid!, lp.query),
-    enabled: scope === 'platform' || !!tid,
+      platform ? api.roles.list(lp.query) : api.tenants.roles(tid!, lp.query),
+    enabled: platform || !!tid,
   })
-  const writable =
-    scope === 'platform' ? can('roles:write') : can('tenant:manage')
-  const keys = [['roles'], ['tenant-roles']]
   const s = useCrudState<Role>()
-  const create = useApiMutation(
-    (b: { name: string; description: string }) =>
-      scope === 'platform'
-        ? api.roles.create(b)
-        : api.tenants.createRole(tid!, b),
+  const tree = useQuery({
+    queryKey: ['permission-tree', 'role', platform, tid],
+    queryFn: () =>
+      platform ? api.permissions.tree() : api.tenants.permissionTree(tid!),
+    enabled: s.formOpen && (platform || !!tid),
+  })
+  const builtin = (r: Role) =>
+    (platform ? ['admin', 'user'] : ['owner']).includes(r.name)
+  const locked = (r: Role) => !platform && r.name === 'owner'
+  const writable = platform ? can('roles:write') : can('tenant:manage')
+  const keys = [['roles'], ['tenant-roles'], ['menus']]
+  const save = useApiMutation(
+    async (v: Values) => {
+      const codes = v.codes as string[]
+      const b = {
+        name: v.name as string,
+        title: (v.title as string) || null,
+        description: (v.description as string) || null,
+        status: v.status as string,
+      }
+      const e = s.editing
+      if (!e)
+        return platform
+          ? api.roles.create({ ...b, permission_codes: codes })
+          : api.tenants.createRole(tid!, { ...b, permission_codes: codes })
+      if (platform) {
+        await api.roles.update(e.id, b)
+        return api.roles.setPermissions(e.id, codes)
+      }
+      await api.tenants.updateRole(tid!, e.id, b)
+      return locked(e) ? e : api.tenants.setRolePermissions(tid!, e.id, codes)
+    },
     keys,
-    t('roles.created')
-  )
-  const update = useApiMutation(
-    (b: { id: string; name: string; description: string }) =>
-      scope === 'platform'
-        ? api.roles.update(b.id, b)
-        : api.tenants.updateRole(tid!, b.id, b),
-    keys,
-    t('roles.updated')
+    t('rbac.saved')
   )
   const remove = useApiMutation(
     (id: string) =>
-      scope === 'platform'
-        ? api.roles.remove(id)
-        : api.tenants.removeRole(tid!, id),
+      platform ? api.roles.remove(id) : api.tenants.removeRole(tid!, id),
     keys,
     t('roles.deleted')
   )
-  const builtin = (r: Role) =>
-    (scope === 'platform' ? ['admin', 'user'] : ['owner']).includes(r.name)
+  const e = s.editing
   return (
     <Page
-      title={scope === 'platform' ? t('common.roles') : t('roles.tenantTitle')}
+      title={platform ? t('common.roles') : t('roles.tenantTitle')}
       description={
-        scope === 'platform'
+        platform
           ? t('roles.platformDesc')
           : t('roles.tenantDesc', { tenant: current?.tenant.name ?? '…' })
       }
@@ -91,33 +107,45 @@ export function RolesManager({ scope }: { scope: 'platform' | 'tenant' }) {
         rowKey={(r) => r.id}
         columns={[
           {
-            header: t('common.name'),
+            header: t('rbac.roleCode'),
             sortKey: 'name',
-            cell: (r) => <span className='font-medium'>{r.name}</span>,
+            cell: (r) => <code className='text-xs'>{r.name}</code>,
           },
           {
-            header: t('common.description'),
-            sortKey: 'description',
-            cell: (r) => r.description ?? '',
-          },
-          {
-            header: t('common.permissions'),
+            header: t('rbac.roleName'),
+            sortKey: 'title',
             cell: (r) => (
-              <div className='flex max-w-xl flex-wrap gap-1'>
-                {r.permissions.map((p) => (
-                  <Badge
-                    key={p.id}
-                    variant='secondary'
-                    className='font-mono text-[10px]'
-                  >
-                    {p.code}
-                  </Badge>
-                ))}
-              </div>
+              <span className='font-medium'>{r.title || r.name}</span>
             ),
           },
           {
-            header: '',
+            header: t('common.description'),
+            cell: (r) => (
+              <span className='text-muted-foreground'>
+                {r.description ?? ''}
+              </span>
+            ),
+          },
+          {
+            header: t('rbac.permCount'),
+            cell: (r) => r.permissions.length,
+          },
+          {
+            header: t('common.status'),
+            sortKey: 'status',
+            cell: (r) => <StatusBadge active={r.status !== 'disabled'} />,
+          },
+          {
+            header: t('rbac.updatedBy'),
+            cell: (r) => r.updated_by ?? '—',
+          },
+          {
+            header: t('rbac.updatedAt'),
+            sortKey: 'updated_at',
+            cell: (r) => fmtDateTime(r.updated_at),
+          },
+          {
+            header: t('rbac.actions'),
             className: 'w-24',
             cell: (r) =>
               writable && (
@@ -132,24 +160,52 @@ export function RolesManager({ scope }: { scope: 'platform' | 'tenant' }) {
       <FormDialog
         open={s.formOpen}
         onOpenChange={(o) => !o && s.closeForm()}
-        title={s.editing ? t('roles.edit') : t('roles.new')}
+        title={e ? t('roles.edit') : t('roles.new')}
+        description={e && locked(e) ? t('permissions.ownerFixed') : undefined}
         fields={[
-          { name: 'name', label: t('common.name'), required: true },
+          {
+            name: 'name',
+            label: t('rbac.roleCode'),
+            required: true,
+            readOnly: !!e && builtin(e),
+          },
+          { name: 'title', label: t('rbac.roleName'), required: true },
           { name: 'description', label: t('common.description') },
+          {
+            name: 'status',
+            label: t('common.status'),
+            type: 'radio',
+            options: statusOptions(),
+            hidden: !!e && locked(e),
+          },
+          {
+            name: 'codes',
+            label: t('rbac.permTree'),
+            type: 'custom',
+            render: (v, set) =>
+              tree.isLoading ? (
+                <p className='text-sm text-muted-foreground'>
+                  {t('common.loading')}
+                </p>
+              ) : (
+                <PermissionTreeSelect
+                  nodes={tree.data ?? []}
+                  value={v as string[]}
+                  onChange={set}
+                  disabled={!!e && locked(e)}
+                />
+              ),
+          },
         ]}
         initial={{
-          name: s.editing?.name ?? '',
-          description: s.editing?.description ?? '',
+          name: e?.name ?? '',
+          title: e?.title || e?.name || '',
+          description: e?.description ?? '',
+          status: e?.status ?? 'active',
+          codes: e?.permissions.map((p) => p.code) ?? [],
         }}
-        onSubmit={(v) => {
-          const b = {
-            name: v.name as string,
-            description: v.description as string,
-          }
-          return s.editing
-            ? update.mutateAsync({ id: s.editing.id, ...b })
-            : create.mutateAsync(b)
-        }}
+        pending={save.isPending}
+        onSubmit={(v) => save.mutateAsync(v)}
       />
       <ConfirmDialog
         open={!!s.deleting}

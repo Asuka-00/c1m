@@ -1,9 +1,9 @@
 /** 平台用户管理接口。 */
-import { del, get, patch, post, type ListQuery } from '../request'
+import { del, get, patch, post, put, type ListQuery } from '../request'
 import type { Message, Paged, Role, User } from '../types'
 
 /** 新增 / 更新用户的请求体。 */
-export type UserIn = Partial<Omit<User, 'id' | 'created_at'>> & {
+export type UserIn = Partial<Omit<User, 'id' | 'created_at' | 'role_names'>> & {
   password?: string
 }
 
@@ -14,8 +14,7 @@ export const usersApi = {
   update: (id: string, b: UserIn) => patch<User>(`/platform/users/${id}`, b),
   remove: (id: string) => del<Message>(`/platform/users/${id}`),
   roles: (id: string) => get<Role[]>(`/platform/users/${id}/roles`),
-  addRole: (id: string, roleId: string) =>
-    post<Role[]>(`/platform/users/${id}/roles/${roleId}`),
-  removeRole: (id: string, roleId: string) =>
-    del<Role[]>(`/platform/users/${id}/roles/${roleId}`),
+  /** 整体设置用户的平台角色 */
+  setRoles: (id: string, roleIds: string[]) =>
+    put<Role[]>(`/platform/users/${id}/roles`, { role_ids: roleIds }),
 }

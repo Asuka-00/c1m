@@ -5,7 +5,7 @@ from datetime import timedelta
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import col, select
+from sqlmodel import col, or_, select
 
 from app.core import security
 from app.core.config import settings
@@ -178,13 +178,26 @@ def list_members(
     ctx: MembersReader,
     params: ListParamsDep,
     role_id: uuid.UUID | None = None,
+    username: str | None = None,
+    full_name: str | None = None,
+    is_active: bool | None = None,
 ) -> Any:
-    """Paginated; sort_by: email, full_name, joined_at; q: email/full_name; filter: role_id (tenant role)."""
+    """分页；sort_by: email, full_name, joined_at；q: email/full_name；
+    筛选：role_id（租户角色）、username（用户名或邮箱包含）、full_name（包含）、is_active。"""
     stmt = (
         select(TenantMember)
         .join(User, col(User.id) == col(TenantMember.user_id))
         .where(TenantMember.tenant_id == ctx.id)
     )
+    if username:
+        like = f"%{username}%"
+        stmt = stmt.where(
+            or_(col(User.username).ilike(like), col(User.email).ilike(like))
+        )
+    if full_name:
+        stmt = stmt.where(col(User.full_name).ilike(f"%{full_name}%"))
+    if is_active is not None:
+        stmt = stmt.where(col(User.is_active) == is_active)
     if role_id is not None:
         stmt = stmt.where(
             col(TenantMember.id).in_(

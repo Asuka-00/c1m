@@ -10,6 +10,11 @@ export interface User {
   is_active: boolean
   is_superuser: boolean
   created_at: string | null
+  /** 最后更新时间 / 更新人 */
+  updated_at?: string | null
+  updated_by?: string | null
+  /** 平台角色名称 */
+  role_names?: string[]
 }
 /** 分页列表响应 `{data, count}`。 */
 export interface Paged<T> {
@@ -22,13 +27,52 @@ export interface Permission {
   code: string
   description: string | null
   scope: 'platform' | 'tenant' | string
+  /** 显示名称 */
+  name?: string | null
+  /** 类型：MENU / BUTTON / API */
+  type?: PermType
+  /** 所属菜单 id */
+  menu_id?: UUID | null
+  sort_order?: number
+  /** active / disabled */
+  status?: string
+}
+/** 权限类型。 */
+export type PermType = 'MENU' | 'BUTTON' | 'API' | 'GROUP'
+/** 统一权限树节点：菜单（kind=menu）、权限（kind=perm）或虚拟分组（kind=group）。 */
+export interface PermNode {
+  id: string
+  kind: 'menu' | 'perm' | 'group'
+  type: PermType
+  key: string | null
+  name: string
+  code: string
+  path: string | null
+  icon: string | null
+  component: string | null
+  sort_order: number
+  visible: boolean
+  status: string
+  scope: string | null
+  space: string | null
+  description: string | null
+  /** 菜单：父菜单 id；权限：所属菜单 id */
+  menu_id: string | null
+  children: PermNode[]
 }
 /** 角色（平台或租户）。 */
 export interface Role {
   id: UUID
+  /** 角色编码 */
   name: string
+  /** 角色名称（显示） */
+  title?: string | null
   description: string | null
+  /** active / disabled */
+  status?: string
   tenant_id: UUID | null
+  updated_at?: string | null
+  updated_by?: string | null
   permissions: Permission[]
 }
 /** 租户。 */
@@ -108,6 +152,8 @@ export interface Member {
   user_id: UUID
   email: string
   full_name: string | null
+  username?: string | null
+  is_active?: boolean
   roles: string[]
 }
 /** 菜单树节点。 */

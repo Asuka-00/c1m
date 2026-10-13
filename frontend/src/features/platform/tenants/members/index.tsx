@@ -20,17 +20,28 @@ import {
   useCrudState,
   useListParams,
   type FilterDef,
-  searchFilter,
 } from '@/components/crud'
+import { StatusBadge } from '../../rbac/status'
 
-/** 租户成员管理：添加成员、分配租户角色、移除成员。 */
+/** 租户成员（用户与权限 · 用户）：按用户名 / 显示名 / 状态 / 角色筛选，
+ *  标签多选分配租户角色，添加与移除成员。 */
 export default function MembersPage() {
   const can = useCan()
   const { data: me } = useMe()
   const current = useCurrentTenant()
   const tid = current?.tenant.id
   const filters: FilterDef[] = [
-    searchFilter(t('table.searchUsers')),
+    { type: 'text', name: 'username', placeholder: t('common.username') },
+    { type: 'text', name: 'full_name', placeholder: t('rbac.displayName') },
+    {
+      type: 'select',
+      name: 'is_active',
+      label: t('table.allStatuses'),
+      options: [
+        { value: 'true', label: t('rbac.enabled') },
+        { value: 'false', label: t('rbac.disabled') },
+      ],
+    },
     {
       type: 'select',
       name: 'role_id',
@@ -40,7 +51,9 @@ export default function MembersPage() {
         tid
           ? api.tenants
               .roles(tid, ALL)
-              .then((r) => r.data.map((x) => ({ value: x.id, label: x.name })))
+              .then((r) =>
+                r.data.map((x) => ({ value: x.id, label: x.title || x.name }))
+              )
           : Promise.resolve([]),
     },
   ]
@@ -56,7 +69,12 @@ export default function MembersPage() {
     enabled: !!tid,
   })
   const roleOptions =
-    roles.data?.data.map((r) => ({ value: r.name, label: r.name })) ?? []
+    roles.data?.data.map((r) => ({
+      value: r.name,
+      label: r.title || r.name,
+    })) ?? []
+  const roleLabel = (n: string) =>
+    roleOptions.find((o) => o.value === n)?.label ?? n
   const s = useCrudState<Member>()
   const keys = [['members'], ['tenants', 'me'], ['menus']]
   const add = useApiMutation(
@@ -97,11 +115,10 @@ export default function MembersPage() {
         rowKey={(r) => r.user_id}
         columns={[
           {
-            header: t('common.email'),
-            sortKey: 'email',
+            header: t('common.username'),
             cell: (r) => (
               <span className='font-medium'>
-                {r.email}
+                {r.username || r.email}
                 {r.user_id === me?.id && (
                   <span className='ms-1 text-muted-foreground'>
                     {t('common.you')}
@@ -111,20 +128,27 @@ export default function MembersPage() {
             ),
           },
           {
-            header: t('common.name'),
+            header: t('rbac.displayName'),
             sortKey: 'full_name',
             cell: (r) => r.full_name ?? '—',
           },
           {
+            header: t('common.email'),
+            sortKey: 'email',
+            cell: (r) => (
+              <span className='text-muted-foreground'>{r.email}</span>
+            ),
+          },
+          {
             header: t('common.roles'),
             cell: (r) => (
-              <div className='flex gap-1'>
+              <div className='flex flex-wrap gap-1'>
                 {r.roles.map((x) => (
                   <Badge
                     key={x}
                     variant={x === 'owner' ? 'default' : 'secondary'}
                   >
-                    {x}
+                    {roleLabel(x)}
                   </Badge>
                 ))}
                 {!r.roles.length && '—'}
@@ -132,7 +156,11 @@ export default function MembersPage() {
             ),
           },
           {
-            header: '',
+            header: t('common.status'),
+            cell: (r) => <StatusBadge active={r.is_active !== false} />,
+          },
+          {
+            header: t('rbac.actions'),
             className: 'w-24',
             cell: (r) => (
               <RowActions
@@ -150,11 +178,7 @@ export default function MembersPage() {
       <FormDialog
         open={s.formOpen}
         onOpenChange={(o) => !o && s.closeForm()}
-        title={
-          s.editing
-            ? t('members.rolesOf', { email: s.editing.email })
-            : t('members.add')
-        }
+        title={s.editing ? t('members.edit') : t('members.add')}
         description={s.editing ? undefined : t('members.addDesc')}
         fields={[
           {
@@ -162,16 +186,34 @@ export default function MembersPage() {
             label: t('common.email'),
             type: 'email',
             required: true,
-            hidden: !!s.editing,
+            readOnly: !!s.editing,
+          },
+          {
+            name: 'username',
+            label: t('common.username'),
+            readOnly: true,
+            hidden: !s.editing,
+          },
+          {
+            name: 'full_name',
+            label: t('rbac.displayName'),
+            readOnly: true,
+            hidden: !s.editing,
           },
           {
             name: 'roles',
             label: t('roles.tenantTitle'),
-            type: 'multi',
+            type: 'tags',
             options: roleOptions,
+            placeholder: t('rbac.pickRoles'),
           },
         ]}
-        initial={{ email: '', roles: s.editing?.roles ?? ['member'] }}
+        initial={{
+          email: s.editing?.email ?? '',
+          username: s.editing?.username ?? '',
+          full_name: s.editing?.full_name ?? '',
+          roles: s.editing?.roles ?? ['member'],
+        }}
         onSubmit={(v) =>
           s.editing
             ? setRoles.mutateAsync({
@@ -192,7 +234,10 @@ export default function MembersPage() {
             ? t('members.leave')
             : t('members.remove')
         }
-        desc={`Remove ${s.deleting?.email} from ${current?.tenant.name}?`}
+        desc={t('members.removeDesc', {
+          email: s.deleting?.email,
+          tenant: current?.tenant.name,
+        })}
         destructive
         confirmText={t('common.remove')}
         handleConfirm={() =>

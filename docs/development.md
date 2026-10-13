@@ -150,3 +150,15 @@ pnpm build
 ```
 
 UI 布局巡检（需前后端已启动）：`node scripts/ui-audit.cjs`。
+
+## RBAC：统一权限树
+
+- 菜单与权限合并为一棵权限树：`Menu`（目录 / 页面）是 MENU 节点；`Permission.menu_id` 把权限挂到菜单下，`type` 为 MENU（页面访问）/ BUTTON（页面内操作）/ API。未挂接的权限归入“其他权限”分组。启动时 `seed_menus` → `link_permissions` 只为 `menu_id` 为空的权限补挂接，不覆盖手工调整。
+- 角色与权限都有 `status`（active / disabled）；停用的角色或权限不授予任何权限（`rbac.service.active_codes`）。角色 `name` 为编码，`title` 为显示名称。
+- 接口：
+  - `GET /platform/permission-tree?space=all|workspace|platform&scope=platform|tenant`：权限树（超级用户）。
+  - `GET /tenants/{id}/permission-tree`：租户角色对话框用的权限树（仅工作区、租户作用域）。
+  - `PUT /platform/users/{id}/roles` `{role_ids}`：整体设置用户的平台角色。
+  - 用户列表筛选 `username` / `full_name` / `is_active`；角色列表筛选 `code` / `title` / `status`；成员列表筛选 `username` / `full_name` / `is_active` / `role_id`。
+- 前端：平台控制台“权限树”页（`platform-permissions`）维护菜单与权限；角色对话框内嵌三态复选权限树；不再有独立的菜单管理页与“角色权限”页签。
+- 已删除的旧兼容管理接口（全部改用 `/platform/...`，仅超级用户）：`GET/POST /tenants/`、`GET /tenants/{id}/permissions`、`/users/` 列表 / 新建 与 `/users/{id}` 查询 / 修改 / 删除、`/roles/*`、`/permissions/*`、`/users/{id}/roles*`、`/menus/` 增删改查。保留的自助接口：`/users/me*`、`/users/signup`、`/menus/me`、`/tenants/me`、`/tenants/{id}/...`（工作区）。
