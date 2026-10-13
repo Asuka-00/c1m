@@ -40,6 +40,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-lot_hold", "Hold Management|Hold 管理|ホールド管理"),
         ("mes-future_hold", "Future Hold|预约 Hold|予約ホールド"),
         ("mes-shift-handover", "Shift Handover|交接班日志|シフト引継ぎ"),
+        ("mes-label-print", "Label Printing|标签打印|ラベル印刷"),
         ("mes-lot", "Lot List|批次列表|ロット一覧"),
         ("mes-wafer", "Wafer|晶圆|ウェーハ"),
     ],

@@ -14,5 +14,6 @@ export const pages: Pages = {
   'mes-page:lot-trace': lazy(() => import('./lot-trace')),
   'mes-page:batch-ops': lazy(() => import('./batch-ops')),
   'mes-page:shift-handover': lazy(() => import('./shift-handover')),
+  'mes-page:label-print': lazy(() => import('./label-print')),
   'mes-page:carrier-ops': lazy(() => import('./carrier-ops')),
 }

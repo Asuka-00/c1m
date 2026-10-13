@@ -123,7 +123,8 @@
     "mes-wo-board": "WO Progress",
     "mes-change_order": "Engineering Change",
     "mes-future_hold": "Future Hold",
-    "mes-shift-handover": "Shift Handover"
+    "mes-shift-handover": "Shift Handover",
+    "mes-label-print": "Label Printing"
   },
   "auth": {
     "appName": "FastAPI Admin",
@@ -1107,6 +1108,26 @@
       "ackDesc": "Confirm you have read the notes and open items.",
       "ackComment": "Note (optional)",
       "acked": "Acknowledged"
+    },
+    "label": {
+      "hint": "Pick lots or carriers and print barcode / QR labels.",
+      "search": "Search code / product",
+      "allStatus": "All statuses",
+      "kind": {
+        "lot": "Lot labels",
+        "carrier": "Carrier labels"
+      },
+      "code": {
+        "both": "Barcode + QR",
+        "barcode": "Barcode only",
+        "qr": "QR only"
+      },
+      "print": "Print {{n}}",
+      "pickAll": "Select page",
+      "codeCol": "Code",
+      "info": "Details",
+      "status": "Status",
+      "qty": "Qty"
     }
   },
   "notify": {

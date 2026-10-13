@@ -46,6 +46,12 @@ MENUS: dict[str, MenuItem] = {
         "mes-page:hold",
         "mes.exec:read",
     ),
+    "mes-label-print": (
+        "/mes/label-print",
+        "Printer",
+        "mes-page:label-print",
+        "mes.exec:read",
+    ),
     "mes-shift-handover": (
         "/mes/shift-handover",
         "NotebookPen",

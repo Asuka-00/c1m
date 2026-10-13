@@ -123,7 +123,8 @@
     "mes-wo-board": "作業指示進捗",
     "mes-change_order": "設計変更",
     "mes-future_hold": "予約ホールド",
-    "mes-shift-handover": "シフト引継ぎ"
+    "mes-shift-handover": "シフト引継ぎ",
+    "mes-label-print": "ラベル印刷"
   },
   "auth": {
     "appName": "FastAPI 管理画面",
@@ -1107,6 +1108,26 @@
       "ackDesc": "引継ぎ事項と未完了事項を確認しました。",
       "ackComment": "メモ（任意）",
       "acked": "引継ぎを確認しました"
+    },
+    "label": {
+      "hint": "ロットまたはキャリアを選び、バーコード / QR ラベルを印刷します。",
+      "search": "コード / 製品を検索",
+      "allStatus": "すべての状態",
+      "kind": {
+        "lot": "ロットラベル",
+        "carrier": "キャリアラベル"
+      },
+      "code": {
+        "both": "バーコード + QR",
+        "barcode": "バーコードのみ",
+        "qr": "QR のみ"
+      },
+      "print": "{{n}} 枚印刷",
+      "pickAll": "このページを選択",
+      "codeCol": "コード",
+      "info": "詳細",
+      "status": "状態",
+      "qty": "数量"
     }
   },
   "notify": {

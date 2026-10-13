@@ -123,7 +123,8 @@
     "mes-wo-board": "工单进度",
     "mes-change_order": "工程变更",
     "mes-future_hold": "预约 Hold",
-    "mes-shift-handover": "交接班日志"
+    "mes-shift-handover": "交接班日志",
+    "mes-label-print": "标签打印"
   },
   "auth": {
     "appName": "FastAPI 管理后台",
@@ -1107,6 +1108,26 @@
       "ackDesc": "确认已了解交接事项与未结事项。",
       "ackComment": "接班备注（可选）",
       "acked": "已接班"
+    },
+    "label": {
+      "hint": "选择批次或载具，打印条码 / 二维码标签。",
+      "search": "搜索编码 / 产品",
+      "allStatus": "全部状态",
+      "kind": {
+        "lot": "批次标签",
+        "carrier": "载具标签"
+      },
+      "code": {
+        "both": "条码 + 二维码",
+        "barcode": "仅条码",
+        "qr": "仅二维码"
+      },
+      "print": "打印 {{n}} 张",
+      "pickAll": "全选本页",
+      "codeCol": "编码",
+      "info": "信息",
+      "status": "状态",
+      "qty": "数量"
     }
   },
   "notify": {

@@ -1400,6 +1400,7 @@
     "mes-lot_hold": "Hold 管理",
     "mes-future_hold": "预约 Hold",
     "mes-shift-handover": "交接班日志",
+    "mes-label-print": "标签打印",
     "mes-lot": "批次列表",
     "mes-wafer": "晶圆",
     "mes-wip-dashboard": "WIP 看板",
