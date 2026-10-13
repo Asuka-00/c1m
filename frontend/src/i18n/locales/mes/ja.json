@@ -70,6 +70,7 @@
       "material": "資材",
       "carrier_type": "キャリアタイプ",
       "carrier": "キャリア",
+      "carrier_event": "キャリア履歴",
       "reticle": "レチクル",
       "fixture": "治具・工具",
       "material_lot": "ラインサイド資材ロット",
@@ -653,8 +654,20 @@
         "carrier_type": "キャリアタイプ",
         "status_code": "状態",
         "max_uses": "最大使用回数",
+        "use_count": "洗浄後使用回数",
+        "last_cleaned_at": "前回洗浄",
         "rfid": "RFID タグ",
         "description": "説明"
+      },
+      "carrier_event": {
+        "carrier": "キャリア",
+        "event": "イベント",
+        "lot": "ロット",
+        "other_carrier": "移動元・先キャリア",
+        "qty": "数量",
+        "comment": "コメント",
+        "username": "ユーザー",
+        "at": "日時"
       },
       "reticle": {
         "code": "コード",
@@ -960,6 +973,8 @@
         "tool_life": "工具使用可・寿命",
         "carrier_available": "キャリア使用可",
         "batch_same_step": "一括：同一ステップ",
+        "carrier_clean": "キャリア洗浄周期",
+        "carrier_usage": "キャリア使用回数",
         "chamber_required": "チャンバー選択済",
         "chamber_available": "チャンバー E10 状態使用可",
         "qtime": "Q タイム",
@@ -1034,7 +1049,8 @@
         "split": "分割",
         "merge": "統合",
         "jump": "ステップジャンプ",
-        "bonus": "追加"
+        "bonus": "追加",
+        "carrier_change": "キャリア変更"
       },
       "genealogy_relation": {
         "split": "分割",
@@ -1149,6 +1165,11 @@
         "cassette": "カセット",
         "pod": "レチクルポッド",
         "smif": "SMIF ポッド"
+      },
+      "carrier_event_type": {
+        "load": "積込み",
+        "unload": "取出し",
+        "clean": "洗浄"
       },
       "asset_status": {
         "available": "使用可",
@@ -1296,6 +1317,7 @@
     "settings": "個人設定",
     "mes-lot-console": "ロット作業",
     "mes-batch-ops": "一括作業",
+    "mes-carrier-ops": "キャリア管理",
     "mes-qtime-monitor": "Q タイム監視",
     "mes-lot_hold": "ホールド管理",
     "mes-lot": "ロット一覧",

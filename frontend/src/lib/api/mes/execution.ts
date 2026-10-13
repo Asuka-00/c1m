@@ -179,6 +179,22 @@ export interface QueueRow {
   qtime_remaining: number | null
   hours: number | null
 }
+/** 载具总览行。 */
+export interface CarrierRow {
+  id: string
+  code: string
+  carrier_type: string | null
+  status: string
+  lot_id: string | null
+  lot: string | null
+  wafers: number
+  capacity: number | null
+  use_count: number
+  max_uses: number | null
+  last_cleaned_at: string | null
+  clean_due_at: string | null
+  due_state: 'ok' | 'warn' | 'overdue'
+}
 /** 批量作业阶段。 */
 export type BatchStage = 'track_in' | 'track_out'
 /** 批量作业候选（设备上的批次、腔体与配方）。 */
@@ -411,6 +427,24 @@ export interface WaferMap {
 }
 
 export const execApi = {
+  /** 载具总览。 */
+  carrierBoard: () =>
+    http
+      .get<{ data: CarrierRow[] }>('/mes/exec/carriers/board')
+      .then((r) => r.data.data),
+  /** 清洗载具。 */
+  carrierClean: (id: string, comment?: string) =>
+    http
+      .post(`/mes/exec/carriers/${id}/clean`, { comment })
+      .then((r) => r.data),
+  /** 批次换载具。 */
+  changeCarrier: (lotId: string, carrierId: string, comment?: string) =>
+    http
+      .post(`/mes/exec/lots/${lotId}/carrier`, {
+        carrier_id: carrierId,
+        comment,
+      })
+      .then((r) => r.data),
   /** 批量作业候选批次。 */
   batchCandidates: (stage: BatchStage, equipmentId: string) =>
     http

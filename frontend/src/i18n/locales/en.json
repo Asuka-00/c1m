@@ -963,6 +963,33 @@
       "blocked": "Some lots are blocked; nothing was run",
       "ok": "OK",
       "failed": "Failed"
+    },
+    "carrier": {
+      "hint": "Carrier status, cleaning and carrier change.",
+      "search": "Search carrier / lot",
+      "allTypes": "All types",
+      "allStatus": "All statuses",
+      "allDue": "All cleaning states",
+      "due": {
+        "ok": "OK",
+        "warn": "Due soon",
+        "overdue": "Needs cleaning"
+      },
+      "code": "Carrier",
+      "type": "Type",
+      "status": "Status",
+      "lot": "Lot",
+      "fill": "Wafers / capacity",
+      "usage": "Uses",
+      "cleanDue": "Cleaning due",
+      "clean": "Clean",
+      "cleanConfirm": "Mark carrier {{code}} as cleaned?",
+      "cleaned": "Cleaning recorded",
+      "change": "Change carrier",
+      "changeDesc": "Move lot {{lot}} from {{code}} to:",
+      "target": "Target carrier",
+      "moved": "Carrier changed",
+      "splitMerge": "Split / merge"
     }
   },
   "notify": {

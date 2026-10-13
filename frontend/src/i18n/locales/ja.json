@@ -963,6 +963,33 @@
       "blocked": "ブロックされたロットがあるため実行しません",
       "ok": "成功",
       "failed": "失敗"
+    },
+    "carrier": {
+      "hint": "キャリアの状態確認・洗浄・載せ替え。",
+      "search": "キャリア・ロット検索",
+      "allTypes": "全タイプ",
+      "allStatus": "全状態",
+      "allDue": "全洗浄状態",
+      "due": {
+        "ok": "正常",
+        "warn": "期限間近",
+        "overdue": "要洗浄"
+      },
+      "code": "キャリア",
+      "type": "タイプ",
+      "status": "状態",
+      "lot": "ロット",
+      "fill": "ウェーハ・容量",
+      "usage": "使用回数",
+      "cleanDue": "洗浄期限",
+      "clean": "洗浄",
+      "cleanConfirm": "キャリア {{code}} を洗浄済みにしますか？",
+      "cleaned": "洗浄を記録しました",
+      "change": "載せ替え",
+      "changeDesc": "ロット {{lot}} を {{code}} から移動：",
+      "target": "移動先キャリア",
+      "moved": "載せ替えました",
+      "splitMerge": "分割・統合"
     }
   },
   "notify": {

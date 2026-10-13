@@ -179,3 +179,73 @@ def test_batch_track_in_out(client: TestClient, db: Session) -> None:
     f.stage(a, "move_in", equipment_id=f.eq["id"])
     f.stage(b, "move_out")
     batch("track_in", [a, c], equipment_id=f.eq["id"])
+
+
+def test_carrier_change_clean_and_checks(client: TestClient, db: Session) -> None:
+    from app.mes.execution.tests.test_exec import Line, _msgs
+
+    f = Line(client, db)
+    ct = f.m.post(
+        "carrier_type",
+        {
+            "code": "FX",
+            "name": "foup",
+            "category": "foup",
+            "capacity": 25,
+            "clean_interval_days": 7,
+        },
+    )
+    c1, c2 = (
+        f.m.post(
+            "carrier",
+            {
+                "code": f"C{i}",
+                "name": f"c{i}",
+                "carrier_type_id": ct["id"],
+                "max_uses": 2,
+            },
+        )
+        for i in (1, 2)
+    )
+    f.bind(
+        "track_in",
+        ("carrier_usage", "block", {}),
+        ("carrier_clean", "block", {}),
+    )
+    (a,) = f.start(1)
+
+    def post(path: str, body: dict[str, Any], status: int = 200) -> Any:
+        r = client.post(f"{EXEC}{path}", headers=f.m.h, json=body)
+        assert r.status_code == status, r.text
+        return r.json()
+
+    post(f"/lots/{a['id']}/carrier", {"carrier_id": c1["id"]})
+    assert f.lot(a)["carrier_id"] == c1["id"]
+    f.sql("UPDATE mes_carrier SET use_count = 2 WHERE id = :c", c=c1["id"])
+    f.stage(a, "move_in", equipment_id=f.eq["id"])
+    assert "clean first" in _msgs(f.stage(a, "track_in", 409, equipment_id=f.eq["id"]))
+    # 装着批次的载具不能清洗；换到 C2 后清洗 C1
+    post(f"/carriers/{c1['id']}/clean", {}, 422)
+    post(f"/lots/{a['id']}/carrier", {"carrier_id": c2["id"]})
+    post(f"/carriers/{c1['id']}/clean", {"comment": "wet clean"})
+    board = {
+        r["code"]: r
+        for r in client.get(f"{EXEC}/carriers/board", headers=f.m.h).json()["data"]
+    }
+    assert board["C1"]["use_count"] == 0 and board["C1"]["lot"] is None
+    assert board["C2"]["lot"] == a["code"]
+    ev = f.m.list("carrier_event", carrier=c1["id"])["data"]
+    assert {e["event"] for e in ev} == {"load", "unload", "clean"}
+    # C2 清洗超期 → 拦截；通过后使用次数 +1
+    f.sql(
+        "UPDATE mes_carrier SET last_cleaned_at = now() - interval '8 days' WHERE id = :c",
+        c=c2["id"],
+    )
+    assert "overdue" in _msgs(f.stage(a, "track_in", 409, equipment_id=f.eq["id"]))
+    f.sql("UPDATE mes_carrier SET last_cleaned_at = now() WHERE id = :c", c=c2["id"])
+    f.stage(a, "track_in", equipment_id=f.eq["id"])
+    assert board["C2"]["use_count"] == 0
+    after = client.get(f"{EXEC}/carriers/board", headers=f.m.h).json()["data"]
+    assert next(r for r in after if r["code"] == "C2")["use_count"] == 1
+    # 运行中不能换载具
+    post(f"/lots/{a['id']}/carrier", {"carrier_id": c1["id"]}, 422)

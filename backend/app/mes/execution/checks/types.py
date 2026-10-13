@@ -1,11 +1,13 @@
 """内置检查类型：设备、配方、光罩、物料、工具、载具、Q-Time、Hold、工单、DC、抽样。"""
 
 import uuid
+from datetime import timedelta
 from typing import Any
 
 from app.mes.common.query import find, one
 from app.mes.equipment.service import e10_current, pm_status, tool_life
 from app.mes.execution.checks.registry import Ctx, check_type
+from app.mes.execution.usage import clean_due
 from app.mes.lot.service import qtime_status
 
 Row = dict[str, Any]
@@ -390,3 +392,35 @@ def _same_step(ctx: Ctx, p: Row) -> Outcome:
         if len(cars) > 1:
             return "fail", "lots are in different carriers", {}
     return "pass", f"{len(ctx.batch)} lots at the same step", {}
+
+
+@check_type("carrier_clean")
+def _carrier_clean(ctx: Ctx, p: Row) -> Outcome:
+    """载具清洗周期：超期拦截，临近到期（warn_hours，默认 24）预警。"""
+    c = ctx.carrier or one(ctx.s, ctx.tid, "carrier", ctx.lot.get("carrier_id"))
+    if not c:
+        return "na", "no carrier", {}
+    due = clean_due(ctx.s, ctx.tid, c)
+    if not due:
+        return "na", "no cleaning interval", {}
+    data = {"carrier": c["code"], "due": due.isoformat()}
+    if ctx.at > due:
+        return "fail", f"carrier {c['code']} cleaning overdue", data
+    if ctx.at > due - timedelta(hours=float(p.get("warn_hours", 24))):
+        return "warn", f"carrier {c['code']} cleaning due soon", data
+    return "pass", f"carrier {c['code']} clean", data
+
+
+@check_type("carrier_usage")
+def _carrier_usage(ctx: Ctx, p: Row) -> Outcome:
+    """载具使用次数：达到最大次数拦截，达到 warn_pct（默认 90%）预警。"""
+    c = ctx.carrier or one(ctx.s, ctx.tid, "carrier", ctx.lot.get("carrier_id"))
+    if not c or not c["max_uses"]:
+        return "na", "no usage limit", {}
+    used, mx = c["use_count"] or 0, c["max_uses"]
+    data = {"carrier": c["code"], "used": used, "max": mx}
+    if used >= mx:
+        return "fail", f"carrier {c['code']} used {used}/{mx}; clean first", data
+    if used >= mx * float(p.get("warn_pct", 90)) / 100:
+        return "warn", f"carrier {c['code']} used {used}/{mx}", data
+    return "pass", f"carrier {c['code']} used {used}/{mx}", data

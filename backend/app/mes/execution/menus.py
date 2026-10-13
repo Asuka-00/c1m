@@ -21,6 +21,12 @@ MENUS: dict[str, MenuItem] = {
         "mes-page:batch-ops",
         "mes.exec:read",
     ),
+    "mes-carrier-ops": (
+        "/mes/carrier-ops",
+        "Container",
+        "mes-page:carrier-ops",
+        "mes.exec:read",
+    ),
     "mes-qtime-monitor": (
         "/mes/qtime-monitor",
         "Timer",

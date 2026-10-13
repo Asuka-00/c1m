@@ -35,6 +35,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
     "g-execution": [
         ("mes-lot-console", "Lot Operation|批次作业|ロット作業"),
         ("mes-batch-ops", "Batch Operation|批量作业|一括作業"),
+        ("mes-carrier-ops", "Carrier Management|载具管理|キャリア管理"),
         ("mes-qtime-monitor", "Q-Time Monitor|Q-Time 监控|Q タイム監視"),
         ("mes-lot_hold", "Hold Management|Hold 管理|ホールド管理"),
         ("mes-lot", "Lot List|批次列表|ロット一覧"),

@@ -70,6 +70,7 @@
       "material": "物料",
       "carrier_type": "载具类型",
       "carrier": "载具",
+      "carrier_event": "载具履历",
       "reticle": "光罩",
       "fixture": "治具 / 工具",
       "material_lot": "线边物料批",
@@ -653,8 +654,20 @@
         "carrier_type": "载具类型",
         "status_code": "状态",
         "max_uses": "最大使用次数",
+        "use_count": "清洗后使用次数",
+        "last_cleaned_at": "上次清洗",
         "rfid": "RFID 标签",
         "description": "描述"
+      },
+      "carrier_event": {
+        "carrier": "载具",
+        "event": "事件",
+        "lot": "批次",
+        "other_carrier": "来源 / 目标载具",
+        "qty": "数量",
+        "comment": "备注",
+        "username": "用户",
+        "at": "时间"
       },
       "reticle": {
         "code": "编码",
@@ -960,6 +973,8 @@
         "tool_life": "工具可用 + 寿命",
         "carrier_available": "载具可用",
         "batch_same_step": "批量：同一工步",
+        "carrier_clean": "载具清洗周期",
+        "carrier_usage": "载具使用次数",
         "chamber_required": "已选腔体",
         "chamber_available": "腔体 E10 状态可用",
         "qtime": "Q-Time",
@@ -1034,7 +1049,8 @@
         "split": "分批",
         "merge": "合批",
         "jump": "跳站",
-        "bonus": "补数"
+        "bonus": "补数",
+        "carrier_change": "换载具"
       },
       "genealogy_relation": {
         "split": "分批",
@@ -1149,6 +1165,11 @@
         "cassette": "片盒",
         "pod": "光罩盒",
         "smif": "SMIF 盒"
+      },
+      "carrier_event_type": {
+        "load": "装入",
+        "unload": "移出",
+        "clean": "清洗"
       },
       "asset_status": {
         "available": "可用",
@@ -1296,6 +1317,7 @@
     "settings": "个人设置",
     "mes-lot-console": "批次作业",
     "mes-batch-ops": "批量作业",
+    "mes-carrier-ops": "载具管理",
     "mes-qtime-monitor": "Q-Time 监控",
     "mes-lot_hold": "Hold 管理",
     "mes-lot": "批次列表",

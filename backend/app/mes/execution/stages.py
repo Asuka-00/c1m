@@ -22,6 +22,7 @@ from app.mes.execution.recipe_run import open_run
 from app.mes.execution.rework import rework_limit_result
 from app.mes.execution.stage_common import _brief, _guard, _ov, _relocate, _result
 from app.mes.execution.track_out import track_out
+from app.mes.execution.usage import count_use
 from app.mes.lot.service import history, lock_lot, units
 
 Row = dict[str, Any]
@@ -154,6 +155,7 @@ def track_in(
     )
     lot.update(lot_status="running", equipment_id=eid)
     open_run(ctx, user)
+    count_use(s, tid, (ctx.carrier or {}).get("id") or lot["carrier_id"], user)
     e10 = e10_apply(s, tid, eq, "track_in", user, lot) if eq else None
     for c in ctx.chambers:
         e10_apply(s, tid, c, "track_in", user, lot)

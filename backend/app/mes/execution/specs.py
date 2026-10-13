@@ -28,6 +28,8 @@ CHECK_TYPES = [
     ("tool_life", "Tool available + life|工具可用 + 寿命|工具使用可・寿命"),
     ("carrier_available", "Carrier available|载具可用|キャリア使用可"),
     ("batch_same_step", "Batch: same step|批量：同一工步|一括：同一ステップ"),
+    ("carrier_clean", "Carrier cleaning due|载具清洗周期|キャリア洗浄周期"),
+    ("carrier_usage", "Carrier usage limit|载具使用次数|キャリア使用回数"),
     ("chamber_required", "Chamber selected|已选腔体|チャンバー選択済"),
     (
         "chamber_available",
@@ -119,6 +121,7 @@ ENUMS.update(
             ("merge", "Merge|合批|統合"),
             ("jump", "Jump step|跳站|ステップジャンプ"),
             ("bonus", "Bonus|补数|追加"),
+            ("carrier_change", "Carrier change|换载具|キャリア変更"),
         ],
         "genealogy_relation": [
             ("split", "Split|分批|分割"),

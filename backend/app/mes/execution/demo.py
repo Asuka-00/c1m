@@ -30,6 +30,8 @@ CHECK_RULES: list[tuple[str, str, str, str, dict[str, Any]]] = [
     ("CR-CARR", "Carrier usable", "carrier_available", "warn", {}),
     ("CR-CHMB", "Chamber selected", "chamber_required", "block", {}),
     ("CR-BATCH", "Batch: same step", "batch_same_step", "block", {}),
+    ("CR-CARR-CLN", "Carrier cleaning due", "carrier_clean", "warn", {}),
+    ("CR-CARR-USE", "Carrier usage limit", "carrier_usage", "block", {}),
     (
         "CR-CHMB-E10",
         "Chamber available (E10 SBY/PRD)",
@@ -70,6 +72,8 @@ CHECK_PLANS = [
             "CR-CHMB",
             "CR-CHMB-E10",
             "CR-BATCH",
+            "CR-CARR-CLN",
+            "CR-CARR-USE",
         ],
     ),
     (

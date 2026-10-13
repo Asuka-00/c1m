@@ -963,6 +963,33 @@
       "blocked": "存在被拦截的批次，未执行",
       "ok": "成功",
       "failed": "失败"
+    },
+    "carrier": {
+      "hint": "查看载具状态，清洗或更换载具。",
+      "search": "搜索载具 / 批次",
+      "allTypes": "全部类型",
+      "allStatus": "全部状态",
+      "allDue": "全部清洗状态",
+      "due": {
+        "ok": "正常",
+        "warn": "即将到期",
+        "overdue": "需清洗"
+      },
+      "code": "载具",
+      "type": "类型",
+      "status": "状态",
+      "lot": "批次",
+      "fill": "晶圆 / 容量",
+      "usage": "使用次数",
+      "cleanDue": "清洗到期",
+      "clean": "清洗",
+      "cleanConfirm": "确认载具 {{code}} 已清洗？",
+      "cleaned": "已记录清洗",
+      "change": "换载具",
+      "changeDesc": "将批次 {{lot}} 从 {{code}} 移入：",
+      "target": "目标载具",
+      "moved": "已换载具",
+      "splitMerge": "分批 / 合批"
     }
   },
   "notify": {

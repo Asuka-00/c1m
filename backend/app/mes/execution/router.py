@@ -415,6 +415,40 @@ def lot_adjust(
     return svc.adjust(session, ctx.id, lot_id, body.model_dump(), ctx.user)
 
 
+class CarrierChangeIn(BaseModel):
+    carrier_id: uuid.UUID
+    comment: str | None = Field(default=None, max_length=300)
+
+
+class CommentIn(BaseModel):
+    comment: str | None = Field(default=None, max_length=300)
+
+
+@router.get("/carriers/board")
+def carrier_board(session: SessionDep, ctx: CurrentTenant) -> Any:
+    """Carrier overview: lot, fill, usage and cleaning due."""
+    _need(ctx, "mes.exec:read")
+    return {"data": svc.carrier_board(session, ctx.id)}
+
+
+@router.post("/carriers/{carrier_id}/clean")
+def carrier_clean(
+    session: SessionDep, ctx: CurrentTenant, carrier_id: uuid.UUID, body: CommentIn
+) -> Any:
+    """Mark a carrier as cleaned."""
+    _need(ctx, "mes.exec:write")
+    return svc.clean_carrier(session, ctx.id, carrier_id, ctx.user, body.comment)
+
+
+@router.post("/lots/{lot_id}/carrier")
+def lot_carrier_change(
+    session: SessionDep, ctx: CurrentTenant, lot_id: uuid.UUID, body: CarrierChangeIn
+) -> Any:
+    """Move a lot's wafers into another carrier."""
+    _need(ctx, "mes.exec:write")
+    return svc.change_carrier(session, ctx.id, lot_id, body.model_dump(), ctx.user)
+
+
 @router.post("/lots/{lot_id}/{stage}")
 def lot_stage(
     session: SessionDep,

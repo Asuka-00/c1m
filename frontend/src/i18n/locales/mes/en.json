@@ -70,6 +70,7 @@
       "material": "Material",
       "carrier_type": "Carrier type",
       "carrier": "Carrier",
+      "carrier_event": "Carrier event",
       "reticle": "Reticle",
       "fixture": "Fixture / tool",
       "material_lot": "Material lot",
@@ -653,8 +654,20 @@
         "carrier_type": "Carrier type",
         "status_code": "State",
         "max_uses": "Max uses",
+        "use_count": "Uses since clean",
+        "last_cleaned_at": "Last cleaned",
         "rfid": "RFID tag",
         "description": "Description"
+      },
+      "carrier_event": {
+        "carrier": "Carrier",
+        "event": "Event",
+        "lot": "Lot",
+        "other_carrier": "From / to carrier",
+        "qty": "Qty",
+        "comment": "Comment",
+        "username": "User",
+        "at": "Time"
       },
       "reticle": {
         "code": "Code",
@@ -960,6 +973,8 @@
         "tool_life": "Tool available + life",
         "carrier_available": "Carrier available",
         "batch_same_step": "Batch: same step",
+        "carrier_clean": "Carrier cleaning due",
+        "carrier_usage": "Carrier usage limit",
         "chamber_required": "Chamber selected",
         "chamber_available": "Chamber E10 state available",
         "qtime": "Q-Time",
@@ -1034,7 +1049,8 @@
         "split": "Split",
         "merge": "Merge",
         "jump": "Jump step",
-        "bonus": "Bonus"
+        "bonus": "Bonus",
+        "carrier_change": "Carrier change"
       },
       "genealogy_relation": {
         "split": "Split",
@@ -1149,6 +1165,11 @@
         "cassette": "Cassette",
         "pod": "Reticle pod",
         "smif": "SMIF pod"
+      },
+      "carrier_event_type": {
+        "load": "Load",
+        "unload": "Unload",
+        "clean": "Clean"
       },
       "asset_status": {
         "available": "Available",
@@ -1296,6 +1317,7 @@
     "settings": "Profile",
     "mes-lot-console": "Lot Operation",
     "mes-batch-ops": "Batch Operation",
+    "mes-carrier-ops": "Carrier Management",
     "mes-qtime-monitor": "Q-Time Monitor",
     "mes-lot_hold": "Hold Management",
     "mes-lot": "Lot List",
