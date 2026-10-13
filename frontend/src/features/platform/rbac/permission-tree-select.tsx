@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { t } from '@/i18n'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import type { PermNode } from '@/lib/api'
+import { permDesc } from '@/lib/rbac-labels'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -82,7 +83,12 @@ export function PermissionTreeSelect({
               onChange([...toggleNode(n, selected, c === true)])
             }
           />
-          <span className={n.kind === 'perm' ? '' : 'font-medium'}>
+          <span
+            className={n.kind === 'perm' ? '' : 'font-medium'}
+            title={
+              n.kind === 'perm' ? permDesc(n.code, n.description) : undefined
+            }
+          >
             {nodeLabel(n)}
           </span>
           {n.code && (

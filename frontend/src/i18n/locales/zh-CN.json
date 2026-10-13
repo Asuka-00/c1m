@@ -118,7 +118,7 @@
   "menu": {
     "dashboard": "仪表盘",
     "members": "用户",
-    "tenant-roles": "角色",
+    "user-roles": "角色",
     "users": "用户",
     "roles": "角色",
     "permissions": "权限",

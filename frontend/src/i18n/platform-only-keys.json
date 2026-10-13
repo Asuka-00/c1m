@@ -1,6 +1,12 @@
 {
   "_comment": "只在平台管理控制台（或平台管理员模拟租户时）显示的 i18n 键，允许出现“租户/tenant/テナント”。其余（工作区）键一律不得出现。",
-  "prefixes": ["platform.", "tenants.", "menu.p-", "permName.tenants__"],
+  "prefixes": [
+    "platform.",
+    "tenants.",
+    "menu.p-",
+    "permName.tenants__",
+    "permDesc.tenants__"
+  ],
   "keys": [
     "users.newDesc",
     "users.rolesDesc",

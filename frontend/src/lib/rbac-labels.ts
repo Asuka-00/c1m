@@ -35,3 +35,30 @@ export const permLabel = (code: string, name?: string | null) =>
  */
 export const roleLabel = (r: { name: string; title?: string | null }) =>
   localize(`roleName.${r.name}`, r.title, r.name)
+
+/**
+ * 内置权限说明（数据库中仍为内置英文说明时按语言翻译，自定义说明保留）。
+ *
+ * @param code - 权限编码
+ * @param desc - 数据库中的说明
+ * @returns 当前语言下的说明
+ */
+export const permDesc = (code: string, desc?: string | null) =>
+  localize(permKey(code).replace(/^permName\./, 'permDesc.'), desc, desc ?? '')
+
+/**
+ * 内置角色说明（平台角色与工作区默认角色分开翻译，自定义说明保留）。
+ *
+ * @param r - 角色（name 为编码，description 为说明）
+ * @param platform - 是否为平台角色
+ * @returns 当前语言下的说明
+ */
+export const roleDesc = (
+  r: { name: string; description?: string | null },
+  platform: boolean
+) =>
+  localize(
+    `roleDesc.${platform ? 'platform_' : ''}${r.name}`,
+    r.description,
+    r.description ?? ''
+  )

@@ -118,7 +118,7 @@
   "menu": {
     "dashboard": "Dashboard",
     "members": "Users",
-    "tenant-roles": "Roles",
+    "user-roles": "Roles",
     "users": "Users",
     "roles": "Roles",
     "permissions": "Permissions",

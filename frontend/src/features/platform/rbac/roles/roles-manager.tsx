@@ -4,7 +4,7 @@ import { fmtDateTime, t } from '@/i18n'
 import { Plus } from 'lucide-react'
 import { api, type Role } from '@/lib/api'
 import { useApiMutation, useCan, useCurrentTenant } from '@/lib/api/hooks'
-import { roleLabel } from '@/lib/rbac-labels'
+import { roleDesc, roleLabel } from '@/lib/rbac-labels'
 import { Button } from '@/components/ui/button'
 import {
   ConfirmDialog,
@@ -121,7 +121,7 @@ export function RolesManager({ scope }: { scope: 'platform' | 'tenant' }) {
             header: t('common.description'),
             cell: (r) => (
               <span className='text-muted-foreground'>
-                {r.description ?? ''}
+                {roleDesc(r, platform)}
               </span>
             ),
           },

@@ -11,6 +11,10 @@ const tab = (key: string): MenuTab => ({
 })
 
 describe('pickTab', () => {
+  it('旧页签 key 映射到新 key', () => {
+    const tabs = [tab('members'), tab('user-roles')]
+    expect(pickTab(tabs, 'tenant-roles')?.key).toBe('user-roles')
+  })
   const tabs = [tab('a'), tab('b')]
   it('URL 中的页签可见时选中它', () => {
     expect(pickTab(tabs, 'b')?.key).toBe('b')

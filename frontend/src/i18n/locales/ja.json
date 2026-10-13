@@ -118,7 +118,7 @@
   "menu": {
     "dashboard": "ダッシュボード",
     "members": "ユーザー",
-    "tenant-roles": "ロール",
+    "user-roles": "ロール",
     "users": "ユーザー",
     "roles": "ロール",
     "permissions": "権限",

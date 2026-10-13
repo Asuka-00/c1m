@@ -2,6 +2,9 @@
 import { t } from '@/i18n'
 import type { MenuTab } from '@/lib/api'
 
+/** 改名前的页签 key -> 新 key（旧链接 `?tab=` 仍可用）。 */
+const LEGACY_TABS: Record<string, string> = { 'tenant-roles': 'user-roles' }
+
 /**
  * 当前页签：URL 中的 `tab` 存在且可见时取之，否则取第一个可见页签。
  *
@@ -9,7 +12,8 @@ import type { MenuTab } from '@/lib/api'
  * @param tab - URL 中的 tab 参数
  */
 export function pickTab(tabs: MenuTab[], tab: unknown): MenuTab | undefined {
-  return tabs.find((x) => x.key === tab) ?? tabs[0]
+  const key = typeof tab === 'string' ? (LEGACY_TABS[tab] ?? tab) : tab
+  return tabs.find((x) => x.key === key) ?? tabs[0]
 }
 
 /**
