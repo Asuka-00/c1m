@@ -25,6 +25,9 @@ from app.mes.lot.qtime import (
     qtime_status as qtime_status,
 )
 from app.mes.lot.state import (
+    HOLD_LIST_EXCLUDED as HOLD_LIST_EXCLUDED,
+)
+from app.mes.lot.state import (
     RULES as RULES,
 )
 from app.mes.lot.state import (

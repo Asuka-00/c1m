@@ -38,6 +38,9 @@ ALL = frozenset(S)
 TERMINAL = frozenset({S.COMPLETED, S.STORED, S.SCRAPPED, S.MERGED})
 ACTIVE = ALL - TERMINAL
 
+# Hold 列表默认排除的批次状态（N6）；include_terminal=true 时不排除
+HOLD_LIST_EXCLUDED: frozenset[LotStatus] = TERMINAL
+
 
 @dataclass(frozen=True)
 class Rule:
@@ -75,7 +78,7 @@ RULES: dict[str, Rule] = {
     "qtime_scrap": _r([S.WAITING], [S.SCRAPPED], hold=True),
     "change_carrier": _r(ACTIVE - {S.RUNNING}, hold=True),
     "priority": _r(ACTIVE, hold=True),
-    # 终态批次不能被 Hold，含自动 Hold（decisions.md #4）
+    # 可被 Hold 的状态（手动 + 自动，D4）：改这一项即可，如放开 completed/stored
     "hold": _r(ACTIVE, hold=True),
     "release": _r(ALL, hold=True),
     "store": _r([S.COMPLETED], [S.STORED, S.COMPLETED]),

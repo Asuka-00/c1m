@@ -17,7 +17,13 @@ from app.core.spec.errors import http_422
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
 from app.mes.execution.events import LOT_HOLD, notify_lot
-from app.mes.lot.service import TERMINAL, check_transition, history, lock_lot
+from app.mes.lot.service import (
+    HOLD_LIST_EXCLUDED,
+    allowed,
+    check_transition,
+    history,
+    lock_lot,
+)
 
 Row = dict[str, Any]
 log = logging.getLogger(__name__)
@@ -83,8 +89,8 @@ def hold_lot(
     Raises:
         HTTPException: 手工 Hold 终态批次（422）。
     """
-    if hold_type != "manual" and lot["lot_status"] in TERMINAL:
-        # 自动来源遇终态批次：静默跳过，不写任何数据（P11）
+    if hold_type != "manual" and not allowed(lot, "hold"):
+        # 自动来源遇不可 Hold 的批次（RULES["hold"]）：静默跳过，不写数据（P11）
         log.warning("skip %s hold on %s lot %s", source, lot["lot_status"], lot["code"])
         return None
     check_transition(lot, "hold")
@@ -287,7 +293,7 @@ def list_holds(
         lot = one(s, tid, "lot", h["lot_id"])
         if not lot or (product_id and str(lot["product_id"]) != str(product_id)):
             continue
-        if not include_terminal and lot["lot_status"] in TERMINAL:
+        if not include_terminal and lot["lot_status"] in HOLD_LIST_EXCLUDED:
             continue
         rc = one(s, tid, "reason_code", h["reason_id"])
         rr = h["release_reason_id"] and one(
