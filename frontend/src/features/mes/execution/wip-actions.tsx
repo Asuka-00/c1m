@@ -26,30 +26,23 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { optLabel } from '@/features/mes/common/labels'
+import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
 import { Pick } from './exec-parts'
+import { canAdjustLot, canChangePriority, canJumpLot } from './lot-rules'
 import { PriorityDialog } from './priority-dialog'
 
 /** 在制调整卡片：按权限与批次状态提供跳站等操作。 */
-export function WipActionsCard({
-  cx,
-  perms,
-}: {
-  cx: ExecContext
-  perms: string[]
-}) {
+export function WipActionsCard({ cx }: { cx: ExecContext }) {
+  const can = useMesCan()
   const [open, setOpen] = useState<'jump' | 'adjust' | 'priority' | null>(null)
-  const st = String(cx.lot.lot_status)
   const canJump =
-    perms.includes('mes.exec:jump') &&
-    st === 'waiting' &&
-    !cx.lot.on_hold &&
+    can(MES_PERM.execJump) &&
+    canJumpLot(cx.lot) &&
     (cx.route_steps?.length ?? 0) > 1
-  const canAdjust =
-    perms.includes('mes.exec:adjust') &&
-    ['waiting', 'moved_in', 'running'].includes(st) &&
-    !cx.lot.on_hold
+  const canAdjust = can(MES_PERM.execAdjust) && canAdjustLot(cx.lot)
+  const canPriority = can(MES_PERM.execAdjust) && canChangePriority(cx.lot)
   return (
     <Card className='gap-3'>
       <CardHeader>
@@ -61,7 +54,7 @@ export function WipActionsCard({
           <Button
             size='sm'
             variant='outline'
-            disabled={!canAdjust}
+            disabled={!canPriority}
             onClick={() => setOpen('priority')}
             data-testid='open-priority'
           >
@@ -96,19 +89,19 @@ export function WipActionsCard({
       <JumpDialog
         cx={cx}
         open={open === 'jump'}
-        canOverride={perms.includes('mes.exec:override')}
+        canOverride={can(MES_PERM.execOverride)}
         onOpenChange={(o) => setOpen(o ? 'jump' : null)}
       />
       <PriorityDialog
         cx={cx}
         open={open === 'priority'}
-        canOverride={perms.includes('mes.exec:override')}
+        canOverride={can(MES_PERM.execOverride)}
         onOpenChange={(o) => setOpen(o ? 'priority' : null)}
       />
       <AdjustDialog
         cx={cx}
         open={open === 'adjust'}
-        canOverride={perms.includes('mes.exec:override')}
+        canOverride={can(MES_PERM.execOverride)}
         onOpenChange={(o) => setOpen(o ? 'adjust' : null)}
       />
     </Card>

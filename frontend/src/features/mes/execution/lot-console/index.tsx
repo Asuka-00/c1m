@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Page } from '@/components/crud'
 import { RefSelect } from '@/features/mes/common/ref-select'
-import { useMesMeta } from '@/features/mes/common/use-mes-meta'
 import { DispatchQueue, LotScan } from '../dispatch-queue'
 import { Console } from './console'
 
@@ -19,8 +18,6 @@ export default function LotConsolePage() {
   const nav = useNavigate()
   const lotId = (search.lot as string) || ''
   const tk = useTenantKey()
-  const { data: meta } = useMesMeta()
-  const perms = meta?.perms ?? []
   const ctx = useQuery({
     queryKey: ['mes', 'exec', tk, lotId],
     queryFn: () => execApi.context(lotId),
@@ -77,11 +74,7 @@ export default function LotConsolePage() {
       {!lotId && <DispatchQueue onLot={setLot} />}
       {ctx.isLoading && <Loader2 className='animate-spin' />}
       {ctx.data && (
-        <Console
-          key={`${lotId}-${ctx.dataUpdatedAt}`}
-          cx={ctx.data}
-          perms={perms}
-        />
+        <Console key={`${lotId}-${ctx.dataUpdatedAt}`} cx={ctx.data} />
       )}
     </Page>
   )

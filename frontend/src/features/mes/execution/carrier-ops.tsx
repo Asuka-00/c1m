@@ -23,6 +23,8 @@ import {
   type FilterDef,
 } from '@/components/crud'
 import { enumLabel } from '@/features/mes/common/labels'
+import { MesCan } from '@/features/mes/common/mes-can'
+import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { RefLink } from '@/features/mes/common/ref-link'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { CarrierDue } from './carrier-due'
@@ -74,6 +76,7 @@ export default function CarrierOps() {
   const view = clientList(all, lp, {
     text: (r) => `${r.code} ${r.lot ?? ''}`,
   })
+  const can = useMesCan()
   const done = (msg: string) => {
     toast.success(msg)
     qc.invalidateQueries({ queryKey: ['mes'] })
@@ -202,22 +205,24 @@ export default function CarrierOps() {
               <span className='flex justify-end gap-1'>
                 {r.lot_id && (
                   <>
-                    <Button
-                      size='sm'
-                      variant='ghost'
-                      onClick={() => setMove(r)}
-                    >
-                      <ArrowRightLeft className='size-4' />
-                      {t('mes.carrier.change')}
-                    </Button>
-                    <Button
-                      size='sm'
-                      variant='ghost'
-                      onClick={() => setSort(r)}
-                    >
-                      <ListOrdered className='size-4' />
-                      {t('mes.sorter.action')}
-                    </Button>
+                    <MesCan perm={MES_PERM.execWrite}>
+                      <Button
+                        size='sm'
+                        variant='ghost'
+                        onClick={() => setMove(r)}
+                      >
+                        <ArrowRightLeft className='size-4' />
+                        {t('mes.carrier.change')}
+                      </Button>
+                      <Button
+                        size='sm'
+                        variant='ghost'
+                        onClick={() => setSort(r)}
+                      >
+                        <ListOrdered className='size-4' />
+                        {t('mes.sorter.action')}
+                      </Button>
+                    </MesCan>
                     <Button size='sm' variant='ghost' asChild>
                       <Link
                         to='/$'
@@ -230,12 +235,18 @@ export default function CarrierOps() {
                     </Button>
                   </>
                 )}
-                {!r.lot_id && r.status !== 'retired' && (
-                  <Button size='sm' variant='ghost' onClick={() => setClean(r)}>
-                    <Sparkles className='size-4' />
-                    {t('mes.carrier.clean')}
-                  </Button>
-                )}
+                {!r.lot_id &&
+                  r.status !== 'retired' &&
+                  can(MES_PERM.execWrite) && (
+                    <Button
+                      size='sm'
+                      variant='ghost'
+                      onClick={() => setClean(r)}
+                    >
+                      <Sparkles className='size-4' />
+                      {t('mes.carrier.clean')}
+                    </Button>
+                  )}
               </span>
             ),
           },

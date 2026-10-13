@@ -47,9 +47,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { EmptyState } from '@/components/desc-list'
+import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
 import { CheckPanel } from './exec-parts'
+import { canMergeLot, canSplitLot } from './lot-rules'
 
 const lotLink = (page: string, id: string) => ({
   to: '/$' as const,
@@ -122,22 +124,21 @@ export function GenealogyList({
 }
 
 /** 操作台卡片：规则摘要、拆批 / 合批按钮、谱系。 */
-export function SplitMergeCard({
-  cx,
-  perms,
-}: {
-  cx: ExecContext
-  perms: string[]
-}) {
+export function SplitMergeCard({ cx }: { cx: ExecContext }) {
+  const can = useMesCan()
   const [open, setOpen] = useState<'split' | 'merge' | null>(null)
   const sm = cx.sm
   if (!sm) return null
   const r = sm.rule
   const onHold = !!cx.lot.on_hold
   const canSplit =
-    perms.includes('mes.exec:split') && sm.allowed && !!r?.allow_split
+    can(MES_PERM.execSplit) &&
+    canSplitLot(cx.lot) &&
+    sm.allowed &&
+    !!r?.allow_split
   const canMerge =
-    perms.includes('mes.exec:merge') &&
+    can(MES_PERM.execMerge) &&
+    canMergeLot(cx.lot) &&
     sm.allowed &&
     !onHold &&
     !!r?.allow_merge
@@ -227,10 +228,10 @@ export function SplitMergeCard({
         </div>
       </CardContent>
       {open === 'split' && (
-        <SplitDialog cx={cx} perms={perms} onClose={() => setOpen(null)} />
+        <SplitDialog cx={cx} onClose={() => setOpen(null)} />
       )}
       {open === 'merge' && (
-        <MergeDialog cx={cx} perms={perms} onClose={() => setOpen(null)} />
+        <MergeDialog cx={cx} onClose={() => setOpen(null)} />
       )}
     </Card>
   )
@@ -270,13 +271,12 @@ function useSm<T>(
 
 function SplitDialog({
   cx,
-  perms,
   onClose,
 }: {
   cx: ExecContext
-  perms: string[]
   onClose: () => void
 }) {
+  const can = useMesCan()
   const qc = useQueryClient()
   const qtyMode = cx.tracking_level === 'quantity'
   const active = cx.units.filter((u) => u.status !== 'scrapped')
@@ -448,7 +448,7 @@ function SplitDialog({
         <CheckPanel
           results={sm.results}
           blocked={sm.blocked}
-          canOverride={perms.includes('mes.exec:override')}
+          canOverride={can(MES_PERM.execOverride)}
           busy={sm.busy}
           onOverride={(reason) =>
             sm.run({ override: true, override_reason: reason })
@@ -478,13 +478,12 @@ function SplitDialog({
 
 function MergeDialog({
   cx,
-  perms,
   onClose,
 }: {
   cx: ExecContext
-  perms: string[]
   onClose: () => void
 }) {
+  const can = useMesCan()
   const qc = useQueryClient()
   const cands = cx.sm?.candidates ?? []
   const [sel, setSel] = useState<string[]>([])
@@ -596,7 +595,7 @@ function MergeDialog({
         <CheckPanel
           results={sm.results}
           blocked={sm.blocked}
-          canOverride={perms.includes('mes.exec:override')}
+          canOverride={can(MES_PERM.execOverride)}
           busy={sm.busy}
           onOverride={(reason) =>
             sm.run({ override: true, override_reason: reason })

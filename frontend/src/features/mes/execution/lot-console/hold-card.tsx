@@ -14,11 +14,13 @@ import {
 } from '@/components/ui/card'
 import { EmptyState } from '@/components/desc-list'
 import { enumLabel } from '@/features/mes/common/labels'
+import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
+import { canHold } from '../lot-rules'
 import { HoldDialog } from './hold-dialog'
 import { ReleaseDialog } from './release-dialog'
 
-export function HoldCard({ cx, perms }: { cx: ExecContext; perms: string[] }) {
-  const terminal = !cx.next_stage
+export function HoldCard({ cx }: { cx: ExecContext }) {
+  const can = useMesCan()
   const [holdOpen, setHoldOpen] = useState(false)
   return (
     <>
@@ -28,7 +30,7 @@ export function HoldCard({ cx, perms }: { cx: ExecContext; perms: string[] }) {
             <PauseCircle className='size-4 text-muted-foreground' />
             {t('menu.mes-lot_hold')}
           </CardTitle>
-          {perms.includes('mes.exec:hold') && !terminal && (
+          {can(MES_PERM.execHold) && canHold(cx.lot) && (
             <CardAction>
               <Button
                 size='sm'
@@ -46,7 +48,7 @@ export function HoldCard({ cx, perms }: { cx: ExecContext; perms: string[] }) {
             <EmptyState icon={CircleCheck}>{t('mes.exec.noHolds')}</EmptyState>
           )}
           {cx.holds.map((h) => (
-            <HoldRow key={String(h.id)} h={h} cx={cx} perms={perms} />
+            <HoldRow key={String(h.id)} h={h} cx={cx} />
           ))}
         </CardContent>
       </Card>
@@ -58,12 +60,11 @@ export function HoldCard({ cx, perms }: { cx: ExecContext; perms: string[] }) {
 function HoldRow({
   h,
   cx,
-  perms,
 }: {
   h: ExecContext['holds'][number]
   cx: ExecContext
-  perms: string[]
 }) {
+  const can = useMesCan()
   const [open, setOpen] = useState(false)
   return (
     <div className='rounded-md border p-2'>
@@ -78,7 +79,7 @@ function HoldRow({
         {String(h.source ?? '')}
       </div>
       {!!h.comment && <div className='text-xs'>{String(h.comment)}</div>}
-      {perms.includes('mes.exec:hold') && (
+      {can(MES_PERM.execHold) && (
         <Button
           size='sm'
           variant='outline'

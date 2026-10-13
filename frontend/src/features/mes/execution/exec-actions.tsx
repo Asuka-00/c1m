@@ -7,7 +7,7 @@ import { Gauge, History, PlayCircle } from 'lucide-react'
 import { useTenantKey } from '@/lib/api/hooks'
 import { mesApi, type MesRow } from '@/lib/api/mes/common'
 import { Button } from '@/components/ui/button'
-import { useMesMeta } from '@/features/mes/common/use-mes-meta'
+import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { ReleaseDialog } from './lot-console/release-dialog'
 
 const pageLink = (page: string, lot: unknown) => ({
@@ -54,7 +54,7 @@ export function LotActions({ row }: { row: MesRow }) {
 export function HoldActions({ row }: { row: MesRow }) {
   const [open, setOpen] = useState(false)
   const tk = useTenantKey()
-  const { data: meta } = useMesMeta()
+  const can = useMesCan()
   const reasons = useQuery({
     queryKey: ['mes', 'reason_code', 'release', tk],
     queryFn: () =>
@@ -76,7 +76,7 @@ export function HoldActions({ row }: { row: MesRow }) {
           <Gauge className='size-4' />
         </Link>
       </Button>
-      {row.is_active && meta?.perms.includes('mes.exec:hold') ? (
+      {row.is_active && can(MES_PERM.execHold) ? (
         <Button
           size='icon'
           variant='ghost'

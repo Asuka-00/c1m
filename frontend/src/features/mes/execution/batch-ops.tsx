@@ -24,6 +24,7 @@ import {
   useListParams,
   type FilterDef,
 } from '@/components/crud'
+import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { RefLink } from '@/features/mes/common/ref-link'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { BatchResult } from './batch-result'
@@ -80,6 +81,7 @@ export default function BatchOps() {
     setSel([])
     setItems(null)
   }
+  const canWrite = useMesCan()(MES_PERM.execWrite)
   const run = useMutation({
     mutationFn: () =>
       execApi.batchStage(stage, sel, {
@@ -176,7 +178,7 @@ export default function BatchOps() {
         rowKey={(r) => r.id}
         toolbar={
           <Button
-            disabled={sel.length < 2 || run.isPending}
+            disabled={!canWrite || sel.length < 2 || run.isPending}
             onClick={() => run.mutate()}
             data-testid='batch-run'
           >

@@ -32,9 +32,9 @@ import {
   type FilterDef,
 } from '@/components/crud'
 import { optLabel } from '@/features/mes/common/labels'
+import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { RefLink } from '@/features/mes/common/ref-link'
 import { mesErrorMessage } from '@/features/mes/common/required'
-import { useMesMeta } from '@/features/mes/common/use-mes-meta'
 import { Pick } from './exec-parts'
 
 /** Hold 来源。 */
@@ -60,8 +60,7 @@ const srcLabel = (s: string) =>
 /** Hold 管理。 */
 export default function HoldManagePage() {
   const tk = useTenantKey()
-  const { data: meta } = useMesMeta()
-  const canRelease = (meta?.perms ?? []).includes('mes.exec:hold')
+  const canRelease = useMesCan()(MES_PERM.execHold)
   const [sel, setSel] = useState<string[]>([])
   const [releasing, setReleasing] = useState<string[] | null>(null)
   const [statusSeen, setStatusSeen] = useState<Status>('active')
