@@ -435,3 +435,9 @@ def _sort_order(ctx: Ctx, _p: Row) -> Outcome:
     if slots != sorted(slots):
         return "fail", "wafer order would change", {}
     return "pass", "wafer order kept", {}
+
+
+@check_type("wo_due")
+def _wo_due(_ctx: Ctx, _p: Row) -> Outcome:
+    """工单交期提醒：定时扫描发送通知（开关见 ``switch``），作业时不检查。"""
+    return "na", "scheduled notice", {}

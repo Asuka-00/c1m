@@ -55,7 +55,7 @@ export interface WoBoardRow {
 
 /** 工单接口：进度看板、状态迁移、开批计划、开批与撤销开批。 */
 export const woApi = {
-  board: (warnDays: number) =>
+  board: (warnDays?: number) =>
     http
       .get<{ data: WoBoardRow[] }>('/mes/work-order/board', {
         params: { warn_days: warnDays },

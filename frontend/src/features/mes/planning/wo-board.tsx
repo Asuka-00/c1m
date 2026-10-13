@@ -46,7 +46,7 @@ function Bar({ r }: { r: WoBoardRow }) {
 /** 工单进度看板。 */
 export default function WoBoard() {
   const tk = useTenantKey()
-  const [warn, setWarn] = useState(3)
+  const [warn, setWarn] = useState<number>()
   const q = useQuery({
     queryKey: ['mes', 'wo', tk, 'board', warn],
     queryFn: () => woApi.board(warn),
@@ -86,8 +86,15 @@ export default function WoBoard() {
             min={0}
             max={60}
             className='w-20'
-            value={warn}
-            onChange={(e) => setWarn(Math.max(0, Number(e.target.value) || 0))}
+            value={warn ?? ''}
+            placeholder={t('mes.woBoard.ruleDefault')}
+            onChange={(e) =>
+              setWarn(
+                e.target.value === ''
+                  ? undefined
+                  : Math.max(0, Number(e.target.value))
+              )
+            }
           />
         </label>
       </div>

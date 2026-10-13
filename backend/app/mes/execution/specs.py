@@ -30,6 +30,7 @@ CHECK_TYPES = [
     ("carrier_available", "Carrier available|载具可用|キャリア使用可"),
     ("batch_same_step", "Batch: same step|批量：同一工步|一括：同一ステップ"),
     ("sort_order", "Sort keeps wafer order|整理保持晶圆顺序|ソート順序維持"),
+    ("wo_due", "Work order due notice|工单交期提醒|作業指示納期通知"),
     ("carrier_clean", "Carrier cleaning due|载具清洗周期|キャリア洗浄周期"),
     ("carrier_usage", "Carrier usage limit|载具使用次数|キャリア使用回数"),
     ("chamber_required", "Chamber selected|已选腔体|チャンバー選択済"),

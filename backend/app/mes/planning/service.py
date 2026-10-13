@@ -29,6 +29,7 @@ from app.core.spec.query import get_row
 from app.core.spec.validate import validator
 from app.mes.common import coderule
 from app.mes.lot import service as lot_svc
+from app.mes.planning.board import wo_due_notify as wo_due_notify
 from app.mes.process import service as process_svc
 
 Row = dict[str, Any]

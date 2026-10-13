@@ -21,6 +21,7 @@ from app.mes.execution.events import QTIME_EXCEEDED, QTIME_WARN, notify_lot
 from app.mes.execution.hold import default_reason, hold_lot
 from app.mes.execution.stage_common import _relocate
 from app.mes.lot.service import history, units
+from app.mes.planning.service import wo_due_notify
 
 Row = dict[str, Any]
 
@@ -233,7 +234,7 @@ def sweep_qtime(s: Session, tid: uuid.UUID, user: Any) -> Row:
 
 
 def sweep_all_tenants(only: list[uuid.UUID] | None = None) -> Row:
-    """全部租户的定时扫描（后台任务调用）：Q-Time 预警 / 超时处置、PM 到期通知。
+    """全部租户的定时扫描（后台任务调用）：Q-Time 预警 / 超时处置、PM 到期与工单交期通知。
 
     通过 Postgres 事务级咨询锁保证多进程 / 多实例下同一时刻只有一个执行者；
     每个租户独立会话（设置 RLS 租户上下文），单租户失败不影响其他租户。
@@ -271,6 +272,7 @@ def sweep_all_tenants(only: list[uuid.UUID] | None = None) -> Row:
                 try:
                     n += len(sweep_qtime(s, tid, None)["actions"])
                     n += pm_notify(s, tid)
+                    n += wo_due_notify(s, tid)
                     s.commit()
                 except Exception:  # noqa: BLE001 - 单租户失败只记录日志
                     log.exception("qtime sweep failed for tenant %s", tid)

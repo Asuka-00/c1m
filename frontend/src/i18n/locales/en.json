@@ -1050,7 +1050,8 @@
       "wipByOp": "WIP by operation",
       "due": "Due date",
       "daysLeft": "{{n}} d left",
-      "riskCol": "Due state"
+      "riskCol": "Due state",
+      "ruleDefault": "Rule"
     }
   },
   "notify": {
@@ -1136,6 +1137,14 @@
         "downtime": {
           "label": "Downtime recorded",
           "title": "Downtime recorded on {{equipment}}: {{reason}}"
+        },
+        "wo_due": {
+          "label": "WO due soon",
+          "title": "Work order {{wo}} due {{due}} ({{progress}}% done)"
+        },
+        "wo_overdue": {
+          "label": "WO overdue",
+          "title": "Work order {{wo}} overdue by {{days}} d (due {{due}})"
         }
       }
     }

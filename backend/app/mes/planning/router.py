@@ -52,11 +52,19 @@ class UndoIn(BaseModel):
 
 @router.get("/board")
 def wo_board(
-    session: SessionDep, ctx: CurrentTenant, warn_days: int = Query(3, ge=0, le=60)
+    session: SessionDep,
+    ctx: CurrentTenant,
+    warn_days: int | None = Query(None, ge=0, le=60),
 ) -> Any:
     """Work order progress board with due-date warnings."""
     _need(ctx, "mes.wo:read")
-    return {"data": board.wo_board(session, ctx.id, warn_days)}
+    return {
+        "data": board.wo_board(
+            session,
+            ctx.id,
+            board.warn_days(session, ctx.id) if warn_days is None else warn_days,
+        )
+    }
 
 
 @router.post("/{rid}/transition")

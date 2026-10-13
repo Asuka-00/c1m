@@ -975,6 +975,7 @@
         "carrier_available": "Carrier available",
         "batch_same_step": "Batch: same step",
         "sort_order": "Sort keeps wafer order",
+        "wo_due": "Work order due notice",
         "carrier_clean": "Carrier cleaning due",
         "carrier_usage": "Carrier usage limit",
         "chamber_required": "Chamber selected",

@@ -8,9 +8,17 @@ from typing import Any
 from sqlmodel import Session
 
 from app.mes.common.query import find, one
+from app.mes.common.switch import switch
 from app.mes.lot.service import TERMINAL
+from app.platform.notification.service import notify, register_event
 
 Row = dict[str, Any]
+WO_DUE = register_event(
+    "mes.wo_due", "WO due soon|工单临近交期|作業指示納期間近", "warning", "work_order"
+).code
+WO_OVERDUE = register_event(
+    "mes.wo_overdue", "WO overdue|工单逾期|作業指示納期遅延", "critical", "work_order"
+).code
 ACTIVE = ("released", "in_progress", "on_hold", "completed")
 
 
@@ -91,3 +99,45 @@ def wo_board(
     order = {"overdue": 0, "at_risk": 1, "ok": 2, "none": 3, "done": 4}
     out.sort(key=lambda r: (order[r["risk"]], r["due_date"] or date.max, r["code"]))
     return out
+
+
+def warn_days(s: Session, tid: uuid.UUID) -> int:
+    """交期预警天数：取工单交期提醒规则参数 ``warn_days``（默认 3）。"""
+    return int((switch(s, tid, "wo_due") or {}).get("warn_days", 3))
+
+
+def wo_due_notify(s: Session, tid: uuid.UUID, today: date | None = None) -> int:
+    """工单交期提醒：临近交期 / 逾期各通知一次（按工单与交期去重），返回发送数。
+
+    由「工单交期提醒」检查规则开关（严重度 off 关闭）。
+    """
+    sw = switch(s, tid, "wo_due")
+    if sw is None:
+        return 0
+    n = 0
+    for r in wo_board(s, tid, int(sw.get("warn_days", 3)), today):
+        if r["risk"] not in ("overdue", "at_risk"):
+            continue
+        ev = WO_OVERDUE if r["risk"] == "overdue" else WO_DUE
+        n += bool(
+            notify(
+                s,
+                tid,
+                ev,
+                title=f"Work order {r['code']} "
+                + ("overdue" if r["risk"] == "overdue" else "due soon")
+                + f" ({r['due_date']})",
+                params={
+                    "wo": r["code"],
+                    "due": str(r["due_date"]),
+                    "days": abs(r["days_left"] or 0),
+                    "progress": round(r["progress"] * 100),
+                },
+                object_type="work_order",
+                object_id=r["id"],
+                object_code=r["code"],
+                link="/mes/wo-board",
+                dedupe_key=f"{ev}:{r['id']}:{r['due_date']}",
+            )
+        )
+    return n

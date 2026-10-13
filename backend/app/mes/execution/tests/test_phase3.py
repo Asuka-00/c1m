@@ -349,3 +349,37 @@ def test_wo_board_due_warnings(client: TestClient, db: Session) -> None:
     assert board()["risk"] == "ok"
     due(-1)
     assert board()["risk"] == "overdue" and board()["days_left"] == -1
+
+
+def test_wo_due_notify_dedupe_and_switch(client: TestClient, db: Session) -> None:
+    import uuid as _uuid
+    from datetime import date, timedelta
+
+    from app.mes.execution.service import sweep_all_tenants
+    from app.mes.execution.tests.test_exec import Line
+    from app.platform.notification.tests.test_notification import _sub_all, _types
+
+    f = Line(client, db)
+    _sub_all(f)
+    (a,) = f.start(2)
+    wo = f.lot(a)["work_order_id"]
+    tid = [_uuid.UUID(str(f.m.tid))]
+    f.sql(
+        "UPDATE mes_work_order SET due_date = :d WHERE id = :w",
+        d=date.today() + timedelta(days=1),
+        w=wo,
+    )
+    sweep_all_tenants(tid)
+    sweep_all_tenants(tid)
+    assert _types(f).count("mes.wo_due") == 1
+    f.sql(
+        "UPDATE mes_work_order SET due_date = :d WHERE id = :w",
+        d=date.today() - timedelta(days=1),
+        w=wo,
+    )
+    f.m.post(
+        "check_rule",
+        {"code": "WD", "name": "wd", "check_type": "wo_due", "severity": "off"},
+    )
+    sweep_all_tenants(tid)
+    assert "mes.wo_overdue" not in _types(f)

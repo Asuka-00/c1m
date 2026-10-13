@@ -1050,7 +1050,8 @@
       "wipByOp": "工程別仕掛",
       "due": "納期",
       "daysLeft": "残り {{n}} 日",
-      "riskCol": "納期状態"
+      "riskCol": "納期状態",
+      "ruleDefault": "ルール"
     }
   },
   "notify": {
@@ -1136,6 +1137,14 @@
         "downtime": {
           "label": "停止記録",
           "title": "設備 {{equipment}} の停止を記録：{{reason}}"
+        },
+        "wo_due": {
+          "label": "作業指示納期間近",
+          "title": "作業指示 {{wo}} 納期 {{due}} 間近（進捗 {{progress}}%）"
+        },
+        "wo_overdue": {
+          "label": "作業指示納期遅延",
+          "title": "作業指示 {{wo}} が {{days}} 日遅延（納期 {{due}}）"
         }
       }
     }

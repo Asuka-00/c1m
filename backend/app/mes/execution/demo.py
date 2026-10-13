@@ -32,6 +32,7 @@ CHECK_RULES: list[tuple[str, str, str, str, dict[str, Any]]] = [
     ("CR-CHMB", "Chamber selected", "chamber_required", "block", {}),
     ("CR-BATCH", "Batch: same step", "batch_same_step", "block", {}),
     ("CR-SORT", "Sort keeps wafer order", "sort_order", "warn", {}),
+    ("CR-WO-DUE", "Work order due notice", "wo_due", "warn", {"warn_days": 3}),
     ("CR-CARR-CLN", "Carrier cleaning due", "carrier_clean", "warn", {}),
     ("CR-CARR-USE", "Carrier usage limit", "carrier_usage", "block", {}),
     (

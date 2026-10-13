@@ -975,6 +975,7 @@
         "carrier_available": "キャリア使用可",
         "batch_same_step": "一括：同一ステップ",
         "sort_order": "ソート順序維持",
+        "wo_due": "作業指示納期通知",
         "carrier_clean": "キャリア洗浄周期",
         "carrier_usage": "キャリア使用回数",
         "chamber_required": "チャンバー選択済",

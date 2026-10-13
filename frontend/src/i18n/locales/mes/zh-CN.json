@@ -975,6 +975,7 @@
         "carrier_available": "载具可用",
         "batch_same_step": "批量：同一工步",
         "sort_order": "整理保持晶圆顺序",
+        "wo_due": "工单交期提醒",
         "carrier_clean": "载具清洗周期",
         "carrier_usage": "载具使用次数",
         "chamber_required": "已选腔体",

@@ -1050,7 +1050,8 @@
       "wipByOp": "在制分布",
       "due": "交期",
       "daysLeft": "剩 {{n}} 天",
-      "riskCol": "交期状态"
+      "riskCol": "交期状态",
+      "ruleDefault": "按规则"
     }
   },
   "notify": {
@@ -1136,6 +1137,14 @@
         "downtime": {
           "label": "停机记录",
           "title": "设备 {{equipment}} 登记停机：{{reason}}"
+        },
+        "wo_due": {
+          "label": "工单临近交期",
+          "title": "工单 {{wo}} 临近交期 {{due}}（进度 {{progress}}%）"
+        },
+        "wo_overdue": {
+          "label": "工单逾期",
+          "title": "工单 {{wo}} 已逾期 {{days}} 天（交期 {{due}}）"
         }
       }
     }
