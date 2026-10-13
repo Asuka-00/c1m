@@ -116,7 +116,9 @@ def test_split_rules(client: TestClient, db: Session) -> None:
     f.stage(other, "move_in", equipment_id=f.eq["id"])
     f.stage(other, "track_in", equipment_id=f.eq["id"])
     assert "cannot split a running lot" in _msgs(
-        split(f, other, [{"unit_ids": uid(f, other, 0, 1)}], 409)
+        split(
+            f, other, [{"unit_ids": uid(f, other, 0, 1)}], 422
+        )  # 非法状态 → 422 lot_status（P01）
     )
     # rule switches
     f.m.patch(
@@ -152,7 +154,7 @@ def test_split_quantity_and_code_rule_ids(client: TestClient, db: Session) -> No
     )
     (lot,) = f.start(500)
     assert "qty must be > 0" in _msgs(split(f, lot, [{"qty": 0}], 422))
-    assert "keep at least" in _msgs(split(f, lot, [{"qty": 500}], 409))
+    assert "keep at least" in _msgs(split(f, lot, [{"qty": 500}], 422))  # P13
     r = split(f, lot, [{"qty": 120}, {"qty": 80}])
     assert [c["qty"] for c in r["children"]] == [120, 80] and r["lot"]["qty"] == 300
     codes = [c["code"] for c in r["children"]]
@@ -197,7 +199,7 @@ def test_merge_back_and_terminate(client: TestClient, db: Session) -> None:
     (ch,) = split(f, lot, [{"unit_ids": uid(f, lot, 0, 1)}])["children"]
     cands = f.ctx(lot)["sm"]["candidates"]
     assert [c["code"] for c in cands] == [ch["code"]] and cands[0]["problems"] == []
-    assert "itself" in _msgs(merge(f, lot, [lot], 409))
+    assert "itself" in _msgs(merge(f, lot, [lot], 422))  # P14
     r = merge(f, lot, [ch], comment="rejoin")
     assert r["lot"]["qty"] == 6 and r["merged"][0]["code"] == ch["code"]
     c = f.lot(ch)
