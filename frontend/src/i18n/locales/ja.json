@@ -599,7 +599,7 @@
       "takeBranch": "順番 {{seq}} へ分岐（条件：{{cond}}）",
       "toRework": "リワークルート {{route}} へ",
       "preview": "チェック事前確認",
-      "holdBlocks": "ロットはホールド中です。全ホールド解除後に作業できます。",
+      "holdBlocks": "ロットはホールド中です。加工中ロットは Track Out できますが、Move In・Track In・Move Out は全ホールド解除後に行えます。",
       "terminal": "ロットは{{status}}です。以降の作業はありません。",
       "checks": "チェック結果",
       "checksHint": "実行・事前確認後にチェック結果を表示します。",

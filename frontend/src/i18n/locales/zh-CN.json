@@ -599,7 +599,7 @@
       "takeBranch": "走分支至序号 {{seq}}（条件：{{cond}}）",
       "toRework": "转入返工流程 {{route}}",
       "preview": "预检卡控",
-      "holdBlocks": "批次处于 Hold 状态：需解除全部 Hold 后才能继续作业。",
+      "holdBlocks": "批次处于 Hold 状态：加工中的批次仍可 Track Out，但 Move In、Track In 和 Move Out 需解除全部 Hold 后才能进行。",
       "terminal": "批次已{{status}}，无后续作业。",
       "checks": "卡控结果",
       "checksHint": "执行或预检后显示卡控结果。",

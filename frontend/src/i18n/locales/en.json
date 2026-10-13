@@ -599,7 +599,7 @@
       "takeBranch": "Take branch to seq. {{seq}} (condition: {{cond}})",
       "toRework": "Send to rework route {{route}}",
       "preview": "Preview checks",
-      "holdBlocks": "The lot is on hold: release every hold before the next stage.",
+      "holdBlocks": "The lot is on hold: a running lot can still Track Out, but Move In, Track In and Move Out require every hold to be released.",
       "terminal": "Lot is {{status}} — no further stages.",
       "checks": "Check results",
       "checksHint": "Check results appear after running or previewing.",
