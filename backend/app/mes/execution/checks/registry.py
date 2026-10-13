@@ -60,6 +60,7 @@ class Ctx:
     batch: list[Row] = field(default_factory=list)  # 批量作业的全部批次
     sort_map: list[Row] = field(default_factory=list)  # 晶圆整理：[{wafer, slot}]
     priority: Row | None = None  # 优先级变更：新优先级
+    operator: str | None = None  # 操作人（用户名，评估时填入）
     tools: list[Row] = field(default_factory=list)
     material_lots: list[Row] = field(default_factory=list)
     dc: list[Row] = field(default_factory=list)  # 录入的 DC 值（含 is_oos 超规标记）
@@ -329,6 +330,7 @@ def evaluate(
         CheckBlocked: 仍存在阻断（先提交检查日志再抛出）。
         HTTPException: 放行但未填写原因（422）。
     """
+    ctx.operator = ctx.operator or actor_name(user)
     results = [*(extra or []), *run(ctx)]
     blocks = [r for r in results if r["result"] == "block"]
     hard = [r for r in blocks if not r["overridable"]]

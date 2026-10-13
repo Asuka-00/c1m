@@ -124,7 +124,8 @@
     "mes-change_order": "工程变更",
     "mes-future_hold": "预约 Hold",
     "mes-shift-handover": "交接班日志",
-    "mes-label-print": "标签打印"
+    "mes-label-print": "标签打印",
+    "mes-operator_qual": "操作员资质"
   },
   "auth": {
     "appName": "FastAPI 管理后台",
@@ -1221,6 +1222,14 @@
         "wo_overdue": {
           "label": "工单逾期",
           "title": "工单 {{wo}} 已逾期 {{days}} 天（交期 {{due}}）"
+        },
+        "qual_expiring": {
+          "label": "资质即将到期",
+          "title": "{{user}} 的 {{operation}} 资质将于 {{date}} 到期"
+        },
+        "qual_expired": {
+          "label": "资质已过期",
+          "title": "{{user}} 的 {{operation}} 资质已于 {{date}} 过期"
         }
       }
     }

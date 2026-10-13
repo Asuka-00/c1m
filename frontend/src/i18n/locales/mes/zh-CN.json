@@ -38,6 +38,7 @@
       "check_log": "卡控记录",
       "future_hold": "预约 Hold",
       "shift_log": "交接班日志",
+      "operator_qual": "操作员资质",
       "site": "工厂",
       "area": "区域",
       "workcenter": "Bay / 工作中心",
@@ -300,6 +301,14 @@
         "received_by": "接班人",
         "received_at": "接班时间",
         "receive_comment": "接班备注"
+      },
+      "operator_qual": {
+        "username": "用户",
+        "operation": "工序",
+        "equipment_type": "设备类型",
+        "certified_on": "认证日期",
+        "expires_on": "有效期至",
+        "is_active": "启用"
       },
       "site": {
         "code": "编码",
@@ -878,6 +887,9 @@
       "future_hold": {
         "reason": "留空则使用默认 Hold 原因"
       },
+      "operator_qual": {
+        "equipment_type": "留空则适用全部设备类型"
+      },
       "calendar_day": {
         "shifts": "逗号分隔的班次编码"
       },
@@ -1022,6 +1034,8 @@
         "sort_order": "整理保持晶圆顺序",
         "hot_lot_limit": "急件在制上限",
         "handover_ack_other": "接班须由他人确认",
+        "operator_qualified": "操作员具备资质",
+        "qual_expiry_notice": "资质到期提醒",
         "future_hold": "预约 Hold",
         "wo_due": "工单交期提醒",
         "carrier_clean": "载具清洗周期",
@@ -1401,6 +1415,7 @@
     "mes-future_hold": "预约 Hold",
     "mes-shift-handover": "交接班日志",
     "mes-label-print": "标签打印",
+    "mes-operator_qual": "操作员资质",
     "mes-lot": "批次列表",
     "mes-wafer": "晶圆",
     "mes-wip-dashboard": "WIP 看板",

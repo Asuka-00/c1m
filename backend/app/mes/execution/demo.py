@@ -41,6 +41,14 @@ CHECK_RULES: list[tuple[str, str, str, str, dict[str, Any]]] = [
         "block",
         {},
     ),
+    ("CR-QUAL", "Operator qualified", "operator_qualified", "warn", {}),
+    (
+        "CR-QUAL-EXP",
+        "Qualification expiry notice",
+        "qual_expiry_notice",
+        "warn",
+        {"warn_days": 14},
+    ),
     ("CR-WO-DUE", "Work order due notice", "wo_due", "warn", {"warn_days": 3}),
     ("CR-CARR-CLN", "Carrier cleaning due", "carrier_clean", "warn", {}),
     ("CR-CARR-USE", "Carrier usage limit", "carrier_usage", "block", {}),
@@ -86,6 +94,7 @@ CHECK_PLANS = [
             "CR-BATCH",
             "CR-CARR-CLN",
             "CR-CARR-USE",
+            "CR-QUAL",
         ],
     ),
     (
@@ -97,6 +106,20 @@ CHECK_PLANS = [
     ("CP-PRIO", "Priority change", ["CR-HOT"]),
     ("CP-TO", "Standard track-out", ["CR-SMP", "CR-DC", "CR-OOS", "CR-MAT"]),
 ]
+_TODAY = date.today()
+for user, op, days in (
+    ("admin", "DF-OX", 365),
+    ("admin", "TF-DEP", 365),
+    ("admin", "PH-CD", 10),
+    ("operator", "DF-OX", -5),
+):
+    add(
+        "operator_qual",
+        username=user,
+        operation=("operation", op),
+        certified_on=_TODAY - timedelta(days=365),
+        expires_on=_TODAY + timedelta(days=days),
+    )
 for c, n, rules in CHECK_PLANS:
     add("check_plan", code=c, name=f"{n} (DEMO)")
     for i, r in enumerate(rules):

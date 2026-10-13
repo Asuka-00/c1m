@@ -38,6 +38,7 @@
       "check_log": "チェック記録",
       "future_hold": "予約ホールド",
       "shift_log": "シフト引継ぎ",
+      "operator_qual": "作業者資格",
       "site": "工場",
       "area": "エリア",
       "workcenter": "ベイ / ワークセンター",
@@ -300,6 +301,14 @@
         "received_by": "受領者",
         "received_at": "受領日時",
         "receive_comment": "受領メモ"
+      },
+      "operator_qual": {
+        "username": "ユーザー",
+        "operation": "工程",
+        "equipment_type": "設備タイプ",
+        "certified_on": "認定日",
+        "expires_on": "有効期限",
+        "is_active": "有効"
       },
       "site": {
         "code": "コード",
@@ -878,6 +887,9 @@
       "future_hold": {
         "reason": "空欄：既定のホールド理由"
       },
+      "operator_qual": {
+        "equipment_type": "空欄：全設備タイプ"
+      },
       "calendar_day": {
         "shifts": "カンマ区切りのシフトコード"
       },
@@ -1022,6 +1034,8 @@
         "sort_order": "ソート順序維持",
         "hot_lot_limit": "ホットロット仕掛上限",
         "handover_ack_other": "引継ぎは別ユーザーが確認",
+        "operator_qualified": "作業者資格あり",
+        "qual_expiry_notice": "資格期限通知",
         "future_hold": "予約ホールド",
         "wo_due": "作業指示納期通知",
         "carrier_clean": "キャリア洗浄周期",
@@ -1401,6 +1415,7 @@
     "mes-future_hold": "予約ホールド",
     "mes-shift-handover": "シフト引継ぎ",
     "mes-label-print": "ラベル印刷",
+    "mes-operator_qual": "作業者資格",
     "mes-lot": "ロット一覧",
     "mes-wafer": "ウェーハ",
     "mes-wip-dashboard": "WIP ダッシュボード",

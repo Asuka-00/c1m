@@ -124,7 +124,8 @@
     "mes-change_order": "Engineering Change",
     "mes-future_hold": "Future Hold",
     "mes-shift-handover": "Shift Handover",
-    "mes-label-print": "Label Printing"
+    "mes-label-print": "Label Printing",
+    "mes-operator_qual": "Operator Qualification"
   },
   "auth": {
     "appName": "FastAPI Admin",
@@ -1221,6 +1222,14 @@
         "wo_overdue": {
           "label": "WO overdue",
           "title": "Work order {{wo}} overdue by {{days}} d (due {{due}})"
+        },
+        "qual_expiring": {
+          "label": "Qualification expiring",
+          "title": "{{user}}'s {{operation}} qualification expires {{date}}"
+        },
+        "qual_expired": {
+          "label": "Qualification expired",
+          "title": "{{user}}'s {{operation}} qualification expired {{date}}"
         }
       }
     }

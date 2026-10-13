@@ -38,6 +38,7 @@
       "check_log": "Check log",
       "future_hold": "Future hold",
       "shift_log": "Shift handover",
+      "operator_qual": "Operator qualification",
       "site": "Factory / site",
       "area": "Area",
       "workcenter": "Bay / work center",
@@ -300,6 +301,14 @@
         "received_by": "Received by",
         "received_at": "Received at",
         "receive_comment": "Receiver note"
+      },
+      "operator_qual": {
+        "username": "User",
+        "operation": "Operation",
+        "equipment_type": "Equipment type",
+        "certified_on": "Certified on",
+        "expires_on": "Expires on",
+        "is_active": "Active"
       },
       "site": {
         "code": "Code",
@@ -878,6 +887,9 @@
       "future_hold": {
         "reason": "Blank: default hold reason"
       },
+      "operator_qual": {
+        "equipment_type": "Blank: any equipment type"
+      },
       "calendar_day": {
         "shifts": "Comma separated shift codes"
       },
@@ -1022,6 +1034,8 @@
         "sort_order": "Sort keeps wafer order",
         "hot_lot_limit": "Hot lot WIP limit",
         "handover_ack_other": "Handover confirmed by another user",
+        "operator_qualified": "Operator qualified",
+        "qual_expiry_notice": "Qualification expiry notice",
         "future_hold": "Future hold at step",
         "wo_due": "Work order due notice",
         "carrier_clean": "Carrier cleaning due",
@@ -1401,6 +1415,7 @@
     "mes-future_hold": "Future Hold",
     "mes-shift-handover": "Shift Handover",
     "mes-label-print": "Label Printing",
+    "mes-operator_qual": "Operator Qualification",
     "mes-lot": "Lot List",
     "mes-wafer": "Wafer",
     "mes-wip-dashboard": "WIP Dashboard",

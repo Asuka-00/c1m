@@ -124,7 +124,8 @@
     "mes-change_order": "設計変更",
     "mes-future_hold": "予約ホールド",
     "mes-shift-handover": "シフト引継ぎ",
-    "mes-label-print": "ラベル印刷"
+    "mes-label-print": "ラベル印刷",
+    "mes-operator_qual": "作業者資格"
   },
   "auth": {
     "appName": "FastAPI 管理画面",
@@ -1221,6 +1222,14 @@
         "wo_overdue": {
           "label": "作業指示納期遅延",
           "title": "作業指示 {{wo}} が {{days}} 日遅延（納期 {{due}}）"
+        },
+        "qual_expiring": {
+          "label": "資格期限間近",
+          "title": "{{user}} の {{operation}} 資格は {{date}} に期限切れ"
+        },
+        "qual_expired": {
+          "label": "資格期限切れ",
+          "title": "{{user}} の {{operation}} 資格は {{date}} に期限切れ"
         }
       }
     }

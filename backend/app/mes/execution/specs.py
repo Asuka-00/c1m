@@ -36,6 +36,11 @@ CHECK_TYPES = [
         "handover_ack_other",
         "Handover confirmed by another user|接班须由他人确认|引継ぎは別ユーザーが確認",
     ),
+    ("operator_qualified", "Operator qualified|操作员具备资质|作業者資格あり"),
+    (
+        "qual_expiry_notice",
+        "Qualification expiry notice|资质到期提醒|資格期限通知",
+    ),
     ("future_hold", "Future hold at step|预约 Hold|予約ホールド"),
     ("wo_due", "Work order due notice|工单交期提醒|作業指示納期通知"),
     ("carrier_clean", "Carrier cleaning due|载具清洗周期|キャリア洗浄周期"),
@@ -451,5 +456,34 @@ register(
         icon="NotebookPen",
         sort_default="shift_date",
         label_field="shift_date",
+    ),
+)
+
+
+register(
+    Entity(
+        "operator_qual",
+        "exec",
+        "Operator qualification|操作员资质|作業者資格",
+        [
+            F("username", "str", "User|用户|ユーザー", required=True, search=True),
+            F("operation", "ref", ref="operation", required=True),
+            F(
+                "equipment_type",
+                "ref",
+                "Equipment type|设备类型|設備タイプ",
+                ref="equipment_type",
+                help="Blank: any equipment type|留空则适用全部设备类型|空欄：全設備タイプ",
+            ),
+            F("certified_on", "date", "Certified on|认证日期|認定日"),
+            F("expires_on", "date", "Expires on|有效期至|有効期限"),
+            F("is_active", "bool", default=True),
+        ],
+        phase=6,
+        has_code=False,
+        icon="Award",
+        sort_default="expires_on",
+        label_field="username",
+        unique=[("username", "operation", "equipment_type")],
     ),
 )

@@ -567,3 +567,38 @@ def test_shift_handover_ack_rule(client: TestClient, db: Session) -> None:
     f.post(f"{url}/{log['id']}/ack", {}, 409)
     rows = client.get(url, headers=f.m.h).json()["data"]
     assert [r["id"] for r in rows] == [log["id"]]
+
+
+# ---------------- 13: operator qualification ----------------
+def test_operator_qualified_and_expiry_notice(client: TestClient, db: Session) -> None:
+    import uuid as _uuid
+    from datetime import date, timedelta
+
+    from app.mes.execution.service import sweep_all_tenants
+    from app.mes.execution.tests.test_exec import Line
+    from app.platform.notification.tests.test_notification import _sub_all, _types
+
+    f = Line(client, db)
+    _sub_all(f)
+    (a,) = f.start(2)
+    f.bind("track_in", ("operator_qualified", "block", {}))
+    f.stage(a, "move_in", equipment_id=f.eq["id"])
+    r = f.stage(a, "track_in", 409, equipment_id=f.eq["id"])
+    assert r["detail"]["code"] == "check_blocked"
+    me = client.get("/api/v1/users/me", headers=f.m.h).json()
+    q = f.m.post(
+        "operator_qual",
+        {
+            "username": me.get("username") or me["email"],
+            "operation_id": f.steps[10]["operation_id"],
+            "expires_on": str(date.today() - timedelta(days=1)),
+        },
+    )
+    f.stage(a, "track_in", 409, equipment_id=f.eq["id"])  # 已过期
+    f.m.patch(
+        "operator_qual", q["id"], {"expires_on": str(date.today() + timedelta(days=3))}
+    )
+    f.stage(a, "track_in", equipment_id=f.eq["id"])
+    sweep_all_tenants([_uuid.UUID(str(f.m.tid))])
+    sweep_all_tenants([_uuid.UUID(str(f.m.tid))])
+    assert _types(f).count("mes.qual_expiring") == 1

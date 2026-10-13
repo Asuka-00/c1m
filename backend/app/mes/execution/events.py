@@ -51,3 +51,17 @@ def notify_lot(
         link=lot_link(lot),
         dedupe_key=dedupe_key,
     )
+
+
+QUAL_EXPIRING = register_event(
+    "mes.qual_expiring",
+    "Qualification expiring|资质即将到期|資格期限間近",
+    "warning",
+    "operator_qual",
+).code
+QUAL_EXPIRED = register_event(
+    "mes.qual_expired",
+    "Qualification expired|资质已过期|資格期限切れ",
+    "critical",
+    "operator_qual",
+).code

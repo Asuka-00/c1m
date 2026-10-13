@@ -1,7 +1,7 @@
 """内置检查类型：设备、配方、光罩、物料、工具、载具、Q-Time、Hold、工单、DC、抽样。"""
 
 import uuid
-from datetime import timedelta
+from datetime import date, timedelta
 from typing import Any
 
 from app.mes.common.query import find, one
@@ -486,3 +486,39 @@ def _hot_lot_limit(ctx: Ctx, p: Row) -> Outcome:
 def _handover_ack_other(_ctx: Ctx, _p: Row) -> Outcome:
     """接班确认须由交班人以外的用户执行（开关见 ``switch``），作业时不检查。"""
     return "na", "shift handover rule", {}
+
+
+@check_type("operator_qualified")
+def _operator_qualified(ctx: Ctx, _p: Row) -> Outcome:
+    """操作员资质：操作人须持有本工序（及设备类型）的有效认证。"""
+    if not ctx.op:
+        return "na", "no operation", {}
+    user = ctx.operator or ""
+    et = (ctx.equipment or {}).get("equipment_type_id")
+    today = ctx.at.date() if ctx.at else date.today()
+    data = {"user": user, "operation": ctx.op["code"]}
+    for q in find(
+        ctx.s,
+        ctx.tid,
+        "operator_qual",
+        username=user,
+        operation_id=ctx.op["id"],
+        is_active=True,
+    ):
+        if q["equipment_type_id"] and q["equipment_type_id"] != et:
+            continue
+        if q["expires_on"] and q["expires_on"] < today:
+            continue
+        exp = q["expires_on"] and str(q["expires_on"])
+        return (
+            "pass",
+            f"{user} qualified for {ctx.op['code']}",
+            {**data, "expires": exp},
+        )
+    return "fail", f"{user} not qualified for {ctx.op['code']}", data
+
+
+@check_type("qual_expiry_notice")
+def _qual_expiry_notice(_ctx: Ctx, _p: Row) -> Outcome:
+    """资质到期提醒：定时扫描发送通知（开关见 ``switch``），作业时不检查。"""
+    return "na", "scheduled notice", {}
