@@ -82,3 +82,49 @@ describe('拆批对话框（P13）', () => {
     expect(document.body.textContent).toContain('6 / 10')
   })
 })
+
+describe('拆批对话框边界（P13）', () => {
+  it('多个子批合计恰好等于母批数量时禁止提交，少 1 则可提交', async () => {
+    const s = await render(
+      <W>
+        <SplitMergeCard cx={cx} />
+      </W>
+    )
+    await s.getByTestId('open-split').click()
+    await s.getByTestId('child-plus').click()
+    await expect.poll(() => !!document.querySelector('#split-qty-1')).toBe(true)
+    const q = (i: number) =>
+      document.querySelector<HTMLInputElement>(`#split-qty-${i}`)!
+    await userEvent.fill(q(0), '6')
+    await userEvent.fill(q(1), '4')
+    await expect.element(s.getByTestId('do-split')).toBeDisabled()
+    await expect.element(s.getByTestId('split-too-many')).toBeVisible()
+    await userEvent.fill(q(1), '3')
+    await expect.element(s.getByTestId('do-split')).toBeEnabled()
+    expect(document.querySelector('[data-testid=split-too-many]')).toBeNull()
+  })
+
+  it('晶圆模式：选中全部晶圆时禁止提交', async () => {
+    const units = [
+      { id: 'U1', code: 'W1', status: 'waiting', slot: 1 },
+      { id: 'U2', code: 'W2', status: 'waiting', slot: 2 },
+    ]
+    const wcx = {
+      ...cx,
+      tracking_level: 'wafer',
+      lot: { ...cx.lot, qty: 2 },
+      units,
+    } as unknown as ExecContext
+    const s = await render(
+      <W>
+        <SplitMergeCard cx={wcx} />
+      </W>
+    )
+    await s.getByTestId('open-split').click()
+    await s.getByTestId('pick-W1-1').click()
+    await expect.element(s.getByTestId('do-split')).toBeEnabled()
+    await s.getByTestId('pick-W2-1').click()
+    await expect.element(s.getByTestId('do-split')).toBeDisabled()
+    await expect.element(s.getByTestId('split-too-many')).toBeVisible()
+  })
+})
