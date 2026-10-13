@@ -1,6 +1,6 @@
 /** 登录表单。 */
 import { useState } from 'react'
-import { z } from 'zod'
+import { type z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
@@ -23,22 +23,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
-
-const formSchema = z.object({
-  // 用户名（兼容邮箱登录）；消息写成函数以跟随当前语言
-  login: z
-    .string()
-    .trim()
-    .min(1, { error: () => t('auth.loginRequired') })
-    .refine(
-      (v) =>
-        v.includes('@')
-          ? z.email().safeParse(v).success
-          : /^[A-Za-z0-9_.-]{3,50}$/.test(v),
-      { error: () => t('auth.loginInvalid') }
-    ),
-  password: z.string().min(1, { error: () => t('auth.passwordRequired') }),
-})
+import { formSchema } from './login-schema'
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLFormElement> {
   redirectTo?: string

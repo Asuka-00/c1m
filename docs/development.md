@@ -161,7 +161,7 @@ UI 布局巡检（需前后端已启动）：`node scripts/ui-audit.cjs`。
   - `PUT /platform/users/{id}/roles` `{role_ids}`：整体设置用户的平台角色。
   - 用户列表筛选 `username` / `full_name` / `is_active`；角色列表筛选 `code` / `title` / `status`；成员列表筛选 `username` / `full_name` / `is_active` / `role_id`。
 - 前端：平台控制台“权限树”页（`platform-permissions`）维护菜单与权限；角色对话框内嵌三态复选权限树；不再有独立的菜单管理页与“角色权限”页签。
-- 已删除的旧兼容管理接口（全部改用 `/platform/...`，仅超级用户）：`GET/POST /tenants/`、`GET /tenants/{id}/permissions`、`/users/` 列表 / 新建 与 `/users/{id}` 查询 / 修改 / 删除、`/roles/*`、`/permissions/*`、`/users/{id}/roles*`、`/menus/` 增删改查。保留的自助接口：`/users/me*`、`/users/signup`、`/menus/me`、`/tenants/me`、`/tenants/{id}/...`（工作区）。
+- 已删除的旧兼容管理接口（全部改用 `/platform/...`，仅超级用户）：`GET/POST /tenants/`、`GET /tenants/{id}/permissions`、`/users/` 列表 / 新建 与 `/users/{id}` 查询 / 修改 / 删除、`/roles/*`、`/permissions/*`、`/users/{id}/roles*`、`/menus/` 增删改查。保留的自助接口：`/users/me*`、`/menus/me`、`/tenants/me`、`/tenants/{id}/...`（工作区）。
 
 ### 平台权限与租户模拟
 
@@ -174,9 +174,10 @@ UI 布局巡检（需前后端已启动）：`node scripts/ui-audit.cjs`。
 ## 用户身份：用户名为主
 
 - `user.username` 必填，以小写存储，并有 `lower(username)` 唯一索引（不区分大小写唯一）；`email` 可选，填写时唯一（比较不区分大小写）。重复时返回 409：`User with this username already exists` / `User with this email already exists`。
-- 登录使用用户名（`/login/access-token` 的 `username` 字段）；为兼容旧账号仍接受邮箱。错误信息为 `Incorrect username or password`。
-- 所有操作人字段统一记录用户名：`core.models.actor_name(user)`（审计 `user_email`、平台操作日志 `actor_email`、登录日志 `email`、`updated_by`、批次履历操作人、通知等）。列名保持不变，仅存值改为用户名。迁移 `389542902fa8` 回填缺失用户名并把历史邮箱值转换为用户名。
-- 平台用户：`GET/PUT /platform/users/{id}/tenants` 整体设置用户的租户成员身份与租户角色（保留最后一个 owner 校验，逐项记入平台操作日志）。前端新建用户时保留自动创建的个人工作区后追加所选租户。
+- 仅支持用户名登录（`/login/access-token` 的 `username` 字段，不接受邮箱）。错误信息为 `Incorrect username or password`。
+- 所有操作人字段统一记录用户名：`core.models.actor_name(user)`（审计 / 履历表 `username`、平台操作日志 `actor_username`、登录日志 `username`、`updated_by`、通知等）。迁移 `389542902fa8` 回填用户名并把历史邮箱值转换为用户名，`46aa1248fc63` 把列名改为基于用户名。
+- 平台用户：`GET/PUT /platform/users/{id}/tenants` 整体设置用户的租户成员身份与租户角色（保留最后一个 owner 校验，逐项记入平台操作日志）。系统**不会**为任何用户自动创建个人工作区 / 租户（注册、平台创建、租户内创建、首个超级用户均如此）；租户（工厂 / 站点级作用域）只由平台创建，用户须显式加入。未分配租户的普通用户登录后看到“尚未分配租户，请联系管理员”的提示。公开注册接口 `/users/signup` 与 `allow_signup` 配置已移除。
+- 历史个人工作区清理：`python -m app.cleanup_personal_tenants`（演练）/ `--apply`（删除）。仅删除名称与 slug 符合旧规则、owner 匹配且所有租户作用域表无业务数据的租户；有数据的只列出。
 - 租户成员（需 `members:write`；涉及 owner 需 `tenant:manage`）：
   - `POST /tenants/{id}/members` 按用户名（或邮箱）添加已有用户；
   - `POST /tenants/{id}/members/new` 直接在租户内创建用户（不能创建超级用户，不创建个人工作区）；

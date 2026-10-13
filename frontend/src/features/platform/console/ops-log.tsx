@@ -63,7 +63,9 @@ export default function PlatformOpsLogPage() {
           },
           {
             header: t('platform.actor'),
-            cell: (r) => <span className='font-medium'>{r.actor_email}</span>,
+            cell: (r) => (
+              <span className='font-medium'>{r.actor_username}</span>
+            ),
           },
           {
             header: t('platform.action'),

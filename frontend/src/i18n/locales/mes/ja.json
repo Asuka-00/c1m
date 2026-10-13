@@ -199,7 +199,7 @@
         "source": "ソース",
         "reason": "理由コード",
         "comment": "コメント",
-        "user_email": "ユーザー",
+        "username": "ユーザー",
         "at": "日時"
       },
       "pm_plan": {
@@ -218,7 +218,7 @@
         "equipment": "設備",
         "result": "結果",
         "comment": "コメント",
-        "user_email": "ユーザー",
+        "username": "ユーザー",
         "done_at": "実施日時"
       },
       "downtime": {
@@ -273,7 +273,7 @@
         "message": "メッセージ",
         "context": "コンテキスト",
         "override_reason": "強制解除理由",
-        "user_email": "ユーザー"
+        "username": "ユーザー"
       },
       "site": {
         "code": "コード",
@@ -445,7 +445,7 @@
         "reason": "理由コード",
         "comment": "コメント",
         "details": "詳細",
-        "user_email": "ユーザー",
+        "username": "ユーザー",
         "at": "日時"
       },
       "lot_genealogy": {
@@ -455,7 +455,7 @@
         "qty": "数量",
         "units": "ウェーハ・ユニット",
         "route_step": "ルートステップ",
-        "user_email": "ユーザー",
+        "username": "ユーザー",
         "at": "日時"
       },
       "work_order": {
@@ -734,7 +734,7 @@
         "value": "値",
         "is_oos": "規格外",
         "oos_action": "規格外処置",
-        "user_email": "ユーザー"
+        "username": "ユーザー"
       },
       "warehouse": {
         "code": "コード",
@@ -785,7 +785,7 @@
         "record_id": "レコード ID",
         "record_code": "レコード",
         "changes": "変更内容",
-        "user_email": "ユーザー"
+        "username": "ユーザー"
       }
     },
     "help": {

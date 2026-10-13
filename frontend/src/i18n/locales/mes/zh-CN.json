@@ -199,7 +199,7 @@
         "source": "来源",
         "reason": "原因代码",
         "comment": "备注",
-        "user_email": "用户",
+        "username": "用户",
         "at": "时间"
       },
       "pm_plan": {
@@ -218,7 +218,7 @@
         "equipment": "设备",
         "result": "结果",
         "comment": "备注",
-        "user_email": "用户",
+        "username": "用户",
         "done_at": "完成时间"
       },
       "downtime": {
@@ -273,7 +273,7 @@
         "message": "信息",
         "context": "上下文",
         "override_reason": "放行原因",
-        "user_email": "用户"
+        "username": "用户"
       },
       "site": {
         "code": "编码",
@@ -445,7 +445,7 @@
         "reason": "原因代码",
         "comment": "备注",
         "details": "详情",
-        "user_email": "用户",
+        "username": "用户",
         "at": "时间"
       },
       "lot_genealogy": {
@@ -455,7 +455,7 @@
         "qty": "数量",
         "units": "晶圆 / 单元",
         "route_step": "流程步骤",
-        "user_email": "用户",
+        "username": "用户",
         "at": "时间"
       },
       "work_order": {
@@ -734,7 +734,7 @@
         "value": "值",
         "is_oos": "超规",
         "oos_action": "超规动作",
-        "user_email": "用户"
+        "username": "用户"
       },
       "warehouse": {
         "code": "编码",
@@ -785,7 +785,7 @@
         "record_id": "记录 ID",
         "record_code": "记录",
         "changes": "变更内容",
-        "user_email": "用户"
+        "username": "用户"
       }
     },
     "help": {

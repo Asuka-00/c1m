@@ -268,7 +268,7 @@ export default function LotTracePage() {
                         {fmtDateTime(String(h.at))}
                       </span>
                       <span className='text-xs text-muted-foreground'>
-                        {String(h.user_email ?? '')}
+                        {String(h.username ?? '')}
                       </span>
                     </div>
                     <div className='flex flex-wrap gap-x-4 text-sm'>

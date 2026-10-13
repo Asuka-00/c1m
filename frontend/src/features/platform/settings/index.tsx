@@ -142,6 +142,10 @@ function ProfileCard({ me }: { me: User }) {
           }}
         >
           <div className='grid gap-2'>
+            <Label htmlFor='username'>{t('common.username')}</Label>
+            <Input id='username' value={me.username} readOnly disabled />
+          </div>
+          <div className='grid gap-2'>
             <Label htmlFor='full_name'>{t('common.fullName')}</Label>
             <Input
               id='full_name'

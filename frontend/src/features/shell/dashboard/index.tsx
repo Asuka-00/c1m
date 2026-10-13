@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
-import { Building2, KeyRound, Users } from 'lucide-react'
+import { Building2, KeyRound, TriangleAlert, Users } from 'lucide-react'
 import { api } from '@/lib/api'
 import {
   useCan,
@@ -11,6 +11,7 @@ import {
   useMyMenus,
   useMyTenants,
 } from '@/lib/api/hooks'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -68,6 +69,14 @@ export default function Dashboard() {
       title={t('dashboard.title')}
       description={t('dashboard.signedInAs', { email: me?.username ?? '…' })}
     >
+      {/* 未分配任何租户的普通用户：给出明确提示而不是报错 */}
+      {tenants.data?.count === 0 && me && !me.is_superuser && (
+        <Alert data-testid='no-tenant' className='mb-4'>
+          <TriangleAlert />
+          <AlertTitle>{t('dashboard.noTenantTitle')}</AlertTitle>
+          <AlertDescription>{t('dashboard.noTenantDesc')}</AlertDescription>
+        </Alert>
+      )}
       {can('mes.exec:read') && current && <HomeKpis />}
       <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
         <Stat

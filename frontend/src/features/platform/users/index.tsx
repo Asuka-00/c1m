@@ -84,15 +84,8 @@ export default function UsersPage() {
         username: (v.username as string).trim(),
         password: v.password as string,
       })
-      if (rows.length) {
-        // 保留创建时自动生成的个人工作区，再追加所选租户
-        const own = await api.users.tenants(u.id)
-        const ids = new Set(rows.map((r) => r.tenant_id))
-        await api.users.setTenants(u.id, [
-          ...own.filter((r) => !ids.has(r.tenant_id)),
-          ...rows,
-        ])
-      }
+      // 不会自动创建租户：按所选行分配
+      if (rows.length) await api.users.setTenants(u.id, rows)
       return roleIds.length ? api.users.setRoles(u.id, roleIds) : u
     },
     [['users'], ['user-roles'], ['user-tenants'], ['platform-tenants']],
@@ -212,6 +205,7 @@ export default function UsersPage() {
         }
         onOpenChange={(o) => !o && s.closeForm()}
         title={editing ? t('users.edit') : t('users.new')}
+        description={editing ? undefined : t('users.newDesc')}
         fields={[
           {
             name: 'username',

@@ -112,7 +112,8 @@
     "backToWorkspace": "ワークスペースに戻る",
     "impersonating": "テナント「{{name}}」として表示中",
     "impersonatingShort": "テナントとして表示中",
-    "exitImpersonation": "テナント表示を終了してプラットフォーム管理へ戻る"
+    "exitImpersonation": "テナント表示を終了してプラットフォーム管理へ戻る",
+    "noTenant": "テナント未割り当て"
   },
   "menu": {
     "dashboard": "ダッシュボード",
@@ -221,7 +222,9 @@
     "effectiveDesc": "プラットフォームロール + 現在のテナントでのロール（GET /menus/me より）",
     "bypass": "スーパーユーザー（全権限）",
     "showPerms": "表示",
-    "hidePerms": "非表示"
+    "hidePerms": "非表示",
+    "noTenantTitle": "テナントが割り当てられていません",
+    "noTenantDesc": "アカウントはまだどのテナント（工場 / サイト）にも追加されていないため、業務機能は利用できません。管理者にテナントとロールの割り当てを依頼してください。"
   },
   "users": {
     "title": "ユーザー",
@@ -229,7 +232,7 @@
     "new": "新規ユーザー",
     "edit": "ユーザーを編集",
     "editDesc": "パスワードを空欄にすると変更されません。",
-    "newDesc": "新規ユーザーには個人テナント（オーナー）が作成されます。下でテナントとテナントロールも割り当てられます。",
+    "newDesc": "テナントは自動作成されません。下でテナントとテナントロールを割り当ててください。",
     "passwordUnchanged": "変更なし",
     "passwordMin": "8文字以上",
     "rolesTitle": "{{email}} のプラットフォームロール",

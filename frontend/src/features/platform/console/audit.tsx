@@ -76,7 +76,7 @@ export default function PlatformAuditPage() {
                 : '—',
           },
           { header: t('platform.record'), cell: (r) => r.record_code ?? '—' },
-          { header: t('platform.actor'), cell: (r) => r.user_email ?? '—' },
+          { header: t('platform.actor'), cell: (r) => r.username ?? '—' },
         ]}
       />
     </Page>

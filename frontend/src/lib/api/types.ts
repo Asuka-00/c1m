@@ -99,8 +99,8 @@ export interface PlatformTenant extends Tenant {
 /** 登录日志。 */
 export interface LoginLog {
   id: UUID
-  /** 登录名（用户名；失败时为尝试的登录名） */
-  email: string
+  /** 登录名（尝试登录时输入的用户名） */
+  username: string
   user_id: UUID | null
   success: boolean
   reason: string | null
@@ -112,7 +112,7 @@ export interface LoginLog {
 export interface PlatformAudit {
   id: UUID
   /** 操作人用户名 */
-  actor_email: string
+  actor_username: string
   action: string
   target_type: string
   target_id: string | null
@@ -128,7 +128,7 @@ export interface CrossTenantAudit {
   entity_type: string | null
   action: string | null
   record_code: string | null
-  user_email: string | null
+  username: string | null
   changes: unknown
   created_at: string | null
 }

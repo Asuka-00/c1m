@@ -112,7 +112,8 @@
     "backToWorkspace": "Back to workspace",
     "impersonating": "Viewing as tenant \"{{name}}\"",
     "impersonatingShort": "viewing as tenant",
-    "exitImpersonation": "Leave tenant view, back to Platform Admin"
+    "exitImpersonation": "Leave tenant view, back to Platform Admin",
+    "noTenant": "No tenant assigned"
   },
   "menu": {
     "dashboard": "Dashboard",
@@ -221,7 +222,9 @@
     "effectiveDesc": "Platform roles + your roles in the current tenant (from GET /menus/me)",
     "bypass": "superuser (bypass)",
     "showPerms": "Show",
-    "hidePerms": "Hide"
+    "hidePerms": "Hide",
+    "noTenantTitle": "No tenant assigned",
+    "noTenantDesc": "Your account has not been added to any tenant (factory / site) yet, so business features are unavailable. Please contact an administrator to assign a tenant and roles."
   },
   "users": {
     "title": "Users",
@@ -229,7 +232,7 @@
     "new": "New user",
     "edit": "Edit user",
     "editDesc": "Leave password empty to keep it.",
-    "newDesc": "New users get a personal tenant (owner); you can also assign tenants and tenant roles below.",
+    "newDesc": "No tenant is created automatically; assign tenants and tenant roles below.",
     "passwordUnchanged": "unchanged",
     "passwordMin": "min. 8 characters",
     "rolesTitle": "Platform roles of {{email}}",

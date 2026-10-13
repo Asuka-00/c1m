@@ -112,7 +112,8 @@
     "backToWorkspace": "返回工作区",
     "impersonating": "以租户「{{name}}」身份查看",
     "impersonatingShort": "租户身份查看",
-    "exitImpersonation": "退出租户身份，返回平台管理"
+    "exitImpersonation": "退出租户身份，返回平台管理",
+    "noTenant": "未分配租户"
   },
   "menu": {
     "dashboard": "仪表盘",
@@ -221,7 +222,9 @@
     "effectiveDesc": "平台角色 + 你在当前租户中的角色（来自 GET /menus/me）",
     "bypass": "超级管理员（全部放行）",
     "showPerms": "展开",
-    "hidePerms": "收起"
+    "hidePerms": "收起",
+    "noTenantTitle": "尚未分配租户",
+    "noTenantDesc": "你的账号还没有加入任何租户（工厂 / 站点），因此暂时无法使用业务功能。请联系管理员为你分配租户与角色。"
   },
   "users": {
     "title": "用户",
@@ -229,7 +232,7 @@
     "new": "新建用户",
     "edit": "编辑用户",
     "editDesc": "密码留空则保持不变。",
-    "newDesc": "新用户会自动获得一个个人租户（所有者），可在下方额外分配租户与租户角色。",
+    "newDesc": "不会自动创建租户；可在下方为用户分配租户与租户角色。",
     "passwordUnchanged": "保持不变",
     "passwordMin": "至少 8 个字符",
     "rolesTitle": "{{email}} 的平台角色",

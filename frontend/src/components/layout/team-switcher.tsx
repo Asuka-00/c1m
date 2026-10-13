@@ -82,7 +82,9 @@ export function TeamSwitcher() {
                     ? `${current.tenant.name} · ${current.roles.join(', ') || t('nav.noRole')}`
                     : imp
                       ? `${imp.name} · ${t('nav.impersonatingShort')}`
-                      : t('nav.tenantsCount', { count: data?.count ?? 0 })}
+                      : data && data.count === 0
+                        ? t('nav.noTenant')
+                        : t('nav.tenantsCount', { count: data?.count ?? 0 })}
                 </span>
               </div>
               <ChevronsUpDown className='ms-auto' />

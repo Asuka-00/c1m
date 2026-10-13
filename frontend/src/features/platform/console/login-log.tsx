@@ -49,8 +49,8 @@ export default function LoginLogPage() {
           },
           {
             header: t('common.loginName'),
-            sortKey: 'email',
-            cell: (r) => <span className='font-medium'>{r.email}</span>,
+            sortKey: 'username',
+            cell: (r) => <span className='font-medium'>{r.username}</span>,
           },
           {
             header: t('platform.result'),

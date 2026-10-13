@@ -199,7 +199,7 @@
         "source": "Source",
         "reason": "Reason code",
         "comment": "Comment",
-        "user_email": "User",
+        "username": "User",
         "at": "Time"
       },
       "pm_plan": {
@@ -218,7 +218,7 @@
         "equipment": "Equipment",
         "result": "Result",
         "comment": "Comment",
-        "user_email": "User",
+        "username": "User",
         "done_at": "Done at"
       },
       "downtime": {
@@ -273,7 +273,7 @@
         "message": "Message",
         "context": "Context",
         "override_reason": "Override reason",
-        "user_email": "User"
+        "username": "User"
       },
       "site": {
         "code": "Code",
@@ -445,7 +445,7 @@
         "reason": "Reason code",
         "comment": "Comment",
         "details": "Details",
-        "user_email": "User",
+        "username": "User",
         "at": "Time"
       },
       "lot_genealogy": {
@@ -455,7 +455,7 @@
         "qty": "Qty",
         "units": "Wafers / units",
         "route_step": "Route step",
-        "user_email": "User",
+        "username": "User",
         "at": "Time"
       },
       "work_order": {
@@ -734,7 +734,7 @@
         "value": "Value",
         "is_oos": "OOS",
         "oos_action": "OOS action",
-        "user_email": "User"
+        "username": "User"
       },
       "warehouse": {
         "code": "Code",
@@ -785,7 +785,7 @@
         "record_id": "Record id",
         "record_code": "Record",
         "changes": "Changes",
-        "user_email": "User"
+        "username": "User"
       }
     },
     "help": {
