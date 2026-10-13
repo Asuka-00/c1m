@@ -234,6 +234,8 @@ def test_carrier_change_clean_and_checks(client: TestClient, db: Session) -> Non
     }
     assert board["C1"]["use_count"] == 0 and board["C1"]["lot"] is None
     assert board["C2"]["lot"] == a["code"]
+    assert board["C2"]["lot_status"] == f.lot(a)["lot_status"]
+    assert board["C1"]["lot_status"] is None
     ev = f.m.list("carrier_event", carrier=c1["id"])["data"]
     assert {e["event"] for e in ev} == {"load", "unload", "clean"}
     # C2 清洗超期 → 拦截；通过后使用次数 +1
