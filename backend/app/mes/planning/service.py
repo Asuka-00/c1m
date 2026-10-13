@@ -589,9 +589,11 @@ def undo_start(
     stmt = sa.select(t).where(t.c.tenant_id == tid, t.c.work_order_id == wo["id"])
     if lot_ids:
         stmt = stmt.where(t.c.id.in_(lot_ids))
-    lots = [dict(r) for r in conn(s).execute(stmt).mappings()]
-    if not lots:
+    ids = list(conn(s).execute(stmt.with_only_columns(t.c.id)).scalars())
+    if not ids:
         raise http_422([("lots", "lots: nothing to undo")])
+    # 加锁后再判断状态，防止与 Move In / Hold 并发
+    lots = list(lot_svc.lock_lots(s, tid, ids).values())
     h = TABLES["lot_history"]
     acted = set(
         conn(s)

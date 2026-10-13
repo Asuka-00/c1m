@@ -229,6 +229,8 @@ def _validate_all(s: Session, tid: uuid.UUID, rc: Row, lock: bool) -> list[Row]:
     lines = find(s, tid, "receipt_line", order="created_at", receipt_id=rc["id"])
     if not lines:
         raise http_422([("lines", "lines: add at least one lot")])
+    if lock:  # 多批次按 id 升序一次加锁，防止入库单行顺序相反时死锁
+        lot_svc.lock_lots(s, tid, [x["lot_id"] for x in lines])
     errs: list[tuple[str, str]] = []
     for i, x in enumerate(lines, 1):
         lot = (

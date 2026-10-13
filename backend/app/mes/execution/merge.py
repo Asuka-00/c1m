@@ -11,6 +11,7 @@ from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import TABLES
 from app.core.spec.errors import http_422
+from app.mes.common.query import one
 from app.mes.common.rows import _upd
 from app.mes.execution.checks import service as ck
 from app.mes.execution.sm_rules import (
@@ -27,7 +28,7 @@ from app.mes.execution.sm_rules import (
 )
 from app.mes.execution.stage_common import _brief, _ov
 from app.mes.execution.stages import LOT
-from app.mes.lot.service import history, lock_lot, units
+from app.mes.lot.service import history, lock_lots, units
 
 Row = dict[str, Any]
 
@@ -135,16 +136,36 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
         HTTPException: 规则不满足或载具容量不足（422）。
         CheckBlocked: 检查阻断。
     """
-    ids = list(dict.fromkeys(str(x) for x in body.get("source_lot_ids") or []))
+    ids = [str(x) for x in body.get("source_lot_ids") or []]
     if not ids:
         raise http_422([("source_lot_ids", "source_lot_ids: pick lots to merge")])
-    target = lock_lot(s, tid, lot_id)
-    srcs: list[Row] = []
+    if len(set(ids)) != len(ids) or str(lot_id) in ids:  # P14：不静默去重
+        raise http_422(
+            [
+                (
+                    "source_lot_ids",
+                    "source_lot_ids: duplicate lots or the target lot itself",
+                )
+            ]
+        )
+    src_ids: list[uuid.UUID] = []
     for x in ids:
         try:
-            srcs.append(lock_lot(s, tid, uuid.UUID(x)))
-        except HTTPException, ValueError:
+            src_ids.append(uuid.UUID(x))
+        except ValueError:
             raise http_422([("source_lot_ids", f"source_lot_ids: {x} not found")])
+    # 目标与源批次按 id 升序一次加锁，避免反向合批互相等待造成死锁
+    try:
+        locked = lock_lots(s, tid, [lot_id, *src_ids])
+    except HTTPException:
+        if not one(s, tid, "lot", lot_id):
+            raise
+        missing = [str(x) for x in src_ids if not one(s, tid, "lot", x)]
+        raise http_422(
+            [("source_lot_ids", f"source_lot_ids: {', '.join(missing)} not found")]
+        )
+    target = locked[uuid.UUID(str(lot_id))]
+    srcs = [locked[x] for x in src_ids]
     rule = rule_for(s, tid, target)
     errs: list[str] = []
     if target["lot_status"] not in SPLIT_STATES:
