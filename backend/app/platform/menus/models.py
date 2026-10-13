@@ -15,6 +15,8 @@ class MenuBase(SQLModel):
     sort_order: int = 0
     permission: str | None = Field(default=None, max_length=100)  # 所需权限编码
     hidden: bool = False
+    # 菜单空间："workspace"（租户工作区）或 "platform"（平台管理控制台），两者分别同步
+    space: str = Field(default="workspace", max_length=20, index=True)
 
 
 class Menu(MenuBase, table=True):

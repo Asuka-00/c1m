@@ -2,10 +2,11 @@
 
 import uuid
 from collections.abc import Callable
+from datetime import UTC, datetime
 from typing import Annotated, Any
 
 import jwt
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
@@ -117,6 +118,12 @@ def resolve_tenant(session: Session, user: User, tenant_id: uuid.UUID) -> Tenant
         raise HTTPException(status_code=404, detail="Tenant not found")
     if tenant.status != "active" and not user.is_superuser:
         raise HTTPException(status_code=403, detail="Tenant is suspended")
+    if tenant.expires_at and not user.is_superuser:
+        exp = tenant.expires_at
+        if exp.tzinfo is None:
+            exp = exp.replace(tzinfo=UTC)
+        if exp < datetime.now(UTC):
+            raise HTTPException(status_code=403, detail="Tenant has expired")
     set_tenant(session, tenant.id)
     perms = user_permission_codes(user) | member_permission_codes(member)
     return TenantContext(tenant=tenant, user=user, member=member, permissions=perms)
@@ -184,3 +191,19 @@ def require_tenant_permissions(
         from_path: 为 True 时租户取自路径参数 ``{tenant_id}``，否则取自请求头 / JWT。
     """
     return _tenant_checker(get_path_tenant if from_path else get_current_tenant, codes)
+
+
+def platform_api_router(*routers: APIRouter) -> APIRouter:
+    """构造平台空间路由（``/platform`` 前缀，仅超级用户；其余用户一律 403）。
+
+    Args:
+        *routers: 需在平台空间下以别名暴露的已有路由（同一实现，路径加 ``/platform``）。
+    """
+    r = APIRouter(
+        prefix="/platform",
+        tags=["platform"],
+        dependencies=[Depends(get_current_active_superuser)],
+    )
+    for sub in routers:
+        r.include_router(sub)
+    return r

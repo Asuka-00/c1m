@@ -3,7 +3,7 @@
 from datetime import timedelta
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -19,6 +19,7 @@ from app.platform.auth.service import (
     send_email,
     verify_password_reset_token,
 )
+from app.platform.console.service import record_login
 from app.platform.users import service as crud
 from app.platform.users.schemas import NewPassword, UserPublic, UserUpdate
 
@@ -27,20 +28,30 @@ router = APIRouter(tags=["login"])
 
 @router.post("/login/access-token")
 def login_access_token(
-    session: SessionDep, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
+    request: Request,
+    session: SessionDep,
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
 ) -> Token:
     """
-    OAuth2 compatible token login, get an access token for future requests
+    OAuth2 compatible token login, get an access token for future requests.
+    Every attempt (success or failure) is written to the platform login log.
     """
     user = crud.authenticate(
         session=session, email=form_data.username, password=form_data.password
     )
+    ip = request.client.host if request.client else None
+    ua = request.headers.get("user-agent")
     if not user:
+        record_login(
+            session, form_data.username, None, False, "bad_credentials", ip, ua
+        )
         raise HTTPException(
             status_code=400, detail="Incorrect username/email or password"
         )
     elif not user.is_active:
+        record_login(session, form_data.username, user, False, "inactive", ip, ua)
         raise HTTPException(status_code=400, detail="Inactive user")
+    record_login(session, user.email, user, True, None, ip, ua)
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return Token(
         access_token=security.create_access_token(

@@ -27,6 +27,8 @@ class TenantUpdate(SQLModel):
 class TenantPublic(TenantBase):
     id: uuid.UUID
     status: str
+    plan: str = "standard"
+    expires_at: datetime | None = None
     created_at: datetime | None = None
 
 
@@ -65,3 +67,9 @@ class MyTenantPublic(SQLModel):
 class MyTenantsPublic(SQLModel):
     data: list[MyTenantPublic]
     count: int
+
+
+class OwnerAssign(SQLModel):
+    """平台指定租户 owner：按邮箱选择已有用户。"""
+
+    email: EmailStr

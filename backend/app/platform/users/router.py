@@ -11,7 +11,7 @@ from app.core.deps import SessionDep
 from app.core.models import Message
 from app.core.pagination import ListParamsDep, paginate
 from app.core.security import get_password_hash, verify_password
-from app.platform.auth.deps import CurrentUser, require_permissions
+from app.platform.auth.deps import CurrentUser, platform_api_router, require_permissions
 from app.platform.auth.service import generate_new_account_email, send_email
 from app.platform.rbac.models import UserRole
 from app.platform.rbac.schemas import UserPermissionsPublic
@@ -288,3 +288,7 @@ def delete_user(
     session.delete(user)
     session.commit()
     return Message(message="User deleted successfully")
+
+
+# 平台空间别名：/platform/users/...（仅超级用户）
+platform_router = platform_api_router(router)

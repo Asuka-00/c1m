@@ -19,6 +19,7 @@ class MenuUpdate(SQLModel):
     sort_order: int | None = None
     permission: str | None = Field(default=None, max_length=100)
     hidden: bool | None = None
+    space: str | None = Field(default=None, max_length=20)
     parent_id: uuid.UUID | None = None
 
 
@@ -65,3 +66,5 @@ class MyMenus(SQLModel):
     permissions: list[str]
     tenant_id: uuid.UUID | None = None
     is_superuser: bool = False
+    # 菜单空间：workspace（租户工作区）/ platform（平台管理控制台）
+    space: str = "workspace"

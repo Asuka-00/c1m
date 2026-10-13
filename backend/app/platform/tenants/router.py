@@ -12,11 +12,19 @@ from app.core.config import settings
 from app.core.deps import SessionDep
 from app.core.models import Message
 from app.core.pagination import ListParamsDep, paginate
-from app.platform.auth.deps import CurrentUser, require_tenant_permissions
+from app.platform.auth.deps import (
+    CurrentUser,
+    platform_api_router,
+    require_tenant_permissions,
+    resolve_tenant,
+)
 from app.platform.auth.schemas import Token
+from app.platform.console.service import record_platform_audit
 from app.platform.rbac.models import MemberRole, Permission, Role
 from app.platform.rbac.schemas import (
     PermissionCodes,
+    PermissionPublic,
+    PermissionsPublic,
     RoleCreate,
     RolePublic,
     RolesPublic,
@@ -31,6 +39,7 @@ from app.platform.tenants.schemas import (
     MembersPublic,
     MyTenantPublic,
     MyTenantsPublic,
+    OwnerAssign,
     TenantCreate,
     TenantPublic,
     TenantsPublic,
@@ -329,6 +338,18 @@ def _rp(role: Role) -> RolePublic:
     return RolePublic.model_validate(role, update={"permissions": role.permissions})
 
 
+@router.get("/{tenant_id}/permissions", response_model=PermissionsPublic)
+def list_tenant_permissions(session: SessionDep, _ctx: MembersReader) -> Any:
+    """Tenant-scope permissions grantable to tenant roles (for the role-permission tree)."""
+    perms = session.exec(
+        select(Permission)
+        .where(Permission.scope == "tenant")
+        .order_by(col(Permission.code))
+    ).all()
+    data = [PermissionPublic.model_validate(p) for p in perms]
+    return PermissionsPublic(data=data, count=len(data))
+
+
 @router.post("/{tenant_id}/roles", response_model=RolePublic)
 def create_tenant_role(
     session: SessionDep, ctx: TenantManager, role_in: RoleCreate
@@ -385,3 +406,104 @@ def delete_tenant_role(
     session.delete(role)
     session.commit()
     return Message(message="Role deleted successfully")
+
+
+# ---------------- platform space (superuser only) ----------------
+# 平台管理控制台维护任意租户的成员与 owner：超级用户显式进入租户上下文（RLS），
+# 复用上面的成员接口实现，并把每次写操作记入平台操作日志。
+platform_router = platform_api_router()
+
+
+def _platform_ctx(
+    session: SessionDep, user: CurrentUser, tenant_id: uuid.UUID
+) -> TenantContext:
+    if not session.get(Tenant, tenant_id):
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    return resolve_tenant(session, user, tenant_id)
+
+
+@platform_router.get("/tenants/{tenant_id}/members", response_model=MembersPublic)
+def platform_list_members(
+    session: SessionDep,
+    user: CurrentUser,
+    tenant_id: uuid.UUID,
+    params: ListParamsDep,
+    role_id: uuid.UUID | None = None,
+) -> Any:
+    """Members of any tenant. Paginated; same filters as the tenant endpoint."""
+    return list_members(
+        session, _platform_ctx(session, user, tenant_id), params, role_id
+    )
+
+
+@platform_router.get("/tenants/{tenant_id}/roles", response_model=RolesPublic)
+def platform_list_tenant_roles(
+    session: SessionDep, user: CurrentUser, tenant_id: uuid.UUID, params: ListParamsDep
+) -> Any:
+    """Tenant roles of any tenant (owner/admin/member templates + custom)."""
+    return list_tenant_roles(session, _platform_ctx(session, user, tenant_id), params)
+
+
+@platform_router.post("/tenants/{tenant_id}/members", response_model=MemberPublic)
+def platform_add_member(
+    session: SessionDep, user: CurrentUser, tenant_id: uuid.UUID, body: MemberAdd
+) -> Any:
+    ctx = _platform_ctx(session, user, tenant_id)
+    record_platform_audit(
+        session,
+        user,
+        "member.add",
+        "user",
+        body.email,
+        tenant_id,
+        {"roles": body.roles},
+    )
+    return add_tenant_member(session, ctx, body)
+
+
+@platform_router.put(
+    "/tenants/{tenant_id}/members/{user_id}/roles", response_model=MemberPublic
+)
+def platform_set_member_roles(
+    session: SessionDep,
+    user: CurrentUser,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    body: MemberRolesUpdate,
+) -> Any:
+    ctx = _platform_ctx(session, user, tenant_id)
+    record_platform_audit(
+        session, user, "member.roles", "user", user_id, tenant_id, {"roles": body.roles}
+    )
+    return change_member_roles(session, ctx, user_id, body)
+
+
+@platform_router.delete(
+    "/tenants/{tenant_id}/members/{user_id}", response_model=Message
+)
+def platform_remove_member(
+    session: SessionDep, user: CurrentUser, tenant_id: uuid.UUID, user_id: uuid.UUID
+) -> Any:
+    ctx = _platform_ctx(session, user, tenant_id)
+    record_platform_audit(session, user, "member.remove", "user", user_id, tenant_id)
+    return remove_member(session, ctx, user_id)
+
+
+@platform_router.put("/tenants/{tenant_id}/owner", response_model=MemberPublic)
+def platform_assign_owner(
+    session: SessionDep, user: CurrentUser, tenant_id: uuid.UUID, body: OwnerAssign
+) -> Any:
+    """Make an existing user an owner (adds the membership when missing)."""
+    ctx = _platform_ctx(session, user, tenant_id)
+    target = crud.get_user_by_email(session=session, email=body.email)
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    m = get_membership(session, tenant_id, target.id)
+    if m is None:
+        m = add_member(session, ctx.tenant, target, ["owner"])
+    else:
+        set_member_roles(session, m, sorted({r.name for r in m.roles} | {"owner"}))
+    record_platform_audit(session, user, "tenant.owner", "user", target.id, tenant_id)
+    session.commit()
+    session.refresh(m)
+    return _member_public(m)

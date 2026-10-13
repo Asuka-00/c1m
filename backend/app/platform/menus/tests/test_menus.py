@@ -33,16 +33,31 @@ def test_superuser_sees_all_menus(
     r = client.get(f"{API}/menus/me", headers=superuser_token_headers)
     assert r.status_code == 200
     keys = _keys(r.json()["menus"])
+    assert {"dashboard", "members", "tenant-roles", "settings"} <= keys
+    # 平台页面不在工作区菜单中，旧路径重定向到平台管理控制台
+    assert not keys & {"users", "roles", "permissions", "tenants", "menus"}
+    assert r.json()["redirects"]["/tenants"] == "/platform/tenants"
+    p = client.get(
+        f"{API}/menus/me", headers=superuser_token_headers, params={"space": "platform"}
+    )
+    assert p.status_code == 200 and p.json()["space"] == "platform"
+    pkeys = _keys(p.json()["menus"])
     assert {
-        "dashboard",
-        "members",
-        "users",
-        "roles",
-        "permissions",
-        "tenants",
-        "menus",
-        "settings",
-    } <= keys
+        "p-g-tenants",
+        "p-g-rbac",
+        "p-g-settings",
+        "p-g-ops",
+        "p-tenants",
+        "p-users",
+        "p-roles",
+        "p-permissions",
+        "p-menus",
+        "p-config",
+        "p-channels",
+        "p-audit",
+        "p-login-log",
+        "p-ops-log",
+    } == pkeys
 
 
 def test_owner_vs_member_menus(client: TestClient, db: Session) -> None:
@@ -67,10 +82,24 @@ def test_owner_vs_member_menus(client: TestClient, db: Session) -> None:
         for c in g["children"]
         if c["key"] == "user-permissions"
     )
-    assert [t["key"] for t in up["tabs"]] == ["members", "tenant-roles"]
-    assert set(owner_body["redirects"]) == {"/members", "/tenant-roles"} | {
-        k for k in owner_body["redirects"] if k.startswith("/mes/")
-    }
+    assert [t["key"] for t in up["tabs"]] == [
+        "members",
+        "tenant-roles",
+        "tenant-role-perms",
+    ]
+    # 平台控制台菜单仅超级用户
+    assert (
+        client.get(
+            f"{API}/menus/me", headers=ho, params={"space": "platform"}
+        ).status_code
+        == 403
+    )
+    assert "/platform/tenants" in owner_body["forbidden_paths"]
+    assert set(owner_body["redirects"]) == {
+        "/members",
+        "/tenant-roles",
+        "/tenant-role-permissions",
+    } | {k for k in owner_body["redirects"] if k.startswith("/mes/")}
     assert "/members" not in owner_body["forbidden_paths"]
     tid = owner_body["tenant_id"]
 

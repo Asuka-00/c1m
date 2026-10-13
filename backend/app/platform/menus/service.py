@@ -9,6 +9,8 @@ from app.platform.menus.layout import (
     MERGED,
     OBSOLETE_KEYS,
     OBSOLETE_PREFIXES,
+    PLATFORM_GROUPS,
+    PLATFORM_ITEMS,
     TAB_TITLES,
     tab_keys,
 )
@@ -19,13 +21,14 @@ from app.platform.menus.schemas import MenuNode, MenuTab
 # 系统页面：key -> (路径, 图标, 组件, 权限)
 SYSTEM_ITEMS: dict[str, tuple[str, str | None, str, str | None]] = {
     "dashboard": ("/", "LayoutDashboard", "dashboard", None),
-    "users": ("/users", "UserCog", "users", "users:read"),
-    "roles": ("/roles", "Shield", "roles", "roles:read"),
-    "permissions": ("/permissions", "KeyRound", "permissions", "roles:read"),
-    "tenants": ("/tenants", "Building2", "tenants", "tenants:read"),
     "members": ("/members", "Users", "members", "members:read"),
     "tenant-roles": ("/tenant-roles", "ShieldCheck", "tenant-roles", "members:read"),
-    "menus": ("/menus", "Menu", "menus", "roles:write"),
+    "tenant-role-perms": (
+        "/tenant-role-permissions",
+        "KeyRound",
+        "tenant-role-permissions",
+        "members:read",
+    ),
     "config": ("/config", "SlidersHorizontal", "config", "config:read"),
     "settings": ("/settings", "Settings", "settings", None),
     "notifications": ("/notifications", "Bell", "notifications", None),
@@ -92,19 +95,40 @@ def registry_menus() -> list[MenuTuple]:
     return out
 
 
+def platform_menus() -> list[MenuTuple]:
+    """平台管理控制台菜单 ``(key, parent, title, path, icon, component, order, permission)``。
+
+    平台菜单不设权限编码：整个平台空间仅超级用户可见（由 /menus/me?space=platform 把关）。
+    """
+    out: list[MenuTuple] = [
+        (g, None, lbl.split("|")[0], None, icon, None, order, None)
+        for g, lbl, icon, order in PLATFORM_GROUPS
+    ]
+    for i, (key, (g, lbl, path, icon, comp)) in enumerate(PLATFORM_ITEMS.items()):
+        out.append((key, g, lbl.split("|")[0], path, icon, comp, i * 10, None))
+    return out
+
+
 def seed_menus(session: Session) -> None:
-    """创建 / 同步注册表菜单（保留 hidden 与自定义菜单）；移除已废弃的系统分组（其自定义子项移到顶层）。"""
+    """创建 / 同步注册表菜单（工作区与平台两个空间分别同步）。
+
+    保留 hidden 与自定义菜单；移除已废弃的系统分组（其自定义子项移到顶层）。
+    """
     existing = {m.key: m for m in session.exec(select(Menu)).all()}
-    for key, parent, title, path, icon, comp, order, p in registry_menus():
-        m = existing.get(key)
-        if m is None:
-            m = Menu(key=key, title=title)
-            existing[key] = m
-        m.title, m.path, m.icon, m.component = title, path, icon, comp
-        m.sort_order, m.permission = order, p
-        m.parent_id = existing[parent].id if parent else None
-        session.add(m)
-        session.flush()
+    for space, rows in (
+        ("workspace", registry_menus()),
+        ("platform", platform_menus()),
+    ):
+        for key, parent, title, path, icon, comp, order, p in rows:
+            m = existing.get(key)
+            if m is None:
+                m = Menu(key=key, title=title)
+                existing[key] = m
+            m.title, m.path, m.icon, m.component = title, path, icon, comp
+            m.sort_order, m.permission, m.space = order, p, space
+            m.parent_id = existing[parent].id if parent else None
+            session.add(m)
+            session.flush()
     merged_away = tab_keys() - {k for items in ITEMS.values() for k, _ in items}
     stale = [
         m

@@ -1,7 +1,7 @@
 """菜单接口：当前用户菜单树与菜单管理。"""
 
 import uuid
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlmodel import select
@@ -13,8 +13,10 @@ from app.platform.auth.deps import (
     CurrentUser,
     TokenPayloadDep,
     get_current_tenant,
+    platform_api_router,
     require_permissions,
 )
+from app.platform.menus.layout import PLATFORM_REDIRECTS
 from app.platform.menus.models import Menu
 from app.platform.menus.schemas import (
     MenuCreate,
@@ -35,10 +37,29 @@ def my_menus(
     current_user: CurrentUser,
     token_data: TokenPayloadDep,
     x_tenant_id: Annotated[uuid.UUID | None, Header()] = None,
+    space: Literal["workspace", "platform"] = "workspace",
 ) -> Any:
     """Menu/route tree filtered by the caller's effective permissions in the
     current tenant (X-Tenant-ID / `tid` claim / only membership). Without a
-    resolvable tenant only platform permissions apply."""
+    resolvable tenant only platform permissions apply.
+
+    `space=platform` returns the platform admin console menus (superusers only, 403 otherwise)."""
+    if space == "platform":
+        if not current_user.is_superuser:
+            raise HTTPException(
+                status_code=403, detail="Platform console is for superusers only"
+            )
+        pmenus = list(session.exec(select(Menu).where(Menu.space == "platform")).all())
+        ptree = build_tree(pmenus, set(), True)
+        return MyMenus(
+            menus=ptree,
+            forbidden_paths=[],
+            redirects={},
+            permissions=sorted(user_permission_codes(current_user)),
+            tenant_id=None,
+            is_superuser=True,
+            space="platform",
+        )
     perms = user_permission_codes(current_user)
     tenant_id = None
     try:
@@ -47,12 +68,24 @@ def my_menus(
     except HTTPException as e:
         if e.status_code != 400:
             raise
-    menus = list(session.exec(select(Menu)).all())
+    menus = list(session.exec(select(Menu).where(Menu.space == "workspace")).all())
     tree = build_tree(menus, perms, current_user.is_superuser)
+    redir = redirects(tree)
+    forbidden = forbidden_paths(menus, tree)
+    if current_user.is_superuser:  # 旧平台页面路径 -> 平台管理控制台
+        redir.update(PLATFORM_REDIRECTS)
+    else:  # 平台页面（含旧路径）对非超级用户显示 403 而非 404
+        ppaths = session.exec(select(Menu.path).where(Menu.space == "platform")).all()
+        forbidden = sorted(
+            set(forbidden)
+            | set(PLATFORM_REDIRECTS)
+            | {"/platform"}
+            | {p for p in ppaths if p}
+        )
     return MyMenus(
         menus=tree,
-        forbidden_paths=forbidden_paths(menus, tree),
-        redirects=redirects(tree),
+        forbidden_paths=forbidden,
+        redirects=redir,
         permissions=sorted(perms),
         tenant_id=tenant_id,
         is_superuser=current_user.is_superuser,
@@ -69,10 +102,13 @@ def list_menus(
     params: ListParamsDep,
     parent_id: uuid.UUID | None = None,
     hidden: bool | None = None,
+    space: Literal["workspace", "platform"] | None = None,
 ) -> Any:
     """Paginated; sort_by: key, title, path, component, permission, sort_order; q: key/title/path;
-    filters: parent_id (children of a group), hidden."""
+    filters: parent_id (children of a group), hidden, space."""
     stmt = select(Menu)
+    if space is not None:
+        stmt = stmt.where(Menu.space == space)
     if parent_id is not None:
         stmt = stmt.where(Menu.parent_id == parent_id)
     if hidden is not None:
@@ -144,3 +180,7 @@ def delete_menu(session: SessionDep, id: uuid.UUID) -> Any:
     session.delete(menu)
     session.commit()
     return Message(message="Menu deleted successfully")
+
+
+# 平台空间别名：/platform/menus/...（仅超级用户）
+platform_router = platform_api_router(router)

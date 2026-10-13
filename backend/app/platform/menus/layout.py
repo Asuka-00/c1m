@@ -98,10 +98,8 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
     ],
     "g-system": [
         ("user-permissions", "Users & Permissions|用户与权限|ユーザーと権限"),
-        ("tenants", "Tenants|租户|テナント"),
         ("notify-subscriptions", "Notification Subscriptions|通知订阅|通知購読"),
-        ("config", "Configuration|系统配置|システム設定"),
-        ("menus", "Menus|菜单|メニュー"),
+        ("config", "Tenant Settings|租户设置|テナント設定"),
         ("mes-audit_log", "Audit Log|审计日志|監査ログ"),
     ],
 }
@@ -119,6 +117,9 @@ OBSOLETE_KEYS = {
     "g-check",
     "g-eqp-master",
     "g-lot",
+    # 平台级菜单移至平台管理控制台（space = platform）
+    "tenants",
+    "menus",
 }
 
 
@@ -220,7 +221,7 @@ MERGED: dict[str, tuple[str, str, str, list[str]]] = {
         "/user-permissions",
         "UserCog",
         "tabs",
-        ["users", "members", "roles", "tenant-roles", "permissions"],
+        ["members", "tenant-roles", "tenant-role-perms"],
     ),
 }
 
@@ -262,11 +263,105 @@ TAB_TITLES: dict[str, str] = {
     "mes-trace": "Traceability|追溯查询|トレーサビリティ",
     "mes-warehouse": "Warehouse|仓库|倉庫",
     "mes-storage_location": "Storage Location|库位|ロケーション",
-    "users": "Users|用户|ユーザー",
     "members": "Members|成员|メンバー",
-    "roles": "Roles|角色|ロール",
     "tenant-roles": "Tenant Roles|租户角色|テナントロール",
-    "permissions": "Permissions|权限|権限",
+    "tenant-role-perms": "Role Permissions|角色权限|ロール権限",
+}
+
+
+# ---------------- 平台管理控制台（space = platform，仅超级用户） ----------------
+# 分组：(key, 标题, 图标, 排序)
+PLATFORM_GROUPS: list[tuple[str, str, str, int]] = [
+    ("p-g-tenants", "Tenant Management|租户管理|テナント管理", "Building2", 0),
+    ("p-g-rbac", "Platform Access|平台权限|プラットフォーム権限", "ShieldCheck", 10),
+    (
+        "p-g-settings",
+        "Platform Settings|平台设置|プラットフォーム設定",
+        "SlidersHorizontal",
+        20,
+    ),
+    ("p-g-ops", "Operations & Audit|运维与审计|運用・監査", "ScrollText", 30),
+]
+# 页面：key -> (分组, 标题, 路径, 图标, 组件)
+PLATFORM_ITEMS: dict[str, tuple[str, str, str, str, str]] = {
+    "p-tenants": (
+        "p-g-tenants",
+        "Tenants|租户列表|テナント一覧",
+        "/platform/tenants",
+        "Building2",
+        "platform-tenants",
+    ),
+    "p-users": (
+        "p-g-rbac",
+        "Platform Users|平台用户|プラットフォームユーザー",
+        "/platform/users",
+        "UserCog",
+        "users",
+    ),
+    "p-roles": (
+        "p-g-rbac",
+        "Platform Roles|平台角色|プラットフォームロール",
+        "/platform/roles",
+        "Shield",
+        "roles",
+    ),
+    "p-permissions": (
+        "p-g-rbac",
+        "Permission Tree|权限树|権限ツリー",
+        "/platform/permissions",
+        "KeyRound",
+        "platform-permissions",
+    ),
+    "p-menus": (
+        "p-g-rbac",
+        "Menu Management|菜单管理|メニュー管理",
+        "/platform/menus",
+        "Menu",
+        "menus",
+    ),
+    "p-config": (
+        "p-g-settings",
+        "Platform Defaults|系统配置（平台默认）|システム設定（既定値）",
+        "/platform/config",
+        "SlidersHorizontal",
+        "platform-config",
+    ),
+    "p-channels": (
+        "p-g-settings",
+        "Notification Channels|通知渠道|通知チャネル",
+        "/platform/notify-channels",
+        "Send",
+        "notify-channels",
+    ),
+    "p-audit": (
+        "p-g-ops",
+        "Cross-tenant Audit Log|跨租户审计日志|テナント横断監査ログ",
+        "/platform/audit",
+        "History",
+        "platform-audit",
+    ),
+    "p-login-log": (
+        "p-g-ops",
+        "Login Log|登录日志|ログイン履歴",
+        "/platform/login-log",
+        "LogIn",
+        "login-log",
+    ),
+    "p-ops-log": (
+        "p-g-ops",
+        "Platform Operation Log|平台操作日志|プラットフォーム操作ログ",
+        "/platform/ops-log",
+        "ScrollText",
+        "platform-ops-log",
+    ),
+}
+# 旧工作区路径 -> 平台控制台路径（超级用户访问旧链接时重定向）
+PLATFORM_REDIRECTS: dict[str, str] = {
+    "/tenants": "/platform/tenants",
+    "/users": "/platform/users",
+    "/roles": "/platform/roles",
+    "/permissions": "/platform/permissions",
+    "/menus": "/platform/menus",
 }
 
 
@@ -285,4 +380,6 @@ def titles(lang_index: int) -> dict[str, str]:
     for items in ITEMS.values():
         out.update({k: lbl.split("|")[lang_index] for k, lbl in items})
     out.update({k: lbl.split("|")[lang_index] for k, lbl in TAB_TITLES.items()})
+    out.update({k: lbl.split("|")[lang_index] for k, lbl, _, _ in PLATFORM_GROUPS})
+    out.update({k: v[1].split("|")[lang_index] for k, v in PLATFORM_ITEMS.items()})
     return out

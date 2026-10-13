@@ -69,9 +69,21 @@ def recipients(
             who |= roles.get(str(r), set())
         who |= {uuid.UUID(str(u)) for u in sub.user_ids or []} & users
         for ch in sub.channels or ["in_app"]:
-            if ch in CHANNELS:
+            if ch in CHANNELS and channel_enabled(session, ch):
                 out.setdefault(ch, set()).update(who)
     return out
+
+
+def channel_enabled(session: Session, code: str) -> bool:
+    """渠道是否启用：读取平台配置 ``notification.<code>_enabled``（未配置视为启用）。"""
+    from app.platform.config.models import ConfigGroup, ConfigItem
+
+    item = session.exec(
+        select(ConfigItem)
+        .join(ConfigGroup)
+        .where(ConfigGroup.code == "notification", ConfigItem.code == f"{code}_enabled")
+    ).first()
+    return item is None or item.value is not False
 
 
 def notify(

@@ -17,6 +17,7 @@ from app.mes.warehouse import module as _mes_warehouse  # noqa: F401
 from app.platform.audit import module as _audit  # noqa: F401
 from app.platform.auth import module as _auth  # noqa: F401
 from app.platform.config import module as _config  # noqa: F401
+from app.platform.console import module as _console  # noqa: F401
 from app.platform.files import module as _files  # noqa: F401
 from app.platform.menus import module as _menus  # noqa: F401
 from app.platform.notification import module as _notification  # noqa: F401

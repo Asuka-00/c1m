@@ -9,6 +9,7 @@ register(
             "app.platform.rbac.router:user_roles_router",
             "app.platform.rbac.router:roles_router",
             "app.platform.rbac.router:permissions_router",
+            "app.platform.rbac.router:platform_router",
         ),
     )
 )
