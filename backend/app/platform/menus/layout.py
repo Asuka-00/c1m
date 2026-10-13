@@ -79,6 +79,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
     "g-process": [
         ("mes-route-master", "Route|工艺流程|ルート"),
         ("mes-recipe-param", "Recipe & Parameters|配方与参数|レシピ・パラメータ"),
+        ("mes-change_order", "Engineering Change|工程变更|設計変更"),
         ("mes-qtime_rule", "Q-Time Rule|Q-Time 规则|Q タイムルール"),
         ("mes-check-config", "Check Config|卡控配置|チェック設定"),
         ("mes-lot-rules", "Lot Rules|批次规则|ロット規則"),

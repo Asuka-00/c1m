@@ -14,3 +14,11 @@ export const reorderRouteSteps = (routeId: string, stepIds: string[]) =>
       step_ids: stepIds,
     })
     .then((r) => r.data)
+
+/** 工程变更单接口：发布（生效时间已到则立即生效）、取消。 */
+export const changeApi = {
+  act: (id: string, action: 'release' | 'cancel') =>
+    http
+      .post<{ data: MesRow }>(`/mes/change-order/${id}/${action}`, {})
+      .then((r) => r.data.data),
+}

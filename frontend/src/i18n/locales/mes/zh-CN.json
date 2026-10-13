@@ -61,6 +61,7 @@
       "recipe": "配方",
       "recipe_equipment": "配方设备映射",
       "param_spec": "工艺参数规格",
+      "change_order": "工程变更",
       "uom": "计量单位",
       "uom_conversion": "单位换算",
       "tech_node": "工艺节点",
@@ -581,6 +582,20 @@
         "usl": "规格上限",
         "description": "描述"
       },
+      "change_order": {
+        "code": "编码",
+        "name": "名称",
+        "change_type": "变更对象",
+        "route": "新流程版本",
+        "recipe": "新配方版本",
+        "effective_at": "生效时间",
+        "wip_rule": "在制规则",
+        "reason": "变更原因",
+        "ecn_status": "状态",
+        "applied_at": "生效于",
+        "result": "执行结果",
+        "description": "描述"
+      },
       "uom": {
         "code": "编码",
         "name": "名称",
@@ -854,6 +869,9 @@
       "recipe_equipment": {
         "ideal_uph": "可选，OEE 计算优先于设备 UPH"
       },
+      "change_order": {
+        "wip_rule": "流程变更：等待中的在制批次沿用旧版，或按工步序号切换到新版"
+      },
       "uom_conversion": {
         "factor": "目标 = 源 × 系数"
       },
@@ -1124,6 +1142,20 @@
         "per_lot": "每批",
         "per_unit": "每单元/片"
       },
+      "change_type": {
+        "route": "流程",
+        "recipe": "配方"
+      },
+      "wip_rule": {
+        "keep_old": "在制沿用旧版",
+        "switch_new": "在制切换新版"
+      },
+      "ecn_status": {
+        "draft": "草稿",
+        "released": "已发布（待生效）",
+        "applied": "已生效",
+        "cancelled": "已取消"
+      },
       "resource_kind": {
         "equipment": "设备",
         "equipment_group": "设备组",
@@ -1351,6 +1383,7 @@
     "mes-defect_code": "缺陷代码",
     "mes-route-master": "工艺流程",
     "mes-recipe-param": "配方与参数",
+    "mes-change_order": "工程变更",
     "mes-qtime_rule": "Q-Time 规则",
     "mes-check-config": "卡控配置",
     "mes-lot-rules": "批次规则",

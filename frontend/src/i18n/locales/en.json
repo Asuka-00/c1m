@@ -120,7 +120,8 @@
     "config": "System configuration",
     "notifications": "Message Center",
     "notify-subscriptions": "Notification Subscriptions",
-    "mes-wo-board": "WO Progress"
+    "mes-wo-board": "WO Progress",
+    "mes-change_order": "Engineering Change"
   },
   "auth": {
     "appName": "FastAPI Admin",
@@ -1052,6 +1053,22 @@
       "daysLeft": "{{n}} d left",
       "riskCol": "Due state",
       "ruleDefault": "Rule"
+    },
+    "ecn": {
+      "release": "Release",
+      "cancel": "Cancel change",
+      "confirm": {
+        "release": "Release {{code}}? It takes effect now if its time has come.",
+        "cancel": "Cancel {{code}}?"
+      },
+      "done": {
+        "released": "Released, pending",
+        "applied": "Applied",
+        "cancelled": "Cancelled"
+      },
+      "result": "New version v{{v}}, {{n}} references updated",
+      "switched": "Lots switched",
+      "kept": "Lots on old version"
     }
   },
   "notify": {

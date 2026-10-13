@@ -61,6 +61,7 @@
       "recipe": "Recipe",
       "recipe_equipment": "Recipe ↔ equipment",
       "param_spec": "Parameter spec",
+      "change_order": "Engineering change",
       "uom": "Unit of measure",
       "uom_conversion": "UOM conversion",
       "tech_node": "Technology node",
@@ -581,6 +582,20 @@
         "usl": "USL",
         "description": "Description"
       },
+      "change_order": {
+        "code": "Code",
+        "name": "Name",
+        "change_type": "Change of",
+        "route": "New route version",
+        "recipe": "New recipe version",
+        "effective_at": "Effective at",
+        "wip_rule": "WIP rule",
+        "reason": "Reason",
+        "ecn_status": "Status",
+        "applied_at": "Applied at",
+        "result": "Result",
+        "description": "Description"
+      },
       "uom": {
         "code": "Code",
         "name": "Name",
@@ -854,6 +869,9 @@
       "recipe_equipment": {
         "ideal_uph": "Optional; overrides the equipment UPH for OEE"
       },
+      "change_order": {
+        "wip_rule": "Route changes: waiting lots stay on the old version or move to the new one by step seq"
+      },
       "uom_conversion": {
         "factor": "to = from × factor"
       },
@@ -1124,6 +1142,20 @@
         "per_lot": "Per lot",
         "per_unit": "Per unit / wafer"
       },
+      "change_type": {
+        "route": "Route",
+        "recipe": "Recipe"
+      },
+      "wip_rule": {
+        "keep_old": "WIP keeps old version",
+        "switch_new": "WIP switches to new"
+      },
+      "ecn_status": {
+        "draft": "Draft",
+        "released": "Released (pending)",
+        "applied": "Effective",
+        "cancelled": "Cancelled"
+      },
       "resource_kind": {
         "equipment": "Equipment",
         "equipment_group": "Equipment group",
@@ -1351,6 +1383,7 @@
     "mes-defect_code": "Defect Code",
     "mes-route-master": "Route",
     "mes-recipe-param": "Recipe & Parameters",
+    "mes-change_order": "Engineering Change",
     "mes-qtime_rule": "Q-Time Rule",
     "mes-check-config": "Check Config",
     "mes-lot-rules": "Lot Rules",

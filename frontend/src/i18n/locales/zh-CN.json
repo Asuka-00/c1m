@@ -120,7 +120,8 @@
     "config": "系统配置",
     "notifications": "消息中心",
     "notify-subscriptions": "通知订阅",
-    "mes-wo-board": "工单进度"
+    "mes-wo-board": "工单进度",
+    "mes-change_order": "工程变更"
   },
   "auth": {
     "appName": "FastAPI 管理后台",
@@ -1052,6 +1053,22 @@
       "daysLeft": "剩 {{n}} 天",
       "riskCol": "交期状态",
       "ruleDefault": "按规则"
+    },
+    "ecn": {
+      "release": "发布",
+      "cancel": "取消变更",
+      "confirm": {
+        "release": "发布变更单 {{code}}？生效时间已到时立即生效。",
+        "cancel": "取消变更单 {{code}}？"
+      },
+      "done": {
+        "released": "已发布，待生效",
+        "applied": "已生效",
+        "cancelled": "已取消"
+      },
+      "result": "新版本 v{{v}}，改指引用 {{n}} 处",
+      "switched": "切换新版的批次",
+      "kept": "沿用旧版的批次"
     }
   },
   "notify": {

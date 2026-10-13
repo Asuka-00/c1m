@@ -120,7 +120,8 @@
     "config": "システム設定",
     "notifications": "メッセージセンター",
     "notify-subscriptions": "通知購読",
-    "mes-wo-board": "作業指示進捗"
+    "mes-wo-board": "作業指示進捗",
+    "mes-change_order": "設計変更"
   },
   "auth": {
     "appName": "FastAPI 管理画面",
@@ -1052,6 +1053,22 @@
       "daysLeft": "残り {{n}} 日",
       "riskCol": "納期状態",
       "ruleDefault": "ルール"
+    },
+    "ecn": {
+      "release": "発行",
+      "cancel": "変更取消",
+      "confirm": {
+        "release": "{{code}} を発行しますか？発効日時到来済みなら即時発効します。",
+        "cancel": "{{code}} を取り消しますか？"
+      },
+      "done": {
+        "released": "発行済（発効待ち）",
+        "applied": "発効しました",
+        "cancelled": "取り消しました"
+      },
+      "result": "新版 v{{v}}、参照 {{n}} 件を更新",
+      "switched": "新版へ切替えたロット",
+      "kept": "旧版継続のロット"
     }
   },
   "notify": {

@@ -383,3 +383,64 @@ def test_wo_due_notify_dedupe_and_switch(client: TestClient, db: Session) -> Non
     )
     sweep_all_tenants(tid)
     assert "mes.wo_overdue" not in _types(f)
+
+
+# ---------------- 8: engineering change ----------------
+def test_change_order_route_switch_and_due(client: TestClient, db: Session) -> None:
+    from datetime import timedelta
+
+    from app.core.spec.base import now
+    from app.core.tenant import set_tenant
+    from app.mes.execution.tests.test_exec import API, Line
+    from app.mes.process.service import apply_due
+
+    f = Line(client, db)
+    a, b = f.start(2, 3)
+    f.run_step(a)
+    f.stage(b, "move_in", equipment_id=f.eq["id"])
+    v2 = f.m.action("route", f.route["id"], "new-version")
+    co = f.m.post(
+        "change_order",
+        {
+            "code": "ECN1",
+            "name": "e",
+            "change_type": "route",
+            "route_id": v2["id"],
+            "wip_rule": "switch_new",
+        },
+    )
+    out = f.post(f"{API}/change-order/{co['id']}/release", {})["data"]
+    assert out["ecn_status"] == "applied"
+    assert out["result"]["switched"] == [a["code"]]
+    assert out["result"]["kept"] == [b["code"]]
+    la = f.lot(a)
+    assert la["route_id"] == v2["id"]
+    step20 = f.sql(
+        "SELECT id FROM mes_route_step WHERE route_id = :r AND seq = 20", r=v2["id"]
+    )[0][0]
+    assert la["current_step_id"] == str(step20)
+    assert f.lot(b)["route_id"] == f.route["id"]
+    g = lambda e, i: client.get(f.m.url(e, i), headers=f.m.h).json()  # noqa: E731
+    assert g("route", f.route["id"])["status"] == "inactive"
+    assert g("work_order", f.wo["id"])["route_id"] == v2["id"]
+    f.m.patch("change_order", co["id"], {"name": "x"}, status=422)
+
+    # 未到生效时间：发布后待生效，定时扫描到期生效（沿用旧版本）
+    v3 = f.m.action("route", v2["id"], "new-version")
+    co2 = f.m.post(
+        "change_order",
+        {
+            "code": "ECN2",
+            "name": "e",
+            "change_type": "route",
+            "route_id": v3["id"],
+            "effective_at": (now() + timedelta(hours=1)).isoformat(),
+        },
+    )
+    out = f.post(f"{API}/change-order/{co2['id']}/release", {})["data"]
+    assert out["ecn_status"] == "released"
+    set_tenant(db, f.m.tid)
+    assert apply_due(db, f.m.tid, now() + timedelta(hours=2)) == 1
+    db.commit()
+    assert g("change_order", co2["id"])["ecn_status"] == "applied"
+    assert f.lot(a)["route_id"] == v2["id"]

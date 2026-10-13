@@ -61,6 +61,7 @@
       "recipe": "レシピ",
       "recipe_equipment": "レシピ・設備対応",
       "param_spec": "プロセスパラメータ規格",
+      "change_order": "設計変更",
       "uom": "単位",
       "uom_conversion": "単位換算",
       "tech_node": "テクノロジーノード",
@@ -581,6 +582,20 @@
         "usl": "規格上限",
         "description": "説明"
       },
+      "change_order": {
+        "code": "コード",
+        "name": "名称",
+        "change_type": "変更対象",
+        "route": "新ルート版",
+        "recipe": "新レシピ版",
+        "effective_at": "発効日時",
+        "wip_rule": "仕掛ルール",
+        "reason": "変更理由",
+        "ecn_status": "状態",
+        "applied_at": "発効日時",
+        "result": "実行結果",
+        "description": "説明"
+      },
       "uom": {
         "code": "コード",
         "name": "名称",
@@ -854,6 +869,9 @@
       "recipe_equipment": {
         "ideal_uph": "任意。OEE 計算で設備 UPH より優先"
       },
+      "change_order": {
+        "wip_rule": "ルート変更：待機中の仕掛ロットは旧版継続、または工程番号で新版へ切替"
+      },
       "uom_conversion": {
         "factor": "換算先 = 換算元 × 係数"
       },
@@ -1124,6 +1142,20 @@
         "per_lot": "ロット当たり",
         "per_unit": "ユニット・ウェーハ当たり"
       },
+      "change_type": {
+        "route": "ルート",
+        "recipe": "レシピ"
+      },
+      "wip_rule": {
+        "keep_old": "仕掛は旧版継続",
+        "switch_new": "仕掛を新版へ切替"
+      },
+      "ecn_status": {
+        "draft": "下書き",
+        "released": "発行済（発効待ち）",
+        "applied": "発効済",
+        "cancelled": "取消"
+      },
       "resource_kind": {
         "equipment": "設備",
         "equipment_group": "設備グループ",
@@ -1351,6 +1383,7 @@
     "mes-defect_code": "欠陥コード",
     "mes-route-master": "ルート",
     "mes-recipe-param": "レシピ・パラメータ",
+    "mes-change_order": "設計変更",
     "mes-qtime_rule": "Q タイムルール",
     "mes-check-config": "チェック設定",
     "mes-lot-rules": "ロット規則",
