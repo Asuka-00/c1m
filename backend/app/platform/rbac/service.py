@@ -39,13 +39,33 @@ def seed_rbac(session: Session) -> None:
     session.commit()
 
 
+#: 历次改名前的内置英文名称：数据库中仍是这些旧默认值时视为未自定义，同步为新名称
+LEGACY_NAMES = {
+    "Owner",
+    "Member",
+    "View members",
+    "Manage members",
+    "Manage tenant",
+    "View users",
+    "Edit users",
+    "Delete users",
+}
+
+
+def _builtin(current: str | None, new: str) -> str:
+    """未设置或仍为旧内置默认值时返回新名称，否则保留自定义名称。"""
+    return (
+        new if not current or (current in LEGACY_NAMES and current != new) else current
+    )
+
+
 def fill_names(obj: Permission | Role) -> None:
-    """为内置权限 / 角色补齐英文显示名称（已有名称不覆盖；前端按 i18n 翻译内置名称）。"""
+    """为内置权限 / 角色补齐英文显示名称（自定义名称不覆盖；前端按 i18n 翻译内置名称）。"""
     if isinstance(obj, Permission):
-        if not obj.name and (lbl := permission_label(obj.code)):
-            obj.name = lbl.split("|")[0]
-    elif not obj.title and obj.name in ROLE_LABELS:
-        obj.title = ROLE_LABELS[obj.name].split("|")[0]
+        if lbl := permission_label(obj.code):
+            obj.name = _builtin(obj.name, lbl.split("|")[0])
+    elif obj.name in ROLE_LABELS:
+        obj.title = _builtin(obj.title, ROLE_LABELS[obj.name].split("|")[0])
 
 
 def get_role(session: Session, name: str) -> Role | None:

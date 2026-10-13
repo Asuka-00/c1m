@@ -46,9 +46,9 @@ DEFAULT_ROLES: dict[str, tuple[str, list[str]]] = {
     "user": ("Regular platform user (tenant access comes from memberships)", []),
 }
 TENANT_ROLES: dict[str, tuple[str, list[str]]] = {
-    "owner": ("Tenant owner", list(TENANT_PERMISSIONS)),
+    "owner": ("System administrator with all permissions", list(TENANT_PERMISSIONS)),
     "admin": (
-        "Tenant administrator",
+        "Administrator",
         [
             "members:read",
             "members:write",
@@ -58,7 +58,7 @@ TENANT_ROLES: dict[str, tuple[str, list[str]]] = {
         ],
     ),
     "member": (
-        "Tenant member",
+        "Standard user",
         ["members:read", *(p for p in MES_PERMISSIONS if p.endswith(":read"))],
     ),
 }

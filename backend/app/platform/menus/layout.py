@@ -99,7 +99,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
     "g-system": [
         ("user-permissions", "Users & Permissions|用户与权限|ユーザーと権限"),
         ("notify-subscriptions", "Notification Subscriptions|通知订阅|通知購読"),
-        ("config", "Tenant Settings|租户设置|テナント設定"),
+        ("config", "System Settings|系统设置|システム設定"),
         ("mes-audit_log", "Audit Log|审计日志|監査ログ"),
     ],
 }
@@ -265,8 +265,8 @@ TAB_TITLES: dict[str, str] = {
     "mes-trace": "Traceability|追溯查询|トレーサビリティ",
     "mes-warehouse": "Warehouse|仓库|倉庫",
     "mes-storage_location": "Storage Location|库位|ロケーション",
-    "members": "Members|成员|メンバー",
-    "tenant-roles": "Tenant Roles|租户角色|テナントロール",
+    "members": "Users|用户|ユーザー",
+    "tenant-roles": "Roles|角色|ロール",
 }
 
 

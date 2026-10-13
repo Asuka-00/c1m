@@ -11,6 +11,8 @@ from app.platform.rbac.service import fill_names
 from app.platform.tenants.models import Tenant, TenantMember
 from app.platform.users.models import User
 
+#: 旧版默认角色说明（含“租户”字样），同步时替换为中性说明
+LEGACY_DESCRIPTIONS = {"Tenant owner", "Tenant administrator", "Tenant member"}
 DEFAULT_TENANT_SLUG = "default"
 
 
@@ -76,6 +78,8 @@ def seed_tenant_roles(session: Session, tenant: Tenant) -> None:
         if not role:
             role = Role(name=name, description=desc, tenant_id=tenant.id)
             session.add(role)
+        elif role.description in LEGACY_DESCRIPTIONS:
+            role.description = desc
         fill_names(role)
         have = {p.code for p in role.permissions}
         for c in codes:

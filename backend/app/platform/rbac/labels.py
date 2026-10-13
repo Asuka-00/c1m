@@ -5,9 +5,9 @@ from app.platform.rbac.permissions import DEFAULT_PERMISSIONS
 
 # 非 MES 权限的显示名称
 FIXED: dict[str, str] = {
-    "users:read": "View users|查看用户|ユーザー閲覧",
-    "users:write": "Edit users|编辑用户|ユーザー編集",
-    "users:delete": "Delete users|删除用户|ユーザー削除",
+    "users:read": "View platform users|查看平台用户|プラットフォームユーザー閲覧",
+    "users:write": "Edit platform users|编辑平台用户|プラットフォームユーザー編集",
+    "users:delete": "Delete platform users|删除平台用户|プラットフォームユーザー削除",
     "roles:read": "View roles & permissions|查看角色与权限|ロール・権限閲覧",
     "roles:write": "Manage roles & permissions|管理角色与权限|ロール・権限管理",
     "tenants:read": "View tenants|查看租户|テナント閲覧",
@@ -17,9 +17,9 @@ FIXED: dict[str, str] = {
     "platform.notify:read": "View notification channels|查看通知渠道|通知チャネル閲覧",
     "platform.notify:write": "Configure notification channels|配置通知渠道|通知チャネル設定",
     "platform.audit:read": "View audit & logs|查看审计与日志|監査・ログ閲覧",
-    "tenant:manage": "Manage tenant|管理租户设置|テナント設定管理",
-    "members:read": "View members|查看成员|メンバー閲覧",
-    "members:write": "Manage members|管理成员|メンバー管理",
+    "tenant:manage": "Manage system settings & admins|管理系统设置与管理员|システム設定・管理者の管理",
+    "members:read": "View users|查看用户|ユーザー閲覧",
+    "members:write": "Manage users|管理用户|ユーザー管理",
     "config:read": "View configuration|查看系统配置|システム設定閲覧",
     "config:write": "Edit configuration|编辑系统配置|システム設定編集",
     "notify:config": "Configure subscriptions|配置通知订阅|通知購読設定",
@@ -40,12 +40,12 @@ ACTIONS: dict[str, str] = {
     "start": "Start lots|投产|投入",
     "confirm": "Confirm receipts|确认入库|入庫確認",
 }
-# 内置角色（平台 + 租户默认角色）的显示名称
+# 内置角色（平台 + 租户默认角色）的显示名称；工作区不出现“租户”字样，owner 显示为系统管理员
 ROLE_LABELS: dict[str, str] = {
     "admin": "Administrator|管理员|管理者",
     "user": "User|普通用户|一般ユーザー",
-    "owner": "Owner|所有者|オーナー",
-    "member": "Member|成员|メンバー",
+    "owner": "System admin|系统管理员|システム管理者",
+    "member": "Standard user|普通用户|一般ユーザー",
 }
 
 
