@@ -516,3 +516,54 @@ def test_hot_lot_priority_queue_and_limit(client: TestClient, db: Session) -> No
         f"{EXEC}/lots/{b['id']}/priority", {"priority_id": hot["id"]}, status=409
     )
     assert r["detail"]["code"] == "check_blocked"
+
+
+# ---------------- 11: shift handover ----------------
+def test_shift_handover_ack_rule(client: TestClient, db: Session) -> None:
+    from datetime import date
+
+    from app.mes.execution.tests.test_exec import Line
+
+    f = Line(client, db)
+    sh = f.m.post(
+        "shift",
+        {
+            "code": "D",
+            "name": "day",
+            "site_id": f.m.fx("site"),
+            "start_time": "08:00",
+            "end_time": "20:00",
+        },
+    )
+    url = f"{EXEC}/shift-logs"
+    f.post(
+        url,
+        {"shift_date": str(date.today()), "shift_id": sh["id"], "summary": " "},
+        422,
+    )
+    log = f.post(
+        url,
+        {
+            "shift_date": str(date.today()),
+            "shift_id": sh["id"],
+            "summary": "ok",
+            "open_items": "x",
+        },
+    )
+    assert log["log_status"] == "open" and log["shift"] == "D" and log["handed_by"]
+    # 默认开启：交班人不能自己接班
+    f.post(f"{url}/{log['id']}/ack", {}, 422)
+    f.m.post(
+        "check_rule",
+        {
+            "code": "HO",
+            "name": "h",
+            "check_type": "handover_ack_other",
+            "severity": "off",
+        },
+    )
+    out = f.post(f"{url}/{log['id']}/ack", {"comment": "got it"})
+    assert out["log_status"] == "acknowledged" and out["receive_comment"] == "got it"
+    f.post(f"{url}/{log['id']}/ack", {}, 409)
+    rows = client.get(url, headers=f.m.h).json()["data"]
+    assert [r["id"] for r in rows] == [log["id"]]

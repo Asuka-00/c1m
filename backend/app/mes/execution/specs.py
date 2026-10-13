@@ -32,6 +32,10 @@ CHECK_TYPES = [
     ("batch_same_step", "Batch: same step|批量：同一工步|一括：同一ステップ"),
     ("sort_order", "Sort keeps wafer order|整理保持晶圆顺序|ソート順序維持"),
     ("hot_lot_limit", "Hot lot WIP limit|急件在制上限|ホットロット仕掛上限"),
+    (
+        "handover_ack_other",
+        "Handover confirmed by another user|接班须由他人确认|引継ぎは別ユーザーが確認",
+    ),
     ("future_hold", "Future hold at step|预约 Hold|予約ホールド"),
     ("wo_due", "Work order due notice|工单交期提醒|作業指示納期通知"),
     ("carrier_clean", "Carrier cleaning due|载具清洗周期|キャリア洗浄周期"),
@@ -102,6 +106,10 @@ ENUMS.update(
             ("manual", "Manual|手动|手動"),
             ("auto", "Automatic|自动|自動"),
             ("future", "Future hold|预约 Hold|予約ホールド"),
+        ],
+        "shift_log_status": [
+            ("open", "Awaiting handover|待接班|引継ぎ待ち"),
+            ("acknowledged", "Acknowledged|已接班|引継ぎ済"),
         ],
         "fh_status": [
             ("active", "Waiting|待触发|待機中"),
@@ -403,5 +411,45 @@ register(
         order=3,
         sort_default="created_at",
         label_field="comment",
+    ),
+)
+
+
+register(
+    Entity(
+        "shift_log",
+        "exec",
+        "Shift handover|交接班日志|シフト引継ぎ",
+        [
+            F("shift_date", "date", "Date|日期|日付", required=True),
+            F("shift", "ref", "Shift|班次|シフト", ref="shift", required=True),
+            F("area", "ref", ref="area"),
+            F("summary", "text", "Handover notes|交接事项|引継ぎ事項", search=True),
+            F("open_items", "text", "Open items|未结事项|未完了事項", search=True),
+            F("handed_by", "str", "Handed over by|交班人|引継ぎ者"),
+            F("handed_at", "datetime", "Handed over at|交班时间|引継ぎ日時"),
+            F(
+                "log_status",
+                "enum",
+                "Status|状态|状態",
+                enum="shift_log_status",
+                default="open",
+            ),
+            F("received_by", "str", "Received by|接班人|受領者"),
+            F("received_at", "datetime", "Received at|接班时间|受領日時"),
+            F(
+                "receive_comment",
+                "str",
+                "Receiver note|接班备注|受領メモ",
+                max_length=300,
+            ),
+        ],
+        phase=6,
+        has_code=False,
+        readonly=True,
+        menu=False,
+        icon="NotebookPen",
+        sort_default="shift_date",
+        label_field="shift_date",
     ),
 )

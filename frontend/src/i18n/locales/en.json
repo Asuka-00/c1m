@@ -122,7 +122,8 @@
     "notify-subscriptions": "Notification Subscriptions",
     "mes-wo-board": "WO Progress",
     "mes-change_order": "Engineering Change",
-    "mes-future_hold": "Future Hold"
+    "mes-future_hold": "Future Hold",
+    "mes-shift-handover": "Shift Handover"
   },
   "auth": {
     "appName": "FastAPI Admin",
@@ -1081,6 +1082,31 @@
       "desc": "Hot lots dispatch first and are highlighted.",
       "new": "New priority",
       "done": "Priority changed"
+    },
+    "shiftLog": {
+      "hint": "Record shift handover notes and open items; the next shift confirms.",
+      "search": "Search notes / handed by",
+      "allStatus": "All statuses",
+      "allShifts": "All shifts",
+      "status": {
+        "open": "Awaiting",
+        "acknowledged": "Acknowledged"
+      },
+      "statusCol": "Handover",
+      "date": "Date / shift",
+      "shift": "Shift",
+      "area": "Area",
+      "summary": "Handover notes",
+      "openItems": "Open items",
+      "handedBy": "Handed over by",
+      "new": "Hand over",
+      "newDesc": "Record this shift's notes and open items.",
+      "submit": "Submit",
+      "created": "Handed over",
+      "ack": "Acknowledge",
+      "ackDesc": "Confirm you have read the notes and open items.",
+      "ackComment": "Note (optional)",
+      "acked": "Acknowledged"
     }
   },
   "notify": {

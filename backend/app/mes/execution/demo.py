@@ -34,6 +34,13 @@ CHECK_RULES: list[tuple[str, str, str, str, dict[str, Any]]] = [
     ("CR-SORT", "Sort keeps wafer order", "sort_order", "warn", {}),
     ("CR-FH", "Future hold at step", "future_hold", "block", {}),
     ("CR-HOT", "Hot lot WIP limit", "hot_lot_limit", "block", {"max": 3}),
+    (
+        "CR-SHIFT",
+        "Handover confirmed by another user",
+        "handover_ack_other",
+        "block",
+        {},
+    ),
     ("CR-WO-DUE", "Work order due notice", "wo_due", "warn", {"warn_days": 3}),
     ("CR-CARR-CLN", "Carrier cleaning due", "carrier_clean", "warn", {}),
     ("CR-CARR-USE", "Carrier usage limit", "carrier_usage", "block", {}),
@@ -387,6 +394,7 @@ def _post_demo(session: Session, tid: uuid.UUID, admin: Any) -> None:
             .values(due_date=date.today() + timedelta(days=days))
         )
     _hot_demo(session, tid, admin)
+    _shift_demo(session, tid, admin)
     fh = TABLES["future_hold"]
     if (
         conn(session)
@@ -475,3 +483,54 @@ def _hot_demo(session: Session, tid: uuid.UUID, admin: Any) -> None:
         {"priority_id": pr, "comment": "Customer escalation (DEMO)"},
         admin,
     )
+
+
+def _shift_demo(session: Session, tid: uuid.UUID, admin: Any) -> None:
+    """演示交接班日志：昨日夜班已接班、今日白班待接班（已有日志则跳过）。"""
+    from datetime import date, timedelta
+
+    from app.core.spec.base import now
+    from app.mes.common.rows import _ins
+
+    t = TABLES["shift_log"]
+    if (
+        conn(session)
+        .execute(sa.select(sa.func.count()).where(t.c.tenant_id == tid))
+        .scalar()
+    ):
+        return
+    today = date.today()
+    for d, sh, summary, items, ack in (
+        (
+            today - timedelta(days=1),
+            "N",
+            "ETC01 PM done, seasoning passed; DM26100001 held for OOS (DEMO)",
+            "Engineer review of DM26100001 CD data",
+            True,
+        ),
+        (
+            today,
+            "D",
+            "Hot lot DM26100002 at DF-OX; FRN01 running (DEMO)",
+            "Wait for CD disposition; reticle RT-A100-PO inspection due",
+            False,
+        ),
+    ):
+        _ins(
+            session,
+            tid,
+            "shift_log",
+            admin,
+            shift_date=d,
+            shift_id=_resolve(session, tid, ("shift", sh)),
+            area_id=_resolve(session, tid, ("area", "DIFF")),
+            summary=summary,
+            open_items=items,
+            handed_by="admin",
+            handed_at=now(),
+            log_status="acknowledged" if ack else "open",
+            received_by="operator" if ack else None,
+            received_at=now() if ack else None,
+            attrs={"_demo": True},
+        )
+    session.commit()

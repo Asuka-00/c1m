@@ -37,6 +37,7 @@
       "check_binding": "チェック割当",
       "check_log": "チェック記録",
       "future_hold": "予約ホールド",
+      "shift_log": "シフト引継ぎ",
       "site": "工場",
       "area": "エリア",
       "workcenter": "ベイ / ワークセンター",
@@ -286,6 +287,19 @@
         "comment": "コメント",
         "fh_status": "状態",
         "triggered_at": "発動日時"
+      },
+      "shift_log": {
+        "shift_date": "日付",
+        "shift": "シフト",
+        "area": "エリア",
+        "summary": "引継ぎ事項",
+        "open_items": "未完了事項",
+        "handed_by": "引継ぎ者",
+        "handed_at": "引継ぎ日時",
+        "log_status": "状態",
+        "received_by": "受領者",
+        "received_at": "受領日時",
+        "receive_comment": "受領メモ"
       },
       "site": {
         "code": "コード",
@@ -1007,6 +1021,7 @@
         "batch_same_step": "一括：同一ステップ",
         "sort_order": "ソート順序維持",
         "hot_lot_limit": "ホットロット仕掛上限",
+        "handover_ack_other": "引継ぎは別ユーザーが確認",
         "future_hold": "予約ホールド",
         "wo_due": "作業指示納期通知",
         "carrier_clean": "キャリア洗浄周期",
@@ -1064,6 +1079,10 @@
         "manual": "手動",
         "auto": "自動",
         "future": "予約ホールド"
+      },
+      "shift_log_status": {
+        "open": "引継ぎ待ち",
+        "acknowledged": "引継ぎ済"
       },
       "fh_status": {
         "active": "待機中",
@@ -1380,6 +1399,7 @@
     "mes-qtime-monitor": "Q タイム監視",
     "mes-lot_hold": "ホールド管理",
     "mes-future_hold": "予約ホールド",
+    "mes-shift-handover": "シフト引継ぎ",
     "mes-lot": "ロット一覧",
     "mes-wafer": "ウェーハ",
     "mes-wip-dashboard": "WIP ダッシュボード",

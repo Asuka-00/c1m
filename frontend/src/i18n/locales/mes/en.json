@@ -37,6 +37,7 @@
       "check_binding": "Check binding",
       "check_log": "Check log",
       "future_hold": "Future hold",
+      "shift_log": "Shift handover",
       "site": "Factory / site",
       "area": "Area",
       "workcenter": "Bay / work center",
@@ -286,6 +287,19 @@
         "comment": "Comment",
         "fh_status": "Status",
         "triggered_at": "Triggered at"
+      },
+      "shift_log": {
+        "shift_date": "Date",
+        "shift": "Shift",
+        "area": "Area",
+        "summary": "Handover notes",
+        "open_items": "Open items",
+        "handed_by": "Handed over by",
+        "handed_at": "Handed over at",
+        "log_status": "Status",
+        "received_by": "Received by",
+        "received_at": "Received at",
+        "receive_comment": "Receiver note"
       },
       "site": {
         "code": "Code",
@@ -1007,6 +1021,7 @@
         "batch_same_step": "Batch: same step",
         "sort_order": "Sort keeps wafer order",
         "hot_lot_limit": "Hot lot WIP limit",
+        "handover_ack_other": "Handover confirmed by another user",
         "future_hold": "Future hold at step",
         "wo_due": "Work order due notice",
         "carrier_clean": "Carrier cleaning due",
@@ -1064,6 +1079,10 @@
         "manual": "Manual",
         "auto": "Automatic",
         "future": "Future hold"
+      },
+      "shift_log_status": {
+        "open": "Awaiting handover",
+        "acknowledged": "Acknowledged"
       },
       "fh_status": {
         "active": "Waiting",
@@ -1380,6 +1399,7 @@
     "mes-qtime-monitor": "Q-Time Monitor",
     "mes-lot_hold": "Hold Management",
     "mes-future_hold": "Future Hold",
+    "mes-shift-handover": "Shift Handover",
     "mes-lot": "Lot List",
     "mes-wafer": "Wafer",
     "mes-wip-dashboard": "WIP Dashboard",

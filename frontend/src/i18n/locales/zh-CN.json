@@ -122,7 +122,8 @@
     "notify-subscriptions": "通知订阅",
     "mes-wo-board": "工单进度",
     "mes-change_order": "工程变更",
-    "mes-future_hold": "预约 Hold"
+    "mes-future_hold": "预约 Hold",
+    "mes-shift-handover": "交接班日志"
   },
   "auth": {
     "appName": "FastAPI 管理后台",
@@ -1081,6 +1082,31 @@
       "desc": "急件优先派工，并在队列中高亮。",
       "new": "新优先级",
       "done": "优先级已变更"
+    },
+    "shiftLog": {
+      "hint": "按班次记录交接事项与未结事项，接班人确认。",
+      "search": "搜索交接内容 / 交班人",
+      "allStatus": "全部状态",
+      "allShifts": "全部班次",
+      "status": {
+        "open": "待接班",
+        "acknowledged": "已接班"
+      },
+      "statusCol": "接班",
+      "date": "日期 / 班次",
+      "shift": "班次",
+      "area": "区域",
+      "summary": "交接事项",
+      "openItems": "未结事项",
+      "handedBy": "交班人",
+      "new": "交班",
+      "newDesc": "登记本班交接事项与未结事项。",
+      "submit": "提交交班",
+      "created": "已交班",
+      "ack": "接班确认",
+      "ackDesc": "确认已了解交接事项与未结事项。",
+      "ackComment": "接班备注（可选）",
+      "acked": "已接班"
     }
   },
   "notify": {

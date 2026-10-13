@@ -480,3 +480,9 @@ def _hot_lot_limit(ctx: Ctx, p: Row) -> Outcome:
     if n >= mx:
         return "fail", f"{n} hot lots in WIP (max {mx})", data
     return "pass", f"{n} hot lots in WIP (max {mx})", data
+
+
+@check_type("handover_ack_other")
+def _handover_ack_other(_ctx: Ctx, _p: Row) -> Outcome:
+    """接班确认须由交班人以外的用户执行（开关见 ``switch``），作业时不检查。"""
+    return "na", "shift handover rule", {}

@@ -17,7 +17,7 @@ from app.core.deps import SessionDep
 from app.core.spec.engine import ENTITIES
 from app.core.spec.serialize import serialize
 from app.mes.common.query import one
-from app.mes.execution import dispatch
+from app.mes.execution import dispatch, shift_log
 from app.mes.execution import service as sm
 from app.mes.execution import service as svc
 from app.platform.auth.deps import CurrentTenant
@@ -427,6 +427,46 @@ def lot_adjust(
     if body.override:
         _need(ctx, "mes.exec:override")
     return svc.adjust(session, ctx.id, lot_id, body.model_dump(), ctx.user)
+
+
+class ShiftLogIn(BaseModel):
+    shift_date: date
+    shift_id: uuid.UUID
+    area_id: uuid.UUID | None = None
+    summary: str = Field(max_length=4000)
+    open_items: str | None = Field(default=None, max_length=4000)
+
+
+class AckIn(BaseModel):
+    comment: str | None = Field(default=None, max_length=300)
+
+
+@router.get("/shift-logs")
+def shift_logs(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    date_from: date | None = None,
+    date_to: date | None = None,
+) -> Any:
+    """Shift handover logs in a date range."""
+    _need(ctx, "mes.exec:read")
+    return {"data": shift_log.list_logs(session, ctx.id, date_from, date_to)}
+
+
+@router.post("/shift-logs")
+def shift_log_create(session: SessionDep, ctx: CurrentTenant, body: ShiftLogIn) -> Any:
+    """Hand over a shift."""
+    _need(ctx, "mes.exec:write")
+    return shift_log.create(session, ctx.id, body.model_dump(), ctx.user)
+
+
+@router.post("/shift-logs/{rid}/ack")
+def shift_log_ack(
+    session: SessionDep, ctx: CurrentTenant, rid: uuid.UUID, body: AckIn
+) -> Any:
+    """Acknowledge a shift handover."""
+    _need(ctx, "mes.exec:write")
+    return shift_log.acknowledge(session, ctx.id, rid, body.model_dump(), ctx.user)
 
 
 class PriorityIn(BaseModel):

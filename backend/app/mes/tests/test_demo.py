@@ -49,6 +49,7 @@ def test_seed_and_remove() -> None:
             )
             + 2  # split example: two child lots (one merged back)
             + 1  # future hold example
+            + 2  # shift handover examples
         )
         assert _count(s) == before + len(DEMO) + started  # + lots / wafers
         assert remove(s) >= len(DEMO)  # + started demo lots / wafers

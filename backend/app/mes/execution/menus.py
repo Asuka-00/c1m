@@ -46,6 +46,12 @@ MENUS: dict[str, MenuItem] = {
         "mes-page:hold",
         "mes.exec:read",
     ),
+    "mes-shift-handover": (
+        "/mes/shift-handover",
+        "NotebookPen",
+        "mes-page:shift-handover",
+        "mes.exec:read",
+    ),
     "mes-yield-report": (
         "/mes/yield-report",
         "PieChart",
