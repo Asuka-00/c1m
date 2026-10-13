@@ -1,4 +1,6 @@
 import {
+  LogIn,
+  Send,
   Building2,
   Circle,
   KeyRound,
@@ -77,6 +79,8 @@ import {
 
 /** 后端菜单注册表可引用的图标名（lucide 名称）。 */
 export const ICONS: Record<string, LucideIcon> = {
+  LogIn,
+  Send,
   MapPin,
   PackageCheck,
   Warehouse,

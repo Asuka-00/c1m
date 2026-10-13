@@ -105,7 +105,13 @@
     "superuserTag": "(superuser)",
     "signOut": "Sign out",
     "signOutDesc": "Are you sure you want to sign out? You will need to sign in again to access your account.",
-    "sidebar": "Navigation"
+    "sidebar": "Navigation",
+    "platformAdmin": "Platform Admin",
+    "platformSubtitle": "Superusers only",
+    "backToWorkspace": "Back to workspace",
+    "impersonating": "Viewing as tenant \"{{name}}\"",
+    "impersonatingShort": "viewing as tenant",
+    "exitImpersonation": "Leave tenant view, back to Platform Admin"
   },
   "menu": {
     "dashboard": "Dashboard",
@@ -273,7 +279,9 @@
     "saved": "Permissions saved",
     "created": "Permission created",
     "updated": "Permission updated",
-    "deleted": "Permission deleted"
+    "deleted": "Permission deleted",
+    "tenantTitle": "Role permissions",
+    "tenantDesc": "Assign permissions to the roles of tenant \"{{name}}\" (tenant-scope only; platform permissions can only go to platform roles)."
   },
   "tenants": {
     "title": "Tenants",
@@ -378,11 +386,13 @@
     "support": "Support",
     "groups": {
       "branding": "Branding",
-      "security": "Security"
+      "security": "Security",
+      "notification": "Notification channels"
     },
     "groupDescs": {
       "branding": "Product name, logo and footer shown on the login page, sidebar and browser tab.",
-      "security": "Platform sign-in policies (stored settings; platform admins only)."
+      "security": "Platform sign-in policies (stored settings; platform admins only).",
+      "notification": "Platform-wide switches for notification channels (platform admins only)."
     },
     "items": {
       "branding": {
@@ -400,6 +410,9 @@
         "allow_signup": "Allow self sign-up",
         "password_policy": "Password policy",
         "extra": "Advanced (JSON)"
+      },
+      "notification": {
+        "in_app_enabled": "In-app channel enabled"
       }
     },
     "itemDescs": {
@@ -412,6 +425,9 @@
         "primary_color": "Brand accent color.",
         "footer_copyright": "Shown in the footer of the login page and the app.",
         "support_url": "Optional help / support link in the footer."
+      },
+      "notification": {
+        "in_app_enabled": "Deliver notifications to the in-app inbox."
       }
     }
   },
@@ -1051,5 +1067,82 @@
     "pmHint": "Main equipment PM plans",
     "trackOuts": "Track-outs today",
     "trackOutsHint": "Lot track-out operations"
+  },
+  "platform": {
+    "plans": {
+      "trial": "Trial",
+      "standard": "Standard",
+      "enterprise": "Enterprise"
+    },
+    "allPlans": "All plans",
+    "tenantsDesc": "All tenants: create, disable, plan and expiry, members and owners, branding, and enter as tenant (recorded in the platform op log).",
+    "plan": "Plan",
+    "expiresAt": "Expires",
+    "expired": "expired",
+    "never": "Never",
+    "owners": "Owners",
+    "memberCount": "Members",
+    "members": "Members",
+    "branding": "Branding",
+    "enter": "Enter as tenant",
+    "expiresHint": "YYYY-MM-DD, empty = never",
+    "ownerEmail": "Owner email (existing user)",
+    "ownerAssigned": "Owner assigned",
+    "membersOf": "Members of \"{{name}}\"",
+    "membersDesc": "Add members, change tenant roles or assign an owner; every change is recorded in the platform op log.",
+    "assignOwner": "Make owner",
+    "brandingOf": "Branding of \"{{name}}\"",
+    "brandingDesc": "Branding overrides of this tenant on top of the platform defaults; reset to inherit.",
+    "channelSaved": "Notification channel updated",
+    "channelsDesc": "Registered notification channels; a disabled channel delivers nothing platform-wide.",
+    "channel": "Channel",
+    "code": "Code",
+    "enabled": "Enabled",
+    "searchLogin": "Search email / IP",
+    "allResults": "All results",
+    "success": "Success",
+    "failure": "Failed",
+    "loginLogDesc": "Every sign-in attempt (successful and failed) for security auditing.",
+    "time": "Time",
+    "result": "Result",
+    "reason": "Reason",
+    "reasons": {
+      "bad_credentials": "Wrong username or password",
+      "inactive": "Inactive user"
+    },
+    "userAgent": "Client",
+    "searchOps": "Search actor / action / target",
+    "allActions": "All actions",
+    "actions": {
+      "tenant.create": "Create tenant",
+      "tenant.update": "Update tenant",
+      "tenant.delete": "Delete tenant",
+      "tenant.enter": "Enter as tenant",
+      "tenant.owner": "Assign owner",
+      "tenant.branding": "Change tenant branding",
+      "member.add": "Add member",
+      "member.roles": "Change member roles",
+      "member.remove": "Remove member",
+      "config.update": "Change platform config",
+      "channel.update": "Change notification channel",
+      "audit.cross_tenant_read": "Cross-tenant audit read"
+    },
+    "opsLogDesc": "Superuser actions in the Platform Admin console, cross-tenant reads and tenant impersonation.",
+    "actor": "Actor",
+    "action": "Action",
+    "target": "Target",
+    "detail": "Detail",
+    "searchAudit": "Search record / user",
+    "allTenants": "All tenants",
+    "auditDesc": "Business audit logs of all tenants (read tenant by tenant under RLS; each read is recorded in the platform op log).",
+    "tenant": "Tenant",
+    "entity": "Entity",
+    "record": "Record",
+    "spaces": {
+      "workspace": "Workspace",
+      "platform": "Platform Admin"
+    },
+    "allSpaces": "All spaces",
+    "space": "Space"
   }
 }

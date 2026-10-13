@@ -1,87 +1,68 @@
-/** 系统配置页面。 */
-import { useState } from 'react'
-import { AxiosError } from 'axios'
+/** 工作区 · 租户设置页面。 */
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
 import { Loader2 } from 'lucide-react'
-import { api } from '@/lib/api'
-import { useCan, useCurrentTenant, useMe } from '@/lib/api/hooks'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { api, type ConfigGroup } from '@/lib/api'
+import { useCan, useCurrentTenant } from '@/lib/api/hooks'
 import { Page } from '@/components/crud'
 import { ConfigGroupCard } from './config-group-card'
 
-type Scope = 'tenant' | 'platform'
-
-/** 系统配置：当前租户的设置（在平台值之上的覆盖值），
- *  平台管理员还可编辑平台默认值。 */
+/** 租户设置：当前租户在平台默认值之上的覆盖值（品牌等）。
+ *  平台默认值已移至平台管理控制台（/platform/config）。 */
 export default function ConfigPage() {
   const can = useCan()
   const current = useCurrentTenant()
-  const { data: me } = useMe()
-  const tenantQ = useQuery({
+  const q = useQuery({
     queryKey: ['config', 'tenant', current?.tenant.id],
     queryFn: api.config.tenant,
     enabled: !!current && can('config:read'),
   })
-  // 平台默认值：仅当平台接口允许（拥有平台角色）时显示
-  const platformQ = useQuery({
-    queryKey: ['config', 'platform'],
-    queryFn: api.config.platform,
-    retry: (n, e) =>
-      !(e instanceof AxiosError && e.response?.status === 403) && n < 2,
-  })
-  const hasPlatform = platformQ.isSuccess
-  const hasTenant = !!current && can('config:read')
-  const [tab, setTab] = useState<Scope>(hasTenant ? 'tenant' : 'platform')
-  const scope: Scope = !hasTenant ? 'platform' : !hasPlatform ? 'tenant' : tab
-  const q = scope === 'tenant' ? tenantQ : platformQ
-  const canEdit =
-    scope === 'tenant'
-      ? can('config:write')
-      : !!me && hasPlatform && can('config:write')
-
   return (
     <Page
-      title={t('config.title')}
-      description={
-        scope === 'tenant'
-          ? t('config.tenantDesc', { tenant: current?.tenant.name ?? '…' })
-          : t('config.platformDesc')
-      }
+      title={t('menu.config')}
+      description={t('config.tenantDesc', {
+        tenant: current?.tenant.name ?? '…',
+      })}
     >
-      {hasTenant && hasPlatform && (
-        <Tabs
-          value={scope}
-          onValueChange={(v) => setTab(v as Scope)}
-          className='mb-4'
-        >
-          <TabsList>
-            <TabsTrigger value='tenant'>
-              {t('config.tenantTab', { tenant: current?.tenant.name ?? '' })}
-            </TabsTrigger>
-            <TabsTrigger value='platform'>
-              {t('config.platformTab')}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      )}
-      {q.isLoading ? (
-        <Loader2 className='mx-auto animate-spin' />
-      ) : (
-        <div className='flex flex-col gap-3'>
-          {(q.data?.data ?? []).map((g) => (
-            <ConfigGroupCard
-              key={`${scope}-${g.code}`}
-              group={g}
-              scope={scope}
-              canEdit={canEdit}
-            />
-          ))}
-          {!q.data?.data.length && (
-            <p className='text-sm text-muted-foreground'>{t('config.empty')}</p>
-          )}
-        </div>
-      )}
+      <ConfigGroups
+        loading={q.isLoading}
+        groups={q.data?.data}
+        scope='tenant'
+        canEdit={can('config:write')}
+      />
     </Page>
+  )
+}
+
+/** 配置分组列表（加载中 / 空状态）。 */
+export function ConfigGroups({
+  loading,
+  groups,
+  scope,
+  canEdit,
+  tenantId,
+}: {
+  loading: boolean
+  groups?: ConfigGroup[]
+  scope: 'tenant' | 'platform'
+  canEdit: boolean
+  tenantId?: string
+}) {
+  if (loading) return <Loader2 className='mx-auto animate-spin' />
+  return (
+    <div className='flex flex-col gap-3'>
+      {(groups ?? []).map((g) => (
+        <ConfigGroupCard
+          key={`${scope}-${tenantId ?? ''}-${g.code}`}
+          group={g}
+          scope={scope}
+          canEdit={canEdit}
+          tenantId={tenantId}
+        />
+      ))}
+      {!groups?.length && (
+        <p className='text-sm text-muted-foreground'>{t('config.empty')}</p>
+      )}
+    </div>
   )
 }

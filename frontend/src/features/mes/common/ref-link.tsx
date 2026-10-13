@@ -31,7 +31,7 @@ export function RefLink({
   mono?: boolean
 }) {
   const { data } = useMesMeta()
-  const menus = useMyMenus()
+  const menus = useMyMenus('workspace')
   const e = data?.entities.find((x) => x.code === target)
   // 仅链接到当前用户可访问的页面
   const visible = new Set(paths(menus.data?.menus ?? []))

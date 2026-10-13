@@ -1,6 +1,14 @@
 /** 租户、成员与租户角色接口。 */
 import { del, get, patch, post, put, type ListQuery } from '../request'
-import type { Member, Message, MyTenant, Paged, Role, Tenant } from '../types'
+import type {
+  Member,
+  Message,
+  MyTenant,
+  Paged,
+  Permission,
+  Role,
+  Tenant,
+} from '../types'
 
 /** 当前用户可访问的租户。 */
 export const myTenantsApi = {
@@ -22,6 +30,9 @@ export const tenantsApi = {
     put<Member>(`/tenants/${id}/members/${userId}/roles`, { roles }),
   removeMember: (id: string, userId: string) =>
     del<Message>(`/tenants/${id}/members/${userId}`),
+  /** 可授予租户角色的权限（仅租户作用域） */
+  permissions: (id: string) =>
+    get<Paged<Permission>>(`/tenants/${id}/permissions`),
   roles: (id: string, q: ListQuery) =>
     get<Paged<Role>>(`/tenants/${id}/roles`, q),
   createRole: (

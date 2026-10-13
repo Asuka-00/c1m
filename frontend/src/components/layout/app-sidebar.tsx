@@ -1,6 +1,6 @@
 import { t } from '@/i18n'
 import type { MenuNode } from '@/lib/api'
-import { useMyMenus } from '@/lib/api/hooks'
+import { useMyMenus, useSpace } from '@/lib/api/hooks'
 import { useLayout } from '@/context/layout-provider'
 import {
   Sidebar,
@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { groupIconFor, iconFor } from './icons'
 import { NavGroup } from './nav-group'
 import { NavUser } from './nav-user'
+import { PlatformBrand } from './platform-brand'
 import { TeamSwitcher } from './team-switcher'
 import type { NavItem } from './types'
 
@@ -31,17 +32,19 @@ function toNavItem(n: MenuNode, top = false): NavItem {
   return { title: title(n), url: n.path ?? '#', icon: iconFor(n.icon) }
 }
 
-/** 侧栏完全由 GET /menus/me 构建。带子项的节点为可折叠分组（手风琴：
+/** 侧栏完全由 GET /menus/me（平台空间为 ?space=platform）构建。带子项的节点为可折叠分组（手风琴：
  *  只展开当前页面所在分组的祖先链，打开一个分组会收起其他分组，支持多级）；
  *  顶层叶子节点为普通链接。 */
 export function AppSidebar() {
   const { collapsible, variant } = useLayout()
+  // 平台空间（/platform/...）显示平台控制台菜单与标识
+  const space = useSpace()
   const { data, isLoading } = useMyMenus()
   const items: NavItem[] = (data?.menus ?? []).map((g) => toNavItem(g, true))
   return (
-    <Sidebar collapsible={collapsible} variant={variant}>
+    <Sidebar collapsible={collapsible} variant={variant} data-space={space}>
       <SidebarHeader>
-        <TeamSwitcher />
+        {space === 'platform' ? <PlatformBrand /> : <TeamSwitcher />}
       </SidebarHeader>
       <SidebarContent>
         {isLoading ? (

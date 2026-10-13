@@ -2,6 +2,7 @@
 import { Navigate, useSearch } from '@tanstack/react-router'
 import type { MenuNode } from '@/lib/api'
 import { useMyMenus } from '@/lib/api/hooks'
+import { isPlatformPath } from '@/lib/space'
 import { ForbiddenError } from '@/features/shell/errors/forbidden'
 import { NotFoundError } from '@/features/shell/errors/not-found-error'
 import { resolveRedirect } from './merged'
@@ -16,8 +17,10 @@ function flatten(nodes: MenuNode[]): MenuNode[] {
 /** 在后端菜单树中解析 `path` 并渲染对应组件。
  *  已并入合并菜单的旧路径 -> 重定向到对应页签；路径存在但无权限 -> 403；未知路径 -> 404。 */
 export function DynamicPage({ path }: { path: string }) {
-  const { data, isLoading } = useMyMenus()
+  const { data, isLoading, isError } = useMyMenus()
   const search = useSearch({ strict: false }) as Record<string, unknown>
+  // 平台控制台菜单仅超级用户可取（其他用户 403）
+  if (isError && isPlatformPath(path)) return <ForbiddenError />
   if (isLoading || !data) return <Spinner />
   const node = flatten(data.menus).find((n) => n.path === path)
   if (!node) {

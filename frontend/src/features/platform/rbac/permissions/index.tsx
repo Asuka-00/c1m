@@ -1,4 +1,4 @@
-/** 权限管理页面。 */
+/** 权限管理页面：平台空间（平台角色 + 权限 CRUD）与工作区（租户角色权限）共用。 */
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
@@ -14,7 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   ConfirmDialog,
   DataTable,
@@ -30,15 +29,24 @@ import { PermissionTree } from './permission-tree'
 
 type Scope = 'platform' | 'tenant'
 
-/** 权限管理：按资源分组的权限列表与 CRUD。 */
-export default function PermissionsPage() {
+/**
+ * 权限管理。
+ *
+ * @param scope `platform`：平台控制台，编辑平台角色的权限树并维护权限定义；
+ *   `tenant`：工作区"角色权限"，只编辑当前租户角色，且只列出租户作用域权限。
+ */
+export function PermissionsView({ scope }: { scope: Scope }) {
   const can = useCan()
   const current = useCurrentTenant()
-  const [scope, setScope] = useState<Scope>('platform')
   const [roleId, setRoleId] = useState<string | null>(null)
+  const tid = current?.tenant.id
   const perms = useQuery({
-    queryKey: ['permissions', 'all'],
-    queryFn: () => api.permissions.list(ALL),
+    queryKey: ['permissions', 'all', scope, tid],
+    queryFn: () =>
+      scope === 'platform'
+        ? api.permissions.list(ALL)
+        : api.tenants.permissions(tid!),
+    enabled: scope === 'platform' || !!tid,
   })
   const filters: FilterDef[] = [
     searchFilter(t('table.searchPermissions')),
@@ -56,16 +64,17 @@ export default function PermissionsPage() {
   const permsPage = useQuery({
     queryKey: ['permissions', lp.query],
     queryFn: () => api.permissions.list(lp.query),
+    enabled: scope === 'platform',
   })
   const platformRoles = useQuery({
     queryKey: ['roles', 'all'],
     queryFn: () => api.roles.list(ALL),
+    enabled: scope === 'platform',
   })
-  const tid = current?.tenant.id
   const tenantRoles = useQuery({
     queryKey: ['tenant-roles', tid, 'all'],
     queryFn: () => api.tenants.roles(tid!, ALL),
-    enabled: !!tid,
+    enabled: scope === 'tenant' && !!tid,
   })
   const roles: Role[] =
     (scope === 'platform'
@@ -106,24 +115,18 @@ export default function PermissionsPage() {
   )
 
   return (
-    <Page title={t('common.permissions')} description={t('permissions.desc')}>
-      <Tabs
-        value={scope}
-        onValueChange={(v) => {
-          setScope(v as Scope)
-          setRoleId(null)
-        }}
-      >
-        <TabsList>
-          <TabsTrigger value={'platform'}>
-            {t('permissions.platformTab')}
-          </TabsTrigger>
-          <TabsTrigger value={'tenant'} disabled={!tid}>
-            {t('permissions.tenantTab')}{' '}
-            {current ? `(${current.tenant.name})` : ''}
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+    <Page
+      title={
+        scope === 'platform'
+          ? t('common.permissions')
+          : t('permissions.tenantTitle')
+      }
+      description={
+        scope === 'platform'
+          ? t('permissions.desc')
+          : t('permissions.tenantDesc', { name: current?.tenant.name ?? '' })
+      }
+    >
       <div className='grid gap-4 lg:grid-cols-[240px_1fr]'>
         <Card className='py-2'>
           <CardContent className='grid gap-1 px-2'>
@@ -163,104 +166,113 @@ export default function PermissionsPage() {
         )}
       </div>
 
-      <div className='mt-4 flex items-center justify-between'>
-        <h3 className='text-lg font-semibold'>{t('permissions.all')}</h3>
-        {can('roles:write') && (
-          <Button variant='outline' onClick={s.openCreate}>
-            <Plus /> {t('permissions.new')}
-          </Button>
-        )}
-      </div>
-      <DataTable
-        rows={permsPage.data?.data}
-        total={permsPage.data?.count}
-        params={lp}
-        filters={filters}
-        loading={permsPage.isLoading}
-        rowKey={(r) => r.id}
-        columns={[
-          {
-            header: t('permissions.code'),
-            sortKey: 'code',
-            cell: (r) => <span className='font-mono text-xs'>{r.code}</span>,
-          },
-          {
-            header: t('permissions.scope'),
-            sortKey: 'scope',
-            cell: (r) =>
-              t(`permissions.scopes.${r.scope}`, { defaultValue: r.scope }),
-          },
-          {
-            header: t('common.description'),
-            sortKey: 'description',
-            cell: (r) => r.description ?? '',
-          },
-          {
-            header: '',
-            className: 'w-24',
-            cell: (r) =>
-              can('roles:write') && (
-                <RowActions
-                  onEdit={() => s.openEdit(r)}
-                  onDelete={() => s.openDelete(r)}
-                />
-              ),
-          },
-        ]}
-      />
-      <FormDialog
-        open={s.formOpen}
-        onOpenChange={(o) => !o && s.closeForm()}
-        title={s.editing ? t('permissions.edit') : t('permissions.new')}
-        fields={[
-          {
-            name: 'code',
-            label: t('permissions.codeLabel'),
-            required: true,
-            hidden: !!s.editing,
-          },
-          {
-            name: 'scope',
-            label: t('permissions.scope'),
-            type: 'select',
-            options: [
-              { value: 'platform', label: t('permissions.scopes.platform') },
-              { value: 'tenant', label: t('permissions.scopes.tenant') },
-            ],
-          },
-          { name: 'description', label: t('common.description') },
-        ]}
-        initial={{
-          code: s.editing?.code ?? '',
-          scope: s.editing?.scope ?? 'platform',
-          description: s.editing?.description ?? '',
-        }}
-        onSubmit={(v) =>
-          s.editing
-            ? update.mutateAsync({
-                id: s.editing.id,
-                description: v.description as string,
-                scope: v.scope as string,
-              })
-            : create.mutateAsync({
-                code: v.code as string,
-                scope: v.scope as string,
-                description: v.description as string,
-              })
-        }
-      />
-      <ConfirmDialog
-        open={!!s.deleting}
-        onOpenChange={(o) => !o && s.closeDelete()}
-        title={t('permissions.delete')}
-        desc={t('permissions.deleteDesc', { code: s.deleting?.code })}
-        destructive
-        confirmText={t('common.delete')}
-        handleConfirm={() =>
-          s.deleting &&
-          remove.mutate(s.deleting.id, { onSuccess: s.closeDelete })
-        }
-      />
+      {scope === 'platform' && (
+        <>
+          <div className='mt-4 flex items-center justify-between'>
+            <h3 className='text-lg font-semibold'>{t('permissions.all')}</h3>
+            {can('roles:write') && (
+              <Button variant='outline' onClick={s.openCreate}>
+                <Plus /> {t('permissions.new')}
+              </Button>
+            )}
+          </div>
+          <DataTable
+            rows={permsPage.data?.data}
+            total={permsPage.data?.count}
+            params={lp}
+            filters={filters}
+            loading={permsPage.isLoading}
+            rowKey={(r) => r.id}
+            columns={[
+              {
+                header: t('permissions.code'),
+                sortKey: 'code',
+                cell: (r) => (
+                  <span className='font-mono text-xs'>{r.code}</span>
+                ),
+              },
+              {
+                header: t('permissions.scope'),
+                sortKey: 'scope',
+                cell: (r) =>
+                  t(`permissions.scopes.${r.scope}`, { defaultValue: r.scope }),
+              },
+              {
+                header: t('common.description'),
+                sortKey: 'description',
+                cell: (r) => r.description ?? '',
+              },
+              {
+                header: '',
+                className: 'w-24',
+                cell: (r) =>
+                  can('roles:write') && (
+                    <RowActions
+                      onEdit={() => s.openEdit(r)}
+                      onDelete={() => s.openDelete(r)}
+                    />
+                  ),
+              },
+            ]}
+          />
+          <FormDialog
+            open={s.formOpen}
+            onOpenChange={(o) => !o && s.closeForm()}
+            title={s.editing ? t('permissions.edit') : t('permissions.new')}
+            fields={[
+              {
+                name: 'code',
+                label: t('permissions.codeLabel'),
+                required: true,
+                hidden: !!s.editing,
+              },
+              {
+                name: 'scope',
+                label: t('permissions.scope'),
+                type: 'select',
+                options: [
+                  {
+                    value: 'platform',
+                    label: t('permissions.scopes.platform'),
+                  },
+                  { value: 'tenant', label: t('permissions.scopes.tenant') },
+                ],
+              },
+              { name: 'description', label: t('common.description') },
+            ]}
+            initial={{
+              code: s.editing?.code ?? '',
+              scope: s.editing?.scope ?? 'platform',
+              description: s.editing?.description ?? '',
+            }}
+            onSubmit={(v) =>
+              s.editing
+                ? update.mutateAsync({
+                    id: s.editing.id,
+                    description: v.description as string,
+                    scope: v.scope as string,
+                  })
+                : create.mutateAsync({
+                    code: v.code as string,
+                    scope: v.scope as string,
+                    description: v.description as string,
+                  })
+            }
+          />
+          <ConfirmDialog
+            open={!!s.deleting}
+            onOpenChange={(o) => !o && s.closeDelete()}
+            title={t('permissions.delete')}
+            desc={t('permissions.deleteDesc', { code: s.deleting?.code })}
+            destructive
+            confirmText={t('common.delete')}
+            handleConfirm={() =>
+              s.deleting &&
+              remove.mutate(s.deleting.id, { onSuccess: s.closeDelete })
+            }
+          />
+        </>
+      )}
     </Page>
   )
 }

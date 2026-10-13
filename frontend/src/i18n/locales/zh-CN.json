@@ -105,7 +105,13 @@
     "superuserTag": "（超级管理员）",
     "signOut": "退出登录",
     "signOutDesc": "确定要退出登录吗？之后需要重新登录才能访问账户。",
-    "sidebar": "导航"
+    "sidebar": "导航",
+    "platformAdmin": "平台管理",
+    "platformSubtitle": "Platform Admin · 仅超级用户",
+    "backToWorkspace": "返回工作区",
+    "impersonating": "以租户「{{name}}」身份查看",
+    "impersonatingShort": "租户身份查看",
+    "exitImpersonation": "退出租户身份，返回平台管理"
   },
   "menu": {
     "dashboard": "仪表盘",
@@ -273,7 +279,9 @@
     "saved": "权限已保存",
     "created": "权限已创建",
     "updated": "权限已更新",
-    "deleted": "权限已删除"
+    "deleted": "权限已删除",
+    "tenantTitle": "角色权限",
+    "tenantDesc": "为租户「{{name}}」的角色分配权限（仅租户作用域权限；平台权限只能授予平台角色）。"
   },
   "tenants": {
     "title": "租户",
@@ -378,11 +386,13 @@
     "support": "帮助与支持",
     "groups": {
       "branding": "产品品牌",
-      "security": "安全"
+      "security": "安全",
+      "notification": "通知渠道"
     },
     "groupDescs": {
       "branding": "产品名称、Logo 与页脚，用于登录页、侧边栏和浏览器标签。",
-      "security": "平台登录策略（仅平台管理员）。"
+      "security": "平台登录策略（仅平台管理员）。",
+      "notification": "通知渠道的全平台开关（仅平台管理员）。"
     },
     "items": {
       "branding": {
@@ -400,6 +410,9 @@
         "allow_signup": "允许自助注册",
         "password_policy": "密码策略",
         "extra": "高级（JSON）"
+      },
+      "notification": {
+        "in_app_enabled": "启用站内通知"
       }
     },
     "itemDescs": {
@@ -412,6 +425,9 @@
         "primary_color": "品牌主题色。",
         "footer_copyright": "显示在登录页和应用的页脚。",
         "support_url": "页脚中的可选帮助/支持链接。"
+      },
+      "notification": {
+        "in_app_enabled": "把通知投递到站内消息中心。"
       }
     }
   },
@@ -1051,5 +1067,82 @@
     "pmHint": "主设备 PM 计划",
     "trackOuts": "今日出站",
     "trackOutsHint": "批次出站操作次数"
+  },
+  "platform": {
+    "plans": {
+      "trial": "试用",
+      "standard": "标准版",
+      "enterprise": "企业版"
+    },
+    "allPlans": "全部套餐",
+    "tenantsDesc": "所有租户：创建、停用、套餐与到期时间，成员与 owner、品牌，以及以租户身份进入（记入平台操作日志）。",
+    "plan": "套餐",
+    "expiresAt": "到期时间",
+    "expired": "已过期",
+    "never": "永久",
+    "owners": "Owner",
+    "memberCount": "成员数",
+    "members": "成员",
+    "branding": "品牌",
+    "enter": "以租户身份进入",
+    "expiresHint": "YYYY-MM-DD，留空表示永久",
+    "ownerEmail": "Owner 邮箱（已有用户）",
+    "ownerAssigned": "已指定 owner",
+    "membersOf": "「{{name}}」的成员",
+    "membersDesc": "添加成员、修改租户角色或指定 owner；所有操作记入平台操作日志。",
+    "assignOwner": "设为 owner",
+    "brandingOf": "「{{name}}」的品牌",
+    "brandingDesc": "该租户在平台默认值之上的品牌覆盖值；重置即继承平台值。",
+    "channelSaved": "通知渠道已更新",
+    "channelsDesc": "已登记的通知渠道；停用后全平台不再经该渠道投递。",
+    "channel": "渠道",
+    "code": "编码",
+    "enabled": "启用",
+    "searchLogin": "搜索邮箱 / IP",
+    "allResults": "全部结果",
+    "success": "成功",
+    "failure": "失败",
+    "loginLogDesc": "所有登录尝试（成功与失败），用于安全审计。",
+    "time": "时间",
+    "result": "结果",
+    "reason": "原因",
+    "reasons": {
+      "bad_credentials": "用户名或密码错误",
+      "inactive": "用户已停用"
+    },
+    "userAgent": "客户端",
+    "searchOps": "搜索操作人 / 操作 / 目标",
+    "allActions": "全部操作",
+    "actions": {
+      "tenant.create": "创建租户",
+      "tenant.update": "更新租户",
+      "tenant.delete": "删除租户",
+      "tenant.enter": "以租户身份进入",
+      "tenant.owner": "指定 owner",
+      "tenant.branding": "修改租户品牌",
+      "member.add": "添加成员",
+      "member.roles": "修改成员角色",
+      "member.remove": "移除成员",
+      "config.update": "修改平台配置",
+      "channel.update": "修改通知渠道",
+      "audit.cross_tenant_read": "跨租户读取审计"
+    },
+    "opsLogDesc": "超级用户在平台管理控制台的操作、跨租户读取与以租户身份进入的记录。",
+    "actor": "操作人",
+    "action": "操作",
+    "target": "目标",
+    "detail": "详情",
+    "searchAudit": "搜索记录 / 操作人",
+    "allTenants": "全部租户",
+    "auditDesc": "各租户的业务审计日志汇总（逐租户在 RLS 下读取；每次读取记入平台操作日志）。",
+    "tenant": "租户",
+    "entity": "实体",
+    "record": "记录",
+    "spaces": {
+      "workspace": "工作区",
+      "platform": "平台管理"
+    },
+    "allSpaces": "全部空间",
+    "space": "空间"
   }
 }

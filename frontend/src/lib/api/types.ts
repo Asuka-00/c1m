@@ -37,8 +37,66 @@ export interface Tenant {
   name: string
   slug: string
   status: string
+  /** 套餐：trial / standard / enterprise */
+  plan?: string
+  /** 到期时间（null 表示永久） */
+  expires_at?: string | null
   created_at: string | null
 }
+/** 平台视角的租户（含成员数与 owner）。 */
+export interface PlatformTenant extends Tenant {
+  plan: string
+  expires_at: string | null
+  member_count: number
+  owners: string[]
+}
+/** 登录日志。 */
+export interface LoginLog {
+  id: UUID
+  email: string
+  user_id: UUID | null
+  success: boolean
+  reason: string | null
+  ip: string | null
+  user_agent: string | null
+  created_at: string | null
+}
+/** 平台操作日志。 */
+export interface PlatformAudit {
+  id: UUID
+  actor_email: string
+  action: string
+  target_type: string
+  target_id: string | null
+  tenant_id: UUID | null
+  detail: Record<string, unknown> | null
+  created_at: string | null
+}
+/** 跨租户业务审计行。 */
+export interface CrossTenantAudit {
+  id: string
+  tenant_id: string
+  tenant_name: string
+  entity_type: string | null
+  action: string | null
+  record_code: string | null
+  user_email: string | null
+  changes: unknown
+  created_at: string | null
+}
+/** 通知渠道（平台开关）。 */
+export interface NotifyChannel {
+  code: string
+  label: string
+  enabled: boolean
+}
+/** 访问令牌。 */
+export interface Token {
+  access_token: string
+  token_type?: string
+}
+/** 菜单空间：租户工作区或平台管理控制台。 */
+export type MenuSpace = 'workspace' | 'platform'
 /** 当前用户的租户及其在该租户的角色。 */
 export interface MyTenant {
   tenant: Tenant
@@ -83,6 +141,8 @@ export interface MyMenus {
   permissions: string[]
   tenant_id: UUID | null
   is_superuser: boolean
+  /** 菜单所属空间 */
+  space?: MenuSpace
 }
 /** 菜单（管理视图）。 */
 export interface Menu {
@@ -96,6 +156,8 @@ export interface Menu {
   permission: string | null
   hidden: boolean
   parent_id: UUID | null
+  /** 所属空间（workspace / platform） */
+  space?: MenuSpace
 }
 /** 通用消息响应。 */
 export interface Message {

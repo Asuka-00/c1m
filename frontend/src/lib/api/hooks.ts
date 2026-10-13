@@ -4,10 +4,13 @@ import {
   useQueryClient,
   type QueryKey,
 } from '@tanstack/react-query'
+import { useRouterState } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
+import { isPlatformPath } from '../space'
 import { errorMessage } from './client'
 import { api } from './index'
+import type { MenuSpace } from './types'
 
 /** 查询 key 包含当前租户，切换租户时会重新获取。 */
 export function useTenantKey() {
@@ -19,15 +22,31 @@ export const useMe = () => useQuery({ queryKey: ['me'], queryFn: api.me })
 /** 当前用户可访问的租户。 */
 export const useMyTenants = () =>
   useQuery({ queryKey: ['tenants', 'me'], queryFn: api.myTenants })
-/** 当前用户在当前租户下的菜单树与权限（按租户缓存）。 */
-export function useMyMenus() {
+
+/** 当前所在空间：`/platform/...` 为平台管理控制台，其余为租户工作区。 */
+export function useSpace(): MenuSpace {
+  const path = useRouterState({ select: (s) => s.location.pathname })
+  return isPlatformPath(path) ? 'platform' : 'workspace'
+}
+
+/**
+ * 当前用户的菜单树与权限（按空间与租户缓存）。
+ *
+ * @param space 菜单空间，默认取当前路由所在空间。
+ */
+export function useMyMenus(space?: MenuSpace) {
   const tk = useTenantKey()
-  return useQuery({ queryKey: ['menus', 'me', tk], queryFn: api.myMenus })
+  const current = useSpace()
+  const sp = space ?? current
+  return useQuery({
+    queryKey: ['menus', 'me', sp, tk],
+    queryFn: () => api.myMenus(sp),
+  })
 }
 
 /** 实际生效的租户（用户所选，或后端解析出的租户）。 */
 export function useCurrentTenant() {
-  const menus = useMyMenus()
+  const menus = useMyMenus('workspace')
   const tenants = useMyTenants()
   const id = menus.data?.tenant_id
   return tenants.data?.data.find((t) => t.tenant.id === id) ?? null

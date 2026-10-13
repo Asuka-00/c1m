@@ -1,5 +1,6 @@
 import { authApi } from './platform/auth'
 import { configApi } from './platform/config'
+import { platformApi } from './platform/console'
 import { filesApi } from './platform/files'
 import { menusApi, myMenusApi } from './platform/menus'
 import { notificationsApi } from './platform/notifications'
@@ -23,6 +24,7 @@ export const api = {
   tenants: tenantsApi,
   menus: menusApi,
   notifications: notificationsApi,
+  platform: platformApi,
 }
 export { ALL, type ListQuery } from './request'
 export type { UserIn } from './platform/users'

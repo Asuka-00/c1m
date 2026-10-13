@@ -52,7 +52,7 @@ function Stat({
 /** 首页仪表盘。 */
 export default function Dashboard() {
   const { data: me } = useMe()
-  const menus = useMyMenus()
+  const menus = useMyMenus('workspace')
   const tenants = useMyTenants()
   const current = useCurrentTenant()
   const can = useCan()

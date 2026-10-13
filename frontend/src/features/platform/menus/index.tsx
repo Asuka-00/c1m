@@ -22,10 +22,21 @@ import {
 import { ICONS } from '@/components/layout/icons'
 import { COMPONENTS } from '@/features/shell/dynamic/registry'
 
-/** 菜单管理：树形列表，编辑标题 / 图标 / 排序 / 隐藏，新增自定义菜单。 */
+/** 菜单管理：树形列表，编辑标题 / 图标 / 排序 / 隐藏，新增自定义菜单。
+ *  工作区与平台管理控制台两个空间的菜单分别同步，可按空间筛选。 */
 export default function MenusPage() {
+  const spaceOpts = [
+    { value: 'workspace', label: t('platform.spaces.workspace') },
+    { value: 'platform', label: t('platform.spaces.platform') },
+  ]
   const filters: FilterDef[] = [
     searchFilter(t('table.searchMenus')),
+    {
+      type: 'select',
+      name: 'space',
+      label: t('platform.allSpaces'),
+      options: spaceOpts,
+    },
     {
       type: 'select',
       name: 'parent_id',
@@ -81,6 +92,7 @@ export default function MenusPage() {
     parent_id: v.parent_id === NONE ? null : (v.parent_id as string) || null,
     sort_order: Number(v.sort_order) || 0,
     hidden: !!v.hidden,
+    space: v.space === 'platform' ? 'platform' : 'workspace',
   })
   const opt = (xs: string[]) => [
     { value: NONE, label: t('common.none') },
@@ -158,6 +170,14 @@ export default function MenusPage() {
             cell: (r) => (r.hidden ? t('common.yes') : ''),
           },
           {
+            header: t('platform.space'),
+            cell: (r) => (
+              <Badge variant={r.space === 'platform' ? 'default' : 'outline'}>
+                {t(`platform.spaces.${r.space ?? 'workspace'}`)}
+              </Badge>
+            ),
+          },
+          {
             header: '',
             className: 'w-24',
             cell: (r) => (
@@ -217,6 +237,12 @@ export default function MenusPage() {
           },
           { name: 'sort_order', label: t('menus.order'), type: 'number' },
           { name: 'hidden', label: t('menus.hidden'), type: 'checkbox' },
+          {
+            name: 'space',
+            label: t('platform.space'),
+            type: 'select',
+            options: spaceOpts,
+          },
         ]}
         initial={{
           key: '',
@@ -228,6 +254,7 @@ export default function MenusPage() {
           permission: s.editing?.permission ?? NONE,
           sort_order: String(s.editing?.sort_order ?? 0),
           hidden: s.editing?.hidden ?? false,
+          space: s.editing?.space ?? 'workspace',
         }}
         onSubmit={(v) =>
           s.editing

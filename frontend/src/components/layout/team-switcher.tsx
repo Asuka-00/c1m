@@ -28,11 +28,17 @@ export function TeamSwitcher() {
   // 头部显示当前租户的品牌（应用名 + Logo）
   const branding = useBranding(current?.tenant.slug)
   const setTenantId = useAuthStore((s) => s.setTenantId)
+  const impersonating = useAuthStore((s) => s.impersonating)
+  const setImpersonating = useAuthStore((s) => s.setImpersonating)
+  const tenantId = useAuthStore((s) => s.tenantId)
+  // 超级用户以非成员租户身份进入时，租户不在 /tenants/me 中
+  const imp = !current && impersonating?.id === tenantId ? impersonating : null
   const qc = useQueryClient()
   const navigate = useNavigate()
 
   const switchTo = (id: string) => {
     setTenantId(id)
+    setImpersonating(null)
     // 所有租户范围的数据都需重新获取（菜单、成员、角色等）
     qc.invalidateQueries()
     navigate({ to: '/' })
@@ -69,7 +75,9 @@ export function TeamSwitcher() {
                 <span className='truncate text-xs'>
                   {current
                     ? `${current.tenant.name} · ${current.roles.join(', ') || t('nav.noRole')}`
-                    : t('nav.tenantsCount', { count: data?.count ?? 0 })}
+                    : imp
+                      ? `${imp.name} · ${t('nav.impersonatingShort')}`
+                      : t('nav.tenantsCount', { count: data?.count ?? 0 })}
                 </span>
               </div>
               <ChevronsUpDown className='ms-auto' />
