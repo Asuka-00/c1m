@@ -670,6 +670,7 @@
       "splitUnitHint": "Assign wafers / units to child lots; the rest stay in the parent.",
       "childCount": "Child lots",
       "remain": "Parent keeps {{n}} / {{total}}",
+      "tooMany": "Child lots must total less than the parent qty {{total}} (cannot split everything)",
       "child": "Child {{n}}",
       "childShort": "C{{n}}",
       "keep": "Keep",

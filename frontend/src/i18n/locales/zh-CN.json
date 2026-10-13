@@ -670,6 +670,7 @@
       "splitUnitHint": "将晶圆 / 单元分配到子批，未分配的留在母批。",
       "childCount": "子批数",
       "remain": "母批保留 {{n}} / {{total}}",
+      "tooMany": "子批合计必须小于母批数量 {{total}}（不能拆完）",
       "child": "子批 {{n}}",
       "childShort": "子{{n}}",
       "keep": "保留",

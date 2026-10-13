@@ -7,6 +7,7 @@ import {
   canMergeLot,
   canRunStage,
   canSplitLot,
+  checkSplit,
 } from './lot-rules'
 
 const ALL = [
@@ -58,5 +59,30 @@ describe('lot-rules（对齐 lot-state-machine §4 / decisions）', () => {
     const live = ALL.filter((s) => !TERM.includes(s))
     expect(where(canAdjustLot, true)).toEqual(live)
     expect(where(canChangePriority, true)).toEqual(live)
+  })
+})
+
+describe('checkSplit（P13：不能拆完）', () => {
+  it('数量模式：合计须小于母批', () => {
+    expect(checkSplit([{ qty: 3 }, { qty: 2 }], 10, true)).toEqual({
+      moved: 5,
+      remain: 5,
+      tooMany: false,
+      ready: true,
+    })
+    expect(checkSplit([{ qty: 10 }], 10, true)).toMatchObject({
+      remain: 0,
+      tooMany: true,
+      ready: false,
+    })
+    expect(checkSplit([{ qty: 8 }, { qty: 5 }], 10, true).remain).toBe(0)
+    expect(checkSplit([{ qty: 3 }, { qty: 0 }], 10, true).ready).toBe(false)
+  })
+
+  it('单元模式：按选中的晶圆数计', () => {
+    expect(checkSplit([{ unit_ids: ['a', 'b'] }], 3, false).ready).toBe(true)
+    expect(
+      checkSplit([{ unit_ids: ['a', 'b'] }, { unit_ids: ['c'] }], 3, false)
+    ).toMatchObject({ tooMany: true, ready: false, remain: 0 })
   })
 })

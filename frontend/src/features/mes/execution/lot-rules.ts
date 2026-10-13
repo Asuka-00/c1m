@@ -57,3 +57,26 @@ export const canAdjustLot = (lot: LotLike) => !isTerminal(lot)
 
 /** 能否调整优先级：非终态，Hold 中允许。 */
 export const canChangePriority = (lot: LotLike) => !isTerminal(lot)
+
+/** 拆批子批定义（数量模式用 qty，单元模式用 unit_ids）。 */
+type SplitChildLike = { qty?: number; unit_ids?: string[] }
+
+/**
+ * 拆批对话框校验（P13）：每个子批至少 1，子批合计须小于母批数量（不能拆完）。
+ *
+ * @returns moved 子批合计；remain 母批剩余（不小于 0）；
+ *   tooMany 合计 ≥ 母批数量；ready 可提交
+ */
+export function checkSplit(
+  children: SplitChildLike[],
+  lotQty: number,
+  qtyMode: boolean
+) {
+  const size = (c: SplitChildLike) =>
+    qtyMode ? c.qty || 0 : c.unit_ids?.length || 0
+  const moved = children.reduce((a, c) => a + size(c), 0)
+  const tooMany = moved >= lotQty
+  const ready =
+    children.length > 0 && children.every((c) => size(c) > 0) && !tooMany
+  return { moved, remain: Math.max(lotQty - moved, 0), tooMany, ready }
+}

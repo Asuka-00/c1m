@@ -51,7 +51,7 @@ import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
 import { CheckPanel } from './exec-parts'
-import { canMergeLot, canSplitLot } from './lot-rules'
+import { canMergeLot, canSplitLot, checkSplit } from './lot-rules'
 
 const lotLink = (page: string, id: string) => ({
   to: '/$' as const,
@@ -298,13 +298,7 @@ function SplitDialog({
       ),
     [n, pick, qtys, qtyMode]
   )
-  const moved = children.reduce(
-    (a, c) => a + (qtyMode ? c.qty || 0 : c.unit_ids?.length || 0),
-    0
-  )
-  const ready = children.every((c) =>
-    qtyMode ? (c.qty || 0) > 0 : (c.unit_ids?.length || 0) > 0
-  )
+  const { remain, tooMany, ready } = checkSplit(children, lotQty, qtyMode)
   const sm = useSm(
     (body) => execApi.split(String(cx.lot.id), children, { comment, ...body }),
     (r) => {
@@ -358,9 +352,18 @@ function SplitDialog({
           >
             <Plus className='size-3' />
           </Button>
-          <span className='ms-auto text-muted-foreground'>
-            {t('mes.sm.remain', { n: lotQty - moved, total: lotQty })}
-          </span>
+          {tooMany ? (
+            <span
+              className='ms-auto text-destructive'
+              data-testid='split-too-many'
+            >
+              {t('mes.sm.tooMany', { total: lotQty })}
+            </span>
+          ) : (
+            <span className='ms-auto text-muted-foreground'>
+              {t('mes.sm.remain', { n: remain, total: lotQty })}
+            </span>
+          )}
         </div>
         {qtyMode ? (
           <div className='grid grid-cols-3 gap-3'>
