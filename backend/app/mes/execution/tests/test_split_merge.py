@@ -222,11 +222,11 @@ def test_merge_rules(client: TestClient, db: Session) -> None:
     f.run_step(c)
     assert "different route step" in _msgs(merge(f, a, [c], 409))
     f.stage(b, "move_in", equipment_id=f.eq["id"])
-    assert "different stage" in _msgs(merge(f, a, [b], 409))
+    assert "target is waiting" in _msgs(merge(f, a, [b], 422))  # N4 / B08
     # hold blocks (not overridable)
     (d,) = f.start(3)
     f.post(f"{EXEC}/lots/{d['id']}/hold", {"reason_id": f.reasons["hold"]["id"]})
-    r = merge(f, a, [d], 409, override=True, override_reason="x")
+    r = merge(f, a, [d], 422, override=True, override_reason="x")  # N4 / B10
     assert "on hold" in _msgs(r)
     # different WO: blocked unless the rule allows it
     wo2 = f.m.post(

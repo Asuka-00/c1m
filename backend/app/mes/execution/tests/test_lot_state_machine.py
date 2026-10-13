@@ -292,16 +292,58 @@ def test_p15_scrap_to_zero_keeps_hold(client: TestClient, db: Session) -> None:
     assert len(f.ctx(lot)["holds"]) == 1
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="待定 #B08：状态不同现走合批规则检查返回 409 check_blocked，清单期望 422",
-)
+def _field(r: Any) -> str:
+    return str(r["detail"][0]["loc"][-1])
+
+
 def test_b08_merge_different_status_rejected(client: TestClient, db: Session) -> None:
+    """B08（N4）：源与目标状态不同 → 422 lot_status，无变化。"""
     f = _line(client, db)
     a, b = f.start(2, 2)
     f.stage(b, "move_in", equipment_id=f.eq["id"])
-    merge(f, a, [b], 422)
-    assert f.lot(b)["lot_status"] == "moved_in"
+    assert _field(merge(f, a, [b], 422)) == "lot_status"
+    assert f.lot(b)["lot_status"] == "moved_in" and f.lot(a)["qty"] == 2
+
+
+def test_b10_merge_on_hold_rejected(client: TestClient, db: Session) -> None:
+    """B10（N4）：源持 Hold → 422 on_hold；目标持 Hold 同样 422 on_hold。"""
+    f = _line(client, db)
+    a, b = f.start(2, 2)
+    _hold(f, b)
+    assert _field(merge(f, a, [b], 422)) == "on_hold"
+    assert _field(merge(f, b, [a], 422)) == "on_hold"
+    assert f.lot(a)["qty"] == 2 and f.lot(b)["lot_status"] == "waiting"
+
+
+def test_n4_status_takes_precedence_over_hold(client: TestClient, db: Session) -> None:
+    """N4：源状态非法且持 Hold → 以 lot_status 为准。"""
+    f = _line(client, db)
+    a, b = f.start(2, 2)
+    f.stage(b, "move_in", equipment_id=f.eq["id"])
+    f.stage(b, "track_in", equipment_id=f.eq["id"])
+    _hold(f, b)
+    assert _field(merge(f, a, [b], 422)) == "lot_status"
+
+
+def test_n4_target_first_then_sources_by_id(client: TestClient, db: Session) -> None:
+    """N4：先查目标，再按 id 升序查源，返回第一个不合格。"""
+    f = _line(client, db)
+    t_, x, y = f.start(2, 2, 2)
+    lo, hi = sorted((x, y), key=lambda r: r["id"])
+    _hold(f, hi)
+    f.stage(lo, "move_in", equipment_id=f.eq["id"])
+    r = merge(f, t_, [hi, lo], 422)  # 请求里高 id 在前，仍先报低 id 源
+    assert _field(r) == "lot_status" and lo["code"] in _msgs(r)
+    _hold(f, t_)
+    assert _field(merge(f, t_, [hi, lo], 422)) == "on_hold"  # 目标优先
+
+
+def test_n4_rule_mismatch_still_409(client: TestClient, db: Session) -> None:
+    """N4：状态机通过后，规则不一致（不同工步）仍 409 check_blocked。"""
+    f = _line(client, db)
+    a, b = f.start(2, 2)
+    f.run_step(b)
+    assert merge(f, a, [b], 409)["detail"]["code"] == "check_blocked"
 
 
 def test_x03_duplicate_track_out_without_key(client: TestClient, db: Session) -> None:

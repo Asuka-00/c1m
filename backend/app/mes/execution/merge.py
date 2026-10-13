@@ -28,7 +28,7 @@ from app.mes.execution.sm_rules import (
 )
 from app.mes.execution.stage_common import _brief, _ov
 from app.mes.execution.stages import LOT
-from app.mes.lot.service import history, lock_lots, units
+from app.mes.lot.service import check_transition, history, lock_lots, units
 
 Row = dict[str, Any]
 
@@ -166,6 +166,21 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
         )
     target = locked[uuid.UUID(str(lot_id))]
     srcs = [locked[x] for x in src_ids]
+    # N4：先目标、再按 id 升序逐个源批次走状态机，遇到第一个不合格即 422
+    # （状态非法 lot_status 优先于 on_hold）；全部通过后才做合批规则检查（409）
+    check_transition(target, "merge_target")
+    for src in sorted(srcs, key=lambda x: x["id"]):
+        check_transition(src, "merge_source")
+        if src["lot_status"] != target["lot_status"]:
+            raise http_422(
+                [
+                    (
+                        "lot_status",
+                        f"lot_status: {src['code']} is {src['lot_status']}, "
+                        f"target is {target['lot_status']}",
+                    )
+                ]
+            )
     rule = rule_for(s, tid, target)
     errs: list[str] = []
     if target["lot_status"] not in SPLIT_STATES:
