@@ -742,7 +742,8 @@
       "scrap": "廃棄",
       "bonus": "補数",
       "qty": "数量",
-      "adjusted": "調整しました"
+      "adjusted": "調整しました",
+      "runningScrapAll": "加工中のロットは全数廃棄（数量 0）できません。Track Out 後に処理してください"
     },
     "qtime": {
       "hint": "待機中ロットの Q タイム残り時間と超過状況。",

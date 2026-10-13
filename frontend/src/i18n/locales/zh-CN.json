@@ -742,7 +742,8 @@
       "scrap": "报废",
       "bonus": "补数",
       "qty": "数量",
-      "adjusted": "已调整"
+      "adjusted": "已调整",
+      "runningScrapAll": "加工中的批次不能整批报废（报废后数量会变为 0），请等 Track Out 后再处理"
     },
     "qtime": {
       "hint": "查看等待中批次的 Q-Time 剩余时间与超时状态。",

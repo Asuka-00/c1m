@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  blocksScrapToZero,
   canAdjustLot,
+  canChangeCarrier,
   canChangePriority,
   canHold,
   canJumpLot,
@@ -84,5 +86,30 @@ describe('checkSplit（P13：不能拆完）', () => {
     expect(
       checkSplit([{ unit_ids: ['a', 'b'] }, { unit_ids: ['c'] }], 3, false)
     ).toMatchObject({ tooMany: true, ready: false, remain: 0 })
+  })
+})
+
+describe('canChangeCarrier（换载具 / 分拣）', () => {
+  it('非终态且不在 running；空载具与终态不可', () => {
+    expect(ALL.filter((x) => canChangeCarrier(x))).toEqual([
+      'waiting',
+      'moved_in',
+      'tracked_out',
+    ])
+    expect(canChangeCarrier(null)).toBe(false)
+  })
+  it('旧接口没有 lot_status 字段时不拦截', () => {
+    expect(canChangeCarrier(undefined)).toBe(true)
+  })
+})
+
+describe('blocksScrapToZero（decisions #3）', () => {
+  it('仅 running 且报废后为 0 时禁止', () => {
+    expect(blocksScrapToZero(lot('running'), 25, 25)).toBe(true)
+    expect(blocksScrapToZero(lot('running'), 30, 25)).toBe(true)
+    expect(blocksScrapToZero(lot('running'), 24, 25)).toBe(false)
+    expect(blocksScrapToZero(lot('running'), 0, 0)).toBe(false)
+    expect(blocksScrapToZero(lot('waiting'), 25, 25)).toBe(false)
+    expect(blocksScrapToZero(lot('tracked_out', true), 25, 25)).toBe(false)
   })
 })

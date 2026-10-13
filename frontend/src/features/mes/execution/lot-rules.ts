@@ -80,3 +80,23 @@ export function checkSplit(
     children.length > 0 && children.every((c) => size(c) > 0) && !tooMany
   return { moved, remain: Math.max(lotQty - moved, 0), tooMany, ready }
 }
+
+/**
+ * 能否换载具 / 分拣：非终态且不在 running（SM §4 change_carrier / sort）。
+ * `lot_status` 为 undefined 表示后端未下发该字段（旧版接口），不在前端拦截、交由后端校验。
+ */
+export function canChangeCarrier(lotStatus: string | null | undefined) {
+  if (lotStatus === undefined) return true
+  if (lotStatus === null) return false
+  return !isTerminal({ lot_status: lotStatus }) && lotStatus !== 'running'
+}
+
+/**
+ * 报废到 0 是否被禁止：加工中（running）批次不能整批报废（decisions #3）。
+ *
+ * @param scrap 本次报废数量（数量级）或晶圆数（单元级）
+ * @param total 批次当前数量或未报废的晶圆数
+ */
+export function blocksScrapToZero(lot: LotLike, scrap: number, total: number) {
+  return status(lot) === 'running' && scrap > 0 && scrap >= total
+}

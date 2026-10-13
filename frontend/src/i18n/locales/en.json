@@ -742,7 +742,8 @@
       "scrap": "Scrap",
       "bonus": "Bonus",
       "qty": "Quantity",
-      "adjusted": "Adjusted"
+      "adjusted": "Adjusted",
+      "runningScrapAll": "A running lot cannot be scrapped down to 0; handle it after Track Out"
     },
     "qtime": {
       "hint": "Remaining Q-Time and violations of waiting lots.",

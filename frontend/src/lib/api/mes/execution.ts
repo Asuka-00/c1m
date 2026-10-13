@@ -188,6 +188,8 @@ export interface CarrierRow {
   status: string
   lot_id: string | null
   lot: string | null
+  /** 载具内非终态批次的状态；空载具为 null（旧版接口无此字段） */
+  lot_status?: string | null
   wafers: number
   capacity: number | null
   use_count: number

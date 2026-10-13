@@ -2,9 +2,16 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { t } from '@/i18n'
-import { Flame, PackageMinus, SkipForward, Wrench } from 'lucide-react'
+import {
+  Flame,
+  PackageMinus,
+  SkipForward,
+  TriangleAlert,
+  Wrench,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { execApi, type ExecContext } from '@/lib/api/mes/execution'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -30,7 +37,12 @@ import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
 import { Pick } from './exec-parts'
-import { canAdjustLot, canChangePriority, canJumpLot } from './lot-rules'
+import {
+  blocksScrapToZero,
+  canAdjustLot,
+  canChangePriority,
+  canJumpLot,
+} from './lot-rules'
 import { PriorityDialog } from './priority-dialog'
 
 /** 在制调整卡片：按权限与批次状态提供跳站等操作。 */
@@ -245,6 +257,11 @@ function AdjustDialog({
   const live = cx.units.filter((u) => u.status !== 'scrapped')
   const byUnit = unitLevel && kind === 'scrap'
   const reasons = (kind === 'scrap' ? cx.reasons.scrap : cx.reasons.bonus) ?? []
+  const scrapAll =
+    kind === 'scrap' &&
+    (byUnit
+      ? blocksScrapToZero(cx.lot, units.length, live.length)
+      : blocksScrapToZero(cx.lot, Number(qty) || 0, Number(cx.lot.qty ?? 0)))
   const m = useMutation({
     mutationFn: () =>
       execApi.adjust(String(cx.lot.id), {
@@ -359,9 +376,17 @@ function AdjustDialog({
             )}
           </div>
         )}
+        {scrapAll && (
+          <Alert variant='destructive' data-testid='scrap-all-running'>
+            <TriangleAlert />
+            <AlertDescription>{t('mes.wip.runningScrapAll')}</AlertDescription>
+          </Alert>
+        )}
         <DialogFooter>
           <Button
+            data-testid='do-adjust'
             disabled={
+              scrapAll ||
               !reason ||
               (byUnit ? units.length === 0 : !(Number(qty) > 0)) ||
               (override && !ovReason.trim()) ||
