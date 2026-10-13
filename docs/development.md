@@ -59,7 +59,7 @@ core  <-  platform.*  <-  mes.common  <-  mes.<domain>  <-  mes.execution
 - `app.core` 不导入 `platform` / `mes`；`platform` 不导入 `mes`（需要 MES 信息时经注册表获取，如权限、菜单）。
 - MES 领域依赖（只能向左）：`factory`、`product` → common；`equipment` → common、product；`process` → + equipment；`quality` → + process；`lot` → + quality；`planning` → + lot；`execution` 可依赖所有领域，任何模块都不得依赖 `execution`。
 - 跨模块只能导入对方的公开面：`service`、`models`、`schemas`、`specs`、`permissions`、`menus`、`deps`（`core` 与 `mes.common` 为共享内核，全部公开）。
-- 模块间无循环依赖（`router*.py` / `deps.py` / `module.py` 为组合边界，不计入循环检查；`if TYPE_CHECKING:` 中的导入忽略）。需要“反向”通知时使用钩子，例如 `users.service.USER_CREATED_HOOKS`（tenants 注册个人工作区创建）。
+- 模块间无循环依赖（`router*.py` / `deps.py` / `module.py` 为组合边界，不计入循环检查；`if TYPE_CHECKING:` 中的导入忽略）。需要“反向”通知时使用钩子。
 - 规则由 `app/tests/test_architecture.py`（随 pytest 运行）强制执行。
 
 > 注意：包名 `app.platform` 与标准库 `platform` 同名，不要以 `python app/xxx.py` 方式运行脚本（会把 `app/` 放进 `sys.path`），请使用 `python -m app.xxx`。
@@ -72,7 +72,7 @@ core  <-  platform.*  <-  mes.common  <-  mes.<domain>  <-  mes.execution
 
 ## RBAC
 
-- 权限编码为 `<资源>:<动作>`，如 `mes.lot:write`、`mes.exec:override`。实体权限由规格自动生成，读写权限按各模块 `permissions.py` 的 `PERM_MODULES` 自动生成，额外权限在 `PERMISSIONS` 中声明（经 `module.py` 注册），新增权限需在迁移中 `add_permissions()`。
+- 权限编码为 `<资源>:<动作>`，如 `mes.lot:write`、`mes.exec:override`。实体权限由规格自动生成，读写权限按各模块 `permissions.py` 的 `PERM_MODULES` 自动生成，额外权限在 `PERMISSIONS` 中声明（经 `module.py` 注册），启动时由种子数据同步到数据库。
 - 角色按租户分配；超级用户拥有全部权限。前端通过 `/mes/_meta` 等接口获取当前权限控制按钮显示，后端在每个路由中再校验。
 
 ## 动态菜单
