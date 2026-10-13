@@ -493,7 +493,7 @@
         "merge_source_invalid": "合批来源批次有重复，或包含了目标批次",
         "rework_route_missing": "当前工步未配置返工路线，无法返工",
         "qtime_rule_in_use": "Q-Time 规则 {{qtime_rule_code}} 已被 {{hold_count}} 条 Hold 记录引用，不能删除，请改为停用",
-        "qtime_action_invalid": "Q-Time 超时动作只能是 Hold 或返工",
+        "qtime_action_invalid": "Q-Time 超时动作只能是警告、Hold 或返工",
         "hold_not_found": "Hold 记录不存在或已被删除，请刷新列表"
       }
     },

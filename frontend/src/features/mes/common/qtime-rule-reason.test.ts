@@ -31,10 +31,11 @@ const reason = f({
 const ent = (code: string) =>
   ({ code, fields: [action, reason] }) as unknown as MesEntity
 
-describe('D26：Q-Time 规则动作只有 hold / rework', () => {
+describe('D26：Q-Time 规则动作只有 warn / hold / rework', () => {
   const all = ['warn', 'hold', 'rework', 'scrap']
-  it('表单下拉只有 hold / rework', () => {
+  it('表单下拉恰为 warn / hold / rework（scrap 隐藏）', () => {
     expect(overrideEnumOptions('qtime_action', all, 'hold')).toEqual([
+      'warn',
       'hold',
       'rework',
     ])

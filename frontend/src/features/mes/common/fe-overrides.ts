@@ -2,7 +2,7 @@
  * 前端对后端表单元数据的临时覆盖（集中在此，便于整体移除）。
  *
  * TODO(D25/D26)：后端 qtime_rule 表单配置更新后（reason 去掉 required_when 并带帮助文本、
- * qtime_action 枚举只剩 hold / rework），删除本文件及以下引用：
+ * qtime_action 枚举去掉 scrap），删除本文件及以下引用：
  *   - required.ts       overrideRequiredWhen
  *   - labels.ts         overrideHelpKey
  *   - entity-form.tsx   overrideEnumOptions
@@ -29,9 +29,9 @@ export function overrideRequiredWhen(
 export const overrideHelpKey = (e: MesEntity, f: MesField) =>
   `${e.code}.${f.name}` === D25_REASON ? 'mes.qtimeRule.reasonHint' : null
 
-/** D26：Q-Time 动作只有 hold / rework；表单下拉中隐藏的枚举值（枚举名 → 值）。列表 / 筛选 / 标签不受影响。 */
+/** D26：Q-Time 动作只有 warn / hold / rework；表单下拉中隐藏的枚举值（枚举名 → 值）。列表 / 筛选 / 标签不受影响。 */
 const HIDDEN_ENUM: Record<string, readonly string[]> = {
-  qtime_action: ['warn', 'scrap'],
+  qtime_action: ['scrap'],
 }
 
 /** 表单可选的枚举值；当前值即使已被隐藏也保留，旧数据（如 scrap）可正常显示。 */
