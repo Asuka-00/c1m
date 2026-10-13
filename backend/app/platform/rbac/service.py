@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 from sqlmodel import Session, col, select
 
 from app.core.models import get_datetime_utc
+from app.platform.rbac.labels import ROLE_LABELS, permission_label
 from app.platform.rbac.models import Permission, Role
 from app.platform.rbac.permissions import (
     DEFAULT_PERMISSIONS,
@@ -24,16 +25,27 @@ def seed_rbac(session: Session) -> None:
         if code not in perms:
             perms[code] = Permission(code=code, description=desc, scope=scope)
             session.add(perms[code])
+        fill_names(perms[code])
     for name, (desc, codes) in DEFAULT_ROLES.items():
         role = get_role(session, name)
         if not role:
             role = Role(name=name, description=desc)
             session.add(role)
+        fill_names(role)
         have = {p.code for p in role.permissions}
         for c in codes:
             if c not in have:
                 role.permissions.append(perms[c])
     session.commit()
+
+
+def fill_names(obj: Permission | Role) -> None:
+    """为内置权限 / 角色补齐英文显示名称（已有名称不覆盖；前端按 i18n 翻译内置名称）。"""
+    if isinstance(obj, Permission):
+        if not obj.name and (lbl := permission_label(obj.code)):
+            obj.name = lbl.split("|")[0]
+    elif not obj.title and obj.name in ROLE_LABELS:
+        obj.title = ROLE_LABELS[obj.name].split("|")[0]
 
 
 def get_role(session: Session, name: str) -> Role | None:

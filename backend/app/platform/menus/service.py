@@ -90,17 +90,32 @@ def registry_menus() -> list[MenuTuple]:
     return out
 
 
+# 平台页面 -> 访问权限编码（与平台接口授权 auth.deps.platform_permission 对应）
+PLATFORM_MENU_PERMS: dict[str, str] = {
+    "p-tenants": "tenants:read",
+    "p-users": "users:read",
+    "p-roles": "roles:read",
+    "p-permissions": "roles:read",
+    "p-config": "platform.config:read",
+    "p-channels": "platform.notify:read",
+    "p-audit": "platform.audit:read",
+    "p-login-log": "platform.audit:read",
+    "p-ops-log": "platform.audit:read",
+}
+
+
 def platform_menus() -> list[MenuTuple]:
     """平台管理控制台菜单 ``(key, parent, title, path, icon, component, order, permission)``。
 
-    平台菜单不设权限编码：整个平台空间仅超级用户可见（由 /menus/me?space=platform 把关）。
+    平台菜单的访问权限见 ``PLATFORM_MENU_PERMS``（超级用户可见全部）。
     """
     out: list[MenuTuple] = [
         (g, None, lbl.split("|")[0], None, icon, None, order, None)
         for g, lbl, icon, order in PLATFORM_GROUPS
     ]
     for i, (key, (g, lbl, path, icon, comp)) in enumerate(PLATFORM_ITEMS.items()):
-        out.append((key, g, lbl.split("|")[0], path, icon, comp, i * 10, None))
+        p = PLATFORM_MENU_PERMS.get(key)
+        out.append((key, g, lbl.split("|")[0], path, icon, comp, i * 10, p))
     return out
 
 
@@ -141,11 +156,15 @@ def seed_menus(session: Session) -> None:
     session.commit()
 
 
-# 菜单未直接引用的资源：平台菜单不带权限编码，按资源挂到对应平台页面；tenant:manage 挂到租户设置
+# 菜单未直接引用的资源，按资源挂到对应页面（tenant:manage 挂到租户设置）
 PLATFORM_RESOURCE_MENUS = {
     "users": "p-users",
     "roles": "p-roles",
     "tenants": "p-tenants",
+    "platform.config": "p-config",
+    "platform.notify": "p-channels",
+    "platform.audit": "p-audit",
+    "tenant": "config",
 }
 
 
@@ -248,6 +267,7 @@ def permission_tree(
                     component=m.component,
                     sort_order=m.sort_order,
                     visible=not m.hidden,
+                    status=m.status,
                     space=m.space,
                     menu_id=str(m.parent_id) if m.parent_id else None,
                     children=children,
@@ -285,7 +305,11 @@ def build_tree(menus: list[Menu], allowed: set[str], superuser: bool) -> list[Me
     """
 
     def visible(m: Menu) -> bool:
-        return not m.hidden and allowed_perm(m.permission, allowed, superuser)
+        return (
+            not m.hidden
+            and m.status != "disabled"
+            and allowed_perm(m.permission, allowed, superuser)
+        )
 
     by_parent: dict[object, list[Menu]] = {}
     for m in menus:

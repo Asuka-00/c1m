@@ -116,10 +116,13 @@ def read_users(
     dependencies=[Depends(require_permissions("users:write"))],
     response_model=UserPublic,
 )
-def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
+def create_user(
+    *, session: SessionDep, current_user: CurrentUser, user_in: UserCreate
+) -> Any:
     """
     Create new user.
     """
+    _guard_superuser(current_user, None, user_in.is_superuser)
     user = crud.get_user_by_email(session=session, email=user_in.email)
     if user:
         raise HTTPException(
@@ -278,6 +281,7 @@ def update_user(
             status_code=404,
             detail="The user with this id does not exist in the system",
         )
+    _guard_superuser(current_user, db_user, user_in.is_superuser)
     _check_username(session, user_in.username, user_id)
     if user_in.email:
         existing_user = crud.get_user_by_email(session=session, email=user_in.email)
@@ -308,9 +312,26 @@ def delete_user(
         raise HTTPException(
             status_code=403, detail="Super users are not allowed to delete themselves"
         )
+    _guard_superuser(current_user, user, None)
     session.delete(user)
     session.commit()
     return Message(message="User deleted successfully")
+
+
+def _guard_superuser(
+    actor: User, target: User | None, want_superuser: bool | None
+) -> None:
+    """非超级用户（仅持平台权限）不能创建 / 修改 / 删除超级用户，也不能授予超级用户。
+
+    Raises:
+        HTTPException: 越权（403）。
+    """
+    if actor.is_superuser:
+        return
+    if want_superuser or (target is not None and target.is_superuser):
+        raise HTTPException(
+            status_code=403, detail="Only superusers can manage superuser accounts"
+        )
 
 
 # 平台空间别名：/platform/users/...（仅超级用户）

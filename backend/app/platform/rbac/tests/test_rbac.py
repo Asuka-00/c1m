@@ -175,16 +175,21 @@ def test_assign_role_grants_permission(
     assert r.status_code == 200
     assert {x["name"] for x in r.json()} == {"user", role["name"]}
 
-    # 平台角色授予的权限出现在有效权限中，但平台管理接口仍仅限超级用户
+    # 平台角色授予的权限：可读平台用户，但不能删除（缺 users:delete）
     me = client.get(f"{API}/users/me/permissions", headers=uh).json()
     assert "users:read" in me["permissions"]
-    assert client.get(f"{API}/platform/users/", headers=uh).status_code == 403
+    assert client.get(f"{API}/platform/users/", headers=uh).status_code == 200
+    assert (
+        client.delete(f"{API}/platform/users/{user.id}", headers=uh).status_code == 403
+    )
+    assert client.get(f"{API}/platform/roles/", headers=uh).status_code == 403
     # 停用角色后不再授予权限
     client.patch(
         f"{API}/platform/roles/{role['id']}", headers=h, json={"status": "disabled"}
     )
     me = client.get(f"{API}/users/me/permissions", headers=uh).json()
     assert "users:read" not in me["permissions"]
+    assert client.get(f"{API}/platform/users/", headers=uh).status_code == 403
 
     r = client.delete(f"{API}/platform/users/{user.id}/roles/{role['id']}", headers=h)
     assert {x["name"] for x in r.json()} == {"user"}

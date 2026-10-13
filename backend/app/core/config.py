@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     # 60 minutes * 24 hours * 8 days = 8 days
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
+    # 平台“以租户身份进入”模拟令牌的有效期（分钟）
+    IMPERSONATION_EXPIRE_MINUTES: int = 30
     #: Q-Time 超时自动扫描周期（秒），0 表示关闭后台扫描
     QTIME_SWEEP_SECONDS: int = 0
     FRONTEND_HOST: str = "http://localhost:5173"

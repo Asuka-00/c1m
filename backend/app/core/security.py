@@ -22,7 +22,10 @@ ALGORITHM = "HS256"
 
 
 def create_access_token(
-    subject: str | Any, expires_delta: timedelta, tenant_id: Any | None = None
+    subject: str | Any,
+    expires_delta: timedelta,
+    tenant_id: Any | None = None,
+    impersonation: bool = False,
 ) -> str:
     """签发访问令牌。
 
@@ -30,6 +33,8 @@ def create_access_token(
         subject: 令牌主体（用户 id）。
         expires_delta: 有效期。
         tenant_id: 可选，写入 ``tid`` 声明作为默认租户。
+        impersonation: 是否为平台“以租户身份进入”的模拟令牌（写入 ``imp`` 声明，
+            令牌只能访问 ``tid`` 租户，且不能调用平台接口）。
 
     Returns:
         编码后的 JWT。
@@ -38,6 +43,8 @@ def create_access_token(
     to_encode: dict[str, Any] = {"exp": expire, "sub": str(subject)}
     if tenant_id is not None:
         to_encode["tid"] = str(tenant_id)
+    if impersonation:
+        to_encode["imp"] = True
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 

@@ -22,6 +22,9 @@ class MenuUpdate(SQLModel):
     sort_order: int | None = None
     permission: str | None = Field(default=None, max_length=100)
     hidden: bool | None = None
+    status: str | None = Field(
+        default=None, schema_extra={"pattern": r"^(active|disabled)$"}
+    )
     space: str | None = Field(
         default=None, schema_extra={"pattern": r"^(workspace|platform)$"}
     )
@@ -71,6 +74,8 @@ class MyMenus(SQLModel):
     permissions: list[str]
     tenant_id: uuid.UUID | None = None
     is_superuser: bool = False
+    # 是否可进入平台管理控制台（超级用户或持有任一平台权限）
+    platform_access: bool = False
     # 菜单空间：workspace（租户工作区）/ platform（平台管理控制台）
     space: str = "workspace"
 

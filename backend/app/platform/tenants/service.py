@@ -9,6 +9,7 @@ from sqlmodel import Session, select
 
 from app.platform.rbac.models import Permission, Role
 from app.platform.rbac.permissions import TENANT_ROLES
+from app.platform.rbac.service import fill_names
 from app.platform.tenants.models import Tenant, TenantMember
 from app.platform.users.models import User
 from app.platform.users.service import USER_CREATED_HOOKS
@@ -78,6 +79,7 @@ def seed_tenant_roles(session: Session, tenant: Tenant) -> None:
         if not role:
             role = Role(name=name, description=desc, tenant_id=tenant.id)
             session.add(role)
+        fill_names(role)
         have = {p.code for p in role.permissions}
         for c in codes:
             if c not in have and c in perms:

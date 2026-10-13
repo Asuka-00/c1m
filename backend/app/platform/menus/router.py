@@ -14,6 +14,7 @@ from app.platform.auth.deps import (
     TokenPayloadDep,
     get_current_tenant,
     platform_api_router,
+    platform_codes,
     require_permissions,
 )
 from app.platform.menus.layout import PLATFORM_REDIRECTS
@@ -51,21 +52,26 @@ def my_menus(
     current tenant (X-Tenant-ID / `tid` claim / only membership). Without a
     resolvable tenant only platform permissions apply.
 
-    `space=platform` returns the platform admin console menus (superusers only, 403 otherwise)."""
+    `space=platform` returns the platform admin console menus, filtered by platform
+    permissions (superusers see all; users without any platform permission get 403;
+    impersonation tokens are rejected)."""
+    paccess = current_user.is_superuser or bool(platform_codes(current_user))
     if space == "platform":
-        if not current_user.is_superuser:
+        if not paccess or token_data.imp:
             raise HTTPException(
-                status_code=403, detail="Platform console is for superusers only"
+                status_code=403, detail="No access to the platform console"
             )
+        pperms = user_permission_codes(current_user)
         pmenus = list(session.exec(select(Menu).where(Menu.space == "platform")).all())
-        ptree = build_tree(pmenus, set(), True)
+        ptree = build_tree(pmenus, pperms, current_user.is_superuser)
         return MyMenus(
             menus=ptree,
-            forbidden_paths=[],
+            forbidden_paths=forbidden_paths(pmenus, ptree),
             redirects={},
-            permissions=sorted(user_permission_codes(current_user)),
+            permissions=sorted(pperms),
             tenant_id=None,
-            is_superuser=True,
+            is_superuser=current_user.is_superuser,
+            platform_access=True,
             space="platform",
         )
     perms = user_permission_codes(current_user)
@@ -80,9 +86,9 @@ def my_menus(
     tree = build_tree(menus, perms, current_user.is_superuser)
     redir = redirects(tree)
     forbidden = forbidden_paths(menus, tree)
-    if current_user.is_superuser:  # 旧平台页面路径 -> 平台管理控制台
+    if paccess and not token_data.imp:  # 旧平台页面路径 -> 平台管理控制台
         redir.update(PLATFORM_REDIRECTS)
-    else:  # 平台页面（含旧路径）对非超级用户显示 403 而非 404
+    else:  # 平台页面（含旧路径）对无平台权限的用户显示 403 而非 404
         ppaths = session.exec(select(Menu.path).where(Menu.space == "platform")).all()
         forbidden = sorted(
             set(forbidden)
@@ -97,6 +103,7 @@ def my_menus(
         permissions=sorted(perms),
         tenant_id=tenant_id,
         is_superuser=current_user.is_superuser,
+        platform_access=paccess and not token_data.imp,
     )
 
 

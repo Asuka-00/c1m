@@ -207,8 +207,8 @@ def delete_platform_tenant(
 
 @router.post("/tenants/{tenant_id}/enter", response_model=Token)
 def enter_tenant(session: SessionDep, user: CurrentUser, tenant_id: uuid.UUID) -> Any:
-    """Impersonation: issue a token bound to the tenant (`tid`) for a superuser who
-    may not be a member. Always written to the platform op log."""
+    """以租户身份进入：签发绑定该租户（`tid`）的短期模拟令牌（`imp`，有效期
+    IMPERSONATION_EXPIRE_MINUTES）。模拟令牌只能访问该租户、不能调用平台接口；始终记入平台操作日志。"""
     t = _tenant_or_404(session, tenant_id)
     record_platform_audit(
         session,
@@ -223,10 +223,22 @@ def enter_tenant(session: SessionDep, user: CurrentUser, tenant_id: uuid.UUID) -
     return Token(
         access_token=security.create_access_token(
             user.id,
-            expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+            expires_delta=timedelta(minutes=settings.IMPERSONATION_EXPIRE_MINUTES),
             tenant_id=t.id,
+            impersonation=True,
         )
     )
+
+
+@router.post("/tenants/{tenant_id}/exit", response_model=Message)
+def exit_tenant(session: SessionDep, user: CurrentUser, tenant_id: uuid.UUID) -> Any:
+    """退出租户模拟（前端恢复原令牌后调用），记入平台操作日志。"""
+    t = _tenant_or_404(session, tenant_id)
+    record_platform_audit(
+        session, user, "tenant.exit", "tenant", t.id, t.id, {"slug": t.slug}
+    )
+    session.commit()
+    return Message(message="ok")
 
 
 # ---------------- notification channels ----------------
