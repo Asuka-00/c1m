@@ -82,13 +82,13 @@ def test_all_list_endpoints_paginate_and_sort(
         )
     tid = client.get(f"{API}/tenants/me", headers=h).json()["data"][0]["tenant"]["id"]
     cases = {
-        "/users/": "email",
-        "/roles/": "name",
-        "/permissions/": "code",
-        "/tenants/": "slug",
+        "/platform/users/": "email",
+        "/platform/roles/": "name",
+        "/platform/permissions/": "code",
+        "/platform/tenants": "slug",
         f"/tenants/{tid}/members": "email",
         f"/tenants/{tid}/roles": "name",
-        "/menus/": "title",
+        "/platform/menus/": "title",
     }
     for url, field in cases.items():
         r = client.get(

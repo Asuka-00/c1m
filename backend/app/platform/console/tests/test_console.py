@@ -210,8 +210,17 @@ def test_permission_scope_split(
     # 租户角色只能授予租户作用域权限
     _, ho = _user(client, db)
     tid = client.get(f"{API}/tenants/me", headers=ho).json()["data"][0]["tenant"]["id"]
-    tperms = client.get(f"{API}/tenants/{tid}/permissions", headers=ho).json()
-    codes = {p["code"] for p in tperms["data"]}
+    tree = client.get(f"{API}/tenants/{tid}/permission-tree", headers=ho).json()
+
+    def walk(ns: list[dict]) -> set[str]:  # type: ignore[type-arg]
+        return {
+            c
+            for n in ns
+            for c in ([n["code"]] if n["kind"] == "perm" else [])
+            + list(walk(n["children"]))
+        }
+
+    codes = walk(tree)
     assert "members:read" in codes and not codes & {"users:read", "tenants:write"}
     r = client.post(
         f"{API}/tenants/{tid}/roles",
@@ -235,4 +244,4 @@ def test_menu_space_validated(
         headers=superuser_token_headers,
         params={"space": "platform", "page_size": 100},
     ).json()
-    assert plat["count"] == 14 and {m["space"] for m in plat["data"]} == {"platform"}
+    assert plat["count"] == 13 and {m["space"] for m in plat["data"]} == {"platform"}

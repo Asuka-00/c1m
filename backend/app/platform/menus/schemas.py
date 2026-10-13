@@ -73,3 +73,27 @@ class MyMenus(SQLModel):
     is_superuser: bool = False
     # 菜单空间：workspace（租户工作区）/ platform（平台管理控制台）
     space: str = "workspace"
+
+
+class PermNode(SQLModel):
+    """统一权限树节点：菜单（kind=menu，type=MENU）或权限（kind=perm，type=MENU/BUTTON/API）。"""
+
+    id: str
+    # menu / perm / group（"其他权限"等虚拟分组）
+    kind: str
+    type: str
+    key: str | None = None
+    name: str
+    code: str = ""
+    path: str | None = None
+    icon: str | None = None
+    component: str | None = None
+    sort_order: int = 0
+    visible: bool = True
+    status: str = "active"
+    scope: str | None = None
+    space: str | None = None
+    description: str | None = None
+    # 菜单：父菜单 id；权限：所属菜单 id
+    menu_id: str | None = None
+    children: list[PermNode] = []

@@ -50,6 +50,8 @@ class MemberPublic(SQLModel):
     user_id: uuid.UUID
     email: EmailStr
     full_name: str | None = None
+    username: str | None = None
+    is_active: bool = True
     roles: list[str]
 
 

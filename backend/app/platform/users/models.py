@@ -27,4 +27,7 @@ class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str
     created_at: datetime | None = Field(default_factory=get_datetime_utc)
+    # 最近一次由管理员修改的时间与操作人（邮箱）
+    updated_at: datetime | None = None
+    updated_by: str | None = Field(default=None, max_length=255)
     roles: list[Role] = Relationship(back_populates="users", link_model=UserRole)

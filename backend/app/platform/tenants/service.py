@@ -44,10 +44,12 @@ class TenantContext:
 
 # ---------- tenants / members ----------
 def member_permission_codes(member: TenantMember | None) -> set[str]:
-    """成员在租户内的角色权限编码。"""
+    """成员在租户内的角色权限编码（忽略停用的角色与权限）。"""
     if not member:
         return set()
-    return {p.code for r in member.roles for p in r.permissions}
+    from app.platform.rbac.service import active_codes
+
+    return active_codes(member.roles)
 
 
 def get_membership(

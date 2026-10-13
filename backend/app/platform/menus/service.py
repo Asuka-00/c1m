@@ -1,6 +1,6 @@
 """默认菜单注册表（init_db 幂等同步）与菜单树构建。"""
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.core import registry
 from app.platform.menus.layout import (
@@ -16,19 +16,14 @@ from app.platform.menus.layout import (
 )
 from app.platform.menus.layout import titles as titles
 from app.platform.menus.models import Menu
-from app.platform.menus.schemas import MenuNode, MenuTab
+from app.platform.menus.schemas import MenuNode, MenuTab, PermNode
+from app.platform.rbac.models import Permission
 
 # 系统页面：key -> (路径, 图标, 组件, 权限)
 SYSTEM_ITEMS: dict[str, tuple[str, str | None, str, str | None]] = {
     "dashboard": ("/", "LayoutDashboard", "dashboard", None),
     "members": ("/members", "Users", "members", "members:read"),
     "tenant-roles": ("/tenant-roles", "ShieldCheck", "tenant-roles", "members:read"),
-    "tenant-role-perms": (
-        "/tenant-role-permissions",
-        "KeyRound",
-        "tenant-role-permissions",
-        "members:read",
-    ),
     "config": ("/config", "SlidersHorizontal", "config", "config:read"),
     "settings": ("/settings", "Settings", "settings", None),
     "notifications": ("/notifications", "Bell", "notifications", None),
@@ -141,7 +136,140 @@ def seed_menus(session: Session) -> None:
             session.add(child)
         session.flush()
         session.delete(m)
+    session.flush()
+    link_permissions(session)
     session.commit()
+
+
+# 菜单未直接引用的资源：平台菜单不带权限编码，按资源挂到对应平台页面；tenant:manage 挂到租户设置
+PLATFORM_RESOURCE_MENUS = {
+    "users": "p-users",
+    "roles": "p-roles",
+    "tenants": "p-tenants",
+}
+
+
+def _resource(code: str) -> str:
+    """权限编码的资源部分（``mes.lot:write`` -> ``mes.lot``）。"""
+    return code.rsplit(":", 1)[0]
+
+
+def link_permissions(session: Session) -> None:
+    """把尚未挂接菜单的权限按资源前缀挂到菜单下（迁移已有数据，幂等）。
+
+    菜单的权限编码（逗号分隔）中出现的权限为 MENU 类型（页面访问），同资源的其余权限为
+    BUTTON 类型（页面内操作）；找不到菜单的保持未挂接（权限树中归入"其他权限"）。
+    已手动挂接（menu_id 非空）的权限不改动。
+    """
+    menus = sorted(
+        session.exec(select(Menu)).all(), key=lambda m: (m.space, m.sort_order)
+    )
+    by_key = {m.key: m for m in menus}
+    gate: dict[str, Menu] = {}  # 访问权限编码 -> 菜单
+    res: dict[str, Menu] = {}  # 资源 -> 菜单
+    for m in menus:
+        if not m.path or not m.permission:
+            continue
+        for code in m.permission.split(","):
+            gate.setdefault(code, m)
+            res.setdefault(_resource(code), m)
+    for r, key in PLATFORM_RESOURCE_MENUS.items():
+        if key in by_key:
+            res.setdefault(r, by_key[key])
+    for p in session.exec(select(Permission).where(col(Permission.menu_id).is_(None))):
+        target = gate.get(p.code) or res.get(_resource(p.code))
+        if target is None:
+            continue
+        p.menu_id = target.id
+        p.type = "MENU" if p.code in (target.permission or "").split(",") else "BUTTON"
+        session.add(p)
+
+
+def permission_tree(
+    session: Session, spaces: list[str], scope: str | None = None
+) -> list[PermNode]:
+    """统一权限树：菜单（MENU 节点，含分组与页面）-> 挂接的权限（MENU / BUTTON）。
+
+    Args:
+        session: 数据库会话。
+        spaces: 包含的菜单空间（workspace / platform），多个时各作为一个根节点。
+        scope: 仅包含该作用域的权限（租户角色用 ``tenant``），并剪掉没有权限的菜单。
+
+    Returns:
+        树节点列表；未挂接菜单的权限归入根节点"其他权限"。
+    """
+    menus = list(session.exec(select(Menu).where(col(Menu.space).in_(spaces))).all())
+    perms = list(session.exec(select(Permission)).all())
+    if scope:
+        perms = [p for p in perms if p.scope == scope]
+    menu_ids = {m.id for m in menus}
+    by_menu: dict[object, list[Permission]] = {}
+    for p in perms:
+        by_menu.setdefault(p.menu_id if p.menu_id in menu_ids else None, []).append(p)
+    kids: dict[object, list[Menu]] = {}
+    for m in menus:
+        kids.setdefault(m.parent_id, []).append(m)
+
+    def perm_node(p: Permission) -> PermNode:
+        return PermNode(
+            id=str(p.id),
+            kind="perm",
+            type=p.type,
+            name=p.name or p.description or p.code,
+            code=p.code,
+            sort_order=p.sort_order,
+            status=p.status,
+            scope=p.scope,
+            description=p.description,
+            menu_id=str(p.menu_id) if p.menu_id else None,
+        )
+
+    def build(parent: object) -> list[PermNode]:
+        out = []
+        for m in sorted(kids.get(parent, []), key=lambda x: (x.sort_order, x.title)):
+            children = build(m.id) + [
+                perm_node(p)
+                for p in sorted(
+                    by_menu.get(m.id, []), key=lambda p: (p.sort_order, p.code)
+                )
+            ]
+            if scope and not children:
+                continue
+            out.append(
+                PermNode(
+                    id=str(m.id),
+                    kind="menu",
+                    type="MENU",
+                    key=m.key,
+                    name=m.title,
+                    code=m.permission or "",
+                    path=m.path,
+                    icon=m.icon,
+                    component=m.component,
+                    sort_order=m.sort_order,
+                    visible=not m.hidden,
+                    space=m.space,
+                    menu_id=str(m.parent_id) if m.parent_id else None,
+                    children=children,
+                )
+            )
+        return out
+
+    roots = build(None)
+    other = by_menu.get(None, [])
+    if other:
+        roots.append(
+            PermNode(
+                id="other",
+                kind="group",
+                type="GROUP",
+                key="other",
+                name="Other permissions",
+                sort_order=9999,
+                children=[perm_node(p) for p in sorted(other, key=lambda p: p.code)],
+            )
+        )
+    return roots
 
 
 def build_tree(menus: list[Menu], allowed: set[str], superuser: bool) -> list[MenuNode]:

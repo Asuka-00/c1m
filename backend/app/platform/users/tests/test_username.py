@@ -32,7 +32,7 @@ def test_username_create_unique_validate(
     h = superuser_token_headers
     name, pw = "U_" + random_lower_string()[:10], random_lower_string()
     r = client.post(
-        f"{API}/users/",
+        f"{API}/platform/users/",
         headers=h,
         json={"email": random_email(), "username": name, "password": pw},
     )
@@ -40,30 +40,32 @@ def test_username_create_unique_validate(
     assert r.json()["username"] == name.lower()  # stored lower-case
     assert _login(client, name, pw) == 200
     dup = client.post(
-        f"{API}/users/",
+        f"{API}/platform/users/",
         headers=h,
         json={"email": random_email(), "username": name.lower(), "password": pw},
     )
     assert dup.status_code == 409
     for bad in ("a@b", "x", "has space"):
         r = client.post(
-            f"{API}/users/",
+            f"{API}/platform/users/",
             headers=h,
             json={"email": random_email(), "username": bad, "password": pw},
         )
         assert r.status_code == 422, bad
     uid = client.post(
-        f"{API}/users/", headers=h, json={"email": random_email(), "password": pw}
+        f"{API}/platform/users/",
+        headers=h,
+        json={"email": random_email(), "password": pw},
     ).json()["id"]
     assert (
         client.patch(
-            f"{API}/users/{uid}", headers=h, json={"username": name}
+            f"{API}/platform/users/{uid}", headers=h, json={"username": name}
         ).status_code
         == 409
     )
     assert (
         client.patch(
-            f"{API}/users/{uid}", headers=h, json={"username": "other_" + name}
+            f"{API}/platform/users/{uid}", headers=h, json={"username": "other_" + name}
         ).status_code
         == 200
     )

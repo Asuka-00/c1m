@@ -51,7 +51,6 @@ def test_superuser_sees_all_menus(
         "p-users",
         "p-roles",
         "p-permissions",
-        "p-menus",
         "p-config",
         "p-channels",
         "p-audit",
@@ -85,7 +84,6 @@ def test_owner_vs_member_menus(client: TestClient, db: Session) -> None:
     assert [t["key"] for t in up["tabs"]] == [
         "members",
         "tenant-roles",
-        "tenant-role-perms",
     ]
     # 平台控制台菜单仅超级用户
     assert (
@@ -98,7 +96,6 @@ def test_owner_vs_member_menus(client: TestClient, db: Session) -> None:
     assert set(owner_body["redirects"]) == {
         "/members",
         "/tenant-roles",
-        "/tenant-role-permissions",
     } | {k for k in owner_body["redirects"] if k.startswith("/mes/")}
     assert "/members" not in owner_body["forbidden_paths"]
     tid = owner_body["tenant_id"]
@@ -127,7 +124,7 @@ def test_menu_crud(
     h = superuser_token_headers
     key = f"reports-{random_lower_string()[:6]}"
     r = client.post(
-        f"{API}/menus/",
+        f"{API}/platform/menus/",
         headers=h,
         json={
             "key": key,
@@ -141,7 +138,7 @@ def test_menu_crud(
     mid = r.json()["id"]
     assert (
         client.post(
-            f"{API}/menus/", headers=h, json={"key": key, "title": "x"}
+            f"{API}/platform/menus/", headers=h, json={"key": key, "title": "x"}
         ).status_code
         == 409
     )
@@ -150,18 +147,18 @@ def test_menu_crud(
     assert key not in _keys(client.get(f"{API}/menus/me", headers=hu).json()["menus"])
     assert (
         client.post(
-            f"{API}/menus/", headers=hu, json={"key": "x", "title": "x"}
+            f"{API}/platform/menus/", headers=hu, json={"key": "x", "title": "x"}
         ).status_code
         == 403
     )
     assert (
-        client.patch(f"{API}/menus/{mid}", headers=h, json={"hidden": True}).json()[
-            "hidden"
-        ]
+        client.patch(
+            f"{API}/platform/menus/{mid}", headers=h, json={"hidden": True}
+        ).json()["hidden"]
         is True
     )
     assert key not in _keys(client.get(f"{API}/menus/me", headers=h).json()["menus"])
-    assert client.delete(f"{API}/menus/{mid}", headers=h).status_code == 200
+    assert client.delete(f"{API}/platform/menus/{mid}", headers=h).status_code == 200
 
 
 def test_role_permission_bulk_and_tenant_roles(
@@ -169,17 +166,21 @@ def test_role_permission_bulk_and_tenant_roles(
 ) -> None:
     h = superuser_token_headers
     role = client.post(
-        f"{API}/roles/", headers=h, json={"name": f"r-{random_lower_string()[:6]}"}
+        f"{API}/platform/roles/",
+        headers=h,
+        json={"name": f"r-{random_lower_string()[:6]}"},
     ).json()
     r = client.put(
-        f"{API}/roles/{role['id']}/permissions",
+        f"{API}/platform/roles/{role['id']}/permissions",
         headers=h,
         json={"codes": ["users:read", "roles:read"]},
     )
     assert {p["code"] for p in r.json()["permissions"]} == {"users:read", "roles:read"}
     assert (
         client.put(
-            f"{API}/roles/{role['id']}/permissions", headers=h, json={"codes": ["nope"]}
+            f"{API}/platform/roles/{role['id']}/permissions",
+            headers=h,
+            json={"codes": ["nope"]},
         ).status_code
         == 404
     )
@@ -238,7 +239,10 @@ def test_role_permission_bulk_and_tenant_roles(
         client.delete(f"{API}/tenants/{tid}/roles/{rid}", headers=ho).status_code == 200
     )
     # platform /roles must not expose tenant roles
-    assert client.get(f"{API}/roles/{roles['member']}", headers=h).status_code == 404
+    assert (
+        client.get(f"{API}/platform/roles/{roles['member']}", headers=h).status_code
+        == 404
+    )
 
 
 def test_menu_layout_complete_and_synced(

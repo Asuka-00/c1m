@@ -24,11 +24,19 @@ from app.platform.menus.schemas import (
     MenusPublic,
     MenuUpdate,
     MyMenus,
+    PermNode,
 )
-from app.platform.menus.service import build_tree, forbidden_paths, redirects
+from app.platform.menus.service import (
+    build_tree,
+    forbidden_paths,
+    permission_tree,
+    redirects,
+)
 from app.platform.rbac.service import user_permission_codes
 
 router = APIRouter(prefix="/menus", tags=["menus"])
+# 菜单管理（仅在平台空间 /platform/menus 下挂载）
+admin_router = APIRouter(prefix="/menus", tags=["menus"])
 
 
 @router.get("/me", response_model=MyMenus)
@@ -92,7 +100,7 @@ def my_menus(
     )
 
 
-@router.get(
+@admin_router.get(
     "/",
     dependencies=[Depends(require_permissions("roles:read"))],
     response_model=MenusPublic,
@@ -132,7 +140,7 @@ def list_menus(
     return MenusPublic(data=data, count=count)
 
 
-@router.post(
+@admin_router.post(
     "/",
     dependencies=[Depends(require_permissions("roles:write"))],
     response_model=MenuPublic,
@@ -149,7 +157,7 @@ def create_menu(session: SessionDep, menu_in: MenuCreate) -> Any:
     return menu
 
 
-@router.patch(
+@admin_router.patch(
     "/{id}",
     dependencies=[Depends(require_permissions("roles:write"))],
     response_model=MenuPublic,
@@ -168,7 +176,7 @@ def update_menu(session: SessionDep, id: uuid.UUID, menu_in: MenuUpdate) -> Any:
     return menu
 
 
-@router.delete(
+@admin_router.delete(
     "/{id}",
     dependencies=[Depends(require_permissions("roles:write"))],
     response_model=Message,
@@ -182,5 +190,17 @@ def delete_menu(session: SessionDep, id: uuid.UUID) -> Any:
     return Message(message="Menu deleted successfully")
 
 
-# 平台空间别名：/platform/menus/...（仅超级用户）
-platform_router = platform_api_router(router)
+# 平台空间：/platform/menus/...（仅超级用户）与统一权限树
+platform_router = platform_api_router(admin_router)
+
+
+@platform_router.get("/permission-tree", response_model=list[PermNode])
+def read_permission_tree(
+    session: SessionDep,
+    space: Literal["workspace", "platform", "all"] = "all",
+    scope: Literal["platform", "tenant"] | None = None,
+) -> Any:
+    """Unified permission tree: menus (MENU) -> attached permissions (MENU / BUTTON).
+    `space=all` returns both spaces; `scope` keeps only that permission scope."""
+    spaces: list[str] = ["platform", "workspace"] if space == "all" else [space]
+    return permission_tree(session, spaces, scope)

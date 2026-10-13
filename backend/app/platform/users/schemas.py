@@ -53,6 +53,10 @@ class UpdatePassword(SQLModel):
 class UserPublic(UserBase):
     id: uuid.UUID
     created_at: datetime | None = None
+    updated_at: datetime | None = None
+    updated_by: str | None = None
+    # 平台角色（编码）；仅管理列表填充
+    role_names: list[str] = []
 
 
 class UsersPublic(SQLModel):

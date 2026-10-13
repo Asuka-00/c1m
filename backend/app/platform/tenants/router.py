@@ -20,17 +20,17 @@ from app.platform.auth.deps import (
 )
 from app.platform.auth.schemas import Token
 from app.platform.console.service import record_platform_audit
+from app.platform.menus.schemas import PermNode
+from app.platform.menus.service import permission_tree
 from app.platform.rbac.models import MemberRole, Permission, Role
 from app.platform.rbac.schemas import (
     PermissionCodes,
-    PermissionPublic,
-    PermissionsPublic,
     RoleCreate,
     RolePublic,
     RolesPublic,
     RoleUpdate,
 )
-from app.platform.rbac.service import has_permissions
+from app.platform.rbac.service import has_permissions, role_filters, touch
 from app.platform.tenants.models import Tenant, TenantMember
 from app.platform.tenants.schemas import (
     MemberAdd,
@@ -40,15 +40,12 @@ from app.platform.tenants.schemas import (
     MyTenantPublic,
     MyTenantsPublic,
     OwnerAssign,
-    TenantCreate,
     TenantPublic,
-    TenantsPublic,
     TenantUpdate,
 )
 from app.platform.tenants.service import (
     TenantContext,
     add_member,
-    create_tenant,
     get_membership,
     member_permission_codes,
     owner_count,
@@ -75,42 +72,10 @@ def _member_public(m: TenantMember) -> MemberPublic:
         user_id=m.user_id,
         email=m.user.email,
         full_name=m.user.full_name,
+        username=m.user.username,
+        is_active=m.user.is_active,
         roles=sorted(r.name for r in m.roles),
     )
-
-
-@router.get("/", response_model=TenantsPublic)
-def list_tenants(
-    session: SessionDep,
-    current_user: CurrentUser,
-    params: ListParamsDep,
-    status: Literal["active", "suspended"] | None = None,
-) -> Any:
-    """All tenants (platform tenants:read) or only the caller's tenants.
-    Paginated; sort_by: name, slug, status, created_at; q: name/slug; optional status."""
-    stmt = select(Tenant)
-    if status:
-        stmt = stmt.where(Tenant.status == status)
-    if not has_permissions(current_user, "tenants:read"):
-        sub = select(TenantMember.tenant_id).where(
-            TenantMember.user_id == current_user.id
-        )
-        stmt = stmt.where(col(Tenant.id).in_(sub))
-    data, count = paginate(
-        session,
-        stmt,
-        params,
-        {
-            "name": Tenant.name,
-            "slug": Tenant.slug,
-            "status": Tenant.status,
-            "created_at": Tenant.created_at,
-        },
-        ("slug", "asc"),
-        Tenant.id,
-        search=[Tenant.name, Tenant.slug],
-    )
-    return TenantsPublic(data=data, count=count)
 
 
 @router.get("/me", response_model=MyTenantsPublic)
@@ -128,16 +93,6 @@ def my_tenants(session: SessionDep, current_user: CurrentUser) -> Any:
         for m in sorted(members, key=lambda m: m.tenant.slug)
     ]
     return MyTenantsPublic(data=data, count=len(data))
-
-
-@router.post("/", response_model=TenantPublic)
-def create_new_tenant(
-    session: SessionDep, current_user: CurrentUser, tenant_in: TenantCreate
-) -> Any:
-    """Create a tenant; the caller becomes its owner."""
-    if session.exec(select(Tenant).where(Tenant.slug == tenant_in.slug)).first():
-        raise HTTPException(status_code=409, detail="Tenant slug already exists")
-    return create_tenant(session, tenant_in.name, tenant_in.slug, owner=current_user)
 
 
 @router.get("/{tenant_id}", response_model=TenantPublic)
@@ -184,17 +139,29 @@ def switch_tenant(ctx: TenantMember_) -> Any:
 
 @router.get("/{tenant_id}/roles", response_model=RolesPublic)
 def list_tenant_roles(
-    session: SessionDep, ctx: MembersReader, params: ListParamsDep
+    session: SessionDep,
+    ctx: MembersReader,
+    params: ListParamsDep,
+    code: str | None = None,
+    title: str | None = None,
+    status: Literal["active", "disabled"] | None = None,
 ) -> Any:
-    """Paginated; sort_by: name, description."""
+    """Paginated; sort_by: name, title, status, updated_at; q: code/name/description;
+    filters: code, title (contains), status."""
     roles, count = paginate(
         session,
-        select(Role).where(Role.tenant_id == ctx.id),
+        role_filters(select(Role).where(Role.tenant_id == ctx.id), code, title, status),
         params,
-        {"name": Role.name, "description": Role.description},
+        {
+            "name": Role.name,
+            "title": Role.title,
+            "status": Role.status,
+            "description": Role.description,
+            "updated_at": Role.updated_at,
+        },
         ("name", "asc"),
         Role.id,
-        search=[Role.name, Role.description],
+        search=[Role.name, Role.title, Role.description],
     )
     return RolesPublic(
         data=[
@@ -338,16 +305,10 @@ def _rp(role: Role) -> RolePublic:
     return RolePublic.model_validate(role, update={"permissions": role.permissions})
 
 
-@router.get("/{tenant_id}/permissions", response_model=PermissionsPublic)
-def list_tenant_permissions(session: SessionDep, _ctx: MembersReader) -> Any:
-    """Tenant-scope permissions grantable to tenant roles (for the role-permission tree)."""
-    perms = session.exec(
-        select(Permission)
-        .where(Permission.scope == "tenant")
-        .order_by(col(Permission.code))
-    ).all()
-    data = [PermissionPublic.model_validate(p) for p in perms]
-    return PermissionsPublic(data=data, count=len(data))
+@router.get("/{tenant_id}/permission-tree", response_model=list[PermNode])
+def tenant_permission_tree(session: SessionDep, _ctx: MembersReader) -> Any:
+    """Workspace permission tree limited to tenant-scope permissions (role dialog)."""
+    return permission_tree(session, ["workspace"], "tenant")
 
 
 @router.post("/{tenant_id}/roles", response_model=RolePublic)
@@ -358,8 +319,15 @@ def create_tenant_role(
         select(Role).where(Role.tenant_id == ctx.id, Role.name == role_in.name)
     ).first():
         raise HTTPException(status_code=409, detail="Role already exists")
-    role = Role(name=role_in.name, description=role_in.description, tenant_id=ctx.id)
+    role = Role(
+        name=role_in.name,
+        title=role_in.title,
+        description=role_in.description,
+        status=role_in.status,
+        tenant_id=ctx.id,
+    )
     role.permissions = _tenant_perms(session, role_in.permission_codes)
+    touch(role, ctx.user)
     session.add(role)
     session.commit()
     session.refresh(role)
@@ -373,7 +341,10 @@ def update_tenant_role(
     role = _tenant_role(session, ctx, role_id)
     if role.name == "owner" and role_in.name not in (None, "owner"):
         raise HTTPException(status_code=400, detail="The owner role cannot be renamed")
+    if role.name == "owner" and role_in.status == "disabled":
+        raise HTTPException(status_code=400, detail="The owner role cannot be disabled")
     role.sqlmodel_update(role_in.model_dump(exclude_unset=True))
+    touch(role, ctx.user)
     session.add(role)
     session.commit()
     session.refresh(role)
@@ -390,6 +361,7 @@ def set_tenant_role_permissions(
             status_code=400, detail="The owner role permissions are fixed"
         )
     role.permissions = _tenant_perms(session, body.codes)
+    touch(role, ctx.user)
     session.add(role)
     session.commit()
     session.refresh(role)

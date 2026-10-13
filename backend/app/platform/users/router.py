@@ -4,11 +4,12 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import or_
 from sqlmodel import Session, col, select
 
 from app.core.config import settings
 from app.core.deps import SessionDep
-from app.core.models import Message
+from app.core.models import Message, get_datetime_utc
 from app.core.pagination import ListParamsDep, paginate
 from app.core.security import get_password_hash, verify_password
 from app.platform.auth.deps import CurrentUser, platform_api_router, require_permissions
@@ -29,6 +30,8 @@ from app.platform.users.schemas import (
 )
 
 router = APIRouter(prefix="/users", tags=["users"])
+# 用户管理（仅在平台空间 /platform/users 下挂载）；本路由只保留自助接口（me / signup）
+admin_router = APIRouter(prefix="/users", tags=["users"])
 
 
 def _check_username(
@@ -43,7 +46,7 @@ def _check_username(
         )
 
 
-@router.get(
+@admin_router.get(
     "/",
     dependencies=[Depends(require_permissions("users:read"))],
     response_model=UsersPublic,
@@ -54,12 +57,23 @@ def read_users(
     is_active: bool | None = None,
     is_superuser: bool | None = None,
     role_id: uuid.UUID | None = None,
+    username: str | None = None,
+    full_name: str | None = None,
 ) -> Any:
     """
-    Retrieve users (paginated; sort_by: email, full_name, created_at, is_active, is_superuser;
-    q searches email/full_name; filters: is_active, is_superuser, role_id = platform role).
+    Retrieve users (paginated; sort_by: email, username, full_name, created_at, updated_at,
+    is_active, is_superuser; q searches email/username/full_name; filters: is_active,
+    is_superuser, role_id = platform role, username (username or email contains),
+    full_name (contains)).
     """
     stmt = select(User)
+    if username:
+        like = f"%{username}%"
+        stmt = stmt.where(
+            or_(col(User.username).ilike(like), col(User.email).ilike(like))
+        )
+    if full_name:
+        stmt = stmt.where(col(User.full_name).ilike(f"%{full_name}%"))
     if is_active is not None:
         stmt = stmt.where(User.is_active == is_active)
     if is_superuser is not None:
@@ -79,6 +93,7 @@ def read_users(
             "username": User.username,
             "full_name": User.full_name,
             "created_at": User.created_at,
+            "updated_at": User.updated_at,
             "is_active": User.is_active,
             "is_superuser": User.is_superuser,
         },
@@ -87,11 +102,16 @@ def read_users(
         search=[User.email, User.username, User.full_name],
     )
 
-    users_public = [UserPublic.model_validate(user) for user in users]
+    users_public = [
+        UserPublic.model_validate(
+            user, update={"role_names": sorted(r.name for r in user.roles)}
+        )
+        for user in users
+    ]
     return UsersPublic(data=users_public, count=count)
 
 
-@router.post(
+@admin_router.post(
     "/",
     dependencies=[Depends(require_permissions("users:write"))],
     response_model=UserPublic,
@@ -216,7 +236,7 @@ def register_user(session: SessionDep, user_in: UserRegister) -> Any:
     return user
 
 
-@router.get("/{user_id}", response_model=UserPublic)
+@admin_router.get("/{user_id}", response_model=UserPublic)
 def read_user_by_id(
     user_id: uuid.UUID, session: SessionDep, current_user: CurrentUser
 ) -> Any:
@@ -236,7 +256,7 @@ def read_user_by_id(
     return user
 
 
-@router.patch(
+@admin_router.patch(
     "/{user_id}",
     dependencies=[Depends(require_permissions("users:write"))],
     response_model=UserPublic,
@@ -244,6 +264,7 @@ def read_user_by_id(
 def update_user(
     *,
     session: SessionDep,
+    current_user: CurrentUser,
     user_id: uuid.UUID,
     user_in: UserUpdate,
 ) -> Any:
@@ -265,11 +286,13 @@ def update_user(
                 status_code=409, detail="User with this email already exists"
             )
 
+    db_user.updated_at = get_datetime_utc()
+    db_user.updated_by = current_user.email
     db_user = crud.update_user(session=session, db_user=db_user, user_in=user_in)
     return db_user
 
 
-@router.delete(
+@admin_router.delete(
     "/{user_id}", dependencies=[Depends(require_permissions("users:delete"))]
 )
 def delete_user(
@@ -291,4 +314,4 @@ def delete_user(
 
 
 # 平台空间别名：/platform/users/...（仅超级用户）
-platform_router = platform_api_router(router)
+platform_router = platform_api_router(admin_router)

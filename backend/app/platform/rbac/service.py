@@ -1,9 +1,10 @@
 """RBAC 服务：默认权限/角色同步、角色分配与权限判断。"""
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlmodel import Session, col, select
 
+from app.core.models import get_datetime_utc
 from app.platform.rbac.models import Permission, Role
 from app.platform.rbac.permissions import (
     DEFAULT_PERMISSIONS,
@@ -53,8 +54,19 @@ def assign_role(session: Session, user: User, name: str) -> None:
 
 
 def user_permission_codes(user: User) -> set[str]:
-    """用户的平台级权限编码。"""
-    return {p.code for r in user.roles for p in r.permissions}
+    """用户的平台级权限编码（忽略停用的角色与权限）。"""
+    return active_codes(user.roles)
+
+
+def active_codes(roles: list[Role]) -> set[str]:
+    """角色集合授予的有效权限编码：跳过停用的角色与停用的权限。"""
+    return {
+        p.code
+        for r in roles
+        if r.status != "disabled"
+        for p in r.permissions
+        if p.status != "disabled"
+    }
 
 
 def has_permissions(user: User, *codes: str, extra: set[str] | None = None) -> bool:
@@ -68,3 +80,22 @@ def has_permissions(user: User, *codes: str, extra: set[str] | None = None) -> b
     if user.is_superuser:
         return True
     return set(codes) <= (user_permission_codes(user) | (extra or set()))
+
+
+def role_filters(
+    stmt: Any, code: str | None, title: str | None, status: str | None
+) -> Any:
+    """角色列表的筛选：编码 / 名称包含（不区分大小写）与状态。"""
+    if code:
+        stmt = stmt.where(col(Role.name).ilike(f"%{code}%"))
+    if title:
+        stmt = stmt.where(col(Role.title).ilike(f"%{title}%"))
+    if status:
+        stmt = stmt.where(Role.status == status)
+    return stmt
+
+
+def touch(role: Role, user: User) -> None:
+    """记录角色的更新时间与更新人。"""
+    role.updated_at = get_datetime_utc()
+    role.updated_by = user.email

@@ -192,20 +192,30 @@ def test_switch_tenant_token_claim(client: TestClient, db: Session) -> None:
 def test_tenant_crud(
     client: TestClient, db: Session, superuser_token_headers: dict[str, str]
 ) -> None:
-    _, h, _ = _user(client, db)
+    email, h, _ = _user(client, db)
+    sh = superuser_token_headers
     slug = f"acme-{random_lower_string()[:6]}"
-    r = client.post(f"{API}/tenants/", headers=h, json={"name": "Acme", "slug": slug})
+    # 租户由平台创建（自助创建接口已移除），普通用户无权调用平台接口
+    body = {"name": "Acme", "slug": slug}
+    assert (
+        client.post(f"{API}/platform/tenants", headers=h, json=body).status_code == 403
+    )
+    r = client.post(
+        f"{API}/platform/tenants", headers=sh, json={**body, "owner_email": email.email}
+    )
     assert r.status_code == 200
     tid = r.json()["id"]
     assert (
         client.post(
-            f"{API}/tenants/", headers=h, json={"name": "Acme", "slug": slug}
+            f"{API}/platform/tenants", headers=sh, json={"name": "Acme", "slug": slug}
         ).status_code
         == 409
     )
     assert (
         client.post(
-            f"{API}/tenants/", headers=h, json={"name": "Bad", "slug": "Bad Slug"}
+            f"{API}/platform/tenants",
+            headers=sh,
+            json={"name": "Bad", "slug": "Bad Slug"},
         ).status_code
         == 422
     )
@@ -222,7 +232,8 @@ def test_tenant_crud(
         == 403
     )
     assert {
-        t["slug"] for t in client.get(f"{API}/tenants/", headers=h).json()["data"]
+        x["tenant"]["slug"]
+        for x in client.get(f"{API}/tenants/me", headers=h).json()["data"]
     } >= {slug}
     roles = {
         r["name"]
@@ -243,7 +254,9 @@ def test_tenant_crud(
         == 403
     )
     assert (
-        client.get(f"{API}/tenants/", headers=superuser_token_headers).json()["count"]
+        client.get(f"{API}/platform/tenants", headers=superuser_token_headers).json()[
+            "count"
+        ]
         >= 3
     )
     assert (
