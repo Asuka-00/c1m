@@ -8,14 +8,17 @@ from sqlmodel import Session
 from app.core.config import settings
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
-from app.testing.utils import random_email, random_lower_string
+from app.testing.utils import random_email, random_lower_string, username_for
 
 API = settings.API_V1_STR
 
 
 def _user(client: TestClient, db: Session) -> tuple[str, dict[str, str]]:
     email, pw = random_email(), random_lower_string()
-    crud.create_user(session=db, user_create=UserCreate(email=email, password=pw))
+    crud.create_user(
+        session=db,
+        user_create=UserCreate(email=email, username=username_for(email), password=pw),
+    )
     tok = client.post(
         f"{API}/login/access-token", data={"username": email, "password": pw}
     ).json()["access_token"]
@@ -57,12 +60,12 @@ def test_tenant_lifecycle(
             "name": "Acme",
             "slug": slug,
             "plan": "trial",
-            "owner_email": owner_email,
+            "owner": username_for(owner_email),
         },
     )
     assert r.status_code == 200, r.text
     t = r.json()
-    assert t["plan"] == "trial" and t["owners"] == [owner_email]
+    assert t["plan"] == "trial" and t["owners"] == [username_for(owner_email)]
     tid = t["id"]
     # 内置租户角色模板自动创建
     roles = client.get(f"{API}/platform/tenants/{tid}/roles", headers=sh).json()
@@ -75,7 +78,9 @@ def test_tenant_lifecycle(
     # 成员与 owner 指定
     other_email, _ = _user(client, db)
     r = client.put(
-        f"{API}/platform/tenants/{tid}/owner", headers=sh, json={"email": other_email}
+        f"{API}/platform/tenants/{tid}/owner",
+        headers=sh,
+        json={"username": other_email},
     )
     assert r.status_code == 200 and "owner" in r.json()["roles"]
     members = client.get(f"{API}/platform/tenants/{tid}/members", headers=sh).json()
@@ -141,18 +146,19 @@ def test_login_log(
 ) -> None:
     email, _ = _user(client, db)
     client.post(
-        f"{API}/login/access-token", data={"username": email, "password": "nope-nope"}
+        f"{API}/login/access-token",
+        data={"username": username_for(email), "password": "nope-nope"},
     )
     rows = client.get(
         f"{API}/platform/login-log",
         headers=superuser_token_headers,
-        params={"q": email},
+        params={"q": username_for(email)},
     ).json()["data"]
     assert {r["success"] for r in rows} == {True, False}
     failed = client.get(
         f"{API}/platform/login-log",
         headers=superuser_token_headers,
-        params={"q": email, "success": False},
+        params={"q": username_for(email), "success": False},
     ).json()
     assert failed["count"] == 1 and failed["data"][0]["reason"] == "bad_credentials"
 

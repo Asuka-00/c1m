@@ -10,7 +10,7 @@ from app.platform.users import service as crud
 from app.platform.users.models import User
 from app.platform.users.schemas import UserCreate
 from app.testing.user import create_random_user
-from app.testing.utils import random_email, random_lower_string
+from app.testing.utils import random_email, random_lower_string, username_for
 
 
 def test_get_users_superuser_me(
@@ -45,7 +45,11 @@ def test_create_user_new_email(
     ):
         username = random_email()
         password = random_lower_string()
-        data = {"email": username, "password": password}
+        data = {
+            "email": username,
+            "username": username_for(username),
+            "password": password,
+        }
         r = client.post(
             f"{settings.API_V1_STR}/platform/users/",
             headers=superuser_token_headers,
@@ -63,7 +67,9 @@ def test_get_existing_user_as_superuser(
 ) -> None:
     username = random_email()
     password = random_lower_string()
-    user_in = UserCreate(email=username, password=password)
+    user_in = UserCreate(
+        email=username, username=username_for(username), password=password
+    )
     user = crud.create_user(session=db, user_create=user_in)
     user_id = user.id
     r = client.get(
@@ -91,7 +97,9 @@ def test_get_non_existing_user_as_superuser(
 def test_get_existing_user_current_user(client: TestClient, db: Session) -> None:
     username = random_email()
     password = random_lower_string()
-    user_in = UserCreate(email=username, password=password)
+    user_in = UserCreate(
+        email=username, username=username_for(username), password=password
+    )
     user = crud.create_user(session=db, user_create=user_in)
     user_id = user.id
 
@@ -152,16 +160,18 @@ def test_create_user_existing_username(
     username = random_email()
     # username = email
     password = random_lower_string()
-    user_in = UserCreate(email=username, password=password)
+    user_in = UserCreate(
+        email=username, username=username_for(username), password=password
+    )
     crud.create_user(session=db, user_create=user_in)
-    data = {"email": username, "password": password}
+    data = {"email": username, "username": username_for(username), "password": password}
     r = client.post(
         f"{settings.API_V1_STR}/platform/users/",
         headers=superuser_token_headers,
         json=data,
     )
     created_user = r.json()
-    assert r.status_code == 400
+    assert r.status_code == 409
     assert "_id" not in created_user
 
 
@@ -170,7 +180,7 @@ def test_create_user_by_normal_user(
 ) -> None:
     username = random_email()
     password = random_lower_string()
-    data = {"email": username, "password": password}
+    data = {"email": username, "username": username_for(username), "password": password}
     r = client.post(
         f"{settings.API_V1_STR}/platform/users/",
         headers=normal_user_token_headers,
@@ -184,12 +194,16 @@ def test_retrieve_users(
 ) -> None:
     username = random_email()
     password = random_lower_string()
-    user_in = UserCreate(email=username, password=password)
+    user_in = UserCreate(
+        email=username, username=username_for(username), password=password
+    )
     crud.create_user(session=db, user_create=user_in)
 
     username2 = random_email()
     password2 = random_lower_string()
-    user_in2 = UserCreate(email=username2, password=password2)
+    user_in2 = UserCreate(
+        email=username2, username=username_for(username2), password=password2
+    )
     crud.create_user(session=db, user_create=user_in2)
 
     r = client.get(
@@ -289,7 +303,9 @@ def test_update_user_me_email_exists(
 ) -> None:
     username = random_email()
     password = random_lower_string()
-    user_in = UserCreate(email=username, password=password)
+    user_in = UserCreate(
+        email=username, username=username_for(username), password=password
+    )
     user = crud.create_user(session=db, user_create=user_in)
 
     data = {"email": user.email}
@@ -325,7 +341,12 @@ def test_register_user(client: TestClient, db: Session) -> None:
     username = random_email()
     password = random_lower_string()
     full_name = random_lower_string()
-    data = {"email": username, "password": password, "full_name": full_name}
+    data = {
+        "email": username,
+        "username": username_for(username),
+        "password": password,
+        "full_name": full_name,
+    }
     r = client.post(
         f"{settings.API_V1_STR}/users/signup",
         json=data,
@@ -349,6 +370,7 @@ def test_register_user_already_exists_error(client: TestClient) -> None:
     full_name = random_lower_string()
     data = {
         "email": settings.FIRST_SUPERUSER,
+        "username": "fresh_" + random_lower_string()[:8],
         "password": password,
         "full_name": full_name,
     }
@@ -356,8 +378,8 @@ def test_register_user_already_exists_error(client: TestClient) -> None:
         f"{settings.API_V1_STR}/users/signup",
         json=data,
     )
-    assert r.status_code == 400
-    assert r.json()["detail"] == "The user with this email already exists in the system"
+    assert r.status_code == 409
+    assert r.json()["detail"] == "User with this email already exists"
 
 
 def test_update_user(
@@ -365,7 +387,9 @@ def test_update_user(
 ) -> None:
     username = random_email()
     password = random_lower_string()
-    user_in = UserCreate(email=username, password=password)
+    user_in = UserCreate(
+        email=username, username=username_for(username), password=password
+    )
     user = crud.create_user(session=db, user_create=user_in)
 
     data = {"full_name": "Updated_full_name"}
@@ -404,12 +428,16 @@ def test_update_user_email_exists(
 ) -> None:
     username = random_email()
     password = random_lower_string()
-    user_in = UserCreate(email=username, password=password)
+    user_in = UserCreate(
+        email=username, username=username_for(username), password=password
+    )
     user = crud.create_user(session=db, user_create=user_in)
 
     username2 = random_email()
     password2 = random_lower_string()
-    user_in2 = UserCreate(email=username2, password=password2)
+    user_in2 = UserCreate(
+        email=username2, username=username_for(username2), password=password2
+    )
     user2 = crud.create_user(session=db, user_create=user_in2)
 
     data = {"email": user2.email}
@@ -425,7 +453,9 @@ def test_update_user_email_exists(
 def test_delete_user_me(client: TestClient, db: Session) -> None:
     username = random_email()
     password = random_lower_string()
-    user_in = UserCreate(email=username, password=password)
+    user_in = UserCreate(
+        email=username, username=username_for(username), password=password
+    )
     user = crud.create_user(session=db, user_create=user_in)
     user_id = user.id
 
@@ -470,7 +500,9 @@ def test_delete_user_super_user(
 ) -> None:
     username = random_email()
     password = random_lower_string()
-    user_in = UserCreate(email=username, password=password)
+    user_in = UserCreate(
+        email=username, username=username_for(username), password=password
+    )
     user = crud.create_user(session=db, user_create=user_in)
     user_id = user.id
     r = client.delete(
@@ -515,7 +547,9 @@ def test_delete_user_without_privileges(
 ) -> None:
     username = random_email()
     password = random_lower_string()
-    user_in = UserCreate(email=username, password=password)
+    user_in = UserCreate(
+        email=username, username=username_for(username), password=password
+    )
     user = crud.create_user(session=db, user_create=user_in)
 
     r = client.delete(

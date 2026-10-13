@@ -24,3 +24,8 @@ def get_superuser_token_headers(client: TestClient) -> dict[str, str]:
     a_token = tokens["access_token"]
     headers = {"Authorization": f"Bearer {a_token}"}
     return headers
+
+
+def username_for(email: str) -> str:
+    """测试用：由邮箱推导用户名（随机邮箱的本地部分，截断到 40 位）。"""
+    return email.split("@")[0].lower()[:40]

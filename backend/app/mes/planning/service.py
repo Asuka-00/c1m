@@ -20,6 +20,7 @@ import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
+from app.core.models import actor_name
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, TABLES, Entity
@@ -277,7 +278,7 @@ def transition(
             "product_version": prod["version"],
             "route_version": route["version"],
             "released_at": now(),
-            "released_by": getattr(user, "email", None),
+            "released_by": actor_name(user),
         }
     elif action == "hold":
         extra = {"held_from": wo["wo_status"]}
@@ -522,7 +523,7 @@ def start(
                 carrier_id=x.get("carrier_id"),
                 source_ref=x.get("source_ref") or None,
                 started_at=at,
-                started_by=getattr(user, "email", None),
+                started_by=actor_name(user),
                 attrs=dict(tag),
                 **sysv,
             )

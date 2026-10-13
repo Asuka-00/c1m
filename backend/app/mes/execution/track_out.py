@@ -5,6 +5,7 @@ from typing import Any
 
 from sqlmodel import Session
 
+from app.core.models import actor_name
 from app.core.spec.audit import audit
 from app.core.spec.base import now
 from app.core.spec.engine import ENTITIES
@@ -168,7 +169,7 @@ def track_out(
         override=body.get("override", False),
         reason=body.get("override_reason"),
     )
-    at, email = now(), getattr(user, "email", None)
+    at, email = now(), actor_name(user)
     for d in dc:
         _ins(
             s,

@@ -6,6 +6,7 @@ from typing import Any
 import sqlalchemy as sa
 from sqlmodel import Session
 
+from app.core.models import actor_name
 from app.core.spec.base import conn
 from app.core.spec.engine import TABLES
 from app.core.spec.errors import http_422
@@ -135,7 +136,7 @@ def _genealogy(
         qty=qty,
         units=unit_codes,
         route_step_id=parent["current_step_id"],
-        user_email=getattr(user, "email", None),
+        user_email=actor_name(user),
         at=at,
     )
 

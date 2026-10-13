@@ -4,7 +4,6 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import EmailStr
 from sqlmodel import Field, SQLModel
 
 
@@ -28,7 +27,7 @@ class PlatformTenants(SQLModel):
 
 
 class PlatformTenantCreate(SQLModel):
-    """创建租户；``owner_email`` 指定已有用户为 owner（为空则不设 owner）。"""
+    """创建租户；``owner`` 按用户名（或邮箱）指定已有用户为 owner（为空则不设 owner）。"""
 
     name: str = Field(min_length=1, max_length=255)
     slug: str = Field(
@@ -38,7 +37,7 @@ class PlatformTenantCreate(SQLModel):
         default="standard", schema_extra={"pattern": r"^(trial|standard|enterprise)$"}
     )
     expires_at: datetime | None = None
-    owner_email: EmailStr | None = None
+    owner: str | None = Field(default=None, max_length=255)
 
 
 class PlatformTenantUpdate(SQLModel):

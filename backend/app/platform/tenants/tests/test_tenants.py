@@ -9,7 +9,7 @@ from app.core.config import settings
 from app.platform.tenants.models import Tenant
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
-from app.testing.utils import random_email, random_lower_string
+from app.testing.utils import random_email, random_lower_string, username_for
 
 API = settings.API_V1_STR
 
@@ -17,7 +17,8 @@ API = settings.API_V1_STR
 def _user(client: TestClient, db: Session):  # type: ignore[no-untyped-def]
     email, pw = random_email(), random_lower_string()
     user = crud.create_user(
-        session=db, user_create=UserCreate(email=email, password=pw)
+        session=db,
+        user_create=UserCreate(email=email, username=username_for(email), password=pw),
     )
     r = client.post(
         f"{API}/login/access-token", data={"username": email, "password": pw}
@@ -33,7 +34,8 @@ def test_signup_creates_personal_tenant_as_owner(client: TestClient) -> None:
     email, pw = random_email(), random_lower_string()
     assert (
         client.post(
-            f"{API}/users/signup", json={"email": email, "password": pw}
+            f"{API}/users/signup",
+            json={"email": email, "username": username_for(email), "password": pw},
         ).status_code
         == 200
     )
@@ -89,12 +91,12 @@ def test_members_roles_and_header_selection(client: TestClient, db: Session) -> 
     r = client.post(
         f"{API}/tenants/{t}/members",
         headers=ho,
-        json={"email": member.email, "roles": ["member"]},
+        json={"username": member.email, "roles": ["member"]},
     )
     assert r.status_code == 200 and r.json()["roles"] == ["member"]
     assert (
         client.post(
-            f"{API}/tenants/{t}/members", headers=ho, json={"email": member.email}
+            f"{API}/tenants/{t}/members", headers=ho, json={"username": member.email}
         ).status_code
         == 409
     )
@@ -107,7 +109,7 @@ def test_members_roles_and_header_selection(client: TestClient, db: Session) -> 
     # member can read but not manage members or the tenant
     assert (
         client.post(
-            f"{API}/tenants/{t}/members", headers=hm, json={"email": owner.email}
+            f"{API}/tenants/{t}/members", headers=hm, json={"username": owner.email}
         ).status_code
         == 403
     )
@@ -173,7 +175,9 @@ def test_members_roles_and_header_selection(client: TestClient, db: Session) -> 
 def test_switch_tenant_token_claim(client: TestClient, db: Session) -> None:
     owner, ho, t = _user(client, db)
     member, hm, personal = _user(client, db)
-    client.post(f"{API}/tenants/{t}/members", headers=ho, json={"email": member.email})
+    client.post(
+        f"{API}/tenants/{t}/members", headers=ho, json={"username": member.email}
+    )
     tok = client.post(f"{API}/tenants/{t}/switch", headers=hm).json()["access_token"]
     hs = {"Authorization": f"Bearer {tok}"}
     assert client.get(f"{API}/menus/me", headers=hs).json()["tenant_id"] == t
@@ -201,7 +205,7 @@ def test_tenant_crud(
         client.post(f"{API}/platform/tenants", headers=h, json=body).status_code == 403
     )
     r = client.post(
-        f"{API}/platform/tenants", headers=sh, json={**body, "owner_email": email.email}
+        f"{API}/platform/tenants", headers=sh, json={**body, "owner": email.username}
     )
     assert r.status_code == 200
     tid = r.json()["id"]

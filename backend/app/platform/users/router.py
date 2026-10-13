@@ -9,7 +9,7 @@ from sqlmodel import Session, col, select
 
 from app.core.config import settings
 from app.core.deps import SessionDep
-from app.core.models import Message, get_datetime_utc
+from app.core.models import Message, actor_name, get_datetime_utc
 from app.core.pagination import ListParamsDep, paginate
 from app.core.security import get_password_hash, verify_password
 from app.platform.auth.deps import CurrentUser, platform_api_router, require_permissions
@@ -34,16 +34,15 @@ router = APIRouter(prefix="/users", tags=["users"])
 admin_router = APIRouter(prefix="/users", tags=["users"])
 
 
-def _check_username(
-    session: Session, username: str | None, exclude_id: uuid.UUID | None = None
+def _check_identity(
+    session: Session,
+    username: str | None,
+    email: str | None,
+    exclude_id: uuid.UUID | None = None,
 ) -> None:
-    if not username:
-        return
-    other = crud.get_user_by_username(session=session, username=username)
-    if other and other.id != exclude_id:
-        raise HTTPException(
-            status_code=409, detail="User with this username already exists"
-        )
+    """用户名 / 邮箱重复时 409。"""
+    if detail := crud.identity_conflict(session, username, email, exclude_id):
+        raise HTTPException(status_code=409, detail=detail)
 
 
 @admin_router.get(
@@ -123,18 +122,12 @@ def create_user(
     Create new user.
     """
     _guard_superuser(current_user, None, user_in.is_superuser)
-    user = crud.get_user_by_email(session=session, email=user_in.email)
-    if user:
-        raise HTTPException(
-            status_code=400,
-            detail="The user with this email already exists in the system.",
-        )
-    _check_username(session, user_in.username)
+    _check_identity(session, user_in.username, user_in.email)
 
     user = crud.create_user(session=session, user_create=user_in)
     if settings.emails_enabled and user_in.email:
         email_data = generate_new_account_email(
-            email_to=user_in.email, username=user_in.email, password=user_in.password
+            email_to=user_in.email, username=user_in.username, password=user_in.password
         )
         send_email(
             email_to=user_in.email,
@@ -152,14 +145,10 @@ def update_user_me(
     Update own user.
     """
 
-    _check_username(session, user_in.username, current_user.id)
-    if user_in.email:
-        existing_user = crud.get_user_by_email(session=session, email=user_in.email)
-        if existing_user and existing_user.id != current_user.id:
-            raise HTTPException(
-                status_code=409, detail="User with this email already exists"
-            )
+    _check_identity(session, user_in.username, user_in.email, current_user.id)
     user_data = user_in.model_dump(exclude_unset=True)
+    if user_data.get("username", "") is None:  # 用户名必填，不能清空
+        user_data.pop("username")
     current_user.sqlmodel_update(user_data)
     session.add(current_user)
     session.commit()
@@ -228,12 +217,7 @@ def register_user(session: SessionDep, user_in: UserRegister) -> Any:
     """
     Create new user without the need to be logged in.
     """
-    user = crud.get_user_by_email(session=session, email=user_in.email)
-    if user:
-        raise HTTPException(
-            status_code=400,
-            detail="The user with this email already exists in the system",
-        )
+    _check_identity(session, user_in.username, user_in.email)
     user_create = UserCreate.model_validate(user_in)
     user = crud.create_user(session=session, user_create=user_create)
     return user
@@ -282,16 +266,10 @@ def update_user(
             detail="The user with this id does not exist in the system",
         )
     _guard_superuser(current_user, db_user, user_in.is_superuser)
-    _check_username(session, user_in.username, user_id)
-    if user_in.email:
-        existing_user = crud.get_user_by_email(session=session, email=user_in.email)
-        if existing_user and existing_user.id != user_id:
-            raise HTTPException(
-                status_code=409, detail="User with this email already exists"
-            )
+    _check_identity(session, user_in.username, user_in.email, user_id)
 
     db_user.updated_at = get_datetime_utc()
-    db_user.updated_by = current_user.email
+    db_user.updated_by = actor_name(current_user)
     db_user = crud.update_user(session=session, db_user=db_user, user_in=user_in)
     return db_user
 

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 from sqlmodel import Session, col, select
 
-from app.core.models import get_datetime_utc
+from app.core.models import actor_name, get_datetime_utc
 from app.platform.rbac.labels import ROLE_LABELS, permission_label
 from app.platform.rbac.models import Permission, Role
 from app.platform.rbac.permissions import (
@@ -110,4 +110,4 @@ def role_filters(
 def touch(role: Role, user: User) -> None:
     """记录角色的更新时间与更新人。"""
     role.updated_at = get_datetime_utc()
-    role.updated_by = user.email
+    role.updated_by = actor_name(user)

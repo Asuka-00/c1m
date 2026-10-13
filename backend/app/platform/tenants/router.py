@@ -5,13 +5,14 @@ from datetime import timedelta
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import col, or_, select
+from sqlmodel import col, func, or_, select
 
 from app.core import security
 from app.core.config import settings
 from app.core.deps import SessionDep
 from app.core.models import Message
 from app.core.pagination import ListParamsDep, paginate
+from app.core.tenant import set_tenant
 from app.platform.auth.deps import (
     CurrentUser,
     platform_api_router,
@@ -34,14 +35,18 @@ from app.platform.rbac.service import has_permissions, role_filters, touch
 from app.platform.tenants.models import Tenant, TenantMember
 from app.platform.tenants.schemas import (
     MemberAdd,
+    MemberCreate,
     MemberPublic,
     MemberRolesUpdate,
     MembersPublic,
+    MemberUserUpdate,
     MyTenantPublic,
     MyTenantsPublic,
     OwnerAssign,
     TenantPublic,
     TenantUpdate,
+    UserTenantRoles,
+    UserTenantsUpdate,
 )
 from app.platform.tenants.service import (
     TenantContext,
@@ -53,6 +58,7 @@ from app.platform.tenants.service import (
 )
 from app.platform.users import service as crud
 from app.platform.users.models import User
+from app.platform.users.schemas import UserCreate, UserUpdate
 
 router = APIRouter(prefix="/tenants", tags=["tenants"])
 
@@ -67,7 +73,7 @@ MembersReader = Annotated[TenantContext, _ctx("members:read")]
 MembersWriter = Annotated[TenantContext, _ctx("members:write")]
 
 
-def _member_public(m: TenantMember) -> MemberPublic:
+def _member_public(m: TenantMember, sole: bool | None = None) -> MemberPublic:
     return MemberPublic(
         user_id=m.user_id,
         email=m.user.email,
@@ -75,7 +81,25 @@ def _member_public(m: TenantMember) -> MemberPublic:
         username=m.user.username,
         is_active=m.user.is_active,
         roles=sorted(r.name for r in m.roles),
+        sole_tenant=bool(sole),
     )
+
+
+def _sole_tenant_ids(session: SessionDep, user_ids: list[uuid.UUID]) -> set[uuid.UUID]:
+    """只属于一个租户且非超级用户的用户 id（租户管理员可管理其账号）。"""
+    if not user_ids:
+        return set()
+    rows = session.exec(
+        select(TenantMember.user_id, func.count())
+        .where(col(TenantMember.user_id).in_(user_ids))
+        .group_by(col(TenantMember.user_id))
+    ).all()
+    supers = set(
+        session.exec(
+            select(User.id).where(col(User.id).in_(user_ids), col(User.is_superuser))
+        ).all()
+    )
+    return {uid for uid, n in rows if n == 1 and uid not in supers}
 
 
 @router.get("/me", response_model=MyTenantsPublic)
@@ -217,15 +241,18 @@ def list_members(
         TenantMember.id,
         search=[User.email, User.full_name],
     )
-    return MembersPublic(data=[_member_public(m) for m in members], count=count)
+    sole = _sole_tenant_ids(session, [m.user_id for m in members])
+    return MembersPublic(
+        data=[_member_public(m, m.user_id in sole) for m in members], count=count
+    )
 
 
 @router.post("/{tenant_id}/members", response_model=MemberPublic)
 def add_tenant_member(
     session: SessionDep, ctx: MembersWriter, member_in: MemberAdd
 ) -> Any:
-    """Add an existing user (by email) to the tenant. Only owners may grant 'owner'."""
-    user = crud.get_user_by_email(session=session, email=member_in.email)
+    """按用户名（或邮箱）添加已有用户为成员；只有 owner 能授予 owner 角色。"""
+    user = crud.get_user_by_login(session=session, login=member_in.username)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     if get_membership(session, ctx.id, user.id):
@@ -241,6 +268,65 @@ def add_tenant_member(
     session.commit()
     session.refresh(member)
     return _member_public(member)
+
+
+@router.post("/{tenant_id}/members/new", response_model=MemberPublic)
+def create_tenant_user(
+    session: SessionDep, ctx: MembersWriter, body: MemberCreate
+) -> Any:
+    """租户管理员在本租户内直接创建新用户并加入（不能创建超级用户、不创建个人工作区）。"""
+    if "owner" in body.roles and not ctx.can("tenant:manage"):
+        raise HTTPException(
+            status_code=403, detail="Only owners can grant the owner role"
+        )
+    if detail := crud.identity_conflict(session, body.username, body.email):
+        raise HTTPException(status_code=409, detail=detail)
+    user = crud.create_user(
+        session=session,
+        user_create=UserCreate(
+            username=body.username,
+            email=body.email,
+            full_name=body.full_name,
+            password=body.password,
+            is_active=body.is_active,
+            is_superuser=False,
+        ),
+        with_personal_tenant=False,
+    )
+    set_tenant(session, ctx.id)
+    try:
+        member = add_member(session, ctx.tenant, user, body.roles)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    session.commit()
+    session.refresh(member)
+    return _member_public(member, True)
+
+
+@router.patch("/{tenant_id}/members/{user_id}/user", response_model=MemberPublic)
+def update_tenant_user(
+    session: SessionDep, ctx: MembersWriter, user_id: uuid.UUID, body: MemberUserUpdate
+) -> Any:
+    """修改成员账号（显示名 / 邮箱 / 状态 / 重置密码）。
+
+    仅当该用户只属于本租户且不是超级用户时允许；修改 owner 需 tenant:manage。
+    """
+    m = _target(session, ctx, user_id)
+    if user_id not in _sole_tenant_ids(session, [user_id]):
+        raise HTTPException(
+            status_code=403,
+            detail="User belongs to other tenants; ask a platform admin",
+        )
+    if any(r.name == "owner" for r in m.roles) and not ctx.can("tenant:manage"):
+        raise HTTPException(status_code=403, detail="Only owners can manage owners")
+    if detail := crud.identity_conflict(session, None, body.email, user_id):
+        raise HTTPException(status_code=409, detail=detail)
+    data = body.model_dump(exclude_unset=True)
+    if data.get("is_active") is None:
+        data.pop("is_active", None)
+    crud.update_user(session=session, db_user=m.user, user_in=UserUpdate(**data))
+    session.refresh(m)
+    return _member_public(m, True)
 
 
 def _target(
@@ -404,7 +490,8 @@ def _platform_ctx(
 ) -> TenantContext:
     if not session.get(Tenant, tenant_id):
         raise HTTPException(status_code=404, detail="Tenant not found")
-    return resolve_tenant(session, user, tenant_id)
+    # 平台接口已按平台权限授权；非成员的平台管理员同样获得该租户的全部权限
+    return resolve_tenant(session, user, tenant_id, impersonating=True)
 
 
 @platform_router.get("/tenants/{tenant_id}/members", response_model=MembersPublic)
@@ -439,7 +526,7 @@ def platform_add_member(
         user,
         "member.add",
         "user",
-        body.email,
+        body.username,
         tenant_id,
         {"roles": body.roles},
     )
@@ -480,7 +567,7 @@ def platform_assign_owner(
 ) -> Any:
     """Make an existing user an owner (adds the membership when missing)."""
     ctx = _platform_ctx(session, user, tenant_id)
-    target = crud.get_user_by_email(session=session, email=body.email)
+    target = crud.get_user_by_login(session=session, login=body.username)
     if not target:
         raise HTTPException(status_code=404, detail="User not found")
     m = get_membership(session, tenant_id, target.id)
@@ -492,3 +579,82 @@ def platform_assign_owner(
     session.commit()
     session.refresh(m)
     return _member_public(m)
+
+
+@platform_router.get("/users/{user_id}/tenants", response_model=list[UserTenantRoles])
+def platform_user_tenants(session: SessionDep, user_id: uuid.UUID) -> Any:
+    """用户所属的租户及其租户角色（平台用户编辑对话框）。"""
+    if not session.get(User, user_id):
+        raise HTTPException(status_code=404, detail="User not found")
+    ms = session.exec(select(TenantMember).where(TenantMember.user_id == user_id)).all()
+    return [
+        UserTenantRoles(
+            tenant_id=m.tenant_id,
+            tenant_name=m.tenant.name if m.tenant else None,
+            roles=sorted(r.name for r in m.roles),
+        )
+        for m in ms
+    ]
+
+
+@platform_router.put("/users/{user_id}/tenants", response_model=list[UserTenantRoles])
+def platform_set_user_tenants(
+    session: SessionDep, user: CurrentUser, user_id: uuid.UUID, body: UserTenantsUpdate
+) -> Any:
+    """整体设置用户的租户成员身份与租户角色（新增 / 修改 / 移除），逐项记入平台操作日志。"""
+    target = session.get(User, user_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    want = {i.tenant_id: i.roles for i in body.items}
+    have = {
+        m.tenant_id: m
+        for m in session.exec(
+            select(TenantMember).where(TenantMember.user_id == user_id)
+        ).all()
+    }
+    for tid in set(have) - set(want):
+        m = have[tid]
+        if any(r.name == "owner" for r in m.roles) and owner_count(session, tid) <= 1:
+            raise HTTPException(
+                status_code=400, detail="A tenant must keep at least one owner"
+            )
+        record_platform_audit(session, user, "member.remove", "user", user_id, tid)
+        session.delete(m)
+    for tid, roles in want.items():
+        ctx = _platform_ctx(session, user, tid)
+        try:
+            if tid in have:
+                m = have[tid]
+                if (
+                    any(r.name == "owner" for r in m.roles)
+                    and "owner" not in roles
+                    and owner_count(session, tid) <= 1
+                ):
+                    raise HTTPException(
+                        status_code=400, detail="A tenant must keep at least one owner"
+                    )
+                set_member_roles(session, m, roles)
+                record_platform_audit(
+                    session,
+                    user,
+                    "member.roles",
+                    "user",
+                    user_id,
+                    tid,
+                    {"roles": roles},
+                )
+            else:
+                add_member(session, ctx.tenant, target, roles)
+                record_platform_audit(
+                    session,
+                    user,
+                    "member.add",
+                    "user",
+                    target.username,
+                    tid,
+                    {"roles": roles},
+                )
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    session.commit()
+    return platform_user_tenants(session, user_id)

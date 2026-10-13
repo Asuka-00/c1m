@@ -7,7 +7,7 @@ from app.core.config import settings
 from app.platform.rbac.permissions import TENANT_PERMISSIONS
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate, UserUpdate
-from app.testing.utils import random_lower_string
+from app.testing.utils import random_lower_string, username_for
 
 API = settings.API_V1_STR
 
@@ -28,6 +28,7 @@ def test_users_search_paginates_sorts_and_counts(
             session=db,
             user_create=UserCreate(
                 email=f"{tag}-{i:02d}@example.com",
+                username=username_for(f"{tag}-{i:02d}@example.com"),
                 password=random_lower_string(),
                 full_name=f"Zed {i}",
             ),
@@ -36,6 +37,7 @@ def test_users_search_paginates_sorts_and_counts(
         session=db,
         user_create=UserCreate(
             email=f"other-{tag[:4]}x@example.com",
+            username=username_for(f"other-{tag[:4]}x@example.com"),
             password=random_lower_string(),
             full_name=f"Name {tag.upper()}",
         ),
@@ -112,7 +114,12 @@ def test_search_respects_tenant_scope(client: TestClient, db: Session) -> None:
     hs = []
     for _ in range(2):
         email, pw = f"{random_lower_string()[:8]}@example.com", random_lower_string()
-        crud.create_user(session=db, user_create=UserCreate(email=email, password=pw))
+        crud.create_user(
+            session=db,
+            user_create=UserCreate(
+                email=email, username=username_for(email), password=pw
+            ),
+        )
         hs.append(_login(client, email, pw))
     ha, hb = hs
     ta = client.get(f"{API}/tenants/me", headers=ha).json()["data"][0]["tenant"]["id"]
@@ -224,7 +231,9 @@ def test_enumerable_filters(
         crud.create_user(
             session=db,
             user_create=UserCreate(
-                email=f"{tag}-{i}@example.com", password=random_lower_string()
+                email=f"{tag}-{i}@example.com",
+                username=username_for(f"{tag}-{i}@example.com"),
+                password=random_lower_string(),
             ),
         )
         for i in range(3)
@@ -319,7 +328,7 @@ def test_enumerable_filters(
     client.post(
         f"{API}/tenants/{tid}/members",
         headers=h,
-        json={"email": users[1].email, "roles": ["member"]},
+        json={"username": users[1].email, "roles": ["member"]},
     )
     m = client.get(
         f"{API}/tenants/{tid}/members",

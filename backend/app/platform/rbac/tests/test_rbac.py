@@ -8,7 +8,7 @@ from app.platform.rbac.service import has_permissions
 from app.platform.users import service as crud
 from app.platform.users.models import User
 from app.platform.users.schemas import UserCreate
-from app.testing.utils import random_email, random_lower_string
+from app.testing.utils import random_email, random_lower_string, username_for
 
 API = settings.API_V1_STR
 
@@ -23,7 +23,8 @@ def _login(client: TestClient, email: str, password: str) -> dict[str, str]:
 def _new_user(client: TestClient, db: Session) -> tuple[User, dict[str, str]]:
     email, pw = random_email(), random_lower_string()
     user = crud.create_user(
-        session=db, user_create=UserCreate(email=email, password=pw)
+        session=db,
+        user_create=UserCreate(email=email, username=username_for(email), password=pw),
     )
     return user, _login(client, email, pw)
 
@@ -62,7 +63,8 @@ def test_signup_gets_user_role(client: TestClient) -> None:
     email, pw = random_email(), random_lower_string()
     assert (
         client.post(
-            f"{API}/users/signup", json={"email": email, "password": pw}
+            f"{API}/users/signup",
+            json={"email": email, "username": username_for(email), "password": pw},
         ).status_code
         == 200
     )
@@ -212,7 +214,7 @@ def test_removing_tenant_roles_blocks_members(
         client.post(
             f"{API}/tenants/{tenant['id']}/members",
             headers=uh,
-            json={"email": other.email, "roles": ["owner"]},
+            json={"username": other.email, "roles": ["owner"]},
         ).status_code
         == 200
     )
@@ -231,6 +233,11 @@ def test_removing_tenant_roles_blocks_members(
 
 
 def test_superuser_bypass_without_roles() -> None:
-    u = User(email=random_email(), hashed_password="x", is_superuser=True)
+    u = User(
+        email=random_email(),
+        username="su_" + random_lower_string()[:10],
+        hashed_password="x",
+        is_superuser=True,
+    )
     assert u.roles == []
     assert has_permissions(u, "anything:at_all")

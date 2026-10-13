@@ -14,7 +14,7 @@ from app.core.db import engine
 from app.core.tenant import set_tenant
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
-from app.testing.utils import random_email, random_lower_string
+from app.testing.utils import random_email, random_lower_string, username_for
 
 API = settings.API_V1_STR
 PNG = (
@@ -25,7 +25,10 @@ PNG = (
 
 def _owner(client: TestClient, db: Session) -> tuple[dict[str, str], str, str]:
     email, pw = random_email(), random_lower_string()
-    crud.create_user(session=db, user_create=UserCreate(email=email, password=pw))
+    crud.create_user(
+        session=db,
+        user_create=UserCreate(email=email, username=username_for(email), password=pw),
+    )
     tok = client.post(
         f"{API}/login/access-token", data={"username": email, "password": pw}
     ).json()["access_token"]
@@ -280,11 +283,14 @@ def test_tenant_overrides_inherit_and_reset(
 def test_tenant_config_permissions(client: TestClient, db: Session) -> None:
     ho, tid, _ = _owner(client, db)
     email, pw = random_email(), random_lower_string()
-    crud.create_user(session=db, user_create=UserCreate(email=email, password=pw))
+    crud.create_user(
+        session=db,
+        user_create=UserCreate(email=email, username=username_for(email), password=pw),
+    )
     client.post(
         f"{API}/tenants/{tid}/members",
         headers=ho,
-        json={"email": email, "roles": ["member"]},
+        json={"username": email, "roles": ["member"]},
     )
     tok = client.post(
         f"{API}/login/access-token", data={"username": email, "password": pw}

@@ -11,7 +11,7 @@ from sqlmodel import Session
 from app.mes.execution.tests.test_exec import EXEC, Line, _msgs
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
-from app.testing.utils import random_email, random_lower_string
+from app.testing.utils import random_email, random_lower_string, username_for
 
 API = EXEC[: -len("/exec")]
 
@@ -307,11 +307,14 @@ def test_bound_checks_override_preview_and_perms(
     assert any(x["result"] == "warn" for x in r["results"])
     # member: no split / merge permission
     email, pw = random_email(), random_lower_string()
-    crud.create_user(session=db, user_create=UserCreate(email=email, password=pw))
+    crud.create_user(
+        session=db,
+        user_create=UserCreate(email=email, username=username_for(email), password=pw),
+    )
     client.post(
         f"{API[:-4]}/tenants/{f.m.tid}/members",
         headers=f.m.h,
-        json={"email": email, "roles": ["member"]},
+        json={"username": email, "roles": ["member"]},
     )
     tok = client.post(
         f"{API[:-4]}/login/access-token", data={"username": email, "password": pw}

@@ -59,7 +59,7 @@ def _owners(session: SessionDep, ids: list[uuid.UUID]) -> dict[uuid.UUID, list[s
     if not ids:
         return {}
     rows = session.exec(
-        select(TenantMember.tenant_id, User.email)
+        select(TenantMember.tenant_id, User.username)
         .join(User, col(User.id) == col(TenantMember.user_id))
         .join(MemberRole, col(MemberRole.member_id) == col(TenantMember.id))
         .join(Role, col(Role.id) == col(MemberRole.role_id))
@@ -139,8 +139,8 @@ def create_platform_tenant(
     if session.exec(select(Tenant).where(Tenant.slug == body.slug)).first():
         raise HTTPException(status_code=409, detail="Tenant slug already exists")
     owner = None
-    if body.owner_email:
-        owner = crud.get_user_by_email(session=session, email=body.owner_email)
+    if body.owner:
+        owner = crud.get_user_by_login(session=session, login=body.owner)
         if not owner:
             raise HTTPException(status_code=404, detail="Owner user not found")
     t = create_tenant(session, body.name, body.slug, owner=owner)
@@ -154,7 +154,7 @@ def create_platform_tenant(
         "tenant",
         t.id,
         t.id,
-        {"slug": t.slug, "plan": t.plan, "owner": body.owner_email},
+        {"slug": t.slug, "plan": t.plan, "owner": body.owner},
     )
     session.commit()
     session.refresh(t)

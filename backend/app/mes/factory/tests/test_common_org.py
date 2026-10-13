@@ -12,7 +12,7 @@ from app.core.tenant import set_tenant
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
 from app.testing.mes import API, Mes
-from app.testing.utils import random_email, random_lower_string
+from app.testing.utils import random_email, random_lower_string, username_for
 
 
 def _org(m: Mes) -> tuple[dict, dict]:  # type: ignore[type-arg]
@@ -357,11 +357,14 @@ def test_isolation_and_permissions(client: TestClient, db: Session) -> None:
         assert s.execute(text("SELECT count(*) FROM mes_site")).scalar_one() == 1
     # plain member: read yes, write no
     email, pw = random_email(), random_lower_string()
-    crud.create_user(session=db, user_create=UserCreate(email=email, password=pw))
+    crud.create_user(
+        session=db,
+        user_create=UserCreate(email=email, username=username_for(email), password=pw),
+    )
     client.post(
         f"/api/v1/tenants/{a.tid}/members",
         headers=a.h,
-        json={"email": email, "roles": ["member"]},
+        json={"username": email, "roles": ["member"]},
     )
     tok = client.post(
         "/api/v1/login/access-token", data={"username": email, "password": pw}

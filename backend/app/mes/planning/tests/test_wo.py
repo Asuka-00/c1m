@@ -13,7 +13,7 @@ from app.core.tenant import set_tenant
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
 from app.testing.mes import API, Mes
-from app.testing.utils import random_email, random_lower_string
+from app.testing.utils import random_email, random_lower_string, username_for
 
 
 class Fab:
@@ -291,11 +291,14 @@ def test_permissions_rls_readonly(client: TestClient, db: Session) -> None:
     m = f.m
     w = f.wo()
     email, pw = random_email(), random_lower_string()
-    crud.create_user(session=db, user_create=UserCreate(email=email, password=pw))
+    crud.create_user(
+        session=db,
+        user_create=UserCreate(email=email, username=username_for(email), password=pw),
+    )
     client.post(
         f"{API[:-4]}/tenants/{m.tid}/members",
         headers=m.h,
-        json={"email": email, "roles": ["member"]},
+        json={"username": email, "roles": ["member"]},
     )
     tok = client.post(
         f"{API[:-4]}/login/access-token", data={"username": email, "password": pw}

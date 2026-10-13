@@ -32,23 +32,22 @@ def init_db(session: Session) -> None:
     from app.platform.rbac.service import assign_role, seed_rbac
 
     seed_rbac(session)
+    uname = (settings.FIRST_SUPERUSER_USERNAME or "admin").lower()
     user = session.exec(
-        select(User).where(User.email == settings.FIRST_SUPERUSER)
+        select(User).where(
+            (User.email == settings.FIRST_SUPERUSER) | (User.username == uname)
+        )
     ).first()
     if not user:
         user_in = UserCreate(
             email=settings.FIRST_SUPERUSER,
-            username=settings.FIRST_SUPERUSER_USERNAME or None,
+            username=uname,
             password=settings.FIRST_SUPERUSER_PASSWORD,
             is_superuser=True,
         )
         user = crud.create_user(
             session=session, user_create=user_in, with_personal_tenant=False
         )
-    elif not user.username and settings.FIRST_SUPERUSER_USERNAME:
-        user.username = settings.FIRST_SUPERUSER_USERNAME
-        session.add(user)
-        session.commit()
     assign_role(session, user, ADMIN_ROLE)
     # 多租户：默认租户，FIRST_SUPERUSER 为其 owner
     from app.platform.menus.service import seed_menus

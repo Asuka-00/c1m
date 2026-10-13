@@ -9,21 +9,21 @@ from sqlmodel import Field, SQLModel
 
 from app.platform.users.models import USERNAME_RE, UserBase
 
-
-# 创建时通过 API 接收的属性
-class UserCreate(UserBase):
-    username: Username | None = Field(default=None, max_length=50)
-    password: str = Field(min_length=8, max_length=128)
-
-
 # 以小写存储，使唯一索引实际上不区分大小写
 Username = Annotated[
     str, StringConstraints(pattern=USERNAME_RE), AfterValidator(str.lower)
 ]
 
 
+# 创建时通过 API 接收的属性
+class UserCreate(UserBase):
+    username: Username = Field(max_length=50)
+    password: str = Field(min_length=8, max_length=128)
+
+
 class UserRegister(SQLModel):
-    email: EmailStr = Field(max_length=255)
+    username: Username = Field(max_length=50)
+    email: EmailStr | None = Field(default=None, max_length=255)
     password: str = Field(min_length=8, max_length=128)
     full_name: str | None = Field(default=None, max_length=255)
 

@@ -8,6 +8,7 @@ import sqlalchemy as sa
 from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core.models import actor_name
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, TABLES
@@ -51,7 +52,7 @@ def e10_log(
         source=source,
         reason_id=reason_id,
         comment=comment,
-        user_email=getattr(user, "email", None),
+        user_email=actor_name(user),
         at=now(),
     )
 
@@ -238,7 +239,7 @@ def pm_complete(
         equipment_id=eq["id"],
         result=body.get("result") or "ok",
         comment=body.get("comment"),
-        user_email=getattr(user, "email", None),
+        user_email=actor_name(user),
         done_at=now(),
     )
     audit(s, tid, ENTITIES["equipment"], "pm", eq, user, {"pm": (None, p["code"])})

@@ -3,7 +3,7 @@
 from fastapi.testclient import TestClient
 
 from app.core.config import settings
-from app.testing.utils import random_email, random_lower_string
+from app.testing.utils import random_email, random_lower_string, username_for
 
 API = settings.API_V1_STR
 
@@ -55,7 +55,11 @@ def test_username_create_unique_validate(
     uid = client.post(
         f"{API}/platform/users/",
         headers=h,
-        json={"email": random_email(), "password": pw},
+        json={
+            "email": random_email(),
+            "username": username_for(random_email()),
+            "password": pw,
+        },
     ).json()["id"]
     assert (
         client.patch(

@@ -15,7 +15,7 @@ from app.core.spec.base import now
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
 from app.testing.mes import API, Mes
-from app.testing.utils import random_email, random_lower_string
+from app.testing.utils import random_email, random_lower_string, username_for
 
 EXEC = f"{API}/exec"
 
@@ -420,11 +420,14 @@ def test_block_override_permission_and_audit(client: TestClient, db: Session) ->
     )
     # a member may read but not run / override
     email, pw = random_email(), random_lower_string()
-    crud.create_user(session=db, user_create=UserCreate(email=email, password=pw))
+    crud.create_user(
+        session=db,
+        user_create=UserCreate(email=email, username=username_for(email), password=pw),
+    )
     client.post(
         f"{API[:-4]}/tenants/{f.m.tid}/members",
         headers=f.m.h,
-        json={"email": email, "roles": ["member"]},
+        json={"username": email, "roles": ["member"]},
     )
     tok = client.post(
         f"{API[:-4]}/login/access-token", data={"username": email, "password": pw}

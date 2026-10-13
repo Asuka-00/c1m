@@ -45,13 +45,11 @@ def login_access_token(
         record_login(
             session, form_data.username, None, False, "bad_credentials", ip, ua
         )
-        raise HTTPException(
-            status_code=400, detail="Incorrect username/email or password"
-        )
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
     elif not user.is_active:
-        record_login(session, form_data.username, user, False, "inactive", ip, ua)
+        record_login(session, user.username, user, False, "inactive", ip, ua)
         raise HTTPException(status_code=400, detail="Inactive user")
-    record_login(session, user.email, user, True, None, ip, ua)
+    record_login(session, user.username, user, True, None, ip, ua)
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return Token(
         access_token=security.create_access_token(
@@ -77,7 +75,7 @@ def recover_password(email: str, session: SessionDep) -> Message:
 
     # 始终返回相同响应，防止邮箱枚举攻击
     # 仅当用户存在时才发送邮件
-    if user:
+    if user and user.email:
         password_reset_token = generate_password_reset_token(email=email)
         email_data = generate_reset_password_email(
             email_to=user.email, email=email, token=password_reset_token
@@ -126,7 +124,7 @@ def recover_password_html_content(email: str, session: SessionDep) -> Any:
     """
     user = crud.get_user_by_email(session=session, email=email)
 
-    if not user:
+    if not user or not user.email:
         raise HTTPException(
             status_code=404,
             detail="The user with this username does not exist in the system.",

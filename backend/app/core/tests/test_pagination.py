@@ -4,14 +4,17 @@ from sqlmodel import Session
 from app.core.config import settings
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
-from app.testing.utils import random_email, random_lower_string
+from app.testing.utils import random_email, random_lower_string, username_for
 
 API = settings.API_V1_STR
 
 
 def _owner(client: TestClient, db: Session) -> dict[str, str]:
     email, pw = random_email(), random_lower_string()
-    crud.create_user(session=db, user_create=UserCreate(email=email, password=pw))
+    crud.create_user(
+        session=db,
+        user_create=UserCreate(email=email, username=username_for(email), password=pw),
+    )
     tok = client.post(
         f"{API}/login/access-token", data={"username": email, "password": pw}
     ).json()["access_token"]
@@ -77,7 +80,9 @@ def test_all_list_endpoints_paginate_and_sort(
         crud.create_user(
             session=db,
             user_create=UserCreate(
-                email=random_email(), password=random_lower_string()
+                email=random_email(),
+                username=username_for(random_email()),
+                password=random_lower_string(),
             ),
         )
     tid = client.get(f"{API}/tenants/me", headers=h).json()["data"][0]["tenant"]["id"]

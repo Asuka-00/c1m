@@ -10,6 +10,7 @@ import sqlalchemy as sa
 from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core.models import actor_name
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, ENUMS, TABLES
@@ -342,7 +343,7 @@ def evaluate(
         for r in blocks:
             r["result"] = "overridden"
     t = TABLES["check_log"]
-    email = getattr(user, "email", None)
+    email = actor_name(user)
     for r in results:
         conn(ctx.s).execute(
             sa.insert(t).values(

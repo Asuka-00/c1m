@@ -132,9 +132,9 @@ def slugify(value: str) -> str:
 
 def create_personal_tenant(session: Session, user: User) -> Tenant:
     """为用户创建个人工作区租户（用户为 owner）。"""
-    base = slugify(user.email.split("@")[0])
+    base = slugify(user.username)
     slug = f"{base}-{secrets.token_hex(3)}"
-    return create_tenant(session, f"{user.email}'s workspace", slug, owner=user)
+    return create_tenant(session, f"{user.username}'s workspace", slug, owner=user)
 
 
 # 每个新用户（注册或管理员创建）都会获得一个个人租户并作为 owner，

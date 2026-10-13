@@ -54,6 +54,8 @@ def create_user(
 def update_user(*, session: Session, db_user: User, user_in: UserUpdate) -> Any:
     """更新用户（提供密码时重新哈希）。"""
     user_data = user_in.model_dump(exclude_unset=True)
+    if user_data.get("username", "") is None:  # 用户名必填，不能清空
+        user_data.pop("username")
     extra_data = {}
     if "password" in user_data:
         password = user_data["password"]
@@ -68,7 +70,7 @@ def update_user(*, session: Session, db_user: User, user_in: UserUpdate) -> Any:
 
 def get_user_by_email(*, session: Session, email: str) -> User | None:
     """按邮箱精确查询用户。"""
-    statement = select(User).where(User.email == email)
+    statement = select(User).where(func.lower(User.email) == email.lower())
     session_user = session.exec(statement).first()
     return session_user
 
@@ -83,6 +85,36 @@ def get_user_by_username(*, session: Session, username: str) -> User | None:
     return session.exec(
         select(User).where(func.lower(User.username) == username.lower())
     ).first()
+
+
+def identity_conflict(
+    session: Session,
+    username: str | None,
+    email: str | None,
+    exclude_id: Any = None,
+) -> str | None:
+    """用户名 / 邮箱重复检查（用户名不区分大小写；邮箱仅在填写时检查）。
+
+    Args:
+        session: 数据库会话。
+        username: 用户名。
+        email: 邮箱（可空）。
+        exclude_id: 排除的用户 id（更新自身时）。
+
+    Returns:
+        冲突时的错误信息（前端按 backend.<detail> 翻译），否则 None。
+    """
+    if username:
+        other = get_user_by_username(session=session, username=username)
+        if other and other.id != exclude_id:
+            return "User with this username already exists"
+    if email:
+        other = session.exec(
+            select(User).where(func.lower(User.email) == email.lower())
+        ).first()
+        if other and other.id != exclude_id:
+            return "User with this email already exists"
+    return None
 
 
 def get_user_by_login(*, session: Session, login: str) -> User | None:

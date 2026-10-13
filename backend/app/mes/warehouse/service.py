@@ -18,6 +18,7 @@ import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
+from app.core.models import actor_name
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, TABLES, Entity
@@ -345,7 +346,7 @@ def transition(
                 )
             ]
         )
-    at, who = now(), getattr(user, "email", None)
+    at, who = now(), actor_name(user)
     vals: Row = {"receipt_status": to}
     if action == "submit":
         _validate_all(s, tid, rc, lock=False)

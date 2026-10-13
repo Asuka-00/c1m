@@ -7,6 +7,7 @@ from typing import Any
 from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core.models import actor_name
 from app.core.spec.audit import audit
 from app.core.spec.base import now
 from app.core.spec.engine import ENTITIES
@@ -88,7 +89,7 @@ def hold_lot(
         comment=(comment or "")[:300] or None,
         is_active=True,
         held_at=now(),
-        held_by=getattr(user, "email", None) or "system",
+        held_by=actor_name(user) or "system",
         route_step_id=lot["current_step_id"],
     )
     _upd(s, tid, "lot", lot["id"], user, on_hold=True)
@@ -157,7 +158,7 @@ def release_hold(
         user,
         is_active=False,
         released_at=now(),
-        released_by=getattr(user, "email", None),
+        released_by=actor_name(user),
         release_reason_id=rr and rr["id"],
         release_comment=(comment or "")[:300] or None,
     )

@@ -5,6 +5,7 @@ from typing import Any
 
 from sqlmodel import Session
 
+from app.core.models import actor_name
 from app.platform.console.models import LoginLog, PlatformAudit
 from app.platform.users.models import User
 
@@ -32,7 +33,7 @@ def record_platform_audit(
     session.add(
         PlatformAudit(
             actor_id=actor.id,
-            actor_email=actor.email,
+            actor_email=actor_name(actor) or "",
             action=action,
             target_type=target_type,
             target_id=str(target_id) if target_id is not None else None,

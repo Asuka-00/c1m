@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import col, select
 
 from app.core.deps import SessionDep
-from app.core.models import Message, get_datetime_utc
+from app.core.models import Message, actor_name, get_datetime_utc
 from app.core.pagination import ListParamsDep, paginate
 from app.platform.auth.deps import (
     CurrentUser,
@@ -292,7 +292,7 @@ def set_user_roles(
         raise HTTPException(status_code=404, detail="Role not found")
     user.roles = list(roles)
     user.updated_at = get_datetime_utc()
-    user.updated_by = current.email
+    user.updated_by = actor_name(current)
     session.add(user)
     session.commit()
     session.refresh(user)

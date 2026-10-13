@@ -12,7 +12,7 @@ from app.mes.execution.tests.test_exec import Line, _dc, _dc_line
 from app.platform.notification import service as svc
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
-from app.testing.utils import random_email, random_lower_string
+from app.testing.utils import random_email, random_lower_string, username_for
 
 API = settings.API_V1_STR
 EQP = f"{API}/mes/eqp"
@@ -93,11 +93,14 @@ def test_subscription_crud_validation_permission(
     assert lst["count"] == 1
     # 成员（只读角色）无配置权限
     email, pw = random_email(), random_lower_string()
-    crud.create_user(session=db, user_create=UserCreate(email=email, password=pw))
+    crud.create_user(
+        session=db,
+        user_create=UserCreate(email=email, username=username_for(email), password=pw),
+    )
     client.post(
         f"{API}/tenants/{tid}/members",
         headers=h,
-        json={"email": email, "roles": ["member"]},
+        json={"username": email, "roles": ["member"]},
     )
     tok = client.post(
         f"{API}/login/access-token", data={"username": email, "password": pw}

@@ -13,7 +13,7 @@ from app.platform.rbac.models import Permission
 from app.platform.rbac.permissions import DEFAULT_PERMISSIONS
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
-from app.testing.utils import random_email, random_lower_string
+from app.testing.utils import random_email, random_lower_string, username_for
 
 API = settings.API_V1_STR
 
@@ -24,7 +24,8 @@ def _user_with(
     """创建持有给定平台权限（经新建平台角色）的普通用户，返回 (id, 认证头)。"""
     email, pw = random_email(), random_lower_string()
     user = crud.create_user(
-        session=db, user_create=UserCreate(email=email, password=pw)
+        session=db,
+        user_create=UserCreate(email=email, username=username_for(email), password=pw),
     )
     if codes:
         role = client.post(
@@ -97,7 +98,12 @@ def test_platform_roles_grant_access(
     assert paths == {"/platform/users"}
     assert "/platform/roles" in pm["forbidden_paths"]
     # 不能创建 / 修改超级用户
-    body = {"email": random_email(), "password": "x" * 10, "is_superuser": True}
+    body = {
+        "email": random_email(),
+        "username": username_for(random_email()),
+        "password": "x" * 10,
+        "is_superuser": True,
+    }
     assert (
         client.post(f"{API}/platform/users/", headers=h, json=body).status_code == 403
     )

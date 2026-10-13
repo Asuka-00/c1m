@@ -9,7 +9,7 @@ from app.mes.execution.tests.test_exec import API, Line
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
 from app.testing.mes import Mes
-from app.testing.utils import random_email, random_lower_string
+from app.testing.utils import random_email, random_lower_string, username_for
 
 
 def _msgs(r: Any) -> str:
@@ -175,11 +175,14 @@ def test_permissions_and_rls(client: TestClient, db: Session) -> None:
     meta = client.get(f"{API}/_meta", headers=s.m.h).json()
     assert {"mes.wh:read", "mes.wh:write", "mes.wh:confirm"} <= set(meta["perms"])
     email, pw = random_email(), random_lower_string()
-    crud.create_user(session=db, user_create=UserCreate(email=email, password=pw))
+    crud.create_user(
+        session=db,
+        user_create=UserCreate(email=email, username=username_for(email), password=pw),
+    )
     client.post(
         f"{API[:-4]}/tenants/{s.m.tid}/members",
         headers=s.m.h,
-        json={"email": email, "roles": ["member"]},
+        json={"username": email, "roles": ["member"]},
     )
     tok = client.post(
         f"{API[:-4]}/login/access-token", data={"username": email, "password": pw}

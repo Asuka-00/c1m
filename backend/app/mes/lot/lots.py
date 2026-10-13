@@ -7,6 +7,7 @@ import sqlalchemy as sa
 from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core.models import actor_name
 from app.core.spec.base import conn, now
 from app.core.spec.engine import TABLES
 from app.mes.common import coderule
@@ -55,7 +56,7 @@ def history(
         user,
         lot_id=lot["id"],
         action=action,
-        user_email=getattr(user, "email", None),
+        user_email=actor_name(user),
         at=now(),
         **kw,
     )
