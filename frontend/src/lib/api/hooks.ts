@@ -10,7 +10,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { isPlatformPath } from '../space'
 import { errorMessage } from './client'
 import { api } from './index'
-import type { MenuSpace } from './types'
+import type { MenuNode, MenuSpace, MyTenant } from './types'
 
 /** 查询 key 包含当前租户，切换租户时会重新获取。 */
 export function useTenantKey() {
@@ -44,12 +44,54 @@ export function useMyMenus(space?: MenuSpace) {
   })
 }
 
+/**
+ * 平台管理控制台入口路径：工作区菜单声明 platform_access 时，取平台菜单中第一个可访问的页面。
+ *
+ * @returns 入口路径；无平台权限（或正在模拟租户）时为 null
+ */
+export function usePlatformEntry(): string | null {
+  const ws = useMyMenus('workspace')
+  const allowed = !!ws.data?.platform_access
+  const tk = useTenantKey()
+  const pm = useQuery({
+    queryKey: ['menus', 'me', 'platform', tk],
+    queryFn: () => api.myMenus('platform'),
+    enabled: allowed,
+  })
+  if (!allowed) return null
+  const first = (ns: MenuNode[]): string | null => {
+    for (const n of ns) {
+      if (n.path) return n.path
+      const c = first(n.children)
+      if (c) return c
+    }
+    return null
+  }
+  return first(pm.data?.menus ?? []) ?? '/platform/tenants'
+}
+
 /** 实际生效的租户（用户所选，或后端解析出的租户）。 */
-export function useCurrentTenant() {
+export function useCurrentTenant(): MyTenant | null {
   const menus = useMyMenus('workspace')
   const tenants = useMyTenants()
+  const imp = useAuthStore((s) => s.impersonating)
   const id = menus.data?.tenant_id
-  return tenants.data?.data.find((t) => t.tenant.id === id) ?? null
+  const found = tenants.data?.data.find((t) => t.tenant.id === id)
+  if (found) return found
+  // 以租户身份进入（非成员）：租户不在 /tenants/me 中，用模拟信息补齐
+  if (imp && id && imp.id === id)
+    return {
+      tenant: {
+        id,
+        name: imp.name,
+        slug: '',
+        status: 'active',
+        created_at: null,
+      },
+      roles: [],
+      permissions: menus.data?.permissions ?? [],
+    }
+  return null
 }
 
 /**

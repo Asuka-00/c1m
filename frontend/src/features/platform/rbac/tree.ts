@@ -1,6 +1,7 @@
 /** 统一权限树的纯函数工具（三态勾选、编码收集）。 */
 import { t } from '@/i18n'
 import type { PermNode } from '@/lib/api'
+import { permLabel } from '@/lib/rbac-labels'
 
 /**
  * 节点显示名称：菜单按 menu.<key> 本地化（与侧边栏一致），虚拟分组使用本地化名称。
@@ -12,7 +13,7 @@ export function nodeLabel(n: PermNode): string {
   if (n.kind === 'group') return t('rbac.otherPerms')
   if (n.kind === 'menu' && n.key)
     return t(`menu.${n.key}`, { defaultValue: n.name })
-  return n.name
+  return n.kind === 'perm' ? permLabel(n.code, n.name) : n.name
 }
 
 /** 复选框状态：全选 / 未选 / 半选。 */

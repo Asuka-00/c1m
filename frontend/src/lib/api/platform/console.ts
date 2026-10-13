@@ -34,6 +34,8 @@ export const platformApi = {
   removeTenant: (id: string) => del<Message>(`/platform/tenants/${id}`),
   /** 以租户身份进入：返回绑定该租户的令牌（服务端记入平台操作日志） */
   enterTenant: (id: string) => post<Token>(`/platform/tenants/${id}/enter`),
+  /** 退出租户模拟（恢复原令牌后调用，记入平台操作日志） */
+  exitTenant: (id: string) => post<Message>(`/platform/tenants/${id}/exit`),
   members: (id: string, q: ListQuery) =>
     get<Paged<Member>>(`/platform/tenants/${id}/members`, q),
   tenantRoles: (id: string, q: ListQuery) =>

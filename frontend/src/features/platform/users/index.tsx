@@ -5,6 +5,7 @@ import { fmtDateTime, t } from '@/i18n'
 import { KeyRound, Plus } from 'lucide-react'
 import { ALL, api, type User, type UserIn } from '@/lib/api'
 import { useApiMutation, useCan, useMe } from '@/lib/api/hooks'
+import { roleLabel } from '@/lib/rbac-labels'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -48,8 +49,7 @@ export default function UsersPage() {
     queryFn: () => api.roles.list(ALL),
   })
   const roleOptions =
-    roles.data?.data.map((r) => ({ value: r.id, label: r.title || r.name })) ??
-    []
+    roles.data?.data.map((r) => ({ value: r.id, label: roleLabel(r) })) ?? []
   const s = useCrudState<User>()
   const editing = s.editing
   const userRoles = useQuery({
@@ -138,7 +138,9 @@ export default function UsersPage() {
                 {r.is_superuser && <Badge>{t('common.superuser')}</Badge>}
                 {r.role_names?.map((x) => (
                   <Badge key={x} variant='secondary'>
-                    {x}
+                    {roleLabel(
+                      roles.data?.data.find((o) => o.name === x) ?? { name: x }
+                    )}
                   </Badge>
                 ))}
               </div>

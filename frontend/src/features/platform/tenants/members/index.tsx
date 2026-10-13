@@ -9,6 +9,7 @@ import {
   useCurrentTenant,
   useMe,
 } from '@/lib/api/hooks'
+import { roleLabel } from '@/lib/rbac-labels'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -52,7 +53,7 @@ export default function MembersPage() {
           ? api.tenants
               .roles(tid, ALL)
               .then((r) =>
-                r.data.map((x) => ({ value: x.id, label: x.title || x.name }))
+                r.data.map((x) => ({ value: x.id, label: roleLabel(x) }))
               )
           : Promise.resolve([]),
     },
@@ -71,9 +72,9 @@ export default function MembersPage() {
   const roleOptions =
     roles.data?.data.map((r) => ({
       value: r.name,
-      label: r.title || r.name,
+      label: roleLabel(r),
     })) ?? []
-  const roleLabel = (n: string) =>
+  const roleName = (n: string) =>
     roleOptions.find((o) => o.value === n)?.label ?? n
   const s = useCrudState<Member>()
   const keys = [['members'], ['tenants', 'me'], ['menus']]
@@ -148,7 +149,7 @@ export default function MembersPage() {
                     key={x}
                     variant={x === 'owner' ? 'default' : 'secondary'}
                   >
-                    {roleLabel(x)}
+                    {roleName(x)}
                   </Badge>
                 ))}
                 {!r.roles.length && '—'}

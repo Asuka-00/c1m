@@ -21,6 +21,17 @@ http.interceptors.response.use(
   (error: AxiosError) => {
     const status = error.response?.status
     const url = error.config?.url ?? ''
+    const detail = (error.response?.data as { detail?: string })?.detail
+    const st = useAuthStore.getState()
+    // 模拟令牌过期 / 失效：恢复原平台令牌并回到平台租户列表，而不是登出
+    if (
+      st.originalToken &&
+      (status === 401 || detail === 'Could not validate credentials')
+    ) {
+      st.endImpersonation()
+      window.location.assign('/platform/tenants')
+      return Promise.reject(error)
+    }
     if (status === 401 || (status === 403 && url.includes('/users/me'))) {
       useAuthStore.getState().reset()
       if (!window.location.pathname.startsWith('/sign-in')) {

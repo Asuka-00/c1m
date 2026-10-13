@@ -17,6 +17,7 @@ const ACTIONS = [
   'tenant.update',
   'tenant.delete',
   'tenant.enter',
+  'tenant.exit',
   'tenant.owner',
   'tenant.branding',
   'member.add',

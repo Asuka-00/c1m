@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { t } from '@/i18n'
 import { Building2, Check, ChevronsUpDown } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
+import { api } from '@/lib/api'
 import { useCurrentTenant, useMyTenants } from '@/lib/api/hooks'
 import { useBranding } from '@/lib/branding'
 import {
@@ -29,7 +30,7 @@ export function TeamSwitcher() {
   const branding = useBranding(current?.tenant.slug)
   const setTenantId = useAuthStore((s) => s.setTenantId)
   const impersonating = useAuthStore((s) => s.impersonating)
-  const setImpersonating = useAuthStore((s) => s.setImpersonating)
+  const endImpersonation = useAuthStore((s) => s.endImpersonation)
   const tenantId = useAuthStore((s) => s.tenantId)
   // 超级用户以非成员租户身份进入时，租户不在 /tenants/me 中
   const imp = !current && impersonating?.id === tenantId ? impersonating : null
@@ -37,8 +38,12 @@ export function TeamSwitcher() {
   const navigate = useNavigate()
 
   const switchTo = (id: string) => {
+    if (impersonating) {
+      // 切回自己的租户：先恢复原令牌并记录退出
+      const imp = endImpersonation()
+      if (imp) void api.platform.exitTenant(imp.id).catch(() => undefined)
+    }
     setTenantId(id)
-    setImpersonating(null)
     // 所有租户范围的数据都需重新获取（菜单、成员、角色等）
     qc.invalidateQueries()
     navigate({ to: '/' })

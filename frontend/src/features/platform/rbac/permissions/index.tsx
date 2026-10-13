@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
 import { ChevronDown, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react'
 import { api, type PermNode } from '@/lib/api'
-import { useApiMutation } from '@/lib/api/hooks'
+import { useApiMutation, useCan } from '@/lib/api/hooks'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -44,6 +44,7 @@ const ANY = '_all'
 
 /** 权限树页面（仅超级用户）。 */
 export default function PermissionTreePage() {
+  const writable = useCan()('roles:write')
   const [space, setSpace] = useState(ANY)
   const [type, setType] = useState(ANY)
   const [q, setQ] = useState('')
@@ -65,6 +66,7 @@ export default function PermissionTreePage() {
         permission: (v.permission as string) || null,
         sort_order: Number(v.sort_order) || 0,
         hidden: v.visible !== 'true',
+        status: v.status as string,
         space: v.space as 'workspace' | 'platform',
       }
       return edit?.node
@@ -135,9 +137,11 @@ export default function PermissionTreePage() {
       title={t('rbac.treeTitle')}
       description={t('rbac.treeDesc')}
       actions={
-        <Button onClick={() => setEdit({ mode: 'menu' })}>
-          <Plus /> {t('rbac.newRoot')}
-        </Button>
+        writable && (
+          <Button onClick={() => setEdit({ mode: 'menu' })}>
+            <Plus /> {t('rbac.newRoot')}
+          </Button>
+        )
       }
     >
       <div className='mb-3 flex flex-wrap items-center gap-2'>
@@ -275,7 +279,7 @@ export default function PermissionTreePage() {
                   )}
                 </TableCell>
                 <TableCell>
-                  {n.kind !== 'group' && (
+                  {writable && n.kind !== 'group' && (
                     <div className='flex justify-end gap-1'>
                       {n.kind === 'menu' && (
                         <DropdownMenu>
@@ -364,6 +368,12 @@ export default function PermissionTreePage() {
             ],
           },
           {
+            name: 'status',
+            label: t('common.status'),
+            type: 'radio',
+            options: statusOptions(),
+          },
+          {
             name: 'visible',
             label: t('rbac.visible'),
             type: 'radio',
@@ -383,6 +393,7 @@ export default function PermissionTreePage() {
           sort_order: String(e?.sort_order ?? 0),
           space: e?.space ?? edit?.parent?.space ?? 'workspace',
           visible: String(e?.visible ?? true),
+          status: e?.status ?? 'active',
         }}
         pending={saveMenu.isPending}
         onSubmit={(v) => saveMenu.mutateAsync(v)}

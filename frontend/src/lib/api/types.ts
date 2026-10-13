@@ -187,6 +187,8 @@ export interface MyMenus {
   permissions: string[]
   tenant_id: UUID | null
   is_superuser: boolean
+  /** 可进入平台管理控制台（超级用户或持有任一平台权限；模拟令牌下为 false） */
+  platform_access?: boolean
   /** 菜单所属空间 */
   space?: MenuSpace
 }
@@ -204,6 +206,8 @@ export interface Menu {
   parent_id: UUID | null
   /** 所属空间（workspace / platform） */
   space?: MenuSpace
+  /** active / disabled（停用：隐藏且禁止访问） */
+  status?: string
 }
 /** 通用消息响应。 */
 export interface Message {

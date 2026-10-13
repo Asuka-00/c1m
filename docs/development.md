@@ -162,3 +162,11 @@ UI 布局巡检（需前后端已启动）：`node scripts/ui-audit.cjs`。
   - 用户列表筛选 `username` / `full_name` / `is_active`；角色列表筛选 `code` / `title` / `status`；成员列表筛选 `username` / `full_name` / `is_active` / `role_id`。
 - 前端：平台控制台“权限树”页（`platform-permissions`）维护菜单与权限；角色对话框内嵌三态复选权限树；不再有独立的菜单管理页与“角色权限”页签。
 - 已删除的旧兼容管理接口（全部改用 `/platform/...`，仅超级用户）：`GET/POST /tenants/`、`GET /tenants/{id}/permissions`、`/users/` 列表 / 新建 与 `/users/{id}` 查询 / 修改 / 删除、`/roles/*`、`/permissions/*`、`/users/{id}/roles*`、`/menus/` 增删改查。保留的自助接口：`/users/me*`、`/users/signup`、`/menus/me`、`/tenants/me`、`/tenants/{id}/...`（工作区）。
+
+### 平台权限与租户模拟
+
+- 平台接口（`/platform/...`）按平台权限授权（`auth.deps.platform_permission`）：路径首段映射资源，GET 需 `<资源>:read`，其余需 `<资源>:write`；`users` 删除需 `users:delete`，设置用户角色需 `roles:write`，租户品牌属 `platform.config:*`。资源：`users`、`roles`（角色 / 权限 / 权限树 / 菜单）、`tenants`、`platform.config`、`platform.notify`、`platform.audit`。超级用户直接通过；非超级用户不能创建 / 修改 / 删除超级用户。
+- 平台菜单带访问权限（`menus.service.PLATFORM_MENU_PERMS`），`/menus/me?space=platform` 按权限过滤；持有任一平台权限即可进入控制台（`/menus/me` 返回 `platform_access`）。
+- 菜单 `status`（active / disabled）：停用的菜单对所有人隐藏，其路径进入 `forbidden_paths`（前端 403）。
+- 内置权限 / 角色名称：`rbac.labels` 提供三语名称，种子数据补齐英文 `name` / `title`，`scripts/export_mes_i18n.py` 生成前端 `permName.*` / `roleName.*`；前端在名称为空或仍为内置英文名时按语言翻译（`lib/rbac-labels.ts`）。
+- 以租户身份进入：`POST /platform/tenants/{id}/enter`（`tenants:write`）签发 `imp` 模拟令牌（`IMPERSONATION_EXPIRE_MINUTES`，默认 30 分钟），只能访问绑定租户（具全部租户权限）且不能调用平台接口；前端保存原令牌，退出（或模拟令牌过期）时恢复并调用 `POST /platform/tenants/{id}/exit`。进入 / 退出均记入平台操作日志。

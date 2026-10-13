@@ -4,6 +4,7 @@ import { fmtDateTime, t } from '@/i18n'
 import { Plus } from 'lucide-react'
 import { api, type Role } from '@/lib/api'
 import { useApiMutation, useCan, useCurrentTenant } from '@/lib/api/hooks'
+import { roleLabel } from '@/lib/rbac-labels'
 import { Button } from '@/components/ui/button'
 import {
   ConfirmDialog,
@@ -114,9 +115,7 @@ export function RolesManager({ scope }: { scope: 'platform' | 'tenant' }) {
           {
             header: t('rbac.roleName'),
             sortKey: 'title',
-            cell: (r) => (
-              <span className='font-medium'>{r.title || r.name}</span>
-            ),
+            cell: (r) => <span className='font-medium'>{roleLabel(r)}</span>,
           },
           {
             header: t('common.description'),
