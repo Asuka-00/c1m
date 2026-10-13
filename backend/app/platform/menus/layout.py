@@ -6,7 +6,8 @@
 
 # 分组 key、标题、图标、排序。
 # 顺序遵循 MES 常规：工作台 → 日常作业（执行 / 在制报表 / 计划 / 仓储 / 设备 / 质量）
-# → 主数据（工艺 / 卡控 / 产品物料 / 设备主数据 / 工厂 / 基础数据）→ 系统。
+# → 主数据（工艺（含卡控 / 批次规则）/ 产品物料 / 工厂 / 基础数据）→ 系统；
+# 设备主数据位于设备管理组内日常作业之后。
 # 低频从属主数据（类型 / 分类 / 配置链）以合并菜单的页签呈现，见 MERGED。
 # 菜单同步（seed_menus）按此幂等更新已有库的排序与父级。
 GROUPS: list[tuple[str, str, str, int]] = [
@@ -18,9 +19,7 @@ GROUPS: list[tuple[str, str, str, int]] = [
     ("g-equipment", "Equipment Management|设备管理|設備管理", "Cpu", 50),
     ("g-quality", "Quality|质量管理|品質管理", "BadgeCheck", 60),
     ("g-process", "Process Engineering|工艺管理|工程管理", "Workflow", 70),
-    ("g-check", "Check Control|卡控管理|チェック管理", "ShieldAlert", 75),
     ("g-product", "Product & Material|产品与物料|製品・資材", "Package", 80),
-    ("g-eqp-master", "Equipment Master|设备主数据|設備マスタ", "ServerCog", 85),
     ("g-factory", "Factory Modeling|工厂建模|工場モデリング", "Factory", 90),
     ("g-master", "Master Data|基础数据|基準データ", "BookOpen", 100),
     ("g-system", "System|系统管理|システム管理", "Shield", 110),
@@ -56,8 +55,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
             "mes-material_lot",
             "Line-side Material Lot|线边物料批|ラインサイド資材ロット",
         ),
-        ("mes-warehouse", "Warehouse|仓库|倉庫"),
-        ("mes-storage_location", "Storage Location|库位|ロケーション"),
+        ("mes-warehouse-master", "Warehouse|仓库|倉庫"),
     ],
     "g-equipment": [
         ("mes-eqp-board", "Equipment Status Board|设备状态看板|設備状態ボード"),
@@ -65,6 +63,8 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-downtime", "Downtime|停机记录|停止記録"),
         ("mes-e10_history", "E10 History|E10 状态履历|E10 状態履歴"),
         ("mes-tool", "Tool Life|工具寿命|工具寿命"),
+        ("mes-equipment-master", "Equipment|设备|設備"),
+        ("mes-e10-model", "E10 State Model|E10 状态模型|E10 状態モデル"),
     ],
     "g-quality": [
         ("mes-dc_result", "DC Data|量测数据|測定データ"),
@@ -75,10 +75,8 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-route-master", "Route|工艺流程|ルート"),
         ("mes-recipe-param", "Recipe & Parameters|配方与参数|レシピ・パラメータ"),
         ("mes-qtime_rule", "Q-Time Rule|Q-Time 规则|Q タイムルール"),
-        ("mes-lot-rules", "Lot Rules|批次规则|ロット規則"),
-    ],
-    "g-check": [
         ("mes-check-config", "Check Config|卡控配置|チェック設定"),
+        ("mes-lot-rules", "Lot Rules|批次规则|ロット規則"),
     ],
     "g-product": [
         ("mes-product-master", "Product|产品|製品"),
@@ -86,10 +84,6 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-carrier-master", "Carrier|载具|キャリア"),
         ("mes-reticle", "Reticle|光罩|レチクル"),
         ("mes-fixture", "Fixture|治具|治具"),
-    ],
-    "g-eqp-master": [
-        ("mes-equipment-master", "Equipment|设备|設備"),
-        ("mes-e10-model", "E10 State Model|E10 状态模型|E10 状態モデル"),
     ],
     "g-factory": [
         ("mes-factory-model", "Factory Model|工厂模型|工場モデル"),
@@ -103,12 +97,8 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-attr_def", "Custom Attribute|自定义属性|カスタム属性"),
     ],
     "g-system": [
-        ("users", "Users|用户|ユーザー"),
-        ("roles", "Roles|角色|ロール"),
-        ("permissions", "Permissions|权限|権限"),
+        ("user-permissions", "Users & Permissions|用户与权限|ユーザーと権限"),
         ("tenants", "Tenants|租户|テナント"),
-        ("members", "Members|成员|メンバー"),
-        ("tenant-roles", "Tenant Roles|租户角色|テナントロール"),
         ("notify-subscriptions", "Notification Subscriptions|通知订阅|通知購読"),
         ("config", "Configuration|系统配置|システム設定"),
         ("menus", "Menus|菜单|メニュー"),
@@ -118,8 +108,18 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
 
 # 已废弃系统分组的 key（同步时删除）
 OBSOLETE_PREFIXES = ("mes-g-",)
-# 已并入其他页面的菜单：mes-hold-release → Hold 管理（mes-lot_hold）
-OBSOLETE_KEYS = {"general", "tenant", "admin", "other", "mes-hold-release", "g-lot"}
+# 同步时删除的旧菜单 / 分组：mes-hold-release → Hold 管理（mes-lot_hold）；
+# 菜单整合取消的分组 g-check / g-eqp-master / g-lot（其菜单已移入其他分组）
+OBSOLETE_KEYS = {
+    "general",
+    "tenant",
+    "admin",
+    "other",
+    "mes-hold-release",
+    "g-check",
+    "g-eqp-master",
+    "g-lot",
+}
 
 
 # 合并菜单：key -> (路径, 图标, 视图, [页签 key])。
@@ -210,6 +210,18 @@ MERGED: dict[str, tuple[str, str, str, list[str]]] = {
         "tabs",
         ["mes-lot-trace", "mes-trace"],
     ),
+    "mes-warehouse-master": (
+        "/mes/warehouse-master",
+        "Warehouse",
+        "tree",
+        ["mes-warehouse", "mes-storage_location"],
+    ),
+    "user-permissions": (
+        "/user-permissions",
+        "UserCog",
+        "tabs",
+        ["users", "members", "roles", "tenant-roles", "permissions"],
+    ),
 }
 
 # 页签标题（原独立菜单的标题，"en|zh|ja"）
@@ -248,6 +260,13 @@ TAB_TITLES: dict[str, str] = {
     "mes-sampling_rule": "Sampling Rule|抽样规则|サンプリング規則",
     "mes-lot-trace": "Lot History|批次履历|ロット履歴",
     "mes-trace": "Traceability|追溯查询|トレーサビリティ",
+    "mes-warehouse": "Warehouse|仓库|倉庫",
+    "mes-storage_location": "Storage Location|库位|ロケーション",
+    "users": "Users|用户|ユーザー",
+    "members": "Members|成员|メンバー",
+    "roles": "Roles|角色|ロール",
+    "tenant-roles": "Tenant Roles|租户角色|テナントロール",
+    "permissions": "Permissions|权限|権限",
 }
 
 

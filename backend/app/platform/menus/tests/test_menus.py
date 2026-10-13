@@ -13,6 +13,7 @@ def _keys(nodes: list[dict]) -> set[str]:  # type: ignore[type-arg]
     out: set[str] = set()
     for n in nodes:
         out.add(n["key"])
+        out |= {t["key"] for t in n.get("tabs", [])}  # 合并菜单的页签
         out |= _keys(n["children"])
     return out
 
@@ -59,6 +60,17 @@ def test_owner_vs_member_menus(client: TestClient, db: Session) -> None:
     # tenant owners manage their tenant's config (System group)
     assert {"g-system", "config"} <= keys
     assert {"/users", "/roles", "/tenants"} <= set(owner_body["forbidden_paths"])
+    # 用户与权限：租户所有者只看到成员 / 租户角色页签
+    up = next(
+        c
+        for g in owner_body["menus"]
+        for c in g["children"]
+        if c["key"] == "user-permissions"
+    )
+    assert [t["key"] for t in up["tabs"]] == ["members", "tenant-roles"]
+    assert set(owner_body["redirects"]) == {"/members", "/tenant-roles"} | {
+        k for k in owner_body["redirects"] if k.startswith("/mes/")
+    }
     assert "/members" not in owner_body["forbidden_paths"]
     tid = owner_body["tenant_id"]
 

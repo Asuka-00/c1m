@@ -171,17 +171,20 @@ def build_tree(menus: list[Menu], allowed: set[str], superuser: bool) -> list[Me
 
 
 def forbidden_paths(menus: list[Menu], tree: list[MenuNode]) -> list[str]:
-    """存在但对当前用户不可见的页面路径（前端据此显示 403 而非 404）。"""
+    """存在但对当前用户不可见的页面路径（含合并菜单中无权限的页签旧路径；前端据此显示 403 而非 404）。"""
     allowed: set[str] = set()
 
     def walk(nodes: list[MenuNode]) -> None:
         for n in nodes:
             if n.path:
                 allowed.add(n.path)
+            allowed.update(tb.path for tb in n.tabs if tb.path)
             walk(n.children)
 
     walk(tree)
-    return sorted({m.path for m in menus if m.path and m.path not in allowed})
+    known = {m.path for m in menus if m.path}
+    known |= {tb.path for m in menus for tb in merged_tabs(m.key) if tb.path}
+    return sorted(known - allowed)
 
 
 def redirects(tree: list[MenuNode]) -> dict[str, str]:

@@ -168,7 +168,7 @@ def test_search_other_endpoints(
         ]
     ] == ["admin"]
     menus = client.get(f"{API}/menus/", headers=h, params={"q": "/ten"}).json()  # path
-    assert {m["key"] for m in menus["data"]} >= {"tenants", "tenant-roles"}
+    assert {m["key"] for m in menus["data"]} >= {"tenants"}
     assert (
         client.get(f"{API}/menus/", headers=h, params={"q": "Settings"}).json()["count"]
         == 1
@@ -253,12 +253,8 @@ def test_enumerable_filters(
         f"{API}/menus/", headers=h, params={"parent_id": admin_group}
     ).json()
     assert {m["key"] for m in kids["data"]} == {
-        "users",
-        "roles",
-        "permissions",
+        "user-permissions",  # 用户 / 成员 / 角色 / 租户角色 / 权限 合并为页签
         "tenants",
-        "members",
-        "tenant-roles",
         "menus",
         "config",
         "mes-audit_log",
