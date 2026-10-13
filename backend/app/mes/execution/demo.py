@@ -33,6 +33,7 @@ CHECK_RULES: list[tuple[str, str, str, str, dict[str, Any]]] = [
     ("CR-BATCH", "Batch: same step", "batch_same_step", "block", {}),
     ("CR-SORT", "Sort keeps wafer order", "sort_order", "warn", {}),
     ("CR-FH", "Future hold at step", "future_hold", "block", {}),
+    ("CR-HOT", "Hot lot WIP limit", "hot_lot_limit", "block", {"max": 3}),
     ("CR-WO-DUE", "Work order due notice", "wo_due", "warn", {"warn_days": 3}),
     ("CR-CARR-CLN", "Carrier cleaning due", "carrier_clean", "warn", {}),
     ("CR-CARR-USE", "Carrier usage limit", "carrier_usage", "block", {}),
@@ -86,6 +87,7 @@ CHECK_PLANS = [
         ["CR-E10", "CR-CAP", "CR-RCP", "CR-RET"],
     ),
     ("CP-SORT", "Wafer sort", ["CR-SORT"]),
+    ("CP-PRIO", "Priority change", ["CR-HOT"]),
     ("CP-TO", "Standard track-out", ["CR-SMP", "CR-DC", "CR-OOS", "CR-MAT"]),
 ]
 for c, n, rules in CHECK_PLANS:
@@ -103,6 +105,7 @@ for prod in ("MCU-A100", "MCU-B200"):
         ("track_in", "CP-TI"),
         ("track_out", "CP-TO"),
         ("sort", "CP-SORT"),
+        ("priority", "CP-PRIO"),
     ):
         add(
             "check_binding",
@@ -383,6 +386,7 @@ def _post_demo(session: Session, tid: uuid.UUID, admin: Any) -> None:
             .where(wt.c.tenant_id == tid, wt.c.code == wo, wt.c.due_date.is_(None))
             .values(due_date=date.today() + timedelta(days=days))
         )
+    _hot_demo(session, tid, admin)
     fh = TABLES["future_hold"]
     if (
         conn(session)
@@ -434,3 +438,40 @@ def _post_demo(session: Session, tid: uuid.UUID, admin: Any) -> None:
             attrs={"_demo": True},
         )
     session.commit()
+
+
+def _hot_demo(session: Session, tid: uuid.UUID, admin: Any) -> None:
+    """演示急件：WO-DEMO-01 的最后一个在制批次设为 HOT（已有急件则跳过）。"""
+    from app.mes.execution import service as ex
+
+    lt, pt = TABLES["lot"], TABLES["lot_priority"]
+    hot = [
+        r[0]
+        for r in conn(session).execute(
+            sa.select(pt.c.id).where(pt.c.tenant_id == tid, pt.c.is_hot.is_(True))
+        )
+    ]
+    w = _resolve(session, tid, ("work_order", "WO-DEMO-01"))
+    lots = (
+        conn(session)
+        .execute(
+            sa.select(lt)
+            .where(
+                lt.c.work_order_id == w,
+                lt.c.lot_status.in_(("waiting", "moved_in", "running")),
+            )
+            .order_by(lt.c.code.desc())
+        )
+        .mappings()
+        .all()
+    )
+    if not lots or any(x["priority_id"] in hot for x in lots):
+        return
+    pr = _resolve(session, tid, ("lot_priority", "HOT"))
+    ex.set_priority(
+        session,
+        tid,
+        lots[0]["id"],
+        {"priority_id": pr, "comment": "Customer escalation (DEMO)"},
+        admin,
+    )

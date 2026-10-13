@@ -492,3 +492,27 @@ def test_future_hold_triggers_at_move_in_and_switch(
     f.run_step(b)
     f.stage(b, "move_in", equipment_id=f.eq["id"])
     assert not f.lot(b)["on_hold"]
+
+
+# ---------------- 10: priority / hot lot ----------------
+def test_hot_lot_priority_queue_and_limit(client: TestClient, db: Session) -> None:
+    from app.mes.execution.tests.test_exec import Line
+
+    f = Line(client, db)
+    a, b, c = f.start(2, 2, 2)
+    hot = f.m.post(
+        "lot_priority", {"code": "HOT", "name": "h", "level": 2, "is_hot": True}
+    )
+    out = f.post(
+        f"{EXEC}/lots/{c['id']}/priority", {"priority_id": hot["id"], "comment": "x"}
+    )
+    assert out["lot"]["priority_id"] == hot["id"]
+    q = client.get(f"{EXEC}/queue", headers=f.m.h).json()["data"]
+    assert q[0]["code"] == c["code"] and q[0]["hot"]
+    f.post(f"{EXEC}/lots/{c['id']}/priority", {"priority_id": hot["id"]}, status=409)
+    # 急件上限 1：第二个急件被阻断
+    f.bind("priority", ("hot_lot_limit", "block", {"max": 1}))
+    r = f.post(
+        f"{EXEC}/lots/{b['id']}/priority", {"priority_id": hot["id"]}, status=409
+    )
+    assert r["detail"]["code"] == "check_blocked"

@@ -993,7 +993,8 @@
         "merge": "統合",
         "jump": "ステップジャンプ",
         "adjust": "廃棄・追加",
-        "sort": "ウェーハソート"
+        "sort": "ウェーハソート",
+        "priority": "優先度変更"
       },
       "check_type": {
         "e10_available": "設備 E10 状態使用可",
@@ -1005,6 +1006,7 @@
         "carrier_available": "キャリア使用可",
         "batch_same_step": "一括：同一ステップ",
         "sort_order": "ソート順序維持",
+        "hot_lot_limit": "ホットロット仕掛上限",
         "future_hold": "予約ホールド",
         "wo_due": "作業指示納期通知",
         "carrier_clean": "キャリア洗浄周期",
@@ -1091,7 +1093,8 @@
         "jump": "ステップジャンプ",
         "bonus": "追加",
         "carrier_change": "キャリア変更",
-        "sort": "ウェーハソート"
+        "sort": "ウェーハソート",
+        "priority": "優先度変更"
       },
       "genealogy_relation": {
         "split": "分割",

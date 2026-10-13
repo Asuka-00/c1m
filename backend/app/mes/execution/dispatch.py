@@ -104,6 +104,7 @@ def queue(
                 "priority": pr and pr["code"],
                 "priority_level": pr and pr["level"],
                 "priority_color": pr and pr.get("color"),
+                "hot": bool(pr and pr["is_hot"]),
                 "on_hold": bool(lot["on_hold"]),
                 "qtime_remaining": rem,
                 "hours": since and round((at - since).total_seconds() / 3600, 1),
@@ -112,6 +113,7 @@ def queue(
     out.sort(
         key=lambda r: (
             r["on_hold"],
+            not r["hot"],
             r["priority_level"] if r["priority_level"] is not None else 999,
             r["qtime_remaining"] if r["qtime_remaining"] is not None else 1e9,
             -(r["hours"] or 0),

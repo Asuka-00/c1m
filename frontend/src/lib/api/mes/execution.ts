@@ -175,6 +175,7 @@ export interface QueueRow {
   priority: string | null
   priority_level: number | null
   priority_color: string | null
+  hot: boolean
   on_hold: boolean
   qtime_remaining: number | null
   hours: number | null
@@ -601,6 +602,18 @@ export const execApi = {
       }>('/mes/exec/qtime/sweep', {})
       .then((r) => r.data),
   /** 在制报废 / 补数。 */
+  priority: (
+    id: string,
+    body: {
+      priority_id: string
+      comment?: string
+      override?: boolean
+      override_reason?: string
+    }
+  ) =>
+    http
+      .post<StageResult>(`/mes/exec/lots/${id}/priority`, body)
+      .then((r) => r.data),
   adjust: (
     id: string,
     body: {

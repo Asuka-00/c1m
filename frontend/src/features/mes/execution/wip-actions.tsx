@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { t } from '@/i18n'
-import { PackageMinus, SkipForward, Wrench } from 'lucide-react'
+import { Flame, PackageMinus, SkipForward, Wrench } from 'lucide-react'
 import { toast } from 'sonner'
 import { execApi, type ExecContext } from '@/lib/api/mes/execution'
 import { Button } from '@/components/ui/button'
@@ -29,6 +29,7 @@ import { optLabel } from '@/features/mes/common/labels'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
 import { Pick } from './exec-parts'
+import { PriorityDialog } from './priority-dialog'
 
 /** 在制调整卡片：按权限与批次状态提供跳站等操作。 */
 export function WipActionsCard({
@@ -38,7 +39,7 @@ export function WipActionsCard({
   cx: ExecContext
   perms: string[]
 }) {
-  const [open, setOpen] = useState<'jump' | 'adjust' | null>(null)
+  const [open, setOpen] = useState<'jump' | 'adjust' | 'priority' | null>(null)
   const st = String(cx.lot.lot_status)
   const canJump =
     perms.includes('mes.exec:jump') &&
@@ -57,6 +58,16 @@ export function WipActionsCard({
           {t('mes.wip.title')}
         </CardTitle>
         <CardAction className='flex gap-2'>
+          <Button
+            size='sm'
+            variant='outline'
+            disabled={!canAdjust}
+            onClick={() => setOpen('priority')}
+            data-testid='open-priority'
+          >
+            <Flame className='size-4' />
+            {t('mes.prio.title')}
+          </Button>
           <Button
             size='sm'
             variant='outline'
@@ -87,6 +98,12 @@ export function WipActionsCard({
         open={open === 'jump'}
         canOverride={perms.includes('mes.exec:override')}
         onOpenChange={(o) => setOpen(o ? 'jump' : null)}
+      />
+      <PriorityDialog
+        cx={cx}
+        open={open === 'priority'}
+        canOverride={perms.includes('mes.exec:override')}
+        onOpenChange={(o) => setOpen(o ? 'priority' : null)}
       />
       <AdjustDialog
         cx={cx}

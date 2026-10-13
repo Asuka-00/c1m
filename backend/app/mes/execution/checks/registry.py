@@ -59,6 +59,7 @@ class Ctx:
     chambers: list[Row] = field(default_factory=list)  # 选定的腔体（设备子单元）
     batch: list[Row] = field(default_factory=list)  # 批量作业的全部批次
     sort_map: list[Row] = field(default_factory=list)  # 晶圆整理：[{wafer, slot}]
+    priority: Row | None = None  # 优先级变更：新优先级
     tools: list[Row] = field(default_factory=list)
     material_lots: list[Row] = field(default_factory=list)
     dc: list[Row] = field(default_factory=list)  # 录入的 DC 值（含 is_oos 超规标记）

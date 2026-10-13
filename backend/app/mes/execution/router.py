@@ -429,6 +429,24 @@ def lot_adjust(
     return svc.adjust(session, ctx.id, lot_id, body.model_dump(), ctx.user)
 
 
+class PriorityIn(BaseModel):
+    priority_id: uuid.UUID
+    comment: str | None = Field(default=None, max_length=300)
+    override: bool = False
+    override_reason: str | None = Field(default=None, max_length=300)
+
+
+@router.post("/lots/{lot_id}/priority")
+def lot_priority(
+    session: SessionDep, ctx: CurrentTenant, lot_id: uuid.UUID, body: PriorityIn
+) -> Any:
+    """Change a lot's priority (hot lot)."""
+    _need(ctx, "mes.exec:adjust")
+    if body.override:
+        _need(ctx, "mes.exec:override")
+    return svc.set_priority(session, ctx.id, lot_id, body.model_dump(), ctx.user)
+
+
 class CarrierChangeIn(BaseModel):
     carrier_id: uuid.UUID
     comment: str | None = Field(default=None, max_length=300)

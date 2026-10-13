@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
-import { PauseCircle, ScanLine } from 'lucide-react'
+import { Flame, PauseCircle, ScanLine } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTenantKey } from '@/lib/api/hooks'
 import { mesApi } from '@/lib/api/mes/common'
@@ -67,7 +67,7 @@ export function LotScan({ onLot }: { onLot: (id: string) => void }) {
 }
 
 /**
- * 派工队列：在制批次按“非 Hold → 优先级 → Q-Time 剩余 → 滞留时长”排序，
+ * 派工队列：在制批次按“非 Hold → 急件 → 优先级 → Q-Time 剩余 → 滞留时长”排序，
  * 支持关键字 / 状态 / 产品 / 工序 / Hold 筛选，点击行进入批次作业。
  *
  * @param onLot - 选择批次的回调（批次 id）
@@ -105,6 +105,15 @@ export function DispatchQueue({ onLot }: { onLot: (id: string) => void }) {
     },
     {
       type: 'select',
+      name: 'hot',
+      label: t('mes.queue.allPriorities'),
+      options: [
+        { value: 'true', label: t('mes.queue.hotOnly') },
+        { value: 'false', label: t('mes.queue.notHot') },
+      ],
+    },
+    {
+      type: 'select',
       name: 'on_hold',
       label: t('mes.queue.allHold'),
       options: [
@@ -136,6 +145,12 @@ export function DispatchQueue({ onLot }: { onLot: (id: string) => void }) {
               onClick={() => onLot(r.id)}
             >
               {r.on_hold && <PauseCircle className='size-3.5 text-amber-600' />}
+              {r.hot && (
+                <Flame
+                  className='size-3.5 text-red-600'
+                  aria-label={t('mes.queue.hot')}
+                />
+              )}
               {r.code}
             </button>
           ),
@@ -146,8 +161,12 @@ export function DispatchQueue({ onLot }: { onLot: (id: string) => void }) {
           cell: (r) =>
             r.priority ? (
               <Badge
-                variant='outline'
-                style={{ borderColor: r.priority_color ?? undefined }}
+                variant={r.hot ? 'default' : 'outline'}
+                style={
+                  r.hot
+                    ? { background: r.priority_color ?? '#dc2626' }
+                    : { borderColor: r.priority_color ?? undefined }
+                }
               >
                 {r.priority}
               </Badge>

@@ -926,7 +926,11 @@
       "qty": "数量",
       "qtime": "Q-Time 剩余(分)",
       "hours": "滞留(小时)",
-      "open": "作业"
+      "open": "作业",
+      "hot": "急件",
+      "allPriorities": "全部急件状态",
+      "hotOnly": "仅急件",
+      "notHot": "非急件"
     },
     "due": {
       "overdue": "逾期",
@@ -1071,6 +1075,12 @@
       "result": "新版本 v{{v}}，改指引用 {{n}} 处",
       "switched": "切换新版的批次",
       "kept": "沿用旧版的批次"
+    },
+    "prio": {
+      "title": "变更优先级",
+      "desc": "急件优先派工，并在队列中高亮。",
+      "new": "新优先级",
+      "done": "优先级已变更"
     }
   },
   "notify": {

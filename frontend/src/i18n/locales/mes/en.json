@@ -993,7 +993,8 @@
         "merge": "Merge",
         "jump": "Jump step",
         "adjust": "Scrap / bonus",
-        "sort": "Wafer sort"
+        "sort": "Wafer sort",
+        "priority": "Priority change"
       },
       "check_type": {
         "e10_available": "Equipment E10 state available",
@@ -1005,6 +1006,7 @@
         "carrier_available": "Carrier available",
         "batch_same_step": "Batch: same step",
         "sort_order": "Sort keeps wafer order",
+        "hot_lot_limit": "Hot lot WIP limit",
         "future_hold": "Future hold at step",
         "wo_due": "Work order due notice",
         "carrier_clean": "Carrier cleaning due",
@@ -1091,7 +1093,8 @@
         "jump": "Jump step",
         "bonus": "Bonus",
         "carrier_change": "Carrier change",
-        "sort": "Wafer sort"
+        "sort": "Wafer sort",
+        "priority": "Priority change"
       },
       "genealogy_relation": {
         "split": "Split",

@@ -12,6 +12,7 @@ TRIGGERS = [
     ("jump", "Jump step|跳站|ステップジャンプ"),
     ("adjust", "Scrap / bonus|报废 / 补数|廃棄・追加"),
     ("sort", "Wafer sort|晶圆整理|ウェーハソート"),
+    ("priority", "Priority change|优先级变更|優先度変更"),
 ]
 # built-in check types (app.mes.checks implements them; plugins may add more)
 CHECK_TYPES = [
@@ -30,6 +31,7 @@ CHECK_TYPES = [
     ("carrier_available", "Carrier available|载具可用|キャリア使用可"),
     ("batch_same_step", "Batch: same step|批量：同一工步|一括：同一ステップ"),
     ("sort_order", "Sort keeps wafer order|整理保持晶圆顺序|ソート順序維持"),
+    ("hot_lot_limit", "Hot lot WIP limit|急件在制上限|ホットロット仕掛上限"),
     ("future_hold", "Future hold at step|预约 Hold|予約ホールド"),
     ("wo_due", "Work order due notice|工单交期提醒|作業指示納期通知"),
     ("carrier_clean", "Carrier cleaning due|载具清洗周期|キャリア洗浄周期"),
@@ -133,6 +135,7 @@ ENUMS.update(
             ("bonus", "Bonus|补数|追加"),
             ("carrier_change", "Carrier change|换载具|キャリア変更"),
             ("sort", "Wafer sort|晶圆整理|ウェーハソート"),
+            ("priority", "Priority change|优先级变更|優先度変更"),
         ],
         "genealogy_relation": [
             ("split", "Split|分批|分割"),

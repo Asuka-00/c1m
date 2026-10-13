@@ -993,7 +993,8 @@
         "merge": "合批",
         "jump": "跳站",
         "adjust": "报废 / 补数",
-        "sort": "晶圆整理"
+        "sort": "晶圆整理",
+        "priority": "优先级变更"
       },
       "check_type": {
         "e10_available": "设备 E10 状态可用",
@@ -1005,6 +1006,7 @@
         "carrier_available": "载具可用",
         "batch_same_step": "批量：同一工步",
         "sort_order": "整理保持晶圆顺序",
+        "hot_lot_limit": "急件在制上限",
         "future_hold": "预约 Hold",
         "wo_due": "工单交期提醒",
         "carrier_clean": "载具清洗周期",
@@ -1091,7 +1093,8 @@
         "jump": "跳站",
         "bonus": "补数",
         "carrier_change": "换载具",
-        "sort": "晶圆整理"
+        "sort": "晶圆整理",
+        "priority": "优先级变更"
       },
       "genealogy_relation": {
         "split": "分批",

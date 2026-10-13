@@ -459,3 +459,24 @@ def _future_hold(ctx: Ctx, _p: Row) -> Outcome:
     if n:
         return "fail", f"{n} future hold(s) at this step", {"count": n}
     return "na", "no future hold", {}
+
+
+@check_type("hot_lot_limit")
+def _hot_lot_limit(ctx: Ctx, p: Row) -> Outcome:
+    """急件在制上限：设为急件时，在制急件数（不含本批）不得超过 ``max``（默认 5）。"""
+    pr = ctx.priority
+    if not pr or not pr["is_hot"]:
+        return "na", "not a hot lot", {}
+    hot = {x["id"] for x in find(ctx.s, ctx.tid, "lot_priority", is_hot=True)}
+    n = sum(
+        1
+        for x in find(ctx.s, ctx.tid, "lot")
+        if x["priority_id"] in hot
+        and x["id"] != ctx.lot["id"]
+        and x["lot_status"] in ("waiting", "moved_in", "running", "tracked_out")
+    )
+    mx = int(p.get("max", 5))
+    data = {"hot": n, "max": mx}
+    if n >= mx:
+        return "fail", f"{n} hot lots in WIP (max {mx})", data
+    return "pass", f"{n} hot lots in WIP (max {mx})", data

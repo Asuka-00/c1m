@@ -926,7 +926,11 @@
       "qty": "Qty",
       "qtime": "Q-Time left (min)",
       "hours": "Since last move (h)",
-      "open": "Operate"
+      "open": "Operate",
+      "hot": "Hot lot",
+      "allPriorities": "All lots",
+      "hotOnly": "Hot lots only",
+      "notHot": "Not hot"
     },
     "due": {
       "overdue": "Overdue",
@@ -1071,6 +1075,12 @@
       "result": "New version v{{v}}, {{n}} references updated",
       "switched": "Lots switched",
       "kept": "Lots on old version"
+    },
+    "prio": {
+      "title": "Change priority",
+      "desc": "Hot lots dispatch first and are highlighted.",
+      "new": "New priority",
+      "done": "Priority changed"
     }
   },
   "notify": {
