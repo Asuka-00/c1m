@@ -40,8 +40,8 @@ def default_reason(s: Session, tid: uuid.UUID, rtype: str) -> Row:
     rs = [
         r
         for r in find(s, tid, "reason_code", order="code", reason_type=rtype)
-        if r["is_active"]
-    ]
+        if r["is_active"] and not (r.get("attrs") or {}).get("system")
+    ]  # 系统原因码（如 qtime_expired，D18）不作为默认原因
     if not rs:
         raise http_422(
             [("reason", f"reason: no active {rtype} reason code configured")]
