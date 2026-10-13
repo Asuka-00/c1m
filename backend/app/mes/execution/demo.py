@@ -9,6 +9,7 @@ from sqlmodel import Session
 from app.core.spec.base import conn
 from app.core.spec.engine import TABLES
 from app.mes.common.demo import ACTIVATE, _resolve, _rows, add
+from app.mes.execution.checks.types import chambers_of
 
 # ---------------- execution: checks, E10, line-side material, tools ----------------
 for trig, st in (("track_in", "PRD-RUN"), ("track_out", "SBY-IDLE")):
@@ -27,6 +28,14 @@ CHECK_RULES: list[tuple[str, str, str, str, dict[str, Any]]] = [
     ("CR-MAT", "Line-side material sufficient", "material_sufficient", "block", {}),
     ("CR-TOOL", "Tool available + life", "tool_life", "block", {"expiry_warn_days": 7}),
     ("CR-CARR", "Carrier usable", "carrier_available", "warn", {}),
+    ("CR-CHMB", "Chamber selected", "chamber_required", "block", {}),
+    (
+        "CR-CHMB-E10",
+        "Chamber available (E10 SBY/PRD)",
+        "chamber_available",
+        "block",
+        {},
+    ),
     ("CR-QT", "Q-Time window", "qtime", "block", {}),
     ("CR-PM", "Equipment PM not overdue", "pm_due", "block", {}),
     ("CR-RCP-MAP", "Recipe ↔ equipment mapping", "recipe_match", "warn", {}),
@@ -50,7 +59,16 @@ CHECK_PLANS = [
     (
         "CP-TI",
         "Standard track-in",
-        ["CR-E10", "CR-CAP", "CR-RCP", "CR-TOOL", "CR-CARR", "CR-MAT"],
+        [
+            "CR-E10",
+            "CR-CAP",
+            "CR-RCP",
+            "CR-TOOL",
+            "CR-CARR",
+            "CR-MAT",
+            "CR-CHMB",
+            "CR-CHMB-E10",
+        ],
     ),
     (
         "CP-TI-LITHO",
@@ -277,6 +295,10 @@ def _run_exec(session: Session, tid: uuid.UUID, admin: Any) -> None:
         body: dict[str, Any] = {}
         if eq:
             body["equipment_id"] = _resolve(session, tid, ("equipment", eq))
+            if stage == "track_in":
+                # 带腔体的设备默认选第一个腔体
+                chs = chambers_of(session, tid, {"id": body["equipment_id"]})
+                body["chamber_ids"] = [str(c["id"]) for c in chs[:1]]
         if rc:
             body["recipe_id"] = _resolve(session, tid, ("recipe", f"{rc}@1"))
         extra = extra or {}

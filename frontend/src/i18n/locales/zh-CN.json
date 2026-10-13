@@ -632,7 +632,8 @@
       "disposition": "处置",
       "oosAction": "超规动作",
       "eqpRecipe": "设备端配方名",
-      "eqpRecipeHint": "设备上报或扫码（可选）"
+      "eqpRecipeHint": "设备上报或扫码（可选）",
+      "chambers": "腔体"
     },
     "trace": {
       "hint": "查看批次及其单元的全部操作记录。",

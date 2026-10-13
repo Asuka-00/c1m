@@ -29,6 +29,15 @@ def allowed_equipment_ids(ctx: Ctx) -> set[Any]:
     return ids
 
 
+def chambers_of(s: Any, tid: uuid.UUID, eq: Row) -> list[Row]:
+    """设备下的有效腔体（unit_kind = chamber），按编码排序。"""
+    return [
+        c
+        for c in find(s, tid, "equipment", order="code", parent_id=eq["id"])
+        if c["unit_kind"] == "chamber" and c["is_active"]
+    ]
+
+
 # ---------------- built-in checks ----------------
 @check_type("e10_available")
 def _e10(ctx: Ctx, p: Row) -> Outcome:
@@ -337,3 +346,32 @@ def _qty_adjust_limit(_ctx: Ctx, _p: Row) -> Outcome:
 def _split_merge(_ctx: Ctx, _p: Row) -> Outcome:
     # 拆 / 合批时由拆合批逻辑内置强制执行
     return "na", "evaluated by the split / merge service", {}
+
+
+@check_type("chamber_required")
+def _chamber_required(ctx: Ctx, _p: Row) -> Outcome:
+    """设备带腔体时必须至少选一个腔体。"""
+    eq = ctx.equipment
+    if not eq or not chambers_of(ctx.s, ctx.tid, eq):
+        return "na", "equipment has no chambers", {}
+    if not ctx.chambers:
+        return "fail", f"{eq['code']}: select a chamber", {}
+    return "pass", ", ".join(c["code"] for c in ctx.chambers), {}
+
+
+@check_type("chamber_available")
+def _chamber_e10(ctx: Ctx, p: Row) -> Outcome:
+    """选定腔体的 E10 状态须在允许类别内（默认 SBY / PRD）。"""
+    if not ctx.chambers:
+        return "na", "no chamber selected", {}
+    allowed = p.get("allowed") or ["SBY", "PRD"]
+    bad, data = [], {}
+    for c in ctx.chambers:
+        st = e10_current(ctx.s, ctx.tid, c)
+        cat = st and st["e10_category"]
+        data[c["code"]] = st and st["code"]
+        if cat not in allowed:
+            bad.append(f"{c['code']} is {st and st['code']} ({cat})")
+    if bad:
+        return "fail", "; ".join(bad) + f"; needs {'/'.join(allowed)}", data
+    return "pass", "chambers available", data

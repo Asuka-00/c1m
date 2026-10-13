@@ -35,3 +35,64 @@ def test_wafer_map_and_wafer_history(client: TestClient, db: Session) -> None:
     assert get(f"/wafers/{w0['id']}/history")["data"]
     r = client.get(f"{EXEC}/wafers/{lot['id']}/history", headers=f.m.h)
     assert r.status_code == 404
+
+
+def test_chamber_select_checks_and_e10(client: TestClient, db: Session) -> None:
+    from app.mes.execution.tests.test_exec import Line, _msgs
+
+    f = Line(client, db)
+    f.bind(
+        "track_in",
+        ("chamber_required", "block", {}),
+        ("chamber_available", "block", {}),
+    )
+    pm = [
+        f.m.post(
+            "equipment",
+            {
+                "code": f"EQ1-PM{i}",
+                "name": f"pm{i}",
+                "unit_kind": "chamber",
+                "parent_id": f.eq["id"],
+            },
+        )
+        for i in (1, 2)
+    ]
+    a, b, c = f.start(1, 1, 1)
+
+    def e10(eid: str) -> Any:
+        return client.get(f.m.url("equipment", eid), headers=f.m.h).json()[
+            "e10_state_id"
+        ]
+
+    # 未选腔体 → 拦截
+    f.stage(a, "move_in", equipment_id=f.eq["id"])
+    assert "select a chamber" in _msgs(
+        f.stage(a, "track_in", 409, equipment_id=f.eq["id"])
+    )
+    # 腔体 DOWN → 拦截
+    f.sql(
+        "UPDATE mes_equipment SET e10_state_id = :s WHERE id = :e",
+        s=f.st["DOWN"]["id"],
+        e=pm[1]["id"],
+    )
+    assert "DOWN" in _msgs(
+        f.stage(a, "track_in", 409, equipment_id=f.eq["id"], chamber_ids=[pm[1]["id"]])
+    )
+    # 其他设备的腔体 → 422
+    f.stage(b, "move_in", equipment_id=f.eq2["id"])
+    f.stage(b, "track_in", 422, equipment_id=f.eq2["id"], chamber_ids=[pm[0]["id"]])
+    # 选 PM1 → 通过，腔体 E10 随 Track In / Out 迁移
+    f.stage(a, "track_in", equipment_id=f.eq["id"], chamber_ids=[pm[0]["id"]])
+    assert e10(pm[0]["id"]) == f.st["PRD"]["id"]
+    ctx = client.get(f"{EXEC}/lots/{c['id']}", headers=f.m.h).json()
+    eq1 = next(e for e in ctx["equipment"] if e["id"] == f.eq["id"])
+    assert [x["code"] for x in eq1["chambers"]] == ["EQ1-PM1", "EQ1-PM2"]
+    f.stage(a, "track_out")
+    assert e10(pm[0]["id"]) == f.st["SBY"]["id"]
+    hist = f.m.list("lot_history", lot=a["id"], action="track_in")["data"][0]
+    assert hist["details"]["chambers"] == ["EQ1-PM1"]
+    # 规则严重度为 off → 管控关闭
+    f.sql("UPDATE mes_check_rule SET severity = 'off'")
+    f.stage(c, "move_in", equipment_id=f.eq["id"])
+    f.stage(c, "track_in", equipment_id=f.eq["id"])

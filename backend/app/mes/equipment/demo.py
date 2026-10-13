@@ -139,6 +139,7 @@ for c, n, et, g, wc, subs in _rows(
             name=f"{n} {sc}",
             unit_kind=kind,
             parent=("equipment", c),
+            initial_state=("e10_state", "SBY-IDLE"),
         )
 for c, n, et, days, lots in _rows(
     [

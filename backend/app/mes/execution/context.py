@@ -42,6 +42,7 @@ def build_ctx(s: Session, tid: uuid.UUID, lot: Row, trigger: str, body: Row) -> 
     rt = one(s, tid, "reticle", body.get("reticle_id") or xc.get("reticle_id"))
     car = one(s, tid, "carrier", body.get("carrier_id") or lot.get("carrier_id"))
     tools = _rows(s, tid, "tool", body.get("tool_ids") or xc.get("tool_ids"))
+    chs = _rows(s, tid, "equipment", body.get("chamber_ids") or xc.get("chamber_ids"))
     mls = _rows(
         s,
         tid,
@@ -62,6 +63,7 @@ def build_ctx(s: Session, tid: uuid.UUID, lot: Row, trigger: str, body: Row) -> 
         eqp_recipe=body.get("eqp_recipe") or None,
         reticle=rt,
         carrier=car,
+        chambers=chs,
         tools=tools,
         material_lots=mls,
     )
@@ -165,9 +167,9 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
         ]
     )
 
-    def _eq(e: Row) -> Row:
+    def _eq(e: Row, sub: bool = False) -> Row:
         st = ck.e10_current(s, tid, e)
-        return {
+        out: Row = {
             "id": str(e["id"]),
             "code": e["code"],
             "name": e["name"],
@@ -175,6 +177,9 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
             "category": st and st["e10_category"],
             "color": st and st["color"],
         }
+        if not sub:
+            out["chambers"] = [_eq(c, True) for c in ck.chambers_of(s, tid, e)]
+        return out
 
     out["equipment"] = sorted((_eq(e) for e in eqs), key=lambda x: x["code"])
     rids = {r["recipe_id"] for r in res if r["recipe_id"]}

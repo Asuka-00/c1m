@@ -27,6 +27,11 @@ CHECK_TYPES = [
     ("material_sufficient", "Material sufficient|物料充足|資材充足"),
     ("tool_life", "Tool available + life|工具可用 + 寿命|工具使用可・寿命"),
     ("carrier_available", "Carrier available|载具可用|キャリア使用可"),
+    ("chamber_required", "Chamber selected|已选腔体|チャンバー選択済"),
+    (
+        "chamber_available",
+        "Chamber E10 state available|腔体 E10 状态可用|チャンバー E10 状態使用可",
+    ),
     ("qtime", "Q-Time|Q-Time|Q タイム"),
     ("lot_hold", "Lot not on hold|批次未 Hold|ロット非ホールド"),
     ("wo_status", "Work order status|工单状态|作業指示状態"),

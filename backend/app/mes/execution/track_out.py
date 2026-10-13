@@ -10,7 +10,7 @@ from app.core.spec.audit import audit
 from app.core.spec.base import now
 from app.core.spec.engine import ENTITIES
 from app.core.spec.errors import http_422
-from app.mes.common.query import one
+from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
 from app.mes.equipment.service import e10_apply
 from app.mes.execution.checks import service as ck
@@ -277,6 +277,23 @@ def track_out(
     lot.update(lot_status=status, qty=qty)
     eq = one(s, tid, "equipment", lot["equipment_id"])
     e10 = e10_apply(s, tid, eq, "track_out", user, lot) if eq else None
+    # 腔体：同腔体仍有其他运行中批次时不迁移
+    busy = (
+        {
+            c
+            for o in find(
+                s, tid, "lot", equipment_id=lot["equipment_id"], lot_status="running"
+            )
+            if o["id"] != lot["id"]
+            for c in (o.get("exec_ctx") or {}).get("chamber_ids") or []
+        }
+        if lot["equipment_id"]
+        else set()
+    )
+    for cid in (lot.get("exec_ctx") or {}).get("chamber_ids") or []:
+        ch = one(s, tid, "equipment", uuid.UUID(cid))
+        if ch and cid not in busy:
+            e10_apply(s, tid, ch, "track_out", user, lot)
     history(
         s,
         tid,

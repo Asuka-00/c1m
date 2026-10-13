@@ -288,11 +288,7 @@ export interface ExecContext {
     auto: Record<ExecStage, boolean>
     is_last: boolean
   }
-  equipment?: (Opt & {
-    state: string | null
-    category: string | null
-    color: string | null
-  })[]
+  equipment?: (EqpOpt & { chambers: EqpOpt[] })[]
   recipes?: (Opt & { version: number; status: string })[]
   reticles?: (Opt & { status: string })[]
   tools?: {
@@ -335,6 +331,12 @@ export interface ExecContext {
   }[]
   exec_ctx: Record<string, unknown>
 }
+/** 设备 / 腔体候选（含当前 E10 状态）。 */
+export type EqpOpt = Opt & {
+  state: string | null
+  category: string | null
+  color: string | null
+}
 /** 阶段作业请求体（设备、配方、工具、物料、DC、报废 / 返工、放行等）。 */
 export interface StageBody {
   equipment_id?: string | null
@@ -344,6 +346,8 @@ export interface StageBody {
   reticle_id?: string | null
   carrier_id?: string | null
   tool_ids?: string[]
+  /** 选定的腔体 */
+  chamber_ids?: string[]
   material_lot_ids?: string[]
   dc?: {
     measurement_item_id: string

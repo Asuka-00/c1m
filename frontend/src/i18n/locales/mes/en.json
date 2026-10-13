@@ -942,6 +942,8 @@
         "material_sufficient": "Material sufficient",
         "tool_life": "Tool available + life",
         "carrier_available": "Carrier available",
+        "chamber_required": "Chamber selected",
+        "chamber_available": "Chamber E10 state available",
         "qtime": "Q-Time",
         "lot_hold": "Lot not on hold",
         "wo_status": "Work order status",

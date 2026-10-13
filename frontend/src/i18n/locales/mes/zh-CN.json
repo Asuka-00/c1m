@@ -942,6 +942,8 @@
         "material_sufficient": "物料充足",
         "tool_life": "工具可用 + 寿命",
         "carrier_available": "载具可用",
+        "chamber_required": "已选腔体",
+        "chamber_available": "腔体 E10 状态可用",
         "qtime": "Q-Time",
         "lot_hold": "批次未 Hold",
         "wo_status": "工单状态",

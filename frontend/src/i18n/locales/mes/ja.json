@@ -942,6 +942,8 @@
         "material_sufficient": "資材充足",
         "tool_life": "工具使用可・寿命",
         "carrier_available": "キャリア使用可",
+        "chamber_required": "チャンバー選択済",
+        "chamber_available": "チャンバー E10 状態使用可",
         "qtime": "Q タイム",
         "lot_hold": "ロット非ホールド",
         "wo_status": "作業指示状態",

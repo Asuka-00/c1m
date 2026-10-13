@@ -42,6 +42,9 @@ from app.mes.execution.checks.registry import (
 from app.mes.execution.checks.types import (
     allowed_equipment_ids as allowed_equipment_ids,
 )
+from app.mes.execution.checks.types import (
+    chambers_of as chambers_of,
+)
 from app.mes.lot.service import (
     qtime_status as qtime_status,
 )

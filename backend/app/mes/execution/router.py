@@ -57,6 +57,7 @@ class StageIn(BaseModel):
     reticle_id: uuid.UUID | None = None
     carrier_id: uuid.UUID | None = None
     tool_ids: list[uuid.UUID] | None = None
+    chamber_ids: list[uuid.UUID] | None = None
     material_lot_ids: list[uuid.UUID] | None = None
     dc: list[DcIn] | None = None
     scrap: list[ScrapIn] | None = None

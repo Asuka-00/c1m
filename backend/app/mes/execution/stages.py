@@ -100,6 +100,16 @@ def track_in(
         errs.append(
             ("equipment_id", "equipment_id: select an active main equipment unit")
         )
+    for c in ctx.chambers:
+        if not eq or c["parent_id"] != eq["id"] or c["unit_kind"] != "chamber":
+            errs.append(
+                (
+                    "chamber_ids",
+                    f"chamber_ids: {c['code']} is not a chamber of the equipment",
+                )
+            )
+        elif not c["is_active"]:
+            errs.append(("chamber_ids", f"chamber_ids: {c['code']} is inactive"))
     if not ctx.recipe and any(r["recipe_id"] for r in ctx.resources()):
         errs.append(("recipe_id", "recipe_id: required at this step"))
     for fid in {r["fixture_id"] for r in ctx.resources("fixture") if r["fixture_id"]}:
@@ -121,6 +131,7 @@ def track_in(
         "reticle_id": ctx.reticle and str(ctx.reticle["id"]),
         "tool_ids": [str(t["id"]) for t in ctx.tools],
         "material_lot_ids": [str(m["id"]) for m in ctx.material_lots],
+        "chamber_ids": [str(c["id"]) for c in ctx.chambers],
     }
     for t in ctx.tools:
         _upd(s, tid, "tool", t["id"], user, tool_status="in_use", equipment_id=eid)
@@ -142,6 +153,8 @@ def track_in(
     )
     lot.update(lot_status="running", equipment_id=eid)
     e10 = e10_apply(s, tid, eq, "track_in", user, lot) if eq else None
+    for c in ctx.chambers:
+        e10_apply(s, tid, c, "track_in", user, lot)
     history(
         s,
         tid,
@@ -157,6 +170,7 @@ def track_in(
             "tools": [t["code"] for t in ctx.tools],
             "reticle": ctx.reticle and ctx.reticle["code"],
             "carrier": ctx.carrier and ctx.carrier["code"],
+            "chambers": [c["code"] for c in ctx.chambers],
             "e10": e10,
             **_ov(body, results),
         },

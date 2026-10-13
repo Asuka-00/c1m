@@ -67,6 +67,7 @@ import { enumLabel, optLabel } from '@/features/mes/common/labels'
 import { RefSelect } from '@/features/mes/common/ref-select'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity, useMesMeta } from '@/features/mes/common/use-mes-meta'
+import { ChamberPick } from './chamber-pick'
 import { DispatchQueue, LotScan } from './dispatch-queue'
 import { CheckPanel, Pick, StageBar } from './exec-parts'
 import { SplitMergeCard } from './split-merge'
@@ -159,6 +160,11 @@ function Console({ cx, perms }: { cx: ExecContext; perms: string[] }) {
   const [recipe, setRecipe] = useState(
     String(lot.recipe_id ?? (cx.recipes?.length === 1 ? cx.recipes[0].id : ''))
   )
+  const [chambers, setChambers] = useState<string[]>(
+    (xc.chamber_ids as string[]) ?? []
+  )
+  const eqChambers =
+    cx.equipment?.find((e) => e.id === equipment)?.chambers ?? []
   const [eqpRecipe, setEqpRecipe] = useState('')
   const [reticle, setReticle] = useState(
     String(
@@ -203,6 +209,7 @@ function Console({ cx, perms }: { cx: ExecContext; perms: string[] }) {
       b.reticle_id = reticle || null
       b.carrier_id = carrier
       b.tool_ids = Object.values(tools).filter(Boolean)
+      b.chamber_ids = chambers.filter((c) => eqChambers.some((x) => x.id === c))
       b.material_lot_ids = mats
     }
     if (stage === 'track_out') {
@@ -448,6 +455,13 @@ function Console({ cx, perms }: { cx: ExecContext; perms: string[] }) {
                       ),
                     }))}
                   />
+                  {stage === 'track_in' && (
+                    <ChamberPick
+                      options={eqChambers}
+                      value={chambers}
+                      onChange={setChambers}
+                    />
+                  )}
                 </div>
               )}
               {stage === 'track_in' && (
