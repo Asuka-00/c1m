@@ -29,6 +29,7 @@ import {
   useListParams,
   type FilterDef,
 } from '@/components/crud'
+import { IconButton } from '@/components/icon-button'
 import { optLabel } from '@/features/mes/common/labels'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
@@ -203,11 +204,10 @@ export default function EqpBoard() {
             cell: (r) => (
               <span className='inline-flex items-center gap-1'>
                 {r.chambers.length > 0 && (
-                  <Button
-                    size='icon'
+                  <IconButton
+                    label={t('mes.eqp.chambers')}
                     variant='ghost'
                     className='size-6'
-                    aria-label={t('mes.eqp.chambers')}
                     aria-expanded={open.includes(r.id)}
                     onClick={() =>
                       setOpen((o) =>
@@ -223,7 +223,7 @@ export default function EqpBoard() {
                         open.includes(r.id) && 'rotate-90'
                       )}
                     />
-                  </Button>
+                  </IconButton>
                 )}
                 <span className='font-mono'>{r.code}</span>
               </span>

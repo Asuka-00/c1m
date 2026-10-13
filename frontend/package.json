@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "node scripts/check-i18n.mjs && node scripts/check-workspace-wording.mjs && node scripts/check-descriptions.mjs && tsc -b && vite build",
-    "lint": "eslint .",
+    "lint": "eslint . && node scripts/test-eslint-rules.mjs",
     "preview": "vite preview",
     "format:check": "prettier --check .",
     "format": "prettier --write .",

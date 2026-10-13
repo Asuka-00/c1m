@@ -11,7 +11,6 @@ import {
   type MesTreeNode,
 } from '@/lib/api/mes/common'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   Table,
@@ -22,6 +21,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { Column } from '@/components/crud'
+import { IconButton } from '@/components/icon-button'
 
 /** 关键字过滤：保留匹配节点及其祖先。 */
 function prune(nodes: MesTreeNode[], q: string): MesTreeNode[] {
@@ -128,11 +128,10 @@ export function EntityTree({
                         style={{ paddingInlineStart: depth * 20 }}
                       >
                         {n.children.length ? (
-                          <Button
-                            size='icon'
+                          <IconButton
+                            label={t('mes.treeToggle')}
                             variant='ghost'
                             className='size-6'
-                            aria-label={t('mes.treeToggle')}
                             onClick={() => toggle(n.id)}
                           >
                             {closed.has(n.id) && !kw ? (
@@ -140,7 +139,7 @@ export function EntityTree({
                             ) : (
                               <ChevronDown className='size-4' />
                             )}
-                          </Button>
+                          </IconButton>
                         ) : (
                           <span className='inline-block w-6' />
                         )}

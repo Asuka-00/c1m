@@ -8,6 +8,7 @@ import { execApi } from '@/lib/api/mes/execution'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Page } from '@/components/crud'
+import { IconButton } from '@/components/icon-button'
 import { RefSelect } from '@/features/mes/common/ref-select'
 import { DispatchQueue, LotScan } from '../dispatch-queue'
 import { Console } from './console'
@@ -61,14 +62,13 @@ export default function LotConsolePage() {
           />
         </div>
         {lotId && (
-          <Button
-            size='icon'
+          <IconButton
+            label={t('mes.exec.refresh')}
             variant='ghost'
-            aria-label={t('mes.exec.refresh')}
             onClick={() => ctx.refetch()}
           >
             <RefreshCw className='size-4' />
-          </Button>
+          </IconButton>
         )}
       </div>
       {!lotId && <DispatchQueue onLot={setLot} />}

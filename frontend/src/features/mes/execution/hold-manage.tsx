@@ -32,6 +32,7 @@ import {
   useListParams,
   type FilterDef,
 } from '@/components/crud'
+import { IconButton } from '@/components/icon-button'
 import {
   enumLabel,
   HOLD_SOURCES,
@@ -360,15 +361,13 @@ export default function HoldManagePage() {
             header: '',
             cell: (r) =>
               canRelease && r.is_active ? (
-                <Button
-                  size='icon'
+                <IconButton
+                  label={t('mes.exec.release')}
                   variant='ghost'
-                  title={t('mes.exec.release')}
-                  aria-label={t('mes.exec.release')}
                   onClick={() => setReleasing([r.id])}
                 >
                   <PlayCircle className='size-4' />
-                </Button>
+                </IconButton>
               ) : null,
           },
         ]}

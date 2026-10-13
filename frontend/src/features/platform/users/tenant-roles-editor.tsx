@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { TagSelect } from '@/components/crud/tag-select'
+import { IconButton } from '@/components/icon-button'
 import { encodeRows } from './tenant-rows'
 
 /** 单行：租户下拉 + 该租户角色标签多选。 */
@@ -79,15 +80,14 @@ function Row({
           placeholder={t('rbac.pickRoles')}
         />
       </div>
-      <Button
+      <IconButton
+        label={t('users.removeTenant')}
         type='button'
-        size='icon'
         variant='ghost'
-        aria-label={t('users.removeTenant')}
         onClick={onRemove}
       >
         <Trash2 className='size-4' />
-      </Button>
+      </IconButton>
     </div>
   )
 }

@@ -19,6 +19,7 @@ import {
   type Values,
   type FilterDef,
 } from '@/components/crud'
+import { IconButton } from '@/components/icon-button'
 import { StatusBadge } from '../rbac/status'
 import { statusOptions } from '../rbac/status-options'
 import { TenantRolesEditor } from './tenant-roles-editor'
@@ -182,15 +183,13 @@ export default function UsersPage() {
                 }
               >
                 {writable && (
-                  <Button
-                    size='icon'
+                  <IconButton
+                    label={t('rbac.resetPassword')}
                     variant='ghost'
-                    aria-label={t('rbac.resetPassword')}
-                    title={t('rbac.resetPassword')}
                     onClick={() => setResetFor(r)}
                   >
                     <KeyRound className='size-4' />
-                  </Button>
+                  </IconButton>
                 )}
               </RowActions>
             ),

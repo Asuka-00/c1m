@@ -31,6 +31,7 @@ import {
   type Column,
   type ListParams,
 } from '@/components/crud'
+import { IconButton } from '@/components/icon-button'
 import { cellValue } from './cells'
 import { EntityForm } from './entity-form'
 import { EntityTree } from './entity-tree'
@@ -222,26 +223,20 @@ export function EntityTable({
         >
           {extraActions?.(r)}
           {onOpenChildren && (
-            <Button
-              size='icon'
+            <IconButton
+              label={t('mes.details')}
               variant='ghost'
-              aria-label={t('mes.details')}
-              title={t('mes.details')}
               onClick={() => onOpenChildren(r)}
             >
               <ListTree className='size-4' />
-            </Button>
+            </IconButton>
           )}
           {e.versioned && e.can_write && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  size='icon'
-                  variant='ghost'
-                  aria-label={t('mes.versionActions')}
-                >
+                <IconButton label={t('mes.versionActions')} variant='ghost'>
                   <MoreHorizontal className='size-4' />
-                </Button>
+                </IconButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align='end'>
                 {r.status !== 'active' && (

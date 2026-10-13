@@ -6,8 +6,8 @@ import { Ban, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import type { MesRow } from '@/lib/api/mes/common'
 import { changeApi } from '@/lib/api/mes/process'
-import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/crud'
+import { IconButton } from '@/components/icon-button'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity, useMesMeta } from '@/features/mes/common/use-mes-meta'
 
@@ -33,26 +33,22 @@ export function ChangeActions({ row }: { row: MesRow }) {
   return (
     <>
       {st === 'draft' && (
-        <Button
-          size='icon'
+        <IconButton
+          label={t('mes.ecn.release')}
           variant='ghost'
-          title={t('mes.ecn.release')}
-          aria-label={t('mes.ecn.release')}
           onClick={() => setConfirm('release')}
         >
           <Send className='size-4' />
-        </Button>
+        </IconButton>
       )}
       {(st === 'draft' || st === 'released') && (
-        <Button
-          size='icon'
+        <IconButton
+          label={t('mes.ecn.cancel')}
           variant='ghost'
-          title={t('mes.ecn.cancel')}
-          aria-label={t('mes.ecn.cancel')}
           onClick={() => setConfirm('cancel')}
         >
           <Ban className='size-4' />
-        </Button>
+        </IconButton>
       )}
       <ConfirmDialog
         open={!!confirm}

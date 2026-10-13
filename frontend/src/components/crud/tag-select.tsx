@@ -17,6 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { IconTooltip } from '@/components/icon-button'
 
 /** 标签式多选输入：已选项显示为可移除的标签，点击展开可搜索的选项列表。 */
 export function TagSelect({
@@ -54,16 +55,18 @@ export function TagSelect({
           {value.map((v) => (
             <Badge key={v} variant='secondary' className='gap-1'>
               {label(v)}
-              <button
-                type='button'
-                aria-label={t('common.remove')}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  toggle(v)
-                }}
-              >
-                <X className='size-3' />
-              </button>
+              <IconTooltip label={t('common.remove')}>
+                <button
+                  type='button'
+                  aria-label={t('common.remove')}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    toggle(v)
+                  }}
+                >
+                  <X className='size-3' />
+                </button>
+              </IconTooltip>
             </Badge>
           ))}
           <ChevronsUpDown className='ms-auto size-4 opacity-50' />

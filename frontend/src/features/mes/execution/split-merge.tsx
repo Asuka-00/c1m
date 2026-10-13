@@ -47,6 +47,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { EmptyState } from '@/components/desc-list'
+import { IconButton } from '@/components/icon-button'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
@@ -332,26 +333,24 @@ function SplitDialog({
         </DialogHeader>
         <div className='flex items-center gap-2 text-sm'>
           <Label>{t('mes.sm.childCount')}</Label>
-          <Button
-            size='icon'
+          <IconButton
+            label={t('mes.sm.childMinus')}
             variant='outline'
             className='size-7'
-            aria-label='-'
             onClick={() => setCount(n - 1)}
           >
             <Minus className='size-3' />
-          </Button>
+          </IconButton>
           <span className='w-6 text-center tabular-nums'>{n}</span>
-          <Button
-            size='icon'
+          <IconButton
+            label={t('mes.sm.childPlus')}
             variant='outline'
             className='size-7'
-            aria-label='+'
             onClick={() => setCount(n + 1)}
             data-testid='child-plus'
           >
             <Plus className='size-3' />
-          </Button>
+          </IconButton>
           {tooMany ? (
             <span
               className='ms-auto text-destructive'

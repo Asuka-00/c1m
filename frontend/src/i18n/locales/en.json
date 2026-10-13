@@ -90,6 +90,7 @@
     "en": "English"
   },
   "nav": {
+    "toggleSidebar": "Toggle sidebar",
     "selectTenant": "Select site",
     "tenants": "Sites",
     "tenantsCount": "{{count}} sites",
@@ -670,6 +671,8 @@
       "overrideReason": "override reason: {{r}}"
     },
     "sm": {
+      "childMinus": "Fewer child lots",
+      "childPlus": "More child lots",
       "title": "Split / merge",
       "split": "Split",
       "merge": "Merge",

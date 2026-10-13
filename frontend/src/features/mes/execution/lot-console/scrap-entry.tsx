@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { IconButton } from '@/components/icon-button'
 import { optLabel } from '@/features/mes/common/labels'
 import { Pick } from '../exec-parts'
 import type { Scrap } from './types'
@@ -72,14 +73,13 @@ export function ScrapEntry(p: {
                   options={scrapReasons}
                 />
               </div>
-              <Button
-                size='icon'
+              <IconButton
+                label={t('common.delete')}
                 variant='ghost'
-                aria-label={t('common.delete')}
                 onClick={() => p.setScrap(p.scrap.filter((_, j) => j !== i))}
               >
                 <Trash2 className='size-4' />
-              </Button>
+              </IconButton>
             </div>
           ))}
           <Button

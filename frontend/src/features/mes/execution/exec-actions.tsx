@@ -6,7 +6,7 @@ import { t } from '@/i18n'
 import { Gauge, History, PlayCircle } from 'lucide-react'
 import { useTenantKey } from '@/lib/api/hooks'
 import { mesApi, type MesRow } from '@/lib/api/mes/common'
-import { Button } from '@/components/ui/button'
+import { IconButton } from '@/components/icon-button'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { ReleaseDialog } from './lot-console/release-dialog'
 
@@ -20,32 +20,22 @@ const pageLink = (page: string, lot: unknown) => ({
 export function LotActions({ row }: { row: MesRow }) {
   return (
     <>
-      <Button
-        size='icon'
-        variant='ghost'
-        asChild
-        title={t('menu.mes-lot-console')}
-      >
+      <IconButton label={t('menu.mes-lot-console')} variant='ghost' asChild>
         <Link
           {...pageLink('lot-console', row.id)}
           aria-label={t('menu.mes-lot-console')}
         >
           <Gauge className='size-4' />
         </Link>
-      </Button>
-      <Button
-        size='icon'
-        variant='ghost'
-        asChild
-        title={t('menu.mes-lot-trace')}
-      >
+      </IconButton>
+      <IconButton label={t('menu.mes-lot-trace')} variant='ghost' asChild>
         <Link
           {...pageLink('lot-trace', row.id)}
           aria-label={t('menu.mes-lot-trace')}
         >
           <History className='size-4' />
         </Link>
-      </Button>
+      </IconButton>
     </>
   )
 }
@@ -63,29 +53,22 @@ export function HoldActions({ row }: { row: MesRow }) {
   })
   return (
     <>
-      <Button
-        size='icon'
-        variant='ghost'
-        asChild
-        title={t('menu.mes-lot-console')}
-      >
+      <IconButton label={t('menu.mes-lot-console')} variant='ghost' asChild>
         <Link
           {...pageLink('lot-console', row.lot_id)}
           aria-label={t('menu.mes-lot-console')}
         >
           <Gauge className='size-4' />
         </Link>
-      </Button>
+      </IconButton>
       {row.is_active && can(MES_PERM.execHold) ? (
-        <Button
-          size='icon'
+        <IconButton
+          label={t('mes.exec.release')}
           variant='ghost'
-          title={t('mes.exec.release')}
-          aria-label={t('mes.exec.release')}
           onClick={() => setOpen(true)}
         >
           <PlayCircle className='size-4' />
-        </Button>
+        </IconButton>
       ) : null}
       <ReleaseDialog
         hold={row}

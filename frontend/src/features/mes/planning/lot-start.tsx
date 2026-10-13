@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Page } from '@/components/crud'
+import { IconButton } from '@/components/icon-button'
 import { cellValue } from '@/features/mes/common/cells'
 import { RefSelect } from '@/features/mes/common/ref-select'
 import { mesErrorMessage } from '@/features/mes/common/required'
@@ -430,16 +431,15 @@ export default function LotStartPage() {
                               />
                             </td>
                             <td className='p-2'>
-                              <Button
-                                size='icon'
+                              <IconButton
+                                label={t('common.delete')}
                                 variant='ghost'
-                                aria-label={t('common.delete')}
                                 onClick={() =>
                                   setLots((ls) => ls.filter((_, k) => k !== i))
                                 }
                               >
                                 <Trash2 className='size-4 text-destructive' />
-                              </Button>
+                              </IconButton>
                             </td>
                           </tr>
                         ))}

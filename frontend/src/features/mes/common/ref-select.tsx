@@ -20,6 +20,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { IconButton } from '@/components/icon-button'
 import { rowLabel } from './labels'
 
 /** 可搜索的引用选择器（在目标实体上做服务端搜索）。 */
@@ -107,15 +108,14 @@ export function RefSelect({
         </PopoverContent>
       </Popover>
       {value && !disabled && (
-        <Button
+        <IconButton
+          label={t('mes.clear')}
           type='button'
-          size='icon'
           variant='ghost'
-          aria-label={t('mes.clear')}
           onClick={() => onChange(null, null)}
         >
           <X className='size-4' />
-        </Button>
+        </IconButton>
       )}
     </div>
   )

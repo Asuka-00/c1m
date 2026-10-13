@@ -3,7 +3,7 @@ import { t } from '@/i18n'
 import { Eye, X } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { IconButton } from '@/components/icon-button'
 import { useExitTenant } from '@/features/platform/console/enter-tenant'
 
 /** 工作区顶部栏中的模拟身份徽标。 */
@@ -20,16 +20,14 @@ export function ImpersonationBadge() {
     >
       <Eye className='size-3' />
       {t('nav.impersonating', { name: imp.name })}
-      <Button
+      <IconButton
+        label={t('nav.exitImpersonation')}
         variant='ghost'
-        size='icon'
         className='size-5'
-        aria-label={t('nav.exitImpersonation')}
-        title={t('nav.exitImpersonation')}
         onClick={exit}
       >
         <X className='size-3' />
-      </Button>
+      </IconButton>
     </Badge>
   )
 }

@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { t } from '@/i18n'
 import { Menu, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -7,7 +8,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar'
-import { Button } from '../ui/button'
+import { IconButton, type IconButtonProps } from '@/components/icon-button'
 
 /** 侧栏顶部的应用标题（模板备用组件，当前侧栏使用租户切换器）。 */
 export function AppTitle() {
@@ -41,15 +42,15 @@ function ToggleSidebar({
   className,
   onClick,
   ...props
-}: React.ComponentProps<typeof Button>) {
+}: Omit<IconButtonProps, 'label'>) {
   const { toggleSidebar } = useSidebar()
 
   return (
-    <Button
+    <IconButton
+      label={t('nav.toggleSidebar')}
       data-sidebar='trigger'
       data-slot='sidebar-trigger'
       variant='ghost'
-      size='icon'
       className={cn('aspect-square size-8 max-md:scale-125', className)}
       onClick={(event) => {
         onClick?.(event)
@@ -59,7 +60,6 @@ function ToggleSidebar({
     >
       <X className='md:hidden' />
       <Menu className='max-md:hidden' />
-      <span className='sr-only'>Toggle Sidebar</span>
-    </Button>
+    </IconButton>
   )
 }

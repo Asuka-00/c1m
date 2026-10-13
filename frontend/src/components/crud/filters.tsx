@@ -25,6 +25,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { IconButton } from '@/components/icon-button'
 import {
   type FilterDef,
   filterKeys,
@@ -175,15 +176,14 @@ function TextFilter({
         className='h-9 ps-8 pe-8 [&::-webkit-search-cancel-button]:hidden'
       />
       {value && (
-        <Button
+        <IconButton
+          label={t('table.clearSearch')}
           variant='ghost'
-          size='icon'
           className='absolute end-0.5 top-1/2 size-8 -translate-y-1/2'
           onClick={clear}
-          aria-label={t('table.clearSearch')}
         >
           <X className='size-4' />
-        </Button>
+        </IconButton>
       )}
     </div>
   )

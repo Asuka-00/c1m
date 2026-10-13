@@ -30,6 +30,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ConfirmDialog, FormDialog, Page, type Values } from '@/components/crud'
+import { IconButton } from '@/components/icon-button'
 import { StatusBadge } from '../status'
 import { statusOptions } from '../status-options'
 import { allIds, filterTree, nodeLabel as label } from '../tree'
@@ -306,10 +307,9 @@ export default function PermissionTreePage() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
-                      <Button
-                        size='icon'
+                      <IconButton
+                        label={t('common.edit')}
                         variant='ghost'
-                        aria-label={t('common.edit')}
                         onClick={() =>
                           setEdit({
                             mode: n.kind === 'menu' ? 'menu' : 'perm',
@@ -318,15 +318,14 @@ export default function PermissionTreePage() {
                         }
                       >
                         <Pencil className='size-4' />
-                      </Button>
-                      <Button
-                        size='icon'
+                      </IconButton>
+                      <IconButton
+                        label={t('common.delete')}
                         variant='ghost'
-                        aria-label={t('common.delete')}
                         onClick={() => setDeleting(n)}
                       >
                         <Trash2 className='size-4 text-destructive' />
-                      </Button>
+                      </IconButton>
                     </div>
                   )}
                 </TableCell>

@@ -90,6 +90,7 @@
     "en": "English"
   },
   "nav": {
+    "toggleSidebar": "サイドバーの切り替え",
     "selectTenant": "工場を選択",
     "tenants": "工場",
     "tenantsCount": "{{count}} 工場",
@@ -670,6 +671,8 @@
       "overrideReason": "強制解除理由：{{r}}"
     },
     "sm": {
+      "childMinus": "子ロットを減らす",
+      "childPlus": "子ロットを増やす",
       "title": "分割・統合",
       "split": "分割",
       "merge": "統合",
