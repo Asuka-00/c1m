@@ -95,7 +95,7 @@ export default function UsersPage() {
       }
       return roleIds.length ? api.users.setRoles(u.id, roleIds) : u
     },
-    [['users'], ['user-roles'], ['user-tenants']],
+    [['users'], ['user-roles'], ['user-tenants'], ['platform-tenants']],
     t('rbac.saved')
   )
   const reset = useApiMutation(

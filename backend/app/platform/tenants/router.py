@@ -619,7 +619,9 @@ def platform_set_user_tenants(
             raise HTTPException(
                 status_code=400, detail="A tenant must keep at least one owner"
             )
-        record_platform_audit(session, user, "member.remove", "user", user_id, tid)
+        record_platform_audit(
+            session, user, "member.remove", "user", target.username, tid
+        )
         session.delete(m)
     for tid, roles in want.items():
         ctx = _platform_ctx(session, user, tid)
@@ -640,7 +642,7 @@ def platform_set_user_tenants(
                     user,
                     "member.roles",
                     "user",
-                    user_id,
+                    target.username,
                     tid,
                     {"roles": roles},
                 )

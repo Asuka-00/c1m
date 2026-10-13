@@ -36,17 +36,31 @@ function Row({
   })
   const options =
     roles.data?.data.map((r) => ({ value: r.name, label: roleLabel(r) })) ?? []
+  // 已选租户不在下拉列表（如超出分页）时，用行内租户名补充选项
+  const tenantOptions =
+    row.tenant_id && !tenants.some((o) => o.value === row.tenant_id)
+      ? [
+          { value: row.tenant_id, label: row.tenant_name ?? row.tenant_id },
+          ...tenants,
+        ]
+      : tenants
   return (
     <div className='flex items-start gap-2' data-testid='tenant-row'>
       <Select
         value={row.tenant_id || undefined}
-        onValueChange={(v) => onChange({ tenant_id: v, roles: ['member'] })}
+        onValueChange={(v) =>
+          onChange({
+            tenant_id: v,
+            tenant_name: tenants.find((o) => o.value === v)?.label,
+            roles: ['member'],
+          })
+        }
       >
         <SelectTrigger className='w-44 shrink-0' aria-label={t('users.tenant')}>
           <SelectValue placeholder={t('users.pickTenant')} />
         </SelectTrigger>
         <SelectContent>
-          {tenants
+          {tenantOptions
             .filter(
               (o) => o.value === row.tenant_id || !taken.includes(o.value)
             )
