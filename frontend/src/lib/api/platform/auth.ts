@@ -5,15 +5,13 @@ import type { Message, User } from '../types'
 
 /** 认证接口：登录、当前用户、注册与密码找回。 */
 export const authApi = {
-  login: (email: string, password: string) =>
+  login: (username: string, password: string) =>
     http
       .post<{
         access_token: string
-      }>(
-        '/login/access-token',
-        new URLSearchParams({ username: email, password }),
-        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-      )
+      }>('/login/access-token', new URLSearchParams({ username, password }), {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      })
       .then((r) => r.data),
   me: () => get<User>('/users/me'),
   updateMe: (body: { full_name?: string | null; email?: string | null }) =>

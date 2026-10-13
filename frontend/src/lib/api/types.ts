@@ -185,8 +185,6 @@ export interface MenuNode {
 export interface MenuTab {
   key: string
   title: string
-  /** 原独立菜单路径（旧链接重定向到 合并页?tab=key） */
-  path: string | null
   component: string | null
   permission: string | null
 }
@@ -194,8 +192,6 @@ export interface MenuTab {
 export interface MyMenus {
   menus: MenuNode[]
   forbidden_paths: string[]
-  /** 已并入合并菜单的旧路径 -> 新路径（含 ?tab=） */
-  redirects?: Record<string, string>
   permissions: string[]
   tenant_id: UUID | null
   is_superuser: boolean

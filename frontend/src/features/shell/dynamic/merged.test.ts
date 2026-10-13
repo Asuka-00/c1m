@@ -1,20 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import type { MenuTab } from '@/lib/api'
-import { pickTab, resolveRedirect } from './merged'
+import type { MenuNode, MenuTab } from '@/lib/api'
+import { findPage, pickTab } from './merged'
 
 const tab = (key: string): MenuTab => ({
   key,
   title: key,
-  path: `/old/${key}`,
   component: `mes:${key}`,
   permission: null,
 })
 
 describe('pickTab', () => {
-  it('旧页签 key 映射到新 key', () => {
-    const tabs = [tab('members'), tab('user-roles')]
-    expect(pickTab(tabs, 'tenant-roles')?.key).toBe('user-roles')
-  })
   const tabs = [tab('a'), tab('b')]
   it('URL 中的页签可见时选中它', () => {
     expect(pickTab(tabs, 'b')?.key).toBe('b')
@@ -26,16 +21,32 @@ describe('pickTab', () => {
   })
 })
 
-describe('resolveRedirect', () => {
-  const r = { '/mes/check-rule': '/mes/check-config?tab=mes-check_rule' }
-  it('旧路径跳转到合并页并保留原查询参数', () => {
-    expect(resolveRedirect(r, '/mes/check-rule', { id: '1' })).toEqual({
+describe('findPage', () => {
+  const node = (
+    key: string,
+    path: string | null,
+    extra: Partial<MenuNode> = {}
+  ): MenuNode => ({ key, title: key, path, children: [], ...extra }) as MenuNode
+  const menus = [
+    node('g', null, {
+      children: [
+        node('mes-lot-console', '/mes/lot-console'),
+        node('mes-check-config', '/mes/check-config', {
+          tabs: [tab('mes-check_rule')],
+        }),
+      ],
+    }),
+  ]
+  it('独立菜单返回路径，页签返回合并页与 tab', () => {
+    expect(findPage(menus, 'mes-lot-console')).toEqual({
+      path: '/mes/lot-console',
+    })
+    expect(findPage(menus, 'mes-check_rule')).toEqual({
       path: '/mes/check-config',
-      search: { id: '1', tab: 'mes-check_rule' },
+      tab: 'mes-check_rule',
     })
   })
-  it('非旧路径返回 null', () => {
-    expect(resolveRedirect(r, '/mes/x')).toBeNull()
-    expect(resolveRedirect(undefined, '/mes/check-rule')).toBeNull()
+  it('不可见时返回 null', () => {
+    expect(findPage(menus, 'mes-x')).toBeNull()
   })
 })

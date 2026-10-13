@@ -15,8 +15,6 @@
     "users.pickTenant",
     "users.addTenant",
     "users.removeTenant",
-    "permissions.tenantTab",
-    "permissions.tenantOnly",
     "permissions.scopes.tenant",
     "permissions.tenantDesc",
     "nav.impersonating",
