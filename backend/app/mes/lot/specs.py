@@ -208,7 +208,7 @@ register(
                 # D25 / D26：原因码选填，hold 留空时用系统原因码 qtime_expired
                 help="Optional; for hold, blank uses system reason qtime_expired"
                 "|选填；处置为 hold 时留空使用系统原因码 qtime_expired"
-                "|任意。hold で空欄の場合はシステム理由 qtime_expired",
+                "|任意。hold で空欄の場合はシステム理由 qtime_expired（Q-Time 超過）を使用",
             ),
             # D24/D25：被引用的规则不能删，改为停用（停用后不计时、不处置）
             F("is_active", "bool", default=True),

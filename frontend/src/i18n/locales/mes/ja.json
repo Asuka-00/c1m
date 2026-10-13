@@ -901,7 +901,7 @@
       },
       "qtime_rule": {
         "warn_minutes": "経過がこの値以上で事前警告（空欄：なし）",
-        "reason": "任意。hold で空欄の場合はシステム理由 qtime_expired"
+        "reason": "任意。hold で空欄の場合はシステム理由 qtime_expired（Q-Time 超過）を使用"
       },
       "work_order": {
         "priority": "空欄：ロットタイプの既定優先度",
