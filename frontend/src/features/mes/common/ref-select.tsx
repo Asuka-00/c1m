@@ -1,5 +1,5 @@
 /** MES 引用字段选择器。 */
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
 import { Check, ChevronsUpDown, X } from 'lucide-react'
@@ -47,6 +47,8 @@ export function RefSelect({
   disabled?: boolean
 }) {
   const [open, setOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const clearable = Boolean(value) && !disabled
   const [q, setQ] = useState('')
   const tk = useTenantKey()
   const { data, isFetching } = useQuery({
@@ -60,18 +62,20 @@ export function RefSelect({
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
+            ref={triggerRef}
             id={id}
             type='button'
             variant='outline'
             role='combobox'
             disabled={disabled}
-            className={cn(
-              'w-full min-w-0 justify-between font-normal',
-              value && !disabled && 'pe-10'
-            )}
+            className='w-full min-w-0 justify-between font-normal'
           >
             <span
-              className={cn('truncate', !value && 'text-muted-foreground')}
+              className={cn(
+                'truncate',
+                !value && 'text-muted-foreground',
+                clearable && 'pe-6'
+              )}
               title={value ? String(label ?? value) : undefined}
             >
               {value ? (label ?? value) : t('common.select')}
@@ -119,14 +123,17 @@ export function RefSelect({
           </Command>
         </PopoverContent>
       </Popover>
-      {value && !disabled && (
+      {clearable && (
         <IconButton
           label={t('mes.clear')}
           type='button'
           variant='ghost'
           size='icon'
-          className='absolute end-7 top-1/2 size-6 -translate-y-1/2'
-          onClick={() => onChange(null, null)}
+          className='absolute end-8 top-1/2 size-6 -translate-y-1/2'
+          onClick={() => {
+            onChange(null, null)
+            triggerRef.current?.focus()
+          }}
         >
           <X className='size-4' />
         </IconButton>
