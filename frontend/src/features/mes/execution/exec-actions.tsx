@@ -8,7 +8,7 @@ import { useTenantKey } from '@/lib/api/hooks'
 import { mesApi, type MesRow } from '@/lib/api/mes/common'
 import { Button } from '@/components/ui/button'
 import { useMesMeta } from '@/features/mes/common/use-mes-meta'
-import { ReleaseDialog } from './lot-console'
+import { ReleaseDialog } from './lot-console/release-dialog'
 
 const pageLink = (page: string, lot: unknown) => ({
   to: '/$' as const,
