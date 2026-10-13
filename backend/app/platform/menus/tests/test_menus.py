@@ -204,12 +204,17 @@ def test_menu_layout_complete_and_synced(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
     from app.core.registry import menu_items
-    from app.platform.menus.layout import GROUPS, ITEMS
+    from app.platform.menus.layout import GROUPS, ITEMS, MERGED, tab_keys
     from app.platform.menus.service import SYSTEM_ITEMS
 
     placed = [k for items in ITEMS.values() for k, _ in items]
-    assert len(placed) == len(set(placed))  # each item once
-    assert set(placed) == set(SYSTEM_ITEMS) | set(menu_items())  # nothing missing
+    tabs = [k for *_, ts in MERGED.values() for k in ts]
+    assert len(placed) == len(set(placed)) and len(tabs) == len(set(tabs))
+    assert set(MERGED) <= set(placed) and not tab_keys() & set(placed)
+    # 每个页面恰好出现一次：独立菜单或合并菜单的页签
+    assert (set(placed) - set(MERGED)) | tab_keys() == set(SYSTEM_ITEMS) | set(
+        menu_items()
+    )
     assert [g for g, *_ in GROUPS] == list(ITEMS)
     tree = client.get(f"{API}/menus/me", headers=superuser_token_headers).json()
     top = [n["key"] for n in tree["menus"]]
@@ -222,7 +227,7 @@ def test_menu_layout_complete_and_synced(
     assert by["g-workspace"][:2] == ["dashboard", "notifications"]
     assert by["g-execution"][0] == "mes-lot-console"
     assert by["g-equipment"][0] == "mes-eqp-board"
-    assert "mes-equipment" in by["g-eqp-master"]
+    assert any("mes-equipment-master" in v for v in by.values())
     assert not {"general", "admin", "other", "tenant"} & set(top)
 
 
@@ -280,3 +285,67 @@ def test_sync_removes_merged_hold_release_menu(db: Session) -> None:
     assert "mes-hold-release" not in keys
     hold = keys["mes-lot_hold"]
     assert (hold.path, hold.component) == ("/mes/lot-hold", "mes-page:hold")
+
+
+def test_merged_menu_tabs_and_redirects(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    """合并菜单返回页签（原菜单 key / 组件 / 权限），旧路径重定向到 合并页?tab=。"""
+    from app.platform.menus.layout import MERGED
+
+    body = client.get(f"{API}/menus/me", headers=superuser_token_headers).json()
+    nodes = {}
+
+    def walk(ns: list[dict]) -> None:  # type: ignore[type-arg]
+        for n in ns:
+            nodes[n["key"]] = n
+            walk(n["children"])
+
+    walk(body["menus"])
+    for key, (path, _, view, tabs) in MERGED.items():
+        n = nodes[key]
+        assert n["path"] == path and n["component"] == view
+        assert [t["key"] for t in n["tabs"]] == tabs
+        for t in n["tabs"]:
+            assert t["component"] and t["path"] != path
+            assert body["redirects"][t["path"]] == f"{path}?tab={t['key']}"
+            assert t["key"] not in nodes  # 不再是独立菜单
+
+
+def test_merged_menu_permission_any_tab(db: Session) -> None:
+    """合并菜单：拥有任一页签权限即可见，页签按各自权限过滤。"""
+    from sqlmodel import select
+
+    from app.platform.menus.models import Menu
+    from app.platform.menus.service import allowed_perm, build_tree, redirects
+
+    assert allowed_perm("a:read,b:read", {"b:read"}, False)
+    assert not allowed_perm("a:read,b:read", {"c:read"}, False)
+    assert allowed_perm(None, set(), False) and allowed_perm("x", set(), True)
+    menus = list(db.exec(select(Menu)).all())
+    tree = build_tree(menus, {"mes.check:read"}, False)
+    flat = {c["key"]: c for g in tree for c in g.model_dump()["children"]}
+    node = flat["mes-check-config"]
+    assert [t["key"] for t in node["tabs"]] == [
+        "mes-check_rule",
+        "mes-check_plan",
+        "mes-check_binding",
+    ]
+    assert "mes-product-master" not in flat  # 无产品权限
+    assert all(v.startswith("/mes/check-config?tab=") for v in redirects(tree).values())
+
+
+def test_sync_removes_menus_merged_into_tabs(db: Session) -> None:
+    """已有库中被合并为页签的旧独立菜单在同步时删除。"""
+    from sqlmodel import select
+
+    from app.platform.menus.layout import tab_keys
+    from app.platform.menus.models import Menu
+    from app.platform.menus.service import seed_menus
+
+    old = sorted(tab_keys())
+    db.add_all(Menu(key=k, title=k, path=f"/old/{k}") for k in old)
+    db.commit()
+    seed_menus(db)
+    keys = {m.key for m in db.exec(select(Menu)).all()}
+    assert not keys & set(old)

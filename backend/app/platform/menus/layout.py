@@ -6,7 +6,8 @@
 
 # 分组 key、标题、图标、排序。
 # 顺序遵循 MES 常规：工作台 → 日常作业（执行 / 在制报表 / 计划 / 仓储 / 设备 / 质量）
-# → 主数据（工艺 / 卡控 / 产品物料 / 设备主数据 / 工厂 / 批次规则 / 基础数据）→ 系统。
+# → 主数据（工艺 / 卡控 / 产品物料 / 设备主数据 / 工厂 / 基础数据）→ 系统。
+# 低频从属主数据（类型 / 分类 / 配置链）以合并菜单的页签呈现，见 MERGED。
 # 菜单同步（seed_menus）按此幂等更新已有库的排序与父级。
 GROUPS: list[tuple[str, str, str, int]] = [
     ("g-workspace", "Workspace|工作台|ワークスペース", "LayoutDashboard", 0),
@@ -21,7 +22,6 @@ GROUPS: list[tuple[str, str, str, int]] = [
     ("g-product", "Product & Material|产品与物料|製品・資材", "Package", 80),
     ("g-eqp-master", "Equipment Master|设备主数据|設備マスタ", "ServerCog", 85),
     ("g-factory", "Factory Modeling|工厂建模|工場モデリング", "Factory", 90),
-    ("g-lot", "Lot Rules|批次规则|ロット規則", "Layers", 95),
     ("g-master", "Master Data|基础数据|基準データ", "BookOpen", 100),
     ("g-system", "System|系统管理|システム管理", "Shield", 110),
 ]
@@ -81,30 +81,21 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-recipe", "Recipe|配方|レシピ"),
         ("mes-param_spec", "Parameter Spec|参数规格|パラメータ規格"),
         ("mes-qtime_rule", "Q-Time Rule|Q-Time 规则|Q タイムルール"),
+        ("mes-lot-rules", "Lot Rules|批次规则|ロット規則"),
     ],
     "g-check": [
-        ("mes-check_binding", "Check Binding|卡控绑定|チェック割当"),
-        ("mes-check_plan", "Check Plan|卡控方案|チェックプラン"),
-        ("mes-check_rule", "Check Rule|卡控规则|チェックルール"),
+        ("mes-check-config", "Check Config|卡控配置|チェック設定"),
     ],
     "g-product": [
-        ("mes-product", "Product|产品|製品"),
-        ("mes-product_family", "Product Family|产品族|製品ファミリー"),
-        ("mes-tech_node", "Technology Node|工艺节点|テクノロジーノード"),
-        ("mes-material", "Material|物料|資材"),
-        ("mes-material_type", "Material Type|物料类型|資材タイプ"),
-        ("mes-carrier", "Carrier|载具|キャリア"),
-        ("mes-carrier_type", "Carrier Type|载具类型|キャリアタイプ"),
+        ("mes-product-master", "Product|产品|製品"),
+        ("mes-material-master", "Material|物料|資材"),
+        ("mes-carrier-master", "Carrier|载具|キャリア"),
         ("mes-reticle", "Reticle|光罩|レチクル"),
         ("mes-fixture", "Fixture|治具|治具"),
     ],
     "g-eqp-master": [
-        ("mes-equipment", "Equipment|设备|設備"),
-        ("mes-equipment_type", "Equipment Type|设备类型|設備タイプ"),
-        ("mes-equipment_group", "Equipment Group|设备组|設備グループ"),
-        ("mes-equipment_capability", "Capability|设备能力|設備能力"),
-        ("mes-e10_state", "E10 State Model|E10 状态模型|E10 状態モデル"),
-        ("mes-e10_auto_rule", "E10 Auto Transition|E10 自动迁移|E10 自動遷移"),
+        ("mes-equipment-master", "Equipment|设备|設備"),
+        ("mes-e10-model", "E10 State Model|E10 状态模型|E10 状態モデル"),
     ],
     "g-factory": [
         ("mes-site", "Site|工厂|工場"),
@@ -112,11 +103,6 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-workcenter", "Work Center|工作中心|ワークセンター"),
         ("mes-shift", "Shift|班次|シフト"),
         ("mes-work_calendar", "Work Calendar|工作日历|稼働カレンダー"),
-    ],
-    "g-lot": [
-        ("mes-lot_type", "Lot Type|批次类型|ロットタイプ"),
-        ("mes-lot_priority", "Priority|优先级|優先度"),
-        ("mes-split_merge_rule", "Split / Merge Rule|分批合批规则|分割・統合ルール"),
     ],
     "g-master": [
         ("mes-reason_code", "Reason Code|原因代码|理由コード"),
@@ -142,7 +128,90 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
 # 已废弃系统分组的 key（同步时删除）
 OBSOLETE_PREFIXES = ("mes-g-",)
 # 已并入其他页面的菜单：mes-hold-release → Hold 管理（mes-lot_hold）
-OBSOLETE_KEYS = {"general", "tenant", "admin", "other", "mes-hold-release"}
+OBSOLETE_KEYS = {"general", "tenant", "admin", "other", "mes-hold-release", "g-lot"}
+
+
+# 合并菜单：key -> (路径, 图标, 视图, [页签 key])。
+# 视图 "tabs"：页签页（各页签复用原页面组件，页签写入 URL ?tab=）；
+# "tree"：层级树 + 详情（页签顺序即层级，下级实体的父字段名 = 上级实体编码）。
+# 页签 key 为原独立菜单 key：菜单同步时删除旧菜单，旧路径由前端重定向到对应页签。
+MERGED: dict[str, tuple[str, str, str, list[str]]] = {
+    "mes-check-config": (
+        "/mes/check-config",
+        "ShieldAlert",
+        "tabs",
+        ["mes-check_rule", "mes-check_plan", "mes-check_binding"],
+    ),
+    "mes-product-master": (
+        "/mes/product-master",
+        "Package",
+        "tabs",
+        ["mes-product", "mes-product_family", "mes-tech_node"],
+    ),
+    "mes-material-master": (
+        "/mes/material-master",
+        "Boxes",
+        "tabs",
+        ["mes-material", "mes-material_type"],
+    ),
+    "mes-carrier-master": (
+        "/mes/carrier-master",
+        "Container",
+        "tabs",
+        ["mes-carrier", "mes-carrier_type"],
+    ),
+    "mes-equipment-master": (
+        "/mes/equipment-master",
+        "Cpu",
+        "tabs",
+        [
+            "mes-equipment",
+            "mes-equipment_type",
+            "mes-equipment_group",
+            "mes-equipment_capability",
+        ],
+    ),
+    "mes-e10-model": (
+        "/mes/e10-model",
+        "Activity",
+        "tabs",
+        ["mes-e10_state", "mes-e10_auto_rule"],
+    ),
+    "mes-lot-rules": (
+        "/mes/lot-rules",
+        "Layers",
+        "tabs",
+        ["mes-lot_type", "mes-lot_priority", "mes-split_merge_rule"],
+    ),
+}
+
+# 页签标题（原独立菜单的标题，"en|zh|ja"）
+TAB_TITLES: dict[str, str] = {
+    "mes-check_rule": "Check Rule|卡控规则|チェックルール",
+    "mes-check_plan": "Check Plan|卡控方案|チェックプラン",
+    "mes-check_binding": "Check Binding|卡控绑定|チェック割当",
+    "mes-product": "Product|产品|製品",
+    "mes-product_family": "Product Family|产品族|製品ファミリー",
+    "mes-tech_node": "Technology Node|工艺节点|テクノロジーノード",
+    "mes-material": "Material|物料|資材",
+    "mes-material_type": "Material Type|物料类型|資材タイプ",
+    "mes-carrier": "Carrier|载具|キャリア",
+    "mes-carrier_type": "Carrier Type|载具类型|キャリアタイプ",
+    "mes-equipment": "Equipment|设备|設備",
+    "mes-equipment_type": "Equipment Type|设备类型|設備タイプ",
+    "mes-equipment_group": "Equipment Group|设备组|設備グループ",
+    "mes-equipment_capability": "Capability|设备能力|設備能力",
+    "mes-e10_state": "E10 State Model|E10 状态模型|E10 状態モデル",
+    "mes-e10_auto_rule": "E10 Auto Transition|E10 自动迁移|E10 自動遷移",
+    "mes-lot_type": "Lot Type|批次类型|ロットタイプ",
+    "mes-lot_priority": "Priority|优先级|優先度",
+    "mes-split_merge_rule": "Split / Merge Rule|分批合批规则|分割・統合ルール",
+}
+
+
+def tab_keys() -> set[str]:
+    """所有合并页签的 key（不再作为独立菜单存在）。"""
+    return {k for _, _, _, tabs in MERGED.values() for k in tabs}
 
 
 def titles(lang_index: int) -> dict[str, str]:
@@ -154,4 +223,5 @@ def titles(lang_index: int) -> dict[str, str]:
     out = {k: lbl.split("|")[lang_index] for k, lbl, _, _ in GROUPS}
     for items in ITEMS.values():
         out.update({k: lbl.split("|")[lang_index] for k, lbl in items})
+    out.update({k: lbl.split("|")[lang_index] for k, lbl in TAB_TITLES.items()})
     return out

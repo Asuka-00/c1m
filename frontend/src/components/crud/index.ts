@@ -1,4 +1,5 @@
 export * from './page'
+export * from './page-embed'
 export * from './data-table'
 export * from './form-dialog'
 export * from './row-actions'

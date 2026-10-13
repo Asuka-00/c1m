@@ -41,7 +41,10 @@ def test_meta_and_menus(client: TestClient, db: Session) -> None:
     site = next(e for e in meta["entities"] if e["code"] == "site")
     assert site["can_write"] and site["read"] == "mes.org:read"
     menus = client.get("/api/v1/menus/me", headers=m.h).json()
-    keys = {c["key"] for g in menus["menus"] for c in g["children"]}
+    # 独立菜单与合并菜单的页签
+    keys = {c["key"] for g in menus["menus"] for c in g["children"]} | {
+        t["key"] for g in menus["menus"] for c in g["children"] for t in c["tabs"]
+    }
     assert {
         "mes-site",
         "mes-workcenter",

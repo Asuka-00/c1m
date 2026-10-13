@@ -59,13 +59,27 @@ export interface MenuNode {
   path: string | null
   icon: string | null
   component: string | null
+  /** 权限编码；多个以逗号分隔表示“任一即可”（合并菜单） */
   permission: string | null
+  /** 合并菜单的页签（已按权限过滤） */
+  tabs?: MenuTab[]
   children: MenuNode[]
+}
+/** 合并菜单的页签（原独立菜单）。 */
+export interface MenuTab {
+  key: string
+  title: string
+  /** 原独立菜单路径（旧链接重定向到 合并页?tab=key） */
+  path: string | null
+  component: string | null
+  permission: string | null
 }
 /** 当前用户菜单：菜单树、权限与禁止访问的路径。 */
 export interface MyMenus {
   menus: MenuNode[]
   forbidden_paths: string[]
+  /** 已并入合并菜单的旧路径 -> 新路径（含 ?tab=） */
+  redirects?: Record<string, string>
   permissions: string[]
   tenant_id: UUID | null
   is_superuser: boolean

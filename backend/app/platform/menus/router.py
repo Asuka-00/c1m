@@ -23,7 +23,7 @@ from app.platform.menus.schemas import (
     MenuUpdate,
     MyMenus,
 )
-from app.platform.menus.service import build_tree, forbidden_paths
+from app.platform.menus.service import build_tree, forbidden_paths, redirects
 from app.platform.rbac.service import user_permission_codes
 
 router = APIRouter(prefix="/menus", tags=["menus"])
@@ -52,6 +52,7 @@ def my_menus(
     return MyMenus(
         menus=tree,
         forbidden_paths=forbidden_paths(menus, tree),
+        redirects=redirects(tree),
         permissions=sorted(perms),
         tenant_id=tenant_id,
         is_superuser=current_user.is_superuser,

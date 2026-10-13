@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import type { MenuNode } from '@/lib/api'
 import { useMyMenus } from '@/lib/api/hooks'
 import { cn } from '@/lib/utils'
+import { resolveRedirect } from '@/features/shell/dynamic/merged'
 import { useMesMeta } from './use-mes-meta'
 
 const paths = (ns: MenuNode[]): string[] =>
@@ -35,13 +36,19 @@ export function RefLink({
   // 仅链接到当前用户可访问的页面
   const visible = new Set(paths(menus.data?.menus ?? []))
   const want = target === 'lot' ? '/mes/lot-console' : e && `/mes/${e.url}`
-  const path = want && visible.has(want) ? want.slice(1) : null
+  const base = target === 'lot' ? { lot: id } : { id }
+  // 已并入合并菜单的页面：跳转到合并页对应页签
+  const moved =
+    want && !visible.has(want)
+      ? resolveRedirect(menus.data?.redirects, want, base)
+      : null
+  const path = want && visible.has(want) ? want.slice(1) : moved?.path.slice(1)
   if (!path) return <>{label}</>
   return (
     <Link
       to='/$'
       params={{ _splat: path }}
-      search={(target === 'lot' ? { lot: id } : { id }) as never}
+      search={(moved?.search ?? base) as never}
       className={cn(
         'text-blue-600 underline-offset-2 hover:underline dark:text-blue-400',
         mono && 'font-mono'
