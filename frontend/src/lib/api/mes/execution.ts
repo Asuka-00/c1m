@@ -561,11 +561,15 @@ export const execApi = {
     http
       .get<{ data: OeeRow[] }>('/mes/exec/reports/oee', { params: p })
       .then((r) => r.data.data),
-  /** Hold 列表：默认生效中，可切换已解除（历史）/ 全部。 */
-  holds: (status: 'active' | 'released' | 'all' = 'active') =>
-    http
-      .get<{ data: HoldRow[] }>('/mes/exec/holds', { params: { status } })
-      .then((r) => r.data.data),
+  /** Hold 列表（服务端分页 / 搜索 / 筛选）；Hold 时间范围映射为 date_from / date_to。 */
+  holds: (p: Record<string, string | number | undefined>) => {
+    const { held_at_from, held_at_to, ...rest } = p
+    return http
+      .get<{ data: HoldRow[]; count: number }>('/mes/exec/holds', {
+        params: { ...rest, date_from: held_at_from, date_to: held_at_to },
+      })
+      .then((r) => r.data)
+  },
   /** 批量释放 Hold。 */
   releaseBatch: (body: {
     hold_ids: string[]

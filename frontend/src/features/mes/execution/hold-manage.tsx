@@ -26,9 +26,7 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   DataTable,
   Page,
-  clientList,
   downloadCsv,
-  rangeParam,
   searchFilter,
   useListParams,
   type FilterDef,
@@ -48,7 +46,7 @@ type Status = 'active' | 'released' | 'all'
 const codeOptions =
   (entity: string, f: Record<string, string> = {}) =>
   () =>
-    mesApi.list(entity, { ...f, page_size: 200 }).then((r) =>
+    mesApi.list(entity, { ...f, page_size: 100 }).then((r) =>
       r.data.map((x) => ({
         value: String(x.code),
         label: optLabel(x as { code: string; name?: string }),
@@ -109,35 +107,27 @@ export default function HoldManagePage() {
     setSel([])
   }
   const q = useQuery({
-    queryKey: ['mes', 'exec', tk, 'holds', status],
-    queryFn: () => execApi.holds(status),
+    queryKey: ['mes', 'exec', tk, 'holds', lp.query],
+    queryFn: () => execApi.holds({ status: 'all', ...lp.query }),
   })
-  const all = useMemo(() => q.data ?? [], [q.data])
-  const from = lp.filters.held_at_from
-  const to = lp.filters.held_at_to
-  const view = clientList(all, lp, {
-    text: (r) =>
-      [r.lot, r.product, r.reason, r.reason_name, r.comment, r.held_by].join(
-        ' '
-      ),
-    match: {
-      status: () => true, // 已在服务端按状态取数
-      held_at_from: (r) =>
-        !!r.held_at &&
-        +new Date(r.held_at) >= +new Date(rangeParam(from!, false)),
-      held_at_to: (r) =>
-        !!r.held_at && +new Date(r.held_at) <= +new Date(rangeParam(to!, true)),
-    },
-  })
-  const activeView = view.rows.filter((r) => r.is_active)
+  const rows = useMemo(() => q.data?.data ?? [], [q.data])
+  const total = q.data?.count ?? 0
+  /** 已勾选 Hold 的批次号（跨页保留）。 */
+  const [selLots, setSelLots] = useState<Record<string, string>>({})
+  const activeView = rows.filter((r) => r.is_active)
   const allOn =
     activeView.length > 0 && activeView.every((r) => sel.includes(r.id))
-  const toggleAll = () =>
+  const toggleAll = () => {
+    setSelLots((m) => ({
+      ...m,
+      ...Object.fromEntries(activeView.map((r) => [r.id, r.lot])),
+    }))
     setSel((s) =>
       allOn
         ? s.filter((x) => !activeView.some((r) => r.id === x))
         : [...new Set([...s, ...activeView.map((r) => r.id)])]
     )
+  }
   const showRelease = status !== 'active'
   return (
     <Page
@@ -147,8 +137,14 @@ export default function HoldManagePage() {
         <>
           <Button
             variant='outline'
-            disabled={!view.total}
-            onClick={() =>
+            disabled={!total}
+            onClick={async () => {
+              const { data: all } = await execApi.holds({
+                status: 'all',
+                ...lp.query,
+                page: 1,
+                page_size: 5000,
+              })
               downloadCsv(
                 'lot_hold',
                 [
@@ -166,7 +162,7 @@ export default function HoldManagePage() {
                   t('mes.holdrel.releaseReason'),
                   t('mes.holdrel.releaseComment'),
                 ],
-                view.filtered.map((r) => [
+                all.map((r) => [
                   r.lot,
                   r.product,
                   r.step_seq,
@@ -182,7 +178,7 @@ export default function HoldManagePage() {
                   r.release_comment,
                 ])
               )
-            }
+            }}
           >
             <Download className='size-4' />
             {t('mes.export')}
@@ -201,8 +197,8 @@ export default function HoldManagePage() {
       }
     >
       <DataTable
-        rows={view.rows}
-        total={view.total}
+        rows={rows}
+        total={total}
         params={lp}
         filters={filters}
         loading={q.isLoading}
@@ -226,11 +222,12 @@ export default function HoldManagePage() {
                       <Checkbox
                         checked={sel.includes(r.id)}
                         aria-label={r.lot}
-                        onCheckedChange={(v) =>
+                        onCheckedChange={(v) => {
+                          setSelLots((m) => ({ ...m, [r.id]: r.lot }))
                           setSel((s) =>
                             v ? [...s, r.id] : s.filter((x) => x !== r.id)
                           )
-                        }
+                        }}
                       />
                     ) : null,
                 },
@@ -334,7 +331,9 @@ export default function HoldManagePage() {
       {releasing && (
         <ReleaseDialog
           ids={releasing}
-          lots={all.filter((r) => releasing.includes(r.id)).map((r) => r.lot)}
+          lots={releasing.map(
+            (id) => selLots[id] ?? rows.find((r) => r.id === id)?.lot ?? id
+          )}
           onClose={(done) => {
             setReleasing(null)
             if (done) setSel([])

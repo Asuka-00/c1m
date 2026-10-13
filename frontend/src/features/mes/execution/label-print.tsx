@@ -17,7 +17,6 @@ import {
 import {
   DataTable,
   Page,
-  clientList,
   useListParams,
   type FilterDef,
 } from '@/components/crud'
@@ -25,7 +24,15 @@ import { enumLabel } from '@/features/mes/common/labels'
 import { printHtml, type CodeKind, type LabelData } from './label-utils'
 
 type Kind = 'lot' | 'carrier'
-const ACTIVE = ['waiting', 'moved_in', 'running', 'tracked_out', 'completed']
+const LOT_STATUS = [
+  'waiting',
+  'moved_in',
+  'running',
+  'tracked_out',
+  'completed',
+  'stored',
+]
+const CARRIER_STATUS = ['available', 'in_use', 'dirty', 'hold', 'retired']
 const s = (v: unknown) => (v == null ? '' : String(v))
 
 /** 行 -> 标签数据。 */
@@ -52,11 +59,7 @@ export default function LabelPrint() {
   const tk = useTenantKey()
   const [kind, setKind] = useState<Kind>('lot')
   const [code, setCode] = useState<CodeKind>('both')
-  const [picked, setPicked] = useState<Record<string, boolean>>({})
-  const q = useQuery({
-    queryKey: ['mes', kind, tk, 'labels'],
-    queryFn: () => mesApi.list(kind, { page_size: 100 }),
-  })
+  const [picked, setPicked] = useState<Record<string, MesRow>>({})
   const prio = useQuery({
     queryKey: ['mes', 'lot_priority', tk, 'all'],
     queryFn: () => mesApi.list('lot_priority', { page_size: 100 }),
@@ -66,13 +69,6 @@ export default function LabelPrint() {
       new Set((prio.data?.data ?? []).filter((p) => p.is_hot).map((p) => p.id)),
     [prio.data]
   )
-  const all = useMemo(
-    () =>
-      (q.data?.data ?? []).filter(
-        (r) => kind === 'carrier' || ACTIVE.includes(s(r.lot_status))
-      ),
-    [q.data, kind]
-  )
   const filters: FilterDef[] = [
     { type: 'text', name: 'q', placeholder: t('mes.label.search') },
     kind === 'lot'
@@ -80,25 +76,28 @@ export default function LabelPrint() {
           type: 'select',
           name: 'lot_status',
           label: t('mes.label.allStatus'),
-          options: ACTIVE.map((v) => ({
+          options: LOT_STATUS.map((v) => ({
             value: v,
             label: enumLabel('lot_status', v),
           })),
         }
       : {
           type: 'select',
-          name: 'carrier_status',
+          name: 'status_code',
           label: t('mes.label.allStatus'),
-          options: [...new Set(all.map((r) => s(r.carrier_status)))]
-            .filter(Boolean)
-            .map((v) => ({ value: v, label: enumLabel('carrier_status', v) })),
+          options: CARRIER_STATUS.map((v) => ({
+            value: v,
+            label: enumLabel('asset_status', v),
+          })),
         },
   ]
   const lp = useListParams(filters)
-  const view = clientList(all, lp, {
-    text: (r) => `${s(r.code)} ${s(r.product_label)} ${s(r.name)}`,
+  const q = useQuery({
+    queryKey: ['mes', kind, tk, 'labels', lp.query],
+    queryFn: () => mesApi.list(kind, lp.query),
   })
-  const chosen = all.filter((r) => picked[r.id])
+  const rows = q.data?.data ?? []
+  const chosen = Object.values(picked)
   const print = async () => {
     const html = await printHtml(
       chosen.map((r) => toLabel(kind, r, hot)),
@@ -111,7 +110,7 @@ export default function LabelPrint() {
     w.focus()
     w.print()
   }
-  const allOnPage = view.rows.length > 0 && view.rows.every((r) => picked[r.id])
+  const allOnPage = rows.length > 0 && rows.every((r) => !!picked[r.id])
   return (
     <Page title={t('menu.mes-label-print')} description={t('mes.label.hint')}>
       <div className='flex flex-wrap items-center gap-3'>
@@ -151,8 +150,8 @@ export default function LabelPrint() {
         </Button>
       </div>
       <DataTable
-        rows={view.rows}
-        total={view.total}
+        rows={rows}
+        total={q.data?.count ?? 0}
         params={lp}
         filters={filters}
         loading={q.isLoading}
@@ -165,10 +164,14 @@ export default function LabelPrint() {
                 aria-label={t('mes.label.pickAll')}
                 checked={allOnPage}
                 onCheckedChange={(v) =>
-                  setPicked((p) => ({
-                    ...p,
-                    ...Object.fromEntries(view.rows.map((r) => [r.id, !!v])),
-                  }))
+                  setPicked((p) => {
+                    const n = { ...p }
+                    for (const r of rows) {
+                      if (v) n[r.id] = r
+                      else delete n[r.id]
+                    }
+                    return n
+                  })
                 }
               />
             ),
@@ -177,7 +180,12 @@ export default function LabelPrint() {
                 aria-label={s(r.code)}
                 checked={!!picked[r.id]}
                 onCheckedChange={(v) =>
-                  setPicked((p) => ({ ...p, [r.id]: !!v }))
+                  setPicked((p) => {
+                    const n = { ...p }
+                    if (v) n[r.id] = r
+                    else delete n[r.id]
+                    return n
+                  })
                 }
               />
             ),
@@ -199,7 +207,7 @@ export default function LabelPrint() {
             cell: (r) =>
               kind === 'lot'
                 ? enumLabel('lot_status', s(r.lot_status))
-                : enumLabel('carrier_status', s(r.carrier_status)),
+                : enumLabel('asset_status', s(r.status_code)),
           },
         ]}
       />

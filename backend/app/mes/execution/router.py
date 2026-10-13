@@ -10,7 +10,7 @@ import uuid
 from datetime import date, datetime, time, timedelta
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.core.deps import SessionDep
@@ -131,21 +131,44 @@ def holds_list(
     product_id: uuid.UUID | None = None,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
+    reason: str | None = None,
+    product: str | None = None,
+    q: str | None = Query(default=None, max_length=100),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=5000),
+    sort_by: str = "held_at",
+    sort_order: Literal["asc", "desc"] = "desc",
 ) -> Any:
-    """Holds for the Hold management page (active by default; history / all)."""
+    """Hold 管理页列表：服务端筛选、搜索、排序与分页，返回 ``{data, count}``。"""
     _need(ctx, "mes.exec:read")
-    return {
-        "data": svc.list_holds(
-            session,
-            ctx.id,
-            {"active": True, "released": False}.get(status),
-            reason_id,
-            source,
-            product_id,
-            date_from,
-            date_to,
+    rows = svc.list_holds(
+        session,
+        ctx.id,
+        {"active": True, "released": False}.get(status),
+        reason_id,
+        source,
+        product_id,
+        date_from,
+        date_to,
+    )
+    if reason:
+        rows = [r for r in rows if r["reason"] == reason]
+    if product:
+        rows = [r for r in rows if r["product"] == product]
+    if q:
+        k = q.strip().lower()
+        keys = ("lot", "product", "reason", "reason_name", "comment", "held_by")
+        rows = [r for r in rows if any(k in str(r.get(f) or "").lower() for f in keys)]
+    if rows and sort_by in rows[0]:
+        rows.sort(
+            key=lambda r: (
+                r.get(sort_by) is None,
+                r.get(sort_by) if r.get(sort_by) is not None else 0,
+            ),
+            reverse=sort_order == "desc",
         )
-    }
+    start = (page - 1) * page_size
+    return {"data": rows[start : start + page_size], "count": len(rows)}
 
 
 class BatchReleaseIn(BaseModel):

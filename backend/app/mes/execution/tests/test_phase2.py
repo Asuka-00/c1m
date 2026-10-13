@@ -360,6 +360,23 @@ def test_hold_list_and_batch_release(client: TestClient, db: Session) -> None:
     other = f.m.post("reason_code", {"code": "HX", "name": "x", "reason_type": "hold"})
     q = client.get(f"{EXEC}/holds", headers=f.m.h, params={"reason_id": other["id"]})
     assert q.json()["data"] == []
+    # 服务端分页 / 搜索 / 按编码筛选
+    pg = client.get(f"{EXEC}/holds", headers=f.m.h, params={"page_size": 2}).json()
+    assert pg["count"] == 3 and len(pg["data"]) == 2
+    p2 = {"page": 2, "page_size": 2}
+    assert (
+        len(client.get(f"{EXEC}/holds", headers=f.m.h, params=p2).json()["data"]) == 1
+    )
+    one_lot = {"q": rows[0]["lot"]}
+    assert (
+        client.get(f"{EXEC}/holds", headers=f.m.h, params=one_lot).json()["count"] == 1
+    )
+    assert (
+        client.get(f"{EXEC}/holds", headers=f.m.h, params={"reason": "HX"}).json()[
+            "count"
+        ]
+        == 0
+    )
     ids = [r["id"] for r in rows[:2]]
     # 需要释放类原因代码
     f.post(f"{EXEC}/holds/release-batch", {"hold_ids": ids, "reason_id": hr}, 422)
