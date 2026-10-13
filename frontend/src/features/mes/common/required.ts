@@ -67,17 +67,92 @@ const KNOWN: Record<string, string> = {
     'mes.err.productNeedsDefaultRoute',
 }
 
+/** 后端业务错误码（decisions P01/P02/P14/P16、lot-state-machine v0.2）。 */
+export const MES_ERROR_CODES = [
+  'on_hold',
+  'lot_status',
+  'lot_busy',
+  'batch_blocked',
+  'idempotency_in_progress',
+  'idempotency_key_mismatch',
+  'idempotency_key_reused',
+] as const
+type MesErrorCode = (typeof MES_ERROR_CODES)[number]
+const isCode = (x: unknown): x is MesErrorCode =>
+  typeof x === 'string' && (MES_ERROR_CODES as readonly string[]).includes(x)
+
+/** 合批源列表重复或包含目标（P14）：后端以 lot_status / source_lot_ids 字段返回。 */
+const MERGE_SOURCES = /duplicate|repeated|target|重复|目标/i
+
+/**
+ * 字段级错误（422 `[{loc: ['body', 字段], msg}]`）中的业务错误码翻译。
+ * 只处理 on_hold、lot_status 与合批源校验；其他字段返回 null 交给原逻辑。
+ */
+function fieldCodeMessage(name: string, rest: string): string | null {
+  if (name === 'on_hold') return t('mes.err.code.on_hold')
+  if (
+    (name === 'lot_status' || name === 'source_lot_ids') &&
+    MERGE_SOURCES.test(rest)
+  )
+    return t('mes.err.code.merge_sources')
+  if (name !== 'lot_status') return null
+  const stage = /^cannot (\w+) a (\w+) lot$/.exec(rest)
+  if (stage)
+    return t('mes.err.code.lot_status_stage', {
+      stage: t(`mes.exec.stage.${stage[1]}`),
+      status: enumLabel('lot_status', stage[2]),
+    })
+  const is = /^lot is (\w+)$/.exec(rest)
+  if (is)
+    return t('mes.err.code.lot_status_is', {
+      status: enumLabel('lot_status', is[1]),
+    })
+  return t('mes.err.code.lot_status')
+}
+
+/**
+ * 整体错误码翻译：`detail` 为错误码字符串或 `{code}` 对象时
+ * （lot_busy 409、batch_blocked 409、幂等键 409/422 等）。
+ *
+ * @returns 本地化消息；不是已知错误码时为 null
+ */
+export function mesCodeMessage(err: unknown): string | null {
+  if (!(err instanceof AxiosError) || !err.response) return null
+  const d = (err.response.data as { detail?: unknown })?.detail
+  const code =
+    typeof d === 'string'
+      ? d
+      : d && typeof d === 'object' && !Array.isArray(d)
+        ? (d as { code?: unknown }).code
+        : null
+  return isCode(code) ? t(`mes.err.code.${code}`) : null
+}
+
 /** 用实体字段标签翻译 MES 422 错误详情（"field: message"）。 */
 export function mesErrorMessage(err: unknown, e: MesEntity | undefined) {
+  const coded = mesCodeMessage(err)
+  if (coded) return coded
   const d =
     err instanceof AxiosError && err.response?.status === 422
       ? (err.response.data as { detail?: unknown })?.detail
       : null
-  if (!e || !Array.isArray(d)) return errorMessage(err)
-  const msgs = d.map((x: { loc?: string[]; msg?: string }) => {
+  if (!Array.isArray(d)) return errorMessage(err)
+  const parse = (x: { loc?: string[]; msg?: string }) => {
     const msg = String(x.msg ?? '')
     const name = x.loc?.[1] ?? msg.split(':')[0]
     const rest = msg.slice(msg.indexOf(':') + 1).trim()
+    return { name, rest }
+  }
+  // 全部是业务错误码时直接给出本地化提示（不加“校验失败”前缀）
+  const codes = d.map((x) => {
+    const { name, rest } = parse(x)
+    return fieldCodeMessage(name, rest)
+  })
+  if (codes.every(Boolean)) return [...new Set(codes)].join('；')
+  if (!e) return errorMessage(err)
+  const msgs = d.map((x: { loc?: string[]; msg?: string }, i) => {
+    const { name, rest } = parse(x)
+    if (codes[i]) return codes[i]
     const label = e.fields.some((f) => f.name === name)
       ? fieldLabel(e, name)
       : entityLabel(name)

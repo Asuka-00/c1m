@@ -479,7 +479,19 @@
       "defaultsFrom": "空欄の場合は{{field}}を使用",
       "parentTypeMismatch": "親設備の設備タイプと一致する必要があります（空欄で継承）",
       "duplicateDefaultRoute": "この製品には既定ルートがあります",
-      "productNeedsDefaultRoute": "有効化の前に有効なルートを既定として割り当てる必要があります"
+      "productNeedsDefaultRoute": "有効化の前に有効なルートを既定として割り当てる必要があります",
+      "code": {
+        "on_hold": "ロットはホールド中です。先にホールドを解除してください",
+        "lot_status": "現在のロット状態ではこの操作はできません",
+        "lot_status_is": "ロットは「{{status}}」状態のため、この操作はできません",
+        "lot_status_stage": "「{{status}}」状態のロットは {{stage}} できません",
+        "lot_busy": "ロットは他の操作で使用中です。しばらくしてから再試行してください",
+        "batch_blocked": "一括作業がチェックで阻止されました。各ロットの結果を確認してください",
+        "idempotency_in_progress": "同じリクエストを処理中です。しばらくして更新してください",
+        "idempotency_key_mismatch": "再送信の内容が最初のリクエストと異なります。更新してやり直してください",
+        "idempotency_key_reused": "このリクエストキーは別の操作で使用済みです。更新して再試行してください",
+        "merge_sources": "統合元ロットに重複があるか、統合先ロットが含まれています"
+      }
     },
     "autoHint": "空欄の場合は自動採番",
     "currentStep": "現在",
