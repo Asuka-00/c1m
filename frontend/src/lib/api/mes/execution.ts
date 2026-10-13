@@ -130,6 +130,11 @@ export interface HoldRow {
   release_comment: string | null
   /** 批次状态（N6；旧版接口无此字段） */
   lot_status?: string | null
+  /** D20：Q-Time 自动 Hold 的规则、起止工步与超时秒数（手动 Hold / 旧记录为 null 或缺失） */
+  qtime_rule_id?: string | null
+  qtime_from_step_id?: string | null
+  qtime_to_step_id?: string | null
+  qtime_overdue_seconds?: number | null
 }
 /** 追溯对象类型。 */
 export type TraceKind = 'lot' | 'wafer' | 'equipment' | 'material_lot'

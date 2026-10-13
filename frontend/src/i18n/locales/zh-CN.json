@@ -1149,6 +1149,14 @@
     },
     "reasonCode": {
       "qtime_expired": "Q-Time 超时"
+    },
+    "qtimeHold": {
+      "overdue": "超时 {{time}}",
+      "steps": "工步 {{from}} → {{to}}",
+      "rule": "Q-Time 规则",
+      "minutes": "{{m}} 分钟",
+      "hours": "{{h}} 小时",
+      "hoursMinutes": "{{h}} 小时 {{m}} 分钟"
     }
   },
   "notify": {

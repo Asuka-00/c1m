@@ -16,6 +16,8 @@ import { EmptyState } from '@/components/desc-list'
 import { enumLabel, reasonLabel } from '@/features/mes/common/labels'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { canHold } from '../lot-rules'
+import type { QtimeHoldFields, StepNames } from '../qtime-hold'
+import { QtimeHoldInfo } from '../qtime-hold-info'
 import { HoldDialog } from './hold-dialog'
 import { ReleaseDialog } from './release-dialog'
 
@@ -79,6 +81,7 @@ function HoldRow({
         {String(h.source ?? '')}
       </div>
       {!!h.comment && <div className='text-xs'>{String(h.comment)}</div>}
+      <QtimeHoldInfo hold={h as QtimeHoldFields} steps={stepNames(cx)} />
       {can(MES_PERM.execHold) && (
         <Button
           size='sm'
@@ -97,5 +100,15 @@ function HoldRow({
         onOpenChange={setOpen}
       />
     </div>
+  )
+}
+
+/** 当前流程工步 id -> “序号 · 工序” 显示名（用于 Q-Time Hold 的起止工步）。 */
+function stepNames(cx: ExecContext): StepNames {
+  return Object.fromEntries(
+    (cx.route_steps ?? []).map((s) => [
+      s.id,
+      s.operation ? `${s.seq} · ${s.operation}` : String(s.seq),
+    ])
   )
 }

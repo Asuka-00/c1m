@@ -127,4 +127,27 @@ describe('Hold 列表：显示终态批次开关（N6 / P15 A）', () => {
       )
       .toBeVisible()
   })
+
+  it('D20：有 Q-Time 字段时在来源列显示，缺失 / null 时不显示', async () => {
+    const { s } = await show([
+      row({
+        source: 'qtime',
+        qtime_rule_id: 'R-9',
+        qtime_from_step_id: 'S1',
+        qtime_to_step_id: 'S2',
+        qtime_overdue_seconds: 600,
+      }),
+      row({ id: 'H2', lot: 'LOT2', qtime_overdue_seconds: null }),
+      row({ id: 'H3', lot: 'LOT3' }),
+    ])
+    await expect.element(s.getByText('LOT3')).toBeVisible()
+    await expect
+      .poll(
+        () => document.querySelectorAll('[data-testid=qtime-hold-info]').length
+      )
+      .toBe(1)
+    expect(
+      document.querySelector('[data-testid=qtime-hold-info]')!.textContent
+    ).toContain('R-9')
+  })
 })

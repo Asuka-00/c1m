@@ -1149,6 +1149,14 @@
     },
     "reasonCode": {
       "qtime_expired": "Q-Time expired"
+    },
+    "qtimeHold": {
+      "overdue": "Overdue by {{time}}",
+      "steps": "Steps {{from}} → {{to}}",
+      "rule": "Q-Time rule",
+      "minutes": "{{m}} min",
+      "hours": "{{h}} h",
+      "hoursMinutes": "{{h}} h {{m}} min"
     }
   },
   "notify": {

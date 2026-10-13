@@ -41,6 +41,7 @@ import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { RefLink } from '@/features/mes/common/ref-link'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { Pick } from './exec-parts'
+import { QtimeHoldInfo } from './qtime-hold-info'
 
 /** Hold 来源。 */
 const SOURCES = ['manual', 'qtime', 'oos', 'split']
@@ -296,7 +297,12 @@ export default function HoldManagePage() {
           },
           {
             header: t('mes.holdrel.source'),
-            cell: (r) => srcLabel(r.source),
+            cell: (r) => (
+              <div className='space-y-0.5'>
+                <div>{srcLabel(r.source)}</div>
+                <QtimeHoldInfo hold={r} />
+              </div>
+            ),
           },
           {
             header: t('mes.holdrel.heldAt'),

@@ -167,4 +167,26 @@ describe('批次操作台按钮权限', () => {
       await r.unmount()
     }
   })
+
+  it('D20：Q-Time Hold 显示超时与工步名，手动 Hold 不显示', async () => {
+    const W = wrap(ALL)
+    const qt = {
+      ...hold,
+      id: 'H2',
+      qtime_rule_id: 'R-1',
+      qtime_from_step_id: 'S1',
+      qtime_to_step_id: 'S2',
+      qtime_overdue_seconds: 3600,
+    }
+    const c = { ...cx('waiting', true, [qt, hold]) } as ExecContext
+    const r = await render(
+      <W>
+        <HoldCard cx={c} />
+      </W>
+    )
+    const infos = r.container.querySelectorAll('[data-testid=qtime-hold-info]')
+    expect(infos.length).toBe(1)
+    expect(infos[0].textContent).toContain('1 → 2')
+    expect(infos[0].textContent).not.toContain('S1')
+  })
 })
