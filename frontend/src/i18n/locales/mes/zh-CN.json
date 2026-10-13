@@ -1317,7 +1317,7 @@
     "mes-attr_def": "自定义属性",
     "user-permissions": "用户与权限",
     "notify-subscriptions": "通知订阅",
-    "config": "租户设置",
+    "config": "系统设置",
     "mes-audit_log": "审计日志",
     "mes-check_rule": "卡控规则",
     "mes-check_plan": "卡控方案",
@@ -1355,8 +1355,8 @@
     "mes-trace": "追溯查询",
     "mes-warehouse": "仓库",
     "mes-storage_location": "库位",
-    "members": "成员",
-    "tenant-roles": "租户角色",
+    "members": "用户",
+    "tenant-roles": "角色",
     "p-g-tenants": "租户管理",
     "p-g-rbac": "平台权限",
     "p-g-settings": "平台设置",
@@ -1372,9 +1372,9 @@
     "p-ops-log": "平台操作日志"
   },
   "permName": {
-    "users__read": "查看用户",
-    "users__write": "编辑用户",
-    "users__delete": "删除用户",
+    "users__read": "查看平台用户",
+    "users__write": "编辑平台用户",
+    "users__delete": "删除平台用户",
     "roles__read": "查看角色与权限",
     "roles__write": "管理角色与权限",
     "tenants__read": "查看租户",
@@ -1384,9 +1384,9 @@
     "platform_notify__read": "查看通知渠道",
     "platform_notify__write": "配置通知渠道",
     "platform_audit__read": "查看审计与日志",
-    "tenant__manage": "管理租户设置",
-    "members__read": "查看成员",
-    "members__write": "管理成员",
+    "tenant__manage": "管理系统设置与管理员",
+    "members__read": "查看用户",
+    "members__write": "管理用户",
     "config__read": "查看系统配置",
     "config__write": "编辑系统配置",
     "mes_common__read": "通用·查看",
@@ -1429,7 +1429,7 @@
   "roleName": {
     "admin": "管理员",
     "user": "普通用户",
-    "owner": "所有者",
-    "member": "成员"
+    "owner": "系统管理员",
+    "member": "普通用户"
   }
 }

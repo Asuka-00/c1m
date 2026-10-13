@@ -1317,7 +1317,7 @@
     "mes-attr_def": "カスタム属性",
     "user-permissions": "ユーザーと権限",
     "notify-subscriptions": "通知購読",
-    "config": "テナント設定",
+    "config": "システム設定",
     "mes-audit_log": "監査ログ",
     "mes-check_rule": "チェックルール",
     "mes-check_plan": "チェックプラン",
@@ -1355,8 +1355,8 @@
     "mes-trace": "トレーサビリティ",
     "mes-warehouse": "倉庫",
     "mes-storage_location": "ロケーション",
-    "members": "メンバー",
-    "tenant-roles": "テナントロール",
+    "members": "ユーザー",
+    "tenant-roles": "ロール",
     "p-g-tenants": "テナント管理",
     "p-g-rbac": "プラットフォーム権限",
     "p-g-settings": "プラットフォーム設定",
@@ -1372,9 +1372,9 @@
     "p-ops-log": "プラットフォーム操作ログ"
   },
   "permName": {
-    "users__read": "ユーザー閲覧",
-    "users__write": "ユーザー編集",
-    "users__delete": "ユーザー削除",
+    "users__read": "プラットフォームユーザー閲覧",
+    "users__write": "プラットフォームユーザー編集",
+    "users__delete": "プラットフォームユーザー削除",
     "roles__read": "ロール・権限閲覧",
     "roles__write": "ロール・権限管理",
     "tenants__read": "テナント閲覧",
@@ -1384,9 +1384,9 @@
     "platform_notify__read": "通知チャネル閲覧",
     "platform_notify__write": "通知チャネル設定",
     "platform_audit__read": "監査・ログ閲覧",
-    "tenant__manage": "テナント設定管理",
-    "members__read": "メンバー閲覧",
-    "members__write": "メンバー管理",
+    "tenant__manage": "システム設定・管理者の管理",
+    "members__read": "ユーザー閲覧",
+    "members__write": "ユーザー管理",
     "config__read": "システム設定閲覧",
     "config__write": "システム設定編集",
     "mes_common__read": "共通·閲覧",
@@ -1429,7 +1429,7 @@
   "roleName": {
     "admin": "管理者",
     "user": "一般ユーザー",
-    "owner": "オーナー",
-    "member": "メンバー"
+    "owner": "システム管理者",
+    "member": "一般ユーザー"
   }
 }

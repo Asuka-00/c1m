@@ -11,6 +11,7 @@ import {
   useMyMenus,
   useMyTenants,
 } from '@/lib/api/hooks'
+import { roleLabel } from '@/lib/rbac-labels'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -86,7 +87,10 @@ export default function Dashboard() {
           hint={
             current
               ? t('dashboard.rolesHint', {
-                  roles: current.roles.join(', ') || t('nav.noRole'),
+                  roles:
+                    current.roles
+                      .map((name) => roleLabel({ name }))
+                      .join(', ') || t('nav.noRole'),
                 })
               : t('dashboard.selectTenant')
           }
@@ -97,12 +101,15 @@ export default function Dashboard() {
           icon={Users}
           hint={t('dashboard.inTenant')}
         />
-        <Stat
-          title={t('dashboard.myTenants')}
-          value={tenants.data?.count ?? '—'}
-          icon={KeyRound}
-          hint={me?.is_superuser ? t('dashboard.superuserHint') : undefined}
-        />
+        {/* 只属于一个厂区的用户不显示“我的厂区”，避免感知多厂区 */}
+        {((tenants.data?.count ?? 0) > 1 || me?.is_superuser) && (
+          <Stat
+            title={t('dashboard.myTenants')}
+            value={tenants.data?.count ?? '—'}
+            icon={KeyRound}
+            hint={me?.is_superuser ? t('dashboard.superuserHint') : undefined}
+          />
+        )}
       </div>
       <Card>
         <CardHeader>

@@ -1317,7 +1317,7 @@
     "mes-attr_def": "Custom Attribute",
     "user-permissions": "Users & Permissions",
     "notify-subscriptions": "Notification Subscriptions",
-    "config": "Tenant Settings",
+    "config": "System Settings",
     "mes-audit_log": "Audit Log",
     "mes-check_rule": "Check Rule",
     "mes-check_plan": "Check Plan",
@@ -1355,8 +1355,8 @@
     "mes-trace": "Traceability",
     "mes-warehouse": "Warehouse",
     "mes-storage_location": "Storage Location",
-    "members": "Members",
-    "tenant-roles": "Tenant Roles",
+    "members": "Users",
+    "tenant-roles": "Roles",
     "p-g-tenants": "Tenant Management",
     "p-g-rbac": "Platform Access",
     "p-g-settings": "Platform Settings",
@@ -1372,9 +1372,9 @@
     "p-ops-log": "Platform Operation Log"
   },
   "permName": {
-    "users__read": "View users",
-    "users__write": "Edit users",
-    "users__delete": "Delete users",
+    "users__read": "View platform users",
+    "users__write": "Edit platform users",
+    "users__delete": "Delete platform users",
     "roles__read": "View roles & permissions",
     "roles__write": "Manage roles & permissions",
     "tenants__read": "View tenants",
@@ -1384,9 +1384,9 @@
     "platform_notify__read": "View notification channels",
     "platform_notify__write": "Configure notification channels",
     "platform_audit__read": "View audit & logs",
-    "tenant__manage": "Manage tenant",
-    "members__read": "View members",
-    "members__write": "Manage members",
+    "tenant__manage": "Manage system settings & admins",
+    "members__read": "View users",
+    "members__write": "Manage users",
     "config__read": "View configuration",
     "config__write": "Edit configuration",
     "mes_common__read": "Common·View",
@@ -1429,7 +1429,7 @@
   "roleName": {
     "admin": "Administrator",
     "user": "User",
-    "owner": "Owner",
-    "member": "Member"
+    "owner": "System admin",
+    "member": "Standard user"
   }
 }

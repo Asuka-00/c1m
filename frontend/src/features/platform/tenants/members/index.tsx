@@ -182,10 +182,7 @@ export default function MembersPage() {
             cell: (r) => (
               <div className='flex flex-wrap gap-1'>
                 {r.roles.map((x) => (
-                  <Badge
-                    key={x}
-                    variant={x === 'owner' ? 'default' : 'secondary'}
-                  >
+                  <Badge key={x} variant='secondary'>
                     {roleName(x)}
                   </Badge>
                 ))}
