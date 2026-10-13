@@ -10,6 +10,15 @@ import type {
   Tenant,
 } from '../types'
 
+/** 租户内新建 / 修改成员账号的请求体。 */
+export interface MemberUserIn {
+  full_name?: string | null
+  email?: string | null
+  password?: string
+  roles?: string[]
+  is_active?: boolean
+}
+
 /** 当前用户可访问的租户。 */
 export const myTenantsApi = {
   myTenants: () => get<Paged<MyTenant>>('/tenants/me'),
@@ -22,8 +31,15 @@ export const tenantsApi = {
   remove: (id: string) => del<Message>(`/tenants/${id}`),
   members: (id: string, q: ListQuery) =>
     get<Paged<Member>>(`/tenants/${id}/members`, q),
-  addMember: (id: string, b: { email: string; roles: string[] }) =>
+  /** 按用户名添加已有用户 */
+  addMember: (id: string, b: { username: string; roles: string[] }) =>
     post<Member>(`/tenants/${id}/members`, b),
+  /** 在租户内直接创建新用户（不能创建超级用户） */
+  createUser: (id: string, b: MemberUserIn & { username: string }) =>
+    post<Member>(`/tenants/${id}/members/new`, b),
+  /** 修改成员账号（仅只属于本租户的用户；含重置密码） */
+  updateUser: (id: string, userId: string, b: MemberUserIn) =>
+    patch<Member>(`/tenants/${id}/members/${userId}/user`, b),
   setMemberRoles: (id: string, userId: string, roles: string[]) =>
     put<Member>(`/tenants/${id}/members/${userId}/roles`, { roles }),
   removeMember: (id: string, userId: string) =>

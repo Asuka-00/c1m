@@ -25,7 +25,7 @@ import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
 
 const formSchema = z.object({
-  // 用户名或邮箱；消息写成函数以跟随当前语言
+  // 用户名（兼容邮箱登录）；消息写成函数以跟随当前语言
   login: z
     .string()
     .trim()
@@ -75,7 +75,7 @@ export function UserAuthForm({
             .tenant.id
         )
       const me = await api.me()
-      toast.success(t('auth.welcome', { name: me.full_name || me.email }))
+      toast.success(t('auth.welcome', { name: me.full_name || me.username }))
       navigate({ to: redirectTo || '/', replace: true })
     } catch (e) {
       toast.error(errorMessage(e))

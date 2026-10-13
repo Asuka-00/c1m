@@ -48,7 +48,7 @@ export default function LoginLogPage() {
             cell: (r) => fmtDateTime(r.created_at),
           },
           {
-            header: t('common.email'),
+            header: t('common.loginName'),
             sortKey: 'email',
             cell: (r) => <span className='font-medium'>{r.email}</span>,
           },

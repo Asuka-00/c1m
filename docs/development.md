@@ -170,3 +170,14 @@ UI 布局巡检（需前后端已启动）：`node scripts/ui-audit.cjs`。
 - 菜单 `status`（active / disabled）：停用的菜单对所有人隐藏，其路径进入 `forbidden_paths`（前端 403）。
 - 内置权限 / 角色名称：`rbac.labels` 提供三语名称，种子数据补齐英文 `name` / `title`，`scripts/export_mes_i18n.py` 生成前端 `permName.*` / `roleName.*`；前端在名称为空或仍为内置英文名时按语言翻译（`lib/rbac-labels.ts`）。
 - 以租户身份进入：`POST /platform/tenants/{id}/enter`（`tenants:write`）签发 `imp` 模拟令牌（`IMPERSONATION_EXPIRE_MINUTES`，默认 30 分钟），只能访问绑定租户（具全部租户权限）且不能调用平台接口；前端保存原令牌，退出（或模拟令牌过期）时恢复并调用 `POST /platform/tenants/{id}/exit`。进入 / 退出均记入平台操作日志。
+
+## 用户身份：用户名为主
+
+- `user.username` 必填，以小写存储，并有 `lower(username)` 唯一索引（不区分大小写唯一）；`email` 可选，填写时唯一（比较不区分大小写）。重复时返回 409：`User with this username already exists` / `User with this email already exists`。
+- 登录使用用户名（`/login/access-token` 的 `username` 字段）；为兼容旧账号仍接受邮箱。错误信息为 `Incorrect username or password`。
+- 所有操作人字段统一记录用户名：`core.models.actor_name(user)`（审计 `user_email`、平台操作日志 `actor_email`、登录日志 `email`、`updated_by`、批次履历操作人、通知等）。列名保持不变，仅存值改为用户名。迁移 `389542902fa8` 回填缺失用户名并把历史邮箱值转换为用户名。
+- 平台用户：`GET/PUT /platform/users/{id}/tenants` 整体设置用户的租户成员身份与租户角色（保留最后一个 owner 校验，逐项记入平台操作日志）。前端新建用户时保留自动创建的个人工作区后追加所选租户。
+- 租户成员（需 `members:write`；涉及 owner 需 `tenant:manage`）：
+  - `POST /tenants/{id}/members` 按用户名（或邮箱）添加已有用户；
+  - `POST /tenants/{id}/members/new` 直接在租户内创建用户（不能创建超级用户，不创建个人工作区）；
+  - `PATCH /tenants/{id}/members/{uid}/user` 修改账号 / 重置密码，仅当该用户只属于本租户（`MemberPublic.sole_tenant`）时允许，否则 403。

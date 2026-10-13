@@ -4,8 +4,10 @@ export type UUID = string
 /** 用户。 */
 export interface User {
   id: UUID
-  email: string
-  username: string | null
+  /** 用户名：主身份与登录名（不区分大小写唯一，小写存储） */
+  username: string
+  /** 邮箱：可选，填写时唯一 */
+  email: string | null
   full_name: string | null
   is_active: boolean
   is_superuser: boolean
@@ -97,6 +99,7 @@ export interface PlatformTenant extends Tenant {
 /** 登录日志。 */
 export interface LoginLog {
   id: UUID
+  /** 登录名（用户名；失败时为尝试的登录名） */
   email: string
   user_id: UUID | null
   success: boolean
@@ -108,6 +111,7 @@ export interface LoginLog {
 /** 平台操作日志。 */
 export interface PlatformAudit {
   id: UUID
+  /** 操作人用户名 */
   actor_email: string
   action: string
   target_type: string
@@ -150,10 +154,18 @@ export interface MyTenant {
 /** 租户成员。 */
 export interface Member {
   user_id: UUID
-  email: string
+  username: string
+  email: string | null
   full_name: string | null
-  username?: string | null
   is_active?: boolean
+  roles: string[]
+  /** 是否只属于本租户（仅此时租户管理员可修改账号 / 重置密码） */
+  sole_tenant?: boolean
+}
+/** 用户在某租户的成员身份（平台为用户分配租户）。 */
+export interface UserTenantRoles {
+  tenant_id: UUID
+  tenant_name?: string | null
   roles: string[]
 }
 /** 菜单树节点。 */

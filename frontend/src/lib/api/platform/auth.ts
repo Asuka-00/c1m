@@ -16,7 +16,7 @@ export const authApi = {
       )
       .then((r) => r.data),
   me: () => get<User>('/users/me'),
-  updateMe: (body: { full_name?: string | null; email?: string }) =>
+  updateMe: (body: { full_name?: string | null; email?: string | null }) =>
     patch<User>('/users/me', body),
   updatePassword: (body: { current_password: string; new_password: string }) =>
     patch<Message>('/users/me/password', body),

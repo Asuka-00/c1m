@@ -21,7 +21,8 @@ interface PlatformTenantIn {
   status?: string
   plan?: string
   expires_at?: string | null
-  owner_email?: string | null
+  /** 初始 owner 的用户名 */
+  owner?: string | null
 }
 
 /** 平台控制台接口。 */
@@ -40,14 +41,14 @@ export const platformApi = {
     get<Paged<Member>>(`/platform/tenants/${id}/members`, q),
   tenantRoles: (id: string, q: ListQuery) =>
     get<Paged<Role>>(`/platform/tenants/${id}/roles`, q),
-  addMember: (id: string, b: { email: string; roles: string[] }) =>
+  addMember: (id: string, b: { username: string; roles: string[] }) =>
     post<Member>(`/platform/tenants/${id}/members`, b),
   setMemberRoles: (id: string, userId: string, roles: string[]) =>
     put<Member>(`/platform/tenants/${id}/members/${userId}/roles`, { roles }),
   removeMember: (id: string, userId: string) =>
     del<Message>(`/platform/tenants/${id}/members/${userId}`),
-  assignOwner: (id: string, email: string) =>
-    put<Member>(`/platform/tenants/${id}/owner`, { email }),
+  assignOwner: (id: string, username: string) =>
+    put<Member>(`/platform/tenants/${id}/owner`, { username }),
   branding: (id: string) =>
     get<Paged<ConfigGroup>>(`/platform/tenants/${id}/branding`),
   updateBranding: (id: string, code: string, values: Record<string, unknown>) =>

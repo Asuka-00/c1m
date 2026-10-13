@@ -42,8 +42,8 @@ export function NavUser() {
   const [open, setOpen] = useDialogState()
   const { data: me } = useMe()
   const entry = usePlatformEntry()
-  const name = me?.full_name || me?.email.split('@')[0] || '…'
-  const email = me?.email ?? ''
+  const name = me?.full_name || me?.username || '…'
+  const email = me?.email ?? me?.username ?? ''
   const who = (
     <>
       <Avatar className='h-8 w-8 rounded-lg'>

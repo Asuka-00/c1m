@@ -36,7 +36,8 @@
     "backHome": "Back to Home",
     "close": "Close",
     "no": "no",
-    "username": "Username"
+    "username": "Username",
+    "loginName": "Login"
   },
   "table": {
     "rowsPerPage": "Rows per page",
@@ -135,12 +136,16 @@
     "emailInvalid": "Please enter a valid email.",
     "passwordRequired": "Please enter your password.",
     "welcome": "Welcome back, {{name}}!",
-    "loginLabel": "Username or email",
-    "loginPlaceholder": "admin or name@example.com",
+    "loginLabel": "Username",
+    "loginPlaceholder": "e.g. admin",
     "loginRequired": "Please enter your username or email",
-    "loginInvalid": "Enter a valid email or username (3–50 letters, digits, . _ -)"
+    "loginInvalid": "Enter a valid username (3–50 letters, digits, . _ -)"
   },
   "errors": {
+    "401": {
+      "title": "Unauthorized Access",
+      "desc": "Please log in with the appropriate credentials to access this resource."
+    },
     "403": {
       "title": "Access Forbidden",
       "desc": "You don't have the necessary permission to view this resource."
@@ -152,10 +157,6 @@
     "500": {
       "title": "Oops! Something went wrong",
       "desc": "We apologize for the inconvenience. Please try again later."
-    },
-    "401": {
-      "title": "Unauthorized Access",
-      "desc": "Please log in with the appropriate credentials to access this resource."
     },
     "503": {
       "title": "Website is under maintenance!",
@@ -201,7 +202,10 @@
     "A record with the same key already exists": "A record with the same key already exists",
     "Record is referenced by other records": "Record is referenced by other records",
     "Read-only entity": "Read-only entity",
-    "step_ids must list every step of the route exactly once": "step_ids must list every step of the route exactly once"
+    "step_ids must list every step of the route exactly once": "step_ids must list every step of the route exactly once",
+    "Incorrect username or password": "Incorrect username or password",
+    "User belongs to other tenants; ask a platform admin": "This user also belongs to other tenants; ask a platform admin",
+    "Only owners can manage owners": "Only owners can manage owners"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -225,7 +229,7 @@
     "new": "New user",
     "edit": "Edit user",
     "editDesc": "Leave password empty to keep it.",
-    "newDesc": "New users get a personal tenant (owner).",
+    "newDesc": "New users get a personal tenant (owner); you can also assign tenants and tenant roles below.",
     "passwordUnchanged": "unchanged",
     "passwordMin": "min. 8 characters",
     "rolesTitle": "Platform roles of {{email}}",
@@ -237,7 +241,13 @@
     "updated": "User updated",
     "deleted": "User deleted",
     "regular": "Regular users",
-    "usernameHint": "Optional; 3–50 letters, digits, . _ -"
+    "usernameHint": "Required; 3–50 letters, digits, . _ - (case-insensitive)",
+    "emailOptional": "Optional; must be unique if set",
+    "tenants": "Tenants",
+    "tenant": "Tenant",
+    "pickTenant": "Select tenant",
+    "addTenant": "Add tenant",
+    "removeTenant": "Remove this tenant"
   },
   "roles": {
     "platformTitle": "Roles",
@@ -304,7 +314,7 @@
     "title": "Members",
     "desc": "Members of tenant “{{tenant}}”",
     "add": "Add member",
-    "addDesc": "The user must already have an account.",
+    "addDesc": "Add a registered user by username.",
     "rolesOf": "Roles of {{email}}",
     "tenantRoles": "Tenant roles",
     "leave": "Leave tenant",
@@ -313,7 +323,14 @@
     "added": "Member added",
     "rolesUpdated": "Roles updated",
     "removed": "Member removed",
-    "edit": "Edit user"
+    "edit": "Edit user",
+    "addExisting": "Add existing user",
+    "createUser": "New user",
+    "createDesc": "Create an account directly in this tenant (superusers cannot be created).",
+    "created": "User created",
+    "initialPassword": "Initial password",
+    "usernameHint": "Username of an existing user",
+    "sharedUser": "This user also belongs to other tenants; only their roles here can be changed. Account details and password are managed by platform admins."
   },
   "menus": {
     "title": "Menus",
@@ -1087,7 +1104,6 @@
     "branding": "Branding",
     "enter": "Enter as tenant",
     "expiresHint": "YYYY-MM-DD, empty = never",
-    "ownerEmail": "Owner email (existing user)",
     "ownerAssigned": "Owner assigned",
     "membersOf": "Members of \"{{name}}\"",
     "membersDesc": "Add members, change tenant roles or assign an owner; every change is recorded in the platform op log.",
@@ -1145,7 +1161,8 @@
       "platform": "Platform Admin"
     },
     "allSpaces": "All spaces",
-    "space": "Space"
+    "space": "Space",
+    "ownerUsername": "Owner username (existing user)"
   },
   "rbac": {
     "actions": "Actions",

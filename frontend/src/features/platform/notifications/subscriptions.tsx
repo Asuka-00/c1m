@@ -85,7 +85,7 @@ export default function SubscriptionsPage() {
     roles.data?.data.map((r) => [r.id, r.name] as const) ?? []
   )
   const userName = new Map(
-    members.data?.data.map((m) => [m.user_id, m.email] as const) ?? []
+    members.data?.data.map((m) => [m.user_id, m.username] as const) ?? []
   )
   const toBody = (v: Values): SubscriptionIn => ({
     name: v.name as string,
@@ -196,7 +196,9 @@ export default function SubscriptionsPage() {
             options:
               members.data?.data.map((m) => ({
                 value: m.user_id,
-                label: m.email,
+                label: m.full_name
+                  ? `${m.username}（${m.full_name}）`
+                  : m.username,
               })) ?? [],
           },
           {

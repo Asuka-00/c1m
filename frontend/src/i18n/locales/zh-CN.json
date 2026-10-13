@@ -36,7 +36,8 @@
     "backHome": "返回首页",
     "close": "关闭",
     "no": "否",
-    "username": "用户名"
+    "username": "用户名",
+    "loginName": "登录名"
   },
   "table": {
     "rowsPerPage": "每页行数",
@@ -135,12 +136,16 @@
     "emailInvalid": "请输入有效的邮箱。",
     "passwordRequired": "请输入密码。",
     "welcome": "欢迎回来，{{name}}！",
-    "loginLabel": "用户名或邮箱",
-    "loginPlaceholder": "admin 或 name@example.com",
+    "loginLabel": "用户名",
+    "loginPlaceholder": "例如 admin",
     "loginRequired": "请输入用户名或邮箱",
-    "loginInvalid": "请输入有效的邮箱或用户名（3–50 位字母、数字、. _ -）"
+    "loginInvalid": "请输入有效的用户名（3–50 位字母、数字、. _ -）"
   },
   "errors": {
+    "401": {
+      "title": "未授权",
+      "desc": "请使用有效凭据登录后访问此资源。"
+    },
     "403": {
       "title": "禁止访问",
       "desc": "你没有查看此资源所需的权限。"
@@ -152,10 +157,6 @@
     "500": {
       "title": "出错了",
       "desc": "给你带来不便，敬请谅解。请稍后再试。"
-    },
-    "401": {
-      "title": "未授权",
-      "desc": "请使用有效凭据登录后访问此资源。"
     },
     "503": {
       "title": "网站维护中",
@@ -201,7 +202,10 @@
     "A record with the same key already exists": "已存在相同编码/键的记录",
     "Record is referenced by other records": "该记录被其他数据引用，无法删除",
     "Read-only entity": "只读数据",
-    "step_ids must list every step of the route exactly once": "step_ids 必须恰好包含流程的每个步骤一次"
+    "step_ids must list every step of the route exactly once": "step_ids 必须恰好包含流程的每个步骤一次",
+    "Incorrect username or password": "用户名或密码错误",
+    "User belongs to other tenants; ask a platform admin": "该用户同时属于其他租户，请联系平台管理员修改",
+    "Only owners can manage owners": "只有所有者可以管理所有者"
   },
   "dashboard": {
     "title": "仪表盘",
@@ -225,7 +229,7 @@
     "new": "新建用户",
     "edit": "编辑用户",
     "editDesc": "密码留空则保持不变。",
-    "newDesc": "新用户会自动获得一个个人租户（所有者）。",
+    "newDesc": "新用户会自动获得一个个人租户（所有者），可在下方额外分配租户与租户角色。",
     "passwordUnchanged": "保持不变",
     "passwordMin": "至少 8 个字符",
     "rolesTitle": "{{email}} 的平台角色",
@@ -237,7 +241,13 @@
     "updated": "用户已更新",
     "deleted": "用户已删除",
     "regular": "普通用户",
-    "usernameHint": "可选；3–50 位字母、数字、. _ -"
+    "usernameHint": "必填；3–50 位字母、数字、. _ -，不区分大小写",
+    "emailOptional": "可选；填写时须唯一",
+    "tenants": "所属租户",
+    "tenant": "租户",
+    "pickTenant": "选择租户",
+    "addTenant": "添加租户",
+    "removeTenant": "移除该租户"
   },
   "roles": {
     "platformTitle": "角色",
@@ -304,7 +314,7 @@
     "title": "成员",
     "desc": "租户「{{tenant}}」的成员",
     "add": "添加成员",
-    "addDesc": "该用户必须已有账户。",
+    "addDesc": "按用户名添加已注册的用户。",
     "rolesOf": "{{email}} 的角色",
     "tenantRoles": "租户角色",
     "leave": "退出租户",
@@ -313,7 +323,14 @@
     "added": "成员已添加",
     "rolesUpdated": "角色已更新",
     "removed": "成员已移除",
-    "edit": "编辑用户"
+    "edit": "编辑用户",
+    "addExisting": "添加已有用户",
+    "createUser": "新建用户",
+    "createDesc": "直接在本租户创建账号（不能创建超级用户）。",
+    "created": "用户已创建",
+    "initialPassword": "初始密码",
+    "usernameHint": "输入已有用户的用户名",
+    "sharedUser": "该用户同时属于其他租户，只能修改其在本租户的角色；账号信息与密码由平台管理员管理。"
   },
   "menus": {
     "title": "菜单",
@@ -1087,7 +1104,6 @@
     "branding": "品牌",
     "enter": "以租户身份进入",
     "expiresHint": "YYYY-MM-DD，留空表示永久",
-    "ownerEmail": "Owner 邮箱（已有用户）",
     "ownerAssigned": "已指定 owner",
     "membersOf": "「{{name}}」的成员",
     "membersDesc": "添加成员、修改租户角色或指定 owner；所有操作记入平台操作日志。",
@@ -1145,7 +1161,8 @@
       "platform": "平台管理"
     },
     "allSpaces": "全部空间",
-    "space": "空间"
+    "space": "空间",
+    "ownerUsername": "Owner 用户名（已有用户）"
   },
   "rbac": {
     "actions": "操作",

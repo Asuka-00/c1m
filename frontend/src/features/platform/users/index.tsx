@@ -21,6 +21,8 @@ import {
 } from '@/components/crud'
 import { StatusBadge } from '../rbac/status'
 import { statusOptions } from '../rbac/status-options'
+import { TenantRolesEditor } from './tenant-roles-editor'
+import { decodeRows, encodeRows } from './tenant-rows'
 
 /** 用户管理（平台）：用户 CRUD、启停、平台角色分配与重置密码。 */
 export default function UsersPage() {
@@ -57,6 +59,11 @@ export default function UsersPage() {
     queryFn: () => api.users.roles(editing!.id),
     enabled: !!editing,
   })
+  const userTenants = useQuery({
+    queryKey: ['user-tenants', editing?.id],
+    queryFn: () => api.users.tenants(editing!.id),
+    enabled: !!editing,
+  })
   const [resetFor, setResetFor] = useState<User | null>(null)
   const save = useApiMutation(
     async (v: Values) => {
@@ -64,20 +71,31 @@ export default function UsersPage() {
         full_name: (v.full_name as string) || null,
         is_active: v.status === 'active',
       }
-      if (v.email) b.email = v.email as string
+      b.email = ((v.email as string) || '').trim() || null
       const roleIds = v.roles as string[]
+      const rows = decodeRows(v.tenants as string[])
       if (editing) {
         await api.users.update(editing.id, b)
+        await api.users.setTenants(editing.id, rows)
         return api.users.setRoles(editing.id, roleIds)
       }
       const u = await api.users.create({
         ...b,
-        username: ((v.username as string) || '').trim() || null,
+        username: (v.username as string).trim(),
         password: v.password as string,
       })
+      if (rows.length) {
+        // 保留创建时自动生成的个人工作区，再追加所选租户
+        const own = await api.users.tenants(u.id)
+        const ids = new Set(rows.map((r) => r.tenant_id))
+        await api.users.setTenants(u.id, [
+          ...own.filter((r) => !ids.has(r.tenant_id)),
+          ...rows,
+        ])
+      }
       return roleIds.length ? api.users.setRoles(u.id, roleIds) : u
     },
-    [['users'], ['user-roles']],
+    [['users'], ['user-roles'], ['user-tenants']],
     t('rbac.saved')
   )
   const reset = useApiMutation(
@@ -115,9 +133,7 @@ export default function UsersPage() {
           {
             header: t('common.username'),
             sortKey: 'username',
-            cell: (r) => (
-              <span className='font-medium'>{r.username || r.email}</span>
-            ),
+            cell: (r) => <span className='font-medium'>{r.username}</span>,
           },
           {
             header: t('rbac.displayName'),
@@ -128,7 +144,7 @@ export default function UsersPage() {
             header: t('common.email'),
             sortKey: 'email',
             cell: (r) => (
-              <span className='text-muted-foreground'>{r.email}</span>
+              <span className='text-muted-foreground'>{r.email ?? '—'}</span>
             ),
           },
           {
@@ -189,14 +205,18 @@ export default function UsersPage() {
         ]}
       />
       <FormDialog
-        key={`${editing?.id ?? 'new'}-${userRoles.isSuccess}`}
-        open={s.formOpen && (!editing || !userRoles.isLoading)}
+        key={`${editing?.id ?? 'new'}-${userRoles.isSuccess}-${userTenants.isSuccess}`}
+        open={
+          s.formOpen &&
+          (!editing || (!userRoles.isLoading && !userTenants.isLoading))
+        }
         onOpenChange={(o) => !o && s.closeForm()}
         title={editing ? t('users.edit') : t('users.new')}
         fields={[
           {
             name: 'username',
             label: t('common.username'),
+            required: true,
             readOnly: !!editing,
             placeholder: t('users.usernameHint'),
           },
@@ -204,7 +224,7 @@ export default function UsersPage() {
             name: 'email',
             label: t('common.email'),
             type: 'email',
-            required: true,
+            placeholder: t('users.emailOptional'),
           },
           { name: 'full_name', label: t('rbac.displayName') },
           {
@@ -228,6 +248,17 @@ export default function UsersPage() {
             type: 'radio',
             options: statusOptions(),
           },
+          {
+            name: 'tenants',
+            label: t('users.tenants'),
+            type: 'custom',
+            render: (val, onChange) => (
+              <TenantRolesEditor
+                value={val as string[]}
+                onChange={(x) => onChange(x)}
+              />
+            ),
+          },
         ]}
         initial={{
           username: editing?.username ?? '',
@@ -236,6 +267,7 @@ export default function UsersPage() {
           password: '',
           roles: userRoles.data?.map((r) => r.id) ?? [],
           status: editing && !editing.is_active ? 'disabled' : 'active',
+          tenants: encodeRows(userTenants.data ?? []),
         }}
         pending={save.isPending}
         onSubmit={(v) => save.mutateAsync(v)}
@@ -245,7 +277,7 @@ export default function UsersPage() {
         onOpenChange={(o) => !o && setResetFor(null)}
         title={t('rbac.resetPassword')}
         description={t('rbac.resetPasswordDesc', {
-          name: resetFor?.username || resetFor?.email,
+          name: resetFor?.username,
         })}
         fields={[
           {
@@ -269,7 +301,7 @@ export default function UsersPage() {
         open={!!s.deleting}
         onOpenChange={(o) => !o && s.closeDelete()}
         title={t('users.delete')}
-        desc={t('users.deleteDesc', { email: s.deleting?.email })}
+        desc={t('users.deleteDesc', { email: s.deleting?.username })}
         destructive
         confirmText={t('common.delete')}
         handleConfirm={() =>

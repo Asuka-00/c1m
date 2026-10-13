@@ -206,7 +206,7 @@ def list_members(
     full_name: str | None = None,
     is_active: bool | None = None,
 ) -> Any:
-    """分页；sort_by: email, full_name, joined_at；q: email/full_name；
+    """分页；sort_by: username, email, full_name, joined_at；q: 用户名/邮箱/显示名；
     筛选：role_id（租户角色）、username（用户名或邮箱包含）、full_name（包含）、is_active。"""
     stmt = (
         select(TenantMember)
@@ -233,13 +233,14 @@ def list_members(
         stmt,
         params,
         {
+            "username": User.username,
             "email": User.email,
             "full_name": User.full_name,
             "joined_at": TenantMember.created_at,
         },
-        ("email", "asc"),
+        ("username", "asc"),
         TenantMember.id,
-        search=[User.email, User.full_name],
+        search=[User.username, User.email, User.full_name],
     )
     sole = _sole_tenant_ids(session, [m.user_id for m in members])
     return MembersPublic(

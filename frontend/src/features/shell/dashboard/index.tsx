@@ -66,7 +66,7 @@ export default function Dashboard() {
   return (
     <Page
       title={t('dashboard.title')}
-      description={t('dashboard.signedInAs', { email: me?.email ?? '…' })}
+      description={t('dashboard.signedInAs', { email: me?.username ?? '…' })}
     >
       {can('mes.exec:read') && current && <HomeKpis />}
       <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>

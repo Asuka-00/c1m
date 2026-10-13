@@ -236,9 +236,8 @@ export default function PlatformTenantsPage() {
             placeholder: t('platform.expiresHint'),
           },
           {
-            name: 'owner_email',
-            label: t('platform.ownerEmail'),
-            type: 'email',
+            name: 'owner',
+            label: t('platform.ownerUsername'),
             hidden: !!s.editing,
           },
         ]}
@@ -248,7 +247,7 @@ export default function PlatformTenantsPage() {
           status: s.editing?.status ?? 'active',
           plan: s.editing?.plan ?? 'standard',
           expires_at: toDay(s.editing?.expires_at ?? null),
-          owner_email: '',
+          owner: '',
         }}
         onSubmit={(v) =>
           s.editing
@@ -264,7 +263,7 @@ export default function PlatformTenantsPage() {
                 slug: v.slug as string,
                 plan: v.plan as string,
                 expires_at: fromDay(v.expires_at as string),
-                owner_email: (v.owner_email as string) || null,
+                owner: ((v.owner as string) || '').trim() || null,
               })
         }
       />

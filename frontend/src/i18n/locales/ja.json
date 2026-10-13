@@ -36,7 +36,8 @@
     "backHome": "ホームへ戻る",
     "close": "閉じる",
     "no": "いいえ",
-    "username": "ユーザー名"
+    "username": "ユーザー名",
+    "loginName": "ログイン名"
   },
   "table": {
     "rowsPerPage": "表示件数",
@@ -135,12 +136,16 @@
     "emailInvalid": "有効なメールアドレスを入力してください。",
     "passwordRequired": "パスワードを入力してください。",
     "welcome": "おかえりなさい、{{name}} さん！",
-    "loginLabel": "ユーザー名またはメール",
-    "loginPlaceholder": "admin または name@example.com",
+    "loginLabel": "ユーザー名",
+    "loginPlaceholder": "例：admin",
     "loginRequired": "ユーザー名またはメールを入力してください",
-    "loginInvalid": "有効なメールまたはユーザー名（3〜50 文字の英数字・. _ -）を入力してください"
+    "loginInvalid": "有効なユーザー名（3〜50 文字の英数字・. _ -）を入力してください"
   },
   "errors": {
+    "401": {
+      "title": "認証が必要です",
+      "desc": "このリソースにアクセスするにはログインしてください。"
+    },
     "403": {
       "title": "アクセス禁止",
       "desc": "このリソースを表示する権限がありません。"
@@ -152,10 +157,6 @@
     "500": {
       "title": "エラーが発生しました",
       "desc": "ご不便をおかけします。しばらくしてから再度お試しください。"
-    },
-    "401": {
-      "title": "認証が必要です",
-      "desc": "このリソースにアクセスするにはログインしてください。"
     },
     "503": {
       "title": "メンテナンス中です",
@@ -201,7 +202,10 @@
     "A record with the same key already exists": "同じキーのレコードが既に存在します",
     "Record is referenced by other records": "他のレコードから参照されています",
     "Read-only entity": "読み取り専用",
-    "step_ids must list every step of the route exactly once": "step_ids にはルートの全ステップを 1 回ずつ指定してください"
+    "step_ids must list every step of the route exactly once": "step_ids にはルートの全ステップを 1 回ずつ指定してください",
+    "Incorrect username or password": "ユーザー名またはパスワードが正しくありません",
+    "User belongs to other tenants; ask a platform admin": "このユーザーは他のテナントにも所属しています。プラットフォーム管理者に依頼してください",
+    "Only owners can manage owners": "オーナーを管理できるのはオーナーのみです"
   },
   "dashboard": {
     "title": "ダッシュボード",
@@ -225,7 +229,7 @@
     "new": "新規ユーザー",
     "edit": "ユーザーを編集",
     "editDesc": "パスワードを空欄にすると変更されません。",
-    "newDesc": "新規ユーザーには個人テナント（所有者）が作成されます。",
+    "newDesc": "新規ユーザーには個人テナント（オーナー）が作成されます。下でテナントとテナントロールも割り当てられます。",
     "passwordUnchanged": "変更なし",
     "passwordMin": "8文字以上",
     "rolesTitle": "{{email}} のプラットフォームロール",
@@ -237,7 +241,13 @@
     "updated": "ユーザーを更新しました",
     "deleted": "ユーザーを削除しました",
     "regular": "一般ユーザー",
-    "usernameHint": "任意。3〜50 文字の英数字・. _ -"
+    "usernameHint": "必須。3〜50 文字の英数字と . _ -（大文字小文字を区別しない）",
+    "emailOptional": "任意。入力する場合は一意",
+    "tenants": "所属テナント",
+    "tenant": "テナント",
+    "pickTenant": "テナントを選択",
+    "addTenant": "テナントを追加",
+    "removeTenant": "このテナントを削除"
   },
   "roles": {
     "platformTitle": "ロール",
@@ -304,7 +314,7 @@
     "title": "メンバー",
     "desc": "テナント「{{tenant}}」のメンバー",
     "add": "メンバーを追加",
-    "addDesc": "ユーザーは既にアカウントを持っている必要があります。",
+    "addDesc": "ユーザー名で登録済みユーザーを追加します。",
     "rolesOf": "{{email}} のロール",
     "tenantRoles": "テナントロール",
     "leave": "テナントから退出",
@@ -313,7 +323,14 @@
     "added": "メンバーを追加しました",
     "rolesUpdated": "ロールを更新しました",
     "removed": "メンバーを削除しました",
-    "edit": "ユーザーを編集"
+    "edit": "ユーザーを編集",
+    "addExisting": "既存ユーザーを追加",
+    "createUser": "新規ユーザー",
+    "createDesc": "このテナントで直接アカウントを作成します（スーパーユーザーは作成不可）。",
+    "created": "ユーザーを作成しました",
+    "initialPassword": "初期パスワード",
+    "usernameHint": "既存ユーザーのユーザー名",
+    "sharedUser": "このユーザーは他のテナントにも所属しているため、このテナントでのロールのみ変更できます。アカウント情報とパスワードはプラットフォーム管理者が管理します。"
   },
   "menus": {
     "title": "メニュー",
@@ -1087,7 +1104,6 @@
     "branding": "ブランディング",
     "enter": "テナントとして入る",
     "expiresHint": "YYYY-MM-DD、空欄は無期限",
-    "ownerEmail": "オーナーのメール（既存ユーザー）",
     "ownerAssigned": "オーナーを設定しました",
     "membersOf": "「{{name}}」のメンバー",
     "membersDesc": "メンバー追加、テナントロール変更、オーナー指定。すべてプラットフォーム操作ログに記録されます。",
@@ -1145,7 +1161,8 @@
       "platform": "プラットフォーム管理"
     },
     "allSpaces": "すべてのスペース",
-    "space": "スペース"
+    "space": "スペース",
+    "ownerUsername": "オーナーのユーザー名（既存ユーザー）"
   },
   "rbac": {
     "actions": "操作",

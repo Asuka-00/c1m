@@ -60,7 +60,8 @@ export function TenantMembersDialog({
   const [removing, setRemoving] = useState<Member | null>(null)
   const [owner, setOwner] = useState('')
   const add = useApiMutation(
-    (b: { email: string; roles: string[] }) => api.platform.addMember(tid, b),
+    (b: { username: string; roles: string[] }) =>
+      api.platform.addMember(tid, b),
     keys,
     t('members.added')
   )
@@ -76,7 +77,7 @@ export function TenantMembersDialog({
     t('members.removed')
   )
   const assign = useApiMutation(
-    (email: string) => api.platform.assignOwner(tid, email),
+    (username: string) => api.platform.assignOwner(tid, username),
     keys,
     t('platform.ownerAssigned')
   )
@@ -98,10 +99,9 @@ export function TenantMembersDialog({
           }}
         >
           <Input
-            type='email'
             value={owner}
             onChange={(e) => setOwner(e.target.value)}
-            placeholder={t('platform.ownerEmail')}
+            placeholder={t('platform.ownerUsername')}
             className='max-w-xs'
           />
           <Button type='submit' variant='outline' disabled={!owner.trim()}>
@@ -124,9 +124,16 @@ export function TenantMembersDialog({
           rowKey={(r) => r.user_id}
           columns={[
             {
+              header: t('common.username'),
+              sortKey: 'username',
+              cell: (r) => <span className='font-medium'>{r.username}</span>,
+            },
+            {
               header: t('common.email'),
               sortKey: 'email',
-              cell: (r) => <span className='font-medium'>{r.email}</span>,
+              cell: (r) => (
+                <span className='text-muted-foreground'>{r.email ?? '—'}</span>
+              ),
             },
             {
               header: t('common.name'),
@@ -170,16 +177,16 @@ export function TenantMembersDialog({
           }}
           title={
             editing
-              ? t('members.rolesOf', { email: editing.email })
+              ? t('members.rolesOf', { email: editing.username })
               : t('members.add')
           }
           fields={[
             {
-              name: 'email',
-              label: t('common.email'),
-              type: 'email',
+              name: 'username',
+              label: t('common.username'),
               required: true,
               hidden: !!editing,
+              placeholder: t('members.usernameHint'),
             },
             {
               name: 'roles',
@@ -189,7 +196,7 @@ export function TenantMembersDialog({
             },
           ]}
           initial={{
-            email: '',
+            username: '',
             roles: editing?.roles ?? ['member'],
           }}
           onSubmit={(v) =>
@@ -199,7 +206,7 @@ export function TenantMembersDialog({
                   roles: v.roles as string[],
                 })
               : add.mutateAsync({
-                  email: v.email as string,
+                  username: (v.username as string).trim(),
                   roles: v.roles as string[],
                 })
           }
@@ -209,7 +216,7 @@ export function TenantMembersDialog({
           onOpenChange={(o) => !o && setRemoving(null)}
           title={t('members.remove')}
           desc={t('members.removeDesc', {
-            email: removing?.email,
+            email: removing?.username,
             tenant: tenant.name,
           })}
           destructive
