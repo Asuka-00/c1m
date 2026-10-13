@@ -444,3 +444,51 @@ def test_change_order_route_switch_and_due(client: TestClient, db: Session) -> N
     db.commit()
     assert g("change_order", co2["id"])["ecn_status"] == "applied"
     assert f.lot(a)["route_id"] == v2["id"]
+
+
+# ---------------- 9: future hold ----------------
+def test_future_hold_triggers_at_move_in_and_switch(
+    client: TestClient, db: Session
+) -> None:
+    from app.mes.execution.tests.test_exec import Line
+
+    f = Line(client, db)
+    a, b = f.start(2, 2)
+    fh = f.m.post(
+        "future_hold",
+        {"lot_id": a["id"], "route_step_id": f.steps[20]["id"], "comment": "check"},
+    )
+    assert fh["fh_status"] == "active"
+    other = f.m.post("route", {"code": "R2", "name": "r2"})
+    st = f.m.post(
+        "route_step",
+        {
+            "route_id": other["id"],
+            "seq": 10,
+            "operation_id": f.steps[10]["operation_id"],
+        },
+    )
+    f.m.post("future_hold", {"lot_id": a["id"], "route_step_id": st["id"]}, status=422)
+
+    f.run_step(a)
+    out = f.stage(a, "move_in", equipment_id=f.eq["id"])
+    assert out["future_hold"] and out["lot"]["on_hold"]
+    assert out["lot"]["lot_status"] == "waiting"
+    holds = client.get(
+        f"{EXEC}/holds", headers=f.m.h, params={"lot_id": a["id"]}
+    ).json()["data"]
+    assert holds[0]["hold_type"] == "future"
+    f.post(
+        f"{EXEC}/holds/{holds[0]['id']}/release",
+        {"reason_id": f.reasons["release"]["id"]},
+    )
+    f.stage(a, "move_in", equipment_id=f.eq["id"])
+    assert f.lot(a)["lot_status"] == "moved_in"
+    f.m.patch("future_hold", fh["id"], {"comment": "x"}, status=422)
+
+    # 管控关闭：不触发
+    f.bind("move_in", ("future_hold", "off", {}))
+    f.m.post("future_hold", {"lot_id": b["id"], "route_step_id": f.steps[20]["id"]})
+    f.run_step(b)
+    f.stage(b, "move_in", equipment_id=f.eq["id"])
+    assert not f.lot(b)["on_hold"]

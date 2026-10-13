@@ -121,7 +121,8 @@
     "notifications": "消息中心",
     "notify-subscriptions": "通知订阅",
     "mes-wo-board": "工单进度",
-    "mes-change_order": "工程变更"
+    "mes-change_order": "工程变更",
+    "mes-future_hold": "预约 Hold"
   },
   "auth": {
     "appName": "FastAPI 管理后台",
@@ -635,7 +636,8 @@
       "oosAction": "超规动作",
       "eqpRecipe": "设备端配方名",
       "eqpRecipeHint": "设备上报或扫码（可选）",
-      "chambers": "腔体"
+      "chambers": "腔体",
+      "futureHold": "到达预约 Hold 工步，批次已 Hold：{{reason}}"
     },
     "trace": {
       "hint": "查看批次及其单元的全部操作记录。",

@@ -121,7 +121,8 @@
     "notifications": "Message Center",
     "notify-subscriptions": "Notification Subscriptions",
     "mes-wo-board": "WO Progress",
-    "mes-change_order": "Engineering Change"
+    "mes-change_order": "Engineering Change",
+    "mes-future_hold": "Future Hold"
   },
   "auth": {
     "appName": "FastAPI Admin",
@@ -635,7 +636,8 @@
       "oosAction": "OOS action",
       "eqpRecipe": "Equipment recipe",
       "eqpRecipeHint": "Reported / scanned (optional)",
-      "chambers": "Chambers"
+      "chambers": "Chambers",
+      "futureHold": "Future hold at this step, lot held: {{reason}}"
     },
     "trace": {
       "hint": "All operations on the lot and its units.",

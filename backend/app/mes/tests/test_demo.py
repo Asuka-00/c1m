@@ -47,8 +47,9 @@ def test_seed_and_remove() -> None:
                 len(lots) + (0 if wo == "WO-DEMO-03" else sum(q for q, _ in lots))
                 for wo, lots in STARTS
             )
-            + 2
-        )  # split example: two child lots (one merged back)
+            + 2  # split example: two child lots (one merged back)
+            + 1  # future hold example
+        )
         assert _count(s) == before + len(DEMO) + started  # + lots / wafers
         assert remove(s) >= len(DEMO)  # + started demo lots / wafers
         assert _count(s) == before

@@ -114,7 +114,7 @@ def hold_lot(
         {"reason": (None, reason["code"]), "source": (None, source)},
     )
     # 自动 Hold 通知（Q-Time 超时已由 qtime 事件通知；分批继承的 Hold 不重复通知）
-    if hold_type == "auto" and source not in ("qtime", "split"):
+    if hold_type in ("auto", "future") and source not in ("qtime", "split"):
         notify_lot(
             s,
             tid,

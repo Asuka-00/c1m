@@ -252,6 +252,15 @@ function Console({ cx, perms }: { cx: ExecContext; perms: string[] }) {
           : body()
       ),
     onSuccess: (r) => {
+      if (r.future_hold?.length) {
+        toast.warning(
+          t('mes.exec.futureHold', {
+            reason: r.future_hold.map((x) => x.comment || x.reason).join('; '),
+          })
+        )
+        qc.invalidateQueries({ queryKey: ['mes'] })
+        return
+      }
       const auto = (r.auto ?? []).filter((a) => a.ok).map((a) => a.stage)
       toast.success(
         [

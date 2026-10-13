@@ -32,6 +32,7 @@ CHECK_RULES: list[tuple[str, str, str, str, dict[str, Any]]] = [
     ("CR-CHMB", "Chamber selected", "chamber_required", "block", {}),
     ("CR-BATCH", "Batch: same step", "batch_same_step", "block", {}),
     ("CR-SORT", "Sort keeps wafer order", "sort_order", "warn", {}),
+    ("CR-FH", "Future hold at step", "future_hold", "block", {}),
     ("CR-WO-DUE", "Work order due notice", "wo_due", "warn", {"warn_days": 3}),
     ("CR-CARR-CLN", "Carrier cleaning due", "carrier_clean", "warn", {}),
     ("CR-CARR-USE", "Carrier usage limit", "carrier_usage", "block", {}),
@@ -61,7 +62,7 @@ for c, n, tp, sev, prm in CHECK_RULES:
         params=prm,
     )
 CHECK_PLANS = [
-    ("CP-MI", "Standard move-in", ["CR-HOLD", "CR-WO", "CR-QT"]),
+    ("CP-MI", "Standard move-in", ["CR-HOLD", "CR-WO", "CR-QT", "CR-FH"]),
     (
         "CP-TI",
         "Standard track-in",
@@ -367,3 +368,69 @@ def _run_exec(session: Session, tid: uuid.UUID, admin: Any) -> None:
             },
             admin,
         )
+
+
+def _post_demo(session: Session, tid: uuid.UUID, admin: Any) -> None:
+    """幂等补充演示数据：演示工单交期、预约 Hold 示例。"""
+    from datetime import date, timedelta
+
+    from app.mes.common.rows import _ins
+
+    wt = TABLES["work_order"]
+    for wo, days in (("WO-DEMO-01", 5), ("WO-DEMO-02", -2), ("WO-DEMO-03", 2)):
+        conn(session).execute(
+            sa.update(wt)
+            .where(wt.c.tenant_id == tid, wt.c.code == wo, wt.c.due_date.is_(None))
+            .values(due_date=date.today() + timedelta(days=days))
+        )
+    fh = TABLES["future_hold"]
+    if (
+        conn(session)
+        .execute(sa.select(sa.func.count()).where(fh.c.tenant_id == tid))
+        .scalar()
+    ):
+        return
+    w = _resolve(session, tid, ("work_order", "WO-DEMO-01"))
+    lot = (
+        conn(session)
+        .execute(
+            sa.select(TABLES["lot"])
+            .where(
+                TABLES["lot"].c.work_order_id == w,
+                TABLES["lot"].c.lot_status.in_(("waiting", "moved_in", "running")),
+            )
+            .order_by(TABLES["lot"].c.code)
+        )
+        .mappings()
+        .first()
+    )
+    if not lot:
+        return
+    st = TABLES["route_step"]
+    cur = (
+        conn(session)
+        .execute(sa.select(st.c.seq).where(st.c.id == lot["current_step_id"]))
+        .scalar()
+    )
+    nxt = (
+        conn(session)
+        .execute(
+            sa.select(st.c.id)
+            .where(st.c.route_id == lot["route_id"], st.c.seq > (cur or 0))
+            .order_by(st.c.seq)
+        )
+        .scalar()
+    )
+    if nxt:
+        _ins(
+            session,
+            tid,
+            "future_hold",
+            admin,
+            lot_id=lot["id"],
+            route_step_id=nxt,
+            comment="Engineer review before next step (DEMO)",
+            fh_status="active",
+            attrs={"_demo": True},
+        )
+    session.commit()

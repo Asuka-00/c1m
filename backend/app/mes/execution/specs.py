@@ -30,6 +30,7 @@ CHECK_TYPES = [
     ("carrier_available", "Carrier available|载具可用|キャリア使用可"),
     ("batch_same_step", "Batch: same step|批量：同一工步|一括：同一ステップ"),
     ("sort_order", "Sort keeps wafer order|整理保持晶圆顺序|ソート順序維持"),
+    ("future_hold", "Future hold at step|预约 Hold|予約ホールド"),
     ("wo_due", "Work order due notice|工单交期提醒|作業指示納期通知"),
     ("carrier_clean", "Carrier cleaning due|载具清洗周期|キャリア洗浄周期"),
     ("carrier_usage", "Carrier usage limit|载具使用次数|キャリア使用回数"),
@@ -98,6 +99,12 @@ ENUMS.update(
         "hold_type": [
             ("manual", "Manual|手动|手動"),
             ("auto", "Automatic|自动|自動"),
+            ("future", "Future hold|预约 Hold|予約ホールド"),
+        ],
+        "fh_status": [
+            ("active", "Waiting|待触发|待機中"),
+            ("triggered", "Triggered|已触发|発動済"),
+            ("cancelled", "Cancelled|已取消|取消"),
         ],
         "history_action": [
             ("start", "Lot start|投产|投入"),
@@ -346,5 +353,52 @@ register(
         order=4,
         sort_default="created_at",
         label_field="check_type",
+    ),
+)
+
+
+register(
+    Entity(
+        "future_hold",
+        "exec",
+        "Future hold|预约 Hold|予約ホールド",
+        [
+            F("lot", "ref", "Lot|批次|ロット", required=True, ref="lot", cascade=True),
+            F(
+                "route_step",
+                "ref",
+                "Hold at step|Hold 工步|ホールド工程",
+                required=True,
+                ref="route_step",
+            ),
+            F(
+                "reason",
+                "ref",
+                "Reason code|原因代码|理由コード",
+                ref="reason_code",
+                help="Blank: default hold reason|留空则使用默认 Hold 原因|空欄：既定のホールド理由",
+            ),
+            F("comment", "str", "Comment|备注|コメント", max_length=300, search=True),
+            F(
+                "fh_status",
+                "enum",
+                "Status|状态|状態",
+                enum="fh_status",
+                system=True,
+                default="active",
+            ),
+            F(
+                "triggered_at",
+                "datetime",
+                "Triggered at|触发时间|発動日時",
+                system=True,
+            ),
+        ],
+        phase=6,
+        has_code=False,
+        icon="CalendarX",
+        order=3,
+        sort_default="created_at",
+        label_field="comment",
     ),
 )

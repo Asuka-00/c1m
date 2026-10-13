@@ -38,6 +38,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-carrier-ops", "Carrier Management|载具管理|キャリア管理"),
         ("mes-qtime-monitor", "Q-Time Monitor|Q-Time 监控|Q タイム監視"),
         ("mes-lot_hold", "Hold Management|Hold 管理|ホールド管理"),
+        ("mes-future_hold", "Future Hold|预约 Hold|予約ホールド"),
         ("mes-lot", "Lot List|批次列表|ロット一覧"),
         ("mes-wafer", "Wafer|晶圆|ウェーハ"),
     ],

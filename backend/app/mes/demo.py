@@ -24,7 +24,7 @@ from app.mes.planning import demo as _planning  # noqa: F401  # isort: skip
 from app.mes.execution import demo as _execution  # noqa: F401  # isort: skip
 from app.mes.warehouse import demo as _warehouse  # noqa: F401  # isort: skip
 from app.mes.common.demo import ACTIVATE, DEMO, _exists, _resolve, default_tenant
-from app.mes.execution.demo import _run_exec
+from app.mes.execution.demo import _post_demo, _run_exec
 from app.mes.planning.demo import STARTS
 
 DEMO_SUB = "[demo] "
@@ -132,6 +132,7 @@ def seed(session: Session) -> int:
             demo=True,
         )
     _run_exec(session, tid, admin)
+    _post_demo(session, tid, admin)
     return n
 
 

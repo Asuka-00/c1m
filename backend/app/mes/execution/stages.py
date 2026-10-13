@@ -17,6 +17,7 @@ from app.mes.equipment.service import e10_apply
 from app.mes.execution.checks import service as ck
 from app.mes.execution.constants import NEXT_STAGE
 from app.mes.execution.context import build_ctx
+from app.mes.execution.future_hold import trigger
 from app.mes.execution.qtime_actions import _qtime_actions
 from app.mes.execution.recipe_run import open_run
 from app.mes.execution.rework import rework_limit_result
@@ -30,7 +31,7 @@ LOT = ENTITIES["lot"]
 
 
 def move_in(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -> Row:
-    """Move In：进站到当前工步（Q-Time 超时处置、move_in 检查）。
+    """Move In：进站到当前工步（Q-Time 超时处置、预约 Hold、move_in 检查）。
 
     Args:
         s: 数据库会话。
@@ -51,6 +52,11 @@ def move_in(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any)
         s.commit()
         return _result(s, tid, lot_id, [], qtime=q)
     ctx = build_ctx(s, tid, lot, "move_in", body)
+    if ck.enabled(ctx, "future_hold"):
+        fired = trigger(s, tid, lot, step, user)
+        if fired:
+            s.commit()
+            return _result(s, tid, lot_id, [], future_hold=fired)
     if ctx.equipment and ctx.equipment["unit_kind"] != "main":
         raise http_422([("equipment_id", "equipment_id: select a main equipment unit")])
     results = ck.evaluate(

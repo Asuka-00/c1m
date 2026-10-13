@@ -36,6 +36,7 @@
       "check_plan_item": "Plan rule",
       "check_binding": "Check binding",
       "check_log": "Check log",
+      "future_hold": "Future hold",
       "site": "Factory / site",
       "area": "Area",
       "workcenter": "Bay / work center",
@@ -277,6 +278,14 @@
         "context": "Context",
         "override_reason": "Override reason",
         "username": "User"
+      },
+      "future_hold": {
+        "lot": "Lot",
+        "route_step": "Hold at step",
+        "reason": "Reason code",
+        "comment": "Comment",
+        "fh_status": "Status",
+        "triggered_at": "Triggered at"
       },
       "site": {
         "code": "Code",
@@ -852,6 +861,9 @@
       "check_rule": {
         "params": "e.g. {\"allowed\": [\"SBY\", \"PRD\"]} for E10; {\"days\": 7} for warn ahead"
       },
+      "future_hold": {
+        "reason": "Blank: default hold reason"
+      },
       "calendar_day": {
         "shifts": "Comma separated shift codes"
       },
@@ -993,6 +1005,7 @@
         "carrier_available": "Carrier available",
         "batch_same_step": "Batch: same step",
         "sort_order": "Sort keeps wafer order",
+        "future_hold": "Future hold at step",
         "wo_due": "Work order due notice",
         "carrier_clean": "Carrier cleaning due",
         "carrier_usage": "Carrier usage limit",
@@ -1047,7 +1060,13 @@
       },
       "hold_type": {
         "manual": "Manual",
-        "auto": "Automatic"
+        "auto": "Automatic",
+        "future": "Future hold"
+      },
+      "fh_status": {
+        "active": "Waiting",
+        "triggered": "Triggered",
+        "cancelled": "Cancelled"
       },
       "history_action": {
         "start": "Lot start",
@@ -1357,6 +1376,7 @@
     "mes-carrier-ops": "Carrier Management",
     "mes-qtime-monitor": "Q-Time Monitor",
     "mes-lot_hold": "Hold Management",
+    "mes-future_hold": "Future Hold",
     "mes-lot": "Lot List",
     "mes-wafer": "Wafer",
     "mes-wip-dashboard": "WIP Dashboard",

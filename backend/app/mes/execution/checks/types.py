@@ -441,3 +441,21 @@ def _sort_order(ctx: Ctx, _p: Row) -> Outcome:
 def _wo_due(_ctx: Ctx, _p: Row) -> Outcome:
     """工单交期提醒：定时扫描发送通知（开关见 ``switch``），作业时不检查。"""
     return "na", "scheduled notice", {}
+
+
+@check_type("future_hold")
+def _future_hold(ctx: Ctx, _p: Row) -> Outcome:
+    """预约 Hold：Move In 时触发当前工步的预约 Hold（关闭后不触发）。"""
+    n = len(
+        find(
+            ctx.s,
+            ctx.tid,
+            "future_hold",
+            lot_id=ctx.lot["id"],
+            route_step_id=ctx.step["id"],
+            fh_status="active",
+        )
+    )
+    if n:
+        return "fail", f"{n} future hold(s) at this step", {"count": n}
+    return "na", "no future hold", {}

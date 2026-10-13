@@ -36,6 +36,7 @@
       "check_plan_item": "方案规则",
       "check_binding": "卡控绑定",
       "check_log": "卡控记录",
+      "future_hold": "预约 Hold",
       "site": "工厂",
       "area": "区域",
       "workcenter": "Bay / 工作中心",
@@ -277,6 +278,14 @@
         "context": "上下文",
         "override_reason": "放行原因",
         "username": "用户"
+      },
+      "future_hold": {
+        "lot": "批次",
+        "route_step": "Hold 工步",
+        "reason": "原因代码",
+        "comment": "备注",
+        "fh_status": "状态",
+        "triggered_at": "触发时间"
       },
       "site": {
         "code": "编码",
@@ -852,6 +861,9 @@
       "check_rule": {
         "params": "例如 E10 用 {\"allowed\": [\"SBY\", \"PRD\"]}"
       },
+      "future_hold": {
+        "reason": "留空则使用默认 Hold 原因"
+      },
       "calendar_day": {
         "shifts": "逗号分隔的班次编码"
       },
@@ -993,6 +1005,7 @@
         "carrier_available": "载具可用",
         "batch_same_step": "批量：同一工步",
         "sort_order": "整理保持晶圆顺序",
+        "future_hold": "预约 Hold",
         "wo_due": "工单交期提醒",
         "carrier_clean": "载具清洗周期",
         "carrier_usage": "载具使用次数",
@@ -1047,7 +1060,13 @@
       },
       "hold_type": {
         "manual": "手动",
-        "auto": "自动"
+        "auto": "自动",
+        "future": "预约 Hold"
+      },
+      "fh_status": {
+        "active": "待触发",
+        "triggered": "已触发",
+        "cancelled": "已取消"
       },
       "history_action": {
         "start": "投产",
@@ -1357,6 +1376,7 @@
     "mes-carrier-ops": "载具管理",
     "mes-qtime-monitor": "Q-Time 监控",
     "mes-lot_hold": "Hold 管理",
+    "mes-future_hold": "预约 Hold",
     "mes-lot": "批次列表",
     "mes-wafer": "晶圆",
     "mes-wip-dashboard": "WIP 看板",

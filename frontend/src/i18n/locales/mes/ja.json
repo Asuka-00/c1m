@@ -36,6 +36,7 @@
       "check_plan_item": "プランルール",
       "check_binding": "チェック割当",
       "check_log": "チェック記録",
+      "future_hold": "予約ホールド",
       "site": "工場",
       "area": "エリア",
       "workcenter": "ベイ / ワークセンター",
@@ -277,6 +278,14 @@
         "context": "コンテキスト",
         "override_reason": "強制解除理由",
         "username": "ユーザー"
+      },
+      "future_hold": {
+        "lot": "ロット",
+        "route_step": "ホールド工程",
+        "reason": "理由コード",
+        "comment": "コメント",
+        "fh_status": "状態",
+        "triggered_at": "発動日時"
       },
       "site": {
         "code": "コード",
@@ -852,6 +861,9 @@
       "check_rule": {
         "params": "例：E10 は {\"allowed\": [\"SBY\", \"PRD\"]}"
       },
+      "future_hold": {
+        "reason": "空欄：既定のホールド理由"
+      },
       "calendar_day": {
         "shifts": "カンマ区切りのシフトコード"
       },
@@ -993,6 +1005,7 @@
         "carrier_available": "キャリア使用可",
         "batch_same_step": "一括：同一ステップ",
         "sort_order": "ソート順序維持",
+        "future_hold": "予約ホールド",
         "wo_due": "作業指示納期通知",
         "carrier_clean": "キャリア洗浄周期",
         "carrier_usage": "キャリア使用回数",
@@ -1047,7 +1060,13 @@
       },
       "hold_type": {
         "manual": "手動",
-        "auto": "自動"
+        "auto": "自動",
+        "future": "予約ホールド"
+      },
+      "fh_status": {
+        "active": "待機中",
+        "triggered": "発動済",
+        "cancelled": "取消"
       },
       "history_action": {
         "start": "投入",
@@ -1357,6 +1376,7 @@
     "mes-carrier-ops": "キャリア管理",
     "mes-qtime-monitor": "Q タイム監視",
     "mes-lot_hold": "ホールド管理",
+    "mes-future_hold": "予約ホールド",
     "mes-lot": "ロット一覧",
     "mes-wafer": "ウェーハ",
     "mes-wip-dashboard": "WIP ダッシュボード",

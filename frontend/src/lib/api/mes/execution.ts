@@ -427,6 +427,7 @@ export interface StageResult {
   results: CheckResult[]
   auto?: { stage: ExecStage; ok: boolean; error?: unknown }[]
   qtime?: string
+  future_hold?: { id: string; reason: string; comment: string | null }[]
   oos_action?: string | null
   e10?: Record<string, unknown> | null
   next_step?: { id: string; seq: number } | null

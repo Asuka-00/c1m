@@ -121,7 +121,8 @@
     "notifications": "メッセージセンター",
     "notify-subscriptions": "通知購読",
     "mes-wo-board": "作業指示進捗",
-    "mes-change_order": "設計変更"
+    "mes-change_order": "設計変更",
+    "mes-future_hold": "予約ホールド"
   },
   "auth": {
     "appName": "FastAPI 管理画面",
@@ -635,7 +636,8 @@
       "oosAction": "規格外処置",
       "eqpRecipe": "装置レシピ名",
       "eqpRecipeHint": "装置報告またはスキャン（任意）",
-      "chambers": "チャンバー"
+      "chambers": "チャンバー",
+      "futureHold": "予約ホールド工程に到着、ロットをホールド：{{reason}}"
     },
     "trace": {
       "hint": "ロットとユニットの全操作履歴。",
