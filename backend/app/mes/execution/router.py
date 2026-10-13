@@ -173,6 +173,13 @@ def holds_list(
     return {"data": rows[start : start + page_size], "count": len(rows)}
 
 
+@router.get("/holds/{hold_id}")
+def hold_detail(session: SessionDep, ctx: CurrentTenant, hold_id: uuid.UUID) -> Any:
+    """Hold 详情：字段同列表每条（含 Q-Time 附加字段，D20）。"""
+    _need(ctx, "mes.exec:read")
+    return svc.get_hold(session, ctx.id, hold_id)
+
+
 class BatchReleaseIn(BaseModel):
     hold_ids: list[uuid.UUID] = Field(min_length=1, max_length=500)
     reason_id: uuid.UUID

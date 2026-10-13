@@ -59,10 +59,20 @@ def _qe(f: Line) -> Any:
 
 
 def _direct_hold(f: Line, lot: Any) -> Any:
-    """直接调用超时转 Hold 处置（QT-02/03/AH：sweep / move_in 只评估 waiting 批次）。"""
+    """直接调用超时转 Hold 处置（QT-02/03/AH：直接调用处置，覆盖任意状态）。"""
     tid = uuid.UUID(f.m.tid)
-    r = {"id": uuid.uuid4(), "code": "QT", "max_minutes": 30, "reason_id": None}
-    r["action"] = "hold"
+    q = _rule(
+        f, reason_id=f.reasons["hold"]["id"]
+    )  # D20：Hold 记录引用真实规则（外键）
+    r = {
+        "id": uuid.UUID(q["id"]),
+        "code": q["code"],
+        "max_minutes": 30,
+        "reason_id": None,
+        "from_step_id": uuid.UUID(q["from_step_id"]),
+        "to_step_id": uuid.UUID(q["to_step_id"]),
+        "action": "hold",
+    }
     with _session(f.m.tid) as s:
         row = lock_lot(s, tid, uuid.UUID(lot["id"]))
         got = qa.qtime_hold(s, tid, row, None, r, QX, {"rule": "QT"})

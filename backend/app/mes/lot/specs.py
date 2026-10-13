@@ -462,6 +462,37 @@ register(
             F("held_at", "datetime", "Held at|Hold 时间|ホールド日時"),
             F("held_by", "str", "Held by|Hold 人|ホールド者"),
             F("route_step", "ref", ref="route_step", list=False, filter=False),
+            # D20：Q-Time 自动 Hold 附加信息（手动 Hold / 旧记录为空）
+            F(
+                "qtime_rule",
+                "ref",
+                "Q-Time rule|Q-Time 规则|Q タイム規則",
+                ref="qtime_rule",
+                list=False,
+                filter=False,
+            ),
+            F(
+                "qtime_from_step",
+                "ref",
+                "Q-Time from step|Q-Time 起始工步|Q タイム開始ステップ",
+                ref="route_step",
+                list=False,
+                filter=False,
+            ),
+            F(
+                "qtime_to_step",
+                "ref",
+                "Q-Time to step|Q-Time 终点工步|Q タイム終了ステップ",
+                ref="route_step",
+                list=False,
+                filter=False,
+            ),
+            F(
+                "qtime_overdue_seconds",
+                "int",
+                "Q-Time overdue (s)|Q-Time 超时秒数|Q タイム超過秒",
+                list=False,
+            ),
             F("released_at", "datetime", "Released at|解除时间|解除日時"),
             F("released_by", "str", "Released by|解除人|解除者", list=False),
             F(

@@ -47,10 +47,7 @@ def move_in(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any)
     _guard(lot, "move_in")
     step = one(s, tid, "route_step", lot["current_step_id"])
     assert step
-    q = _qtime_actions(s, tid, lot, step, user)
-    if q:
-        s.commit()
-        return _result(s, tid, lot_id, [], qtime=q)
+    # D19：Move In 不再停表，也不做 Q-Time 超时处置（改在 Track In / 定时扫描）
     ctx = build_ctx(s, tid, lot, "move_in", body)
     if ck.enabled(ctx, "future_hold"):
         fired = trigger(s, tid, lot, step, user)
@@ -99,6 +96,13 @@ def track_in(
     """Track In：选定设备 / 配方 / 工具开始加工（track_in 检查、E10 迁移），批次进入 Running。"""
     lot = lock_lot(s, tid, lot_id)
     _guard(lot, "track_in")
+    step = one(s, tid, "route_step", lot["current_step_id"])
+    assert step
+    # D19 停表点：已超时则处置；D22 转 Hold 后提交并返回 200（qtime="hold"，未进站）
+    q = _qtime_actions(s, tid, lot, step, user)
+    if q:
+        s.commit()
+        return _result(s, tid, lot_id, [], qtime=q)
     ctx = build_ctx(s, tid, lot, "track_in", body)
     eq = ctx.equipment
     errs: list[tuple[str, str]] = []

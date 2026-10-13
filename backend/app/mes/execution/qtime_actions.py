@@ -1,9 +1,12 @@
-"""Q-Time 超时处置：在 Move In 时或定时扫描时执行（警告 / Hold / 返工 / 报废）。
+"""Q-Time 超时处置：在 Track In 时或定时扫描时执行（警告 / Hold / 返工）。
+
+停表点为 Track In（D19）：waiting / moved_in 批次计时，Track In 之后不再处置。
 
 管控开关：Move In 触发时机上 ``qtime`` 类型规则严重度为 ``off`` 时（按工步 / 设备等作用域），
 不执行超时处置。
 """
 
+import math
 import uuid
 from typing import Any
 
@@ -52,6 +55,13 @@ def qtime_hold(
     都没有时回退默认 hold 原因。非在制批次按 D17 跳过（返回 None）。
     """
     rr = one(s, tid, "reason_code", r["reason_id"])
+    over = (x["minutes"] - (r["max_minutes"] or 0)) * 60  # D20 超出时长（秒）
+    extra = {
+        "qtime_rule_id": r["id"],
+        "qtime_from_step_id": r.get("from_step_id"),
+        "qtime_to_step_id": r.get("to_step_id"),
+        "qtime_overdue_seconds": max(1, math.ceil(over)),
+    }
     reason = rr if rr and rr["reason_type"] == "hold" else qtime_expired_reason(s, tid)
     return hold_lot(
         s,
@@ -64,6 +74,7 @@ def qtime_hold(
         comment=f"Q-Time {r['code']} expired: "
         f"{x['minutes']:g} > {r['max_minutes']} min",
         details={**det, "configured_action": r["action"] or "hold", "action": "hold"},
+        extra=extra,
     )
 
 
@@ -137,6 +148,15 @@ def _qtime_actions(
     return None
 
 
+#: Q-Time 计时中的批次状态：停表点为 Track In（D19），moved_in 仍计时
+QTIME_RUNNING = ("waiting", "moved_in")
+
+
+def qtime_lots(s: Session, tid: uuid.UUID) -> list[Row]:
+    """Q-Time 计时中的批次（waiting / moved_in）。"""
+    return [x for st in QTIME_RUNNING for x in find(s, tid, "lot", lot_status=st)]
+
+
 def qtime_monitor(s: Session, tid: uuid.UUID) -> list[Row]:
     """Q-Time 监控：等待中批次在当前工步（终点）上的各条 Q-Time 规则计时。
 
@@ -145,7 +165,7 @@ def qtime_monitor(s: Session, tid: uuid.UUID) -> list[Row]:
     """
     at = now()
     out: list[Row] = []
-    for lot in find(s, tid, "lot", lot_status="waiting"):
+    for lot in qtime_lots(s, tid):
         step = one(s, tid, "route_step", lot["current_step_id"])
         if not step:
             continue
@@ -216,7 +236,7 @@ def sweep_qtime(s: Session, tid: uuid.UUID, user: Any) -> Row:
         ``{"checked": 扫描批次数, "actions": [{"lot", "action"}]}``。
     """
     acted: list[Row] = []
-    lots = find(s, tid, "lot", lot_status="waiting")
+    lots = qtime_lots(s, tid)
     for lot in lots:
         step = one(s, tid, "route_step", lot["current_step_id"])
         if not step:

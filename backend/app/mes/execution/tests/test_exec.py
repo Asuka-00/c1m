@@ -867,43 +867,45 @@ def test_qtime_min_and_violation_actions(client: TestClient, db: Session) -> Non
             "reason_id": f.reasons["hold"]["id"],
         },
     )
-    f.bind("move_in", ("qtime", "block", {}))
+    f.bind("track_in", ("qtime", "block", {}))  # D19：Q-Time 在 Track In 卡控
     a, b, c = f.start(1, 1, 1)
     for x in (a, b, c):
         f.run_step(x)
-    assert "min 1 min" in _msgs(f.stage(a, "move_in", 409, equipment_id=f.eq["id"]))
+    f.stage(a, "move_in", equipment_id=f.eq["id"])
+    assert "min 1 min" in _msgs(f.stage(a, "track_in", 409, equipment_id=f.eq["id"]))
     f.sql(
         "UPDATE mes_lot_history SET at = at - interval '10 minutes' WHERE lot_id = :l AND action = 'move_out'",
         l=a["id"],
     )
-    f.stage(a, "move_in", equipment_id=f.eq["id"])  # inside the window
+    f.stage(a, "track_in", equipment_id=f.eq["id"])  # inside the window
     # exceeded -> default action hold (once per violation)
     f.sql(
         "UPDATE mes_lot_history SET at = at - interval '2 hours' WHERE lot_id IN (:b, :c) AND action = 'move_out'",
         b=b["id"],
         c=c["id"],
     )
-    r = f.stage(b, "move_in", equipment_id=f.eq["id"])
-    assert (
-        r["qtime"] == "hold"
-        and r["lot"]["on_hold"]
-        and r["lot"]["lot_status"] == "waiting"
-    )
+    # D19：Move In 不停表、不处置；Track In 时超时 → 转 Hold 并 422 on_hold
+    eq = {"equipment_id": f.eq["id"]}
+    r = f.stage(b, "move_in", **eq)
+    assert r["lot"]["lot_status"] == "moved_in" and not r["lot"]["on_hold"]
+    r = f.stage(b, "track_in", **eq)  # D22：转 Hold，200，未进站
+    assert r["qtime"] == "hold"
+    got = f.lot(b)
+    assert got["on_hold"] and got["lot_status"] == "moved_in"
     hold = m.list("lot_hold", lot=b["id"])["data"][0]
     assert hold["source"] == "qtime"
     f.post(
         f"{EXEC}/holds/{hold['id']}/release", {"reason_id": f.reasons["release"]["id"]}
     )
     f.bind(
-        "move_in",
+        "track_in",
         ("lot_hold", "block", {}),
         scope="route_step",
         route_step_id=f.steps[20]["id"],
     )  # replaces qtime check
     assert (
-        f.stage(b, "move_in", equipment_id=f.eq["id"])["lot"]["lot_status"]
-        == "moved_in"
-    )  # not re-held
+        f.stage(b, "track_in", **eq)["lot"]["lot_status"] == "running"
+    )  # 同一次超时不重复处置
     # scrap / rework actions
     m.patch(
         "qtime_rule",
@@ -916,9 +918,11 @@ def test_qtime_min_and_violation_actions(client: TestClient, db: Session) -> Non
         for x in m.list("reason_code", code="qtime_expired")["data"]
         if x["code"] == "qtime_expired"
     )
-    r = f.stage(c, "move_in", equipment_id=f.eq["id"])
-    assert r["qtime"] == "hold" and r["lot"]["on_hold"]
-    assert r["lot"]["lot_status"] == "waiting" and r["lot"]["qty"] > 0
+    f.stage(c, "move_in", **eq)
+    assert f.stage(c, "track_in", **eq)["qtime"] == "hold"
+    assert f.stage(c, "track_in", 422, **eq)["detail"]["code"] == "on_hold"
+    got = f.lot(c)
+    assert got["on_hold"] and got["lot_status"] == "moved_in" and got["qty"] > 0
     ch = [h for h in m.list("lot_hold", lot=c["id"])["data"] if h["is_active"]]
     assert len(ch) == 1 and ch[0]["source"] == "qtime"
     assert ch[0]["reason_id"] == qe["id"]
@@ -930,8 +934,9 @@ def test_qtime_min_and_violation_actions(client: TestClient, db: Session) -> Non
         l=d["id"],
     )
     m.patch("qtime_rule", rule["id"], {"action": "rework", "reason_id": None})
-    r = f.stage(d, "move_in", equipment_id=f.eq["id"])
-    assert r["qtime"] == "rework" and f.ctx(d)["step"]["route"].startswith("RW")
+    r = f.post(f"{EXEC}/qtime/sweep", {})
+    assert {"lot": d["code"], "action": "rework"} in r["actions"]
+    assert f.ctx(d)["step"]["route"].startswith("RW")
 
 
 def test_hold_release(client: TestClient, db: Session) -> None:

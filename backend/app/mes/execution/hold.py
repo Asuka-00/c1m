@@ -69,6 +69,7 @@ def hold_lot(
     source: str = "manual",
     comment: str | None = None,
     details: Row | None = None,
+    extra: Row | None = None,
 ) -> uuid.UUID | None:
     """对批次加 Hold，并写历史。
 
@@ -82,6 +83,7 @@ def hold_lot(
         source: 来源（manual / qtime / dc / check ...）。
         comment: 备注。
         details: 附加信息。
+        extra: Hold 记录附加列（Q-Time 的 qtime_rule_id 等，D20）。
 
     Returns:
         新建 Hold 的 id；自动来源遇终态批次时跳过并返回 None。
@@ -108,6 +110,7 @@ def hold_lot(
         held_at=now(),
         held_by=actor_name(user) or "system",
         route_step_id=lot["current_step_id"],
+        **(extra or {}),
     )
     _upd(s, tid, "lot", lot["id"], user, on_hold=True)
     lot["on_hold"] = True
@@ -240,6 +243,74 @@ def manual_hold(
     return lot
 
 
+QTIME_FIELDS = (
+    "qtime_rule_id",
+    "qtime_from_step_id",
+    "qtime_to_step_id",
+    "qtime_overdue_seconds",
+)
+
+
+def qtime_fields(h: Row) -> Row:
+    """Hold 记录的 Q-Time 附加字段（D20）：id 转字符串，空值保持 None。"""
+    return {
+        k: (str(h.get(k)) if k.endswith("_id") and h.get(k) else h.get(k))
+        for k in QTIME_FIELDS
+    }
+
+
+def _step_name(s: Session, tid: uuid.UUID, step_id: Any) -> str | None:
+    """工步显示名：``<seq> <工序名>``（只读关联，不入库）。"""
+    st = step_id and one(s, tid, "route_step", step_id)
+    if not st:
+        return None
+    op = st["operation_id"] and one(s, tid, "operation", st["operation_id"])
+    return f"{st['seq']} {op['name']}" if op else str(st["seq"])
+
+
+def hold_row(s: Session, tid: uuid.UUID, h: Row, lot: Row, at: datetime) -> Row:
+    """Hold 记录的接口形状（列表与详情一致）。"""
+    rc = one(s, tid, "reason_code", h["reason_id"])
+    rr = h["release_reason_id"] and one(s, tid, "reason_code", h["release_reason_id"])
+    pr = one(s, tid, "product", lot["product_id"])
+    st = one(s, tid, "route_step", h["route_step_id"])
+    ha = h["held_at"]
+    end = h["released_at"] if not h["is_active"] else at
+    return {
+        "id": str(h["id"]),
+        "lot_id": str(lot["id"]),
+        "lot": lot["code"],
+        "lot_status": lot["lot_status"],
+        "product": pr and pr["code"],
+        "step_seq": st and st["seq"],
+        "reason": rc and rc["code"],
+        "reason_name": rc and rc["name"],
+        "source": h["source"] or "manual",
+        "hold_type": h["hold_type"],
+        "is_active": bool(h["is_active"]),
+        "held_at": ha and ha.isoformat(),
+        "held_by": h["held_by"],
+        "hours": ha and end and round((end - ha).total_seconds() / 3600, 1),
+        "comment": h["comment"],
+        "released_at": h["released_at"] and h["released_at"].isoformat(),
+        "released_by": h["released_by"],
+        "release_reason": rr and f"{rr['code']} · {rr['name'] or ''}",
+        "release_comment": h["release_comment"],
+        **qtime_fields(h),
+        "qtime_from_step_name": _step_name(s, tid, h.get("qtime_from_step_id")),
+        "qtime_to_step_name": _step_name(s, tid, h.get("qtime_to_step_id")),
+    }
+
+
+def get_hold(s: Session, tid: uuid.UUID, hold_id: Any) -> Row:
+    """Hold 详情（形状同列表每条）。"""
+    h = one(s, tid, "lot_hold", hold_id)
+    lot = h and one(s, tid, "lot", h["lot_id"])
+    if not h or not lot:
+        raise HTTPException(status_code=404, detail="Hold not found")
+    return hold_row(s, tid, h, lot, now())
+
+
 def list_holds(
     s: Session,
     tid: uuid.UUID,
@@ -268,7 +339,9 @@ def list_holds(
     Returns:
         每条 ``{id, lot_id, lot, lot_status, product, step_seq, reason, reason_name, source,
         hold_type, is_active, held_at, held_by, hours, comment, released_at,
-        released_by, release_reason, release_comment}``，按 Hold 时间倒序。
+        released_by, release_reason, release_comment, qtime_rule_id,
+        qtime_from_step_id, qtime_to_step_id, qtime_overdue_seconds,
+        qtime_from_step_name, qtime_to_step_name}``，按 Hold 时间倒序。
     """
     at = now()
     if at.tzinfo:  # 无时区的查询参数按 UTC 处理
@@ -295,36 +368,7 @@ def list_holds(
             continue
         if not include_terminal and lot["lot_status"] in HOLD_LIST_EXCLUDED:
             continue
-        rc = one(s, tid, "reason_code", h["reason_id"])
-        rr = h["release_reason_id"] and one(
-            s, tid, "reason_code", h["release_reason_id"]
-        )
-        pr = one(s, tid, "product", lot["product_id"])
-        st = one(s, tid, "route_step", h["route_step_id"])
-        end = h["released_at"] if not h["is_active"] else at
-        out.append(
-            {
-                "id": str(h["id"]),
-                "lot_id": str(lot["id"]),
-                "lot": lot["code"],
-                "lot_status": lot["lot_status"],
-                "product": pr and pr["code"],
-                "step_seq": st and st["seq"],
-                "reason": rc and rc["code"],
-                "reason_name": rc and rc["name"],
-                "source": h["source"] or "manual",
-                "hold_type": h["hold_type"],
-                "is_active": bool(h["is_active"]),
-                "held_at": ha and ha.isoformat(),
-                "held_by": h["held_by"],
-                "hours": ha and end and round((end - ha).total_seconds() / 3600, 1),
-                "comment": h["comment"],
-                "released_at": h["released_at"] and h["released_at"].isoformat(),
-                "released_by": h["released_by"],
-                "release_reason": rr and f"{rr['code']} · {rr['name'] or ''}",
-                "release_comment": h["release_comment"],
-            }
-        )
+        out.append(hold_row(s, tid, h, lot, at))
     out.sort(key=lambda r: str(r["held_at"] or ""), reverse=True)
     return out
 
