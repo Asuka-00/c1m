@@ -490,7 +490,8 @@
         "idempotency_in_progress": "同じリクエストを処理中です。しばらくして更新してください",
         "idempotency_key_mismatch": "再送信の内容が最初のリクエストと異なります。更新してやり直してください",
         "idempotency_key_reused": "このリクエストキーは別の操作で使用済みです。更新して再試行してください",
-        "merge_source_invalid": "統合元ロットに重複があるか、統合先ロットが含まれています"
+        "merge_source_invalid": "統合元ロットに重複があるか、統合先ロットが含まれています",
+        "rework_route_missing": "この工程にリワークルートが設定されていません"
       }
     },
     "autoHint": "空欄の場合は自動採番",
@@ -884,7 +885,7 @@
       "releasedBy": "解除者",
       "releaseReason": "解除理由",
       "releaseComment": "解除コメント",
-      "showTerminal": "終了ロットを表示",
+      "showTerminal": "廃棄・出荷・統合済みロットを表示",
       "lotStatus": "ロット状態"
     },
     "report": {
@@ -1145,6 +1146,9 @@
       "info": "詳細",
       "status": "状態",
       "qty": "数量"
+    },
+    "reasonCode": {
+      "qtime_expired": "Q-Time 超過"
     }
   },
   "notify": {

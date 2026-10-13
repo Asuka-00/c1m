@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { EmptyState } from '@/components/desc-list'
-import { enumLabel } from '@/features/mes/common/labels'
+import { enumLabel, reasonLabel } from '@/features/mes/common/labels'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { canHold } from '../lot-rules'
 import { HoldDialog } from './hold-dialog'
@@ -69,7 +69,7 @@ function HoldRow({
   return (
     <div className='rounded-md border p-2'>
       <div className='flex items-center justify-between gap-2'>
-        <span className='font-medium'>{String(h.reason_label ?? '')}</span>
+        <span className='font-medium'>{reasonLabel(h.reason_label)}</span>
         <Badge variant='outline'>
           {enumLabel('hold_type', String(h.hold_type))}
         </Badge>

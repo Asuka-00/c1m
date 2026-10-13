@@ -32,8 +32,16 @@ export function canRunStage(lot: LotLike, stage: string | null | undefined) {
   return !held(lot) || stage === 'track_out'
 }
 
-/** 能否 Hold：非终态（decisions #4），已 Hold 可再加一条。 */
-export const canHold = (lot: LotLike) => !isTerminal(lot)
+/**
+ * 不能 Hold 的状态（M2）：scrapped、shipped、merged。
+ * completed / stored 允许 Hold（如入库前、出货前扣留）。
+ * 注：shipped 目前不在后端 8 个批次状态中，按规则预留。
+ */
+export const NON_HOLDABLE_STATUSES = ['scrapped', 'shipped', 'merged'] as const
+
+/** 能否 Hold（M2，替代 decisions #4）：除 scrapped / shipped / merged 外均可，已 Hold 可再加一条。 */
+export const canHold = (lot: LotLike) =>
+  !(NON_HOLDABLE_STATUSES as readonly string[]).includes(status(lot))
 
 /** 能否 Release：任意状态（终态批次的历史 Hold 也允许解除）。 */
 export const canRelease = () => true

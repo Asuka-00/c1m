@@ -150,4 +150,21 @@ describe('批次操作台按钮权限', () => {
     await expect.element(held.getByTestId('open-adjust')).toBeEnabled()
     await expect.element(held.getByTestId('open-priority')).toBeEnabled()
   })
+
+  it('M2：completed / stored 批次可 Hold，merged 不可', async () => {
+    const W = wrap(ALL)
+    for (const [st, shown] of [
+      ['completed', true],
+      ['stored', true],
+      ['merged', false],
+    ] as const) {
+      const r = await render(
+        <W>
+          <HoldCard cx={cx(st)} />
+        </W>
+      )
+      expect(!!r.container.querySelector('[data-testid=open-hold]')).toBe(shown)
+      await r.unmount()
+    }
+  })
 })

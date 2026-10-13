@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { optLabel } from '@/features/mes/common/labels'
+import { reasonLabel, reasonOptLabel } from '@/features/mes/common/labels'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
 import { Pick } from '../exec-parts'
@@ -53,7 +53,7 @@ export function ReleaseDialog({
             {t('mes.exec.release')} · {String(hold.lot_label ?? '')}
           </DialogTitle>
           <DialogDescription>
-            {String(hold.reason_label ?? '')}
+            {reasonLabel(hold.reason_label)}
           </DialogDescription>
         </DialogHeader>
         <Pick
@@ -61,7 +61,7 @@ export function ReleaseDialog({
           label={t('mes.exec.releaseReason')}
           value={reason}
           onChange={setReason}
-          options={reasons.map((r) => ({ id: r.id, label: optLabel(r) }))}
+          options={reasons.map((r) => ({ id: r.id, label: reasonOptLabel(r) }))}
         />
         <div className='grid gap-1'>
           <Label htmlFor='release-comment'>{t('mes.exec.comment')}</Label>

@@ -152,6 +152,7 @@ describe('mesErrorMessage：旧格式兜底（后端按 N5 落地后可删）', 
     [422, 'idempotency_key_mismatch'],
     [422, 'idempotency_key_reused'],
     [422, 'merge_source_invalid'],
+    [422, 'rework_route_missing'],
   ])('%i %s：按 detail.code 识别（N5）', (status, code) => {
     const want = t(`mes.err.code.${code}`)
     expect(mesErrorMessage(axErr(status, { code, message: 'x' }), lotE)).toBe(
@@ -191,6 +192,7 @@ describe('mesErrorMessage：旧格式兜底（后端按 N5 落地后可删）', 
       'idempotency_key_mismatch',
       'idempotency_key_reused',
       'merge_source_invalid',
+      'rework_route_missing',
     ]
     for (const l of [zh, en, ja])
       for (const k of keys)

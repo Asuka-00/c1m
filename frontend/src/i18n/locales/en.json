@@ -490,7 +490,8 @@
         "idempotency_in_progress": "The same request is still being processed; refresh shortly to see the result",
         "idempotency_key_mismatch": "The resubmitted request differs from the original; refresh and try again",
         "idempotency_key_reused": "This request key was already used for another operation; refresh and try again",
-        "merge_source_invalid": "The source lots contain duplicates or include the target lot"
+        "merge_source_invalid": "The source lots contain duplicates or include the target lot",
+        "rework_route_missing": "No rework route is configured for this step"
       }
     },
     "autoHint": "Leave blank to generate automatically",
@@ -884,7 +885,7 @@
       "releasedBy": "Released by",
       "releaseReason": "Release reason",
       "releaseComment": "Release comment",
-      "showTerminal": "Show terminal lots",
+      "showTerminal": "Show scrapped / shipped / merged lots",
       "lotStatus": "Lot status"
     },
     "report": {
@@ -1145,6 +1146,9 @@
       "info": "Details",
       "status": "Status",
       "qty": "Qty"
+    },
+    "reasonCode": {
+      "qtime_expired": "Q-Time expired"
     }
   },
   "notify": {

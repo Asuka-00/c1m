@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { optLabel } from '@/features/mes/common/labels'
+import { reasonOptLabel } from '@/features/mes/common/labels'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
 import { Pick } from '../exec-parts'
@@ -59,7 +59,7 @@ export function HoldDialog({
           onChange={setReason}
           options={cx.reasons.hold.map((r) => ({
             id: r.id,
-            label: optLabel(r),
+            label: reasonOptLabel(r),
           }))}
         />
         <div className='grid gap-1'>

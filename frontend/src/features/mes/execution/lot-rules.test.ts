@@ -28,9 +28,11 @@ const where = (f: (l: ReturnType<typeof lot>) => boolean, h = false) =>
   ALL.filter((s) => f(lot(s, h)))
 
 describe('lot-rules（对齐 lot-state-machine §4 / decisions）', () => {
-  it('Hold：非终态可 Hold（含已 Hold），终态不可', () => {
-    expect(where(canHold)).toEqual(ALL.filter((s) => !TERM.includes(s)))
-    expect(where(canHold, true)).toEqual(ALL.filter((s) => !TERM.includes(s)))
+  it('Hold（M2）：completed / stored 可 Hold，scrapped / shipped / merged 不可', () => {
+    const ok = ALL.filter((s) => !['scrapped', 'merged'].includes(s))
+    expect(where(canHold)).toEqual(ok)
+    expect(where(canHold, true)).toEqual(ok)
+    expect(canHold(lot('shipped'))).toBe(false)
   })
 
   it('阶段作业：Hold 中只允许 Track Out，不允许 Move Out', () => {

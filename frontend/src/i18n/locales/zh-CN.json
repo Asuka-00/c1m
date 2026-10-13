@@ -490,7 +490,8 @@
         "idempotency_in_progress": "相同的请求正在处理中，请稍后刷新查看结果",
         "idempotency_key_mismatch": "重复提交的内容与首次请求不一致，请刷新后重新操作",
         "idempotency_key_reused": "该请求标识已用于其他操作，请刷新后重试",
-        "merge_source_invalid": "合批来源批次有重复，或包含了目标批次"
+        "merge_source_invalid": "合批来源批次有重复，或包含了目标批次",
+        "rework_route_missing": "当前工步未配置返工路线，无法返工"
       }
     },
     "autoHint": "留空则自动生成",
@@ -884,7 +885,7 @@
       "releasedBy": "解除人",
       "releaseReason": "解除原因",
       "releaseComment": "解除备注",
-      "showTerminal": "显示终态批次",
+      "showTerminal": "显示已报废 / 已出货 / 已合并批次",
       "lotStatus": "批次状态"
     },
     "report": {
@@ -1145,6 +1146,9 @@
       "info": "信息",
       "status": "状态",
       "qty": "数量"
+    },
+    "reasonCode": {
+      "qtime_expired": "Q-Time 超时"
     }
   },
   "notify": {

@@ -1,6 +1,7 @@
 /** MES 标签工具：实体、字段、枚举、行的多语言显示文本。 */
-import { t } from '@/i18n'
+import i18n, { t } from '@/i18n'
 import type { MesEntity, MesField } from '@/lib/api/mes/common'
+import { splitLabel } from '@/lib/split-label'
 
 /** 标签来自生成的语言包（locales/mes/*.json）。 */
 export const entityLabel = (code: string) =>
@@ -39,3 +40,21 @@ export const rowLabel = (r: Record<string, unknown>, labelField = 'code') => {
 /** 简单选项对象的 `code · name` 显示文本。 */
 export const optLabel = (o: { code: string; name?: string }) =>
   o.name ? `${o.code} · ${o.name}` : o.code
+
+/** 系统内置原因码（如 Q-Time 超时 Hold 的 qtime_expired，M1）的本地化名称；其他原因码沿用主数据名称。 */
+export const reasonName = (code: string, name?: string | null) =>
+  i18n.exists(`mes.reasonCode.${code}`)
+    ? t(`mes.reasonCode.${code}`)
+    : (name ?? '')
+
+/** 原因码选项标签（“编码 · 名称”，内置原因码名称本地化）。 */
+export const reasonOptLabel = (o: { code: string; name?: string }) => {
+  const n = reasonName(o.code, o.name)
+  return n ? `${o.code} · ${n}` : o.code
+}
+
+/** 后端 `reason_label`（“编码 · 名称”）的本地化显示。 */
+export const reasonLabel = (label: unknown) => {
+  const [code, name] = splitLabel(label)
+  return code ? reasonOptLabel({ code, name }) : ''
+}

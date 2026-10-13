@@ -5,13 +5,14 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
+import { t } from '@/i18n'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
 import { userEvent } from 'vitest/browser'
 import { mesApi } from '@/lib/api/mes/common'
 import { execApi, type HoldRow } from '@/lib/api/mes/execution'
 import { SidebarProvider } from '@/components/ui/sidebar'
-import { enumLabel } from '@/features/mes/common/labels'
+import { enumLabel, reasonOptLabel } from '@/features/mes/common/labels'
 import HoldManagePage from './hold-manage'
 
 const row = (over: Partial<HoldRow> = {}): HoldRow => ({
@@ -87,7 +88,9 @@ describe('Hold 列表：显示终态批次开关（N6 / P15 A）', () => {
       row({ id: 'H2', lot: 'LOT2', lot_status: 'waiting' }),
     ])
     await expect
-      .element(s.getByText(enumLabel('lot_status', 'scrapped')))
+      .element(
+        s.getByText(enumLabel('lot_status', 'scrapped'), { exact: true })
+      )
       .toBeVisible()
     await expect
       .poll(
@@ -100,5 +103,28 @@ describe('Hold 列表：显示终态批次开关（N6 / P15 A）', () => {
     const { s } = await show([row()])
     await expect.element(s.getByText('LOT1')).toBeVisible()
     expect(document.querySelector('[data-testid=hold-lot-status]')).toBeNull()
+  })
+
+  it('开关文案说明默认隐藏的是已报废 / 已出货 / 已合并（修订版 N6）', async () => {
+    const { s } = await show([row({ lot_status: 'completed' })])
+    await expect
+      .element(s.getByText(t('mes.holdrel.showTerminal')))
+      .toBeVisible()
+    await expect
+      .element(
+        s.getByText(enumLabel('lot_status', 'completed'), { exact: true })
+      )
+      .toBeVisible()
+  })
+
+  it('qtime_expired 原因码显示本地化名称（M1）', async () => {
+    const { s } = await show([
+      row({ reason: 'qtime_expired', reason_name: 'QT' }),
+    ])
+    await expect
+      .element(
+        s.getByText(reasonOptLabel({ code: 'qtime_expired', name: 'QT' }))
+      )
+      .toBeVisible()
   })
 })

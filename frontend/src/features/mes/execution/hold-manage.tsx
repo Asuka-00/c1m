@@ -32,7 +32,11 @@ import {
   useListParams,
   type FilterDef,
 } from '@/components/crud'
-import { enumLabel, optLabel } from '@/features/mes/common/labels'
+import {
+  enumLabel,
+  optLabel,
+  reasonOptLabel,
+} from '@/features/mes/common/labels'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { RefLink } from '@/features/mes/common/ref-link'
 import { mesErrorMessage } from '@/features/mes/common/required'
@@ -106,11 +110,12 @@ export default function HoldManagePage() {
     setStatusSeen(status)
     setSel([])
   }
-  // 终态批次的 Hold 默认不显示（P15 A / N6），开关打开时请求 include_terminal=true
+  // 默认隐藏 scrapped / shipped / merged 批次的 Hold（修订版 N6，completed / stored 默认显示），
+  // 开关打开时请求 include_terminal=true 显示全部
   const [showTerminal, setShowTerminal] = useState(false)
   const terminalParam = showTerminal ? { include_terminal: 'true' } : {}
   const q = useQuery({
-    queryKey: ['mes', 'exec', tk, 'holds', lp.query, showTerminal],
+    queryKey: ['mes', 'exec', tk, 'holds', lp.query, terminalParam],
     queryFn: () =>
       execApi.holds({ status: 'all', ...lp.query, ...terminalParam }),
   })
@@ -285,7 +290,9 @@ export default function HoldManagePage() {
             header: t('mes.holdrel.reason'),
             sortKey: 'reason',
             cell: (r) =>
-              r.reason ? `${r.reason} · ${r.reason_name ?? ''}` : '—',
+              r.reason
+                ? reasonOptLabel({ code: r.reason, name: r.reason_name ?? '' })
+                : '—',
           },
           {
             header: t('mes.holdrel.source'),
