@@ -109,6 +109,7 @@ OBSOLETE_PREFIXES = ("mes-g-",)
 # 同步时删除的旧菜单 / 分组：mes-hold-release → Hold 管理（mes-lot_hold）；
 # 菜单整合取消的分组 g-check / g-eqp-master / g-lot（其菜单已移入其他分组）
 OBSOLETE_KEYS = {
+    "tenant-roles",  # 页签改名为 user-roles（URL 不再含 tenant）
     "p-menus",  # 菜单管理并入平台权限树
     "tenant-role-perms",  # 角色权限并入租户角色对话框
     "general",
@@ -223,7 +224,7 @@ MERGED: dict[str, tuple[str, str, str, list[str]]] = {
         "/user-permissions",
         "UserCog",
         "tabs",
-        ["members", "tenant-roles"],
+        ["members", "user-roles"],
     ),
 }
 
@@ -266,7 +267,7 @@ TAB_TITLES: dict[str, str] = {
     "mes-warehouse": "Warehouse|仓库|倉庫",
     "mes-storage_location": "Storage Location|库位|ロケーション",
     "members": "Users|用户|ユーザー",
-    "tenant-roles": "Roles|角色|ロール",
+    "user-roles": "Roles|角色|ロール",
 }
 
 
@@ -349,6 +350,9 @@ PLATFORM_ITEMS: dict[str, tuple[str, str, str, str, str]] = {
         "platform-ops-log",
     ),
 }
+# 改名前的工作区页签：旧 key / 旧路径 -> 新 key（旧链接重定向到新页签）
+LEGACY_TABS: dict[str, str] = {"tenant-roles": "user-roles"}
+
 # 旧工作区路径 -> 平台控制台路径（超级用户访问旧链接时重定向）
 PLATFORM_REDIRECTS: dict[str, str] = {
     "/platform/menus": "/platform/permissions",

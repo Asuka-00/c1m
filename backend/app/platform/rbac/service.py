@@ -5,12 +5,19 @@ from typing import TYPE_CHECKING, Any
 from sqlmodel import Session, col, select
 
 from app.core.models import actor_name, get_datetime_utc
-from app.platform.rbac.labels import ROLE_LABELS, permission_label
+from app.platform.rbac.labels import (
+    ROLE_DESCRIPTIONS,
+    ROLE_LABELS,
+    permission_description,
+    permission_label,
+    role_description_key,
+)
 from app.platform.rbac.models import Permission, Role
 from app.platform.rbac.permissions import (
     DEFAULT_PERMISSIONS,
     DEFAULT_ROLES,
     TENANT_PERMISSIONS,
+    TENANT_ROLES,
 )
 
 if TYPE_CHECKING:
@@ -59,13 +66,40 @@ def _builtin(current: str | None, new: str) -> str:
     )
 
 
+#: 历次种子数据中的内置英文说明：仍为这些值时视为未自定义，同步为新的内置说明
+LEGACY_DESCRIPTIONS = {
+    *DEFAULT_PERMISSIONS.values(),
+    *(d for d, _ in DEFAULT_ROLES.values()),
+    *(d for d, _ in TENANT_ROLES.values()),
+    "Administrator with all permissions",
+    "Regular user",
+    "Tenant owner",
+    "Tenant administrator",
+    "Tenant member",
+}
+
+
+def _builtin_desc(current: str | None, new: str) -> str:
+    """说明为空或仍为旧内置说明（含自动生成的 ``MES …``）时返回新说明。"""
+    legacy = not current or current in LEGACY_DESCRIPTIONS or current.startswith("MES ")
+    return new if legacy else current  # type: ignore[return-value]
+
+
 def fill_names(obj: Permission | Role) -> None:
-    """为内置权限 / 角色补齐英文显示名称（自定义名称不覆盖；前端按 i18n 翻译内置名称）。"""
+    """为内置权限 / 角色同步英文显示名称与说明（自定义内容不覆盖；前端按 i18n 翻译内置值）。"""
     if isinstance(obj, Permission):
         if lbl := permission_label(obj.code):
             obj.name = _builtin(obj.name, lbl.split("|")[0])
-    elif obj.name in ROLE_LABELS:
+        if desc := permission_description(obj.code):
+            obj.description = _builtin_desc(obj.description, desc.split("|")[0])
+        return
+    if obj.name in ROLE_LABELS:
         obj.title = _builtin(obj.title, ROLE_LABELS[obj.name].split("|")[0])
+    key = role_description_key(obj.name, obj.tenant_id is None)
+    if key in ROLE_DESCRIPTIONS:
+        obj.description = _builtin_desc(
+            obj.description, ROLE_DESCRIPTIONS[key].split("|")[0]
+        )
 
 
 def get_role(session: Session, name: str) -> Role | None:

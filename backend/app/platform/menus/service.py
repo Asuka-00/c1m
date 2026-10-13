@@ -6,6 +6,7 @@ from app.core import registry
 from app.platform.menus.layout import (
     GROUPS,
     ITEMS,
+    LEGACY_TABS,
     MERGED,
     OBSOLETE_KEYS,
     OBSOLETE_PREFIXES,
@@ -23,7 +24,7 @@ from app.platform.rbac.models import Permission
 SYSTEM_ITEMS: dict[str, tuple[str, str | None, str, str | None]] = {
     "dashboard": ("/", "LayoutDashboard", "dashboard", None),
     "members": ("/members", "Users", "members", "members:read"),
-    "tenant-roles": ("/tenant-roles", "ShieldCheck", "tenant-roles", "members:read"),
+    "user-roles": ("/user-roles", "ShieldCheck", "tenant-roles", "members:read"),
     "config": ("/config", "SlidersHorizontal", "config", "config:read"),
     "settings": ("/settings", "Settings", "settings", None),
     "notifications": ("/notifications", "Bell", "notifications", None),
@@ -375,4 +376,7 @@ def redirects(tree: list[MenuNode]) -> dict[str, str]:
             walk(n.children)
 
     walk(tree)
+    for old, new in LEGACY_TABS.items():
+        if f"/{new}" in out:
+            out[f"/{old}"] = out[f"/{new}"]
     return out

@@ -183,7 +183,7 @@ def test_search_other_endpoints(
     }
     assert (
         client.get(
-            f"{API}/platform/permissions/", headers=h, params={"q": "any user"}
+            f"{API}/platform/permissions/", headers=h, params={"q": "platform users"}
         ).json()["count"]
         >= 2
     )  # description

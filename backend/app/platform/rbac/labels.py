@@ -49,6 +49,32 @@ ROLE_LABELS: dict[str, str] = {
 }
 
 
+# 内置角色说明（"en|zh|ja"）：平台角色键为 ``platform.<code>``，工作区默认角色键为 ``<code>``
+ROLE_DESCRIPTIONS: dict[str, str] = {
+    "platform.admin": "Platform administrator with all permissions|拥有全部权限的平台管理员|全権限を持つプラットフォーム管理者",
+    "platform.user": "Regular user without platform permissions|无平台权限的普通用户|プラットフォーム権限のない一般ユーザー",
+    "owner": "System administrator with all permissions|拥有全部权限的系统管理员|全権限を持つシステム管理者",
+    "admin": "Manages users, settings and all business data|管理用户、系统设置与全部业务数据|ユーザー・設定・全業務データを管理",
+    "member": "Read-only access to business data|只读访问业务数据|業務データの閲覧のみ",
+}
+# 内置权限说明的模板（{label} 为该语言的权限名称）
+PERM_DESC_TEMPLATE = "Allows: {label}|允许：{label}|許可：{label}"
+
+
+def role_description_key(name: str, platform: bool) -> str:
+    """内置角色说明的键（不存在时调用方应保留数据库中的说明）。"""
+    return f"platform.{name}" if platform else name
+
+
+def permission_description(code: str) -> str | None:
+    """内置权限的三语说明（由权限名称生成）；未知编码返回 None。"""
+    lbl = permission_label(code)
+    if not lbl:
+        return None
+    tpl = PERM_DESC_TEMPLATE.split("|")
+    return "|".join(t.format(label=x) for t, x in zip(tpl, lbl.split("|"), strict=True))
+
+
 def permission_label(code: str) -> str | None:
     """内置权限的三语名称；未知编码返回 None。"""
     if code in FIXED:
@@ -67,11 +93,19 @@ def i18n_key(code: str) -> str:
 
 
 def labels_bundle(lang: str) -> dict[str, dict[str, str]]:
-    """前端 i18n 包：``permName.<key>`` 与 ``roleName.<code>``。"""
+    """前端 i18n 包：``permName`` / ``roleName`` / ``permDesc`` / ``roleDesc``。"""
     perms = {}
     for code in DEFAULT_PERMISSIONS:
         lbl = permission_label(code)
         if lbl:
             perms[i18n_key(code)] = split_label(lbl)[lang]
     roles = {k: split_label(v)[lang] for k, v in ROLE_LABELS.items()}
-    return {"permName": perms, "roleName": roles}
+    pdesc = {}
+    for code in DEFAULT_PERMISSIONS:
+        d = permission_description(code)
+        if d:
+            pdesc[i18n_key(code)] = split_label(d)[lang]
+    rdesc = {
+        k.replace(".", "_"): split_label(v)[lang] for k, v in ROLE_DESCRIPTIONS.items()
+    }
+    return {"permName": perms, "roleName": roles, "permDesc": pdesc, "roleDesc": rdesc}
