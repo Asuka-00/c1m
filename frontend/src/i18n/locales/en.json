@@ -945,7 +945,12 @@
       "next": "Next {{d}}"
     },
     "fieldIs": "{{field}}: {{value}}",
-    "treeToggle": "Expand / collapse"
+    "treeToggle": "Expand / collapse",
+    "tree": {
+      "all": "All {{name}}",
+      "expand": "Expand",
+      "collapse": "Collapse"
+    }
   },
   "notify": {
     "bell": "Notifications",

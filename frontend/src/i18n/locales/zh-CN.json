@@ -945,7 +945,12 @@
       "next": "最近到期 {{d}}"
     },
     "fieldIs": "{{field}}：{{value}}",
-    "treeToggle": "展开 / 收起"
+    "treeToggle": "展开 / 收起",
+    "tree": {
+      "all": "全部{{name}}",
+      "expand": "展开",
+      "collapse": "收起"
+    }
   },
   "notify": {
     "bell": "通知",

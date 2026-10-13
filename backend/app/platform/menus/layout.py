@@ -43,8 +43,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
     "g-wip": [
         ("mes-wip-dashboard", "WIP Dashboard|WIP 看板|WIP ダッシュボード"),
         ("mes-oee-report", "Equipment OEE|设备 OEE|設備 OEE"),
-        ("mes-trace", "Traceability|追溯查询|トレーサビリティ"),
-        ("mes-lot-trace", "Lot History|批次履历|ロット履歴"),
+        ("mes-lot-history", "Lot History & Trace|批次履历与追溯|ロット履歴・トレース"),
         ("mes-check_log", "Check Log|卡控记录|チェック記録"),
     ],
     "g-planning": [
@@ -69,17 +68,12 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
     ],
     "g-quality": [
         ("mes-dc_result", "DC Data|量测数据|測定データ"),
-        ("mes-dc_plan", "DC Plan|数据收集计划|データ収集計画"),
-        ("mes-measurement_item", "Measurement Item|量测项目|測定項目"),
-        ("mes-sampling_rule", "Sampling Rule|抽样规则|サンプリング規則"),
+        ("mes-dc-config", "DC Configuration|数据收集配置|データ収集設定"),
         ("mes-defect_code", "Defect Code|缺陷代码|欠陥コード"),
     ],
     "g-process": [
-        ("mes-route", "Route|工艺流程|ルート"),
-        ("mes-operation", "Operation|工序|工程"),
-        ("mes-product_route", "Product Route|产品流程|製品ルート"),
-        ("mes-recipe", "Recipe|配方|レシピ"),
-        ("mes-param_spec", "Parameter Spec|参数规格|パラメータ規格"),
+        ("mes-route-master", "Route|工艺流程|ルート"),
+        ("mes-recipe-param", "Recipe & Parameters|配方与参数|レシピ・パラメータ"),
         ("mes-qtime_rule", "Q-Time Rule|Q-Time 规则|Q タイムルール"),
         ("mes-lot-rules", "Lot Rules|批次规则|ロット規則"),
     ],
@@ -98,11 +92,8 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-e10-model", "E10 State Model|E10 状态模型|E10 状態モデル"),
     ],
     "g-factory": [
-        ("mes-site", "Site|工厂|工場"),
-        ("mes-area", "Area|区域|エリア"),
-        ("mes-workcenter", "Work Center|工作中心|ワークセンター"),
-        ("mes-shift", "Shift|班次|シフト"),
-        ("mes-work_calendar", "Work Calendar|工作日历|稼働カレンダー"),
+        ("mes-factory-model", "Factory Model|工厂模型|工場モデル"),
+        ("mes-calendar", "Work Calendar|工作日历|稼働カレンダー"),
     ],
     "g-master": [
         ("mes-reason_code", "Reason Code|原因代码|理由コード"),
@@ -183,6 +174,42 @@ MERGED: dict[str, tuple[str, str, str, list[str]]] = {
         "tabs",
         ["mes-lot_type", "mes-lot_priority", "mes-split_merge_rule"],
     ),
+    "mes-factory-model": (
+        "/mes/factory-model",
+        "Factory",
+        "tree",
+        ["mes-site", "mes-area", "mes-workcenter"],
+    ),
+    "mes-calendar": (
+        "/mes/calendar",
+        "CalendarDays",
+        "tabs",
+        ["mes-work_calendar", "mes-shift"],
+    ),
+    "mes-route-master": (
+        "/mes/route-master",
+        "Workflow",
+        "tabs",
+        ["mes-route", "mes-operation", "mes-product_route"],
+    ),
+    "mes-recipe-param": (
+        "/mes/recipe-param",
+        "FlaskConical",
+        "tabs",
+        ["mes-recipe", "mes-param_spec"],
+    ),
+    "mes-dc-config": (
+        "/mes/dc-config",
+        "ClipboardCheck",
+        "tabs",
+        ["mes-dc_plan", "mes-measurement_item", "mes-sampling_rule"],
+    ),
+    "mes-lot-history": (
+        "/mes/lot-history",
+        "History",
+        "tabs",
+        ["mes-lot-trace", "mes-trace"],
+    ),
 }
 
 # 页签标题（原独立菜单的标题，"en|zh|ja"）
@@ -206,6 +233,21 @@ TAB_TITLES: dict[str, str] = {
     "mes-lot_type": "Lot Type|批次类型|ロットタイプ",
     "mes-lot_priority": "Priority|优先级|優先度",
     "mes-split_merge_rule": "Split / Merge Rule|分批合批规则|分割・統合ルール",
+    "mes-site": "Site|工厂|工場",
+    "mes-area": "Area|区域|エリア",
+    "mes-workcenter": "Work Center|工作中心|ワークセンター",
+    "mes-work_calendar": "Work Calendar|工作日历|稼働カレンダー",
+    "mes-shift": "Shift|班次|シフト",
+    "mes-route": "Route|工艺流程|ルート",
+    "mes-operation": "Operation|工序|工程",
+    "mes-product_route": "Product Route|产品流程|製品ルート",
+    "mes-recipe": "Recipe|配方|レシピ",
+    "mes-param_spec": "Parameter Spec|参数规格|パラメータ規格",
+    "mes-dc_plan": "DC Plan|数据收集计划|データ収集計画",
+    "mes-measurement_item": "Measurement Item|量测项目|測定項目",
+    "mes-sampling_rule": "Sampling Rule|抽样规则|サンプリング規則",
+    "mes-lot-trace": "Lot History|批次履历|ロット履歴",
+    "mes-trace": "Traceability|追溯查询|トレーサビリティ",
 }
 
 

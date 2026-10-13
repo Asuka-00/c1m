@@ -945,7 +945,12 @@
       "next": "次回 {{d}}"
     },
     "fieldIs": "{{field}}：{{value}}",
-    "treeToggle": "展開 / 折りたたみ"
+    "treeToggle": "展開 / 折りたたみ",
+    "tree": {
+      "all": "すべての{{name}}",
+      "expand": "展開",
+      "collapse": "折りたたむ"
+    }
   },
   "notify": {
     "bell": "通知",
