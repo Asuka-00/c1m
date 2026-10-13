@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
+import { overrideEnumOptions } from './fe-overrides'
 import { entityLabel, enumLabel, fieldHelp, fieldLabel } from './labels'
 import { RefSelect } from './ref-select'
 import { requiredBy, requiredHint, validateRequired } from './required'
@@ -449,7 +450,7 @@ export function EnumSelect({
       </SelectTrigger>
       <SelectContent>
         {!required && <SelectItem value={NONE}>—</SelectItem>}
-        {(data ?? []).map((o) => (
+        {overrideEnumOptions(en, data ?? [], value).map((o) => (
           <SelectItem key={o} value={o}>
             {enumLabel(en, o)}
           </SelectItem>

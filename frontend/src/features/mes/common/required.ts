@@ -4,15 +4,11 @@ import i18n, { t } from '@/i18n'
 import { errorMessage } from '@/lib/api/client'
 import type { MesEntity, MesField } from '@/lib/api/mes/common'
 import { TERMINAL_STATUSES } from '@/features/mes/execution/lot-rules'
+import { overrideRequiredWhen } from './fe-overrides'
 import { entityLabel, enumLabel, fieldLabel } from './labels'
 
 type V = Record<string, unknown>
 const blank = (x: unknown) => x == null || x === ''
-
-/** 前端强制可选的字段（即使元数据仍带 required / required_when）。
- *  D25：Q-Time 规则 action=hold 不再要求原因码，留空时后端使用 qtime_expired；
- *  填写时仍由后端校验存在且属于本租户（422 照常显示）。 */
-const FE_OPTIONAL = new Set(['qtime_rule.reason'])
 
 /** 使 `f` 必填的条件（同级字段 + 当前值）；
  *  无条件必填时为 `true`，可选时为 `null`。与后端的
@@ -22,9 +18,10 @@ export function requiredBy(
   f: MesField,
   v: V
 ): true | { field: MesField; value: unknown } | null {
-  if (FE_OPTIONAL.has(`${e.code}.${f.name}`)) return null
   if (f.required) return true
-  for (const [name, allowed] of Object.entries(f.required_when ?? {})) {
+  for (const [name, allowed] of Object.entries(
+    overrideRequiredWhen(e, f) ?? {}
+  )) {
     const other = e.fields.find((x) => x.name === name)
     if (!other) continue
     const cur = v[other.column]
@@ -87,6 +84,7 @@ export const MES_ERROR_CODES = [
   'rework_route_missing',
   'qtime_rule_in_use',
   'hold_not_found',
+  'qtime_action_invalid',
   'idempotency_in_progress',
   'idempotency_key_mismatch',
   'idempotency_key_reused',

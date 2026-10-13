@@ -493,6 +493,7 @@
         "merge_source_invalid": "統合元ロットに重複があるか、統合先ロットが含まれています",
         "rework_route_missing": "この工程にリワークルートが設定されていません",
         "qtime_rule_in_use": "Q-Time 規則 {{qtime_rule_code}} は {{hold_count}} 件のホールド記録から参照されているため削除できません。無効化してください",
+        "qtime_action_invalid": "Q-Time の違反時処置はホールドまたはリワークのみ指定できます",
         "hold_not_found": "ホールド記録が存在しないか削除されています。一覧を更新してください"
       }
     },

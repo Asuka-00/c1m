@@ -2,7 +2,8 @@ import { AxiosError, AxiosHeaders } from 'axios'
 import { t } from '@/i18n'
 import { describe, expect, it } from 'vitest'
 import type { MesEntity, MesField } from '@/lib/api/mes/common'
-import { fieldHelp } from './labels'
+import { overrideEnumOptions } from './fe-overrides'
+import { enumLabel, fieldHelp } from './labels'
 import {
   mesErrorMessage,
   requiredBy,
@@ -30,6 +31,42 @@ const reason = f({
 const ent = (code: string) =>
   ({ code, fields: [action, reason] }) as unknown as MesEntity
 
+describe('D26：Q-Time 规则动作只有 hold / rework', () => {
+  const all = ['warn', 'hold', 'rework', 'scrap']
+  it('表单下拉只有 hold / rework', () => {
+    expect(overrideEnumOptions('qtime_action', all, 'hold')).toEqual([
+      'hold',
+      'rework',
+    ])
+    expect(
+      overrideEnumOptions('qtime_action', ['hold', 'rework', 'scrap'])
+    ).toEqual(['hold', 'rework'])
+  })
+  it('旧数据 action=scrap 仍保留选项并显示标签', () => {
+    expect(overrideEnumOptions('qtime_action', all, 'scrap')).toContain('scrap')
+    expect(enumLabel('qtime_action', 'scrap')).not.toBe('scrap')
+  })
+  it('其他枚举不受影响', () => {
+    expect(overrideEnumOptions('lot_disposition', ['scrap', 'hold'])).toEqual([
+      'scrap',
+      'hold',
+    ])
+  })
+  it('422 qtime_action_invalid 按 code 本地化', () => {
+    const e = new AxiosError('Request failed')
+    e.response = {
+      status: 422,
+      statusText: '',
+      headers: {},
+      config: { headers: new AxiosHeaders() },
+      data: { detail: { code: 'qtime_action_invalid', message: 'bad action' } },
+    }
+    expect(mesErrorMessage(e, ent('qtime_rule'))).toBe(
+      t('mes.err.code.qtime_action_invalid')
+    )
+  })
+})
+
 describe('D25：Q-Time 规则原因码可空', () => {
   it('action=hold 时原因码不必填，前端不拦截提交', () => {
     const v = { action: 'hold', reason_id: null }
@@ -38,9 +75,18 @@ describe('D25：Q-Time 规则原因码可空', () => {
     expect(validateRequired(ent('qtime_rule'), v, new Set())).toEqual({})
   })
 
+  it('覆盖不修改字段元数据本身（即使旧数据 action=scrap 也不拦截）', () => {
+    expect(
+      validateRequired(ent('qtime_rule'), { action: 'scrap' }, new Set())
+    ).toEqual({})
+    requiredBy(ent('qtime_rule'), reason, { action: 'hold' })
+    expect(reason.required_when).toEqual({ action: ['hold', 'scrap'] })
+  })
+
   it('其他实体的 required_when 不受影响', () => {
     const v = { action: 'hold', reason_id: null }
     expect(requiredBy(ent('other'), reason, v)).not.toBeNull()
+    expect(requiredHint(ent('other'), reason, v)).not.toBe('')
     expect(validateRequired(ent('other'), v, new Set()).reason).toBeTruthy()
   })
 
