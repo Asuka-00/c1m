@@ -80,4 +80,6 @@ api_router = APIRouter()
 for _r in registry.routers(dev=settings.FASTAPI_ENV == "development"):
     api_router.include_router(_r)
 app.include_router(api_router, prefix=settings.API_V1_STR)
-app.frontend("/", directory=FRONTEND_DIR)
+# 单进程部署时由后端托管前端构建产物；生产 compose 由 nginx 托管，此目录不存在
+if FRONTEND_DIR.is_dir():
+    app.frontend("/", directory=FRONTEND_DIR)
