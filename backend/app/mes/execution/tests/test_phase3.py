@@ -134,3 +134,48 @@ def test_recipe_run_snapshot(client: TestClient, db: Session) -> None:
     f.stage(a, "track_out")
     run = f.m.list("lot_recipe_run", lot=a["id"])["data"]
     assert run[0]["track_out_at"] is not None
+
+
+def test_batch_track_in_out(client: TestClient, db: Session) -> None:
+    from app.mes.execution.tests.test_exec import Line
+
+    f = Line(client, db)
+    f.bind("track_in", ("batch_same_step", "block", {}))
+    a, b, c = f.start(1, 1, 1)
+
+    def batch(stage: str, ids: list[Any], status: int = 200, **kw: Any) -> Any:
+        r = client.post(
+            f"{EXEC}/batch/{stage}",
+            headers=f.m.h,
+            json={"lot_ids": [x["id"] for x in ids], **kw},
+        )
+        assert r.status_code == status, r.text
+        return r.json()
+
+    for x in (a, b):
+        f.stage(x, "move_in", equipment_id=f.eq["id"])
+    cand = client.get(
+        f"{EXEC}/batch/track_in/candidates",
+        headers=f.m.h,
+        params={"equipment_id": f.eq["id"]},
+    ).json()
+    assert {x["id"] for x in cand["lots"]} == {a["id"], b["id"]}
+    # c 未进站 → 422
+    batch("track_in", [a, c], 422, equipment_id=f.eq["id"])
+    # c 换到下一工步后再进站：工步不同 → 整体阻断，均未执行
+    f.run_step(c)
+    f.stage(c, "move_in", equipment_id=f.eq["id"])
+    r = batch("track_in", [a, b, c], 409, equipment_id=f.eq["id"])
+    assert r["detail"]["code"] == "batch_blocked"
+    assert f.lot(a)["lot_status"] == "moved_in"
+    out = batch("track_in", [a, b], equipment_id=f.eq["id"])
+    assert [i["ok"] for i in out["items"]] == [True, True]
+    assert {f.lot(x)["lot_status"] for x in (a, b)} == {"running"}
+    out = batch("track_out", [a, b])
+    assert {f.lot(x)["lot_status"] for x in (a, b)} == {"tracked_out"}
+    # 严重度 off → 不同工步也可批量
+    f.sql("UPDATE mes_check_rule SET severity = 'off'")
+    f.stage(a, "move_out")
+    f.stage(a, "move_in", equipment_id=f.eq["id"])
+    f.stage(b, "move_out")
+    batch("track_in", [a, c], equipment_id=f.eq["id"])

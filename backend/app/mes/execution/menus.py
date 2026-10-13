@@ -15,6 +15,12 @@ MENUS: dict[str, MenuItem] = {
         "mes-page:lot-trace",
         "mes.exec:read",
     ),
+    "mes-batch-ops": (
+        "/mes/batch-ops",
+        "Layers",
+        "mes-page:batch-ops",
+        "mes.exec:read",
+    ),
     "mes-qtime-monitor": (
         "/mes/qtime-monitor",
         "Timer",

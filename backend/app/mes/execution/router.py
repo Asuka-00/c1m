@@ -427,3 +427,33 @@ def lot_stage(
     if body.override:
         _need(ctx, "mes.exec:override")
     return svc.run_stage(session, ctx.id, lot_id, stage, body.model_dump(), ctx.user)
+
+
+@router.get("/batch/{stage}/candidates")
+def batch_candidates(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    stage: Literal["track_in", "track_out"],
+    equipment_id: uuid.UUID,
+) -> Any:
+    """Lots on one tool ready for batch track in / out."""
+    _need(ctx, "mes.exec:read")
+    return svc.batch_candidates(session, ctx.id, stage, equipment_id)
+
+
+class BatchStageIn(StageIn):
+    lot_ids: list[uuid.UUID] = Field(min_length=2, max_length=25)
+
+
+@router.post("/batch/{stage}")
+def batch_stage(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    stage: Literal["track_in", "track_out"],
+    body: BatchStageIn,
+) -> Any:
+    """Track in / out several lots together on one tool."""
+    _need(ctx, "mes.exec:write")
+    if body.override:
+        _need(ctx, "mes.exec:override")
+    return svc.batch_stage(session, ctx.id, stage, body.model_dump(), ctx.user)

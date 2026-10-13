@@ -946,6 +946,23 @@
     "wmap": {
       "title": "ウェーハマップ",
       "history": "ウェーハ履歴：{{code}}"
+    },
+    "batch": {
+      "hint": "同一装置で複数ロットを一括着工・完了します。",
+      "search": "ロット・キャリア検索",
+      "allProducts": "全製品",
+      "allOps": "全工程",
+      "lot": "ロット",
+      "product": "製品",
+      "step": "ステップ",
+      "carrier": "キャリア",
+      "qty": "数量",
+      "selectAll": "すべて選択",
+      "run": "一括{{stage}}（{{n}}）",
+      "done": "{{ok}} / {{total}} ロット完了",
+      "blocked": "ブロックされたロットがあるため実行しません",
+      "ok": "成功",
+      "failed": "失敗"
     }
   },
   "notify": {

@@ -27,6 +27,7 @@ CHECK_TYPES = [
     ("material_sufficient", "Material sufficient|物料充足|資材充足"),
     ("tool_life", "Tool available + life|工具可用 + 寿命|工具使用可・寿命"),
     ("carrier_available", "Carrier available|载具可用|キャリア使用可"),
+    ("batch_same_step", "Batch: same step|批量：同一工步|一括：同一ステップ"),
     ("chamber_required", "Chamber selected|已选腔体|チャンバー選択済"),
     (
         "chamber_available",

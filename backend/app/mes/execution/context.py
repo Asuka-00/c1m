@@ -66,6 +66,7 @@ def build_ctx(s: Session, tid: uuid.UUID, lot: Row, trigger: str, body: Row) -> 
         chambers=chs,
         tools=tools,
         material_lots=mls,
+        batch=body.get("batch") or [],
     )
     ctx.material_needs = material_needs(s, tid, step, lot, mls, ctx.at)
     ctx.sampling = sampling(s, tid, lot, step, units(s, tid, lot["id"]))

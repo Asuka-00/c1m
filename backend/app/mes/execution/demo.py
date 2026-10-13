@@ -29,6 +29,7 @@ CHECK_RULES: list[tuple[str, str, str, str, dict[str, Any]]] = [
     ("CR-TOOL", "Tool available + life", "tool_life", "block", {"expiry_warn_days": 7}),
     ("CR-CARR", "Carrier usable", "carrier_available", "warn", {}),
     ("CR-CHMB", "Chamber selected", "chamber_required", "block", {}),
+    ("CR-BATCH", "Batch: same step", "batch_same_step", "block", {}),
     (
         "CR-CHMB-E10",
         "Chamber available (E10 SBY/PRD)",
@@ -68,6 +69,7 @@ CHECK_PLANS = [
             "CR-MAT",
             "CR-CHMB",
             "CR-CHMB-E10",
+            "CR-BATCH",
         ],
     ),
     (

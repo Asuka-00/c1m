@@ -946,6 +946,23 @@
     "wmap": {
       "title": "晶圆图",
       "history": "晶圆履历：{{code}}"
+    },
+    "batch": {
+      "hint": "同一设备上多个批次一起上机或下机。",
+      "search": "搜索批次 / 载具",
+      "allProducts": "全部产品",
+      "allOps": "全部工序",
+      "lot": "批次",
+      "product": "产品",
+      "step": "工步",
+      "carrier": "载具",
+      "qty": "数量",
+      "selectAll": "全选",
+      "run": "批量{{stage}}（{{n}}）",
+      "done": "已完成 {{ok}} / {{total}} 个批次",
+      "blocked": "存在被拦截的批次，未执行",
+      "ok": "成功",
+      "failed": "失败"
     }
   },
   "notify": {

@@ -11,4 +11,5 @@ export const pages: Pages = {
   'mes-page:oee-report': lazy(() => import('./oee-report')),
   'mes-page:trace': lazy(() => import('./trace')),
   'mes-page:lot-trace': lazy(() => import('./lot-trace')),
+  'mes-page:batch-ops': lazy(() => import('./batch-ops')),
 }

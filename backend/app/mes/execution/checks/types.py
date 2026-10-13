@@ -375,3 +375,18 @@ def _chamber_e10(ctx: Ctx, p: Row) -> Outcome:
     if bad:
         return "fail", "; ".join(bad) + f"; needs {'/'.join(allowed)}", data
     return "pass", "chambers available", data
+
+
+@check_type("batch_same_step")
+def _same_step(ctx: Ctx, p: Row) -> Outcome:
+    """批量作业：所有批次须在同一工步；``same_carrier`` 为真时还须同一载具。"""
+    if len(ctx.batch) < 2:
+        return "na", "single lot", {}
+    steps = {str(x["current_step_id"]) for x in ctx.batch}
+    if len(steps) > 1:
+        return "fail", "lots are at different steps", {}
+    if p.get("same_carrier"):
+        cars = {str(x["carrier_id"]) for x in ctx.batch}
+        if len(cars) > 1:
+            return "fail", "lots are in different carriers", {}
+    return "pass", f"{len(ctx.batch)} lots at the same step", {}

@@ -34,6 +34,7 @@ class Ctx:
         op / product / wo: 工序、产品、工单（可为空）。
         equipment / recipe / reticle / carrier: 本次选定的资源（可为空）。
         chambers: 本次选定的腔体。
+        batch: 批量作业时同批作业的全部批次。
         eqp_recipe: 设备上报 / 扫描的设备端配方名（可为空）。
         tools / material_lots: 选定的工具与线边批次。
         dc: 录入的 DC 值。
@@ -56,6 +57,7 @@ class Ctx:
     reticle: Row | None = None
     carrier: Row | None = None
     chambers: list[Row] = field(default_factory=list)  # 选定的腔体（设备子单元）
+    batch: list[Row] = field(default_factory=list)  # 批量作业的全部批次
     tools: list[Row] = field(default_factory=list)
     material_lots: list[Row] = field(default_factory=list)
     dc: list[Row] = field(default_factory=list)  # 录入的 DC 值（含 is_oos 超规标记）

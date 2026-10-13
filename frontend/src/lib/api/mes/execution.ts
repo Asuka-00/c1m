@@ -167,7 +167,10 @@ export interface QueueRow {
   step_seq: number | null
   operation: string | null
   operation_name: string | null
+  step_id: string | null
   lot_status: string
+  equipment_id: string | null
+  carrier: string | null
   qty: number
   priority: string | null
   priority_level: number | null
@@ -175,6 +178,22 @@ export interface QueueRow {
   on_hold: boolean
   qtime_remaining: number | null
   hours: number | null
+}
+/** 批量作业阶段。 */
+export type BatchStage = 'track_in' | 'track_out'
+/** 批量作业候选（设备上的批次、腔体与配方）。 */
+export interface BatchCandidates {
+  lots: QueueRow[]
+  chambers: EqpOpt[]
+  recipes: (Opt & { version: number })[]
+}
+/** 批量作业单批结果。 */
+export interface BatchItem {
+  lot_id: string
+  code: string
+  ok?: boolean
+  results?: CheckResult[]
+  error?: unknown
 }
 /** 首页概览指标。 */
 export interface HomeSummary {
@@ -392,6 +411,20 @@ export interface WaferMap {
 }
 
 export const execApi = {
+  /** 批量作业候选批次。 */
+  batchCandidates: (stage: BatchStage, equipmentId: string) =>
+    http
+      .get<BatchCandidates>(`/mes/exec/batch/${stage}/candidates`, {
+        params: { equipment_id: equipmentId },
+      })
+      .then((r) => r.data),
+  /** 批量 Track In / Track Out。 */
+  batchStage: (stage: BatchStage, lotIds: string[], body: StageBody) =>
+    http
+      .post<{
+        items: BatchItem[]
+      }>(`/mes/exec/batch/${stage}`, { lot_ids: lotIds, ...body })
+      .then((r) => r.data.items),
   /** 批次晶圆图。 */
   waferMap: (lotId: string) =>
     http.get<WaferMap>(`/mes/exec/lots/${lotId}/wafer-map`).then((r) => r.data),

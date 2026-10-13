@@ -946,6 +946,23 @@
     "wmap": {
       "title": "Wafer map",
       "history": "Wafer history: {{code}}"
+    },
+    "batch": {
+      "hint": "Track several lots in or out together on one tool.",
+      "search": "Search lot / carrier",
+      "allProducts": "All products",
+      "allOps": "All operations",
+      "lot": "Lot",
+      "product": "Product",
+      "step": "Step",
+      "carrier": "Carrier",
+      "qty": "Qty",
+      "selectAll": "Select all",
+      "run": "Batch {{stage}} ({{n}})",
+      "done": "{{ok}} / {{total}} lots done",
+      "blocked": "Some lots are blocked; nothing was run",
+      "ok": "OK",
+      "failed": "Failed"
     }
   },
   "notify": {
