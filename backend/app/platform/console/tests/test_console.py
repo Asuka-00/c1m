@@ -219,3 +219,20 @@ def test_permission_scope_split(
         json={"name": "x", "permission_codes": ["tenants:write"]},
     )
     assert r.status_code == 400
+
+
+def test_menu_space_validated(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    r = client.post(
+        f"{API}/platform/menus/",
+        headers=superuser_token_headers,
+        json={"key": f"x-{random_lower_string()[:8]}", "title": "X", "space": "moon"},
+    )
+    assert r.status_code == 422
+    plat = client.get(
+        f"{API}/platform/menus/",
+        headers=superuser_token_headers,
+        params={"space": "platform", "page_size": 100},
+    ).json()
+    assert plat["count"] == 14 and {m["space"] for m in plat["data"]} == {"platform"}

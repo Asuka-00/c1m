@@ -9,6 +9,9 @@ from app.platform.menus.models import MenuBase
 
 class MenuCreate(MenuBase):
     parent_id: uuid.UUID | None = None
+    space: str = Field(
+        default="workspace", schema_extra={"pattern": r"^(workspace|platform)$"}
+    )
 
 
 class MenuUpdate(SQLModel):
@@ -19,7 +22,9 @@ class MenuUpdate(SQLModel):
     sort_order: int | None = None
     permission: str | None = Field(default=None, max_length=100)
     hidden: bool | None = None
-    space: str | None = Field(default=None, max_length=20)
+    space: str | None = Field(
+        default=None, schema_extra={"pattern": r"^(workspace|platform)$"}
+    )
     parent_id: uuid.UUID | None = None
 
 
