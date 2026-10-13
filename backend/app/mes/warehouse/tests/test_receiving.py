@@ -9,7 +9,12 @@ from app.mes.execution.tests.test_exec import API, Line
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
 from app.testing.mes import Mes
-from app.testing.utils import random_email, random_lower_string, username_for
+from app.testing.utils import (
+    login_name,
+    random_email,
+    random_lower_string,
+    username_for,
+)
 
 
 def _msgs(r: Any) -> str:
@@ -182,10 +187,11 @@ def test_permissions_and_rls(client: TestClient, db: Session) -> None:
     client.post(
         f"{API[:-4]}/tenants/{s.m.tid}/members",
         headers=s.m.h,
-        json={"username": email, "roles": ["member"]},
+        json={"username": login_name(email), "roles": ["member"]},
     )
     tok = client.post(
-        f"{API[:-4]}/login/access-token", data={"username": email, "password": pw}
+        f"{API[:-4]}/login/access-token",
+        data={"username": login_name(email), "password": pw},
     ).json()["access_token"]
     hm = {"Authorization": f"Bearer {tok}", "X-Tenant-ID": s.m.tid}
     assert client.get(s.m.url("receipt"), headers=hm).json()["count"] == 1

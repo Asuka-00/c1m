@@ -27,7 +27,7 @@ register(
             ),
             F("changes", "json", "Changes|变更内容|変更内容"),
             F(
-                "user_email",
+                "username",
                 "str",
                 "User|用户|ユーザー",
                 max_length=255,

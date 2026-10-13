@@ -23,14 +23,13 @@ from app.platform.users.schemas import (
     UpdatePassword,
     UserCreate,
     UserPublic,
-    UserRegister,
     UsersPublic,
     UserUpdate,
     UserUpdateMe,
 )
 
 router = APIRouter(prefix="/users", tags=["users"])
-# 用户管理（仅在平台空间 /platform/users 下挂载）；本路由只保留自助接口（me / signup）
+# 用户管理（仅在平台空间 /platform/users 下挂载）；本路由只保留自助接口（me）；公开注册已移除，用户由管理员创建
 admin_router = APIRouter(prefix="/users", tags=["users"])
 
 
@@ -210,17 +209,6 @@ def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
     session.delete(current_user)
     session.commit()
     return Message(message="User deleted successfully")
-
-
-@router.post("/signup", response_model=UserPublic)
-def register_user(session: SessionDep, user_in: UserRegister) -> Any:
-    """
-    Create new user without the need to be logged in.
-    """
-    _check_identity(session, user_in.username, user_in.email)
-    user_create = UserCreate.model_validate(user_in)
-    user = crud.create_user(session=session, user_create=user_create)
-    return user
 
 
 @admin_router.get("/{user_id}", response_model=UserPublic)

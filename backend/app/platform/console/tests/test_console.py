@@ -8,19 +8,27 @@ from sqlmodel import Session
 from app.core.config import settings
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
-from app.testing.utils import random_email, random_lower_string, username_for
+from app.testing.user import create_owned_tenant
+from app.testing.utils import (
+    login_name,
+    random_email,
+    random_lower_string,
+    username_for,
+)
 
 API = settings.API_V1_STR
 
 
 def _user(client: TestClient, db: Session) -> tuple[str, dict[str, str]]:
     email, pw = random_email(), random_lower_string()
-    crud.create_user(
+    _u = crud.create_user(
         session=db,
         user_create=UserCreate(email=email, username=username_for(email), password=pw),
     )
+    create_owned_tenant(db, _u)
     tok = client.post(
-        f"{API}/login/access-token", data={"username": email, "password": pw}
+        f"{API}/login/access-token",
+        data={"username": login_name(email), "password": pw},
     ).json()["access_token"]
     return email, {"Authorization": f"Bearer {tok}"}
 
@@ -80,7 +88,7 @@ def test_tenant_lifecycle(
     r = client.put(
         f"{API}/platform/tenants/{tid}/owner",
         headers=sh,
-        json={"username": other_email},
+        json={"username": username_for(other_email)},
     )
     assert r.status_code == 200 and "owner" in r.json()["roles"]
     members = client.get(f"{API}/platform/tenants/{tid}/members", headers=sh).json()

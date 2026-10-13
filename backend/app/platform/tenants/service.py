@@ -1,7 +1,5 @@
 """租户服务：成员关系、租户角色、租户创建与默认租户。"""
 
-import re
-import secrets
 import uuid
 from dataclasses import dataclass, field
 
@@ -12,7 +10,6 @@ from app.platform.rbac.permissions import TENANT_ROLES
 from app.platform.rbac.service import fill_names
 from app.platform.tenants.models import Tenant, TenantMember
 from app.platform.users.models import User
-from app.platform.users.service import USER_CREATED_HOOKS
 
 DEFAULT_TENANT_SLUG = "default"
 
@@ -122,28 +119,6 @@ def create_tenant(session: Session, name: str, slug: str, owner: User | None) ->
     session.commit()
     session.refresh(tenant)
     return tenant
-
-
-def slugify(value: str) -> str:
-    """把名称转换为 URL 友好的 slug。"""
-    s = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
-    return (s or "t")[:40]
-
-
-def create_personal_tenant(session: Session, user: User) -> Tenant:
-    """为用户创建个人工作区租户（用户为 owner）。"""
-    base = slugify(user.username)
-    slug = f"{base}-{secrets.token_hex(3)}"
-    return create_tenant(session, f"{user.username}'s workspace", slug, owner=user)
-
-
-# 每个新用户（注册或管理员创建）都会获得一个个人租户并作为 owner，
-# 之后可被邀请加入其他租户
-def _on_user_created(session: Session, user: User) -> None:
-    create_personal_tenant(session, user)
-
-
-USER_CREATED_HOOKS.append(_on_user_created)
 
 
 def ensure_default_tenant(session: Session) -> Tenant:

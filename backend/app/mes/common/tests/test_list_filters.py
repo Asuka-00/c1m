@@ -56,7 +56,7 @@ def test_export_honours_filters_and_distinct(client: TestClient, db: Session) ->
     codes = sorted(str(x[0].value) for x in ws.iter_rows(min_row=2) if x[0].value)
     assert [c for c in codes if c.startswith("E")] == ["EX-A", "EX-B"]
     # 文本筛选去重取值：仅 filter=True 的 str 字段
-    d = client.get(m.url("audit_log", "distinct", "user_email"), headers=m.h)
+    d = client.get(m.url("audit_log", "distinct", "username"), headers=m.h)
     assert d.status_code == 200 and d.json()["data"]
     bad = client.get(m.url("site", "distinct", "name"), headers=m.h)
     assert bad.status_code == 422

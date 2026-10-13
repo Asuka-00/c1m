@@ -10,7 +10,12 @@ from app.platform.users import service as crud
 from app.platform.users.models import User
 from app.platform.users.schemas import UserCreate
 from app.testing.user import create_random_user
-from app.testing.utils import random_email, random_lower_string, username_for
+from app.testing.utils import (
+    login_name,
+    random_email,
+    random_lower_string,
+    username_for,
+)
 
 
 def test_get_users_superuser_me(
@@ -104,7 +109,7 @@ def test_get_existing_user_current_user(client: TestClient, db: Session) -> None
     user_id = user.id
 
     login_data = {
-        "username": username,
+        "username": login_name(username),
         "password": password,
     }
     r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
@@ -337,49 +342,13 @@ def test_update_password_me_same_password_error(
     )
 
 
-def test_register_user(client: TestClient, db: Session) -> None:
-    username = random_email()
-    password = random_lower_string()
-    full_name = random_lower_string()
-    data = {
-        "email": username,
-        "username": username_for(username),
-        "password": password,
-        "full_name": full_name,
-    }
+def test_public_signup_removed(client: TestClient) -> None:
+    """公开注册已移除：用户只能由平台或租户管理员创建。"""
     r = client.post(
         f"{settings.API_V1_STR}/users/signup",
-        json=data,
+        json={"username": "nobody1", "password": "password123"},
     )
-    assert r.status_code == 200
-    created_user = r.json()
-    assert created_user["email"] == username
-    assert created_user["full_name"] == full_name
-
-    user_query = select(User).where(User.email == username)
-    user_db = db.exec(user_query).first()
-    assert user_db
-    assert user_db.email == username
-    assert user_db.full_name == full_name
-    verified, _ = verify_password(password, user_db.hashed_password)
-    assert verified
-
-
-def test_register_user_already_exists_error(client: TestClient) -> None:
-    password = random_lower_string()
-    full_name = random_lower_string()
-    data = {
-        "email": settings.FIRST_SUPERUSER,
-        "username": "fresh_" + random_lower_string()[:8],
-        "password": password,
-        "full_name": full_name,
-    }
-    r = client.post(
-        f"{settings.API_V1_STR}/users/signup",
-        json=data,
-    )
-    assert r.status_code == 409
-    assert r.json()["detail"] == "User with this email already exists"
+    assert r.status_code in (404, 405)
 
 
 def test_update_user(
@@ -460,7 +429,7 @@ def test_delete_user_me(client: TestClient, db: Session) -> None:
     user_id = user.id
 
     login_data = {
-        "username": username,
+        "username": login_name(username),
         "password": password,
     }
     r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)

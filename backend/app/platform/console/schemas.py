@@ -53,7 +53,7 @@ class PlatformTenantUpdate(SQLModel):
 
 class LoginLogPublic(SQLModel):
     id: uuid.UUID
-    email: str
+    username: str
     user_id: uuid.UUID | None = None
     success: bool
     reason: str | None = None
@@ -69,7 +69,7 @@ class LoginLogsPublic(SQLModel):
 
 class PlatformAuditPublic(SQLModel):
     id: uuid.UUID
-    actor_email: str
+    actor_username: str
     action: str
     target_type: str
     target_id: str | None = None
@@ -92,7 +92,7 @@ class CrossTenantAudit(SQLModel):
     entity_type: str | None = None
     action: str | None = None
     record_code: str | None = None
-    user_email: str | None = None
+    username: str | None = None
     changes: Any = None
     created_at: datetime | None = None
 

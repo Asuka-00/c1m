@@ -33,7 +33,7 @@ def record_platform_audit(
     session.add(
         PlatformAudit(
             actor_id=actor.id,
-            actor_email=actor_name(actor) or "",
+            actor_username=actor_name(actor) or "",
             action=action,
             target_type=target_type,
             target_id=str(target_id) if target_id is not None else None,
@@ -45,7 +45,7 @@ def record_platform_audit(
 
 def record_login(
     session: Session,
-    email: str,
+    username: str,
     user: User | None,
     success: bool,
     reason: str | None = None,
@@ -55,7 +55,7 @@ def record_login(
     """记录一次登录尝试并立即提交（失败的登录也要留痕）。"""
     session.add(
         LoginLog(
-            email=email[:255],
+            username=username[:255],
             user_id=user.id if user else None,
             success=success,
             reason=reason,

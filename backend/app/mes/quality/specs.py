@@ -301,7 +301,7 @@ register(
                 enum="oos_action",
             ),
             F(
-                "user_email",
+                "username",
                 "str",
                 "User|用户|ユーザー",
                 max_length=255,

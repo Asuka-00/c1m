@@ -13,7 +13,12 @@ from app.platform.rbac.models import Permission
 from app.platform.rbac.permissions import DEFAULT_PERMISSIONS
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
-from app.testing.utils import random_email, random_lower_string, username_for
+from app.testing.utils import (
+    login_name,
+    random_email,
+    random_lower_string,
+    username_for,
+)
 
 API = settings.API_V1_STR
 
@@ -40,7 +45,8 @@ def _user_with(
         )
         assert r.status_code == 200
     tok = client.post(
-        f"{API}/login/access-token", data={"username": email, "password": pw}
+        f"{API}/login/access-token",
+        data={"username": login_name(email), "password": pw},
     ).json()["access_token"]
     return str(user.id), {"Authorization": f"Bearer {tok}"}
 

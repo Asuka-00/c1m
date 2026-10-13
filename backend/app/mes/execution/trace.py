@@ -78,7 +78,7 @@ def _lot_trace(s: Session, tid: uuid.UUID, lot: Row) -> Row:
             "equipment": _code(s, tid, "equipment", r["equipment_id"]),
             "recipe": _code(s, tid, "recipe", r["recipe_id"]),
             "at": r["at"],
-            "user": r["user_email"],
+            "user": r["username"],
         }
         for r in _hist(s, tid, ids, "track_in")
     ]

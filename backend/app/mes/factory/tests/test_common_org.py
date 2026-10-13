@@ -12,7 +12,12 @@ from app.core.tenant import set_tenant
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
 from app.testing.mes import API, Mes
-from app.testing.utils import random_email, random_lower_string, username_for
+from app.testing.utils import (
+    login_name,
+    random_email,
+    random_lower_string,
+    username_for,
+)
 
 
 def _org(m: Mes) -> tuple[dict, dict]:  # type: ignore[type-arg]
@@ -320,7 +325,7 @@ def test_audit_log(client: TestClient, db: Session) -> None:
     m.patch("site", site["id"], {"name": "Fab One"})
     logs = m.list("audit_log", entity_type="site")["data"]
     assert [x["action"] for x in logs] == ["update", "create"]  # newest first
-    assert logs[0]["changes"]["name"] == ["Fab 1", "Fab One"] and logs[0]["user_email"]
+    assert logs[0]["changes"]["name"] == ["Fab 1", "Fab One"] and logs[0]["username"]
     assert client.post(m.url("audit_log"), headers=m.h, json={}).status_code == 405
 
 
@@ -364,10 +369,11 @@ def test_isolation_and_permissions(client: TestClient, db: Session) -> None:
     client.post(
         f"/api/v1/tenants/{a.tid}/members",
         headers=a.h,
-        json={"username": email, "roles": ["member"]},
+        json={"username": login_name(email), "roles": ["member"]},
     )
     tok = client.post(
-        "/api/v1/login/access-token", data={"username": email, "password": pw}
+        "/api/v1/login/access-token",
+        data={"username": login_name(email), "password": pw},
     ).json()["access_token"]
     hm = {"Authorization": f"Bearer {tok}", "X-Tenant-ID": a.tid}
     assert client.get(a.url("site"), headers=hm).json()["count"] == 1

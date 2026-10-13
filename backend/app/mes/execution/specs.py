@@ -324,7 +324,7 @@ register(
                 max_length=300,
                 list=False,
             ),
-            F("user_email", "str", "User|用户|ユーザー", max_length=255, search=True),
+            F("username", "str", "User|用户|ユーザー", max_length=255, search=True),
         ],
         phase=6,
         has_code=False,

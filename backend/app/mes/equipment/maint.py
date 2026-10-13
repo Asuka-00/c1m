@@ -52,7 +52,7 @@ def e10_log(
         source=source,
         reason_id=reason_id,
         comment=comment,
-        user_email=actor_name(user),
+        username=actor_name(user),
         at=now(),
     )
 
@@ -239,7 +239,7 @@ def pm_complete(
         equipment_id=eq["id"],
         result=body.get("result") or "ok",
         comment=body.get("comment"),
-        user_email=actor_name(user),
+        username=actor_name(user),
         done_at=now(),
     )
     audit(s, tid, ENTITIES["equipment"], "pm", eq, user, {"pm": (None, p["code"])})

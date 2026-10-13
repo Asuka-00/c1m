@@ -4,7 +4,13 @@ from sqlmodel import Session
 from app.core.config import settings
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
-from app.testing.utils import random_email, random_lower_string, username_for
+from app.testing.user import create_owned_tenant
+from app.testing.utils import (
+    login_name,
+    random_email,
+    random_lower_string,
+    username_for,
+)
 
 API = settings.API_V1_STR
 
@@ -20,12 +26,14 @@ def _keys(nodes: list[dict]) -> set[str]:  # type: ignore[type-arg]
 
 def _user(client: TestClient, db: Session) -> tuple[str, dict[str, str]]:
     email, pw = random_email(), random_lower_string()
-    crud.create_user(
+    _u = crud.create_user(
         session=db,
         user_create=UserCreate(email=email, username=username_for(email), password=pw),
     )
+    create_owned_tenant(db, _u)
     tok = client.post(
-        f"{API}/login/access-token", data={"username": email, "password": pw}
+        f"{API}/login/access-token",
+        data={"username": login_name(email), "password": pw},
     ).json()["access_token"]
     return email, {"Authorization": f"Bearer {tok}"}
 
@@ -107,7 +115,7 @@ def test_owner_vs_member_menus(client: TestClient, db: Session) -> None:
     client.post(
         f"{API}/tenants/{tid}/members",
         headers=ho,
-        json={"username": member_email, "roles": []},
+        json={"username": username_for(member_email), "roles": []},
     )
     # no roles in that tenant -> no members menus there
     keys = _keys(

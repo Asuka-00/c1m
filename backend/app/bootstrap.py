@@ -45,9 +45,7 @@ def init_db(session: Session) -> None:
             password=settings.FIRST_SUPERUSER_PASSWORD,
             is_superuser=True,
         )
-        user = crud.create_user(
-            session=session, user_create=user_in, with_personal_tenant=False
-        )
+        user = crud.create_user(session=session, user_create=user_in)
     assign_role(session, user, ADMIN_ROLE)
     # 多租户：默认租户，FIRST_SUPERUSER 为其 owner
     from app.platform.menus.service import seed_menus

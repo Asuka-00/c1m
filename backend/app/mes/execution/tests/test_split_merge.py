@@ -11,7 +11,12 @@ from sqlmodel import Session
 from app.mes.execution.tests.test_exec import EXEC, Line, _msgs
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
-from app.testing.utils import random_email, random_lower_string, username_for
+from app.testing.utils import (
+    login_name,
+    random_email,
+    random_lower_string,
+    username_for,
+)
 
 API = EXEC[: -len("/exec")]
 
@@ -314,10 +319,11 @@ def test_bound_checks_override_preview_and_perms(
     client.post(
         f"{API[:-4]}/tenants/{f.m.tid}/members",
         headers=f.m.h,
-        json={"username": email, "roles": ["member"]},
+        json={"username": login_name(email), "roles": ["member"]},
     )
     tok = client.post(
-        f"{API[:-4]}/login/access-token", data={"username": email, "password": pw}
+        f"{API[:-4]}/login/access-token",
+        data={"username": login_name(email), "password": pw},
     ).json()["access_token"]
     hm = {"Authorization": f"Bearer {tok}", "X-Tenant-ID": f.m.tid}
     url = f"{EXEC}/lots/{lot['id']}"

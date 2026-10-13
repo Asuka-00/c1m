@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
@@ -5,13 +7,18 @@ from app.core.config import settings
 from app.platform.users import service as crud
 from app.platform.users.models import User
 from app.platform.users.schemas import UserCreate, UserUpdate
-from app.testing.utils import random_email, random_lower_string, username_for
+from app.testing.utils import (
+    login_name,
+    random_email,
+    random_lower_string,
+    username_for,
+)
 
 
 def user_authentication_headers(
     *, client: TestClient, email: str, password: str
 ) -> dict[str, str]:
-    data = {"username": email, "password": password}
+    data = {"username": login_name(email), "password": password}
 
     r = client.post(f"{settings.API_V1_STR}/login/access-token", data=data)
     response = r.json()
@@ -50,3 +57,11 @@ def authentication_token_from_email(
         user = crud.update_user(session=db, db_user=user, user_in=user_in_update)
 
     return user_authentication_headers(client=client, email=email, password=password)
+
+
+def create_owned_tenant(db: Session, owner: User) -> uuid.UUID:
+    """测试用：创建一个以 ``owner`` 为所有者的租户（系统不再自动创建个人工作区）。"""
+    from app.platform.tenants.service import create_tenant
+
+    slug = "t-" + random_lower_string()[:12]
+    return create_tenant(db, f"{owner.username} tenant", slug, owner=owner).id

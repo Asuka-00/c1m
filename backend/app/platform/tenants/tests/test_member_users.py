@@ -139,7 +139,7 @@ def test_platform_assign_user_tenants_and_actor_username(
     ops = client.get(
         f"{API}/platform/ops-log", headers=sh, params={"page_size": 5}
     ).json()["data"]
-    assert ops and all("@" not in (o.get("actor_email") or "") for o in ops)
+    assert ops and all("@" not in (o.get("actor_username") or "") for o in ops)
     # 修改记录更新人为用户名
     upd = client.patch(
         f"{API}/platform/users/{u['id']}", headers=sh, json={"full_name": "X"}

@@ -136,7 +136,7 @@ def _genealogy(
         qty=qty,
         units=unit_codes,
         route_step_id=parent["current_step_id"],
-        user_email=actor_name(user),
+        username=actor_name(user),
         at=at,
     )
 

@@ -140,7 +140,7 @@ def create_platform_tenant(
         raise HTTPException(status_code=409, detail="Tenant slug already exists")
     owner = None
     if body.owner:
-        owner = crud.get_user_by_login(session=session, login=body.owner)
+        owner = crud.get_user_by_username(session=session, username=body.owner)
         if not owner:
             raise HTTPException(status_code=404, detail="Owner user not found")
     t = create_tenant(session, body.name, body.slug, owner=owner)
@@ -292,7 +292,7 @@ def set_channel(
 def list_login_log(
     session: SessionDep, params: ListParamsDep, success: bool | None = None
 ) -> Any:
-    """Paginated; sort_by: created_at, email; q: email/ip; filter: success."""
+    """Paginated; sort_by: created_at, username; q: username/ip; filter: success."""
     stmt = select(LoginLog)
     if success is not None:
         stmt = stmt.where(LoginLog.success == success)
@@ -300,10 +300,10 @@ def list_login_log(
         session,
         stmt,
         params,
-        {"created_at": LoginLog.created_at, "email": LoginLog.email},
+        {"created_at": LoginLog.created_at, "username": LoginLog.username},
         ("created_at", "desc"),
         LoginLog.id,
-        search=[LoginLog.email, LoginLog.ip],
+        search=[LoginLog.username, LoginLog.ip],
     )
     return LoginLogsPublic(data=data, count=count)
 
@@ -324,7 +324,7 @@ def list_ops_log(
         ("created_at", "desc"),
         PlatformAudit.id,
         search=[
-            PlatformAudit.actor_email,
+            PlatformAudit.actor_username,
             PlatformAudit.action,
             PlatformAudit.target_id,
         ],
@@ -358,7 +358,7 @@ def cross_tenant_audit(
     cond: list[Any] = []
     if q:
         like = f"%{q}%"
-        cond.append(sa.or_(t.c.record_code.ilike(like), t.c.user_email.ilike(like)))
+        cond.append(sa.or_(t.c.record_code.ilike(like), t.c.username.ilike(like)))
     if action:
         cond.append(t.c.action == action)
     need = page * page_size
@@ -392,7 +392,7 @@ def cross_tenant_audit(
             entity_type=r["entity_type"],
             action=r["action"],
             record_code=r["record_code"],
-            user_email=r["user_email"],
+            username=r["username"],
             changes=r["changes"],
             created_at=r["created_at"],
         )

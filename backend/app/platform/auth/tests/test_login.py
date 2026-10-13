@@ -11,12 +11,17 @@ from app.platform.users.models import User
 from app.platform.users.schemas import UserCreate
 from app.platform.users.service import create_user
 from app.testing.user import user_authentication_headers
-from app.testing.utils import random_email, random_lower_string, username_for
+from app.testing.utils import (
+    login_name,
+    random_email,
+    random_lower_string,
+    username_for,
+)
 
 
 def test_get_access_token(client: TestClient) -> None:
     login_data = {
-        "username": settings.FIRST_SUPERUSER,
+        "username": settings.FIRST_SUPERUSER_USERNAME,
         "password": settings.FIRST_SUPERUSER_PASSWORD,
     }
     r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
@@ -28,7 +33,7 @@ def test_get_access_token(client: TestClient) -> None:
 
 def test_get_access_token_incorrect_password(client: TestClient) -> None:
     login_data = {
-        "username": settings.FIRST_SUPERUSER,
+        "username": settings.FIRST_SUPERUSER_USERNAME,
         "password": "incorrect",
     }
     r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
@@ -152,7 +157,7 @@ def test_login_with_bcrypt_password_upgrades_to_argon2(
 
     assert user.hashed_password.startswith("$2")
 
-    login_data = {"username": email, "password": password}
+    login_data = {"username": login_name(email), "password": password}
     r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
     assert r.status_code == 200
     tokens = r.json()
@@ -191,7 +196,7 @@ def test_login_with_argon2_password_keeps_hash(client: TestClient, db: Session) 
 
     original_hash = user.hashed_password
 
-    login_data = {"username": email, "password": password}
+    login_data = {"username": login_name(email), "password": password}
     r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
     assert r.status_code == 200
     tokens = r.json()

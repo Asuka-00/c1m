@@ -56,7 +56,7 @@ def history(
         user,
         lot_id=lot["id"],
         action=action,
-        user_email=actor_name(user),
+        username=actor_name(user),
         at=now(),
         **kw,
     )

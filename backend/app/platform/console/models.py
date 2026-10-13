@@ -15,7 +15,8 @@ class LoginLog(SQLModel, table=True):
 
     __tablename__ = "login_log"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    email: str = Field(max_length=255, index=True)
+    # 登录名（尝试登录时输入的用户名）
+    username: str = Field(max_length=255, index=True)
     user_id: uuid.UUID | None = Field(default=None, index=True)
     success: bool = Field(default=False, index=True)
     reason: str | None = Field(default=None, max_length=100)
@@ -30,7 +31,7 @@ class PlatformAudit(SQLModel, table=True):
     __tablename__ = "platform_audit"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     actor_id: uuid.UUID | None = Field(default=None, index=True)
-    actor_email: str = Field(max_length=255)
+    actor_username: str = Field(max_length=255)
     action: str = Field(max_length=50, index=True)
     target_type: str = Field(max_length=50)
     target_id: str | None = Field(default=None, max_length=64)

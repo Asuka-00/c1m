@@ -185,7 +185,7 @@ def track_out(
             value=d["value"],
             is_oos=d["is_oos"],
             oos_action=d["oos_action"] if d["is_oos"] and oos_on else None,
-            user_email=email,
+            username=email,
         )
     consumed = _consume(s, tid, ctx.material_needs, user)
     tools = []

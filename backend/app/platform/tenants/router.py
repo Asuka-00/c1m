@@ -253,7 +253,7 @@ def add_tenant_member(
     session: SessionDep, ctx: MembersWriter, member_in: MemberAdd
 ) -> Any:
     """按用户名（或邮箱）添加已有用户为成员；只有 owner 能授予 owner 角色。"""
-    user = crud.get_user_by_login(session=session, login=member_in.username)
+    user = crud.get_user_by_username(session=session, username=member_in.username)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     if get_membership(session, ctx.id, user.id):
@@ -292,7 +292,6 @@ def create_tenant_user(
             is_active=body.is_active,
             is_superuser=False,
         ),
-        with_personal_tenant=False,
     )
     set_tenant(session, ctx.id)
     try:
@@ -568,7 +567,7 @@ def platform_assign_owner(
 ) -> Any:
     """Make an existing user an owner (adds the membership when missing)."""
     ctx = _platform_ctx(session, user, tenant_id)
-    target = crud.get_user_by_login(session=session, login=body.username)
+    target = crud.get_user_by_username(session=session, username=body.username)
     if not target:
         raise HTTPException(status_code=404, detail="User not found")
     m = get_membership(session, tenant_id, target.id)

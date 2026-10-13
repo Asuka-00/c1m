@@ -52,7 +52,7 @@ def audit(
             changes={
                 k: [to_json(a), to_json(b)] for k, (a, b) in (changes or {}).items()
             },
-            user_email=actor_name(user),
+            username=actor_name(user),
             created_at=now(),
             created_by=getattr(user, "id", None),
         )

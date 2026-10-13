@@ -1,6 +1,5 @@
 """用户服务：创建、更新、查询与认证。"""
 
-from collections.abc import Callable
 from typing import Any
 
 from sqlmodel import Session, func, select
@@ -11,23 +10,16 @@ from app.platform.rbac.service import assign_role
 from app.platform.users.models import User
 from app.platform.users.schemas import UserCreate, UserUpdate
 
-#: hooks run after a user is created (registered by higher-level modules,
-#: e.g. tenants creates the personal workspace); args: session, user
-USER_CREATED_HOOKS: list[Callable[[Session, User], None]] = []
 
-
-def create_user(
-    *, session: Session, user_create: UserCreate, with_personal_tenant: bool = True
-) -> User:
+def create_user(*, session: Session, user_create: UserCreate) -> User:
     """创建用户。
 
-    分配默认平台角色（超级用户为 admin，否则 user），并在 ``with_personal_tenant``
-    时触发 ``USER_CREATED_HOOKS``（tenants 模块据此创建个人工作区）。
+    分配默认平台角色（超级用户为 admin，否则 user）。不会自动创建任何租户：
+    租户（工厂 / 站点级作用域）由平台管理员创建，用户须被显式加入租户。
 
     Args:
         session: 数据库会话。
         user_create: 用户数据。
-        with_personal_tenant: 是否运行创建后钩子。
 
     Returns:
         新用户。
@@ -42,12 +34,6 @@ def create_user(
     assign_role(
         session, db_obj, ADMIN_ROLE if db_obj.is_superuser else DEFAULT_USER_ROLE
     )
-    # 多租户：新用户（注册或管理员创建）获得个人租户并作为 owner，
-    # 之后可被邀请加入其他租户（由 USER_CREATED_HOOKS 执行）。
-    if with_personal_tenant:
-        for hook in USER_CREATED_HOOKS:
-            hook(session, db_obj)
-        session.refresh(db_obj)
     return db_obj
 
 
@@ -117,28 +103,21 @@ def identity_conflict(
     return None
 
 
-def get_user_by_login(*, session: Session, login: str) -> User | None:
-    """按登录标识查询：含 ``@`` 视为邮箱，否则为用户名。"""
-    if "@" in login:
-        return get_user_by_email(session=session, email=login)
-    return get_user_by_username(session=session, username=login)
-
-
-def authenticate(*, session: Session, email: str, password: str) -> User | None:
-    """校验登录标识与密码。
+def authenticate(*, session: Session, username: str, password: str) -> User | None:
+    """校验用户名与密码（仅支持用户名登录，不接受邮箱）。
 
     Args:
         session: 数据库会话。
-        email: 邮箱或用户名。
+        username: 用户名（不区分大小写）。
         password: 明文密码。
 
     Returns:
         认证成功的用户，否则 None。
     """
-    db_user = get_user_by_login(session=session, login=email.strip())
+    db_user = get_user_by_username(session=session, username=username.strip())
     if not db_user:
         # 即使用户不存在也执行一次密码校验以防时序攻击，
-        # 使邮箱存在与否的响应时间相近
+        # 使用户名存在与否的响应时间相近
         verify_password(password, DUMMY_HASH)
         return None
     verified, updated_password_hash = verify_password(password, db_user.hashed_password)

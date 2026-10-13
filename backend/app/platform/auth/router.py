@@ -37,7 +37,7 @@ def login_access_token(
     Every attempt (success or failure) is written to the platform login log.
     """
     user = crud.authenticate(
-        session=session, email=form_data.username, password=form_data.password
+        session=session, username=form_data.username, password=form_data.password
     )
     ip = request.client.host if request.client else None
     ua = request.headers.get("user-agent")

@@ -43,7 +43,7 @@ def test_set_user_roles_and_filters(
     )
     assert r.status_code == 200
     rows = client.get(
-        f"{API}/platform/users/", headers=h, params={"username": user.email}
+        f"{API}/platform/users/", headers=h, params={"username": user.username}
     ).json()["data"]
     assert len(rows) == 1
     assert code in rows[0]["role_names"] or "测试角色" in rows[0]["role_names"]

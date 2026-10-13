@@ -7,14 +7,16 @@ from app.core.config import settings
 from app.platform.rbac.permissions import TENANT_PERMISSIONS
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate, UserUpdate
-from app.testing.utils import random_lower_string, username_for
+from app.testing.user import create_owned_tenant
+from app.testing.utils import login_name, random_lower_string, username_for
 
 API = settings.API_V1_STR
 
 
 def _login(client: TestClient, email: str, pw: str) -> dict[str, str]:
     tok = client.post(
-        f"{API}/login/access-token", data={"username": email, "password": pw}
+        f"{API}/login/access-token",
+        data={"username": login_name(email), "password": pw},
     ).json()["access_token"]
     return {"Authorization": f"Bearer {tok}"}
 
@@ -24,7 +26,7 @@ def test_users_search_paginates_sorts_and_counts(
 ) -> None:
     tag = random_lower_string()[:8]
     for i in range(23):
-        crud.create_user(
+        _u = crud.create_user(
             session=db,
             user_create=UserCreate(
                 email=f"{tag}-{i:02d}@example.com",
@@ -33,7 +35,8 @@ def test_users_search_paginates_sorts_and_counts(
                 full_name=f"Zed {i}",
             ),
         )
-    crud.create_user(
+        create_owned_tenant(db, _u)
+    _u = crud.create_user(
         session=db,
         user_create=UserCreate(
             email=f"other-{tag[:4]}x@example.com",
@@ -42,6 +45,7 @@ def test_users_search_paginates_sorts_and_counts(
             full_name=f"Name {tag.upper()}",
         ),
     )
+    create_owned_tenant(db, _u)
     h = superuser_token_headers
     r = client.get(
         f"{API}/platform/users/", headers=h, params={"q": tag.upper()}
@@ -114,12 +118,13 @@ def test_search_respects_tenant_scope(client: TestClient, db: Session) -> None:
     hs = []
     for _ in range(2):
         email, pw = f"{random_lower_string()[:8]}@example.com", random_lower_string()
-        crud.create_user(
+        _u = crud.create_user(
             session=db,
             user_create=UserCreate(
                 email=email, username=username_for(email), password=pw
             ),
         )
+        create_owned_tenant(db, _u)
         hs.append(_login(client, email, pw))
     ha, hb = hs
     ta = client.get(f"{API}/tenants/me", headers=ha).json()["data"][0]["tenant"]["id"]
@@ -328,7 +333,7 @@ def test_enumerable_filters(
     client.post(
         f"{API}/tenants/{tid}/members",
         headers=h,
-        json={"username": users[1].email, "roles": ["member"]},
+        json={"username": users[1].username, "roles": ["member"]},
     )
     m = client.get(
         f"{API}/tenants/{tid}/members",

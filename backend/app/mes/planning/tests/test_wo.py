@@ -13,7 +13,12 @@ from app.core.tenant import set_tenant
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
 from app.testing.mes import API, Mes
-from app.testing.utils import random_email, random_lower_string, username_for
+from app.testing.utils import (
+    login_name,
+    random_email,
+    random_lower_string,
+    username_for,
+)
 
 
 class Fab:
@@ -298,10 +303,11 @@ def test_permissions_rls_readonly(client: TestClient, db: Session) -> None:
     client.post(
         f"{API[:-4]}/tenants/{m.tid}/members",
         headers=m.h,
-        json={"username": email, "roles": ["member"]},
+        json={"username": login_name(email), "roles": ["member"]},
     )
     tok = client.post(
-        f"{API[:-4]}/login/access-token", data={"username": email, "password": pw}
+        f"{API[:-4]}/login/access-token",
+        data={"username": login_name(email), "password": pw},
     ).json()["access_token"]
     hm = {"Authorization": f"Bearer {tok}", "X-Tenant-ID": m.tid}
     assert client.get(m.url("work_order"), headers=hm).json()["count"] == 1

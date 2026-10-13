@@ -361,7 +361,7 @@ def evaluate(
                 message=r["message"][:500],
                 context={"preview": preview, **r["data"]},
                 override_reason=reason if r["result"] == "overridden" else None,
-                user_email=email,
+                username=email,
                 created_at=ctx.at,
                 created_by=getattr(user, "id", None),
             )

@@ -8,14 +8,21 @@ from app.platform.rbac.service import has_permissions
 from app.platform.users import service as crud
 from app.platform.users.models import User
 from app.platform.users.schemas import UserCreate
-from app.testing.utils import random_email, random_lower_string, username_for
+from app.testing.user import create_owned_tenant
+from app.testing.utils import (
+    login_name,
+    random_email,
+    random_lower_string,
+    username_for,
+)
 
 API = settings.API_V1_STR
 
 
 def _login(client: TestClient, email: str, password: str) -> dict[str, str]:
     r = client.post(
-        f"{API}/login/access-token", data={"username": email, "password": password}
+        f"{API}/login/access-token",
+        data={"username": login_name(email), "password": password},
     )
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
@@ -26,6 +33,7 @@ def _new_user(client: TestClient, db: Session) -> tuple[User, dict[str, str]]:
         session=db,
         user_create=UserCreate(email=email, username=username_for(email), password=pw),
     )
+    create_owned_tenant(db, user)
     return user, _login(client, email, pw)
 
 
@@ -57,21 +65,6 @@ def test_new_user_gets_user_role(client: TestClient, db: Session) -> None:
     body = client.get(f"{API}/users/me/permissions", headers=headers).json()
     assert body["roles"] == ["user"]
     assert "users:read" not in body["permissions"]
-
-
-def test_signup_gets_user_role(client: TestClient) -> None:
-    email, pw = random_email(), random_lower_string()
-    assert (
-        client.post(
-            f"{API}/users/signup",
-            json={"email": email, "username": username_for(email), "password": pw},
-        ).status_code
-        == 200
-    )
-    body = client.get(
-        f"{API}/users/me/permissions", headers=_login(client, email, pw)
-    ).json()
-    assert body["roles"] == ["user"]
 
 
 def test_normal_user_cannot_manage_roles(
@@ -214,7 +207,7 @@ def test_removing_tenant_roles_blocks_members(
         client.post(
             f"{API}/tenants/{tenant['id']}/members",
             headers=uh,
-            json={"username": other.email, "roles": ["owner"]},
+            json={"username": other.username, "roles": ["owner"]},
         ).status_code
         == 200
     )

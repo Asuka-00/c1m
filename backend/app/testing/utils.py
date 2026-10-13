@@ -16,7 +16,7 @@ def random_email() -> str:
 
 def get_superuser_token_headers(client: TestClient) -> dict[str, str]:
     login_data = {
-        "username": settings.FIRST_SUPERUSER,
+        "username": settings.FIRST_SUPERUSER_USERNAME,
         "password": settings.FIRST_SUPERUSER_PASSWORD,
     }
     r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
@@ -29,3 +29,12 @@ def get_superuser_token_headers(client: TestClient) -> dict[str, str]:
 def username_for(email: str) -> str:
     """测试用：由邮箱推导用户名（随机邮箱的本地部分，截断到 40 位）。"""
     return email.split("@")[0].lower()[:40]
+
+
+def login_name(email: str) -> str:
+    """测试用：由邮箱得到登录用户名（仅支持用户名登录）。"""
+    from app.core.config import settings
+
+    if email == settings.FIRST_SUPERUSER:
+        return settings.FIRST_SUPERUSER_USERNAME
+    return username_for(email) if "@" in email else email

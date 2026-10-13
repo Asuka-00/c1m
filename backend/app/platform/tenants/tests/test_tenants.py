@@ -9,7 +9,13 @@ from app.core.config import settings
 from app.platform.tenants.models import Tenant
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
-from app.testing.utils import random_email, random_lower_string, username_for
+from app.testing.user import create_owned_tenant, user_authentication_headers
+from app.testing.utils import (
+    login_name,
+    random_email,
+    random_lower_string,
+    username_for,
+)
 
 API = settings.API_V1_STR
 
@@ -20,8 +26,10 @@ def _user(client: TestClient, db: Session):  # type: ignore[no-untyped-def]
         session=db,
         user_create=UserCreate(email=email, username=username_for(email), password=pw),
     )
+    create_owned_tenant(db, user)
     r = client.post(
-        f"{API}/login/access-token", data={"username": email, "password": pw}
+        f"{API}/login/access-token",
+        data={"username": login_name(email), "password": pw},
     )
     h = {"Authorization": f"Bearer {r.json()['access_token']}"}
     tenant_id = client.get(f"{API}/tenants/me", headers=h).json()["data"][0]["tenant"][
@@ -30,24 +38,30 @@ def _user(client: TestClient, db: Session):  # type: ignore[no-untyped-def]
     return user, h, tenant_id
 
 
-def test_signup_creates_personal_tenant_as_owner(client: TestClient) -> None:
+def test_new_users_get_no_personal_tenant(
+    client: TestClient, db: Session, superuser_token_headers: dict[str, str]
+) -> None:
+    """任何途径创建的用户都不会自动获得个人工作区。"""
     email, pw = random_email(), random_lower_string()
-    assert (
-        client.post(
-            f"{API}/users/signup",
-            json={"email": email, "username": username_for(email), "password": pw},
-        ).status_code
-        == 200
+    user = crud.create_user(
+        session=db,
+        user_create=UserCreate(email=email, username=username_for(email), password=pw),
     )
-    tok = client.post(
-        f"{API}/login/access-token", data={"username": email, "password": pw}
-    ).json()["access_token"]
-    mine = client.get(
-        f"{API}/tenants/me", headers={"Authorization": f"Bearer {tok}"}
+    h = user_authentication_headers(client=client, email=email, password=pw)
+    assert client.get(f"{API}/tenants/me", headers=h).json()["count"] == 0
+    name = "np_" + random_lower_string()[:8]
+    u = client.post(
+        f"{API}/platform/users/",
+        headers=superuser_token_headers,
+        json={"username": name, "password": pw},
     ).json()
-    assert mine["count"] == 1
-    assert mine["data"][0]["roles"] == ["owner"]
-    assert "tenant:manage" in mine["data"][0]["permissions"]
+    assert (
+        client.get(
+            f"{API}/platform/users/{u['id']}/tenants", headers=superuser_token_headers
+        ).json()
+        == []
+    )
+    assert user.id
 
 
 def test_superuser_owns_default_tenant(
@@ -91,12 +105,12 @@ def test_members_roles_and_header_selection(client: TestClient, db: Session) -> 
     r = client.post(
         f"{API}/tenants/{t}/members",
         headers=ho,
-        json={"username": member.email, "roles": ["member"]},
+        json={"username": member.username, "roles": ["member"]},
     )
     assert r.status_code == 200 and r.json()["roles"] == ["member"]
     assert (
         client.post(
-            f"{API}/tenants/{t}/members", headers=ho, json={"username": member.email}
+            f"{API}/tenants/{t}/members", headers=ho, json={"username": member.username}
         ).status_code
         == 409
     )
@@ -109,7 +123,7 @@ def test_members_roles_and_header_selection(client: TestClient, db: Session) -> 
     # member can read but not manage members or the tenant
     assert (
         client.post(
-            f"{API}/tenants/{t}/members", headers=hm, json={"username": owner.email}
+            f"{API}/tenants/{t}/members", headers=hm, json={"username": owner.username}
         ).status_code
         == 403
     )
@@ -176,7 +190,7 @@ def test_switch_tenant_token_claim(client: TestClient, db: Session) -> None:
     owner, ho, t = _user(client, db)
     member, hm, personal = _user(client, db)
     client.post(
-        f"{API}/tenants/{t}/members", headers=ho, json={"username": member.email}
+        f"{API}/tenants/{t}/members", headers=ho, json={"username": member.username}
     )
     tok = client.post(f"{API}/tenants/{t}/switch", headers=hm).json()["access_token"]
     hs = {"Authorization": f"Bearer {tok}"}

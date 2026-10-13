@@ -18,7 +18,7 @@ def test_superuser_login_by_username_and_email(client: TestClient) -> None:
     pw = settings.FIRST_SUPERUSER_PASSWORD
     assert _login(client, settings.FIRST_SUPERUSER_USERNAME, pw) == 200
     assert _login(client, settings.FIRST_SUPERUSER_USERNAME.upper(), pw) == 200
-    assert _login(client, settings.FIRST_SUPERUSER, pw) == 200
+    assert _login(client, settings.FIRST_SUPERUSER, pw) == 400  # 不再支持邮箱登录
     r = client.post(
         f"{API}/login/access-token",
         data={"username": settings.FIRST_SUPERUSER_USERNAME, "password": "wrong-pw"},
