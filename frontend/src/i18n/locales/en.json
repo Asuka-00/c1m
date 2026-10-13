@@ -90,6 +90,10 @@
     "en": "English"
   },
   "nav": {
+    "searchMenu": "Search menus",
+    "searchMenuHint": "Type a menu name (zh / en / ja) or key",
+    "searchMenuEmpty": "No matching menus",
+    "breadcrumb": "Breadcrumb",
     "selectTenant": "Select site",
     "tenants": "Sites",
     "tenantsCount": "{{count}} sites",
@@ -121,7 +125,7 @@
     "notifications": "Message Center",
     "notify-subscriptions": "Notification Subscriptions",
     "mes-wo-board": "WO Progress",
-    "mes-change_order": "Engineering Change",
+    "mes-change_order": "ECN",
     "mes-future_hold": "Future Hold",
     "mes-shift-handover": "Shift Handover",
     "mes-label-print": "Label Printing",

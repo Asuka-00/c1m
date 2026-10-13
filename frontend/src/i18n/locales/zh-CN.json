@@ -90,6 +90,10 @@
     "en": "English"
   },
   "nav": {
+    "searchMenu": "搜索菜单",
+    "searchMenuHint": "输入菜单名称（中 / 英 / 日）或 key",
+    "searchMenuEmpty": "没有匹配的菜单",
+    "breadcrumb": "面包屑",
     "selectTenant": "选择厂区",
     "tenants": "厂区",
     "tenantsCount": "{{count}} 个厂区",
@@ -121,8 +125,8 @@
     "notifications": "消息中心",
     "notify-subscriptions": "通知订阅",
     "mes-wo-board": "工单进度",
-    "mes-change_order": "工程变更",
-    "mes-future_hold": "预约 Hold",
+    "mes-change_order": "工程变更（ECN）",
+    "mes-future_hold": "Future Hold（预约 Hold）",
     "mes-shift-handover": "交接班日志",
     "mes-label-print": "标签打印",
     "mes-operator_qual": "操作员资质"
