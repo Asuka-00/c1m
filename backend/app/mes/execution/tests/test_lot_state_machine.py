@@ -380,29 +380,30 @@ def test_ik01_same_key_returns_first_result(client: TestClient, db: Session) -> 
 def test_hold_list_excludes_terminal_by_default(
     client: TestClient, db: Session
 ) -> None:
-    """N6：Hold 列表默认排除终态批次；include_terminal=true 包含；返回 lot_status，count 一致。"""
+    """N6（M2 修订）：Hold 列表默认排除 scrapped / merged；include_terminal=true 包含；返回 lot_status，count 一致。"""
     f = Line(client, db)
-    a, b = f.start(1, 1)
-    _hold(f, a)
-    _hold(f, b)
+    a, b, c = f.start(1, 1, 1)
+    for x in (a, b, c):
+        _hold(f, x)
     f.sql("UPDATE mes_lot SET lot_status='scrapped' WHERE id=:i", i=b["id"])
+    f.sql("UPDATE mes_lot SET lot_status='completed' WHERE id=:i", i=c["id"])
 
     def get(**p: Any) -> Any:
         r = f.c.get(f"{EXEC}/holds", headers=f.m.h, params=p)
         assert r.status_code == 200, r.text
         return r.json()
 
-    r = get()
-    assert r["count"] == len(r["data"]) == 1
-    assert r["data"][0]["lot"] == a["code"] and r["data"][0]["lot_status"] == "waiting"
-    r = get(include_terminal="true")
-    assert r["count"] == 2
+    r = get()  # M2：默认只排除 scrapped / merged，completed 仍显示
+    assert r["count"] == len(r["data"]) == 2
     assert {x["lot"]: x["lot_status"] for x in r["data"]} == {
         a["code"]: "waiting",
-        b["code"]: "scrapped",
+        c["code"]: "completed",
     }
+    r = get(include_terminal="true")
+    assert r["count"] == 3
+    assert {x["lot"]: x["lot_status"] for x in r["data"]}[b["code"]] == "scrapped"
     r = get(include_terminal="true", page_size=1)
-    assert r["count"] == 2 and len(r["data"]) == 1
+    assert r["count"] == 3 and len(r["data"]) == 1
 
 
 def test_n5_error_shapes(client: TestClient, db: Session) -> None:
@@ -415,3 +416,23 @@ def test_n5_error_shapes(client: TestClient, db: Session) -> None:
     _hold(f, lot)
     d = f.stage(lot, "move_in", 422, equipment_id=f.eq["id"])["detail"]
     assert d["code"] == "on_hold" and d["message"]
+
+
+@pytest.mark.parametrize("status", ["completed", "stored"])
+def test_m2_manual_hold_completed_stored_allowed(
+    client: TestClient, db: Session, status: str
+) -> None:
+    """M2：completed / stored 允许手动 Hold；scrapped / merged 仍 422（见 H07）。"""
+    f = Line(client, db)
+    (lot,) = f.start(1)
+    f.sql("UPDATE mes_lot SET lot_status=:st WHERE id=:i", st=status, i=lot["id"])
+    _hold(f, lot)
+    got = f.lot(lot)
+    assert got["on_hold"] and got["lot_status"] == status
+
+
+def test_m2_merged_manual_hold_rejected(client: TestClient, db: Session) -> None:
+    f = Line(client, db)
+    (lot,) = f.start(1)
+    f.sql("UPDATE mes_lot SET lot_status='merged' WHERE id=:i", i=lot["id"])
+    assert _hold(f, lot, 422)["detail"]["code"] == "lot_status"

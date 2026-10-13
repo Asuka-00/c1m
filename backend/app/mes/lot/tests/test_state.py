@@ -260,10 +260,10 @@ MATRIX: list[tuple[str, str, str, bool, str]] = [
     ("M-hold-running-H", "hold", "running", True, "ok"),
     ("M-hold-tracked_out-N", "hold", "tracked_out", False, "ok"),
     ("M-hold-tracked_out-H", "hold", "tracked_out", True, "ok"),
-    ("M-hold-completed-N", "hold", "completed", False, "lot_status"),
-    ("M-hold-completed-H", "hold", "completed", True, "lot_status"),
-    ("M-hold-stored-N", "hold", "stored", False, "lot_status"),
-    ("M-hold-stored-H", "hold", "stored", True, "lot_status"),
+    ("M-hold-completed-N", "hold", "completed", False, "ok"),  # M2
+    ("M-hold-completed-H", "hold", "completed", True, "ok"),  # M2
+    ("M-hold-stored-N", "hold", "stored", False, "ok"),  # M2
+    ("M-hold-stored-H", "hold", "stored", True, "ok"),  # M2
     ("M-hold-scrapped-N", "hold", "scrapped", False, "lot_status"),
     ("M-hold-scrapped-H", "hold", "scrapped", True, "lot_status"),
     ("M-hold-merged-N", "hold", "merged", False, "lot_status"),
@@ -319,8 +319,10 @@ def _lot(status: str, on_hold: bool = False) -> dict[str, Any]:
 
 
 def test_rules_cover_matrix_actions() -> None:
-    assert set(RULES) == {ACTION.get(r[1], r[1]) for r in MATRIX}
-    assert len(MATRIX) == 272 and sum(r[4] == "ok" for r in MATRIX) == 62
+    assert set(RULES) - {"ship"} == {ACTION.get(r[1], r[1]) for r in MATRIX}
+    assert (
+        len(MATRIX) == 272 and sum(r[4] == "ok" for r in MATRIX) == 66
+    )  # 清单 62 + M2 的 4 条
 
 
 @pytest.mark.parametrize(
@@ -379,3 +381,26 @@ def test_lock_order_sorted_and_deduped() -> None:
     ids = [uuid.uuid4() for _ in range(5)]
     assert lock_order([str(ids[3]), ids[0], ids[3], *ids]) == sorted(set(ids))
     assert lock_order(reversed(ids)) == lock_order(ids)
+
+
+def test_h2_02_ship_stored_on_hold_rejected() -> None:
+    """H2-02（D13）：stored 持 Hold 出货 → 422 on_hold（规则层；尚无出货接口）。"""
+    assert allowed(_lot("stored"), "ship")
+    with pytest.raises(HTTPException) as e:
+        check(_lot("stored", True), "ship")
+    assert e.value.status_code == 422 and e.value.detail["code"] == "on_hold"
+    for st in ("completed", "scrapped", "merged", "waiting"):
+        with pytest.raises(HTTPException) as e:
+            check(_lot(st, True), "ship")
+        assert e.value.detail["code"] == "lot_status"
+
+
+def test_qt_06_no_qtime_scrap_write_path() -> None:
+    """QT-06（M1）：Q-Time 处置代码中不再有写 scrapped 的路径。"""
+    from pathlib import Path
+
+    import app.mes.execution.qtime_actions as qa
+
+    src = Path(qa.__file__).read_text(encoding="utf-8")
+    assert 'lot_status="scrapped"' not in src
+    assert 'wafer_status="scrapped"' not in src

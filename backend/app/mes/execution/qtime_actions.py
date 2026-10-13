@@ -13,7 +13,6 @@ from sqlmodel import Session
 from app.core.spec.base import conn, now
 from app.core.spec.engine import TABLES
 from app.mes.common.query import find, one
-from app.mes.common.rows import _upd
 from app.mes.equipment.service import pm_notify
 from app.mes.execution.checks import service as ck
 from app.mes.execution.context import build_ctx
@@ -21,11 +20,27 @@ from app.mes.execution.events import QTIME_EXCEEDED, QTIME_WARN, notify_lot
 from app.mes.execution.hold import default_reason, hold_lot
 from app.mes.execution.qual import qual_notify
 from app.mes.execution.stage_common import _relocate
-from app.mes.lot.service import allowed, history, units
+from app.mes.lot.service import history
 from app.mes.planning.service import wo_due_notify
 from app.mes.process.service import apply_due
 
 Row = dict[str, Any]
+
+
+QTIME_EXPIRED = "qtime_expired"
+
+
+def qtime_expired_reason(s: Session, tid: uuid.UUID) -> Row:
+    """Q-Time 超时自动 Hold 的原因码：编码 ``qtime_expired`` 的启用 hold 原因。
+
+    未配置时回退到默认 hold 原因（:func:`default_reason`）。
+    """
+    rs = [
+        r
+        for r in find(s, tid, "reason_code", reason_type="hold")
+        if r["code"] == QTIME_EXPIRED and r["is_active"]
+    ]
+    return rs[0] if rs else default_reason(s, tid, "hold")
 
 
 def _qtime_actions(
@@ -92,41 +107,22 @@ def _qtime_actions(
                 record_move_out=False,
             )
             return "rework"
-        if action == "scrap" and allowed(lot, "qtime_scrap"):
-            reason = one(s, tid, "reason_code", r["reason_id"]) or default_reason(
-                s, tid, "scrap"
-            )
-            for u in units(s, tid, lot["id"]):
-                _upd(
-                    s,
-                    tid,
-                    "wafer",
-                    u["id"],
-                    user,
-                    wafer_status="scrapped",
-                    scrap_reason_id=reason["id"],
-                )
-            _upd(
-                s,
-                tid,
-                "lot",
-                lot["id"],
-                user,
-                lot_status="scrapped",
-                scrapped_qty=(lot["scrapped_qty"] or 0) + lot["qty"],
-                qty=0,
-            )
-            lot.update(lot_status="scrapped", qty=0)
-            history(
+        if action == "scrap":
+            # M1：超时不再自动报废，改为自动 Hold（原因码 qtime_expired）
+            reason = qtime_expired_reason(s, tid)
+            hold_lot(
                 s,
                 tid,
                 lot,
-                "scrap",
                 user,
-                reason_id=reason["id"],
-                details={"source": "qtime", "rule": r["code"]},
+                reason,
+                hold_type="auto",
+                source="qtime",
+                comment=f"Q-Time {r['code']} expired: "
+                f"{x['minutes']:g} > {r['max_minutes']} min",
+                details={**det, "configured_action": "scrap", "action": "hold"},
             )
-            return "scrap"
+            return "hold"
         reason = one(s, tid, "reason_code", r["reason_id"]) or default_reason(
             s, tid, "hold"
         )

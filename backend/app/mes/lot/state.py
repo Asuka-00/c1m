@@ -38,8 +38,10 @@ ALL = frozenset(S)
 TERMINAL = frozenset({S.COMPLETED, S.STORED, S.SCRAPPED, S.MERGED})
 ACTIVE = ALL - TERMINAL
 
-# Hold 列表默认排除的批次状态（N6）；include_terminal=true 时不排除
-HOLD_LIST_EXCLUDED: frozenset[LotStatus] = TERMINAL
+# 可被 Hold 的状态（手动 + 自动，D4 经 M2 修订：completed/stored 允许）
+HOLDABLE: frozenset[LotStatus] = ACTIVE | {S.COMPLETED, S.STORED}
+# Hold 列表默认排除的批次状态（N6 经 M2 修订）；include_terminal=true 时显示全部
+HOLD_LIST_EXCLUDED: frozenset[LotStatus] = frozenset({S.SCRAPPED, S.MERGED})
 
 
 @dataclass(frozen=True)
@@ -78,10 +80,12 @@ RULES: dict[str, Rule] = {
     "qtime_scrap": _r([S.WAITING], [S.SCRAPPED], hold=True),
     "change_carrier": _r(ACTIVE - {S.RUNNING}, hold=True),
     "priority": _r(ACTIVE, hold=True),
-    # 可被 Hold 的状态（手动 + 自动，D4）：改这一项即可，如放开 completed/stored
-    "hold": _r(ACTIVE, hold=True),
+    "hold": _r(HOLDABLE, hold=True),
     "release": _r(ALL, hold=True),
     "store": _r([S.COMPLETED], [S.STORED, S.COMPLETED]),
+    # 出货（D13 / H2-02）：仅 stored 且不能持 Hold。仓库尚无出货接口与 shipped
+    # 状态（D1 维持 8 个状态），这里先定规则，接口落地时调用 check(lot, "ship")
+    "ship": _r([S.STORED]),
 }
 
 

@@ -377,7 +377,9 @@ def test_branch_and_rework_routing(client: TestClient, db: Session) -> None:
     f.stage(b, "track_in", equipment_id=f.eq["id"])
     f.stage(b, "track_out")
     assert "branch" in _msgs(f.stage(b, "move_out", 422, branch=True))
-    assert "rework" in _msgs(f.stage(b, "move_out", 422, rework=True))
+    d = f.stage(b, "move_out", 422, rework=True)["detail"]  # M3 / N5
+    assert d["code"] == "rework_route_missing" and d["message"] and d["route_step_id"]
+    assert f.lot(b)["lot_status"] == "tracked_out"
 
 
 # ---------------- check resolution / override ----------------
@@ -908,12 +910,18 @@ def test_qtime_min_and_violation_actions(client: TestClient, db: Session) -> Non
         rule["id"],
         {"action": "scrap", "reason_id": f.reasons["scrap"]["id"]},
     )
-    r = f.stage(c, "move_in", equipment_id=f.eq["id"])
-    assert (
-        r["qtime"] == "scrap"
-        and r["lot"]["lot_status"] == "scrapped"
-        and r["lot"]["qty"] == 0
+    # QT-01（M1）：配置为 scrap 的超时也改为自动 Hold（原因码 qtime_expired），不报废
+    qe = m.post(
+        "reason_code",
+        {"code": "qtime_expired", "name": "qtime expired", "reason_type": "hold"},
     )
+    r = f.stage(c, "move_in", equipment_id=f.eq["id"])
+    assert r["qtime"] == "hold" and r["lot"]["on_hold"]
+    assert r["lot"]["lot_status"] == "waiting" and r["lot"]["qty"] > 0
+    ch = [h for h in m.list("lot_hold", lot=c["id"])["data"] if h["is_active"]]
+    assert len(ch) == 1 and ch[0]["source"] == "qtime"
+    assert ch[0]["reason_id"] == qe["id"]
+    assert m.list("lot_history", lot=c["id"], action="scrap")["count"] == 0
     (d,) = f.start(1)
     f.run_step(d)
     f.sql(
