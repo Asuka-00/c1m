@@ -91,7 +91,12 @@ export function TagSelect({
                       value.includes(o.value) ? 'opacity-100' : 'opacity-0'
                     )}
                   />
-                  {o.label}
+                  <span
+                    className='break-words whitespace-normal'
+                    title={o.label}
+                  >
+                    {o.label}
+                  </span>
                 </CommandItem>
               ))}
             </CommandGroup>

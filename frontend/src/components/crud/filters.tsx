@@ -252,11 +252,22 @@ function SelectFilter({
             !value && 'text-muted-foreground'
           )}
         >
-          <span className='truncate'>{value ? current : def.label}</span>
+          <span
+            className='truncate'
+            title={value ? String(current) : def.label}
+          >
+            {value ? current : def.label}
+          </span>
           <ChevronDown className='size-4 opacity-50' />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className={cn(POPOVER_W, 'min-w-72 p-0')} align='start'>
+      <PopoverContent
+        className={cn(
+          POPOVER_W,
+          'min-w-[max(18rem,var(--radix-popover-trigger-width))] p-0'
+        )}
+        align='start'
+      >
         <Command shouldFilter={!remote}>
           <CommandInput
             value={q}
@@ -289,7 +300,12 @@ function SelectFilter({
                       o.value === value ? '' : 'opacity-0'
                     )}
                   />
-                  {o.label}
+                  <span
+                    className='break-words whitespace-normal'
+                    title={o.label}
+                  >
+                    {o.label}
+                  </span>
                 </CommandItem>
               ))}
             </CommandGroup>

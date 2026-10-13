@@ -90,8 +90,9 @@ export default function OeeReport() {
           </SelectContent>
         </Select>
         <Input
-          className='w-56'
+          className='w-72'
           value={kw}
+          title={t('mes.eqp.search')}
           onChange={(e) => setKw(e.target.value)}
           placeholder={t('mes.eqp.search')}
         />

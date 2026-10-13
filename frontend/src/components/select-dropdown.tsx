@@ -37,7 +37,11 @@ export function SelectDropdown({
   return (
     <Select {...defaultState}>
       <FormControl>
-        <SelectTrigger disabled={disabled} className={cn(className)}>
+        <SelectTrigger
+          disabled={disabled}
+          className={cn(className)}
+          title={items?.find((i) => i.value === defaultValue)?.label}
+        >
           <SelectValue placeholder={placeholder ?? 'Select'} />
         </SelectTrigger>
       </FormControl>

@@ -56,7 +56,7 @@ export function RefSelect({
     enabled: open,
   })
   return (
-    <div className={cn('flex w-full gap-1', FIELD_MIN_W)}>
+    <div className={cn('relative w-full', FIELD_MIN_W)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -65,7 +65,10 @@ export function RefSelect({
             variant='outline'
             role='combobox'
             disabled={disabled}
-            className='min-w-0 flex-1 justify-between font-normal'
+            className={cn(
+              'w-full min-w-0 justify-between font-normal',
+              value && !disabled && 'pe-10'
+            )}
           >
             <span
               className={cn('truncate', !value && 'text-muted-foreground')}
@@ -104,7 +107,7 @@ export function RefSelect({
                       )}
                     />
                     <span
-                      className='break-all whitespace-normal'
+                      className='break-words whitespace-normal'
                       title={rowLabel(r, labelField)}
                     >
                       {rowLabel(r, labelField)}
@@ -121,6 +124,8 @@ export function RefSelect({
           label={t('mes.clear')}
           type='button'
           variant='ghost'
+          size='icon'
+          className='absolute end-7 top-1/2 size-6 -translate-y-1/2'
           onClick={() => onChange(null, null)}
         >
           <X className='size-4' />
