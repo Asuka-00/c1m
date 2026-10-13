@@ -30,7 +30,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ConfirmDialog, FormDialog, Page, type Values } from '@/components/crud'
-import { IconButton } from '@/components/icon-button'
+import { IconButton, IconTooltip } from '@/components/icon-button'
 import { StatusBadge } from '../status'
 import { statusOptions } from '../status-options'
 import { allIds, filterTree, nodeLabel as label } from '../tree'
@@ -231,22 +231,30 @@ export default function PermissionTreePage() {
                     style={{ paddingInlineStart: depth * 20 }}
                   >
                     {n.children.length ? (
-                      <button
-                        type='button'
-                        className='text-muted-foreground'
-                        aria-label={
+                      <IconTooltip
+                        label={
                           expanded.has(n.id)
                             ? t('common.collapse')
                             : t('common.expand')
                         }
-                        onClick={() => toggle(n.id)}
                       >
-                        {filtering || expanded.has(n.id) ? (
-                          <ChevronDown className='size-4' />
-                        ) : (
-                          <ChevronRight className='size-4' />
-                        )}
-                      </button>
+                        <button
+                          type='button'
+                          className='text-muted-foreground'
+                          aria-label={
+                            expanded.has(n.id)
+                              ? t('common.collapse')
+                              : t('common.expand')
+                          }
+                          onClick={() => toggle(n.id)}
+                        >
+                          {filtering || expanded.has(n.id) ? (
+                            <ChevronDown className='size-4' />
+                          ) : (
+                            <ChevronRight className='size-4' />
+                          )}
+                        </button>
+                      </IconTooltip>
                     ) : (
                       <span className='w-4' />
                     )}

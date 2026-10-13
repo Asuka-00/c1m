@@ -90,7 +90,6 @@
     "en": "English"
   },
   "nav": {
-    "toggleSidebar": "Toggle sidebar",
     "selectTenant": "Select site",
     "tenants": "Sites",
     "tenantsCount": "{{count}} sites",

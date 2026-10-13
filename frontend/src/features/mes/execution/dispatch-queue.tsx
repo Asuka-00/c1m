@@ -144,7 +144,12 @@ export function DispatchQueue({ onLot }: { onLot: (id: string) => void }) {
               className='inline-flex items-center gap-1 font-mono text-blue-600 hover:underline dark:text-blue-400'
               onClick={() => onLot(r.id)}
             >
-              {r.on_hold && <PauseCircle className='size-3.5 text-amber-600' />}
+              {r.on_hold && (
+                <PauseCircle
+                  className='size-3.5 text-amber-600'
+                  aria-label={t('mes.queue.held')}
+                />
+              )}
               {r.hot && (
                 <Flame
                   className='size-3.5 text-red-600'

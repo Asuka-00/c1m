@@ -90,7 +90,6 @@
     "en": "English"
   },
   "nav": {
-    "toggleSidebar": "サイドバーの切り替え",
     "selectTenant": "工場を選択",
     "tenants": "工場",
     "tenantsCount": "{{count}} 工場",
@@ -345,7 +344,7 @@
     "languageDesc": "表示言語を選択します。"
   },
   "sidebar": {
-    "toggle": "サイドバー切替"
+    "toggle": "サイドバーの切り替え"
   },
   "config": {
     "title": "システム設定",

@@ -54,11 +54,11 @@ export function Header({ className, fixed, children, ...props }: HeaderProps) {
             'after:absolute after:inset-0 after:-z-10 after:bg-background/20 after:backdrop-blur-lg'
         )}
       >
-        <IconTooltip label={t('nav.toggleSidebar')}>
+        <IconTooltip label={t('sidebar.toggle')}>
           <SidebarTrigger
             variant='outline'
             className='max-md:scale-125'
-            aria-label={t('nav.toggleSidebar')}
+            aria-label={t('sidebar.toggle')}
           />
         </IconTooltip>
         <Separator orientation='vertical' className='h-6' />

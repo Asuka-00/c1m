@@ -90,7 +90,6 @@
     "en": "English"
   },
   "nav": {
-    "toggleSidebar": "切换侧边栏",
     "selectTenant": "选择厂区",
     "tenants": "厂区",
     "tenantsCount": "{{count}} 个厂区",

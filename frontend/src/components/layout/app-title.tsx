@@ -47,7 +47,7 @@ function ToggleSidebar({
 
   return (
     <IconButton
-      label={t('nav.toggleSidebar')}
+      label={t('sidebar.toggle')}
       data-sidebar='trigger'
       data-slot='sidebar-trigger'
       variant='ghost'
