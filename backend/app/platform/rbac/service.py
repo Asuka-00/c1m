@@ -17,7 +17,6 @@ from app.platform.rbac.permissions import (
     DEFAULT_PERMISSIONS,
     DEFAULT_ROLES,
     TENANT_PERMISSIONS,
-    TENANT_ROLES,
 )
 
 if TYPE_CHECKING:
@@ -30,15 +29,17 @@ def seed_rbac(session: Session) -> None:
     for code, desc in DEFAULT_PERMISSIONS.items():
         scope = "tenant" if code in TENANT_PERMISSIONS else "platform"
         if code not in perms:
-            perms[code] = Permission(code=code, description=desc, scope=scope)
+            perms[code] = Permission(code=code, scope=scope)
             session.add(perms[code])
-        fill_names(perms[code])
+            fill_names(perms[code])
+            perms[code].description = perms[code].description or desc
     for name, (desc, codes) in DEFAULT_ROLES.items():
         role = get_role(session, name)
         if not role:
-            role = Role(name=name, description=desc)
+            role = Role(name=name)
             session.add(role)
-        fill_names(role)
+            fill_names(role)
+            role.description = role.description or desc
         have = {p.code for p in role.permissions}
         for c in codes:
             if c not in have:
@@ -46,60 +47,19 @@ def seed_rbac(session: Session) -> None:
     session.commit()
 
 
-#: 历次改名前的内置英文名称：数据库中仍是这些旧默认值时视为未自定义，同步为新名称
-LEGACY_NAMES = {
-    "Owner",
-    "Member",
-    "View members",
-    "Manage members",
-    "Manage tenant",
-    "View users",
-    "Edit users",
-    "Delete users",
-}
-
-
-def _builtin(current: str | None, new: str) -> str:
-    """未设置或仍为旧内置默认值时返回新名称，否则保留自定义名称。"""
-    return (
-        new if not current or (current in LEGACY_NAMES and current != new) else current
-    )
-
-
-#: 历次种子数据中的内置英文说明：仍为这些值时视为未自定义，同步为新的内置说明
-LEGACY_DESCRIPTIONS = {
-    *DEFAULT_PERMISSIONS.values(),
-    *(d for d, _ in DEFAULT_ROLES.values()),
-    *(d for d, _ in TENANT_ROLES.values()),
-    "Administrator with all permissions",
-    "Regular user",
-    "Tenant owner",
-    "Tenant administrator",
-    "Tenant member",
-}
-
-
-def _builtin_desc(current: str | None, new: str) -> str:
-    """说明为空或仍为旧内置说明（含自动生成的 ``MES …``）时返回新说明。"""
-    legacy = not current or current in LEGACY_DESCRIPTIONS or current.startswith("MES ")
-    return new if legacy else current  # type: ignore[return-value]
-
-
 def fill_names(obj: Permission | Role) -> None:
-    """为内置权限 / 角色同步英文显示名称与说明（自定义内容不覆盖；前端按 i18n 翻译内置值）。"""
+    """为内置权限 / 角色补齐英文显示名称与说明（仅在为空时填充；前端按 i18n 翻译内置值）。"""
     if isinstance(obj, Permission):
-        if lbl := permission_label(obj.code):
-            obj.name = _builtin(obj.name, lbl.split("|")[0])
+        if not obj.name and (lbl := permission_label(obj.code)):
+            obj.name = lbl.split("|")[0]
         if desc := permission_description(obj.code):
-            obj.description = _builtin_desc(obj.description, desc.split("|")[0])
+            obj.description = obj.description or desc.split("|")[0]
         return
-    if obj.name in ROLE_LABELS:
-        obj.title = _builtin(obj.title, ROLE_LABELS[obj.name].split("|")[0])
+    if not obj.title and obj.name in ROLE_LABELS:
+        obj.title = ROLE_LABELS[obj.name].split("|")[0]
     key = role_description_key(obj.name, obj.tenant_id is None)
-    if key in ROLE_DESCRIPTIONS:
-        obj.description = _builtin_desc(
-            obj.description, ROLE_DESCRIPTIONS[key].split("|")[0]
-        )
+    if not obj.description and key in ROLE_DESCRIPTIONS:
+        obj.description = ROLE_DESCRIPTIONS[key].split("|")[0]
 
 
 def get_role(session: Session, name: str) -> Role | None:

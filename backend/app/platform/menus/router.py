@@ -17,7 +17,6 @@ from app.platform.auth.deps import (
     platform_codes,
     require_permissions,
 )
-from app.platform.menus.layout import PLATFORM_REDIRECTS
 from app.platform.menus.models import Menu
 from app.platform.menus.schemas import (
     MenuCreate,
@@ -31,7 +30,6 @@ from app.platform.menus.service import (
     build_tree,
     forbidden_paths,
     permission_tree,
-    redirects,
 )
 from app.platform.rbac.service import user_permission_codes
 
@@ -67,7 +65,6 @@ def my_menus(
         return MyMenus(
             menus=ptree,
             forbidden_paths=forbidden_paths(pmenus, ptree),
-            redirects={},
             permissions=sorted(pperms),
             tenant_id=None,
             is_superuser=current_user.is_superuser,
@@ -84,22 +81,13 @@ def my_menus(
             raise
     menus = list(session.exec(select(Menu).where(Menu.space == "workspace")).all())
     tree = build_tree(menus, perms, current_user.is_superuser)
-    redir = redirects(tree)
     forbidden = forbidden_paths(menus, tree)
-    if paccess and not token_data.imp:  # 旧平台页面路径 -> 平台管理控制台
-        redir.update(PLATFORM_REDIRECTS)
-    else:  # 平台页面（含旧路径）对无平台权限的用户显示 403 而非 404
+    if not (paccess and not token_data.imp):  # 平台页面对无平台权限的用户显示 403
         ppaths = session.exec(select(Menu.path).where(Menu.space == "platform")).all()
-        forbidden = sorted(
-            set(forbidden)
-            | set(PLATFORM_REDIRECTS)
-            | {"/platform"}
-            | {p for p in ppaths if p}
-        )
+        forbidden = sorted(set(forbidden) | {"/platform"} | {p for p in ppaths if p})
     return MyMenus(
         menus=tree,
         forbidden_paths=forbidden,
-        redirects=redir,
         permissions=sorted(perms),
         tenant_id=tenant_id,
         is_superuser=current_user.is_superuser,

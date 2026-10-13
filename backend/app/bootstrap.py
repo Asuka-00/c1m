@@ -33,11 +33,7 @@ def init_db(session: Session) -> None:
 
     seed_rbac(session)
     uname = (settings.FIRST_SUPERUSER_USERNAME or "admin").lower()
-    user = session.exec(
-        select(User).where(
-            (User.email == settings.FIRST_SUPERUSER) | (User.username == uname)
-        )
-    ).first()
+    user = session.exec(select(User).where(User.username == uname)).first()
     if not user:
         user_in = UserCreate(
             email=settings.FIRST_SUPERUSER,

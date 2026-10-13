@@ -213,11 +213,6 @@ def seed_config(session: Session) -> None:
             )
             it.sort_order = idx * 10
             it.tenant_overridable = gcode in TENANT_OVERRIDABLE_GROUPS
-        # 删除已从默认定义中移除的配置项（租户覆盖值随外键级联删除）
-        keep = {i[0] for i in items}
-        for code, it in have.items():
-            if code not in keep:
-                session.delete(it)
     session.commit()
 
 

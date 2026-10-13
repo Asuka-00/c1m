@@ -45,9 +45,8 @@ def test_superuser_sees_all_menus(
     assert r.status_code == 200
     keys = _keys(r.json()["menus"])
     assert {"dashboard", "members", "user-roles", "settings"} <= keys
-    # 平台页面不在工作区菜单中，旧路径重定向到平台管理控制台
+    # 平台页面不在工作区菜单中
     assert not keys & {"users", "roles", "permissions", "tenants", "menus"}
-    assert r.json()["redirects"]["/tenants"] == "/platform/tenants"
     p = client.get(
         f"{API}/menus/me", headers=superuser_token_headers, params={"space": "platform"}
     )
@@ -84,7 +83,7 @@ def test_owner_vs_member_menus(client: TestClient, db: Session) -> None:
     }
     # tenant owners manage their tenant's config (System group)
     assert {"g-system", "config"} <= keys
-    assert {"/users", "/roles", "/tenants"} <= set(owner_body["forbidden_paths"])
+    assert {"/platform", "/platform/users"} <= set(owner_body["forbidden_paths"])
     # 用户与权限：租户所有者只看到成员 / 租户角色页签
     up = next(
         c
@@ -104,12 +103,6 @@ def test_owner_vs_member_menus(client: TestClient, db: Session) -> None:
         == 403
     )
     assert "/platform/tenants" in owner_body["forbidden_paths"]
-    assert set(owner_body["redirects"]) == {
-        "/members",
-        "/user-roles",
-        "/tenant-roles",
-    } | {k for k in owner_body["redirects"] if k.startswith("/mes/")}
-    assert "/members" not in owner_body["forbidden_paths"]
     tid = owner_body["tenant_id"]
 
     member_email, hm = _user(client, db)
@@ -288,66 +281,34 @@ def test_menu_layout_complete_and_synced(
     assert not {"general", "admin", "other", "tenant"} & set(top)
 
 
-def test_sync_moves_and_drops_legacy_groups(db: Session) -> None:
+def test_sync_restores_declared_layout(db: Session) -> None:
     from sqlmodel import select
 
     from app.platform.menus.models import Menu
     from app.platform.menus.service import seed_menus
 
-    legacy = Menu(key="mes-g-legacy", title="MES · Legacy", sort_order=1)
-    db.add(legacy)
-    db.flush()
-    custom = Menu(
-        key="custom-under-legacy", title="x", parent_id=legacy.id, sort_order=1
-    )
+    other = db.exec(select(Menu).where(Menu.key == "g-wip")).one()
     dash = db.exec(select(Menu).where(Menu.key == "dashboard")).one()
-    dash.parent_id, dash.title = legacy.id, "old"
-    # 旧库中的错位 / 旧排序在重新同步后被纠正
+    dash.parent_id, dash.title = other.id, "changed"
+    # 被改动的位置 / 排序在重新同步后恢复为注册表定义
     wip = db.exec(select(Menu).where(Menu.key == "mes-wip-dashboard")).one()
     sysg = db.exec(select(Menu).where(Menu.key == "g-system")).one()
     wip.parent_id, wip.sort_order, sysg.sort_order = sysg.id, 999, -5
-    db.add_all([custom, dash, wip, sysg])
+    db.add_all([dash, wip, sysg])
     db.commit()
     seed_menus(db)
     keys = {m.key: m for m in db.exec(select(Menu)).all()}
-    assert "mes-g-legacy" not in keys
-    assert keys["custom-under-legacy"].parent_id is None
     assert keys["dashboard"].parent_id == keys["g-workspace"].id
     assert keys["dashboard"].title == "Dashboard"
     assert keys["mes-wip-dashboard"].parent_id == keys["g-wip"].id
     assert keys["mes-wip-dashboard"].sort_order == 0
     assert keys["g-system"].sort_order == 110
-    db.delete(keys["custom-under-legacy"])
-    db.commit()
 
 
-def test_sync_removes_merged_hold_release_menu(db: Session) -> None:
-    """旧库中的「批量释放 Hold」菜单在同步后删除，Hold 管理指向合并后的页面。"""
-    from sqlmodel import select
-
-    from app.platform.menus.models import Menu
-    from app.platform.menus.service import seed_menus
-
-    db.add(
-        Menu(
-            key="mes-hold-release",
-            title="Batch Hold Release",
-            path="/mes/hold-release",
-            component="mes-page:hold-release",
-        )
-    )
-    db.commit()
-    seed_menus(db)
-    keys = {m.key: m for m in db.exec(select(Menu)).all()}
-    assert "mes-hold-release" not in keys
-    hold = keys["mes-lot_hold"]
-    assert (hold.path, hold.component) == ("/mes/lot-hold", "mes-page:hold")
-
-
-def test_merged_menu_tabs_and_redirects(
+def test_merged_menu_tabs(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
-    """合并菜单返回页签（原菜单 key / 组件 / 权限），旧路径重定向到 合并页?tab=。"""
+    """合并菜单返回页签（key / 组件 / 权限）。"""
     from app.platform.menus.layout import MERGED
 
     body = client.get(f"{API}/menus/me", headers=superuser_token_headers).json()
@@ -364,8 +325,7 @@ def test_merged_menu_tabs_and_redirects(
         assert n["path"] == path and n["component"] == view
         assert [t["key"] for t in n["tabs"]] == tabs
         for t in n["tabs"]:
-            assert t["component"] and t["path"] != path
-            assert body["redirects"][t["path"]] == f"{path}?tab={t['key']}"
+            assert t["component"]
             assert t["key"] not in nodes  # 不再是独立菜单
 
 
@@ -374,7 +334,7 @@ def test_merged_menu_permission_any_tab(db: Session) -> None:
     from sqlmodel import select
 
     from app.platform.menus.models import Menu
-    from app.platform.menus.service import allowed_perm, build_tree, redirects
+    from app.platform.menus.service import allowed_perm, build_tree
 
     assert allowed_perm("a:read,b:read", {"b:read"}, False)
     assert not allowed_perm("a:read,b:read", {"c:read"}, False)
@@ -389,20 +349,3 @@ def test_merged_menu_permission_any_tab(db: Session) -> None:
         "mes-check_binding",
     ]
     assert "mes-product-master" not in flat  # 无产品权限
-    assert all(v.startswith("/mes/check-config?tab=") for v in redirects(tree).values())
-
-
-def test_sync_removes_menus_merged_into_tabs(db: Session) -> None:
-    """已有库中被合并为页签的旧独立菜单在同步时删除。"""
-    from sqlmodel import select
-
-    from app.platform.menus.layout import tab_keys
-    from app.platform.menus.models import Menu
-    from app.platform.menus.service import seed_menus
-
-    old = sorted(tab_keys())
-    db.add_all(Menu(key=k, title=k, path=f"/old/{k}") for k in old)
-    db.commit()
-    seed_menus(db)
-    keys = {m.key for m in db.exec(select(Menu)).all()}
-    assert not keys & set(old)

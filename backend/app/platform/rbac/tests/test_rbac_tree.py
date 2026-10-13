@@ -52,14 +52,3 @@ def test_set_user_roles_and_filters(
         f"{API}/platform/roles/", headers=h, params={"code": code, "status": "active"}
     ).json()["data"]
     assert [x["name"] for x in roles] == [code]
-
-
-def test_removed_legacy_endpoints(
-    client: TestClient, superuser_token_headers: dict
-) -> None:
-    """旧的兼容管理接口已删除。"""
-    h = superuser_token_headers
-    for path in ("/users/", "/roles/", "/permissions/", "/menus/", "/tenants/"):
-        assert client.get(f"{API}{path}", headers=h).status_code in (404, 405), path
-    assert client.get(f"{API}/menus/me", headers=h).status_code == 200
-    assert client.get(f"{API}/users/me", headers=h).status_code == 200

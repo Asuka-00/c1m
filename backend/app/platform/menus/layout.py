@@ -104,32 +104,10 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
     ],
 }
 
-# 已废弃系统分组的 key（同步时删除）
-OBSOLETE_PREFIXES = ("mes-g-",)
-# 同步时删除的旧菜单 / 分组：mes-hold-release → Hold 管理（mes-lot_hold）；
-# 菜单整合取消的分组 g-check / g-eqp-master / g-lot（其菜单已移入其他分组）
-OBSOLETE_KEYS = {
-    "tenant-roles",  # 页签改名为 user-roles（URL 不再含 tenant）
-    "p-menus",  # 菜单管理并入平台权限树
-    "tenant-role-perms",  # 角色权限并入租户角色对话框
-    "general",
-    "tenant",
-    "admin",
-    "other",
-    "mes-hold-release",
-    "g-check",
-    "g-eqp-master",
-    "g-lot",
-    # 平台级菜单移至平台管理控制台（space = platform）
-    "tenants",
-    "menus",
-}
-
 
 # 合并菜单：key -> (路径, 图标, 视图, [页签 key])。
 # 视图 "tabs"：页签页（各页签复用原页面组件，页签写入 URL ?tab=）；
 # "tree"：层级树 + 详情（页签顺序即层级，下级实体的父字段名 = 上级实体编码）。
-# 页签 key 为原独立菜单 key：菜单同步时删除旧菜单，旧路径由前端重定向到对应页签。
 MERGED: dict[str, tuple[str, str, str, list[str]]] = {
     "mes-check-config": (
         "/mes/check-config",
@@ -349,18 +327,6 @@ PLATFORM_ITEMS: dict[str, tuple[str, str, str, str, str]] = {
         "ScrollText",
         "platform-ops-log",
     ),
-}
-# 改名前的工作区页签：旧 key / 旧路径 -> 新 key（旧链接重定向到新页签）
-LEGACY_TABS: dict[str, str] = {"tenant-roles": "user-roles"}
-
-# 旧工作区路径 -> 平台控制台路径（超级用户访问旧链接时重定向）
-PLATFORM_REDIRECTS: dict[str, str] = {
-    "/platform/menus": "/platform/permissions",
-    "/tenants": "/platform/tenants",
-    "/users": "/platform/users",
-    "/roles": "/platform/roles",
-    "/permissions": "/platform/permissions",
-    "/menus": "/platform/permissions",
 }
 
 

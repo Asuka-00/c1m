@@ -42,12 +42,10 @@ class MenusPublic(SQLModel):
 
 
 class MenuTab(SQLModel):
-    """合并菜单的页签（原独立菜单）。"""
+    """合并菜单的页签。"""
 
     key: str
     title: str
-    # 原独立菜单路径（旧链接重定向到 合并页?tab=key）
-    path: str | None = None
     component: str | None = None
     permission: str | None = None
 
@@ -69,8 +67,6 @@ class MyMenus(SQLModel):
     menus: list[MenuNode]
     # 调用者无权打开的已知路径（前端显示 403 而非 404）
     forbidden_paths: list[str] = []
-    # 已并入合并菜单的旧路径 -> 新路径（含 ?tab=）
-    redirects: dict[str, str] = {}
     permissions: list[str]
     tenant_id: uuid.UUID | None = None
     is_superuser: bool = False

@@ -1,4 +1,4 @@
-"""安全工具：JWT 签发、密码哈希与校验（argon2，兼容旧 bcrypt 哈希并在登录时升级）。"""
+"""安全工具：JWT 签发、密码哈希与校验（argon2；哈希参数变化时在登录时升级）。"""
 
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -6,16 +6,10 @@ from typing import Any
 import jwt
 from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
-from pwdlib.hashers.bcrypt import BcryptHasher
 
 from app.core.config import settings
 
-password_hash = PasswordHash(
-    (
-        Argon2Hasher(),
-        BcryptHasher(),
-    )
-)
+password_hash = PasswordHash((Argon2Hasher(),))
 
 
 ALGORITHM = "HS256"

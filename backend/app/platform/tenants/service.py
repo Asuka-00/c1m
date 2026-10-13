@@ -74,9 +74,10 @@ def seed_tenant_roles(session: Session, tenant: Tenant) -> None:
     for name, (desc, codes) in TENANT_ROLES.items():
         role = tenant_role(session, tenant.id, name)
         if not role:
-            role = Role(name=name, description=desc, tenant_id=tenant.id)
+            role = Role(name=name, tenant_id=tenant.id)
             session.add(role)
-        fill_names(role)
+            fill_names(role)
+            role.description = role.description or desc
         have = {p.code for p in role.permissions}
         for c in codes:
             if c not in have and c in perms:

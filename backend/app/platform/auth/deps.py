@@ -305,7 +305,7 @@ def platform_api_router(*routers: APIRouter) -> APIRouter:
     超级用户或持有对应平台权限的用户可访问，见 :func:`platform_permission`。
 
     Args:
-        *routers: 需在平台空间下以别名暴露的已有路由（同一实现，路径加 ``/platform``）。
+        *routers: 挂到平台空间下的路由（路径加 ``/platform``）。
     """
     r = APIRouter(
         prefix="/platform",

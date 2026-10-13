@@ -359,7 +359,7 @@ def set_role_permissions(
     return _role_public(role)
 
 
-# 平台空间别名：/platform/users|roles|permissions/...（仅超级用户）
+# 平台空间路由：/platform/users|roles|permissions/...（仅超级用户）
 platform_router = platform_api_router(
     user_roles_router, roles_router, permissions_router
 )

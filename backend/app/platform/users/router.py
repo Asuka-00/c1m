@@ -300,5 +300,5 @@ def _guard_superuser(
         )
 
 
-# 平台空间别名：/platform/users/...（仅超级用户）
+# 平台空间路由：/platform/users/...（仅超级用户）
 platform_router = platform_api_router(admin_router)

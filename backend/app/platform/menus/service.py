@@ -6,14 +6,10 @@ from app.core import registry
 from app.platform.menus.layout import (
     GROUPS,
     ITEMS,
-    LEGACY_TABS,
     MERGED,
-    OBSOLETE_KEYS,
-    OBSOLETE_PREFIXES,
     PLATFORM_GROUPS,
     PLATFORM_ITEMS,
     TAB_TITLES,
-    tab_keys,
 )
 from app.platform.menus.layout import titles as titles
 from app.platform.menus.models import Menu
@@ -64,7 +60,6 @@ def merged_tabs(key: str) -> list[MenuTab]:
         MenuTab(
             key=t,
             title=TAB_TITLES[t].split("|")[0],
-            path=defs[t][0],
             component=defs[t][2],
             permission=defs[t][3],
         )
@@ -121,10 +116,7 @@ def platform_menus() -> list[MenuTuple]:
 
 
 def seed_menus(session: Session) -> None:
-    """创建 / 同步注册表菜单（工作区与平台两个空间分别同步）。
-
-    保留 hidden 与自定义菜单；移除已废弃的系统分组（其自定义子项移到顶层）。
-    """
+    """按注册表创建 / 更新菜单（工作区与平台两个空间）；保留 hidden 与自定义菜单。"""
     existing = {m.key: m for m in session.exec(select(Menu)).all()}
     for space, rows in (
         ("workspace", registry_menus()),
@@ -140,19 +132,6 @@ def seed_menus(session: Session) -> None:
             m.parent_id = existing[parent].id if parent else None
             session.add(m)
             session.flush()
-    merged_away = tab_keys() - {k for items in ITEMS.values() for k, _ in items}
-    stale = [
-        m
-        for k, m in existing.items()
-        if k in OBSOLETE_KEYS or k in merged_away or k.startswith(OBSOLETE_PREFIXES)
-    ]
-    for m in stale:
-        for child in session.exec(select(Menu).where(Menu.parent_id == m.id)).all():
-            child.parent_id = None
-            session.add(child)
-        session.flush()
-        session.delete(m)
-    session.flush()
     link_permissions(session)
     session.commit()
 
@@ -175,7 +154,7 @@ def _resource(code: str) -> str:
 
 
 def link_permissions(session: Session) -> None:
-    """把尚未挂接菜单的权限按资源前缀挂到菜单下（迁移已有数据，幂等）。
+    """种子：把尚未挂接菜单的权限按资源前缀挂到菜单下（幂等）。
 
     菜单的权限编码（逗号分隔）中出现的权限为 MENU 类型（页面访问），同资源的其余权限为
     BUTTON 类型（页面内操作）；找不到菜单的保持未挂接（权限树中归入"其他权限"）。
@@ -348,35 +327,15 @@ def build_tree(menus: list[Menu], allowed: set[str], superuser: bool) -> list[Me
 
 
 def forbidden_paths(menus: list[Menu], tree: list[MenuNode]) -> list[str]:
-    """存在但对当前用户不可见的页面路径（含合并菜单中无权限的页签旧路径；前端据此显示 403 而非 404）。"""
+    """存在但对当前用户不可见的页面路径（前端据此显示 403 而非 404）。"""
     allowed: set[str] = set()
 
     def walk(nodes: list[MenuNode]) -> None:
         for n in nodes:
             if n.path:
                 allowed.add(n.path)
-            allowed.update(tb.path for tb in n.tabs if tb.path)
             walk(n.children)
 
     walk(tree)
     known = {m.path for m in menus if m.path}
-    known |= {tb.path for m in menus for tb in merged_tabs(m.key) if tb.path}
     return sorted(known - allowed)
-
-
-def redirects(tree: list[MenuNode]) -> dict[str, str]:
-    """已并入合并菜单的旧路径 -> ``新路径?tab=页签``（仅当前用户可见的页签）。"""
-    out: dict[str, str] = {}
-
-    def walk(nodes: list[MenuNode]) -> None:
-        for n in nodes:
-            for tb in n.tabs:
-                if tb.path and tb.path != n.path:
-                    out[tb.path] = f"{n.path}?tab={tb.key}"
-            walk(n.children)
-
-    walk(tree)
-    for old, new in LEGACY_TABS.items():
-        if f"/{new}" in out:
-            out[f"/{old}"] = out[f"/{new}"]
-    return out

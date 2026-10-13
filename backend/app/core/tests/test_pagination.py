@@ -58,11 +58,6 @@ def test_default_page_size_and_sorting(client: TestClient, db: Session) -> None:
         url, headers=h, params={"sort_by": "name", "sort_order": "desc", "page_size": 3}
     ).json()
     assert [x["name"] for x in desc["data"]] == ["role-24", "role-23", "role-22"]
-    # legacy skip/limit still works
-    assert (
-        len(client.get(url, headers=h, params={"skip": 26, "limit": 10}).json()["data"])
-        == 2
-    )
     # whitelist + bounds
     assert client.get(url, headers=h, params={"sort_by": "id; drop"}).status_code == 422
     assert client.get(url, headers=h, params={"page_size": 101}).status_code == 422
