@@ -370,7 +370,32 @@ export interface StageResult {
 }
 
 /** 批次执行接口：上下文、阶段作业、检查预览、Hold、拆合批、履历。 */
+/** 晶圆图中的一片晶圆。 */
+export interface WaferCell {
+  id: string
+  code: string
+  status: string
+  rework_count?: number
+}
+/** 晶圆图：按槽位排列的晶圆。 */
+export interface WaferMap {
+  lot: string
+  carrier: string | null
+  capacity: number
+  slots: { slot: number; wafer: WaferCell | null }[]
+  /** 无槽位的单元 */
+  units: WaferCell[]
+}
+
 export const execApi = {
+  /** 批次晶圆图。 */
+  waferMap: (lotId: string) =>
+    http.get<WaferMap>(`/mes/exec/lots/${lotId}/wafer-map`).then((r) => r.data),
+  /** 晶圆级履历（含所在批次的批次级记录）。 */
+  waferHistory: (waferId: string) =>
+    http
+      .get<{ data: MesRow[] }>(`/mes/exec/wafers/${waferId}/history`)
+      .then((r) => r.data.data),
   split: (lotId: string, children: SplitChild[], body: SmBody) =>
     http
       .post<SmResult>(`/mes/exec/lots/${lotId}/split`, { children, ...body })

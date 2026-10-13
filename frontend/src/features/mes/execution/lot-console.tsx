@@ -103,8 +103,8 @@ export default function LotConsolePage() {
           <Button variant='outline' asChild>
             <Link
               to='/$'
-              params={{ _splat: 'mes/lot-trace' }}
-              search={{ lot: lotId } as never}
+              params={{ _splat: 'mes/lot-history' }}
+              search={{ tab: 'mes-lot-trace', lot: lotId } as never}
             >
               <History className='size-4' />
               {t('menu.mes-lot-trace')}

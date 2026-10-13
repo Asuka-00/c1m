@@ -183,3 +183,90 @@ def trace(s: Session, tid: uuid.UUID, kind: str, code: str) -> Row:
             u["forward"] = _walk(s, tid, uuid.UUID(u["id"]), False)
         out["lots"] = used
     return jsonable(out)  # type: ignore[no-any-return]
+
+
+# ---------------- 晶圆级履历与晶圆图 ----------------
+def wafer_lots(s: Session, tid: uuid.UUID, wafer: Row) -> list[Any]:
+    """晶圆经历过的批次：当前批次及其谱系上的全部来源批次（拆批 / 合批前的母批）。"""
+    up = _walk(s, tid, wafer["lot_id"], True)
+    return [wafer["lot_id"], *(uuid.UUID(x["id"]) for x in up)]
+
+
+def wafer_history(s: Session, tid: uuid.UUID, wafer_id: uuid.UUID) -> list[Row]:
+    """晶圆履历：该晶圆的单元级记录，加上其所在批次（含来源批次）的批次级记录，按时间倒序。
+
+    Raises:
+        HTTPException: 晶圆不存在（404）。
+    """
+    from app.core.spec.engine import ENTITIES
+    from app.core.spec.serialize import serialize
+
+    w = one(s, tid, "wafer", wafer_id)
+    if not w:
+        raise HTTPException(status_code=404, detail="Record not found")
+    h = TABLES["lot_history"]
+    rows = (
+        conn(s)
+        .execute(
+            sa.select(h)
+            .where(
+                h.c.tenant_id == tid,
+                h.c.lot_id.in_(wafer_lots(s, tid, w)),
+                sa.or_(h.c.unit_id.is_(None), h.c.unit_id == w["id"]),
+            )
+            .order_by(h.c.at.desc())
+            .limit(500)
+        )
+        .mappings()
+        .all()
+    )
+    return serialize(s, tid, ENTITIES["lot_history"], [dict(r) for r in rows])
+
+
+def wafer_map(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
+    """晶圆图：按槽位排列批次的晶圆（容量取载具类型，缺省 25），含状态与返工次数。
+
+    Raises:
+        HTTPException: 批次不存在（404）。
+    """
+    lot = one(s, tid, "lot", lot_id)
+    if not lot:
+        raise HTTPException(status_code=404, detail="Record not found")
+    cap = 25
+    car = lot["carrier_id"] and one(s, tid, "carrier", lot["carrier_id"])
+    ct = car and one(s, tid, "carrier_type", car["carrier_type_id"])
+    if ct and ct["capacity"]:
+        cap = int(ct["capacity"])
+    ws = find(s, tid, "wafer", lot_id=lot_id)
+    cap = max([cap, *(w["slot"] or 0 for w in ws)])
+    by = {w["slot"]: w for w in ws if w["slot"]}
+    slots = []
+    for i in range(1, cap + 1):
+        w = by.get(i)
+        slots.append(
+            {
+                "slot": i,
+                "wafer": w
+                and {
+                    "id": str(w["id"]),
+                    "code": w["code"],
+                    "status": w["wafer_status"],
+                    "rework_count": w["rework_count"] or 0,
+                },
+            }
+        )
+    extra = [
+        {"id": str(w["id"]), "code": w["code"], "status": w["wafer_status"]}
+        for w in ws
+        if not w["slot"]
+    ]
+    out: Row = jsonable(
+        {
+            "lot": lot["code"],
+            "carrier": car and car["code"],
+            "capacity": cap,
+            "slots": slots,
+            "units": extra,
+        }
+    )
+    return out

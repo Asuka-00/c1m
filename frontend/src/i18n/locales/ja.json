@@ -941,6 +941,10 @@
       "all": "すべての{{name}}",
       "expand": "展開",
       "collapse": "折りたたむ"
+    },
+    "wmap": {
+      "title": "ウェーハマップ",
+      "history": "ウェーハ履歴：{{code}}"
     }
   },
   "notify": {

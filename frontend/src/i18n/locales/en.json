@@ -941,6 +941,10 @@
       "all": "All {{name}}",
       "expand": "Expand",
       "collapse": "Collapse"
+    },
+    "wmap": {
+      "title": "Wafer map",
+      "history": "Wafer history: {{code}}"
     }
   },
   "notify": {

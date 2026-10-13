@@ -322,6 +322,20 @@ def trace(
     return svc.trace(session, ctx.id, kind, code)
 
 
+@router.get("/wafers/{wafer_id}/history")
+def wafer_history(session: SessionDep, ctx: CurrentTenant, wafer_id: uuid.UUID) -> Any:
+    """Wafer-level history (unit records plus lot records of the lots it was in)."""
+    _need(ctx, "mes.exec:read")
+    return {"data": svc.wafer_history(session, ctx.id, wafer_id)}
+
+
+@router.get("/lots/{lot_id}/wafer-map")
+def wafer_map(session: SessionDep, ctx: CurrentTenant, lot_id: uuid.UUID) -> Any:
+    """Wafer map: slots of the lot's carrier with wafer status."""
+    _need(ctx, "mes.exec:read")
+    return svc.wafer_map(session, ctx.id, lot_id)
+
+
 @router.get("/qtime/monitor")
 def qtime_monitor(session: SessionDep, ctx: CurrentTenant) -> Any:
     """Q-Time monitor: running clocks of waiting lots at their current step."""

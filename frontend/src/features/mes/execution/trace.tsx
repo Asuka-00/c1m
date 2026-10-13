@@ -89,8 +89,10 @@ function TraceTable({
                     {c === 'code' && r.id ? (
                       <Link
                         to='/$'
-                        params={{ _splat: 'mes/lot-trace' }}
-                        search={{ lot: String(r.id) } as never}
+                        params={{ _splat: 'mes/lot-history' }}
+                        search={
+                          { tab: 'mes-lot-trace', lot: String(r.id) } as never
+                        }
                         className='underline-offset-2 hover:underline'
                       >
                         {String(r.code)}
