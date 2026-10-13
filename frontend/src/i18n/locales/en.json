@@ -124,7 +124,7 @@
   "auth": {
     "appName": "FastAPI Admin",
     "signIn": "Sign in",
-    "signInDesc": "Sign in with your account on the FastAPI backend.",
+    "signInDesc": "Sign in with your account.",
     "passwordRequired": "Please enter your password.",
     "welcome": "Welcome back, {{name}}!",
     "loginLabel": "Username",
@@ -217,16 +217,16 @@
     "showPerms": "Show",
     "hidePerms": "Hide",
     "noTenantTitle": "No site or permissions assigned",
-    "noTenantDesc": "Your account has not been assigned a site or permissions yet, so business features are unavailable. Please contact your administrator."
+    "noTenantDesc": "No site or permissions assigned yet. Please contact your administrator."
   },
   "users": {
     "title": "Users",
     "desc": "All platform users",
     "new": "New user",
     "edit": "Edit user",
-    "newDesc": "No tenant is created automatically; assign tenants and tenant roles below.",
+    "newDesc": "Create a platform user and assign tenants.",
     "passwordMin": "min. 8 characters",
-    "rolesDesc": "Tenant roles are managed per tenant on the Members page.",
+    "rolesDesc": "Tenant roles are managed on each tenant's members page.",
     "delete": "Delete user",
     "deleteDesc": "Delete {{email}}? Their items are deleted too.",
     "created": "User created",
@@ -244,7 +244,7 @@
   "roles": {
     "platformDesc": "Platform-wide roles (assigned to users).",
     "tenantTitle": "Roles",
-    "tenantDesc": "Roles assigned to users; pick permissions in the dialog's permission tree.",
+    "tenantDesc": "Manage roles and their permissions.",
     "new": "New role",
     "edit": "Edit role",
     "delete": "Delete role",
@@ -255,7 +255,7 @@
   },
   "permissions": {
     "title": "Permissions",
-    "desc": "Assign permissions to roles with the permission tree (grouped by resource).",
+    "desc": "Assign permissions to roles.",
     "role": "Role: {{name}}",
     "ownerFixed": "The system admin role is fixed.",
     "selected": "{{count}} selected",
@@ -278,7 +278,7 @@
     "updated": "Permission updated",
     "deleted": "Permission deleted",
     "tenantTitle": "Role permissions",
-    "tenantDesc": "Assign permissions to the roles of tenant \"{{name}}\" (tenant-scope only; platform permissions can only go to platform roles)."
+    "tenantDesc": "Assign permissions to the roles of tenant \"{{name}}\"."
   },
   "tenants": {
     "title": "Tenants",
@@ -313,7 +313,7 @@
     "edit": "Edit user",
     "addExisting": "Add existing user",
     "createUser": "New user",
-    "createDesc": "Create a sign-in account directly (superusers cannot be created).",
+    "createDesc": "Create a new sign-in account.",
     "created": "User created",
     "initialPassword": "Initial password",
     "usernameHint": "Username of an existing user",
@@ -335,7 +335,7 @@
     "profileUpdated": "Profile updated",
     "passwordChanged": "Password changed",
     "language": "Language",
-    "languageDesc": "Interface language (saved in this browser)."
+    "languageDesc": "Choose the interface language."
   },
   "sidebar": {
     "toggle": "Toggle sidebar"
@@ -343,7 +343,7 @@
   "config": {
     "title": "System configuration",
     "tenantDesc": "System settings. Items you have not changed use the default value.",
-    "platformDesc": "Platform defaults, inherited by every tenant unless overridden.",
+    "platformDesc": "Default settings for all tenants.",
     "itemCount": "{{count}} items",
     "inherited": "Inherited from platform",
     "overridden": "Overridden",
@@ -464,7 +464,7 @@
     "edgeCall": "call",
     "edgeReturn": "return",
     "edgeRework": "rework",
-    "flowDraftHint": "Draft: drag from a step's right handle to another step (branch) or a rework route; select an edge and press Delete to remove it; click a step to edit or reorder.",
+    "flowDraftHint": "Drag a step's handle to add a branch; click a step to edit it.",
     "branchDialog": "Branch from step {{from}} to step {{to}}",
     "err": {
       "required": "Required",
@@ -596,7 +596,7 @@
       "holdBlocks": "The lot is on hold: release every hold before the next stage.",
       "terminal": "Lot is {{status}} — no further stages.",
       "checks": "Check results",
-      "checksHint": "Run a stage or preview to see the bound checks.",
+      "checksHint": "Check results appear after running or previewing.",
       "noChecks": "No applicable checks.",
       "overrideReason": "Override reason",
       "override": "Force override and run",
@@ -635,7 +635,7 @@
       "eqpRecipeHint": "Reported / scanned (optional)"
     },
     "trace": {
-      "hint": "Every action on the lot and its units with time, user, step, equipment, recipe, qty and check results.",
+      "hint": "All operations on the lot and its units.",
       "empty": "No history yet.",
       "dc": "DC {{n}} values, {{oos}} OOS",
       "scrap": "scrapped {{n}}",
@@ -659,7 +659,7 @@
       "mergedInto": "merged into",
       "mergedFrom": "merged from",
       "splitQtyHint": "Enter the quantity for each child lot; the parent keeps the rest.",
-      "splitUnitHint": "Assign wafers / units to child lots; unassigned ones stay in the parent. Children inherit step, stage, holds and Q-Time clocks.",
+      "splitUnitHint": "Assign wafers / units to child lots; the rest stay in the parent.",
       "childCount": "Child lots",
       "remain": "Parent keeps {{n}} / {{total}}",
       "child": "Child {{n}}",
@@ -668,7 +668,7 @@
       "goesTo": "Goes to",
       "splitDone": "Split done: {{codes}}",
       "mergeDone": "Merged: {{codes}}",
-      "mergeHint": "Lots at the same product, route version, step and stage. Merged lots end as Merged.",
+      "mergeHint": "Lots of the same product and step that can be merged.",
       "noCandidates": "No lot can be merged here.",
       "mergedQty": "Qty after merge: {{n}}",
       "qtimeNote": "Q-Time uses the earliest (strictest) start.",
@@ -710,21 +710,21 @@
     },
     "wip": {
       "title": "WIP adjustments",
-      "hint": "Jump, in-process scrap / bonus need a reason code and are governed by check rules (can be switched off per step in check bindings).",
+      "hint": "Jump, scrap or bonus adjustments for WIP lots.",
       "jump": "Jump step",
       "jumpDesc": "Move a waiting lot to another operation step of the same route.",
       "toStep": "Target step",
       "jumped": "Lot jumped",
       "override": "Override blocking checks (enter a reason)",
       "adjust": "Scrap/Bonus",
-      "adjustDesc": "Scrap or bonus WIP; adjustments above the limit require override (switchable per step).",
+      "adjustDesc": "Scrap or add WIP quantity.",
       "scrap": "Scrap",
       "bonus": "Bonus",
       "qty": "Quantity",
       "adjusted": "Adjusted"
     },
     "qtime": {
-      "hint": "Q-Time clocks of waiting lots at their current step. Lots past the warn threshold are flagged; violations are handled by the background sweep (QTIME_SWEEP_SECONDS) or \"Sweep now\" (hold / rework / scrap, once per violation; switch off per step via a qtime rule).",
+      "hint": "Remaining Q-Time and violations of waiting lots.",
       "refresh": "Refresh",
       "sweep": "Sweep violations now",
       "swept": "Checked {{checked}} lot(s), acted on {{acted}}",
@@ -758,7 +758,7 @@
       "sweepConfirm": "Scan all waiting lots now and apply the configured action (hold / rework / scrap) to those that exceeded Q-Time?"
     },
     "eqp": {
-      "hint": "Current E10 state and PM due status of main equipment. State changes follow the E10 transition table; overdue PM can block track-in via the pm_due check (switchable per step).",
+      "hint": "State and PM due status of main equipment.",
       "refresh": "Refresh",
       "code": "Equipment",
       "name": "Name",
@@ -775,7 +775,7 @@
       "current": "Current state",
       "toState": "To state",
       "pmRecorded": "PM recorded",
-      "pmDesc": "The day / lot interval of this plan restarts for this equipment.",
+      "pmDesc": "Record a completed PM.",
       "result": "Result",
       "search": "Search equipment code / name",
       "allWorkcenters": "All work centers",
@@ -787,7 +787,7 @@
       "workcenter": "Work center"
     },
     "traceq": {
-      "hint": "Enter a lot / wafer / equipment / material lot code: backward to source lots, equipment and consumed materials; forward to downstream outputs.",
+      "hint": "Trace upstream and downstream by lot, wafer, equipment or material lot.",
       "kind": "Object",
       "code": "Code",
       "search": "Search",
@@ -824,7 +824,7 @@
       }
     },
     "holdrel": {
-      "hint": "Active holds by default; switch to history for released ones. Filter by reason / source / product / hold time, release one row or select several for batch release (release reason code required).",
+      "hint": "View and release held lots.",
       "reason": "Hold reason",
       "source": "Source",
       "product": "Product",
@@ -861,7 +861,7 @@
       "releaseComment": "Release comment"
     },
     "report": {
-      "hint": "WIP by status / step / product, longest-waiting lots and daily output (auto refresh every minute).",
+      "hint": "WIP distribution, waiting lots and daily output.",
       "lots": "WIP lots",
       "qty": "WIP qty",
       "onHold": "Lots on hold",
@@ -884,7 +884,7 @@
       "scrapQty": "Scrap qty",
       "completed": "Lots finished",
       "to": "To",
-      "oeeHint": "OEE = availability (PRD / loading time excl. NST) × performance (ideal time / PRD; UPH from recipe↔equipment, else equipment) × quality. Performance and OEE are not computed when UPH is missing.",
+      "oeeHint": "OEE = availability × performance × quality.",
       "equipment": "Equipment",
       "loading": "Loading (h)",
       "prd": "PRD (h)",
@@ -1050,7 +1050,7 @@
       "enterprise": "Enterprise"
     },
     "allPlans": "All plans",
-    "tenantsDesc": "All tenants: create, disable, plan and expiry, members and owners, branding, and enter as tenant (recorded in the platform op log).",
+    "tenantsDesc": "Manage all tenants.",
     "plan": "Plan",
     "expiresAt": "Expires",
     "expired": "expired",
@@ -1063,12 +1063,12 @@
     "expiresHint": "YYYY-MM-DD, empty = never",
     "ownerAssigned": "Owner assigned",
     "membersOf": "Members of \"{{name}}\"",
-    "membersDesc": "Add members, change tenant roles or assign an owner; every change is recorded in the platform op log.",
+    "membersDesc": "Manage tenant members and roles.",
     "assignOwner": "Make owner",
     "brandingOf": "Branding of \"{{name}}\"",
-    "brandingDesc": "Branding overrides of this tenant on top of the platform defaults; reset to inherit.",
+    "brandingDesc": "Branding of this tenant.",
     "channelSaved": "Notification channel updated",
-    "channelsDesc": "Registered notification channels; a disabled channel delivers nothing platform-wide.",
+    "channelsDesc": "Manage notification channels.",
     "channel": "Channel",
     "code": "Code",
     "enabled": "Enabled",
@@ -1102,14 +1102,14 @@
       "channel.update": "Change notification channel",
       "audit.cross_tenant_read": "Cross-tenant audit read"
     },
-    "opsLogDesc": "Superuser actions in the Platform Admin console, cross-tenant reads and tenant impersonation.",
+    "opsLogDesc": "Actions of platform administrators.",
     "actor": "Actor",
     "action": "Action",
     "target": "Target",
     "detail": "Detail",
     "searchAudit": "Search record / user",
     "allTenants": "All tenants",
-    "auditDesc": "Business audit logs of all tenants (read tenant by tenant under RLS; each read is recorded in the platform op log).",
+    "auditDesc": "Business audit logs of all tenants.",
     "tenant": "Tenant",
     "entity": "Entity",
     "record": "Record",
@@ -1144,7 +1144,7 @@
     "collapseAll": "Collapse all",
     "selectedOf": "{{n}} / {{total}} selected",
     "treeTitle": "Permission tree",
-    "treeDesc": "Menus and permissions in one tree: menus (groups / pages) are MENU nodes; page buttons are BUTTON permissions.",
+    "treeDesc": "Manage menus and permissions.",
     "newRoot": "New root",
     "child": "Child",
     "childMenu": "Sub-menu",
@@ -1172,7 +1172,7 @@
     "menuPerm": "Access permission code",
     "otherPerms": "Other permissions",
     "deleteNode": "Delete node",
-    "deleteMenuDesc": "Delete menu \"{{name}}\"? Its sub-menus are deleted too; attached permissions move to \"Other permissions\".",
+    "deleteMenuDesc": "Delete menu \"{{name}}\" and its sub-menus?",
     "search": "Search…"
   }
 }

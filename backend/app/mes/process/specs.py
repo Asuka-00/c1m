@@ -150,9 +150,7 @@ register(
                 "Branch condition|分支条件|分岐条件",
                 max_length=200,
                 search=True,
-                help="e.g. lot_type == 'ENG' — evaluated at execution time (not in this module)|"
-                "例如 lot_type == 'ENG'，执行时判定（不在本模块）|"
-                "例：lot_type == 'ENG'（実行時に判定。本モジュール対象外）",
+                help="e.g. lot_type == 'ENG'|例如 lot_type == 'ENG'|例：lot_type == 'ENG'",
                 required_when={"branch_to_seq": ("*",)},
             ),
             F("branch_to_seq", "int", "Branch to seq.|分支跳转序号|分岐先順番"),
@@ -160,7 +158,7 @@ register(
                 "max_rework",
                 "int",
                 "Max reworks|最大返工次数|最大リワーク回数",
-                help="Blank: unlimited (check type rework_limit can switch it off)|留空不限（可用卡控类型「返工次数上限」关闭）|空欄：無制限",
+                help="Blank: unlimited|留空不限|空欄：無制限",
                 list=False,
             ),
             F(

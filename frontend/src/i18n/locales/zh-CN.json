@@ -124,7 +124,7 @@
   "auth": {
     "appName": "FastAPI 管理后台",
     "signIn": "登录",
-    "signInDesc": "使用 FastAPI 后端账户登录。",
+    "signInDesc": "使用你的账号登录。",
     "passwordRequired": "请输入密码。",
     "welcome": "欢迎回来，{{name}}！",
     "loginLabel": "用户名",
@@ -217,16 +217,16 @@
     "showPerms": "展开",
     "hidePerms": "收起",
     "noTenantTitle": "尚未分配厂区 / 权限",
-    "noTenantDesc": "你的账号还没有分配厂区或权限，暂时无法使用业务功能。请联系管理员。"
+    "noTenantDesc": "你的账号尚未分配厂区或权限，请联系管理员。"
   },
   "users": {
     "title": "用户",
     "desc": "平台所有用户",
     "new": "新建用户",
     "edit": "编辑用户",
-    "newDesc": "不会自动创建租户；可在下方为用户分配租户与租户角色。",
+    "newDesc": "创建平台用户并分配租户。",
     "passwordMin": "至少 8 个字符",
-    "rolesDesc": "租户角色请在各租户的“成员”页面管理。",
+    "rolesDesc": "租户角色在各租户的成员页面管理。",
     "delete": "删除用户",
     "deleteDesc": "确定删除 {{email}} 吗？其条目也会被删除。",
     "created": "用户已创建",
@@ -244,7 +244,7 @@
   "roles": {
     "platformDesc": "平台级角色（分配给用户）。",
     "tenantTitle": "角色",
-    "tenantDesc": "分配给用户的角色；在对话框的权限树中勾选权限。",
+    "tenantDesc": "管理角色及其权限。",
     "new": "新建角色",
     "edit": "编辑角色",
     "delete": "删除角色",
@@ -255,7 +255,7 @@
   },
   "permissions": {
     "title": "权限",
-    "desc": "通过权限树为角色分配权限（按资源分组）。",
+    "desc": "为角色分配权限。",
     "role": "角色：{{name}}",
     "ownerFixed": "系统管理员角色不可修改。",
     "selected": "已选 {{count}} 项",
@@ -278,7 +278,7 @@
     "updated": "权限已更新",
     "deleted": "权限已删除",
     "tenantTitle": "角色权限",
-    "tenantDesc": "为租户「{{name}}」的角色分配权限（仅租户作用域权限；平台权限只能授予平台角色）。"
+    "tenantDesc": "为租户「{{name}}」的角色分配权限。"
   },
   "tenants": {
     "title": "租户",
@@ -313,7 +313,7 @@
     "edit": "编辑用户",
     "addExisting": "添加已有用户",
     "createUser": "新建用户",
-    "createDesc": "直接创建登录账号（不能创建超级用户）。",
+    "createDesc": "创建新的登录账号。",
     "created": "用户已创建",
     "initialPassword": "初始密码",
     "usernameHint": "输入已有用户的用户名",
@@ -335,7 +335,7 @@
     "profileUpdated": "资料已更新",
     "passwordChanged": "密码已修改",
     "language": "语言",
-    "languageDesc": "界面语言（保存在当前浏览器）。"
+    "languageDesc": "选择界面语言。"
   },
   "sidebar": {
     "toggle": "切换侧边栏"
@@ -343,7 +343,7 @@
   "config": {
     "title": "系统配置",
     "tenantDesc": "系统配置。未修改的项使用默认值。",
-    "platformDesc": "平台默认值，所有租户继承（除非被覆盖）。",
+    "platformDesc": "所有租户的默认配置。",
     "itemCount": "{{count}} 项",
     "inherited": "继承自平台",
     "overridden": "已覆盖",
@@ -464,7 +464,7 @@
     "edgeCall": "调用",
     "edgeReturn": "返回",
     "edgeRework": "返工",
-    "flowDraftHint": "草稿：从步骤右侧连接点拖到另一步骤（分支）或返工流程；选中连线按 Delete 删除；点击步骤可编辑或调整顺序。",
+    "flowDraftHint": "拖动步骤连接点添加分支，点击步骤进行编辑。",
     "branchDialog": "从步骤 {{from}} 分支到步骤 {{to}}",
     "err": {
       "required": "必填",
@@ -596,7 +596,7 @@
       "holdBlocks": "批次处于 Hold 状态：需解除全部 Hold 后才能继续作业。",
       "terminal": "批次已{{status}}，无后续作业。",
       "checks": "卡控结果",
-      "checksHint": "执行作业或预检后显示绑定的卡控结果。",
+      "checksHint": "执行或预检后显示卡控结果。",
       "noChecks": "无适用卡控。",
       "overrideReason": "放行原因",
       "override": "强制放行并执行",
@@ -635,7 +635,7 @@
       "eqpRecipeHint": "设备上报或扫码（可选）"
     },
     "trace": {
-      "hint": "批次及其单元的每一个操作：时间、用户、步骤、设备、配方、数量与卡控结果。",
+      "hint": "查看批次及其单元的全部操作记录。",
       "empty": "暂无履历。",
       "dc": "收集 {{n}} 个值，{{oos}} 个超规",
       "scrap": "报废 {{n}}",
@@ -659,7 +659,7 @@
       "mergedInto": "合入",
       "mergedFrom": "合并自",
       "splitQtyHint": "输入每个子批的数量，其余留在母批。",
-      "splitUnitHint": "将晶圆/单元分配到子批，未分配的留在母批。子批继承步骤、阶段、Hold 与 Q-Time 计时。",
+      "splitUnitHint": "将晶圆 / 单元分配到子批，未分配的留在母批。",
       "childCount": "子批数",
       "remain": "母批保留 {{n}} / {{total}}",
       "child": "子批 {{n}}",
@@ -668,7 +668,7 @@
       "goesTo": "去向",
       "splitDone": "分批完成：{{codes}}",
       "mergeDone": "合批完成：{{codes}}",
-      "mergeHint": "同产品、同流程版本、同步骤与阶段的批次。被合入的批次状态变为已合批（终止）。",
+      "mergeHint": "可合批的同产品、同步骤批次。",
       "noCandidates": "当前无可合批的批次。",
       "mergedQty": "合批后数量：{{n}}",
       "qtimeNote": "Q-Time 取最早（最严格）起始时间。",
@@ -710,21 +710,21 @@
     },
     "wip": {
       "title": "在制调整",
-      "hint": "跳站、在制报废 / 补数等调整均需原因代码，并受卡控规则约束（可在卡控绑定中按工步关闭）。",
+      "hint": "对在制批次进行跳站、报废或补数调整。",
       "jump": "跳站",
       "jumpDesc": "将等待中的批次移到同一流程的其他工序工步。",
       "toStep": "目标工步",
       "jumped": "已跳站",
       "override": "强制放行阻断检查（填写原因）",
       "adjust": "报废/补数",
-      "adjustDesc": "在制品报废或补数；单次调整超过上限需强制放行（可按工步关闭此管控）。",
+      "adjustDesc": "在制品报废或补数。",
       "scrap": "报废",
       "bonus": "补数",
       "qty": "数量",
       "adjusted": "已调整"
     },
     "qtime": {
-      "hint": "等待中批次在当前工步的 Q-Time 计时；达到预警阈值标记“即将超时”，超时由后台定时扫描（QTIME_SWEEP_SECONDS）或“立即扫描”按规则自动 Hold / 返工 / 报废（每次超时只处置一次，可按工步关闭 qtime 管控）。",
+      "hint": "查看等待中批次的 Q-Time 剩余时间与超时状态。",
       "refresh": "刷新",
       "sweep": "立即扫描超时",
       "swept": "已扫描 {{checked}} 个批次，处置 {{acted}} 个",
@@ -758,7 +758,7 @@
       "sweepConfirm": "立即扫描所有等待中批次，并对已超时批次执行规则配置的处置（Hold / 返工 / 报废）？"
     },
     "eqp": {
-      "hint": "主设备当前 E10 状态与 PM 到期情况；状态变更受 E10 迁移表约束，PM 到期可在上机检查 pm_due 中阻断（可按工步关闭）。",
+      "hint": "查看主设备的状态与 PM 到期情况。",
       "refresh": "刷新",
       "code": "设备编码",
       "name": "设备名称",
@@ -775,7 +775,7 @@
       "current": "当前状态",
       "toState": "目标状态",
       "pmRecorded": "PM 已登记",
-      "pmDesc": "登记完成后，该设备该计划的天数 / 批次周期重新起算。",
+      "pmDesc": "登记一次 PM 完成。",
       "result": "结果",
       "search": "搜索设备编码 / 名称",
       "allWorkcenters": "全部工作中心",
@@ -787,7 +787,7 @@
       "workcenter": "工作中心"
     },
     "traceq": {
-      "hint": "输入批次 / 晶圆 / 设备 / 物料批编码：反向追溯来源批次、经过的设备与消耗的物料，正向追溯下游产出。",
+      "hint": "按批次、晶圆、设备或物料批追溯上下游。",
       "kind": "对象",
       "code": "编码",
       "search": "查询",
@@ -824,7 +824,7 @@
       }
     },
     "holdrel": {
-      "hint": "默认显示生效中的 Hold，可切换历史（已解除）；按原因 / 来源 / 产品 / Hold 时间筛选，单条释放或勾选后批量释放（须释放原因代码）。",
+      "hint": "查看并释放 Hold 中的批次。",
       "reason": "Hold 原因",
       "source": "来源",
       "product": "产品",
@@ -861,7 +861,7 @@
       "releaseComment": "解除备注"
     },
     "report": {
-      "hint": "在制批次按状态 / 工步 / 产品分布，滞留时间最长的批次与每日产出（每分钟自动刷新）。",
+      "hint": "在制分布、滞留批次与每日产出。",
       "lots": "在制批次",
       "qty": "在制数量",
       "onHold": "Hold 批次",
@@ -884,7 +884,7 @@
       "scrapQty": "报废数量",
       "completed": "完工批次",
       "to": "结束日期",
-      "oeeHint": "OEE = 时间稼动率（PRD / 负荷时间，扣除 NST）× 性能稼动率（理论时间 / PRD，UPH 取配方设备映射，其次设备）× 良品率。缺少 UPH 时不计算性能与 OEE。",
+      "oeeHint": "OEE = 时间稼动率 × 性能稼动率 × 良品率。",
       "equipment": "设备",
       "loading": "负荷(小时)",
       "prd": "PRD(小时)",
@@ -1050,7 +1050,7 @@
       "enterprise": "企业版"
     },
     "allPlans": "全部套餐",
-    "tenantsDesc": "所有租户：创建、停用、套餐与到期时间，成员与 owner、品牌，以及以租户身份进入（记入平台操作日志）。",
+    "tenantsDesc": "管理所有租户。",
     "plan": "套餐",
     "expiresAt": "到期时间",
     "expired": "已过期",
@@ -1063,12 +1063,12 @@
     "expiresHint": "YYYY-MM-DD，留空表示永久",
     "ownerAssigned": "已指定 owner",
     "membersOf": "「{{name}}」的成员",
-    "membersDesc": "添加成员、修改租户角色或指定 owner；所有操作记入平台操作日志。",
+    "membersDesc": "管理租户成员与角色。",
     "assignOwner": "设为 owner",
     "brandingOf": "「{{name}}」的品牌",
-    "brandingDesc": "该租户在平台默认值之上的品牌覆盖值；重置即继承平台值。",
+    "brandingDesc": "该租户的品牌设置。",
     "channelSaved": "通知渠道已更新",
-    "channelsDesc": "已登记的通知渠道；停用后全平台不再经该渠道投递。",
+    "channelsDesc": "管理通知渠道。",
     "channel": "渠道",
     "code": "编码",
     "enabled": "启用",
@@ -1102,14 +1102,14 @@
       "channel.update": "修改通知渠道",
       "audit.cross_tenant_read": "跨租户读取审计"
     },
-    "opsLogDesc": "平台管理员在平台管理控制台的操作、跨租户读取与以租户身份进入的记录。",
+    "opsLogDesc": "平台管理员的操作记录。",
     "actor": "操作人",
     "action": "操作",
     "target": "目标",
     "detail": "详情",
     "searchAudit": "搜索记录 / 操作人",
     "allTenants": "全部租户",
-    "auditDesc": "各租户的业务审计日志汇总（逐租户在 RLS 下读取；每次读取记入平台操作日志）。",
+    "auditDesc": "所有租户的业务审计日志。",
     "tenant": "租户",
     "entity": "实体",
     "record": "记录",
@@ -1144,7 +1144,7 @@
     "collapseAll": "全部折叠",
     "selectedOf": "已选 {{n}} / {{total}}",
     "treeTitle": "权限树",
-    "treeDesc": "菜单与权限统一管理：菜单（目录 / 页面）为 MENU 节点，页面下挂按钮权限（BUTTON）。",
+    "treeDesc": "管理菜单与权限。",
     "newRoot": "新增根权限",
     "child": "子项",
     "childMenu": "子菜单",
@@ -1172,7 +1172,7 @@
     "menuPerm": "访问权限编码",
     "otherPerms": "其他权限",
     "deleteNode": "删除节点",
-    "deleteMenuDesc": "确定删除菜单「{{name}}」吗？其子菜单将一并删除，挂在其下的权限会移到“其他权限”。",
+    "deleteMenuDesc": "确定删除菜单「{{name}}」及其子菜单吗？",
     "search": "搜索…"
   }
 }

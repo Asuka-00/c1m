@@ -818,8 +818,8 @@
         "over_start_limit_pct": "Started wafers may exceed the plan by at most this percentage"
       },
       "route_step": {
-        "branch_condition": "e.g. lot_type == 'ENG' — evaluated at execution time (not in this module)",
-        "max_rework": "Blank: unlimited (check type rework_limit can switch it off)"
+        "branch_condition": "e.g. lot_type == 'ENG'",
+        "max_rework": "Blank: unlimited"
       },
       "recipe_equipment": {
         "ideal_uph": "Optional; overrides the equipment UPH for OEE"

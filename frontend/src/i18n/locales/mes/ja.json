@@ -818,7 +818,7 @@
         "over_start_limit_pct": "投入枚数が計画を超えてよい割合"
       },
       "route_step": {
-        "branch_condition": "例：lot_type == 'ENG'（実行時に判定。本モジュール対象外）",
+        "branch_condition": "例：lot_type == 'ENG'",
         "max_rework": "空欄：無制限"
       },
       "recipe_equipment": {

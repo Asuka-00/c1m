@@ -818,8 +818,8 @@
         "over_start_limit_pct": "投产片数最多可超出计划片数的百分比"
       },
       "route_step": {
-        "branch_condition": "例如 lot_type == 'ENG'，执行时判定（不在本模块）",
-        "max_rework": "留空不限（可用卡控类型「返工次数上限」关闭）"
+        "branch_condition": "例如 lot_type == 'ENG'",
+        "max_rework": "留空不限"
       },
       "recipe_equipment": {
         "ideal_uph": "可选，OEE 计算优先于设备 UPH"
