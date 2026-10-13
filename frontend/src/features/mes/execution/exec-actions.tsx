@@ -9,12 +9,7 @@ import { mesApi, type MesRow } from '@/lib/api/mes/common'
 import { IconButton } from '@/components/icon-button'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { ReleaseDialog } from './lot-console/release-dialog'
-
-const pageLink = (page: string, lot: unknown) => ({
-  to: '/$' as const,
-  params: { _splat: `mes/${page}` },
-  search: { lot: String(lot) } as never,
-})
+import { lotPageLink } from './lot-links'
 
 /** 批次行操作：在操作台 / 履历时间线中打开。 */
 export function LotActions({ row }: { row: MesRow }) {
@@ -22,7 +17,7 @@ export function LotActions({ row }: { row: MesRow }) {
     <>
       <IconButton label={t('menu.mes-lot-console')} variant='ghost' asChild>
         <Link
-          {...pageLink('lot-console', row.id)}
+          {...lotPageLink('lot-console', row.id)}
           aria-label={t('menu.mes-lot-console')}
         >
           <Gauge className='size-4' />
@@ -30,7 +25,7 @@ export function LotActions({ row }: { row: MesRow }) {
       </IconButton>
       <IconButton label={t('menu.mes-lot-trace')} variant='ghost' asChild>
         <Link
-          {...pageLink('lot-trace', row.id)}
+          {...lotPageLink('lot-trace', row.id)}
           aria-label={t('menu.mes-lot-trace')}
         >
           <History className='size-4' />
@@ -55,7 +50,7 @@ export function HoldActions({ row }: { row: MesRow }) {
     <>
       <IconButton label={t('menu.mes-lot-console')} variant='ghost' asChild>
         <Link
-          {...pageLink('lot-console', row.lot_id)}
+          {...lotPageLink('lot-console', row.lot_id)}
           aria-label={t('menu.mes-lot-console')}
         >
           <Gauge className='size-4' />

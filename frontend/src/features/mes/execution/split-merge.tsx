@@ -52,13 +52,8 @@ import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
 import { CheckPanel } from './exec-parts'
+import { type LotPage, lotPageLink } from './lot-links'
 import { canMergeLot, canSplitLot, checkSplit } from './lot-rules'
-
-const lotLink = (page: string, id: string) => ({
-  to: '/$' as const,
-  params: { _splat: `mes/${page}` },
-  search: { lot: id } as never,
-})
 
 /** 谱系列表：拆批母批 / 子批，合批源批次 / 目标批次。 */
 export function GenealogyList({
@@ -68,7 +63,7 @@ export function GenealogyList({
 }: {
   lotId: string
   links: GenealogyLink[]
-  page?: string
+  page?: LotPage
 }) {
   if (!links.length)
     return <EmptyState icon={GitFork}>{t('mes.sm.noGenealogy')}</EmptyState>
@@ -98,7 +93,7 @@ export function GenealogyList({
             />
             <span className='text-muted-foreground'>{t(`mes.sm.${key}`)}</span>
             <Link
-              {...lotLink(page, other.id)}
+              {...lotPageLink(page, other.id)}
               className='font-mono font-medium underline-offset-2 hover:underline'
             >
               {other.code}

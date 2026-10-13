@@ -133,3 +133,48 @@ export const PLATFORM_MENU_KEYS = [
   'p-login-log',
   'p-ops-log',
 ] as const
+
+/**
+ * 只作为 tabs / tree 页签存在、没有独立路由的 key（整理自后端 10e6736 layout.py 的 TAB_TITLES）。
+ * 前端跳转不能拼成 mes/<x>，要跳父页面并带 tab，否则 404。
+ */
+export const TAB_ONLY_MENU_KEYS = [
+  'mes-check_rule',
+  'mes-check_plan',
+  'mes-check_binding',
+  'mes-product',
+  'mes-product_family',
+  'mes-tech_node',
+  'mes-material',
+  'mes-material_type',
+  'mes-carrier',
+  'mes-carrier_type',
+  'mes-equipment',
+  'mes-equipment_type',
+  'mes-equipment_group',
+  'mes-equipment_capability',
+  'mes-e10_state',
+  'mes-e10_auto_rule',
+  'mes-lot_type',
+  'mes-lot_priority',
+  'mes-split_merge_rule',
+  'mes-site',
+  'mes-area',
+  'mes-workcenter',
+  'mes-work_calendar',
+  'mes-shift',
+  'mes-route',
+  'mes-operation',
+  'mes-product_route',
+  'mes-recipe',
+  'mes-param_spec',
+  'mes-dc_plan',
+  'mes-measurement_item',
+  'mes-sampling_rule',
+  'mes-lot-trace',
+  'mes-trace',
+  'mes-warehouse',
+  'mes-storage_location',
+  'members',
+  'user-roles',
+] as const
