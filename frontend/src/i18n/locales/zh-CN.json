@@ -119,7 +119,8 @@
     "settings": "设置",
     "config": "系统配置",
     "notifications": "消息中心",
-    "notify-subscriptions": "通知订阅"
+    "notify-subscriptions": "通知订阅",
+    "mes-wo-board": "工单进度"
   },
   "auth": {
     "appName": "FastAPI 管理后台",
@@ -1028,6 +1029,28 @@
       "good": "良品",
       "scrap": "报废",
       "yield": "良率"
+    },
+    "woBoard": {
+      "hint": "按工单查看完工进度、在制分布与交期预警。",
+      "search": "搜索工单 / 产品",
+      "allRisks": "全部交期状态",
+      "risk": {
+        "overdue": "逾期",
+        "at_risk": "临近交期",
+        "ok": "正常",
+        "none": "无交期",
+        "done": "已完工"
+      },
+      "warnDays": "预警天数",
+      "code": "工单",
+      "product": "产品",
+      "status": "状态",
+      "qty": "完工/在制/报废/计划",
+      "progress": "进度",
+      "wipByOp": "在制分布",
+      "due": "交期",
+      "daysLeft": "剩 {{n}} 天",
+      "riskCol": "交期状态"
     }
   },
   "notify": {

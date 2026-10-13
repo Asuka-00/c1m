@@ -119,7 +119,8 @@
     "settings": "Settings",
     "config": "System configuration",
     "notifications": "Message Center",
-    "notify-subscriptions": "Notification Subscriptions"
+    "notify-subscriptions": "Notification Subscriptions",
+    "mes-wo-board": "WO Progress"
   },
   "auth": {
     "appName": "FastAPI Admin",
@@ -1028,6 +1029,28 @@
       "good": "Good",
       "scrap": "Scrap",
       "yield": "Yield"
+    },
+    "woBoard": {
+      "hint": "Work order progress, WIP spread and due-date warnings.",
+      "search": "Search WO / product",
+      "allRisks": "All due states",
+      "risk": {
+        "overdue": "Overdue",
+        "at_risk": "Due soon",
+        "ok": "On track",
+        "none": "No due date",
+        "done": "Done"
+      },
+      "warnDays": "Warn days",
+      "code": "Work order",
+      "product": "Product",
+      "status": "Status",
+      "qty": "Done/WIP/Scrap/Plan",
+      "progress": "Progress",
+      "wipByOp": "WIP by operation",
+      "due": "Due date",
+      "daysLeft": "{{n}} d left",
+      "riskCol": "Due state"
     }
   },
   "notify": {

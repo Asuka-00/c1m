@@ -119,7 +119,8 @@
     "settings": "設定",
     "config": "システム設定",
     "notifications": "メッセージセンター",
-    "notify-subscriptions": "通知購読"
+    "notify-subscriptions": "通知購読",
+    "mes-wo-board": "作業指示進捗"
   },
   "auth": {
     "appName": "FastAPI 管理画面",
@@ -1028,6 +1029,28 @@
       "good": "良品",
       "scrap": "廃棄",
       "yield": "歩留まり"
+    },
+    "woBoard": {
+      "hint": "作業指示の進捗、仕掛分布、納期警告。",
+      "search": "作業指示 / 製品を検索",
+      "allRisks": "すべての納期状態",
+      "risk": {
+        "overdue": "遅延",
+        "at_risk": "納期間近",
+        "ok": "順調",
+        "none": "納期なし",
+        "done": "完了"
+      },
+      "warnDays": "警告日数",
+      "code": "作業指示",
+      "product": "製品",
+      "status": "状態",
+      "qty": "完了/仕掛/廃棄/計画",
+      "progress": "進捗",
+      "wipByOp": "工程別仕掛",
+      "due": "納期",
+      "daysLeft": "残り {{n}} 日",
+      "riskCol": "納期状態"
     }
   },
   "notify": {

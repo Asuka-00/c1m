@@ -1332,6 +1332,7 @@
     "mes-lot-history": "ロット履歴・トレース",
     "mes-check_log": "チェック記録",
     "mes-lot_recipe_run": "レシピ実行記録",
+    "mes-wo-board": "作業指示進捗",
     "mes-work_order": "作業指示",
     "mes-lot-start": "ロット投入",
     "mes-receipt": "完成品入庫",

@@ -50,6 +50,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-lot_recipe_run", "Recipe Run|配方执行记录|レシピ実行記録"),
     ],
     "g-planning": [
+        ("mes-wo-board", "WO Progress|工单进度|作業指示進捗"),
         ("mes-work_order", "Work Order|工单|作業指示"),
         ("mes-lot-start", "Lot Start|投产|ロット投入"),
     ],

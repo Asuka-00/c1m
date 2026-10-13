@@ -317,3 +317,35 @@ def test_yield_report(client: TestClient, db: Session) -> None:
     assert op["pareto"][0]["qty"] == 10 and op["pareto"][0]["cum_pct"] == 1.0
     assert rep("lot")["rows"][0]["key"] == lot["code"]
     assert rep("product")["total"]["yield"] == 0.9
+
+
+def test_wo_board_due_warnings(client: TestClient, db: Session) -> None:
+    from datetime import date, timedelta
+
+    from app.mes.execution.tests.test_exec import Line
+
+    f = Line(client, db)
+    (a,) = f.start(2)
+    wo = f.lot(a)["work_order_id"]
+
+    def board() -> Any:
+        r = client.get("/api/v1/mes/work-order/board", headers=f.m.h)
+        assert r.status_code == 200, r.text
+        return next(x for x in r.json()["data"] if x["id"] == wo)
+
+    def due(days: int) -> None:
+        f.sql(
+            "UPDATE mes_work_order SET due_date = :d WHERE id = :w",
+            d=date.today() + timedelta(days=days),
+            w=wo,
+        )
+
+    b = board()
+    assert b["risk"] == "none" and b["wip"] == 2 and b["lots"] == 1
+    assert b["wip_by_op"] == [{"operation": "OP1", "qty": 2}]
+    due(2)
+    assert board()["risk"] == "at_risk"
+    due(10)
+    assert board()["risk"] == "ok"
+    due(-1)
+    assert board()["risk"] == "overdue" and board()["days_left"] == -1

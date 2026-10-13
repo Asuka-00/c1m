@@ -7,11 +7,12 @@
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.core.deps import SessionDep
 from app.core.spec.serialize import serialize
+from app.mes.planning import board
 from app.mes.planning import service as svc
 from app.platform.auth.deps import CurrentTenant
 from app.platform.tenants.service import TenantContext
@@ -47,6 +48,15 @@ class StartIn(BaseModel):
 
 class UndoIn(BaseModel):
     lot_ids: list[uuid.UUID] | None = None
+
+
+@router.get("/board")
+def wo_board(
+    session: SessionDep, ctx: CurrentTenant, warn_days: int = Query(3, ge=0, le=60)
+) -> Any:
+    """Work order progress board with due-date warnings."""
+    _need(ctx, "mes.wo:read")
+    return {"data": board.wo_board(session, ctx.id, warn_days)}
 
 
 @router.post("/{rid}/transition")

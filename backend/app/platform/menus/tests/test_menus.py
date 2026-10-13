@@ -270,7 +270,7 @@ def test_menu_layout_complete_and_synced(
     top = [n["key"] for n in tree["menus"]]
     assert top == [g for g, *_ in GROUPS]  # ordered domain groups only
     by = {n["key"]: [c["key"] for c in n["children"]] for n in tree["menus"]}
-    assert by["g-planning"] == ["mes-work_order", "mes-lot-start"]
+    assert by["g-planning"] == ["mes-wo-board", "mes-work_order", "mes-lot-start"]
     assert "mes-audit_log" in by["g-system"] and "mes-uom" in by["g-master"]
     # 业务流顺序：工作台 → 执行 → 在制报表 … 主数据 → 系统；组内日常作业在前
     assert top[:3] == ["g-workspace", "g-execution", "g-wip"] and top[-1] == "g-system"

@@ -1332,6 +1332,7 @@
     "mes-lot-history": "批次履历与追溯",
     "mes-check_log": "卡控记录",
     "mes-lot_recipe_run": "配方执行记录",
+    "mes-wo-board": "工单进度",
     "mes-work_order": "工单",
     "mes-lot-start": "投产",
     "mes-receipt": "完工入库",

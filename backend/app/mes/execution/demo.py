@@ -1,6 +1,7 @@
 """执行演示数据（检查规则/方案、线边物料、工具、装配线）及演示作业。"""
 
 import uuid
+from datetime import date, timedelta
 from typing import Any
 
 import sqlalchemy as sa
@@ -232,6 +233,7 @@ add(
 add(
     "work_order",
     code="WO-DEMO-03",
+    due_date=date.today() + timedelta(days=2),
     product=("product", "PKG-A100@1"),
     lot_type=("lot_type", "ASSY"),
     planned_qty=2000,
