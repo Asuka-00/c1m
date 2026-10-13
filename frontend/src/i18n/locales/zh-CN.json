@@ -885,7 +885,7 @@
       "releasedBy": "解除人",
       "releaseReason": "解除原因",
       "releaseComment": "解除备注",
-      "showTerminal": "显示已报废 / 已出货 / 已合并批次",
+      "showTerminal": "显示已报废、已合并的批次",
       "lotStatus": "批次状态"
     },
     "report": {

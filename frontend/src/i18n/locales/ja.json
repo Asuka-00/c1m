@@ -885,7 +885,7 @@
       "releasedBy": "解除者",
       "releaseReason": "解除理由",
       "releaseComment": "解除コメント",
-      "showTerminal": "廃棄・出荷・統合済みロットを表示",
+      "showTerminal": "廃棄・統合済みロットを表示",
       "lotStatus": "ロット状態"
     },
     "report": {

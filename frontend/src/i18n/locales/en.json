@@ -885,7 +885,7 @@
       "releasedBy": "Released by",
       "releaseReason": "Release reason",
       "releaseComment": "Release comment",
-      "showTerminal": "Show scrapped / shipped / merged lots",
+      "showTerminal": "Show scrapped / merged lots",
       "lotStatus": "Lot status"
     },
     "report": {

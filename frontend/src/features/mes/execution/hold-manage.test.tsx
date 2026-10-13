@@ -105,7 +105,7 @@ describe('Hold 列表：显示终态批次开关（N6 / P15 A）', () => {
     expect(document.querySelector('[data-testid=hold-lot-status]')).toBeNull()
   })
 
-  it('开关文案说明默认隐藏的是已报废 / 已出货 / 已合并（修订版 N6）', async () => {
+  it('开关文案说明默认隐藏的是已报废 / 已合并（修订版 N6）', async () => {
     const { s } = await show([row({ lot_status: 'completed' })])
     await expect
       .element(s.getByText(t('mes.holdrel.showTerminal')))

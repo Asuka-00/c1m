@@ -110,7 +110,7 @@ export default function HoldManagePage() {
     setStatusSeen(status)
     setSel([])
   }
-  // 默认隐藏 scrapped / shipped / merged 批次的 Hold（修订版 N6，completed / stored 默认显示），
+  // 默认隐藏 scrapped / merged 批次的 Hold（修订版 N6，completed / stored 默认显示），
   // 开关打开时请求 include_terminal=true 显示全部
   const [showTerminal, setShowTerminal] = useState(false)
   const terminalParam = showTerminal ? { include_terminal: 'true' } : {}
