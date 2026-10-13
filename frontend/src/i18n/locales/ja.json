@@ -1156,9 +1156,6 @@
     "reasonCode": {
       "qtime_expired": "Q-Time 超過"
     },
-    "qtimeRule": {
-      "reasonHint": "任意：空欄の場合はシステム理由コード qtime_expired（Q-Time 超過）を使用します"
-    },
     "qtimeHold": {
       "overdue": "{{time}} 超過",
       "steps": "工程 {{from}} → {{to}}",

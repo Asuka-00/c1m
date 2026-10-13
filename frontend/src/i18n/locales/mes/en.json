@@ -395,6 +395,8 @@
       },
       "qtime_rule": {
         "code": "Code",
+        "is_active": "Active",
+        "active_since": "Active since",
         "name": "Name",
         "route": "Route",
         "from_step": "From step",
@@ -894,7 +896,8 @@
         "shifts": "Comma separated shift codes"
       },
       "qtime_rule": {
-        "warn_minutes": "Pre-expiry warning when elapsed ≥ this (blank: none)"
+        "warn_minutes": "Pre-expiry warning when elapsed ≥ this (blank: none)",
+        "reason": "Optional; for hold, blank uses system reason qtime_expired"
       },
       "work_order": {
         "priority": "Blank: the lot type's default priority",

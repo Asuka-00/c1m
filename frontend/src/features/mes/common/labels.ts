@@ -2,7 +2,6 @@
 import i18n, { t } from '@/i18n'
 import type { MesEntity, MesField } from '@/lib/api/mes/common'
 import { splitLabel } from '@/lib/split-label'
-import { overrideHelpKey } from './fe-overrides'
 
 /** 标签来自生成的语言包（locales/mes/*.json）。 */
 export const entityLabel = (code: string) =>
@@ -12,12 +11,9 @@ export const fieldLabel = (e: MesEntity, f: MesField | string) => {
   const name = typeof f === 'string' ? f : f.name
   return t(`mes.field.${e.code}.${name}`, { defaultValue: name })
 }
-/** 字段帮助文本（前端补充优先，否则字段声明了 help 时取语言包）。 */
-export const fieldHelp = (e: MesEntity, f: MesField) => {
-  const fe = overrideHelpKey(e, f)
-  if (fe) return t(fe)
-  return f.help ? t(`mes.help.${e.code}.${f.name}`, { defaultValue: '' }) : ''
-}
+/** 字段帮助文本（字段声明了 help 时）。 */
+export const fieldHelp = (e: MesEntity, f: MesField) =>
+  f.help ? t(`mes.help.${e.code}.${f.name}`, { defaultValue: '' }) : ''
 /**
  * 枚举值标签。
  *

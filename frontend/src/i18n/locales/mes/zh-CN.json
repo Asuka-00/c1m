@@ -395,6 +395,8 @@
       },
       "qtime_rule": {
         "code": "编码",
+        "is_active": "启用",
+        "active_since": "启用时间",
         "name": "名称",
         "route": "流程",
         "from_step": "起始步骤",
@@ -894,7 +896,8 @@
         "shifts": "逗号分隔的班次编码"
       },
       "qtime_rule": {
-        "warn_minutes": "已用时间达到该值即预警（留空不预警）"
+        "warn_minutes": "已用时间达到该值即预警（留空不预警）",
+        "reason": "选填；处置为 hold 时留空使用系统原因码 qtime_expired"
       },
       "work_order": {
         "priority": "留空则使用批次类型的默认优先级",

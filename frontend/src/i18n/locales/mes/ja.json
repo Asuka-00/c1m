@@ -395,6 +395,8 @@
       },
       "qtime_rule": {
         "code": "コード",
+        "is_active": "有効",
+        "active_since": "有効化日時",
         "name": "名称",
         "route": "ルート",
         "from_step": "開始ステップ",
@@ -894,7 +896,8 @@
         "shifts": "カンマ区切りのシフトコード"
       },
       "qtime_rule": {
-        "warn_minutes": "経過がこの値以上で事前警告（空欄：なし）"
+        "warn_minutes": "経過がこの値以上で事前警告（空欄：なし）",
+        "reason": "任意。hold で空欄の場合はシステム理由 qtime_expired（Q-Time 超過）を使用"
       },
       "work_order": {
         "priority": "空欄：ロットタイプの既定優先度",

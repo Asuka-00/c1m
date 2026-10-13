@@ -1156,9 +1156,6 @@
     "reasonCode": {
       "qtime_expired": "Q-Time 超时"
     },
-    "qtimeRule": {
-      "reasonHint": "选填：留空时使用系统原因码 qtime_expired（Q-Time 超时）"
-    },
     "qtimeHold": {
       "overdue": "超时 {{time}}",
       "steps": "工步 {{from}} → {{to}}",

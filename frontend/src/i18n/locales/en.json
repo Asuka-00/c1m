@@ -1156,9 +1156,6 @@
     "reasonCode": {
       "qtime_expired": "Q-Time expired"
     },
-    "qtimeRule": {
-      "reasonHint": "Optional: leave blank to use the system reason code qtime_expired (Q-Time expired)"
-    },
     "qtimeHold": {
       "overdue": "Overdue by {{time}}",
       "steps": "Steps {{from}} → {{to}}",

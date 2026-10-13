@@ -4,7 +4,6 @@ import i18n, { t } from '@/i18n'
 import { errorMessage } from '@/lib/api/client'
 import type { MesEntity, MesField } from '@/lib/api/mes/common'
 import { TERMINAL_STATUSES } from '@/features/mes/execution/lot-rules'
-import { overrideRequiredWhen } from './fe-overrides'
 import { entityLabel, enumLabel, fieldLabel } from './labels'
 
 type V = Record<string, unknown>
@@ -19,9 +18,7 @@ export function requiredBy(
   v: V
 ): true | { field: MesField; value: unknown } | null {
   if (f.required) return true
-  for (const [name, allowed] of Object.entries(
-    overrideRequiredWhen(e, f) ?? {}
-  )) {
+  for (const [name, allowed] of Object.entries(f.required_when ?? {})) {
     const other = e.fields.find((x) => x.name === name)
     if (!other) continue
     const cur = v[other.column]

@@ -30,8 +30,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import { overrideEnumOptions } from './fe-overrides'
+import { cellValue } from './cells'
 import { entityLabel, enumLabel, fieldHelp, fieldLabel } from './labels'
 import { RefSelect } from './ref-select'
 import { requiredBy, requiredHint, validateRequired } from './required'
@@ -183,6 +184,10 @@ function FormBody({
       !f.system &&
       (!f.only_when_required || !!requiredBy(e, f, v))
   )
+  // 系统维护字段（如 Q-Time 规则的 active_since）：编辑时只读显示，不提交
+  const readonly = row
+    ? e.fields.filter((f) => f.system && row[f.column] != null)
+    : []
   return (
     <form onSubmit={submit} noValidate className='space-y-4'>
       <DialogHeader>
@@ -244,6 +249,22 @@ function FormBody({
         ))}
       </div>
       {jsonErr && <p className='text-sm text-destructive'>{jsonErr}</p>}
+      {readonly.length > 0 && (
+        <div className='grid gap-4 sm:grid-cols-2'>
+          {readonly.map((f) => (
+            <div
+              key={f.name}
+              className='space-y-1.5'
+              data-testid={`ro-${f.name}`}
+            >
+              <p className='text-sm font-medium'>{fieldLabel(e, f)}</p>
+              <div className='text-sm text-muted-foreground'>
+                {cellValue(e, row!, f.name)}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       {!!attrs.data?.length && (
         <>
           <Separator />
@@ -342,10 +363,10 @@ function FieldInput({
     case 'bool':
       return (
         <div className='flex h-9 items-center'>
-          <Checkbox
+          <Switch
             id={id}
             checked={val === true}
-            onCheckedChange={(c) => set(f.column, c === true)}
+            onCheckedChange={(c) => set(f.column, c)}
           />
         </div>
       )
@@ -450,7 +471,7 @@ export function EnumSelect({
       </SelectTrigger>
       <SelectContent>
         {!required && <SelectItem value={NONE}>—</SelectItem>}
-        {overrideEnumOptions(en, data ?? [], value).map((o) => (
+        {(data ?? []).map((o) => (
           <SelectItem key={o} value={o}>
             {enumLabel(en, o)}
           </SelectItem>
