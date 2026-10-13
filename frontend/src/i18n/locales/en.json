@@ -833,7 +833,7 @@
       }
     },
     "holdrel": {
-      "hint": "Filter active holds by reason / source / product and release the selected ones at once (release reason code required; comment when the reason demands it).",
+      "hint": "Active holds by default; switch to history for released ones. Filter by reason / source / product / hold time, release one row or select several for batch release (release reason code required).",
       "reason": "Hold reason",
       "source": "Source",
       "product": "Product",
@@ -852,7 +852,22 @@
         "qtime": "Q-Time",
         "oos": "Out of spec",
         "split": "Split (inherited)"
-      }
+      },
+      "search": "Search lot / product / reason / comment",
+      "allStatus": "All (incl. history)",
+      "status": {
+        "active": "Active",
+        "released": "Released"
+      },
+      "allReasons": "All reasons",
+      "allSources": "All sources",
+      "allProducts": "All products",
+      "selectAll": "Select all",
+      "state": "State",
+      "releasedAt": "Released at",
+      "releasedBy": "Released by",
+      "releaseReason": "Release reason",
+      "releaseComment": "Release comment"
     },
     "report": {
       "hint": "WIP by status / step / product, longest-waiting lots and daily output (auto refresh every minute).",

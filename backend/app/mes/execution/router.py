@@ -120,17 +120,31 @@ def lot_hold(
     )[0]
 
 
-@router.get("/holds/active")
-def holds_active(
+@router.get("/holds")
+def holds_list(
     session: SessionDep,
     ctx: CurrentTenant,
+    status: Literal["active", "released", "all"] = "active",
     reason_id: uuid.UUID | None = None,
     source: str | None = None,
     product_id: uuid.UUID | None = None,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
 ) -> Any:
-    """Active holds filtered by reason / source / product."""
+    """Holds for the Hold management page (active by default; history / all)."""
     _need(ctx, "mes.exec:read")
-    return {"data": svc.active_holds(session, ctx.id, reason_id, source, product_id)}
+    return {
+        "data": svc.list_holds(
+            session,
+            ctx.id,
+            {"active": True, "released": False}.get(status),
+            reason_id,
+            source,
+            product_id,
+            date_from,
+            date_to,
+        )
+    }
 
 
 class BatchReleaseIn(BaseModel):

@@ -1,6 +1,7 @@
 """批次 Hold：自动 Hold、释放、手工 Hold 与原因代码。"""
 
 import uuid
+from datetime import datetime
 from typing import Any
 
 from fastapi import HTTPException
@@ -203,32 +204,63 @@ def manual_hold(
     return lot
 
 
-def active_holds(
+def list_holds(
     s: Session,
     tid: uuid.UUID,
+    active: bool | None = True,
     reason_id: Any = None,
     source: str | None = None,
     product_id: Any = None,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
 ) -> list[Row]:
-    """生效中的 Hold 列表（可按原因 / 来源 / 产品筛选），按 Hold 时间倒序。
+    """Hold 列表（Hold 管理页）：默认仅生效中，可切换历史（已解除）或全部。
+
+    Args:
+        s: 数据库会话。
+        tid: 租户 ID。
+        active: ``True`` 生效中，``False`` 已解除（历史），``None`` 全部。
+        reason_id: Hold 原因代码筛选。
+        source: 来源筛选（manual / qtime / oos / split）。
+        product_id: 产品筛选。
+        date_from: Hold 时间下限（含）。
+        date_to: Hold 时间上限（不含）。
 
     Returns:
-        每条 ``{id, lot_id, lot, product, step_seq, reason, source, hold_type,
-        held_at, held_by, hours, comment}``。
+        每条 ``{id, lot_id, lot, product, step_seq, reason, reason_name, source,
+        hold_type, is_active, held_at, held_by, hours, comment, released_at,
+        released_by, release_reason, release_comment}``，按 Hold 时间倒序。
     """
     at = now()
+    if at.tzinfo:  # 无时区的查询参数按 UTC 处理
+        date_from = date_from and (
+            date_from if date_from.tzinfo else date_from.replace(tzinfo=at.tzinfo)
+        )
+        date_to = date_to and (
+            date_to if date_to.tzinfo else date_to.replace(tzinfo=at.tzinfo)
+        )
     out = []
-    for h in find(s, tid, "lot_hold", is_active=True):
+    crit: dict[str, Any] = {} if active is None else {"is_active": active}
+    for h in find(s, tid, "lot_hold", **crit):
         if reason_id and str(h["reason_id"]) != str(reason_id):
             continue
         if source and (h["source"] or "manual") != source:
+            continue
+        ha = h["held_at"]
+        if date_from and (not ha or ha < date_from):
+            continue
+        if date_to and (not ha or ha >= date_to):
             continue
         lot = one(s, tid, "lot", h["lot_id"])
         if not lot or (product_id and str(lot["product_id"]) != str(product_id)):
             continue
         rc = one(s, tid, "reason_code", h["reason_id"])
+        rr = h["release_reason_id"] and one(
+            s, tid, "reason_code", h["release_reason_id"]
+        )
         pr = one(s, tid, "product", lot["product_id"])
         st = one(s, tid, "route_step", h["route_step_id"])
+        end = h["released_at"] if not h["is_active"] else at
         out.append(
             {
                 "id": str(h["id"]),
@@ -240,11 +272,15 @@ def active_holds(
                 "reason_name": rc and rc["name"],
                 "source": h["source"] or "manual",
                 "hold_type": h["hold_type"],
-                "held_at": h["held_at"] and h["held_at"].isoformat(),
+                "is_active": bool(h["is_active"]),
+                "held_at": ha and ha.isoformat(),
                 "held_by": h["held_by"],
-                "hours": h["held_at"]
-                and round((at - h["held_at"]).total_seconds() / 3600, 1),
+                "hours": ha and end and round((end - ha).total_seconds() / 3600, 1),
                 "comment": h["comment"],
+                "released_at": h["released_at"] and h["released_at"].isoformat(),
+                "released_by": h["released_by"],
+                "release_reason": rr and f"{rr['code']} · {rr['name'] or ''}",
+                "release_comment": h["release_comment"],
             }
         )
     out.sort(key=lambda r: str(r["held_at"] or ""), reverse=True)

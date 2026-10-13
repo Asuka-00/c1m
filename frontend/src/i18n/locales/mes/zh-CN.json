@@ -1280,7 +1280,6 @@
     "mes-lot-console": "批次作业",
     "mes-qtime-monitor": "Q-Time 监控",
     "mes-lot_hold": "Hold 管理",
-    "mes-hold-release": "批量释放 Hold",
     "mes-lot": "批次列表",
     "mes-wafer": "晶圆",
     "mes-wip-dashboard": "WIP 看板",

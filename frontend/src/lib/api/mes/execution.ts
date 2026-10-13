@@ -108,7 +108,8 @@ export interface OeeTrendRow {
   oee: number | null
   loading_h: number
 }
-export interface ActiveHold {
+/** Hold 记录（Hold 管理页：生效中 / 已解除）。 */
+export interface HoldRow {
   id: string
   lot_id: string
   lot: string
@@ -120,8 +121,13 @@ export interface ActiveHold {
   hold_type: string
   held_at: string | null
   held_by: string | null
+  is_active: boolean
   hours: number | null
   comment: string | null
+  released_at: string | null
+  released_by: string | null
+  release_reason: string | null
+  release_comment: string | null
 }
 /** 追溯对象类型。 */
 export type TraceKind = 'lot' | 'wafer' | 'equipment' | 'material_lot'
@@ -414,14 +420,10 @@ export const execApi = {
     http
       .get<{ data: OeeRow[] }>('/mes/exec/reports/oee', { params: p })
       .then((r) => r.data.data),
-  /** 生效中的 Hold（按原因 / 来源 / 产品筛选）。 */
-  activeHolds: (f: {
-    reason_id?: string
-    source?: string
-    product_id?: string
-  }) =>
+  /** Hold 列表：默认生效中，可切换已解除（历史）/ 全部。 */
+  holds: (status: 'active' | 'released' | 'all' = 'active') =>
     http
-      .get<{ data: ActiveHold[] }>('/mes/exec/holds/active', { params: f })
+      .get<{ data: HoldRow[] }>('/mes/exec/holds', { params: { status } })
       .then((r) => r.data.data),
   /** 批量释放 Hold。 */
   releaseBatch: (body: {

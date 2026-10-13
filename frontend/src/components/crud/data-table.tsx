@@ -31,6 +31,8 @@ import type { ListParams } from './use-list-params'
 /** DataTable 列定义。 */
 export interface Column<T> {
   header: string
+  /** 自定义表头内容（如全选复选框）；设置后替代默认的可排序表头 */
+  headerNode?: React.ReactNode
   cell: (row: T) => React.ReactNode
   /** 后端 sort_by 键；设置后列头可排序 */
   sortKey?: string
@@ -75,9 +77,10 @@ export function DataTable<T>({
         accessorFn: () => null,
         enableSorting: !!c.sortKey,
         enableHiding: false,
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={c.header} />
-        ),
+        header: ({ column }) =>
+          c.headerNode ?? (
+            <DataTableColumnHeader column={column} title={c.header} />
+          ),
         cell: ({ row }) => c.cell(row.original),
         // 末列为空表头的操作列：固定在右侧，宽表横向滚动时始终可见
         meta: {

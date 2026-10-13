@@ -71,7 +71,7 @@ export function HomeKpis() {
       <Kpi
         title={t('home.hold')}
         icon={PauseCircle}
-        to='mes/hold-release'
+        to='mes/lot-hold'
         tone={d?.on_hold ? 'warn' : undefined}
       >
         <div className={big}>{d?.on_hold ?? '—'}</div>

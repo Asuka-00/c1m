@@ -6,7 +6,7 @@ import type { Pages } from '@/features/shell/dynamic/types'
 export const pages: Pages = {
   'mes-page:lot-console': lazy(() => import('./lot-console')),
   'mes-page:qtime-monitor': lazy(() => import('./qtime-monitor')),
-  'mes-page:hold-release': lazy(() => import('./hold-release')),
+  'mes-page:hold': lazy(() => import('./hold-manage')),
   'mes-page:wip-dashboard': lazy(() => import('./wip-dashboard')),
   'mes-page:oee-report': lazy(() => import('./oee-report')),
   'mes-page:trace': lazy(() => import('./trace')),

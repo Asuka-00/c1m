@@ -1280,7 +1280,6 @@
     "mes-lot-console": "ロット作業",
     "mes-qtime-monitor": "Q タイム監視",
     "mes-lot_hold": "ホールド管理",
-    "mes-hold-release": "ホールド一括解除",
     "mes-lot": "ロット一覧",
     "mes-wafer": "ウェーハ",
     "mes-wip-dashboard": "WIP ダッシュボード",

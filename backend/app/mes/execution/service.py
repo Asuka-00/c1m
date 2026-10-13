@@ -8,10 +8,10 @@ from app.mes.execution.context import (
     context as context,
 )
 from app.mes.execution.hold import (
-    active_holds as active_holds,
+    hold_lot as hold_lot,
 )
 from app.mes.execution.hold import (
-    hold_lot as hold_lot,
+    list_holds as list_holds,
 )
 from app.mes.execution.hold import (
     manual_hold as manual_hold,

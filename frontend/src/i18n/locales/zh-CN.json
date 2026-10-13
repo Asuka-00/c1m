@@ -833,7 +833,7 @@
       }
     },
     "holdrel": {
-      "hint": "生效中的 Hold 按原因 / 来源 / 产品筛选，勾选后批量释放（须释放原因代码，原因要求时须填备注）。",
+      "hint": "默认显示生效中的 Hold，可切换历史（已解除）；按原因 / 来源 / 产品 / Hold 时间筛选，单条释放或勾选后批量释放（须释放原因代码）。",
       "reason": "Hold 原因",
       "source": "来源",
       "product": "产品",
@@ -852,7 +852,22 @@
         "qtime": "Q-Time",
         "oos": "超规",
         "split": "分批继承"
-      }
+      },
+      "search": "搜索批次 / 产品 / 原因 / 备注",
+      "allStatus": "全部（含历史）",
+      "status": {
+        "active": "生效中",
+        "released": "已解除"
+      },
+      "allReasons": "全部原因",
+      "allSources": "全部来源",
+      "allProducts": "全部产品",
+      "selectAll": "全选",
+      "state": "状态",
+      "releasedAt": "解除时间",
+      "releasedBy": "解除人",
+      "releaseReason": "解除原因",
+      "releaseComment": "解除备注"
     },
     "report": {
       "hint": "在制批次按状态 / 工步 / 产品分布，滞留时间最长的批次与每日产出（每分钟自动刷新）。",

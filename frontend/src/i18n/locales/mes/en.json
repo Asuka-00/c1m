@@ -1280,7 +1280,6 @@
     "mes-lot-console": "Lot Operation",
     "mes-qtime-monitor": "Q-Time Monitor",
     "mes-lot_hold": "Hold Management",
-    "mes-hold-release": "Batch Hold Release",
     "mes-lot": "Lot List",
     "mes-wafer": "Wafer",
     "mes-wip-dashboard": "WIP Dashboard",

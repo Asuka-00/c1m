@@ -27,10 +27,11 @@ MENUS: dict[str, MenuItem] = {
         "mes-page:trace",
         "mes.exec:read",
     ),
-    "mes-hold-release": (
-        "/mes/hold-release",
-        "ListChecks",
-        "mes-page:hold-release",
+    # Hold 管理：覆盖通用实体页（生效中 / 历史 + 单条 / 批量释放）
+    "mes-lot_hold": (
+        "/mes/lot-hold",
+        "PauseCircle",
+        "mes-page:hold",
         "mes.exec:read",
     ),
     "mes-wip-dashboard": (

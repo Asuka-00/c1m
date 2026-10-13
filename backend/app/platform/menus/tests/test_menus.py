@@ -257,3 +257,26 @@ def test_sync_moves_and_drops_legacy_groups(db: Session) -> None:
     assert keys["g-system"].sort_order == 110
     db.delete(keys["custom-under-legacy"])
     db.commit()
+
+
+def test_sync_removes_merged_hold_release_menu(db: Session) -> None:
+    """旧库中的「批量释放 Hold」菜单在同步后删除，Hold 管理指向合并后的页面。"""
+    from sqlmodel import select
+
+    from app.platform.menus.models import Menu
+    from app.platform.menus.service import seed_menus
+
+    db.add(
+        Menu(
+            key="mes-hold-release",
+            title="Batch Hold Release",
+            path="/mes/hold-release",
+            component="mes-page:hold-release",
+        )
+    )
+    db.commit()
+    seed_menus(db)
+    keys = {m.key: m for m in db.exec(select(Menu)).all()}
+    assert "mes-hold-release" not in keys
+    hold = keys["mes-lot_hold"]
+    assert (hold.path, hold.component) == ("/mes/lot-hold", "mes-page:hold")

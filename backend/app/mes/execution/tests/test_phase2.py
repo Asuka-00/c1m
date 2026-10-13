@@ -349,18 +349,16 @@ def test_trace_backward_forward(client: TestClient, db: Session) -> None:
 
 
 # ---------------- phase 8: hold filter / batch release ----------------
-def test_active_holds_and_batch_release(client: TestClient, db: Session) -> None:
+def test_hold_list_and_batch_release(client: TestClient, db: Session) -> None:
     f = Line(client, db)
     a, b, c = f.start(1, 1, 1)
     hr = f.reasons["hold"]["id"]
     for x in (a, b, c):
         f.post(f"{EXEC}/lots/{x['id']}/hold", {"reason_id": hr})
-    rows = client.get(f"{EXEC}/holds/active", headers=f.m.h).json()["data"]
+    rows = client.get(f"{EXEC}/holds", headers=f.m.h).json()["data"]
     assert len(rows) == 3 and rows[0]["source"] == "manual"
     other = f.m.post("reason_code", {"code": "HX", "name": "x", "reason_type": "hold"})
-    q = client.get(
-        f"{EXEC}/holds/active", headers=f.m.h, params={"reason_id": other["id"]}
-    )
+    q = client.get(f"{EXEC}/holds", headers=f.m.h, params={"reason_id": other["id"]})
     assert q.json()["data"] == []
     ids = [r["id"] for r in rows[:2]]
     # 需要释放类原因代码
@@ -375,6 +373,26 @@ def test_active_holds_and_batch_release(client: TestClient, db: Session) -> None
     )
     assert r["released"] == [rows[2]["id"]] and len(r["failed"]) == 1
     assert not any(f.lot(x)["on_hold"] for x in (a, b, c))
+
+    # 历史切换：已解除的 Hold 带解除信息；默认列表为空；时间范围筛选
+    def get(**p: str) -> list[dict[str, object]]:
+        r = client.get(f"{EXEC}/holds", headers=f.m.h, params=p)
+        return list(r.json()["data"])
+
+    assert get() == []
+    hist = get(status="released")
+    assert len(hist) == 3 and all(
+        h["released_at"] and h["release_reason"] for h in hist
+    )
+    assert not hist[0]["is_active"] and len(get(status="all")) == 3
+    assert (
+        get(
+            status="all",
+            date_from="2000-01-01T00:00:00Z",
+            date_to="2000-01-02T00:00:00Z",
+        )
+        == []
+    )
 
 
 # ---------------- Q-Time additions: pre-expiry warning + background sweep ----------------

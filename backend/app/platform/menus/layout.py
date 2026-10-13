@@ -37,7 +37,6 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-lot-console", "Lot Operation|批次作业|ロット作業"),
         ("mes-qtime-monitor", "Q-Time Monitor|Q-Time 监控|Q タイム監視"),
         ("mes-lot_hold", "Hold Management|Hold 管理|ホールド管理"),
-        ("mes-hold-release", "Batch Hold Release|批量释放 Hold|ホールド一括解除"),
         ("mes-lot", "Lot List|批次列表|ロット一覧"),
         ("mes-wafer", "Wafer|晶圆|ウェーハ"),
     ],
@@ -142,7 +141,8 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
 
 # 已废弃系统分组的 key（同步时删除）
 OBSOLETE_PREFIXES = ("mes-g-",)
-OBSOLETE_KEYS = {"general", "tenant", "admin", "other"}
+# 已并入其他页面的菜单：mes-hold-release → Hold 管理（mes-lot_hold）
+OBSOLETE_KEYS = {"general", "tenant", "admin", "other", "mes-hold-release"}
 
 
 def titles(lang_index: int) -> dict[str, str]:
