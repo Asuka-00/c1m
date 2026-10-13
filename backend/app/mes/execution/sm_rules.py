@@ -19,7 +19,7 @@ from app.mes.execution.context import build_ctx
 from app.mes.execution.stages import LOT
 
 Row = dict[str, Any]
-SPLIT_STATES = ("waiting", "moved_in")
+SPLIT_STATES = ("waiting", "moved_in")  # == RULES["split"].from_（见 lot.state）
 COPY = (
     "work_order_id",
     "product_id",

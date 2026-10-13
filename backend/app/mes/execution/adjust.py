@@ -14,7 +14,7 @@ from app.mes.common.rows import _upd
 from app.mes.execution.checks import service as ck
 from app.mes.execution.context import build_ctx
 from app.mes.execution.stage_common import _brief, _ov, _result
-from app.mes.lot.service import TERMINAL, history, lock_lot, units
+from app.mes.lot.service import check_transition, history, lock_lot, units
 
 Row = dict[str, Any]
 LOT = ENTITIES["lot"]
@@ -65,8 +65,7 @@ def adjust(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) 
     """
     lot = lock_lot(s, tid, lot_id)
     kind = str(body.get("kind") or "")
-    if lot["lot_status"] in TERMINAL:
-        raise http_422([("lot_status", f"lot_status: lot is {lot['lot_status']}")])
+    check_transition(lot, "adjust")
     level = lot["tracking_level"] or "wafer"
     errs: list[tuple[str, str]] = []
     reason = one(s, tid, "reason_code", body.get("reason_id"))
@@ -95,6 +94,8 @@ def adjust(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) 
             errs.append(("qty", f"qty: exceeds lot qty {lot['qty']}"))
     if errs:
         raise http_422(errs)
+    if kind == "scrap" and n >= lot["qty"]:  # 报废到 0：加工中批次不能被报废
+        check_transition(lot, "scrap")
     assert reason
     ctx = build_ctx(s, tid, lot, "adjust", body)
     lim = limit_result(ctx, n)

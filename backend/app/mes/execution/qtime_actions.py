@@ -21,7 +21,7 @@ from app.mes.execution.events import QTIME_EXCEEDED, QTIME_WARN, notify_lot
 from app.mes.execution.hold import default_reason, hold_lot
 from app.mes.execution.qual import qual_notify
 from app.mes.execution.stage_common import _relocate
-from app.mes.lot.service import history, units
+from app.mes.lot.service import allowed, history, units
 from app.mes.planning.service import wo_due_notify
 from app.mes.process.service import apply_due
 
@@ -92,7 +92,7 @@ def _qtime_actions(
                 record_move_out=False,
             )
             return "rework"
-        if action == "scrap":
+        if action == "scrap" and allowed(lot, "qtime_scrap"):
             reason = one(s, tid, "reason_code", r["reason_id"]) or default_reason(
                 s, tid, "scrap"
             )

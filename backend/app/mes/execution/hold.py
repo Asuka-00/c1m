@@ -1,23 +1,26 @@
 """批次 Hold：自动 Hold、释放、手工 Hold 与原因代码。"""
 
+import logging
 import uuid
 from datetime import datetime
 from typing import Any
 
+import sqlalchemy as sa
 from fastapi import HTTPException
 from sqlmodel import Session
 
 from app.core.models import actor_name
 from app.core.spec.audit import audit
-from app.core.spec.base import now
-from app.core.spec.engine import ENTITIES
+from app.core.spec.base import conn, now
+from app.core.spec.engine import ENTITIES, TABLES
 from app.core.spec.errors import http_422
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
 from app.mes.execution.events import LOT_HOLD, notify_lot
-from app.mes.lot.service import TERMINAL, history, lock_lot
+from app.mes.lot.service import TERMINAL, check_transition, history, lock_lot
 
 Row = dict[str, Any]
+log = logging.getLogger(__name__)
 LOT = ENTITIES["lot"]
 
 
@@ -60,7 +63,7 @@ def hold_lot(
     source: str = "manual",
     comment: str | None = None,
     details: Row | None = None,
-) -> uuid.UUID:
+) -> uuid.UUID | None:
     """对批次加 Hold，并写历史。
 
     Args:
@@ -75,8 +78,16 @@ def hold_lot(
         details: 附加信息。
 
     Returns:
-        新建 Hold 的 id。
+        新建 Hold 的 id；自动来源遇终态批次时跳过并返回 None。
+
+    Raises:
+        HTTPException: 手工 Hold 终态批次（422）。
     """
+    if hold_type != "manual" and lot["lot_status"] in TERMINAL:
+        # 自动来源遇终态批次：静默跳过，不写任何数据（P11）
+        log.warning("skip %s hold on %s lot %s", source, lot["lot_status"], lot["code"])
+        return None
+    check_transition(lot, "hold")
     hid = _ins(
         s,
         tid,
@@ -127,6 +138,23 @@ def hold_lot(
     return hid
 
 
+def _lock_hold(s: Session, tid: uuid.UUID, hold_id: uuid.UUID) -> Row:
+    t = TABLES["lot_hold"]
+    r = (
+        conn(s)
+        .execute(
+            sa.select(t)
+            .where(t.c.tenant_id == tid, t.c.id == hold_id)
+            .with_for_update()
+        )
+        .mappings()
+        .first()
+    )
+    if not r:
+        raise HTTPException(status_code=404, detail="Record not found")
+    return dict(r)
+
+
 def release_hold(
     s: Session,
     tid: uuid.UUID,
@@ -143,6 +171,9 @@ def release_hold(
     h = one(s, tid, "lot_hold", hold_id)
     if not h:
         raise HTTPException(status_code=404, detail="Record not found")
+    # 锁顺序 lot → lot_hold；加锁后重读 Hold，防止并发重复释放
+    lot = lock_lot(s, tid, h["lot_id"])
+    h = _lock_hold(s, tid, hold_id)
     if not h["is_active"]:
         raise http_422([("hold", "hold: already released")])
     rr = (
@@ -162,7 +193,6 @@ def release_hold(
         release_reason_id=rr and rr["id"],
         release_comment=(comment or "")[:300] or None,
     )
-    lot = lock_lot(s, tid, h["lot_id"])
     left = [
         x
         for x in find(s, tid, "lot_hold", lot_id=lot["id"], is_active=True)
@@ -195,8 +225,7 @@ def manual_hold(
 ) -> Row:
     """手工 Hold（需原因代码），返回最新批次。"""
     lot = lock_lot(s, tid, lot_id)
-    if lot["lot_status"] in TERMINAL:
-        raise http_422([("lot_status", f"lot_status: lot is {lot['lot_status']}")])
+    check_transition(lot, "hold")
     r = _reason(s, tid, reason_id, "hold")
     if r["comment_required"] and not (comment or "").strip():
         raise http_422([("comment", "comment: required for this reason code")])

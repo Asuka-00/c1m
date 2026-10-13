@@ -27,7 +27,7 @@ from app.mes.execution.sm_rules import (
 )
 from app.mes.execution.stage_common import _brief, _ov
 from app.mes.execution.stages import LOT
-from app.mes.lot.service import history, lock_lot, units
+from app.mes.lot.service import check_transition, history, lock_lot, units
 
 Row = dict[str, Any]
 
@@ -55,6 +55,7 @@ def split(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
         CheckBlocked: 检查阻断。
     """
     lot = lock_lot(s, tid, lot_id)
+    check_transition(lot, "split")
     rule = rule_for(s, tid, lot)
     qty_mode = (lot["tracking_level"] or "wafer") == "quantity"
     kids = body.get("children") or []
@@ -93,6 +94,8 @@ def split(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
         take.append([active[x] for x in ids])
         qtys.append(len(ids))
     remain = lot["qty"] - sum(qtys)
+    if remain < 1:  # 不能拆完，母批至少保留 1（P13）
+        raise http_422([("lot_status", "lot_status: parent lot must keep at least 1")])
     # 规则校验（不可强制放行）
     errs: list[str] = []
     if lot["lot_status"] not in SPLIT_STATES:
