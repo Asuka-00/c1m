@@ -148,8 +148,22 @@ export function mesCodeMessage(err: unknown): string | null {
   const { code, action, lot_status } = d as Record<string, unknown>
   if (!isCode(code)) return null
   if (code === 'lot_status') return lotStatusMessage(action, lot_status)
-  // detail 中的附加字段（如 qtime_rule_code / hold_count）作为插值参数
-  return t(`mes.err.code.${code}`, d as Record<string, unknown>)
+  return t(`mes.err.code.${code}`, codeParams(d as Record<string, unknown>))
+}
+
+/** 错误码文案可用的插值字段（白名单）；detail 的其他键不传给翻译函数。 */
+export const CODE_PARAMS = [
+  'qtime_rule_code',
+  'hold_count',
+  'hold_id',
+  'action',
+] as const
+
+/** 从错误 detail 中只取白名单内的插值参数。 */
+export function codeParams(d: Record<string, unknown>) {
+  const out: Record<string, unknown> = {}
+  for (const k of CODE_PARAMS) if (d[k] != null) out[k] = d[k]
+  return out
 }
 
 /** 用实体字段标签翻译 MES 422 错误详情（"field: message"）。 */

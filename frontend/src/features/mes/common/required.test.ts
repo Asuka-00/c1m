@@ -3,7 +3,7 @@ import { t } from '@/i18n'
 import { describe, expect, it } from 'vitest'
 import type { MesEntity } from '@/lib/api/mes/common'
 import { enumLabel } from './labels'
-import { mesCodeMessage, mesErrorMessage } from './required'
+import { codeParams, mesCodeMessage, mesErrorMessage } from './required'
 
 function axErr(status: number, detail: unknown) {
   const e = new AxiosError('Request failed')
@@ -238,5 +238,40 @@ describe('mesErrorMessage：旧格式兜底（后端按 N5 落地后可删）', 
     for (const l of [zh, en, ja])
       for (const k of keys)
         expect((l.mes.err.code as Record<string, string>)[k]).toBeTruthy()
+  })
+})
+
+describe('错误码插值参数白名单', () => {
+  it('只传白名单字段，detail 的其他键（code / message / 嵌套对象等）不传', () => {
+    expect(
+      codeParams({
+        code: 'qtime_rule_in_use',
+        message: 'in use',
+        qtime_rule_id: 'R-1',
+        qtime_rule_code: 'QT-ETCH',
+        hold_count: 3,
+        lng: 'ja',
+        defaultValue: 'x',
+        nested: { a: 1 },
+      })
+    ).toEqual({ qtime_rule_code: 'QT-ETCH', hold_count: 3 })
+  })
+
+  it('detail 中的 i18next 选项键（如 lng）不影响提示语言', () => {
+    expect(
+      mesCodeMessage(
+        axErr(409, {
+          code: 'qtime_rule_in_use',
+          qtime_rule_code: 'QT-ETCH',
+          hold_count: 3,
+          lng: 'ja',
+        })
+      )
+    ).toBe(
+      t('mes.err.code.qtime_rule_in_use', {
+        qtime_rule_code: 'QT-ETCH',
+        hold_count: 3,
+      })
+    )
   })
 })

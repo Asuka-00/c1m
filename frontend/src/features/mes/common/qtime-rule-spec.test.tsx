@@ -64,6 +64,28 @@ describe('Q-Time 规则（后端 463d599 规格）', () => {
     expect(fieldHelp(rule, reason)).toContain('qtime_expired')
   })
 
+  it('RC-07：原因码不存在 / 属于其他租户时，照常显示后端 422', () => {
+    const e = new AxiosError('Request failed')
+    e.response = {
+      status: 422,
+      statusText: '',
+      headers: {},
+      config: { headers: new AxiosHeaders() },
+      data: {
+        detail: [
+          {
+            loc: ['body', 'reason_id'],
+            msg: 'reason: not found',
+            type: 'value_error',
+          },
+        ],
+      },
+    }
+    const msg = mesErrorMessage(e, rule)
+    expect(msg).toBeTruthy()
+    expect(msg).toContain('not found')
+  })
+
   it('422 qtime_action_invalid {code, message, action} 按 code 本地化', () => {
     const e = new AxiosError('Request failed')
     e.response = {
