@@ -57,7 +57,7 @@ ENUMS.update(
             ("warn", "Warn|预警|警告"),
             ("hold", "Hold lot|冻结批次|ロット保留"),
             ("rework", "Rework|返工|リワーク"),
-            ("scrap", "Scrap|报废|スクラップ"),
+            # D26：scrap 已去掉（迁移 0011 改成 hold）
         ],
     }
 )

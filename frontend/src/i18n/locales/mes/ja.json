@@ -405,6 +405,8 @@
         "warn_minutes": "事前警告（分）",
         "action": "違反時処置",
         "reason": "理由コード",
+        "is_active": "有効",
+        "active_since": "有効化日時",
         "description": "説明"
       },
       "lot": {
@@ -898,7 +900,8 @@
         "shifts": "カンマ区切りのシフトコード"
       },
       "qtime_rule": {
-        "warn_minutes": "経過がこの値以上で事前警告（空欄：なし）"
+        "warn_minutes": "経過がこの値以上で事前警告（空欄：なし）",
+        "reason": "任意。hold で空欄の場合はシステム理由 qtime_expired"
       },
       "work_order": {
         "priority": "空欄：ロットタイプの既定優先度",
@@ -961,6 +964,7 @@
         "move_out": "ムーブアウト",
         "override": "チェック強制解除",
         "split": "分割",
+        "qtime_rework": "Q タイムリワーク",
         "merge": "統合",
         "e10": "E10 状態変更"
       },
@@ -1370,8 +1374,7 @@
       "qtime_action": {
         "warn": "警告",
         "hold": "ロット保留",
-        "rework": "リワーク",
-        "scrap": "スクラップ"
+        "rework": "リワーク"
       },
       "warehouse_type": {
         "finished_goods": "完成品倉庫",

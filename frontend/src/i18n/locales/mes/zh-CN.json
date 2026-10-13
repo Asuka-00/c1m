@@ -405,6 +405,8 @@
         "warn_minutes": "预警阈值（分钟）",
         "action": "超时动作",
         "reason": "原因代码",
+        "is_active": "启用",
+        "active_since": "启用时间",
         "description": "描述"
       },
       "lot": {
@@ -898,7 +900,8 @@
         "shifts": "逗号分隔的班次编码"
       },
       "qtime_rule": {
-        "warn_minutes": "已用时间达到该值即预警（留空不预警）"
+        "warn_minutes": "已用时间达到该值即预警（留空不预警）",
+        "reason": "选填；处置为 hold 时留空使用系统原因码 qtime_expired"
       },
       "work_order": {
         "priority": "留空则使用批次类型的默认优先级",
@@ -961,6 +964,7 @@
         "move_out": "出站",
         "override": "卡控放行",
         "split": "分批",
+        "qtime_rework": "Q-Time 返工",
         "merge": "合批",
         "e10": "E10 状态变更"
       },
@@ -1370,8 +1374,7 @@
       "qtime_action": {
         "warn": "预警",
         "hold": "冻结批次",
-        "rework": "返工",
-        "scrap": "报废"
+        "rework": "返工"
       },
       "warehouse_type": {
         "finished_goods": "成品仓",

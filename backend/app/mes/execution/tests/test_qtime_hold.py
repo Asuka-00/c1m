@@ -83,9 +83,9 @@ def _direct_hold(f: Line, lot: Any) -> Any:
 def test_qt_01_sweep_waiting_overdue_holds_with_qtime_expired(
     client: TestClient, db: Session
 ) -> None:
-    """QT-01：waiting 超时（规则配置 scrap、无 hold 原因）→ 不报废，Hold(qtime, qtime_expired)。"""
+    """QT-01：waiting 超时（hold 规则、无原因码，D25/D26）→ 不报废，Hold(qtime, qtime_expired)。"""
     f = Line(client, db)
-    _rule(f, action="scrap", reason_id=f.reasons["scrap"]["id"])
+    _rule(f, action="hold", reason_id=None)
     (lot,) = f.start(2)
     f.run_step(lot)
     _expire(f, lot)

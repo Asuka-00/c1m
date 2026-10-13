@@ -262,6 +262,12 @@ def test_rw_03_moved_in_rework_clears_move_in_binding(
     assert ws and all(w["wafer_status"] != "processing" for w in ws)
     hist = f.m.list("lot_history", lot=lot["id"], action="qtime")["data"]
     assert hist and hist[0]["details"]["action"] == "rework"
+    au = [
+        a
+        for a in f.m.list("audit_log", action="qtime_rework", page_size=100)["data"]
+        if str(a.get("record_id")) == lot["id"]
+    ]
+    assert len(au) == 1, au
     assert got["stage_at"]
     # 返工路线首站可正常 Move In
     f.stage(lot, "move_in", **_eq(f))
@@ -368,11 +374,8 @@ def test_qr_01_delete_referenced_qtime_rule_409(
     assert _detail(f, h["id"])["qtime_rule_id"] == rule["id"]
     got = f.m.list("qtime_rule", code=rule["code"])["data"]
     assert [x["id"] for x in got] == [rule["id"]]
-    f.m.patch(  # 停用成功（规则 action=hold 校验要求原因码）
-        "qtime_rule",
-        rule["id"],
-        {"is_active": False, "reason_id": f.reasons["hold"]["id"]},
-    )
+    got = f.m.patch("qtime_rule", rule["id"], {"is_active": False})  # 停用成功
+    assert got["is_active"] is False
     # 未被引用的规则仍可删除
     other = f.m.post(
         "qtime_rule",
@@ -386,3 +389,264 @@ def test_qr_01_delete_referenced_qtime_rule_409(
         },
     )
     f.m.delete("qtime_rule", other["id"])
+
+
+# ---------------- D25 ----------------
+def _rule_body(f: Line, **kw: Any) -> dict[str, Any]:
+    return {
+        "code": f"Q{uuid.uuid4().hex[:5]}",
+        "name": "q",
+        "route_id": f.route["id"],
+        "from_step_id": f.steps[10]["id"],
+        "to_step_id": f.steps[20]["id"],
+        "max_minutes": 30,
+        "action": "hold",
+        **kw,
+    }
+
+
+def test_d25_hold_rule_without_reason(client: TestClient, db: Session) -> None:
+    """D25：无原因码的 hold 规则可新建、修改、停用；超时 Hold 用 qtime_expired。"""
+    f = Line(client, db)
+    rule = f.m.post("qtime_rule", _rule_body(f, reason_id=None))
+    assert rule["reason_id"] is None
+    rule = f.m.patch("qtime_rule", rule["id"], {"max_minutes": 40})
+    assert rule["reason_id"] is None
+    (lot,) = f.start(1)
+    f.run_step(lot)
+    _expire(f, lot)
+    f.post(f"{EXEC}/qtime/sweep", {})
+    (h,) = _list(f, lot)
+    assert h["reason"] == "qtime_expired" and h["qtime_rule_id"] == rule["id"]
+    got = f.m.patch("qtime_rule", rule["id"], {"is_active": False})
+    assert got["is_active"] is False and got["reason_id"] is None
+    # 停用后不再计时 / 处置
+    (b,) = f.start(1)
+    f.run_step(b)
+    _expire(f, b)
+    r = f.post(f"{EXEC}/qtime/sweep", {})
+    assert all(x["lot"] != b["code"] for x in r["actions"])
+
+
+def test_d25_patch_hold_rule_without_reason_never_422(
+    client: TestClient, db: Session
+) -> None:
+    """D25（QT-B 类）：未配原因码的 hold 规则，任何 PATCH 都不 422。"""
+    f = Line(client, db)
+    rule = f.m.post("qtime_rule", _rule_body(f, reason_id=None))
+    for body in (
+        {"name": "renamed"},
+        {"max_minutes": 45},
+        {"warn_minutes": 20},
+        {"description": "x"},
+        {"action": "hold"},
+        {"reason_id": None},
+        {"is_active": False},
+        {"is_active": True},
+        {"action": "rework"},
+        {"action": "hold"},
+    ):
+        got = f.m.patch("qtime_rule", rule["id"], body)
+        assert got["reason_id"] is None
+    assert got["action"] == "hold" and got["is_active"] is True
+
+
+def test_d25_invalid_reason_still_422(client: TestClient, db: Session) -> None:
+    """D25：配了不存在 / 其他租户的原因码仍 422。"""
+    f = Line(client, db)
+    g = Line(client, db)  # 另一个租户
+    foreign = g.reasons["hold"]["id"]
+    for rid in (str(uuid.uuid4()), foreign):
+        r = f.c.post(
+            f.m.url("qtime_rule"), headers=f.m.h, json=_rule_body(f, reason_id=rid)
+        )
+        assert r.status_code == 422, r.text
+    ok = f.m.post("qtime_rule", _rule_body(f, reason_id=None))
+    r = f.c.patch(
+        f.m.url("qtime_rule", ok["id"]), headers=f.m.h, json={"reason_id": foreign}
+    )
+    assert r.status_code == 422, r.text
+
+
+def test_d25_form_meta_matches_validation(client: TestClient, db: Session) -> None:
+    """D25/D26：表单元数据：处置无 scrap，原因码选填（有说明），与校验一致。"""
+    import json
+
+    import app
+
+    f = Line(client, db)
+    meta = f.c.get("/api/v1/mes/_meta", headers=f.m.h).json()
+    e = next(x for x in meta["entities"] if x["code"] == "qtime_rule")
+    fr = next(x for x in e["fields"] if x["name"] == "reason")
+    assert not fr["required_when"] and fr["help"]
+    acts = meta["enums"]["qtime_action"]
+    assert acts == ["warn", "hold", "rework"]
+    p = Path(app.__file__).parents[2] / "frontend/src/i18n/locales/mes/zh-CN.json"
+    assert "qtime_expired" in json.dumps(json.loads(p.read_text()), ensure_ascii=False)
+    # 校验与元数据一致：hold / rework 缺原因码 200
+    f.m.post("qtime_rule", _rule_body(f, reason_id=None))
+    f.m.post("qtime_rule", _rule_body(f, action="rework", reason_id=None))
+
+
+def test_d26_scrap_action_rejected(client: TestClient, db: Session) -> None:
+    """D26：新建 / 修改提交 scrap → 422 qtime_action_invalid。"""
+    f = Line(client, db)
+    body = _rule_body(f, action="scrap", reason_id=f.reasons["scrap"]["id"])
+    r = f.c.post(f.m.url("qtime_rule"), headers=f.m.h, json=body)
+    assert r.status_code == 422, r.text
+    d = r.json()["detail"]
+    assert d["code"] == "qtime_action_invalid" and d["message"]
+    ok = f.m.post("qtime_rule", _rule_body(f, reason_id=None))
+    r = f.c.patch(
+        f.m.url("qtime_rule", ok["id"]), headers=f.m.h, json={"action": "scrap"}
+    )
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "qtime_action_invalid"
+
+
+def _m0011() -> Any:
+    import importlib.util
+
+    import app
+
+    p = (
+        Path(app.__file__).parent
+        / "alembic/versions/0011_qtime_rule_active_no_scrap.py"
+    )
+    spec = importlib.util.spec_from_file_location("m0011", p)
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_d26_migration_scrap_rules_become_hold(client: TestClient, db: Session) -> None:
+    """D26：已有 scrap 规则迁移后为 hold，原因码保留（含空）；重复执行不变；downgrade 恢复。"""
+    f = Line(client, db)
+    a = f.m.post("qtime_rule", _rule_body(f, reason_id=f.reasons["scrap"]["id"]))
+    b = f.m.post("qtime_rule", _rule_body(f, reason_id=None))
+    f.sql(
+        "UPDATE mes_qtime_rule SET action='scrap' WHERE id IN (:a, :b)",
+        a=a["id"],
+        b=b["id"],
+    )
+    mod = _m0011()
+
+    def state() -> dict[str, Any]:
+        rows = f.m.list("qtime_rule")["data"]
+        return {
+            x["id"]: (x["action"], x["reason_id"])
+            for x in rows
+            if x["id"] in (a["id"], b["id"])
+        }
+
+    for _ in range(2):
+        _run([mod.SCRAP_TO_HOLD])
+        assert state() == {
+            a["id"]: ("hold", f.reasons["scrap"]["id"]),
+            b["id"]: ("hold", None),
+        }
+    for _ in range(2):
+        _run([mod.HOLD_TO_SCRAP])
+        assert {k: v[0] for k, v in state().items()} == {
+            a["id"]: "scrap",
+            b["id"]: "scrap",
+        }
+    _run([mod.SCRAP_TO_HOLD])
+    # 迁移后的规则超时 → Hold，原因码保留（scrap 类型原因码不适用 hold 时回退 qtime_expired）
+    (lot,) = f.start(1)
+    f.run_step(lot)
+    _expire(f, lot)
+    f.post(f"{EXEC}/qtime/sweep", {})
+    hs = _list(f, lot)
+    assert hs and all(h["reason"] == "qtime_expired" for h in hs)
+
+
+def test_qs_02_0010_conflicting_plan_code_reported(
+    client: TestClient, db: Session
+) -> None:
+    """0010：已有同名 <code>-QT-TI 方案时不静默跳过——CONFLICTS 查出并记 warning。"""
+    from app.core.db import admin_engine
+
+    f, _ = _setup(client, db)
+    plan = f.bind("move_in", ("qtime", "off", {}))
+    f.m.post("check_plan", {"code": f"{plan['code']}-QT-TI", "name": "taken"})
+    mod = _m0010()
+    with admin_engine.connect() as c:
+        rows = c.execute(text(mod.CONFLICTS)).all()
+    assert (uuid.UUID(f.m.tid), plan["code"]) in [(r[0], r[1]) for r in rows]
+    _run(mod.UPGRADE)
+    assert not [b for b in _bindings(f) if b["trigger"] == "track_in"]
+    _run(mod.DOWNGRADE)
+
+
+def test_qa_01_deactivated_rule_no_hold(client: TestClient, db: Session) -> None:
+    """D24 补充：停用后 Track In / sweep 都跳过（含停用前已在计时的批次），已挂 Hold 不动。"""
+    f, rule = _setup(client, db)
+    a, b, c = f.start(1, 1, 1)
+    for x in (a, b, c):
+        f.run_step(x)
+        _expire(f, x)
+    f.post(f"{EXEC}/qtime/sweep", {})  # a/b/c 都 Hold
+    f.sql(
+        "UPDATE mes_lot_hold SET is_active=false WHERE lot_id IN (:b, :c)",
+        b=b["id"],
+        c=c["id"],
+    )
+    f.sql("UPDATE mes_lot SET on_hold=false WHERE id IN (:b, :c)", b=b["id"], c=c["id"])
+    f.sql(
+        "DELETE FROM mes_lot_history WHERE action='qtime' AND lot_id IN (:b, :c)",
+        b=b["id"],
+        c=c["id"],
+    )
+    got = f.m.patch("qtime_rule", rule["id"], {"is_active": False})
+    assert got["is_active"] is False
+    r = f.post(f"{EXEC}/qtime/sweep", {})
+    assert all(x["lot"] not in (b["code"], c["code"]) for x in r["actions"])
+    f.stage(c, "move_in", **_eq(f))
+    r = f.stage(c, "track_in", **_eq(f))
+    assert not r.get("qtime") and f.lot(c)["lot_status"] == "running"
+    assert not f.lot(b)["on_hold"]
+    assert f.lot(a)["on_hold"] and len(_list(f, a)) == 1  # 已挂 Hold 不动
+    mon = f.c.get(f"{EXEC}/qtime/monitor", headers=f.m.h).json()["data"]
+    assert not [m for m in mon if m["lot"] == b["code"]]
+
+
+def test_qa_02_reenabled_rule_not_retroactive(client: TestClient, db: Session) -> None:
+    """D24 补充：重新启用只对此后开始计时的批次生效，不追溯。"""
+    f, rule = _setup(client, db)
+    f.m.patch("qtime_rule", rule["id"], {"is_active": False})
+    (old,) = f.start(1)
+    f.run_step(old)
+    f.sql(
+        "UPDATE mes_lot_history SET at = at - interval '3 hours' "
+        "WHERE lot_id = :l AND action = 'move_out'",
+        l=old["id"],
+    )
+    got = f.m.patch("qtime_rule", rule["id"], {"is_active": True})
+    assert got["is_active"] is True and got["active_since"]
+    # 把启用时间前移 150 分钟，便于构造「启用后到达、且已超时」的新批次
+    f.sql(
+        "UPDATE mes_qtime_rule SET active_since = now() - interval '150 minutes' "
+        "WHERE id=:i",
+        i=rule["id"],
+    )
+    (new,) = f.start(1)
+    f.run_step(new)
+    _expire(f, new)  # 计时起点 now-2h，晚于启用时间
+    r = f.post(f"{EXEC}/qtime/sweep", {})
+    codes = [x["lot"] for x in r["actions"]]
+    assert new["code"] in codes and old["code"] not in codes
+    assert not f.lot(old)["on_hold"] and f.lot(new)["on_hold"]
+    # 修改其他字段不改变启用时间
+    since = f.m.list("qtime_rule", code=rule["code"])["data"][0]["active_since"]
+    got = f.m.patch("qtime_rule", rule["id"], {"name": "x", "active_since": None})
+    assert got["active_since"] == since  # 只读，且改其他字段不变
+
+
+def test_qa_03_form_meta_is_active(client: TestClient, db: Session) -> None:
+    """表单元数据含 is_active 开关且列表显示。"""
+    f = Line(client, db)
+    meta = f.c.get("/api/v1/mes/_meta", headers=f.m.h).json()
+    e = next(x for x in meta["entities"] if x["code"] == "qtime_rule")
+    fa = next(x for x in e["fields"] if x["name"] == "is_active")
+    assert fa["type"] == "bool" and fa.get("list", True)

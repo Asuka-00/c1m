@@ -66,6 +66,9 @@ def validate(
     Raises:
         HTTPException: 校验失败（422，字段错误列表）。
     """
+    # 原始载荷校验器（在类型 / 枚举转换前，可直接抛 HTTPException 给出结构化错误）
+    for fn in VALIDATORS.get(f"{e.code}:payload", []):
+        fn(session, tenant_id, e, data, existing)
     errors: list[tuple[str, str]] = []
     values: Row = {}
     for f in e.all_fields:

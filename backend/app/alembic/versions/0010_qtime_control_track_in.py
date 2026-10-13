@@ -10,8 +10,12 @@ Revision ID: 0010_qtime_control_track_in
 Revises: 0009_hold_qtime_fields
 """
 
+import logging
+
 import sqlalchemy as sa
 from alembic import op
+
+log = logging.getLogger("alembic.runtime.migration")
 
 revision = "0010_qtime_control_track_in"
 down_revision = "0009_hold_qtime_fields"
@@ -85,7 +89,30 @@ DOWNGRADE = [
 ]
 
 
+CONFLICTS = f"""
+    SELECT p.tenant_id, p.code
+    FROM mes_check_plan p
+    JOIN mes_check_plan c ON c.tenant_id = p.tenant_id
+         AND c.code = left(p.code || '-QT-TI', 100)
+         AND coalesce(c.attrs->>'d23_from_plan', '') <> p.id::text
+    WHERE EXISTS (SELECT 1 FROM mes_check_binding b
+                  WHERE b.check_plan_id = p.id AND b.trigger = 'move_in')
+      AND {_HAS_QTIME}
+      AND NOT EXISTS (SELECT 1 FROM mes_check_plan q
+                      WHERE q.tenant_id = p.tenant_id
+                        AND q.attrs->>'d23_from_plan' = p.id::text)
+"""
+
+
 def upgrade():
+    for tid, code in op.get_bind().execute(sa.text(CONFLICTS)).all():
+        log.warning(
+            "D23: tenant %s plan %s: %s-QT-TI already exists, "
+            "qtime control not migrated to track_in for this plan",
+            tid,
+            code,
+            code,
+        )
     for q in UPGRADE:
         op.execute(sa.text(q))
 

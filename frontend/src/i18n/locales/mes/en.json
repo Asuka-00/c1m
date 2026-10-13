@@ -405,6 +405,8 @@
         "warn_minutes": "Warn at (min)",
         "action": "On violation",
         "reason": "Reason code",
+        "is_active": "Active",
+        "active_since": "Active since",
         "description": "Description"
       },
       "lot": {
@@ -898,7 +900,8 @@
         "shifts": "Comma separated shift codes"
       },
       "qtime_rule": {
-        "warn_minutes": "Pre-expiry warning when elapsed ≥ this (blank: none)"
+        "warn_minutes": "Pre-expiry warning when elapsed ≥ this (blank: none)",
+        "reason": "Optional; for hold, blank uses system reason qtime_expired"
       },
       "work_order": {
         "priority": "Blank: the lot type's default priority",
@@ -961,6 +964,7 @@
         "move_out": "Move out",
         "override": "Check override",
         "split": "Split",
+        "qtime_rework": "Q-Time rework",
         "merge": "Merge",
         "e10": "E10 state change"
       },
@@ -1370,8 +1374,7 @@
       "qtime_action": {
         "warn": "Warn",
         "hold": "Hold lot",
-        "rework": "Rework",
-        "scrap": "Scrap"
+        "rework": "Rework"
       },
       "warehouse_type": {
         "finished_goods": "Finished goods",

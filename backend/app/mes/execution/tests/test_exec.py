@@ -906,13 +906,13 @@ def test_qtime_min_and_violation_actions(client: TestClient, db: Session) -> Non
     assert (
         f.stage(b, "track_in", **eq)["lot"]["lot_status"] == "running"
     )  # 同一次超时不重复处置
-    # scrap / rework actions
-    m.patch(
-        "qtime_rule",
-        rule["id"],
-        {"action": "scrap", "reason_id": f.reasons["scrap"]["id"]},
+    # D26：scrap 处置不再接受
+    r = f.c.patch(
+        m.url("qtime_rule", rule["id"]), headers=m.h, json={"action": "scrap"}
     )
-    # QT-01（M1）：配置为 scrap 的超时也改为自动 Hold（原因码 qtime_expired），不报废
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "qtime_action_invalid"
+    m.patch("qtime_rule", rule["id"], {"reason_id": None})
+    # QT-01（M1 / D25）：hold 规则无原因码 → 自动 Hold（原因码 qtime_expired），不报废
     qe = next(  # 系统原因码，租户初始化时已建（D18）
         x
         for x in m.list("reason_code", code="qtime_expired")["data"]
