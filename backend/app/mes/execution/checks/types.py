@@ -246,6 +246,8 @@ def _carrier(ctx: Ctx, _p: Row) -> Outcome:
 
 @check_type("qtime")
 def _qtime(ctx: Ctx, _p: Row) -> Outcome:
+    if ctx.trigger == "move_in":  # D23：Q-Time 只在 Track In 管控，Move In 不再读
+        return "na", "Q-Time is controlled at track in", {}
     st = qtime_status(ctx.s, ctx.tid, ctx.lot, ctx.step, ctx.at)
     if not st:
         return "na", "no Q-Time rule", {}

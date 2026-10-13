@@ -182,7 +182,8 @@ def test_qf_02_manual_and_legacy_holds_fields_null(
         assert all(h[k] is None for k in QF), h
         d = _detail(f, h["id"])
         assert all(d[k] is None for k in QF) and d["lot"] == lot["code"]
-    _detail(f, str(uuid.uuid4()), 404)
+    d = _detail(f, str(uuid.uuid4()), 404)["detail"]
+    assert d["code"] == "hold_not_found" and d["message"]
 
 
 # ---------------- QF-03 迁移可重复执行、可回滚 ----------------
@@ -236,3 +237,152 @@ def test_qf_03_migration_rerunnable_and_reversible() -> None:
         with server.connect() as c:
             c.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
         server.dispose()
+
+
+def test_rw_03_moved_in_rework_clears_move_in_binding(
+    client: TestClient, db: Session
+) -> None:
+    """RW-03：moved_in 批次 Q-Time rework 处置 → 返工路线上 waiting，不残留设备等进站字段。"""
+    f, rule = _setup(client, db)
+    f.m.patch("qtime_rule", rule["id"], {"action": "rework"})
+    (lot,) = f.start(2)
+    f.run_step(lot)
+    f.stage(lot, "move_in", **_eq(f))
+    assert f.lot(lot)["equipment_id"] == f.eq["id"]
+    _expire(f, lot)
+    r = f.stage(lot, "track_in", **_eq(f))
+    assert r["qtime"] == "rework"
+    cx = f.ctx(lot)
+    got = cx["lot"]
+    assert got["lot_status"] == "waiting" and not got["on_hold"]
+    assert cx["step"]["route"].startswith("RW")
+    for k in ("equipment_id", "recipe_id", "exec_ctx"):
+        assert not got[k], k
+    ws = f.m.list("wafer", lot=lot["id"])["data"]
+    assert ws and all(w["wafer_status"] != "processing" for w in ws)
+    hist = f.m.list("lot_history", lot=lot["id"], action="qtime")["data"]
+    assert hist and hist[0]["details"]["action"] == "rework"
+    assert got["stage_at"]
+    # 返工路线首站可正常 Move In
+    f.stage(lot, "move_in", **_eq(f))
+    assert f.lot(lot)["lot_status"] == "moved_in"
+
+
+# ---------------- D23 / D24 ----------------
+def _m0010() -> Any:
+    import importlib.util
+
+    import app
+
+    p = Path(app.__file__).parent / "alembic/versions/0010_qtime_control_track_in.py"
+    spec = importlib.util.spec_from_file_location("m0010", p)
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _run(qs: list[str]) -> None:
+    from app.core.db import admin_engine
+
+    with admin_engine.begin() as c:
+        for q in qs:
+            c.execute(text(q))
+
+
+def _bindings(f: Line) -> list[Any]:
+    from app.core.db import admin_engine
+
+    with admin_engine.connect() as c:
+        return [
+            dict(r._mapping)
+            for r in c.execute(
+                text(
+                    "SELECT b.trigger, b.attrs, b.check_plan_id, "
+                    "(SELECT array_agg(r.check_type ORDER BY r.check_type) "
+                    " FROM mes_check_plan_item i JOIN mes_check_rule r "
+                    " ON r.id=i.check_rule_id WHERE i.check_plan_id=b.check_plan_id) AS types "
+                    "FROM mes_check_binding b WHERE b.tenant_id=:t ORDER BY b.trigger"
+                ),
+                {"t": f.m.tid},
+            )
+        ]
+
+
+def test_qs_01_qtime_control_moved_to_track_in(client: TestClient, db: Session) -> None:
+    """QS-01（D23）：Move In 时机的 qtime 严重度平移到 Track In（重复执行不重复），
+    Move In 不处置，Track In 按配置处置，downgrade 恢复原配置。"""
+    f, _ = _setup(client, db)
+    f.bind("move_in", ("qtime", "off", {}), ("lot_hold", "block", {}))
+    before = _bindings(f)
+    assert [b["trigger"] for b in before] == ["move_in"]
+    mod = _m0010()
+    _run(mod.UPGRADE)
+    _run(mod.UPGRADE)  # 重复执行
+    bs = _bindings(f)
+    ti = [b for b in bs if b["trigger"] == "track_in"]
+    assert len(ti) == 1 and ti[0]["types"] == ["qtime"]
+    assert [b for b in bs if b["trigger"] == "move_in"] == before
+    # 严重度 off：Move In、Track In 都不处置
+    a, b = f.start(1, 1)
+    for x in (a, b):
+        f.run_step(x)
+        f.stage(x, "move_in", **_eq(f))  # Move In 不读 qtime
+    _expire(f, a)
+    _expire(f, b)
+    r = f.stage(a, "track_in", **_eq(f))
+    assert not r.get("qtime") and f.lot(a)["lot_status"] == "running"
+    # 改为 block：Track In 按配置处置（转 Hold）
+    rule = next(x for x in f.m.list("check_rule")["data"] if x["check_type"] == "qtime")
+    f.m.patch("check_rule", rule["id"], {"severity": "block"})
+    assert f.stage(b, "track_in", **_eq(f))["qtime"] == "hold"
+    # Move In 时机 block 也不再拦超时批次
+    (c,) = f.start(1)
+    f.run_step(c)
+    _expire(f, c)
+    f.stage(c, "move_in", **_eq(f))
+    assert not f.lot(c)["on_hold"]
+    _run(mod.DOWNGRADE)
+    _run(mod.DOWNGRADE)
+    after = _bindings(f)
+    assert [x["trigger"] for x in after] == ["move_in"]
+    assert after[0]["check_plan_id"] == before[0]["check_plan_id"]
+    assert after[0]["types"] == before[0]["types"]
+
+
+def test_qr_01_delete_referenced_qtime_rule_409(
+    client: TestClient, db: Session
+) -> None:
+    """QR-01（D24）：删除被 Hold 引用的 Q-Time 规则 → 409 qtime_rule_in_use；停用可以。"""
+    f, rule = _setup(client, db)
+    (lot,) = f.start(1)
+    f.run_step(lot)
+    _expire(f, lot)
+    f.post(f"{EXEC}/qtime/sweep", {})
+    (h,) = _list(f, lot)
+    r = f.c.delete(f.m.url("qtime_rule", rule["id"]), headers=f.m.h)
+    assert r.status_code == 409, r.text
+    d = r.json()["detail"]
+    assert d["code"] == "qtime_rule_in_use" and d["qtime_rule_id"] == rule["id"]
+    assert d["message"] and d["hold_count"] == 1
+    assert _detail(f, h["id"])["qtime_rule_id"] == rule["id"]
+    got = f.m.list("qtime_rule", code=rule["code"])["data"]
+    assert [x["id"] for x in got] == [rule["id"]]
+    f.m.patch(  # 停用成功（规则 action=hold 校验要求原因码）
+        "qtime_rule",
+        rule["id"],
+        {"is_active": False, "reason_id": f.reasons["hold"]["id"]},
+    )
+    # 未被引用的规则仍可删除
+    other = f.m.post(
+        "qtime_rule",
+        {
+            "code": "QT2",
+            "name": "q2",
+            "route_id": f.route["id"],
+            "from_step_id": f.steps[20]["id"],
+            "to_step_id": f.steps[40]["id"] if 40 in f.steps else f.steps[30]["id"],
+            "max_minutes": 30,
+        },
+    )
+    f.m.delete("qtime_rule", other["id"])

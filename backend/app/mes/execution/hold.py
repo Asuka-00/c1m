@@ -307,7 +307,14 @@ def get_hold(s: Session, tid: uuid.UUID, hold_id: Any) -> Row:
     h = one(s, tid, "lot_hold", hold_id)
     lot = h and one(s, tid, "lot", h["lot_id"])
     if not h or not lot:
-        raise HTTPException(status_code=404, detail="Hold not found")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "hold_not_found",
+                "message": "Hold not found",
+                "hold_id": str(hold_id),
+            },
+        )
     return hold_row(s, tid, h, lot, now())
 
 

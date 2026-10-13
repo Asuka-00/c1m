@@ -2,7 +2,7 @@
 
 停表点为 Track In（D19）：waiting / moved_in 批次计时，Track In 之后不再处置。
 
-管控开关：Move In 触发时机上 ``qtime`` 类型规则严重度为 ``off`` 时（按工步 / 设备等作用域），
+管控开关：Track In 触发时机上（D23，原 Move In 配置由迁移 0010 平移） ``qtime`` 类型规则严重度为 ``off`` 时（按工步 / 设备等作用域），
 不执行超时处置。
 """
 
@@ -11,10 +11,13 @@ import uuid
 from typing import Any
 
 import sqlalchemy as sa
+from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
-from app.core.spec.engine import TABLES
+from app.core.spec.engine import ENTITIES, TABLES
+from app.core.spec.validate import validator
 from app.mes.common.query import find, one
 from app.mes.equipment.service import pm_notify
 from app.mes.execution.checks import service as ck
@@ -82,7 +85,7 @@ def _qtime_actions(
     s: Session, tid: uuid.UUID, lot: Row, step: Row, user: Any
 ) -> str | None:
     """执行最大 Q-Time 超时处置（每次超时只执行一次），返回处置结果。"""
-    if not ck.enabled(build_ctx(s, tid, lot, "move_in", {}), "qtime"):
+    if not ck.enabled(build_ctx(s, tid, lot, "track_in", {}), "qtime"):
         return None
     h = TABLES["lot_history"]
     for x in ck.qtime_status(s, tid, lot, step, now()):
@@ -131,6 +134,9 @@ def _qtime_actions(
         if action == "warn":
             continue
         if action == "rework" and step["rework_route_id"]:
+            # moved_in 批次（D19）：_relocate 清空进站绑定（设备 / 配方 / 执行上下文），
+            # 回到返工路线 waiting；此处补审计记录状态与设备变化
+            prev, eq = lot["lot_status"], lot["equipment_id"]
             _relocate(
                 s,
                 tid,
@@ -141,6 +147,19 @@ def _qtime_actions(
                 branch=False,
                 record_move_out=False,
             )
+            if prev != lot["lot_status"]:
+                audit(
+                    s,
+                    tid,
+                    ENTITIES["lot"],
+                    "qtime_rework",
+                    lot,
+                    user,
+                    {
+                        "lot_status": (prev, lot["lot_status"]),
+                        "equipment_id": (eq and str(eq), None),
+                    },
+                )
             return "rework"
         # D12：超时（含配置为 scrap 的规则）一律自动 Hold，不再报废
         qtime_hold(s, tid, lot, user, r, x, det)
@@ -155,6 +174,34 @@ QTIME_RUNNING = ("waiting", "moved_in")
 def qtime_lots(s: Session, tid: uuid.UUID) -> list[Row]:
     """Q-Time 计时中的批次（waiting / moved_in）。"""
     return [x for st in QTIME_RUNNING for x in find(s, tid, "lot", lot_status=st)]
+
+
+@validator("qtime_rule:delete")
+def _qtime_rule_delete(
+    s: Session, tid: uuid.UUID, _e: Any, row: Row, _o: Row | None
+) -> None:
+    """D24：被 Hold 记录引用的 Q-Time 规则不可删除（409 qtime_rule_in_use），可停用。"""
+    h = TABLES["lot_hold"]
+    n = (
+        conn(s)
+        .execute(
+            sa.select(sa.func.count())
+            .select_from(h)
+            .where(h.c.tenant_id == tid, h.c.qtime_rule_id == row["id"])
+        )
+        .scalar_one()
+    )
+    if n:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "qtime_rule_in_use",
+                "message": "Q-Time rule is referenced by lot holds; deactivate it instead",
+                "qtime_rule_id": str(row["id"]),
+                "qtime_rule_code": row["code"],
+                "hold_count": int(n),
+            },
+        )
 
 
 def qtime_monitor(s: Session, tid: uuid.UUID) -> list[Row]:
@@ -200,7 +247,7 @@ def qtime_monitor(s: Session, tid: uuid.UUID) -> list[Row]:
 def _qtime_warn(s: Session, tid: uuid.UUID, lot: Row, step: Row) -> int:
     """Q-Time 预警通知：达到预警阈值且未超时的规则各通知一次（按计时起点去重）。"""
     sts = [x for x in ck.qtime_status(s, tid, lot, step, now()) if x["warn"]]
-    if not sts or not ck.enabled(build_ctx(s, tid, lot, "move_in", {}), "qtime"):
+    if not sts or not ck.enabled(build_ctx(s, tid, lot, "track_in", {}), "qtime"):
         return 0
     n = 0
     for x in sts:
