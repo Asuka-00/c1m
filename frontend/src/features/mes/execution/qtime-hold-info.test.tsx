@@ -69,4 +69,30 @@ describe('Q-Time Hold 信息（D20）', () => {
       ])
         expect((l.mes.qtimeHold as Record<string, string>)[k]).toBeTruthy()
   })
+
+  it('优先显示后端返回的工步名，为空时退回工步列表 / id', async () => {
+    const a = await render(
+      <QtimeHoldInfo
+        hold={{
+          ...full,
+          qtime_from_step_name: '10 · CLEAN',
+          qtime_to_step_name: '20 · ETCH',
+        }}
+        steps={{ S1: 'list-name' }}
+      />
+    )
+    expect(a.container.textContent).toContain(
+      t('mes.qtimeHold.steps', { from: '10 · CLEAN', to: '20 · ETCH' })
+    )
+    await a.unmount()
+    const b = await render(
+      <QtimeHoldInfo
+        hold={{ ...full, qtime_from_step_name: null, qtime_to_step_name: '' }}
+        steps={{ S1: 'list-name' }}
+      />
+    )
+    expect(b.container.textContent).toContain(
+      t('mes.qtimeHold.steps', { from: 'list-name', to: 'S2' })
+    )
+  })
 })

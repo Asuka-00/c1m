@@ -653,7 +653,9 @@
       "eqpRecipe": "装置レシピ名",
       "eqpRecipeHint": "装置報告またはスキャン（任意）",
       "chambers": "チャンバー",
-      "futureHold": "予約ホールド工程に到着、ロットをホールド：{{reason}}"
+      "futureHold": "予約ホールド工程に到着、ロットをホールド：{{reason}}",
+      "qtimeHandled": "Q タイム超過を処置しました",
+      "qtimeStageSkipped": "今回の {{stage}} は実行されていません。ロット状態を確認してください"
     },
     "trace": {
       "hint": "ロットとユニットの全操作履歴。",
@@ -868,7 +870,8 @@
         "manual": "手動",
         "qtime": "Q タイム",
         "oos": "規格外",
-        "split": "分割継承"
+        "split": "分割継承",
+        "equipment": "装置"
       },
       "search": "ロット / 製品 / 理由 / コメントを検索",
       "allStatus": "すべて（履歴含む）",

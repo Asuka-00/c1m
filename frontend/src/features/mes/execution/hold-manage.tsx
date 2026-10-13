@@ -34,6 +34,8 @@ import {
 } from '@/components/crud'
 import {
   enumLabel,
+  HOLD_SOURCES,
+  holdSourceLabel,
   optLabel,
   reasonOptLabel,
 } from '@/features/mes/common/labels'
@@ -44,7 +46,7 @@ import { Pick } from './exec-parts'
 import { QtimeHoldInfo } from './qtime-hold-info'
 
 /** Hold 来源。 */
-const SOURCES = ['manual', 'qtime', 'oos', 'split']
+const SOURCES = HOLD_SOURCES
 /** 状态切换：生效中（默认）/ 已解除（历史）/ 全部。 */
 type Status = 'active' | 'released' | 'all'
 
@@ -60,8 +62,7 @@ const codeOptions =
     )
 
 /** 来源显示文本。 */
-const srcLabel = (s: string) =>
-  SOURCES.includes(s) ? t(`mes.holdrel.src.${s}`) : s
+const srcLabel = holdSourceLabel
 
 /** Hold 管理。 */
 export default function HoldManagePage() {

@@ -13,7 +13,11 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { EmptyState } from '@/components/desc-list'
-import { enumLabel, reasonLabel } from '@/features/mes/common/labels'
+import {
+  enumLabel,
+  holdSourceLabel,
+  reasonLabel,
+} from '@/features/mes/common/labels'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { canHold } from '../lot-rules'
 import type { QtimeHoldFields, StepNames } from '../qtime-hold'
@@ -78,7 +82,7 @@ function HoldRow({
       </div>
       <div className='text-xs text-muted-foreground'>
         {fmtDateTime(String(h.held_at))} · {String(h.held_by ?? '')} ·{' '}
-        {String(h.source ?? '')}
+        {holdSourceLabel(h.source)}
       </div>
       {!!h.comment && <div className='text-xs'>{String(h.comment)}</div>}
       <QtimeHoldInfo hold={h as QtimeHoldFields} steps={stepNames(cx)} />

@@ -653,7 +653,9 @@
       "eqpRecipe": "Equipment recipe",
       "eqpRecipeHint": "Reported / scanned (optional)",
       "chambers": "Chambers",
-      "futureHold": "Future hold at this step, lot held: {{reason}}"
+      "futureHold": "Future hold at this step, lot held: {{reason}}",
+      "qtimeHandled": "Q-Time exceeded and handled",
+      "qtimeStageSkipped": "{{stage}} was not performed; check the lot status"
     },
     "trace": {
       "hint": "All operations on the lot and its units.",
@@ -868,7 +870,8 @@
         "manual": "Manual",
         "qtime": "Q-Time",
         "oos": "Out of spec",
-        "split": "Split (inherited)"
+        "split": "Split (inherited)",
+        "equipment": "Equipment"
       },
       "search": "Search lot / product / reason / comment",
       "allStatus": "All (incl. history)",

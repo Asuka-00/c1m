@@ -150,4 +150,30 @@ describe('Hold 列表：显示终态批次开关（N6 / P15 A）', () => {
       document.querySelector('[data-testid=qtime-hold-info]')!.textContent
     ).toContain('R-9')
   })
+
+  it('列表优先显示 qtime_*_step_name，缺失时显示 id；来源 equipment 本地化（D21）', async () => {
+    const { s } = await show([
+      row({
+        source: 'qtime',
+        qtime_from_step_id: 'S1',
+        qtime_to_step_id: 'S2',
+        qtime_from_step_name: '10 · CLEAN',
+        qtime_to_step_name: null,
+        qtime_overdue_seconds: 60,
+      }),
+      row({ id: 'H2', lot: 'LOT2', source: 'equipment' }),
+    ])
+    await expect
+      .poll(
+        () =>
+          document.querySelector('[data-testid=qtime-hold-info]')
+            ?.textContent ?? ''
+      )
+      .toContain(t('mes.qtimeHold.steps', { from: '10 · CLEAN', to: 'S2' }))
+    await expect
+      .element(
+        s.getByText(t('mes.holdrel.src.equipment'), { exact: true }).first()
+      )
+      .toBeVisible()
+  })
 })

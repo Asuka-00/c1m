@@ -653,7 +653,9 @@
       "eqpRecipe": "设备端配方名",
       "eqpRecipeHint": "设备上报或扫码（可选）",
       "chambers": "腔体",
-      "futureHold": "到达预约 Hold 工步，批次已 Hold：{{reason}}"
+      "futureHold": "到达预约 Hold 工步，批次已 Hold：{{reason}}",
+      "qtimeHandled": "Q-Time 超时已处置",
+      "qtimeStageSkipped": "本次 {{stage}} 未执行，请刷新后查看批次状态"
     },
     "trace": {
       "hint": "查看批次及其单元的全部操作记录。",
@@ -868,7 +870,8 @@
         "manual": "手动",
         "qtime": "Q-Time",
         "oos": "超规",
-        "split": "分批继承"
+        "split": "分批继承",
+        "equipment": "设备"
       },
       "search": "搜索批次 / 产品 / 原因 / 备注",
       "allStatus": "全部（含历史）",

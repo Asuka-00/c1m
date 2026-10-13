@@ -135,6 +135,8 @@ export interface HoldRow {
   qtime_from_step_id?: string | null
   qtime_to_step_id?: string | null
   qtime_overdue_seconds?: number | null
+  qtime_from_step_name?: string | null
+  qtime_to_step_name?: string | null
 }
 /** 追溯对象类型。 */
 export type TraceKind = 'lot' | 'wafer' | 'equipment' | 'material_lot'

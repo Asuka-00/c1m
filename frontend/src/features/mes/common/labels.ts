@@ -58,3 +58,12 @@ export const reasonLabel = (label: unknown) => {
   const [code, name] = splitLabel(label)
   return code ? reasonOptLabel({ code, name }) : ''
 }
+
+/** Hold 触发来源（D21 `source`：manual / qtime / equipment，另有历史值 oos / split）。 */
+export const HOLD_SOURCES = ['manual', 'qtime', 'equipment', 'oos', 'split']
+
+/** Hold 来源的本地化文本；未知值原样显示。 */
+export const holdSourceLabel = (s: unknown) => {
+  const v = s == null ? '' : String(s)
+  return HOLD_SOURCES.includes(v) ? t(`mes.holdrel.src.${v}`) : v
+}
