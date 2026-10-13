@@ -162,7 +162,7 @@ register(
     Entity(
         "qtime_rule",
         "lot",
-        "Q-Time rule|Q-Time 规则|Q タイム規則",
+        "Q-Time rule|Q-Time 规则|Q-Time ルール",
         [
             F("route", "ref", required=True, ref="route"),
             F(
@@ -478,7 +478,7 @@ register(
             F(
                 "qtime_rule",
                 "ref",
-                "Q-Time rule|Q-Time 规则|Q タイム規則",
+                "Q-Time rule|Q-Time 规则|Q-Time ルール",
                 ref="qtime_rule",
                 list=False,
                 filter=False,
@@ -486,7 +486,7 @@ register(
             F(
                 "qtime_from_step",
                 "ref",
-                "Q-Time from step|Q-Time 起始工步|Q タイム開始ステップ",
+                "Q-Time from step|Q-Time 起始工步|Q-Time 開始ステップ",
                 ref="route_step",
                 list=False,
                 filter=False,
@@ -494,7 +494,7 @@ register(
             F(
                 "qtime_to_step",
                 "ref",
-                "Q-Time to step|Q-Time 终点工步|Q タイム終了ステップ",
+                "Q-Time to step|Q-Time 终点工步|Q-Time 終了ステップ",
                 ref="route_step",
                 list=False,
                 filter=False,
@@ -502,7 +502,7 @@ register(
             F(
                 "qtime_overdue_seconds",
                 "int",
-                "Q-Time overdue (s)|Q-Time 超时秒数|Q タイム超過秒",
+                "Q-Time overdue (s)|Q-Time 超时秒数|Q-Time 超過秒",
                 list=False,
             ),
             F("released_at", "datetime", "Released at|解除时间|解除日時"),

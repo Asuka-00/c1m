@@ -10,11 +10,11 @@ from app.platform.notification.service import notify, register_event
 Row = dict[str, Any]
 
 QTIME_WARN = register_event(
-    "mes.qtime_warn", "Q-Time warning|Q-Time 预警|Q タイム事前警告", "warning", "lot"
+    "mes.qtime_warn", "Q-Time warning|Q-Time 预警|Q-Time 事前警告", "warning", "lot"
 ).code
 QTIME_EXCEEDED = register_event(
     "mes.qtime_exceeded",
-    "Q-Time exceeded|Q-Time 超时|Q タイム超過",
+    "Q-Time exceeded|Q-Time 超时|Q-Time 超過",
     "critical",
     "lot",
 ).code

@@ -12,11 +12,13 @@
 # 菜单同步（seed_menus）按此幂等更新已有库的排序与父级。
 GROUPS: list[tuple[str, str, str, int]] = [
     ("g-workspace", "Workspace|工作台|ワークスペース", "LayoutDashboard", 0),
-    ("g-execution", "Production Execution|生产执行|生産実行", "PlayCircle", 10),
-    ("g-wip", "WIP & Reports|在制与报表|仕掛・レポート", "LineChart", 20),
+    ("g-execution", "Lot Operation|批次作业|ロット作業", "PlayCircle", 10),
+    ("g-exception", "Exception Handling|异常处置|異常処置", "ShieldAlert", 15),
+    ("g-wip", "WIP & Inquiry|在制与查询|仕掛・照会", "LineChart", 20),
     ("g-planning", "Production Planning|生产计划|生産計画", "ClipboardList", 30),
     ("g-warehouse", "Warehouse Management|仓储管理|倉庫管理", "Warehouse", 40),
-    ("g-equipment", "Equipment Management|设备管理|設備管理", "Cpu", 50),
+    # 机台管理：以后 EAP 的通讯状态 / 报警页面直接加在本组
+    ("g-equipment", "Tool Management|机台管理|装置管理", "Cpu", 50),
     ("g-quality", "Quality|质量管理|品質管理", "BadgeCheck", 60),
     ("g-process", "Process Engineering|工艺管理|工程管理", "Workflow", 70),
     ("g-product", "Product & Material|产品与物料|製品・資材", "Package", 80),
@@ -26,6 +28,7 @@ GROUPS: list[tuple[str, str, str, int]] = [
 ]
 
 # 分组 key -> [(菜单 key, 标题)]，按显示顺序（组内：日常作业在前，配置在后）
+# 批次作业组只放操作员高频项；查询类（批次 / 晶圆）在「在制与查询」。
 ITEMS: dict[str, list[tuple[str, str]]] = {
     "g-workspace": [
         ("dashboard", "Dashboard|仪表盘|ダッシュボード"),
@@ -33,30 +36,35 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("settings", "Profile|个人设置|個人設定"),
     ],
     "g-execution": [
-        ("mes-lot-console", "Lot Operation|批次作业|ロット作業"),
-        ("mes-batch-ops", "Batch Operation|批量作业|一括作業"),
-        ("mes-carrier-ops", "Carrier Management|载具管理|キャリア管理"),
-        ("mes-qtime-monitor", "Q-Time Monitor|Q-Time 监控|Q タイム監視"),
+        (
+            "mes-lot-console",
+            "Lot Operation (Track In/Out)|批次作业（进出站）|ロット作業（着工・完了）",
+        ),
         ("mes-lot_hold", "Hold Management|Hold 管理|ホールド管理"),
-        ("mes-future_hold", "Future Hold|预约 Hold|予約ホールド"),
+        ("mes-qtime-monitor", "Q-Time Monitor|Q-Time 监控|Q-Time 監視"),
+        ("mes-batch-ops", "Batch Operation|批量作业|一括作業"),
+        ("mes-carrier-ops", "Carrier Operation|载具作业|キャリア作業"),
         ("mes-shift-handover", "Shift Handover|交接班日志|シフト引継ぎ"),
         ("mes-label-print", "Label Printing|标签打印|ラベル印刷"),
-        ("mes-operator_qual", "Operator Qualification|操作员资质|作業者資格"),
-        ("mes-lot", "Lot List|批次列表|ロット一覧"),
-        ("mes-wafer", "Wafer|晶圆|ウェーハ"),
+    ],
+    "g-exception": [
+        ("mes-future_hold", "Future Hold|Future Hold（预约 Hold）|予約ホールド"),
+        ("mes-check_log", "Interlock Log|卡控记录|インターロック記録"),
     ],
     "g-wip": [
         ("mes-wip-dashboard", "WIP Dashboard|WIP 看板|WIP ダッシュボード"),
         ("mes-oee-report", "Equipment OEE|设备 OEE|設備 OEE"),
-        ("mes-yield-report", "Yield|良率统计|歩留まり"),
+        ("mes-yield-report", "Yield Report|良率报表|歩留まりレポート"),
         ("mes-lot-history", "Lot History & Trace|批次履历与追溯|ロット履歴・トレース"),
-        ("mes-check_log", "Check Log|卡控记录|チェック記録"),
         ("mes-lot_recipe_run", "Recipe Run|配方执行记录|レシピ実行記録"),
+        ("mes-lot", "Lot Inquiry|批次查询|ロット照会"),
+        ("mes-wafer", "Wafer Inquiry|晶圆查询|ウェーハ照会"),
     ],
     "g-planning": [
+        # 投片/开批：叫法为推断，待产线确认
+        ("mes-lot-start", "Lot Start|投片/开批|ロット投入"),
         ("mes-wo-board", "WO Progress|工单进度|作業指示進捗"),
         ("mes-work_order", "Work Order|工单|作業指示"),
-        ("mes-lot-start", "Lot Start|投产|ロット投入"),
     ],
     "g-warehouse": [
         ("mes-receipt", "Finished Goods Receipt|完工入库|完成品入庫"),
@@ -64,40 +72,41 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
             "mes-material_lot",
             "Line-side Material Lot|线边物料批|ラインサイド資材ロット",
         ),
-        ("mes-warehouse-master", "Warehouse|仓库|倉庫"),
+        ("mes-warehouse-master", "Warehouse Master|仓库主数据|倉庫マスタ"),
     ],
     "g-equipment": [
-        ("mes-eqp-board", "Equipment Status Board|设备状态看板|設備状態ボード"),
+        ("mes-eqp-board", "Tool Status Board|机台状态看板|装置状態ボード"),
         ("mes-pm_plan", "PM Plan|PM 计划|PM 計画"),
         ("mes-downtime", "Downtime|停机记录|停止記録"),
         ("mes-e10_history", "E10 History|E10 状态履历|E10 状態履歴"),
-        ("mes-tool", "Tool Life|工具寿命|工具寿命"),
-        ("mes-equipment-master", "Equipment|设备|設備"),
-        ("mes-e10-model", "E10 State Model|E10 状态模型|E10 状態モデル"),
+        ("mes-tool", "Consumable Life|耗材/治具寿命|消耗品・治具寿命"),
+        ("mes-equipment-master", "Equipment Master|机台主数据|装置マスタ"),
+        ("mes-e10-model", "E10 State Configuration|E10 状态配置|E10 状態設定"),
     ],
     "g-quality": [
-        ("mes-dc_result", "DC Data|量测数据|測定データ"),
+        ("mes-dc_result", "Metrology / DC Data|量测数据|測定データ"),
         ("mes-dc-config", "DC Configuration|数据收集配置|データ収集設定"),
         ("mes-defect_code", "Defect Code|缺陷代码|欠陥コード"),
     ],
     "g-process": [
-        ("mes-route-master", "Route|工艺流程|ルート"),
+        ("mes-route-master", "Route Configuration|工艺流程配置|ルート設定"),
         ("mes-recipe-param", "Recipe & Parameters|配方与参数|レシピ・パラメータ"),
-        ("mes-change_order", "Engineering Change|工程变更|設計変更"),
-        ("mes-qtime_rule", "Q-Time Rule|Q-Time 规则|Q タイムルール"),
+        ("mes-change_order", "ECN|工程变更（ECN）|設計変更（ECN）"),
+        ("mes-qtime_rule", "Q-Time Rule|Q-Time 规则|Q-Time ルール"),
         ("mes-check-config", "Check Config|卡控配置|チェック設定"),
         ("mes-lot-rules", "Lot Rules|批次规则|ロット規則"),
     ],
     "g-product": [
-        ("mes-product-master", "Product|产品|製品"),
-        ("mes-material-master", "Material|物料|資材"),
-        ("mes-carrier-master", "Carrier|载具|キャリア"),
+        ("mes-product-master", "Product Master|产品主数据|製品マスタ"),
+        ("mes-material-master", "Material Master|物料主数据|資材マスタ"),
+        ("mes-carrier-master", "Carrier Master|载具主数据|キャリアマスタ"),
         ("mes-reticle", "Reticle|光罩|レチクル"),
         ("mes-fixture", "Fixture|治具|治具"),
     ],
     "g-factory": [
         ("mes-factory-model", "Factory Model|工厂模型|工場モデル"),
-        ("mes-calendar", "Work Calendar|工作日历|稼働カレンダー"),
+        ("mes-calendar", "Calendar & Shifts|日历与班次|カレンダー・シフト"),
+        ("mes-operator_qual", "Operator Qualification|操作员资质|作業者資格"),
     ],
     "g-master": [
         ("mes-reason_code", "Reason Code|原因代码|理由コード"),

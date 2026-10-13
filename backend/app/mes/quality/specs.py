@@ -40,7 +40,7 @@ ENUMS.update(
         "reason_type": [
             ("scrap", "Scrap|报废|スクラップ"),
             ("rework", "Rework|返工|リワーク"),
-            ("hold", "Hold|冻结|ホールド"),
+            ("hold", "Hold|Hold|ホールド"),
             ("e10", "Equipment state change|设备状态变更|設備状態変更"),
             ("downtime", "Equipment downtime|设备停机|設備停止"),
             ("release", "Release|解冻|リリース"),
@@ -55,7 +55,7 @@ ENUMS.update(
         ],
         "qtime_action": [
             ("warn", "Warn|预警|警告"),
-            ("hold", "Hold lot|冻结批次|ロット保留"),
+            ("hold", "Hold lot|Hold 批次|ロットをホールド"),
             ("rework", "Rework|返工|リワーク"),
             # D26：scrap 已去掉（迁移 0011 改成 hold）
         ],
