@@ -9,6 +9,11 @@ import { entityLabel, enumLabel, fieldLabel } from './labels'
 type V = Record<string, unknown>
 const blank = (x: unknown) => x == null || x === ''
 
+/** 前端强制可选的字段（即使元数据仍带 required / required_when）。
+ *  D25：Q-Time 规则 action=hold 不再要求原因码，留空时后端使用 qtime_expired；
+ *  填写时仍由后端校验存在且属于本租户（422 照常显示）。 */
+const FE_OPTIONAL = new Set(['qtime_rule.reason'])
+
 /** 使 `f` 必填的条件（同级字段 + 当前值）；
  *  无条件必填时为 `true`，可选时为 `null`。与后端的
  *  `required` / `required_when` 校验保持一致。 */
@@ -17,6 +22,7 @@ export function requiredBy(
   f: MesField,
   v: V
 ): true | { field: MesField; value: unknown } | null {
+  if (FE_OPTIONAL.has(`${e.code}.${f.name}`)) return null
   if (f.required) return true
   for (const [name, allowed] of Object.entries(f.required_when ?? {})) {
     const other = e.fields.find((x) => x.name === name)
@@ -80,6 +86,7 @@ export const MES_ERROR_CODES = [
   'merge_source_invalid',
   'rework_route_missing',
   'qtime_rule_in_use',
+  'hold_not_found',
   'idempotency_in_progress',
   'idempotency_key_mismatch',
   'idempotency_key_reused',
@@ -146,7 +153,8 @@ export function mesCodeMessage(err: unknown): string | null {
   const { code, action, lot_status } = d as Record<string, unknown>
   if (!isCode(code)) return null
   if (code === 'lot_status') return lotStatusMessage(action, lot_status)
-  return t(`mes.err.code.${code}`)
+  // detail 中的附加字段（如 qtime_rule_code / hold_count）作为插值参数
+  return t(`mes.err.code.${code}`, d as Record<string, unknown>)
 }
 
 /** 用实体字段标签翻译 MES 422 错误详情（"field: message"）。 */

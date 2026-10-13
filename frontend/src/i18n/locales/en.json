@@ -492,7 +492,8 @@
         "idempotency_key_reused": "This request key was already used for another operation; refresh and try again",
         "merge_source_invalid": "The source lots contain duplicates or include the target lot",
         "rework_route_missing": "No rework route is configured for this step",
-        "qtime_rule_in_use": "This Q-Time rule is referenced by hold records and cannot be deleted. Disable it instead."
+        "qtime_rule_in_use": "Q-Time rule {{qtime_rule_code}} is referenced by {{hold_count}} hold record(s) and cannot be deleted. Deactivate it instead.",
+        "hold_not_found": "The hold record does not exist or was deleted; refresh the list"
       }
     },
     "autoHint": "Leave blank to generate automatically",
@@ -1153,6 +1154,9 @@
     },
     "reasonCode": {
       "qtime_expired": "Q-Time expired"
+    },
+    "qtimeRule": {
+      "reasonHint": "Optional: leave blank to use the system reason code qtime_expired (Q-Time expired)"
     },
     "qtimeHold": {
       "overdue": "Overdue by {{time}}",

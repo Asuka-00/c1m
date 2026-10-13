@@ -492,7 +492,8 @@
         "idempotency_key_reused": "このリクエストキーは別の操作で使用済みです。更新して再試行してください",
         "merge_source_invalid": "統合元ロットに重複があるか、統合先ロットが含まれています",
         "rework_route_missing": "この工程にリワークルートが設定されていません",
-        "qtime_rule_in_use": "この Q-Time規則はホールド記録から参照されているため削除できません。無効化してください"
+        "qtime_rule_in_use": "Q-Time 規則 {{qtime_rule_code}} は {{hold_count}} 件のホールド記録から参照されているため削除できません。無効化してください",
+        "hold_not_found": "ホールド記録が存在しないか削除されています。一覧を更新してください"
       }
     },
     "autoHint": "空欄の場合は自動採番",
@@ -1153,6 +1154,9 @@
     },
     "reasonCode": {
       "qtime_expired": "Q-Time 超過"
+    },
+    "qtimeRule": {
+      "reasonHint": "任意：空欄の場合はシステム理由コード qtime_expired（Q-Time 超過）を使用します"
     },
     "qtimeHold": {
       "overdue": "{{time}} 超過",

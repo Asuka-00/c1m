@@ -933,6 +933,7 @@
         "inactive": "Inactive"
       },
       "audit_action": {
+        "qtime_rework": "Q-Time rework",
         "create": "Create",
         "update": "Update",
         "delete": "Delete",

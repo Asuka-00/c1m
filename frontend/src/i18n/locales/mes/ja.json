@@ -933,6 +933,7 @@
         "inactive": "無効"
       },
       "audit_action": {
+        "qtime_rework": "Q-Time リワーク",
         "create": "作成",
         "update": "更新",
         "delete": "削除",

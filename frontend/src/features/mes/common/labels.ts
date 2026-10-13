@@ -11,9 +11,17 @@ export const fieldLabel = (e: MesEntity, f: MesField | string) => {
   const name = typeof f === 'string' ? f : f.name
   return t(`mes.field.${e.code}.${name}`, { defaultValue: name })
 }
-/** 字段帮助文本（字段声明了 help 时）。 */
-export const fieldHelp = (e: MesEntity, f: MesField) =>
-  f.help ? t(`mes.help.${e.code}.${f.name}`, { defaultValue: '' }) : ''
+/** 前端补充的字段帮助（键：实体.字段 → i18n 键）。 */
+const FE_HELP: Record<string, string> = {
+  // D25：Q-Time 规则原因码可空，留空时后端使用 qtime_expired
+  'qtime_rule.reason': 'mes.qtimeRule.reasonHint',
+}
+/** 字段帮助文本（前端补充优先，否则字段声明了 help 时取语言包）。 */
+export const fieldHelp = (e: MesEntity, f: MesField) => {
+  const fe = FE_HELP[`${e.code}.${f.name}`]
+  if (fe) return t(fe)
+  return f.help ? t(`mes.help.${e.code}.${f.name}`, { defaultValue: '' }) : ''
+}
 /**
  * 枚举值标签。
  *

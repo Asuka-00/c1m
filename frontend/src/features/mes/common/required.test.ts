@@ -81,16 +81,45 @@ describe('mesErrorMessage：N5 对象格式', () => {
     ).toBe(t('mes.err.code.merge_source_invalid'))
   })
 
-  it('D24：删除被 Hold 引用的 Q-Time 规则返回 409 qtime_rule_in_use，提示改为停用', () => {
+  it('D24：409 qtime_rule_in_use 显示规则编码与引用的 Hold 条数，提示改为停用', () => {
+    const msg = mesErrorMessage(
+      axErr(409, {
+        code: 'qtime_rule_in_use',
+        message:
+          'Q-Time rule is referenced by lot holds; deactivate it instead',
+        qtime_rule_id: 'R-1',
+        qtime_rule_code: 'QT-ETCH',
+        hold_count: 3,
+      }),
+      { code: 'qtime_rule', fields: [] } as unknown as MesEntity
+    )
+    expect(msg).toBe(
+      t('mes.err.code.qtime_rule_in_use', {
+        qtime_rule_code: 'QT-ETCH',
+        hold_count: 3,
+      })
+    )
+    expect(msg).toContain('QT-ETCH')
+    expect(msg).toContain('3')
+  })
+
+  it('Hold 详情 404 hold_not_found 按 code 本地化', () => {
     expect(
       mesErrorMessage(
-        axErr(409, {
-          code: 'qtime_rule_in_use',
-          message: 'qtime rule is referenced by holds',
+        axErr(404, {
+          code: 'hold_not_found',
+          message: 'Hold not found',
+          hold_id: 'H9',
         }),
-        { code: 'qtime_rule', fields: [] } as unknown as MesEntity
+        lotE
       )
-    ).toBe(t('mes.err.code.qtime_rule_in_use'))
+    ).toBe(t('mes.err.code.hold_not_found'))
+  })
+
+  it('审计动作 qtime_rework 有本地化标签', () => {
+    expect(t('mes.enum.audit_action.qtime_rework')).not.toBe(
+      'mes.enum.audit_action.qtime_rework'
+    )
   })
 
   it('幂等键错误码只认 detail.code，裸字符串不当作错误码', () => {

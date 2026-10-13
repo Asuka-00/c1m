@@ -933,6 +933,7 @@
         "inactive": "失效"
       },
       "audit_action": {
+        "qtime_rework": "Q-Time 返工",
         "create": "新建",
         "update": "修改",
         "delete": "删除",
