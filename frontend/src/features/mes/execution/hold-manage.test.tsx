@@ -157,7 +157,7 @@ describe('Hold 列表：显示终态批次开关（N6 / P15 A）', () => {
         source: 'qtime',
         qtime_from_step_id: 'S1',
         qtime_to_step_id: 'S2',
-        qtime_from_step_name: '10 · CLEAN',
+        qtime_from_step_name: '10 CLEAN',
         qtime_to_step_name: null,
         qtime_overdue_seconds: 60,
       }),
@@ -169,7 +169,7 @@ describe('Hold 列表：显示终态批次开关（N6 / P15 A）', () => {
           document.querySelector('[data-testid=qtime-hold-info]')
             ?.textContent ?? ''
       )
-      .toContain(t('mes.qtimeHold.steps', { from: '10 · CLEAN', to: 'S2' }))
+      .toContain(t('mes.qtimeHold.steps', { from: '10 CLEAN', to: 'S2' }))
     await expect
       .element(
         s.getByText(t('mes.holdrel.src.equipment'), { exact: true }).first()

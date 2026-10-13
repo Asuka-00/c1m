@@ -79,6 +79,7 @@ export const MES_ERROR_CODES = [
   'batch_blocked',
   'merge_source_invalid',
   'rework_route_missing',
+  'qtime_rule_in_use',
   'idempotency_in_progress',
   'idempotency_key_mismatch',
   'idempotency_key_reused',

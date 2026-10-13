@@ -22,17 +22,6 @@ const detailOf = (e: unknown) =>
         | undefined)
     : undefined
 
-/** 后端因 Q-Time 超时把批次转 Hold 后拒绝本次作业（422 on_hold，message 含 Q-Time）。 */
-export function isQtimeHoldError(e: unknown) {
-  const d = detailOf(e)
-  return (
-    !!d &&
-    typeof d === 'object' &&
-    d.code === 'on_hold' &&
-    /q-?time/i.test(String(d.message ?? ''))
-  )
-}
-
 const isLotStateError = (e: unknown) => {
   const c = detailOf(e)?.code
   return c === 'on_hold' || c === 'lot_status' || c === 'lot_busy'
@@ -84,7 +73,8 @@ export function useStageRun(cx: ExecContext, body: () => StageBody) {
         return
       }
       if (r.qtime) {
-        // Q-Time 超时处置（Move In 停表点，D19 后为 Track In）：后端 200 返回 qtime，本次作业未执行
+        // Q-Time 超时处置（D19/D22：停表点为 Track In；hold 时批次仍 moved_in，rework 时转返工流程）：
+        // 后端 200 返回 qtime，本次作业未执行。Move In 已不再处置，此处对任一阶段通用
         toast.warning(qtimeNotice(r.qtime, stage))
         qc.invalidateQueries({ queryKey: ['mes'] })
         return
@@ -109,13 +99,6 @@ export function useStageRun(cx: ExecContext, body: () => StageBody) {
         setResults(res)
         setBlocked(true)
         toast.error(t('mes.exec.blocked'))
-        return
-      }
-      if (isQtimeHoldError(e)) {
-        // 兼容：D22 前的后端在 Track In 超时转 Hold 后返回 422 on_hold（message 含 Q-Time）；
-        // D22 起改为 200 + qtime（见 onSuccess），后端落地后可删除此分支
-        toast.warning(qtimeNotice('hold', stage))
-        qc.invalidateQueries({ queryKey: ['mes'] })
         return
       }
       toast.error(mesErrorMessage(e, lotE))

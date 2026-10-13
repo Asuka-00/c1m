@@ -491,7 +491,8 @@
         "idempotency_key_mismatch": "重复提交的内容与首次请求不一致，请刷新后重新操作",
         "idempotency_key_reused": "该请求标识已用于其他操作，请刷新后重试",
         "merge_source_invalid": "合批来源批次有重复，或包含了目标批次",
-        "rework_route_missing": "当前工步未配置返工路线，无法返工"
+        "rework_route_missing": "当前工步未配置返工路线，无法返工",
+        "qtime_rule_in_use": "该 Q-Time 规则已被 Hold 记录引用，不能删除，请改为停用"
       }
     },
     "autoHint": "留空则自动生成",

@@ -491,7 +491,8 @@
         "idempotency_key_mismatch": "再送信の内容が最初のリクエストと異なります。更新してやり直してください",
         "idempotency_key_reused": "このリクエストキーは別の操作で使用済みです。更新して再試行してください",
         "merge_source_invalid": "統合元ロットに重複があるか、統合先ロットが含まれています",
-        "rework_route_missing": "この工程にリワークルートが設定されていません"
+        "rework_route_missing": "この工程にリワークルートが設定されていません",
+        "qtime_rule_in_use": "この Q タイム規則はホールド記録から参照されているため削除できません。無効化してください"
       }
     },
     "autoHint": "空欄の場合は自動採番",

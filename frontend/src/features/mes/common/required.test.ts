@@ -81,6 +81,18 @@ describe('mesErrorMessage：N5 对象格式', () => {
     ).toBe(t('mes.err.code.merge_source_invalid'))
   })
 
+  it('D24：删除被 Hold 引用的 Q-Time 规则返回 409 qtime_rule_in_use，提示改为停用', () => {
+    expect(
+      mesErrorMessage(
+        axErr(409, {
+          code: 'qtime_rule_in_use',
+          message: 'qtime rule is referenced by holds',
+        }),
+        { code: 'qtime_rule', fields: [] } as unknown as MesEntity
+      )
+    ).toBe(t('mes.err.code.qtime_rule_in_use'))
+  })
+
   it('幂等键错误码只认 detail.code，裸字符串不当作错误码', () => {
     expect(mesCodeMessage(axErr(409, 'idempotency_in_progress'))).toBeNull()
     expect(

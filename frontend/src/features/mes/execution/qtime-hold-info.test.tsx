@@ -75,14 +75,14 @@ describe('Q-Time Hold 信息（D20）', () => {
       <QtimeHoldInfo
         hold={{
           ...full,
-          qtime_from_step_name: '10 · CLEAN',
-          qtime_to_step_name: '20 · ETCH',
+          qtime_from_step_name: '10 CLEAN',
+          qtime_to_step_name: '20 o2',
         }}
         steps={{ S1: 'list-name' }}
       />
     )
     expect(a.container.textContent).toContain(
-      t('mes.qtimeHold.steps', { from: '10 · CLEAN', to: '20 · ETCH' })
+      t('mes.qtimeHold.steps', { from: '10 CLEAN', to: '20 o2' })
     )
     await a.unmount()
     const b = await render(

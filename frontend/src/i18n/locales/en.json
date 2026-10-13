@@ -491,7 +491,8 @@
         "idempotency_key_mismatch": "The resubmitted request differs from the original; refresh and try again",
         "idempotency_key_reused": "This request key was already used for another operation; refresh and try again",
         "merge_source_invalid": "The source lots contain duplicates or include the target lot",
-        "rework_route_missing": "No rework route is configured for this step"
+        "rework_route_missing": "No rework route is configured for this step",
+        "qtime_rule_in_use": "This Q-Time rule is referenced by hold records and cannot be deleted. Disable it instead."
       }
     },
     "autoHint": "Leave blank to generate automatically",

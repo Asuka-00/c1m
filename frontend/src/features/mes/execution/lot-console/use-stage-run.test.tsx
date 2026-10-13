@@ -132,15 +132,16 @@ describe('useStageRun', () => {
   })
 
   it.each([
-    ['waiting', 'move_in'],
-    ['moved_in', 'track_in'],
+    ['moved_in', 'track_in', 'hold'],
+    ['moved_in', 'track_in', 'rework'],
+    ['waiting', 'move_in', 'hold'],
   ])(
-    'Q-Time 超时（D22）：%s 批次 %s 返回 200 + qtime=hold → 提示已转 Hold、未执行，并刷新',
-    async (status, stage) => {
+    'Q-Time 超时（D22）：%s 批次 %s 返回 200 + qtime=%s → 提示处置结果、未执行，并刷新',
+    async (status, stage, action) => {
       const spy = vi.spyOn(execApi, 'stage').mockResolvedValue({
-        lot: { id: 'L1', on_hold: true },
+        lot: { id: 'L1', lot_status: status, on_hold: action === 'hold' },
         results: [],
-        qtime: 'hold',
+        qtime: action,
       } as never)
       const warn = vi.spyOn(toast, 'warning')
       const ok = vi.spyOn(toast, 'success')
@@ -153,9 +154,9 @@ describe('useStageRun', () => {
         await result.current.run.mutateAsync({})
       })
       expect(spy.mock.calls[0][1]).toBe(stage)
-      expect(warn).toHaveBeenCalledWith(qtimeNotice('hold', stage))
-      expect(qtimeNotice('hold', stage)).toContain(
-        t('mes.exec.qtimeAction.hold')
+      expect(warn).toHaveBeenCalledWith(qtimeNotice(action, stage))
+      expect(qtimeNotice(action, stage)).toContain(
+        t(`mes.exec.qtimeAction.${action}`)
       )
       expect(ok).not.toHaveBeenCalled()
       expect(inv).toHaveBeenCalledWith({ queryKey: ['mes'] })
@@ -179,26 +180,6 @@ describe('useStageRun', () => {
       await result.current.run.mutateAsync({}).catch(() => {})
     })
     expect(err).toHaveBeenCalledWith(t('mes.err.code.on_hold'))
-    expect(inv).toHaveBeenCalledWith({ queryKey: ['mes'] })
-  })
-
-  it('兼容：422 on_hold 且 message 含 Q-Time 时按已转 Hold 提示', async () => {
-    vi.spyOn(execApi, 'stage').mockRejectedValue(
-      axErr(422, {
-        code: 'on_hold',
-        message: 'lot was put on hold: Q-Time expired',
-      })
-    )
-    const warn = vi.spyOn(toast, 'warning')
-    const { inv, wrapper } = setup()
-    const { result } = await renderHook(
-      () => useStageRun(execCtx('moved_in'), () => ({})),
-      { wrapper }
-    )
-    await act(async () => {
-      await result.current.run.mutateAsync({}).catch(() => {})
-    })
-    expect(warn).toHaveBeenCalledWith(qtimeNotice('hold', 'track_in'))
     expect(inv).toHaveBeenCalledWith({ queryKey: ['mes'] })
   })
 })
