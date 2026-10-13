@@ -40,6 +40,8 @@ ACTIVE = ALL - TERMINAL
 
 # 可被 Hold 的状态（手动 + 自动，D4 经 M2 修订：completed/stored 允许）
 HOLDABLE: frozenset[LotStatus] = ACTIVE | {S.COMPLETED, S.STORED}
+# 可被自动 Hold 的状态（D17）
+AUTO_HOLDABLE: frozenset[LotStatus] = ACTIVE
 # Hold 列表默认排除的批次状态（N6 经 M2 修订）；include_terminal=true 时显示全部
 HOLD_LIST_EXCLUDED: frozenset[LotStatus] = frozenset({S.SCRAPPED, S.MERGED})
 
@@ -77,10 +79,11 @@ RULES: dict[str, Rule] = {
     # 加工中不能报废（decisions.md #3）
     "scrap": _r(ACTIVE - {S.RUNNING}, [S.SCRAPPED], hold=True),
     "adjust": _r(ACTIVE, hold=True),
-    "qtime_scrap": _r([S.WAITING], [S.SCRAPPED], hold=True),
     "change_carrier": _r(ACTIVE - {S.RUNNING}, hold=True),
     "priority": _r(ACTIVE, hold=True),
-    "hold": _r(HOLDABLE, hold=True),
+    "hold": _r(HOLDABLE, hold=True),  # 手动 Hold（D13）
+    # 自动 Hold（qtime / oos / future 等，D17）：只作用于在制批次，其余由调用方跳过
+    "auto_hold": _r(AUTO_HOLDABLE, hold=True),
     "release": _r(ALL, hold=True),
     "store": _r([S.COMPLETED], [S.STORED, S.COMPLETED]),
     # 出货（D13 / H2-02）：仅 stored 且不能持 Hold。仓库尚无出货接口与 shipped

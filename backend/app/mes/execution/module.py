@@ -17,5 +17,6 @@ register(
         ),
         routers=("app.mes.execution.router:router",),
         menus=MENUS,
+        tenant_seed="app.mes.execution.seed:seed_system_reasons",
     )
 )

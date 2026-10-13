@@ -43,6 +43,30 @@ def qtime_expired_reason(s: Session, tid: uuid.UUID) -> Row:
     return rs[0] if rs else default_reason(s, tid, "hold")
 
 
+def qtime_hold(
+    s: Session, tid: uuid.UUID, lot: Row, user: Any, r: Row, x: Row, det: Row
+) -> uuid.UUID | None:
+    """Q-Time 超时自动 Hold（source=qtime）。
+
+    原因码：规则配置的 hold 原因优先，否则系统原因码 ``qtime_expired``（D18），
+    都没有时回退默认 hold 原因。非在制批次按 D17 跳过（返回 None）。
+    """
+    rr = one(s, tid, "reason_code", r["reason_id"])
+    reason = rr if rr and rr["reason_type"] == "hold" else qtime_expired_reason(s, tid)
+    return hold_lot(
+        s,
+        tid,
+        lot,
+        user,
+        reason,
+        hold_type="auto",
+        source="qtime",
+        comment=f"Q-Time {r['code']} expired: "
+        f"{x['minutes']:g} > {r['max_minutes']} min",
+        details={**det, "configured_action": r["action"] or "hold", "action": "hold"},
+    )
+
+
 def _qtime_actions(
     s: Session, tid: uuid.UUID, lot: Row, step: Row, user: Any
 ) -> str | None:
@@ -107,36 +131,8 @@ def _qtime_actions(
                 record_move_out=False,
             )
             return "rework"
-        if action == "scrap":
-            # M1：超时不再自动报废，改为自动 Hold（原因码 qtime_expired）
-            reason = qtime_expired_reason(s, tid)
-            hold_lot(
-                s,
-                tid,
-                lot,
-                user,
-                reason,
-                hold_type="auto",
-                source="qtime",
-                comment=f"Q-Time {r['code']} expired: "
-                f"{x['minutes']:g} > {r['max_minutes']} min",
-                details={**det, "configured_action": "scrap", "action": "hold"},
-            )
-            return "hold"
-        reason = one(s, tid, "reason_code", r["reason_id"]) or default_reason(
-            s, tid, "hold"
-        )
-        hold_lot(
-            s,
-            tid,
-            lot,
-            user,
-            reason,
-            hold_type="auto",
-            source="qtime",
-            comment=f"Q-Time {r['code']}: {x['minutes']:g} > {r['max_minutes']} min",
-            details=det,
-        )
+        # D12：超时（含配置为 scrap 的规则）一律自动 Hold，不再报废
+        qtime_hold(s, tid, lot, user, r, x, det)
         return "hold"
     return None
 
@@ -210,7 +206,9 @@ def _qtime_warn(s: Session, tid: uuid.UUID, lot: Row, step: Row) -> int:
 
 
 def sweep_qtime(s: Session, tid: uuid.UUID, user: Any) -> Row:
-    """Q-Time 超时扫描：对等待中、未 Hold 的超时批次立即执行处置（幂等）。
+    """Q-Time 超时扫描：对等待中的超时批次立即执行处置（幂等）。
+
+    已持 Hold 的批次也扫描，新的超时会叠加一条 qtime Hold（QT-04）。
 
     可由前端手动触发或外部调度器定时调用；每条超时只处置一次，管控开关关闭的工步跳过。
 
@@ -218,7 +216,7 @@ def sweep_qtime(s: Session, tid: uuid.UUID, user: Any) -> Row:
         ``{"checked": 扫描批次数, "actions": [{"lot", "action"}]}``。
     """
     acted: list[Row] = []
-    lots = [x for x in find(s, tid, "lot", lot_status="waiting") if not x["on_hold"]]
+    lots = find(s, tid, "lot", lot_status="waiting")
     for lot in lots:
         step = one(s, tid, "route_step", lot["current_step_id"])
         if not step:

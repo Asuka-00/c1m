@@ -198,22 +198,6 @@ MATRIX: list[tuple[str, str, str, bool, str]] = [
     ("M-adjust_qty-scrapped-H", "adjust_qty", "scrapped", True, "lot_status"),
     ("M-adjust_qty-merged-N", "adjust_qty", "merged", False, "lot_status"),
     ("M-adjust_qty-merged-H", "adjust_qty", "merged", True, "lot_status"),
-    ("M-qtime_scrap-waiting-N", "qtime_scrap", "waiting", False, "ok"),
-    ("M-qtime_scrap-waiting-H", "qtime_scrap", "waiting", True, "ok"),
-    ("M-qtime_scrap-moved_in-N", "qtime_scrap", "moved_in", False, "lot_status"),
-    ("M-qtime_scrap-moved_in-H", "qtime_scrap", "moved_in", True, "lot_status"),
-    ("M-qtime_scrap-running-N", "qtime_scrap", "running", False, "lot_status"),
-    ("M-qtime_scrap-running-H", "qtime_scrap", "running", True, "lot_status"),
-    ("M-qtime_scrap-tracked_out-N", "qtime_scrap", "tracked_out", False, "lot_status"),
-    ("M-qtime_scrap-tracked_out-H", "qtime_scrap", "tracked_out", True, "lot_status"),
-    ("M-qtime_scrap-completed-N", "qtime_scrap", "completed", False, "lot_status"),
-    ("M-qtime_scrap-completed-H", "qtime_scrap", "completed", True, "lot_status"),
-    ("M-qtime_scrap-stored-N", "qtime_scrap", "stored", False, "lot_status"),
-    ("M-qtime_scrap-stored-H", "qtime_scrap", "stored", True, "lot_status"),
-    ("M-qtime_scrap-scrapped-N", "qtime_scrap", "scrapped", False, "lot_status"),
-    ("M-qtime_scrap-scrapped-H", "qtime_scrap", "scrapped", True, "lot_status"),
-    ("M-qtime_scrap-merged-N", "qtime_scrap", "merged", False, "lot_status"),
-    ("M-qtime_scrap-merged-H", "qtime_scrap", "merged", True, "lot_status"),
     ("M-change_carrier-waiting-N", "change_carrier", "waiting", False, "ok"),
     ("M-change_carrier-waiting-H", "change_carrier", "waiting", True, "ok"),
     ("M-change_carrier-moved_in-N", "change_carrier", "moved_in", False, "ok"),
@@ -319,9 +303,13 @@ def _lot(status: str, on_hold: bool = False) -> dict[str, Any]:
 
 
 def test_rules_cover_matrix_actions() -> None:
-    assert set(RULES) - {"ship"} == {ACTION.get(r[1], r[1]) for r in MATRIX}
+    # ship（D13 规则层）、auto_hold（D17）不在清单矩阵中；qtime_scrap 按 D12 删除
+    assert set(RULES) - {"ship", "auto_hold"} == {
+        ACTION.get(r[1], r[1]) for r in MATRIX
+    }
+    assert "qtime_scrap" not in RULES
     assert (
-        len(MATRIX) == 272 and sum(r[4] == "ok" for r in MATRIX) == 66
+        len(MATRIX) == 256 and sum(r[4] == "ok" for r in MATRIX) == 64
     )  # 清单 62 + M2 的 4 条
 
 
@@ -396,11 +384,22 @@ def test_h2_02_ship_stored_on_hold_rejected() -> None:
 
 
 def test_qt_06_no_qtime_scrap_write_path() -> None:
-    """QT-06（M1）：Q-Time 处置代码中不再有写 scrapped 的路径。"""
+    """QT-06（D12）：qtime.py / qtime_actions.py 无超时直接报废路径。"""
     from pathlib import Path
 
     import app.mes.execution.qtime_actions as qa
+    import app.mes.lot.qtime as lq
 
-    src = Path(qa.__file__).read_text(encoding="utf-8")
-    assert 'lot_status="scrapped"' not in src
-    assert 'wafer_status="scrapped"' not in src
+    for mod in (qa, lq):
+        src = Path(mod.__file__).read_text(encoding="utf-8")
+        for bad in ('"scrapped"', "'scrapped'", '"qtime_scrap"', 'action == "scrap"'):
+            assert bad not in src, (mod.__name__, bad)
+
+
+@pytest.mark.parametrize("status", ["completed", "stored", "scrapped", "merged"])
+def test_ah_auto_hold_rule(status: str) -> None:
+    """D17：自动 Hold 只对在制批次；手动 Hold 按 HOLDABLE（completed/stored 允许）。"""
+    assert not allowed(_lot(status), "auto_hold")
+    assert allowed(_lot(status), "hold") is (status in ("completed", "stored"))
+    for st in ("waiting", "moved_in", "running", "tracked_out"):
+        assert allowed(_lot(st, True), "auto_hold")

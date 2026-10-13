@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 
 from sqlmodel import Session, select
 
+from app.core.registry import seed_tenant
 from app.platform.rbac.models import Permission, Role
 from app.platform.rbac.permissions import TENANT_ROLES
 from app.platform.rbac.service import fill_names
@@ -115,6 +116,7 @@ def create_tenant(session: Session, name: str, slug: str, owner: User | None) ->
     session.flush()
     seed_tenant_roles(session, tenant)
     session.flush()
+    seed_tenant(session, tenant.id)
     if owner:
         add_member(session, tenant, owner, ["owner"])
     session.commit()

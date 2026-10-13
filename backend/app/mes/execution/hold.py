@@ -89,8 +89,8 @@ def hold_lot(
     Raises:
         HTTPException: 手工 Hold 终态批次（422）。
     """
-    if hold_type != "manual" and not allowed(lot, "hold"):
-        # 自动来源遇不可 Hold 的批次（RULES["hold"]）：静默跳过，不写数据（P11）
+    if hold_type != "manual" and not allowed(lot, "auto_hold"):
+        # 自动来源遇非在制批次（RULES["auto_hold"]，D17）：跳过，不写数据，记一行日志
         log.warning("skip %s hold on %s lot %s", source, lot["lot_status"], lot["code"])
         return None
     check_transition(lot, "hold")

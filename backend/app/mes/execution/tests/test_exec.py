@@ -911,9 +911,10 @@ def test_qtime_min_and_violation_actions(client: TestClient, db: Session) -> Non
         {"action": "scrap", "reason_id": f.reasons["scrap"]["id"]},
     )
     # QT-01（M1）：配置为 scrap 的超时也改为自动 Hold（原因码 qtime_expired），不报废
-    qe = m.post(
-        "reason_code",
-        {"code": "qtime_expired", "name": "qtime expired", "reason_type": "hold"},
+    qe = next(  # 系统原因码，租户初始化时已建（D18）
+        x
+        for x in m.list("reason_code", code="qtime_expired")["data"]
+        if x["code"] == "qtime_expired"
     )
     r = f.stage(c, "move_in", equipment_id=f.eq["id"])
     assert r["qtime"] == "hold" and r["lot"]["on_hold"]
