@@ -17,6 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { POPOVER_W } from '@/components/field-width'
 import { IconTooltip } from '@/components/icon-button'
 
 /** 标签式多选输入：已选项显示为可移除的标签，点击展开可搜索的选项列表。 */
@@ -72,7 +73,7 @@ export function TagSelect({
           <ChevronsUpDown className='ms-auto size-4 opacity-50' />
         </div>
       </PopoverTrigger>
-      <PopoverContent className='w-(--radix-popover-trigger-width) p-0'>
+      <PopoverContent className={cn(POPOVER_W, 'p-0')} align='start'>
         <Command>
           <CommandInput placeholder={t('rbac.search')} />
           <CommandList>

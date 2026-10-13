@@ -77,7 +77,7 @@ export default function OeeReport() {
       <div className='flex flex-wrap items-end gap-3'>
         <DateRange from={from} to={to} setFrom={setFrom} setTo={setTo} />
         <Select value={wc} onValueChange={setWc}>
-          <SelectTrigger className='w-44' data-testid='oee-wc'>
+          <SelectTrigger className='max-w-72 min-w-44' data-testid='oee-wc'>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

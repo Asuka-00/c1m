@@ -13,6 +13,7 @@ import {
   useListParams,
   type FilterDef,
 } from '@/components/crud'
+import { NUM_W } from '@/components/field-width'
 import { enumLabel } from '@/features/mes/common/labels'
 import { RefLink } from '@/features/mes/common/ref-link'
 
@@ -85,7 +86,7 @@ export default function WoBoard() {
             type='number'
             min={0}
             max={60}
-            className='w-20'
+            className={NUM_W}
             value={warn ?? ''}
             placeholder={t('mes.woBoard.ruleDefault')}
             onChange={(e) =>

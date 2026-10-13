@@ -153,7 +153,10 @@ export default function PermissionTreePage() {
           onChange={(x) => setQ(x.target.value)}
         />
         <Select value={space} onValueChange={setSpace}>
-          <SelectTrigger className='w-40' aria-label={t('rbac.space')}>
+          <SelectTrigger
+            className='max-w-72 min-w-40'
+            aria-label={t('rbac.space')}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -167,7 +170,10 @@ export default function PermissionTreePage() {
           </SelectContent>
         </Select>
         <Select value={type} onValueChange={setType}>
-          <SelectTrigger className='w-36' aria-label={t('rbac.type')}>
+          <SelectTrigger
+            className='max-w-72 min-w-36'
+            aria-label={t('rbac.type')}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

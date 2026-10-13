@@ -70,7 +70,10 @@ export default function YieldReport() {
       <div className='flex flex-wrap items-end gap-3'>
         <DateRange from={from} to={to} setFrom={setFrom} setTo={setTo} />
         <Select value={group} onValueChange={(v) => setGroup(v as YieldGroup)}>
-          <SelectTrigger className='w-40' data-testid='yield-group'>
+          <SelectTrigger
+            className='max-w-72 min-w-40'
+            data-testid='yield-group'
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

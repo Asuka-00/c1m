@@ -121,7 +121,7 @@ export default function LabelPrint() {
             setPicked({})
           }}
         >
-          <SelectTrigger className='w-36' data-testid='label-kind'>
+          <SelectTrigger className='max-w-72 min-w-36' data-testid='label-kind'>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -133,7 +133,7 @@ export default function LabelPrint() {
           </SelectContent>
         </Select>
         <Select value={code} onValueChange={(v) => setCode(v as CodeKind)}>
-          <SelectTrigger className='w-40'>
+          <SelectTrigger className='max-w-72 min-w-40'>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

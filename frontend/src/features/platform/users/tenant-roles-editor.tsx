@@ -57,7 +57,10 @@ function Row({
           })
         }
       >
-        <SelectTrigger className='w-44 shrink-0' aria-label={t('users.tenant')}>
+        <SelectTrigger
+          className='max-w-72 min-w-44 shrink-0'
+          aria-label={t('users.tenant')}
+        >
           <SelectValue placeholder={t('users.pickTenant')} />
         </SelectTrigger>
         <SelectContent>

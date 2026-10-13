@@ -20,6 +20,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { FIELD_MIN_W, POPOVER_W } from '@/components/field-width'
 import { IconButton } from '@/components/icon-button'
 import { rowLabel } from './labels'
 
@@ -55,7 +56,7 @@ export function RefSelect({
     enabled: open,
   })
   return (
-    <div className='flex min-w-0 gap-1'>
+    <div className={cn('flex w-full gap-1', FIELD_MIN_W)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -66,13 +67,16 @@ export function RefSelect({
             disabled={disabled}
             className='min-w-0 flex-1 justify-between font-normal'
           >
-            <span className={cn('truncate', !value && 'text-muted-foreground')}>
+            <span
+              className={cn('truncate', !value && 'text-muted-foreground')}
+              title={value ? String(label ?? value) : undefined}
+            >
               {value ? (label ?? value) : t('common.select')}
             </span>
             <ChevronsUpDown className='opacity-50' />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className='w-(--radix-popover-trigger-width) p-0'>
+        <PopoverContent className={cn(POPOVER_W, 'p-0')} align='start'>
           <Command shouldFilter={false}>
             <CommandInput
               value={q}
@@ -99,7 +103,12 @@ export function RefSelect({
                         value === r.id ? 'opacity-100' : 'opacity-0'
                       )}
                     />
-                    {rowLabel(r, labelField)}
+                    <span
+                      className='break-all whitespace-normal'
+                      title={rowLabel(r, labelField)}
+                    >
+                      {rowLabel(r, labelField)}
+                    </span>
                   </CommandItem>
                 ))}
               </CommandGroup>

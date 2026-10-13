@@ -25,6 +25,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { POPOVER_W } from '@/components/field-width'
 import { IconButton } from '@/components/icon-button'
 import {
   type FilterDef,
@@ -255,7 +256,7 @@ function SelectFilter({
           <ChevronDown className='size-4 opacity-50' />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className='w-72 p-0' align='start'>
+      <PopoverContent className={cn(POPOVER_W, 'min-w-72 p-0')} align='start'>
         <Command shouldFilter={!remote}>
           <CommandInput
             value={q}
