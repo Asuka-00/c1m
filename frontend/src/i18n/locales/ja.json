@@ -587,9 +587,9 @@
         "move_out": "ムーブアウト完了"
       },
       "qtimeAction": {
-        "hold": "Q-Time超過：ロットをホールド",
-        "scrap": "Q-Time超過：ロット廃棄",
-        "rework": "Q-Time超過：リワークへ"
+        "hold": "Q-Time 超過：ロットをホールド",
+        "scrap": "Q-Time 超過：ロット廃棄",
+        "rework": "Q-Time 超過：リワークへ"
       },
       "frame": {
         "sub_route": "サブルート",
@@ -661,7 +661,7 @@
       "eqpRecipeHint": "装置報告またはスキャン（任意）",
       "chambers": "チャンバー",
       "futureHold": "予約ホールド工程に到着、ロットをホールド：{{reason}}",
-      "qtimeHandled": "Q-Time超過を処置しました",
+      "qtimeHandled": "Q-Time 超過を処置しました",
       "qtimeStageSkipped": "今回の {{stage}} は実行されていません。ロット状態を確認してください"
     },
     "trace": {
@@ -704,7 +704,7 @@
       "mergeHint": "統合可能な同一製品・同一ステップのロット。",
       "noCandidates": "統合可能なロットはありません。",
       "mergedQty": "統合後数量：{{n}}",
-      "qtimeNote": "Q-Timeは最も早い（厳しい）開始時刻を採用。",
+      "qtimeNote": "Q-Time は最も早い（厳しい）開始時刻を採用。",
       "factChildren": "子ロット：{{list}}",
       "factParent": "親ロット {{code}} から",
       "factTarget": "{{code}} へ統合",
@@ -758,7 +758,7 @@
       "runningScrapAll": "加工中のロットは全数廃棄（数量 0）できません。Track Out 後に処理してください"
     },
     "qtime": {
-      "hint": "待機中ロットの Q-Time残り時間と超過状況。",
+      "hint": "待機中ロットの Q-Time 残り時間と超過状況。",
       "refresh": "更新",
       "sweep": "超過を今すぐスキャン",
       "swept": "{{checked}} ロットをスキャン、{{acted}} 件処置",
@@ -1224,11 +1224,11 @@
     "event": {
       "mes": {
         "qtime_warn": {
-          "label": "Q-Time事前警告",
+          "label": "Q-Time 事前警告",
           "title": "ロット {{lot}} の Q-Time {{rule}} が {{left}} 分後に超過します"
         },
         "qtime_exceeded": {
-          "label": "Q-Time超過",
+          "label": "Q-Time 超過",
           "title": "ロット {{lot}} の Q-Time {{rule}} 超過：{{minutes}} > {{max}} 分（{{action}}）"
         },
         "lot_hold": {

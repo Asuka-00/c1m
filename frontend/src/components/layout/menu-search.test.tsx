@@ -214,6 +214,52 @@ describe('MenuSearch / MenuBreadcrumb', () => {
       .toHaveTextContent(t('menu.mes-equipment_type'))
   })
 
+  it('Esc 关闭搜索框', async () => {
+    const { s } = await show()
+    await s.getByTestId('menu-search-open').click()
+    await expect.poll(dialog).not.toBeNull()
+    await userEvent.keyboard('{Escape}')
+    await expect.poll(dialog).toBeNull()
+  })
+
+  it('方向键 + 回车选中跳转', async () => {
+    const { s, router } = await show()
+    await s.getByTestId('menu-search-open').click()
+    await userEvent.keyboard('mes-')
+    await expect
+      .element(s.getByTestId('menu-hit-mes-lot-console'))
+      .toHaveAttribute('data-selected', 'true')
+    await userEvent.keyboard('{ArrowDown}')
+    await expect
+      .element(s.getByTestId('menu-hit-mes-qtime-monitor'))
+      .toHaveAttribute('data-selected', 'true')
+    await userEvent.keyboard('{Enter}')
+    await expect
+      .poll(() => router.state.location.pathname)
+      .toBe('/mes/qtime-monitor')
+    await expect.poll(dialog).toBeNull()
+  })
+
+  it('无结果时显示 nav.searchMenuEmpty', async () => {
+    const { s } = await show()
+    await s.getByTestId('menu-search-open').click()
+    await userEvent.keyboard('zzz-no-such-menu')
+    await expect.element(s.getByText(t('nav.searchMenuEmpty'))).toBeVisible()
+  })
+
+  it('面包屑分隔符在 li 内且对读屏隐藏', async () => {
+    const { s } = await show('/mes/equipment-master?tab=mes-equipment_type')
+    await expect.element(s.getByTestId('breadcrumb')).toBeVisible()
+    const ol = document.querySelector('[data-testid=breadcrumb] ol')!
+    expect([...ol.children].every((c) => c.tagName === 'LI')).toBe(true)
+    const seps = ol.querySelectorAll('svg')
+    expect(seps.length).toBe(2)
+    seps.forEach((x) => {
+      expect(x.closest('li')).not.toBeNull()
+      expect(x.getAttribute('aria-hidden')).toBe('true')
+    })
+  })
+
   it('未知路由不显示面包屑', async () => {
     await show('/no/such/page')
     await new Promise((r) => setTimeout(r, 100))

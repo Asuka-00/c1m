@@ -7,7 +7,6 @@
 export const BACKEND_MENU_KEYS = [
   'g-workspace',
   'g-execution',
-  'g-exception',
   'g-wip',
   'g-planning',
   'g-warehouse',

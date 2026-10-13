@@ -1,9 +1,9 @@
 /** 顶栏面包屑：分组 › 菜单 › 页签（由当前路由在菜单树中反查）。 */
-import { Fragment } from 'react'
 import { Link, useLocation } from '@tanstack/react-router'
 import { t } from '@/i18n'
 import { ChevronRight } from 'lucide-react'
 import { useMyMenus } from '@/lib/api/hooks'
+import { cn } from '@/lib/utils'
 import { breadcrumbOf } from './menu-index'
 
 export function MenuBreadcrumb() {
@@ -22,14 +22,21 @@ export function MenuBreadcrumb() {
         {crumbs.map((c, i) => {
           const last = i === crumbs.length - 1
           return (
-            <Fragment key={c.key}>
-              {i > 0 && <ChevronRight className='size-3.5 shrink-0' />}
-              <li
-                className={
-                  last ? 'truncate font-medium text-foreground' : 'truncate'
-                }
-                aria-current={last ? 'page' : undefined}
-              >
+            <li
+              key={c.key}
+              className={cn(
+                'flex min-w-0 items-center gap-1',
+                last && 'font-medium text-foreground'
+              )}
+              aria-current={last ? 'page' : undefined}
+            >
+              {i > 0 && (
+                <ChevronRight
+                  className='size-3.5 shrink-0 text-muted-foreground'
+                  aria-hidden='true'
+                />
+              )}
+              <span className='truncate'>
                 {!last && c.path ? (
                   c.path === '/' ? (
                     <Link to='/' className='hover:underline'>
@@ -47,8 +54,8 @@ export function MenuBreadcrumb() {
                 ) : (
                   c.title
                 )}
-              </li>
-            </Fragment>
+              </span>
+            </li>
           )
         })}
       </ol>
