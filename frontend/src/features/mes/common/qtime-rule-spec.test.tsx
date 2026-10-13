@@ -37,6 +37,25 @@ const rule = {
   fields: [action, reason, isActive, activeSince],
 } as unknown as MesEntity
 
+async function showForm(entity: MesEntity, row: Record<string, unknown>) {
+  vi.spyOn(mesApi, 'meta').mockResolvedValue({
+    enums: { qtime_action: ['warn', 'hold', 'rework'] },
+  } as never)
+  vi.spyOn(mesApi, 'attrs').mockResolvedValue([] as never)
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(
+    <QueryClientProvider client={qc}>
+      <EntityForm
+        entity={entity}
+        row={row as never}
+        open
+        onOpenChange={() => {}}
+        onSubmit={async () => {}}
+      />
+    </QueryClientProvider>
+  )
+}
+
 describe('Q-Time 规则（后端 463d599 规格）', () => {
   it('hold 时原因码选填，且显示 qtime_expired 帮助文本', () => {
     const v = { action: 'hold', reason_id: null, is_active: true }
@@ -69,6 +88,21 @@ describe('Q-Time 规则（后端 463d599 规格）', () => {
     expect(t('mes.enum.audit_action.qtime_rework')).toContain('Q-Time')
     expect(t('mes.field.qtime_rule.is_active')).not.toBe('is_active')
     expect(t('mes.field.qtime_rule.active_since')).not.toBe('active_since')
+  })
+
+  it('其他实体：布尔字段仍为复选框，系统字段编辑时不显示', async () => {
+    const other = {
+      code: 'other',
+      fields: [isActive, activeSince],
+    } as unknown as MesEntity
+    const s = await showForm(other, {
+      id: 'X1',
+      is_active: true,
+      active_since: '2026-10-13T12:00:00+00:00',
+    })
+    await expect.element(s.getByRole('checkbox')).toBeChecked()
+    expect(document.querySelector('[role=switch]')).toBeNull()
+    expect(document.querySelector('[data-testid=ro-active_since]')).toBeNull()
   })
 
   it('编辑表单：动作选项按后端枚举（无 scrap），is_active 为开关，active_since 只读', async () => {

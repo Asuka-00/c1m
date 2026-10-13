@@ -59,6 +59,11 @@ function initialValues(e: MesEntity, row: MesRow | null, preset: V): V {
   return v
 }
 
+/** 以开关渲染的布尔字段（实体.字段）；其他布尔字段仍用复选框。 */
+const SWITCH_FIELDS = new Set(['qtime_rule.is_active'])
+/** 编辑时只读显示的系统维护字段（实体.字段）。 */
+const READONLY_ON_EDIT = new Set(['qtime_rule.active_since'])
+
 function toPayload(e: MesEntity, v: V, hidden: Set<string>): V {
   const out: V = {}
   for (const f of e.fields) {
@@ -184,9 +189,12 @@ function FormBody({
       !f.system &&
       (!f.only_when_required || !!requiredBy(e, f, v))
   )
-  // 系统维护字段（如 Q-Time 规则的 active_since）：编辑时只读显示，不提交
+  // 系统维护字段编辑时只读显示（不提交）；本轮仅 Q-Time 规则的 active_since
   const readonly = row
-    ? e.fields.filter((f) => f.system && row[f.column] != null)
+    ? e.fields.filter(
+        (f) =>
+          READONLY_ON_EDIT.has(`${e.code}.${f.name}`) && row[f.column] != null
+      )
     : []
   return (
     <form onSubmit={submit} noValidate className='space-y-4'>
@@ -363,11 +371,19 @@ function FieldInput({
     case 'bool':
       return (
         <div className='flex h-9 items-center'>
-          <Switch
-            id={id}
-            checked={val === true}
-            onCheckedChange={(c) => set(f.column, c)}
-          />
+          {SWITCH_FIELDS.has(`${e.code}.${f.name}`) ? (
+            <Switch
+              id={id}
+              checked={val === true}
+              onCheckedChange={(c) => set(f.column, c)}
+            />
+          ) : (
+            <Checkbox
+              id={id}
+              checked={val === true}
+              onCheckedChange={(c) => set(f.column, c === true)}
+            />
+          )}
         </div>
       )
     case 'enum':
