@@ -1328,6 +1328,7 @@
     "mes-wafer": "ウェーハ",
     "mes-wip-dashboard": "WIP ダッシュボード",
     "mes-oee-report": "設備 OEE",
+    "mes-yield-report": "歩留まり",
     "mes-lot-history": "ロット履歴・トレース",
     "mes-check_log": "チェック記録",
     "mes-lot_recipe_run": "レシピ実行記録",

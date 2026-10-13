@@ -74,11 +74,25 @@ import {
   MapPin,
   PackageCheck,
   Warehouse,
+  PieChart,
+  Printer,
+  NotebookPen,
+  GitPullRequestArrow,
+  KanbanSquare,
+  Award,
+  CalendarX,
   type LucideIcon,
 } from 'lucide-react'
 
 /** 后端菜单注册表可引用的图标名（lucide 名称）。 */
 export const ICONS: Record<string, LucideIcon> = {
+  PieChart,
+  Printer,
+  NotebookPen,
+  GitPullRequestArrow,
+  KanbanSquare,
+  Award,
+  CalendarX,
   LogIn,
   Send,
   MapPin,

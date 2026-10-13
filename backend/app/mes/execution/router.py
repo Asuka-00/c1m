@@ -295,6 +295,20 @@ def report_oee(
     return {"data": svc.oee(session, ctx.id, a, b), "from": a, "to": b}
 
 
+@router.get("/reports/yield")
+def report_yield(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    group: Literal["operation", "product", "lot"] = "operation",
+) -> Any:
+    """Yield by operation / product / lot and scrap reason Pareto."""
+    _need(ctx, "mes.exec:read")
+    a, b = _window(date_from, date_to, 30)
+    return {**svc.yield_report(session, ctx.id, a, b, group), "from": a, "to": b}
+
+
 @router.get("/reports/oee-trend")
 def report_oee_trend(
     session: SessionDep,

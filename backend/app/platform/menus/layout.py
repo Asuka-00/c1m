@@ -44,6 +44,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
     "g-wip": [
         ("mes-wip-dashboard", "WIP Dashboard|WIP 看板|WIP ダッシュボード"),
         ("mes-oee-report", "Equipment OEE|设备 OEE|設備 OEE"),
+        ("mes-yield-report", "Yield|良率统计|歩留まり"),
         ("mes-lot-history", "Lot History & Trace|批次履历与追溯|ロット履歴・トレース"),
         ("mes-check_log", "Check Log|卡控记录|チェック記録"),
         ("mes-lot_recipe_run", "Recipe Run|配方执行记录|レシピ実行記録"),

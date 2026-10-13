@@ -1328,6 +1328,7 @@
     "mes-wafer": "Wafer",
     "mes-wip-dashboard": "WIP Dashboard",
     "mes-oee-report": "Equipment OEE",
+    "mes-yield-report": "Yield",
     "mes-lot-history": "Lot History & Trace",
     "mes-check_log": "Check Log",
     "mes-lot_recipe_run": "Recipe Run",

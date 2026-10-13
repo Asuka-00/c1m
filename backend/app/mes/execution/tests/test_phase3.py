@@ -293,3 +293,27 @@ def test_wafer_sorter(client: TestClient, db: Session) -> None:
     # 规则关闭 → 可打乱顺序
     f.sql("UPDATE mes_check_rule SET severity = 'off'")
     post(f"/lots/{lot['id']}/sort", {"slots": m(3, 2, 1)})
+
+
+def test_yield_report(client: TestClient, db: Session) -> None:
+    from app.mes.execution.tests.test_exec import Line
+
+    f = Line(client, db, {"product": {"tracking_level": "quantity"}})
+    (lot,) = f.start(100)
+    sr = f.reasons["scrap"]["id"]
+    f.stage(lot, "move_in")
+    f.stage(lot, "track_in", equipment_id=f.eq["id"])
+    f.stage(lot, "track_out", scrap=[{"qty": 10, "reason_id": sr}])
+
+    def rep(group: str) -> Any:
+        r = client.get(f"{EXEC}/reports/yield", headers=f.m.h, params={"group": group})
+        assert r.status_code == 200, r.text
+        return r.json()
+
+    op = rep("operation")
+    assert op["rows"] == [
+        {"key": "OP1", "name": "o1", "good": 90, "scrap": 10, "yield": 0.9}
+    ]
+    assert op["pareto"][0]["qty"] == 10 and op["pareto"][0]["cum_pct"] == 1.0
+    assert rep("lot")["rows"][0]["key"] == lot["code"]
+    assert rep("product")["total"]["yield"] == 0.9

@@ -1004,6 +1004,30 @@
       "pack": "Pack in order",
       "run": "Sort",
       "done": "Wafer sort done"
+    },
+    "yield": {
+      "hint": "Yield by operation, product or lot, with scrap reasons.",
+      "search": "Search code / name",
+      "allBands": "All yields",
+      "band": {
+        "low": "Below 90%",
+        "mid": "90%–98%",
+        "high": "98% and above"
+      },
+      "by": {
+        "operation": "Operation",
+        "product": "Product",
+        "lot": "Lot"
+      },
+      "total": "Good {{good}}, scrap {{scrap}}, yield {{y}}",
+      "pareto": "Scrap reason Pareto",
+      "noScrap": "No scrap in this period.",
+      "qty": "Qty",
+      "cum": "Cumulative %",
+      "name": "Name",
+      "good": "Good",
+      "scrap": "Scrap",
+      "yield": "Yield"
     }
   },
   "notify": {

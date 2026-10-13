@@ -195,6 +195,30 @@ export interface CarrierRow {
   clean_due_at: string | null
   due_state: 'ok' | 'warn' | 'overdue'
 }
+/** 良率分组维度。 */
+export type YieldGroup = 'operation' | 'product' | 'lot'
+/** 良率统计行。 */
+export interface YieldRow {
+  key: string
+  name: string
+  good: number
+  scrap: number
+  yield: number | null
+}
+/** 报废原因帕累托项。 */
+export interface ParetoRow {
+  reason: string
+  name: string
+  qty: number
+  pct: number
+  cum_pct: number
+}
+/** 良率统计结果。 */
+export interface YieldReport {
+  rows: YieldRow[]
+  pareto: ParetoRow[]
+  total: { good: number; scrap: number; yield: number | null }
+}
 /** 批量作业阶段。 */
 export type BatchStage = 'track_in' | 'track_out'
 /** 批量作业候选（设备上的批次、腔体与配方）。 */
@@ -427,6 +451,15 @@ export interface WaferMap {
 }
 
 export const execApi = {
+  /** 良率统计与报废帕累托。 */
+  yieldReport: (p: {
+    date_from?: string
+    date_to?: string
+    group: YieldGroup
+  }) =>
+    http
+      .get<YieldReport>('/mes/exec/reports/yield', { params: p })
+      .then((r) => r.data),
   /** 晶圆整理（Sorter）：重排槽位，可移入另一载具。 */
   sortWafers: (
     lotId: string,

@@ -9,6 +9,7 @@ export const pages: Pages = {
   'mes-page:hold': lazy(() => import('./hold-manage')),
   'mes-page:wip-dashboard': lazy(() => import('./wip-dashboard')),
   'mes-page:oee-report': lazy(() => import('./oee-report')),
+  'mes-page:yield-report': lazy(() => import('./yield-report')),
   'mes-page:trace': lazy(() => import('./trace')),
   'mes-page:lot-trace': lazy(() => import('./lot-trace')),
   'mes-page:batch-ops': lazy(() => import('./batch-ops')),

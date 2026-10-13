@@ -45,3 +45,4 @@ from app.mes.execution.stages import run_stage as run_stage
 from app.mes.execution.trace import trace as trace
 from app.mes.execution.trace import wafer_history as wafer_history
 from app.mes.execution.trace import wafer_map as wafer_map
+from app.mes.execution.yields import yield_report as yield_report

@@ -1328,6 +1328,7 @@
     "mes-wafer": "晶圆",
     "mes-wip-dashboard": "WIP 看板",
     "mes-oee-report": "设备 OEE",
+    "mes-yield-report": "良率统计",
     "mes-lot-history": "批次履历与追溯",
     "mes-check_log": "卡控记录",
     "mes-lot_recipe_run": "配方执行记录",
