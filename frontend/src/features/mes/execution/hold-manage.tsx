@@ -22,6 +22,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import {
   DataTable,
@@ -31,7 +32,7 @@ import {
   useListParams,
   type FilterDef,
 } from '@/components/crud'
-import { optLabel } from '@/features/mes/common/labels'
+import { enumLabel, optLabel } from '@/features/mes/common/labels'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { RefLink } from '@/features/mes/common/ref-link'
 import { mesErrorMessage } from '@/features/mes/common/required'
@@ -105,9 +106,13 @@ export default function HoldManagePage() {
     setStatusSeen(status)
     setSel([])
   }
+  // 终态批次的 Hold 默认不显示（P15 A / N6），开关打开时请求 include_terminal=true
+  const [showTerminal, setShowTerminal] = useState(false)
+  const terminalParam = showTerminal ? { include_terminal: 'true' } : {}
   const q = useQuery({
-    queryKey: ['mes', 'exec', tk, 'holds', lp.query],
-    queryFn: () => execApi.holds({ status: 'all', ...lp.query }),
+    queryKey: ['mes', 'exec', tk, 'holds', lp.query, showTerminal],
+    queryFn: () =>
+      execApi.holds({ status: 'all', ...lp.query, ...terminalParam }),
   })
   const rows = useMemo(() => q.data?.data ?? [], [q.data])
   const total = q.data?.count ?? 0
@@ -141,6 +146,7 @@ export default function HoldManagePage() {
               const { data: all } = await execApi.holds({
                 status: 'all',
                 ...lp.query,
+                ...terminalParam,
                 page: 1,
                 page_size: 5000,
               })
@@ -182,6 +188,17 @@ export default function HoldManagePage() {
             <Download className='size-4' />
             {t('mes.export')}
           </Button>
+          <Label className='flex items-center gap-2 font-normal'>
+            <Switch
+              checked={showTerminal}
+              onCheckedChange={(v) => {
+                setShowTerminal(v)
+                setSel([])
+              }}
+              data-testid='show-terminal'
+            />
+            {t('mes.holdrel.showTerminal')}
+          </Label>
           {canRelease && (
             <Button
               disabled={sel.length === 0}
@@ -239,6 +256,21 @@ export default function HoldManagePage() {
               <RefLink target='lot' id={r.lot_id} label={r.lot} mono />
             ),
           },
+          ...(rows.some((r) => r.lot_status != null)
+            ? [
+                {
+                  header: t('mes.holdrel.lotStatus'),
+                  cell: (r: HoldRow) =>
+                    r.lot_status ? (
+                      <span data-testid='hold-lot-status'>
+                        {enumLabel('lot_status', r.lot_status)}
+                      </span>
+                    ) : (
+                      '—'
+                    ),
+                },
+              ]
+            : []),
           {
             header: t('mes.holdrel.product'),
             sortKey: 'product',

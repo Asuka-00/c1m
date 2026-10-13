@@ -883,7 +883,9 @@
       "releasedAt": "解除日時",
       "releasedBy": "解除者",
       "releaseReason": "解除理由",
-      "releaseComment": "解除コメント"
+      "releaseComment": "解除コメント",
+      "showTerminal": "終了ロットを表示",
+      "lotStatus": "ロット状態"
     },
     "report": {
       "hint": "仕掛分布・滞留ロット・日次産出。",

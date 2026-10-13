@@ -128,6 +128,8 @@ export interface HoldRow {
   released_by: string | null
   release_reason: string | null
   release_comment: string | null
+  /** 批次状态（N6；旧版接口无此字段） */
+  lot_status?: string | null
 }
 /** 追溯对象类型。 */
 export type TraceKind = 'lot' | 'wafer' | 'equipment' | 'material_lot'

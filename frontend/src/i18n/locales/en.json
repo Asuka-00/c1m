@@ -883,7 +883,9 @@
       "releasedAt": "Released at",
       "releasedBy": "Released by",
       "releaseReason": "Release reason",
-      "releaseComment": "Release comment"
+      "releaseComment": "Release comment",
+      "showTerminal": "Show terminal lots",
+      "lotStatus": "Lot status"
     },
     "report": {
       "hint": "WIP distribution, waiting lots and daily output.",

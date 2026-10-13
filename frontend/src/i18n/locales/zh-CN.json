@@ -883,7 +883,9 @@
       "releasedAt": "解除时间",
       "releasedBy": "解除人",
       "releaseReason": "解除原因",
-      "releaseComment": "解除备注"
+      "releaseComment": "解除备注",
+      "showTerminal": "显示终态批次",
+      "lotStatus": "批次状态"
     },
     "report": {
       "hint": "在制分布、滞留批次与每日产出。",
