@@ -2,8 +2,8 @@ import axios, { AxiosError } from 'axios'
 import i18n, { currentLanguage, t } from '@/i18n'
 import { useAuthStore } from '@/stores/auth-store'
 
-/** 后端 API 地址（VITE_API_URL，默认 http://localhost:8000）。 */
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+/** 后端 API 地址（VITE_API_URL；设为空字符串时使用同源，生产经 nginx 反代 /api；未设置时默认 http://localhost:8000）。 */
+export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 /** Axios 实例：附带 Bearer 令牌与 X-Tenant-ID；401 时登出。 */
 export const http = axios.create({ baseURL: `${API_URL}/api/v1` })
