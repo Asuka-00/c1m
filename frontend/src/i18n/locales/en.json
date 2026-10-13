@@ -785,7 +785,10 @@
       "pmWarn": "PM due soon",
       "allDown": "All (down or not)",
       "notDown": "Not down",
-      "workcenter": "Work center"
+      "workcenter": "Work center",
+      "chambers": "Chambers",
+      "chamberCount": "{{n}} chambers",
+      "chambersOf": "{{code}} chambers"
     },
     "traceq": {
       "hint": "Trace upstream and downstream by lot, wafer, equipment or material lot.",
@@ -990,6 +993,17 @@
       "target": "Target carrier",
       "moved": "Carrier changed",
       "splitMerge": "Split / merge"
+    },
+    "sorter": {
+      "action": "Sort",
+      "title": "Wafer sort: {{lot}} ({{code}})",
+      "target": "Move to carrier (optional)",
+      "wafer": "Wafer",
+      "from": "From slot",
+      "to": "To slot",
+      "pack": "Pack in order",
+      "run": "Sort",
+      "done": "Wafer sort done"
     }
   },
   "notify": {

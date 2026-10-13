@@ -962,7 +962,8 @@
         "split": "分割",
         "merge": "統合",
         "jump": "ステップジャンプ",
-        "adjust": "廃棄・追加"
+        "adjust": "廃棄・追加",
+        "sort": "ウェーハソート"
       },
       "check_type": {
         "e10_available": "設備 E10 状態使用可",
@@ -973,6 +974,7 @@
         "tool_life": "工具使用可・寿命",
         "carrier_available": "キャリア使用可",
         "batch_same_step": "一括：同一ステップ",
+        "sort_order": "ソート順序維持",
         "carrier_clean": "キャリア洗浄周期",
         "carrier_usage": "キャリア使用回数",
         "chamber_required": "チャンバー選択済",
@@ -1050,7 +1052,8 @@
         "merge": "統合",
         "jump": "ステップジャンプ",
         "bonus": "追加",
-        "carrier_change": "キャリア変更"
+        "carrier_change": "キャリア変更",
+        "sort": "ウェーハソート"
       },
       "genealogy_relation": {
         "split": "分割",
@@ -1169,7 +1172,8 @@
       "carrier_event_type": {
         "load": "積込み",
         "unload": "取出し",
-        "clean": "洗浄"
+        "clean": "洗浄",
+        "sort": "ウェーハソート"
       },
       "asset_status": {
         "available": "使用可",

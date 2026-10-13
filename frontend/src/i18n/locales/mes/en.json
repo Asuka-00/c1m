@@ -962,7 +962,8 @@
         "split": "Split",
         "merge": "Merge",
         "jump": "Jump step",
-        "adjust": "Scrap / bonus"
+        "adjust": "Scrap / bonus",
+        "sort": "Wafer sort"
       },
       "check_type": {
         "e10_available": "Equipment E10 state available",
@@ -973,6 +974,7 @@
         "tool_life": "Tool available + life",
         "carrier_available": "Carrier available",
         "batch_same_step": "Batch: same step",
+        "sort_order": "Sort keeps wafer order",
         "carrier_clean": "Carrier cleaning due",
         "carrier_usage": "Carrier usage limit",
         "chamber_required": "Chamber selected",
@@ -1050,7 +1052,8 @@
         "merge": "Merge",
         "jump": "Jump step",
         "bonus": "Bonus",
-        "carrier_change": "Carrier change"
+        "carrier_change": "Carrier change",
+        "sort": "Wafer sort"
       },
       "genealogy_relation": {
         "split": "Split",
@@ -1169,7 +1172,8 @@
       "carrier_event_type": {
         "load": "Load",
         "unload": "Unload",
-        "clean": "Clean"
+        "clean": "Clean",
+        "sort": "Wafer sort"
       },
       "asset_status": {
         "available": "Available",

@@ -30,6 +30,7 @@ CHECK_RULES: list[tuple[str, str, str, str, dict[str, Any]]] = [
     ("CR-CARR", "Carrier usable", "carrier_available", "warn", {}),
     ("CR-CHMB", "Chamber selected", "chamber_required", "block", {}),
     ("CR-BATCH", "Batch: same step", "batch_same_step", "block", {}),
+    ("CR-SORT", "Sort keeps wafer order", "sort_order", "warn", {}),
     ("CR-CARR-CLN", "Carrier cleaning due", "carrier_clean", "warn", {}),
     ("CR-CARR-USE", "Carrier usage limit", "carrier_usage", "block", {}),
     (
@@ -81,6 +82,7 @@ CHECK_PLANS = [
         "Litho track-in (+ reticle)",
         ["CR-E10", "CR-CAP", "CR-RCP", "CR-RET"],
     ),
+    ("CP-SORT", "Wafer sort", ["CR-SORT"]),
     ("CP-TO", "Standard track-out", ["CR-SMP", "CR-DC", "CR-OOS", "CR-MAT"]),
 ]
 for c, n, rules in CHECK_PLANS:
@@ -97,6 +99,7 @@ for prod in ("MCU-A100", "MCU-B200"):
         ("move_in", "CP-MI"),
         ("track_in", "CP-TI"),
         ("track_out", "CP-TO"),
+        ("sort", "CP-SORT"),
     ):
         add(
             "check_binding",

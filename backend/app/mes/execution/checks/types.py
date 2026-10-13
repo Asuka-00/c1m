@@ -424,3 +424,14 @@ def _carrier_usage(ctx: Ctx, p: Row) -> Outcome:
     if used >= mx * float(p.get("warn_pct", 90)) / 100:
         return "warn", f"carrier {c['code']} used {used}/{mx}", data
     return "pass", f"carrier {c['code']} used {used}/{mx}", data
+
+
+@check_type("sort_order")
+def _sort_order(ctx: Ctx, _p: Row) -> Outcome:
+    """晶圆整理：按晶圆号排序后的槽位须递增（不打乱晶圆顺序）。"""
+    if not ctx.sort_map:
+        return "na", "no wafer sort", {}
+    slots = [x["slot"] for x in sorted(ctx.sort_map, key=lambda x: x["wafer"]["code"])]
+    if slots != sorted(slots):
+        return "fail", "wafer order would change", {}
+    return "pass", "wafer order kept", {}

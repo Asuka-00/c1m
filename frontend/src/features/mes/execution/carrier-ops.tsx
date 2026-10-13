@@ -3,7 +3,13 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { fmtDateTime, t } from '@/i18n'
-import { ArrowRightLeft, RefreshCw, Sparkles, Split } from 'lucide-react'
+import {
+  ArrowRightLeft,
+  ListOrdered,
+  RefreshCw,
+  Sparkles,
+  Split,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { useTenantKey } from '@/lib/api/hooks'
 import { execApi, type CarrierRow } from '@/lib/api/mes/execution'
@@ -21,6 +27,7 @@ import { RefLink } from '@/features/mes/common/ref-link'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { CarrierDue } from './carrier-due'
 import { Pick } from './exec-parts'
+import { SorterDialog } from './sorter-dialog'
 
 /** 载具管理。 */
 export default function CarrierOps() {
@@ -29,6 +36,7 @@ export default function CarrierOps() {
   const [clean, setClean] = useState<CarrierRow | null>(null)
   const [move, setMove] = useState<CarrierRow | null>(null)
   const [target, setTarget] = useState('')
+  const [sort, setSort] = useState<CarrierRow | null>(null)
   const q = useQuery({
     queryKey: ['mes', 'exec', tk, 'carrier-board'],
     queryFn: execApi.carrierBoard,
@@ -132,6 +140,13 @@ export default function CarrierOps() {
           }))}
         />
       </ConfirmDialog>
+      {sort && (
+        <SorterDialog
+          carrier={sort}
+          targets={all.filter((r) => !r.lot && r.status === 'available')}
+          onClose={() => setSort(null)}
+        />
+      )}
       <DataTable
         rows={view.rows}
         total={view.total}
@@ -194,6 +209,14 @@ export default function CarrierOps() {
                     >
                       <ArrowRightLeft className='size-4' />
                       {t('mes.carrier.change')}
+                    </Button>
+                    <Button
+                      size='sm'
+                      variant='ghost'
+                      onClick={() => setSort(r)}
+                    >
+                      <ListOrdered className='size-4' />
+                      {t('mes.sorter.action')}
                     </Button>
                     <Button size='sm' variant='ghost' asChild>
                       <Link

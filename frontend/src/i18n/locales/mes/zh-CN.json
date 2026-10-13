@@ -962,7 +962,8 @@
         "split": "分批",
         "merge": "合批",
         "jump": "跳站",
-        "adjust": "报废 / 补数"
+        "adjust": "报废 / 补数",
+        "sort": "晶圆整理"
       },
       "check_type": {
         "e10_available": "设备 E10 状态可用",
@@ -973,6 +974,7 @@
         "tool_life": "工具可用 + 寿命",
         "carrier_available": "载具可用",
         "batch_same_step": "批量：同一工步",
+        "sort_order": "整理保持晶圆顺序",
         "carrier_clean": "载具清洗周期",
         "carrier_usage": "载具使用次数",
         "chamber_required": "已选腔体",
@@ -1050,7 +1052,8 @@
         "merge": "合批",
         "jump": "跳站",
         "bonus": "补数",
-        "carrier_change": "换载具"
+        "carrier_change": "换载具",
+        "sort": "晶圆整理"
       },
       "genealogy_relation": {
         "split": "分批",
@@ -1169,7 +1172,8 @@
       "carrier_event_type": {
         "load": "装入",
         "unload": "移出",
-        "clean": "清洗"
+        "clean": "清洗",
+        "sort": "晶圆整理"
       },
       "asset_status": {
         "available": "可用",

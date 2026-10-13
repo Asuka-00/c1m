@@ -249,3 +249,47 @@ def test_carrier_change_clean_and_checks(client: TestClient, db: Session) -> Non
     assert next(r for r in after if r["code"] == "C2")["use_count"] == 1
     # 运行中不能换载具
     post(f"/lots/{a['id']}/carrier", {"carrier_id": c1["id"]}, 422)
+
+
+def test_wafer_sorter(client: TestClient, db: Session) -> None:
+    from app.mes.execution.tests.test_exec import _msgs
+    from app.mes.execution.tests.test_split_merge import _line
+
+    f = _line(client, db)
+    ct = f.m.post(
+        "carrier_type",
+        {"code": "FS", "name": "foup", "category": "foup", "capacity": 25},
+    )
+    c1, c2 = (
+        f.m.post("carrier", {"code": f"S{i}", "name": "s", "carrier_type_id": ct["id"]})
+        for i in (1, 2)
+    )
+    f.bind("sort", ("sort_order", "block", {}))
+    (lot,) = f.start(3)
+
+    def post(path: str, body: dict[str, Any], status: int = 200) -> Any:
+        r = client.post(f"{EXEC}{path}", headers=f.m.h, json=body)
+        assert r.status_code == status, r.text
+        return r.json()
+
+    post(f"/lots/{lot['id']}/carrier", {"carrier_id": c1["id"]})
+    ws = sorted(f.m.list("wafer", lot=lot["id"])["data"], key=lambda w: w["code"])
+
+    def m(*slots: int) -> list[dict[str, Any]]:
+        return [
+            {"wafer_id": w["id"], "slot": s} for w, s in zip(ws, slots, strict=False)
+        ]
+
+    post(f"/lots/{lot['id']}/sort", {"slots": m(1, 1, 2)}, 422)
+    post(f"/lots/{lot['id']}/sort", {"slots": m(1, 2)}, 422)
+    # 打乱顺序 → 拦截；保持顺序移入 S2 的 5/6/7 槽 → 通过
+    assert "order" in _msgs(post(f"/lots/{lot['id']}/sort", {"slots": m(3, 2, 1)}, 409))
+    post(f"/lots/{lot['id']}/sort", {"slots": m(5, 6, 7), "carrier_id": c2["id"]})
+    assert f.lot(lot)["carrier_id"] == c2["id"]
+    got = {w["code"]: w["slot"] for w in f.m.list("wafer", lot=lot["id"])["data"]}
+    assert sorted(got.values()) == [5, 6, 7]
+    assert f.m.list("lot_history", lot=lot["id"], action="sort")["count"] == 1
+    assert f.m.list("carrier_event", carrier=c2["id"], event="sort")["count"] == 1
+    # 规则关闭 → 可打乱顺序
+    f.sql("UPDATE mes_check_rule SET severity = 'off'")
+    post(f"/lots/{lot['id']}/sort", {"slots": m(3, 2, 1)})

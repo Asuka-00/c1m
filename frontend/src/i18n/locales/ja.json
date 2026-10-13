@@ -785,7 +785,10 @@
       "pmWarn": "PM 期限間近",
       "allDown": "全て（停止有無）",
       "notDown": "停止なし",
-      "workcenter": "ワークセンター"
+      "workcenter": "ワークセンター",
+      "chambers": "チャンバー",
+      "chamberCount": "チャンバー {{n}}",
+      "chambersOf": "{{code}} のチャンバー"
     },
     "traceq": {
       "hint": "ロット・ウェーハ・設備・資材ロットで上流・下流を追跡します。",
@@ -990,6 +993,17 @@
       "target": "移動先キャリア",
       "moved": "載せ替えました",
       "splitMerge": "分割・統合"
+    },
+    "sorter": {
+      "action": "ソート",
+      "title": "ウェーハソート：{{lot}}（{{code}}）",
+      "target": "移動先キャリア（任意）",
+      "wafer": "ウェーハ",
+      "from": "元スロット",
+      "to": "新スロット",
+      "pack": "順に詰める",
+      "run": "ソート実行",
+      "done": "ソート完了"
     }
   },
   "notify": {

@@ -11,6 +11,7 @@ TRIGGERS = [
     ("merge", "Merge|合批|統合"),
     ("jump", "Jump step|跳站|ステップジャンプ"),
     ("adjust", "Scrap / bonus|报废 / 补数|廃棄・追加"),
+    ("sort", "Wafer sort|晶圆整理|ウェーハソート"),
 ]
 # built-in check types (app.mes.checks implements them; plugins may add more)
 CHECK_TYPES = [
@@ -28,6 +29,7 @@ CHECK_TYPES = [
     ("tool_life", "Tool available + life|工具可用 + 寿命|工具使用可・寿命"),
     ("carrier_available", "Carrier available|载具可用|キャリア使用可"),
     ("batch_same_step", "Batch: same step|批量：同一工步|一括：同一ステップ"),
+    ("sort_order", "Sort keeps wafer order|整理保持晶圆顺序|ソート順序維持"),
     ("carrier_clean", "Carrier cleaning due|载具清洗周期|キャリア洗浄周期"),
     ("carrier_usage", "Carrier usage limit|载具使用次数|キャリア使用回数"),
     ("chamber_required", "Chamber selected|已选腔体|チャンバー選択済"),
@@ -122,6 +124,7 @@ ENUMS.update(
             ("jump", "Jump step|跳站|ステップジャンプ"),
             ("bonus", "Bonus|补数|追加"),
             ("carrier_change", "Carrier change|换载具|キャリア変更"),
+            ("sort", "Wafer sort|晶圆整理|ウェーハソート"),
         ],
         "genealogy_relation": [
             ("split", "Split|分批|分割"),

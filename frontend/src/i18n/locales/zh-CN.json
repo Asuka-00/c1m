@@ -785,7 +785,10 @@
       "pmWarn": "PM 即将到期",
       "allDown": "全部（停机与否）",
       "notDown": "未停机",
-      "workcenter": "工作中心"
+      "workcenter": "工作中心",
+      "chambers": "腔体",
+      "chamberCount": "{{n}} 个腔体",
+      "chambersOf": "{{code}} 腔体"
     },
     "traceq": {
       "hint": "按批次、晶圆、设备或物料批追溯上下游。",
@@ -990,6 +993,17 @@
       "target": "目标载具",
       "moved": "已换载具",
       "splitMerge": "分批 / 合批"
+    },
+    "sorter": {
+      "action": "整理",
+      "title": "晶圆整理：{{lot}}（{{code}}）",
+      "target": "移入载具（可选）",
+      "wafer": "晶圆",
+      "from": "原槽位",
+      "to": "新槽位",
+      "pack": "顺排",
+      "run": "执行整理",
+      "done": "已完成晶圆整理"
     }
   },
   "notify": {

@@ -2,11 +2,11 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fmtDateTime, t } from '@/i18n'
-import { Download, RefreshCw } from 'lucide-react'
+import { ChevronRight, Download, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTenantKey } from '@/lib/api/hooks'
 import { mesApi } from '@/lib/api/mes/common'
-import { eqpApi, type BoardRow } from '@/lib/api/mes/equipment'
+import { eqpApi, type BoardRow, type E10Unit } from '@/lib/api/mes/equipment'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -33,6 +33,7 @@ import { optLabel } from '@/features/mes/common/labels'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesMeta } from '@/features/mes/common/use-mes-meta'
 import { Pick } from '@/features/mes/execution/exec-parts'
+import { ChamberStates } from './chamber-states'
 
 /** 去重选项。 */
 const opts = (vs: (string | null | undefined)[]) =>
@@ -45,9 +46,10 @@ export default function EqpBoard() {
   const tk = useTenantKey()
   const { data: meta } = useMesMeta()
   const can = (p: string) => (meta?.perms ?? []).includes(p)
-  const [dlg, setDlg] = useState<{ kind: 'e10' | 'pm'; row: BoardRow } | null>(
-    null
-  )
+  const [dlg, setDlg] = useState<
+    { kind: 'e10'; row: E10Unit } | { kind: 'pm'; row: BoardRow } | null
+  >(null)
+  const [open, setOpen] = useState<string[]>([])
   const q = useQuery({
     queryKey: ['mes', 'eqp', tk, 'board'],
     queryFn: eqpApi.board,
@@ -199,7 +201,34 @@ export default function EqpBoard() {
           {
             header: t('mes.eqp.code'),
             sortKey: 'code',
-            cell: (r) => <span className='font-mono'>{r.code}</span>,
+            cell: (r) => (
+              <span className='inline-flex items-center gap-1'>
+                {r.chambers.length > 0 && (
+                  <Button
+                    size='icon'
+                    variant='ghost'
+                    className='size-6'
+                    aria-label={t('mes.eqp.chambers')}
+                    aria-expanded={open.includes(r.id)}
+                    onClick={() =>
+                      setOpen((o) =>
+                        o.includes(r.id)
+                          ? o.filter((x) => x !== r.id)
+                          : [...o, r.id]
+                      )
+                    }
+                  >
+                    <ChevronRight
+                      className={cn(
+                        'size-4 transition-transform',
+                        open.includes(r.id) && 'rotate-90'
+                      )}
+                    />
+                  </Button>
+                )}
+                <span className='font-mono'>{r.code}</span>
+              </span>
+            ),
           },
           { header: t('mes.eqp.name'), cell: (r) => r.name },
           {
@@ -213,6 +242,11 @@ export default function EqpBoard() {
                 {r.state ? `${r.state.code} · ${r.state.name}` : '—'}
                 {r.down && (
                   <Badge variant='destructive'>{t('mes.eqp.down')}</Badge>
+                )}
+                {r.chambers.length > 0 && !open.includes(r.id) && (
+                  <span className='text-xs text-muted-foreground'>
+                    {t('mes.eqp.chamberCount', { n: r.chambers.length })}
+                  </span>
                 )}
               </span>
             ),
@@ -277,6 +311,21 @@ export default function EqpBoard() {
           },
         ]}
       />
+      {open.length > 0 && (
+        <div className='grid gap-3 md:grid-cols-2' data-testid='chamber-panels'>
+          {view.rows
+            .filter((r) => open.includes(r.id))
+            .map((r) => (
+              <ChamberStates
+                key={r.id}
+                main={r.code}
+                chambers={r.chambers}
+                canChange={can('mes.equipment:e10')}
+                onChange={(c) => setDlg({ kind: 'e10', row: c })}
+              />
+            ))}
+        </div>
+      )}
       {dlg?.kind === 'e10' && (
         <E10Dialog row={dlg.row} onClose={() => setDlg(null)} />
       )}
@@ -288,7 +337,7 @@ export default function EqpBoard() {
 }
 
 /** 手动改 E10 状态对话框（目标状态仅列出迁移表允许的状态）。 */
-function E10Dialog({ row, onClose }: { row: BoardRow; onClose: () => void }) {
+function E10Dialog({ row, onClose }: { row: E10Unit; onClose: () => void }) {
   const qc = useQueryClient()
   const [to, setTo] = useState('')
   const [reason, setReason] = useState('')

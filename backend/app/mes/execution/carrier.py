@@ -13,6 +13,8 @@ from app.core.spec.base import now
 from app.core.spec.errors import http_422
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
+from app.mes.execution.checks import service as ck
+from app.mes.execution.context import build_ctx
 from app.mes.execution.sm_rules import _carrier_busy, _carrier_cap
 from app.mes.execution.stages import LOT
 from app.mes.execution.usage import clean_due
@@ -195,3 +197,91 @@ def carrier_board(s: Session, tid: uuid.UUID) -> list[Row]:
             }
         )
     return out
+
+
+def sort_wafers(
+    s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any
+) -> Row:
+    """晶圆整理（Sorter）：在本批次内重排槽位，可同时移入另一个空载具。
+
+    Args:
+        s: 数据库会话。
+        tid: 租户 id。
+        lot_id: 批次 id。
+        body: ``{slots: [{wafer_id, slot}], carrier_id?, comment?, override?, override_reason?}``；
+            须覆盖批次全部在制晶圆。
+        user: 操作人。
+
+    Raises:
+        HTTPException: 批次运行中 / 已结束、晶圆或槽位不合法、目标载具不可用（422）；检查阻断（409）。
+    """
+    lot = lock_lot(s, tid, lot_id)
+    if lot["lot_status"] in TERMINAL or lot["lot_status"] == "running":
+        raise http_422([("lot", f"lot: cannot sort while {lot['lot_status']}")])
+    cid = body.get("carrier_id") or lot["carrier_id"]
+    if not cid:
+        raise http_422([("carrier_id", "carrier_id: required")])
+    car, cap = _carrier_cap(s, tid, cid)
+    moving = car["id"] != lot["carrier_id"]
+    if moving and (
+        car["status_code"] != "available" or _carrier_busy(s, tid, car["id"], lot["id"])
+    ):
+        raise http_422([("carrier_id", f"carrier_id: {car['code']} is not available")])
+    us = {str(u["id"]): u for u in units(s, tid, lot["id"])}
+    smap: list[Row] = [
+        {"wafer": us.get(str(x["wafer_id"])), "slot": int(x["slot"])}
+        for x in body.get("slots") or []
+    ]
+    errs: list[tuple[str, str]] = []
+    if any(x["wafer"] is None for x in smap) or len(smap) != len(us):
+        errs.append(("slots", "slots: list every wafer of the lot once"))
+    sl = [x["slot"] for x in smap]
+    if len(set(sl)) != len(sl) or any(x < 1 or (cap and x > cap) for x in sl):
+        errs.append(("slots", f"slots: use unique slots 1–{cap or '…'}"))
+    if errs:
+        raise http_422(errs)
+    ctx = build_ctx(s, tid, lot, "sort", {})
+    ctx.sort_map = smap
+    results = ck.evaluate(
+        ctx,
+        user,
+        override=bool(body.get("override")),
+        reason=body.get("override_reason"),
+    )
+    for x in smap:
+        if x["wafer"]["slot"] != x["slot"]:
+            _upd(s, tid, "wafer", x["wafer"]["id"], user, slot=x["slot"])
+    old = one(s, tid, "carrier", lot["carrier_id"])
+    if moving:
+        _upd(s, tid, "lot", lot["id"], user, carrier_id=car["id"])
+        _upd(s, tid, "carrier", car["id"], user, status_code="in_use")
+        if old:
+            _upd(s, tid, "carrier", old["id"], user, status_code="available")
+            event(s, tid, old, "unload", user, lot=lot, other=car, qty=lot["qty"])
+    event(
+        s,
+        tid,
+        car,
+        "sort",
+        user,
+        lot=lot,
+        other=old if moving else None,
+        qty=len(smap),
+        comment=body.get("comment"),
+    )
+    history(
+        s,
+        tid,
+        lot,
+        "sort",
+        user,
+        comment=body.get("comment"),
+        details={
+            "carrier": car["code"],
+            "from": old and old["code"],
+            "slots": {x["wafer"]["code"]: x["slot"] for x in smap},
+            "checks": [r["check_type"] for r in results],
+        },
+    )
+    s.commit()
+    return {"lot_id": str(lot["id"]), "carrier": car["code"], "results": results}

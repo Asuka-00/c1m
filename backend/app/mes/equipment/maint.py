@@ -255,38 +255,48 @@ def equipment_board(s: Session, tid: uuid.UUID) -> list[Row]:
         d["equipment_id"] for d in find(s, tid, "downtime") if d["end_at"] is None
     }
     wcs = {w["id"]: w for w in find(s, tid, "workcenter")}
+    chambers: dict[Any, list[Row]] = {}
+    for c in find(s, tid, "equipment", order="code", unit_kind="chamber"):
+        chambers.setdefault(c["parent_id"], []).append(c)
+
+    def e10(eq: Row) -> Row:
+        cur = e10_current(s, tid, eq)
+        nxt = [t for t in trans if cur is None or t["from_state_id"] == cur["id"]]
+        return {
+            "id": str(eq["id"]),
+            "code": eq["code"],
+            "name": eq["name"],
+            "is_active": eq["is_active"],
+            "state": cur
+            and {
+                "id": str(cur["id"]),
+                "code": cur["code"],
+                "name": cur["name"],
+                "category": cur["e10_category"],
+                "color": cur["color"],
+            },
+            "next": [
+                {
+                    "id": str(t["to_state_id"]),
+                    "code": states[t["to_state_id"]]["code"],
+                    "name": states[t["to_state_id"]]["name"],
+                    "reason_required": t["reason_required"],
+                }
+                for t in trans
+                if t in nxt and t["to_state_id"] in states
+            ],
+        }
+
     out = []
     for eq in find(s, tid, "equipment", order="code", unit_kind="main"):
         wc = wcs.get(eq.get("workcenter_id"))
-        cur = e10_current(s, tid, eq)
-        nxt = [t for t in trans if cur is None or t["from_state_id"] == cur["id"]]
         pm = pm_status(s, tid, eq)
         out.append(
             {
-                "id": str(eq["id"]),
-                "code": eq["code"],
-                "name": eq["name"],
-                "is_active": eq["is_active"],
+                **e10(eq),
                 "workcenter": wc and wc["code"],
                 "workcenter_name": wc and wc["name"],
-                "state": cur
-                and {
-                    "id": str(cur["id"]),
-                    "code": cur["code"],
-                    "name": cur["name"],
-                    "category": cur["e10_category"],
-                    "color": cur["color"],
-                },
-                "next": [
-                    {
-                        "id": str(t["to_state_id"]),
-                        "code": states[t["to_state_id"]]["code"],
-                        "name": states[t["to_state_id"]]["name"],
-                        "reason_required": t["reason_required"],
-                    }
-                    for t in trans
-                    if t in nxt and t["to_state_id"] in states
-                ],
+                "chambers": [e10(c) for c in chambers.get(eq["id"], [])],
                 "pm": pm,
                 "pm_due": any(x["due"] for x in pm),
                 "pm_warn": any(x["warn"] for x in pm),

@@ -23,14 +23,12 @@ export interface BoardState {
   color: string | null
 }
 
-/** 设备状态看板行。 */
-export interface BoardRow {
+/** 可改 E10 状态的设备单元（主设备或腔体）。 */
+export interface E10Unit {
   id: string
   code: string
   name: string
   is_active: boolean
-  workcenter: string | null
-  workcenter_name: string | null
   state: BoardState | null
   next: {
     id: string
@@ -38,6 +36,14 @@ export interface BoardRow {
     name: string
     reason_required: boolean
   }[]
+}
+
+/** 设备状态看板行。 */
+export interface BoardRow extends E10Unit {
+  workcenter: string | null
+  workcenter_name: string | null
+  /** 腔体及其 E10 状态 */
+  chambers: E10Unit[]
   pm: PmStatus[]
   pm_due: boolean
   pm_warn: boolean

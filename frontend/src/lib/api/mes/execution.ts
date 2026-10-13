@@ -427,6 +427,16 @@ export interface WaferMap {
 }
 
 export const execApi = {
+  /** 晶圆整理（Sorter）：重排槽位，可移入另一载具。 */
+  sortWafers: (
+    lotId: string,
+    body: {
+      slots: { wafer_id: string; slot: number }[]
+      carrier_id?: string | null
+      override?: boolean
+      override_reason?: string
+    }
+  ) => http.post(`/mes/exec/lots/${lotId}/sort`, body).then((r) => r.data),
   /** 载具总览。 */
   carrierBoard: () =>
     http

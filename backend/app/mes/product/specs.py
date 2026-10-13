@@ -47,6 +47,7 @@ ENUMS.update(
             ("load", "Load|装入|積込み"),
             ("unload", "Unload|移出|取出し"),
             ("clean", "Clean|清洗|洗浄"),
+            ("sort", "Wafer sort|晶圆整理|ウェーハソート"),
         ],
         "asset_status": [
             ("available", "Available|可用|使用可"),

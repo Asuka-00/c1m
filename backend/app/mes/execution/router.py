@@ -440,6 +440,30 @@ def carrier_clean(
     return svc.clean_carrier(session, ctx.id, carrier_id, ctx.user, body.comment)
 
 
+class SortSlotIn(BaseModel):
+    wafer_id: uuid.UUID
+    slot: int = Field(ge=1)
+
+
+class SortIn(BaseModel):
+    slots: list[SortSlotIn] = Field(min_length=1, max_length=50)
+    carrier_id: uuid.UUID | None = None
+    comment: str | None = Field(default=None, max_length=300)
+    override: bool = False
+    override_reason: str | None = Field(default=None, max_length=300)
+
+
+@router.post("/lots/{lot_id}/sort")
+def lot_sort(
+    session: SessionDep, ctx: CurrentTenant, lot_id: uuid.UUID, body: SortIn
+) -> Any:
+    """Wafer sorter: reorder slots or move the lot to another carrier."""
+    _need(ctx, "mes.exec:write")
+    if body.override:
+        _need(ctx, "mes.exec:override")
+    return svc.sort_wafers(session, ctx.id, lot_id, body.model_dump(), ctx.user)
+
+
 @router.post("/lots/{lot_id}/carrier")
 def lot_carrier_change(
     session: SessionDep, ctx: CurrentTenant, lot_id: uuid.UUID, body: CarrierChangeIn
