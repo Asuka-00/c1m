@@ -134,7 +134,6 @@ describe('useStageRun', () => {
   it.each([
     ['moved_in', 'track_in', 'hold'],
     ['moved_in', 'track_in', 'rework'],
-    ['waiting', 'move_in', 'hold'],
   ])(
     'Q-Time 超时（D22）：%s 批次 %s 返回 200 + qtime=%s → 提示处置结果、未执行，并刷新',
     async (status, stage, action) => {
@@ -162,6 +161,26 @@ describe('useStageRun', () => {
       expect(inv).toHaveBeenCalledWith({ queryKey: ['mes'] })
     }
   )
+
+  it('D19：Move In 不再处置 Q-Time，返回无 qtime 时正常成功', async () => {
+    const spy = vi.spyOn(execApi, 'stage').mockResolvedValue({
+      lot: { id: 'L1', lot_status: 'moved_in', on_hold: false },
+      results: [],
+    } as never)
+    const warn = vi.spyOn(toast, 'warning')
+    const ok = vi.spyOn(toast, 'success')
+    const { wrapper } = setup()
+    const { result } = await renderHook(
+      () => useStageRun(execCtx('waiting'), () => ({})),
+      { wrapper }
+    )
+    await act(async () => {
+      await result.current.run.mutateAsync({})
+    })
+    expect(spy.mock.calls[0][1]).toBe('move_in')
+    expect(ok).toHaveBeenCalledWith(t('mes.exec.done.move_in'))
+    expect(warn).not.toHaveBeenCalled()
+  })
 
   it('已持 Hold 的批次 Track In 返回 422 on_hold：报错并刷新', async () => {
     vi.spyOn(execApi, 'stage').mockRejectedValue(
