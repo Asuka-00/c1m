@@ -64,6 +64,11 @@ def check_expect(resp: Resp, expect: dict | None, default_status: int = 200) -> 
         errs.append(f"HTTP {resp.status} != 期望 {want}（code={resp.code}）")
     if "code" in expect and resp.code != expect["code"]:
         errs.append(f"code {resp.code!r} != 期望 {expect['code']!r}")
+    # D80 补充二：idempotency_key_reused 维持 D57 对象格式 detail={code, message}（HTTP 422），不是 err_422 数组
+    if expect.get("detail_object"):
+        det = resp.body.get("detail") if isinstance(resp.body, dict) else None
+        if not (isinstance(det, dict) and det.get("code") and isinstance(det.get("message"), str)):
+            errs.append(f"detail 不是 {{code, message}} 对象：{det!r}"[:200])
     # D65：422 明细第一条的 loc / type，例如 unknown_field 的 [body, 字段]、查询参数的 [query, 参数]
     # message：任一条明细的 msg 含该文本（字符串 / 列表 detail 都可用）
     if "message" in expect and not any(expect["message"] in str(e.get("msg") or "") for e in resp.errors):
@@ -173,6 +178,10 @@ P3_DRAFT_STEPS = {
     "reticle_report",
     "reticle_inspection",
     "reticle_life_reset",
+    "reticle_clean_start",
+    "reticle_clean_complete",
+    "reticle_repair_complete",
+    "reticle_inspect_start",
     # P3-B2 打标（未实现）
     "marking_report",
     "marking_create",
@@ -895,7 +904,9 @@ class Runner:
         if body == call.body:
             raise StepFailed("reuse 的 change 没有改变请求内容")
         new = Call(call.method, call.path, body, call.idem)
-        self._send(entry, new, a.get("expect") or {"status": 422, "code": "idempotency_key_reused"})
+        self._send(
+            entry, new, a.get("expect") or {"status": 422, "code": "idempotency_key_reused", "detail_object": True}
+        )
 
 
 __all__ = ["Runner", "check_expect", "STEP_ADAPTERS", "PASSED", "FAILED", "SKIPPED", "ERROR"]

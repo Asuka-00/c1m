@@ -63,7 +63,7 @@ class Scenario:
         return seen
 
 
-# D80 + 补充一：光罩 10 个手工写接口，Idempotency-Key 必填（场景必须写 idem，或 no_idem: true 测缺失）
+# D80 + 补充一/二：光罩 14 个手工写接口，Idempotency-Key 必填（场景必须写 idem，或 no_idem: true 测缺失）
 RETICLE_IDEM_STEPS = {
     "reticle_adjust",  # /usage
     "reticle_incident",
@@ -75,6 +75,11 @@ RETICLE_IDEM_STEPS = {
     "reticle_restore",
     "reticle_life_reset",
     "reticle_scrap",
+    # D80 补充二：_flow 路由 4 个（/mes/eqp 物料批上机/下机不在范围）
+    "reticle_clean_start",
+    "reticle_clean_complete",
+    "reticle_repair_complete",
+    "reticle_inspect_start",
 }
 
 # P3-B2 打标草稿步骤：都要 lot（批次键；EAP 上报另需 eq）

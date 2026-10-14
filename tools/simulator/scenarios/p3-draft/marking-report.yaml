@@ -184,7 +184,7 @@ steps:
   - marking_replay: {of: rep1, expect: {status: 200, body: {duplicate: true}}}
   - expect_marking_prints: {lot: MK0002, seqs: [1], last: {source: simulator, equipment: EAP-MK01}}   # duplicate 不占 seq
   - marking_report: {eq: EAP-MK01, lot: MK0002, seq: 1, kind: print, payload: {trace_code: $issued, comment: changed},
-                     expect: {status: 422, code: idempotency_key_reused}}
+                     expect: {status: 422, code: idempotency_key_reused, detail_object: true}}
   - marking_report: {eq: EAP-MK01, lot: MK0002, seq: 2, kind: print, payload: {trace_code: OTHER-01},
                      expect: {status: 409, code: trace_code_mismatch, ctx: {expected: $issued, actual: OTHER-01}}}
   - expect_marking_events: {lot: MK0002, audit_has: trace_code_mismatch}

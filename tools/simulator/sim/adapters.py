@@ -87,6 +87,11 @@ def default_adapters() -> dict[str, Adapter]:
         "reticle_unmount": Adapter("光罩卸载", ["/mes/reticle/{reticle_id}/unmount"], card="P3-B4"),
         "reticle_inspection": Adapter("光罩检查录入", ["/mes/reticle/{reticle_id}/inspection"], card="P3-B4"),
         "reticle_life_reset": Adapter("光罩寿命重置", ["/mes/reticle/{reticle_id}/life-reset"], card="P3-B4"),
+        # D80 补充二：_flow 路由 4 个，同样 Idempotency-Key 必填（共 14 个）
+        "reticle_clean_start": Adapter("光罩开始清洗", ["/mes/reticle/{reticle_id}/clean-start"], card="P3-B4"),
+        "reticle_clean_complete": Adapter("光罩清洗完成", ["/mes/reticle/{reticle_id}/clean-complete"], card="P3-B4"),
+        "reticle_repair_complete": Adapter("光罩维修完成", ["/mes/reticle/{reticle_id}/repair-complete"], card="P3-B4"),
+        "reticle_inspect_start": Adapter("光罩开始检查", ["/mes/reticle/{reticle_id}/inspect-start"], card="P3-B4"),
         # D80+补充一：10 个写接口（usage/incident/inspection/mount/unmount/hold/release/restore/life-reset/scrap）
         #   Idempotency-Key 必填，缺失 422 missing loc [header, Idempotency-Key]；重放按 D57
         # P3-B8（D70，未实现）：报警码 track_in_action 配置。路径为提议（通用 CRUD PATCH 或专用接口），B8 落地后核对
@@ -176,6 +181,10 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "reticle_unmount": ["reticle_unmount"],
     "reticle_inspection": ["reticle_inspection"],
     "reticle_life_reset": ["reticle_life_reset"],
+    "reticle_clean_start": ["reticle_clean_start"],
+    "reticle_clean_complete": ["reticle_clean_complete"],
+    "reticle_repair_complete": ["reticle_repair_complete"],
+    "reticle_inspect_start": ["reticle_inspect_start"],
     "set_track_in_action": ["alarm_track_in_action"],
     "expect_alarm_code": ["alarm_code_get"],
     # P3-E2 光罩预审：以后 B11 event_type=reticle_mount/reticle_unmount/reticle_usage（D67：P3 不开）

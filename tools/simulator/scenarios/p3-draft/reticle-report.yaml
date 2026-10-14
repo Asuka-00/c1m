@@ -7,11 +7,11 @@
 #   - EAP 下机（D80 G1）：单独记一行下机事件（kind=unmount），沿用 (tenant_id, source, external_event_id) 部分唯一；
 #     上机行只回填 unmounted_at、不写下机事件号；重放不多出第二行；同号重复下机 duplicate=true；unmounted_at 不被改写
 #   - 已报废：EAP 计数 409 invalid_transition，不计数、不发 life_reached（D72）
-#   - D80 G2/G3 + 补充一：10 个手工写接口缺 Idempotency-Key 一律 422 missing（loc [header, Idempotency-Key]）；
+#   - D80 G2/G3 + 补充一/二：14 个手工写接口（另含 clean-start/clean-complete/repair-complete/inspect-start）缺 Idempotency-Key 一律 422 missing（loc [header, Idempotency-Key]）；
 #     重放按 D57 原状态码 + 原记录、无 duplicate；同 key 不同请求体 422 idempotency_key_reused
 #   - D80 G5：mounted / unmounted / life_reached 带 source、external_event_id（手工为 null）；G6：source ∈ manual/eap/simulator/system
 name: reticle-report
-run_id: ret-report-02
+run_id: ret-report-03
 draft: "等 B11 光罩 event_type（D67 P3 不开）与 D80 落地（下机事件行、10 个写接口 Idempotency-Key 必填、source CHECK）"
 target: http://127.0.0.1:8013
 equipment: [{code: EAP-LT01, type: LITHO}]
@@ -24,7 +24,7 @@ steps:
   - expect_reticle_history: {reticle: R-SIM-03, latest_of: mount, count_of: {mount: 1},
                              fields: {source: simulator, external_event_id: $ext.m1, slot_code: S1, unmounted_at: null}}
   - reticle_report: {eq: EAP-LT01, reticle: R-SIM-03, kind: mount, seq: 1, payload: {slot_code: S2},
-                     expect: {status: 422, code: idempotency_key_reused}}
+                     expect: {status: 422, code: idempotency_key_reused, detail_object: true}}
   - expect_reticle: {reticle: R-SIM-03, fields: {status_code: in_use, mount_count: 1}}
   - expect_reticle_events: {reticle: R-SIM-03, latest: {event: reticle.mounted, payload.source: simulator, payload.external_event_id: $ext.m1}}   # D80 G5
   # ---- 计数
@@ -34,7 +34,7 @@ steps:
   - expect_reticle: {reticle: R-SIM-03, fields: {shot_count: "100"}}
   - expect_reticle_history: {reticle: R-SIM-03, latest_of: usage, count_of: {usage: 1}, fields: {source: simulator, external_event_id: $ext.u1, delta: "100"}}
   - reticle_report: {eq: EAP-LT01, reticle: R-SIM-03, kind: usage, seq: 2, payload: {delta: "101"},
-                     expect: {status: 422, code: idempotency_key_reused}}
+                     expect: {status: 422, code: idempotency_key_reused, detail_object: true}}
   - reticle_report: {eq: EAP-LT01, reticle: R-SIM-03, kind: usage, seq: 3, payload: {delta: "1.1234567"},
                      expect: {status: 422, type: value_error, loc: [body, payload, delta], ctx: {max_places: 6}}}
   - expect_reticle: {reticle: R-SIM-03, fields: {shot_count: "100"}}
@@ -68,11 +68,15 @@ steps:
   - reticle_restore: {no_idem: true, reticle: R-SIM-04, reason: x, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
   - reticle_life_reset: {no_idem: true, reticle: R-SIM-04, reason: x, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
   - reticle_scrap: {no_idem: true, reticle: R-SIM-04, reason: x, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
+  - reticle_clean_start: {no_idem: true, reticle: R-SIM-04, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
+  - reticle_clean_complete: {no_idem: true, reticle: R-SIM-04, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
+  - reticle_repair_complete: {no_idem: true, reticle: R-SIM-04, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
+  - reticle_inspect_start: {no_idem: true, reticle: R-SIM-04, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
   - expect_reticle: {reticle: R-SIM-04, fields: {status_code: available, mount_count: 0, shot_count: "0"}}
   # 手工 mount 带 key：重放原状态码 + 原记录、无 duplicate；同 key 换体 422；事件 source=manual、external_event_id=null
   - reticle_mount: {idem: ret-rep-m4, eq: EAP-LT01, reticle: R-SIM-04, slot: S9, save_as: mm4, expect: {status: 200, absent: [duplicate]}}
   - reticle_replay: {of: mm4, expect: {status: 200, absent: [duplicate]}}
-  - reticle_mount: {idem: ret-rep-m4, eq: EAP-LT01, reticle: R-SIM-04, slot: S8, expect: {status: 422, code: idempotency_key_reused}}
+  - reticle_mount: {idem: ret-rep-m4, eq: EAP-LT01, reticle: R-SIM-04, slot: S8, expect: {status: 422, code: idempotency_key_reused, detail_object: true}}
   - expect_reticle_history: {reticle: R-SIM-04, count_of: {mount: 1}, latest_of: mount, fields: {source: manual, external_event_id: null, slot_code: S9}}
   - expect_reticle_events: {reticle: R-SIM-04, latest: {event: reticle.mounted, payload.source: manual, payload.external_event_id: null}}
   - reticle_unmount: {idem: ret-rep-u4, reticle: R-SIM-04, save_as: mu4, expect: {status: 200}}
@@ -85,7 +89,7 @@ steps:
                      expect: {status: 422, loc: [body, source]}}
   # ---- 已报废：EAP 计数 409，不计数、不发 life_reached（D72）
   - reticle_scrap: {idem: ret-rep-s3, reticle: R-SIM-03, reason: R-scrap, save_as: sc3, expect: {status: 200}}
-  - reticle_scrap: {idem: ret-rep-s3, reticle: R-SIM-03, reason: R-scrap-2, expect: {status: 422, code: idempotency_key_reused}}
+  - reticle_scrap: {idem: ret-rep-s3, reticle: R-SIM-03, reason: R-scrap-2, expect: {status: 422, code: idempotency_key_reused, detail_object: true}}
   - reticle_report: {eq: EAP-LT01, reticle: R-SIM-03, kind: usage, seq: 5, payload: {delta: "500"},
                      expect: {status: 409, code: invalid_transition}}
   - expect_reticle: {reticle: R-SIM-03, fields: {status_code: scrapped, shot_count: "105"}}
@@ -94,3 +98,9 @@ steps:
   - reticle_report: {eq: EAP-LT01, reticle: R-SIM-05, kind: mount, seq: 10, payload: {slot_code: S5}, expect: {status: 200}}
   - reticle_report: {eq: EAP-LT01, reticle: R-SIM-05, kind: usage, seq: 11, payload: {delta: "200"}, save_as: u5, expect: {status: 200}}
   - expect_reticle_events: {reticle: R-SIM-05, latest_of: {reticle.life_reached: {payload.source: simulator, payload.external_event_id: $ext.u5}}}
+  # D80 补充二：clean-complete 重放返回原状态码 + 原记录（不是 409 invalid_transition）
+  - reticle_clean_start: {idem: ret-rep-cs6, reticle: R-SIM-06, expect: {status: 200}}
+  - reticle_clean_complete: {idem: ret-rep-cc6, reticle: R-SIM-06, save_as: cc6, expect: {status: 200}}
+  - reticle_replay: {of: cc6, expect: {status: 200, absent: [duplicate]}}   # 原状态码，不是 409
+  - reticle_clean_complete: {idem: ret-rep-cc6b, reticle: R-SIM-06, expect: {status: 409, code: invalid_transition}}   # 新 key 才是真冲突
+  - expect_reticle_events: {reticle: R-SIM-06, count: {reticle.clean_completed: 1}}

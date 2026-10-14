@@ -469,7 +469,7 @@ def test_reticle_report_draft_e2():
     assert {s.args["kind"] for s in rep} == {"mount", "unmount", "usage"}
     exp = [s.args.get("expect") or {} for s in st]
     codes = [e.get("code") for e in exp]
-    assert codes.count("idempotency_key_reused") == 4 and codes.count("invalid_transition") == 1
+    assert codes.count("idempotency_key_reused") == 4 and codes.count("invalid_transition") == 2
     assert any((e.get("ctx") or {}).get("max_places") == 6 for e in exp)
     # EAP 重放 duplicate=true；手工重放无 duplicate
     for s in st:
@@ -494,7 +494,7 @@ def test_reticle_report_draft_e2():
     from sim.scenario import RETICLE_IDEM_STEPS
 
     miss = {s.kind for s in st if s.args.get("no_idem")}
-    assert miss == RETICLE_IDEM_STEPS and len(miss) == 10
+    assert miss == RETICLE_IDEM_STEPS and len(miss) == 14
     for s in st:
         if s.args.get("no_idem"):
             assert s.args["expect"]["loc"] == ["header", "Idempotency-Key"]
@@ -531,3 +531,25 @@ def test_marking_draft_d79_s4_s5():
             assert c["max_length"] in ("$cfg.trace_code_max_length", 128)
         if c["reason"] == "pattern":
             assert c["pattern"] == "$cfg.trace_code_pattern"
+
+
+def test_d80_s2_flow_idem_and_reused_object():
+    from sim.client import Resp
+    from sim.runner import check_expect
+    from sim.scenario import RETICLE_IDEM_STEPS, load
+
+    flow = {"reticle_clean_start", "reticle_clean_complete", "reticle_repair_complete", "reticle_inspect_start"}
+    assert flow <= RETICLE_IDEM_STEPS and len(RETICLE_IDEM_STEPS) == 14
+    st = load("scenarios/p3-draft/reticle-report.yaml").steps
+    cc = next(s for s in st if s.kind == "reticle_clean_complete" and s.args.get("save_as") == "cc6")
+    rp = next(s for s in st if s.kind == "reticle_replay" and s.args["of"] == "cc6")
+    assert cc.args["idem"] and rp.args["expect"]["status"] == 200
+    for f in ("reticle-report", "reticle-exposure-count", "reticle-collision-hold", "marking-report"):
+        for s in load(f"scenarios/p3-draft/{f}.yaml").steps:
+            e = s.args.get("expect") or {}
+            if e.get("code") == "idempotency_key_reused":
+                assert e["status"] == 422 and e.get("detail_object") is True, (f, s.kind)
+    obj = Resp(422, {"detail": {"code": "idempotency_key_reused", "message": "x"}})
+    arr = Resp(422, {"detail": [{"type": "value_error", "code": "idempotency_key_reused", "msg": "x"}]})
+    want = {"status": 422, "code": "idempotency_key_reused", "detail_object": True}
+    assert check_expect(obj, want) == [] and check_expect(arr, want)

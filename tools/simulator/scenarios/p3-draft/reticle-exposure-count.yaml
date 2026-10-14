@@ -30,7 +30,7 @@ steps:
   # D57（B11）：同 (source, external_event_id) 同内容再发一次 /mes/eap/events → 原状态码 200，信封 duplicate=true，不重复加差额
   - reticle_replay: {of: ev1, expect: {status: 200, body: {duplicate: true}}}
   - expect_reticle: {reticle: R-SIM-01, fields: {shot_count: "130"}}
-  - reticle_replay: {of: ev1, change: {shots: "140"}, expect: {status: 422, code: idempotency_key_reused}}
+  - reticle_replay: {of: ev1, change: {shots: "140"}, expect: {status: 422, code: idempotency_key_reused, detail_object: true}}
   # 没有可修正的估算记录 → 另记一条 kind=report、source=eap
   - reticle_usage: {eq: EAP-LT01, reticle: R-SIM-01, lot: FX0002, shots: "10",
                     expect: {status: 200, body: {result.data.kind: report, result.data.estimated: false}}}
