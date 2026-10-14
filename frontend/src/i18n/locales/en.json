@@ -499,7 +499,8 @@
         "qtime_rule_in_use": "Q-Time rule {{qtime_rule_code}} is referenced by {{hold_count}} hold record(s) and cannot be deleted. Deactivate it instead.",
         "qtime_action_invalid": "The Q-Time action must be Warn, Hold or Rework",
         "hold_not_found": "The hold record does not exist or was deleted; refresh the list",
-        "too_many_decimals": "At most 6 decimal places"
+        "too_many_decimals": "At most 6 decimal places",
+        "date_range_too_large": "The date range can span at most 92 days; narrow it down."
       },
       "tooManyDecimals": "At most {{n}} decimal places"
     },
@@ -684,7 +685,8 @@
       "qtimeStageSkipped": "{{stage}} was not performed; check the lot status",
       "checkMsg": {
         "eqp_wait_qual": "Equipment {{equipment}} is waiting for Qual after PM; it cannot start production until Qual passes (cannot be overridden)"
-      }
+      },
+      "hardBlock": "Some failed checks cannot be overridden."
     },
     "trace": {
       "hint": "All operations on the lot and its units.",
@@ -1656,11 +1658,24 @@
       "name": "Name",
       "trend": "CT and move trend",
       "byOperation": "By operation",
-      "mock": "Sample data (API not available)"
+      "mock": "Sample data (API not available)",
+      "timezone": "Time zone: {{tz}}",
+      "rangeInvalid": "Select a valid date range (start no later than end).",
+      "reworkMoves": "Rework moves (lots / wafers)",
+      "hold": "Hold time (h)"
     },
     "qual": {
-      "notQualified": "{{user}} has no valid qualification for operation {{op}}. Track-in is blocked until it is granted or renewed.",
-      "expiringSoon": "Qualification expires on {{date}}. Please renew it soon."
+      "notQualified": "{{user}} has no valid qualification for operation {{op}} and cannot track in. This cannot be overridden. Obtain or renew the qualification first.",
+      "expiringSoon": "Qualification expires on {{date}}. Please renew it soon.",
+      "warnDays": "Warning window: {{n}} days",
+      "expiringTitle": "Operator qualifications expiring soon",
+      "user": "Operator",
+      "equipmentType": "Equipment type",
+      "anyEquipment": "(operation only)",
+      "expiresOn": "Expires on",
+      "daysLeft": "Days left",
+      "lastDay": "Expires today (still valid)",
+      "hint": "Qualifications expiring soon; still valid on the expiry date."
     }
   },
   "notify": {

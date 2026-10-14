@@ -1,4 +1,4 @@
-/** P3 Cycle Time / Move 报表：按日期、工序、产品筛选，CT 趋势与 Move 数（柱）+ 按工序明细表。 */
+/** P3 Cycle Time / Move 报表（D62 + D63）：按日期、工序、产品筛选，CT 趋势与 Move 数（柱）+ 按工序明细表。 */
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
@@ -16,6 +16,7 @@ import {
 import { useTenantKey } from '@/lib/api/hooks'
 import {
   ctMoveApi,
+  rangeProblem,
   type CtMoveOperationRow,
   type CtMoveTrendPoint,
 } from '@/lib/api/mes/ct-move'
@@ -25,6 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Page } from '@/components/crud'
 import { RefSelect } from '@/features/mes/common/ref-select'
+import { mesErrorMessage } from '@/features/mes/common/required'
 import { DataCard, DateRange, Kpi } from './report-parts'
 import { isoDay } from './report-utils'
 
@@ -54,10 +56,21 @@ export function CtMoveChart({ rows }: { rows: CtMoveTrendPoint[] }) {
           <XAxis dataKey='day' fontSize={12} />
           <YAxis yAxisId='m' fontSize={12} allowDecimals={false} />
           <YAxis yAxisId='c' orientation='right' unit='h' fontSize={12} />
-          <Tooltip />
+          <Tooltip
+            formatter={(v, name) => [
+              v == null ? '—' : String(v as number | string),
+              name,
+            ]}
+          />
           <Legend />
           <Bar yAxisId='m' dataKey={mv} fill='#3b82f6' />
-          <Line yAxisId='c' dataKey={ct} stroke='#f59e0b' dot connectNulls />
+          <Line
+            yAxisId='c'
+            dataKey={ct}
+            stroke='#f59e0b'
+            dot
+            connectNulls={false}
+          />
         </ComposedChart>
       </ResponsiveContainer>
     </div>
@@ -76,7 +89,8 @@ export default function CtMoveReport() {
   const [prod, setProd] = useState<{ id: string | null; label: string | null }>(
     { id: null, label: null }
   )
-  const ok = !!from && !!to && from <= to
+  const problem = rangeProblem(from, to)
+  const ok = problem == null
   const q = useQuery({
     queryKey: ['mes', 'exec', tk, 'report-ct-move', from, to, op.id, prod.id],
     queryFn: () =>
@@ -87,6 +101,7 @@ export default function CtMoveReport() {
         product_id: prod.id ?? undefined,
       }),
     enabled: ok,
+    retry: false,
   })
   const d = q.data
   return (
@@ -116,22 +131,51 @@ export default function CtMoveReport() {
             onChange={(id, label) => setProd({ id, label })}
           />
         </div>
+        {d?.timezone && (
+          <span
+            className='text-xs text-muted-foreground'
+            data-testid='ct-move-tz'
+          >
+            {t('mes.ctMove.timezone', { tz: d.timezone })}
+          </span>
+        )}
         {d?.mock && (
           <Badge variant='outline' data-testid='ct-move-mock'>
             {t('mes.ctMove.mock')}
           </Badge>
         )}
       </div>
-      <div className='grid gap-3 sm:grid-cols-3'>
+      {problem && (
+        <p className='text-sm text-destructive' data-testid='ct-move-range'>
+          {problem === 'too_large'
+            ? t('mes.err.code.date_range_too_large')
+            : t('mes.ctMove.rangeInvalid')}
+        </p>
+      )}
+      {ok && q.isError && (
+        <p className='text-sm text-destructive' data-testid='ct-move-error'>
+          {mesErrorMessage(q.error, undefined)}
+        </p>
+      )}
+      <div className='grid gap-3 sm:grid-cols-3 lg:grid-cols-5'>
         <Kpi label={t('mes.ctMove.moves')} value={d?.total.moves ?? '—'} />
         <Kpi
           label={t('mes.ctMove.moveQty')}
           value={d ? decimalText(d.total.move_qty) : '—'}
         />
         <Kpi
+          label={t('mes.ctMove.reworkMoves')}
+          value={
+            d
+              ? `${d.total.rework_moves} / ${decimalText(d.total.rework_move_qty)}`
+              : '—'
+          }
+        />
+        <Kpi
           label={t('mes.ctMove.ctAvg')}
           value={hours(d?.total.ct_avg_hours)}
         />
+        <Kpi label={t('mes.ctMove.hold')} value={hours(d?.total.hold_hours)} />
       </div>
       <Card className='gap-3'>
         <CardHeader>
@@ -156,6 +200,11 @@ export default function CtMoveReport() {
             right: true,
           },
           {
+            head: t('mes.ctMove.reworkMoves'),
+            get: (r) => `${r.rework_moves} / ${decimalText(r.rework_move_qty)}`,
+            right: true,
+          },
+          {
             head: t('mes.ctMove.ctAvg'),
             get: (r) => hours(r.ct_avg_hours),
             right: true,
@@ -168,6 +217,11 @@ export default function CtMoveReport() {
           {
             head: t('mes.ctMove.ctP90'),
             get: (r) => hours(r.ct_p90_hours),
+            right: true,
+          },
+          {
+            head: t('mes.ctMove.hold'),
+            get: (r) => hours(r.hold_hours),
             right: true,
           },
           { head: t('mes.ctMove.wip'), get: (r) => r.wip_lots, right: true },

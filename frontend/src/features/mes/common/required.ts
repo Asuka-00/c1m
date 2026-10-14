@@ -104,6 +104,7 @@ export const MES_ERROR_CODES = [
   'idempotency_key_mismatch',
   'idempotency_key_reused',
   'too_many_decimals',
+  'date_range_too_large',
 ] as const
 type MesErrorCode = (typeof MES_ERROR_CODES)[number]
 const isCode = (x: unknown): x is MesErrorCode =>

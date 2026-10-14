@@ -242,6 +242,11 @@ export function CheckPanel({
           </Button>
         </div>
       )}
+      {blocked && canOverride && hard && (
+        <p className='text-sm text-destructive' data-testid='hard-block'>
+          {t('mes.exec.hardBlock')}
+        </p>
+      )}
       {blocked && !canOverride && (
         <p className='text-sm text-destructive'>{t('mes.exec.noOverride')}</p>
       )}

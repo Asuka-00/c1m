@@ -1730,7 +1730,8 @@
     "mes-substrate_map": "Substrate Map",
     "mes-bin_set": "Bin Definition Set",
     "mes-map-import": "Map Import",
-    "mes-ct-move-report": "CT / Move Report"
+    "mes-ct-move-report": "CT / Move Report",
+    "mes-qual-expiring": "Expiring qualifications"
   },
   "permName": {
     "users__read": "View platform users",

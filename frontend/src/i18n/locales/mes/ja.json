@@ -1730,7 +1730,8 @@
     "mes-substrate_map": "座標マップ",
     "mes-bin_set": "ビン定義セット",
     "mes-map-import": "座標マップ取込",
-    "mes-ct-move-report": "CT / Move レポート"
+    "mes-ct-move-report": "CT / Move レポート",
+    "mes-qual-expiring": "期限間近の資格"
   },
   "permName": {
     "users__read": "プラットフォームユーザー閲覧",

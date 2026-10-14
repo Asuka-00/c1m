@@ -1730,7 +1730,8 @@
     "mes-substrate_map": "坐标图",
     "mes-bin_set": "bin 定义集",
     "mes-map-import": "坐标图导入",
-    "mes-ct-move-report": "CT / Move 报表"
+    "mes-ct-move-report": "CT / Move 报表",
+    "mes-qual-expiring": "即将到期资质"
   },
   "permName": {
     "users__read": "查看平台用户",

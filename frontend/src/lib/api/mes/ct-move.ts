@@ -1,16 +1,22 @@
 /**
- * P3 Cycle Time / Move 报表接口（前端假设，后端未定；契约草案见 docs/p3-ct-move-contract.md）。
+ * P3 Cycle Time / Move 报表接口（口径按 D62 + D63 定稿；契约见 docs/p3-ct-move-contract.md）。
  *
- * 假设：`GET /mes/exec/reports/ct-move`，权限 `mes.exec:read`。
- * - 入参：`date_from` / `date_to`（YYYY-MM-DD，按租户时区的自然日，含两端）、可选 `operation_id`、`product_id`。
- * - 出参：按日趋势 `trend[]` + 按工序汇总 `by_operation[]` + 总计 `total`。
- * - CT 单位为小时，十进制字符串（D50）；没有数据为 null。Move = 该工序 Track Out（出站）次数，按批次计，
- *   另给 `move_qty`（出站数量合计）。
+ * `GET /mes/exec/reports/ct-move`，权限 `mes.exec:read`（定稿）。只做工序 CT，批次 CT 不进 P3。
+ * - 入参：`date_from` / `date_to`（YYYY-MM-DD，含两端，最多 92 天，超出 422 `date_range_too_large`）、
+ *   可选 `operation_id`、`product_id`。
+ * - Move：一次出站 = 1 个 move（批次 move 数 `moves`）；`move_qty` = 出站片数（晶圆 move 数）。
+ *   拆批 / 合批 / 跳站不算；返工出站单独列 `rework_moves` / `rework_move_qty`，不计入 moves / move_qty。
+ * - CT：上一工序出站（首工序为开批）→ 本工序出站，小时，十进制字符串（D50），按出站日期归天，不扣 Hold；
+ *   Hold 时长单独 `hold_hours`（小时字符串）。没有数据：计数 0，时长 null；`trend` 每天都列。
+ * - 分桶按站点时区（后端算）：前端不硬编码，显示响应里的 `timezone`。
  * 后端返回 404（接口未上线）时前端用 `ctMoveMock` 示例数据，并在页面标注“示例数据”。
  */
 import { AxiosError } from 'axios'
 import { http } from '../client'
 import type { DecimalValue } from './execution'
+
+/** 日期跨度上限（D62-3，含两端）。 */
+export const CT_MOVE_MAX_DAYS = 92
 
 export interface CtMoveParams {
   date_from: string
@@ -19,26 +25,33 @@ export interface CtMoveParams {
   product_id?: string
 }
 
-/** 按日趋势点。 */
-export interface CtMoveTrendPoint {
-  /** 自然日 YYYY-MM-DD（租户时区） */
-  day: string
-  /** 出站批次数 */
+/** 计数与时长指标（trend / by_operation / total 共用）。 */
+export interface CtMoveMetrics {
+  /** 批次 move 数（出站次数，不含返工出站） */
   moves: number
-  /** 出站数量合计 */
+  /** 晶圆 move 数 = 出站片数合计（不含返工） */
   move_qty: DecimalValue
-  /** 当日出站批次的平均工序 CT（小时，Track In → Track Out 之前的等待含在内与否见契约） */
+  /** 返工出站批次数 */
+  rework_moves: number
+  /** 返工出站片数 */
+  rework_move_qty: DecimalValue
+  /** 平均工序 CT（小时），无数据 null */
   ct_avg_hours: DecimalValue | null
+  /** Hold 时长（小时，CT 内不扣除，单独列；前端假设字段名），无数据 null */
+  hold_hours: DecimalValue | null
+}
+
+/** 按日趋势点（范围内每天都有；无数据计数 0、时长 null）。 */
+export interface CtMoveTrendPoint extends CtMoveMetrics {
+  /** 自然日 YYYY-MM-DD（按响应 timezone） */
+  day: string
 }
 
 /** 按工序汇总行。 */
-export interface CtMoveOperationRow {
+export interface CtMoveOperationRow extends CtMoveMetrics {
   operation_id: string
   operation: string
   operation_name: string | null
-  moves: number
-  move_qty: DecimalValue
-  ct_avg_hours: DecimalValue | null
   ct_p50_hours: DecimalValue | null
   ct_p90_hours: DecimalValue | null
   /** 期末在制批次数 */
@@ -48,17 +61,33 @@ export interface CtMoveOperationRow {
 export interface CtMoveReport {
   date_from: string
   date_to: string
-  /** 租户时区（IANA），日期分桶依据 */
+  /** 站点时区（IANA，后端分桶依据） */
   timezone: string
   trend: CtMoveTrendPoint[]
   by_operation: CtMoveOperationRow[]
-  total: {
-    moves: number
-    move_qty: DecimalValue
-    ct_avg_hours: DecimalValue | null
-  }
+  total: CtMoveMetrics
   /** 前端标记：接口未上线时为示例数据 */
   mock?: boolean
+}
+
+/** 区间天数（含两端）；格式不对或倒序返回 null。 */
+export function rangeDays(from: string, to: string): number | null {
+  const re = /^\d{4}-\d{2}-\d{2}$/
+  if (!re.test(from) || !re.test(to)) return null
+  const a = Date.parse(`${from}T00:00:00Z`)
+  const b = Date.parse(`${to}T00:00:00Z`)
+  if (Number.isNaN(a) || Number.isNaN(b) || b < a) return null
+  return Math.round((b - a) / 86_400_000) + 1
+}
+
+/** 前端预校验：null 表示可查询，否则返回问题类型。 */
+export function rangeProblem(
+  from: string,
+  to: string
+): 'invalid' | 'too_large' | null {
+  const n = rangeDays(from, to)
+  if (n == null) return 'invalid'
+  return n > CT_MOVE_MAX_DAYS ? 'too_large' : null
 }
 
 const days = (from: string, to: string) => {
@@ -72,6 +101,38 @@ const days = (from: string, to: string) => {
   return out
 }
 
+/** 空指标：计数 0，时长 null。 */
+export const emptyMetrics = (): CtMoveMetrics => ({
+  moves: 0,
+  move_qty: '0',
+  rework_moves: 0,
+  rework_move_qty: '0',
+  ct_avg_hours: null,
+  hold_hours: null,
+})
+
+/** 补齐后端可能缺省的新字段（老版本或部分返回），保证计数 0 / 时长 null。 */
+export function normalizeReport(r: CtMoveReport): CtMoveReport {
+  const fix = <T extends Partial<CtMoveMetrics>>(x: T) => ({
+    ...emptyMetrics(),
+    ...Object.fromEntries(Object.entries(x).filter(([, v]) => v !== undefined)),
+  })
+  return {
+    ...r,
+    trend: (r.trend ?? []).map((x) => fix(x) as CtMoveTrendPoint),
+    by_operation: (r.by_operation ?? []).map(
+      (x) =>
+        ({
+          ct_p50_hours: null,
+          ct_p90_hours: null,
+          wip_lots: 0,
+          ...fix(x),
+        }) as CtMoveOperationRow
+    ),
+    total: fix(r.total ?? {}),
+  }
+}
+
 const OPS = [
   ['op-dice', 'DS', 'Dicing'],
   ['op-da', 'DA', 'Die attach'],
@@ -80,37 +141,57 @@ const OPS = [
   ['op-ft', 'FT', 'Final test'],
 ] as const
 
-/** 示例数据（确定性，便于截图和测试）。 */
+/** 示例数据（确定性，便于截图和测试）；每 6 天有一天无出站，用来演示空日。 */
 export function ctMoveMock(p: CtMoveParams): CtMoveReport {
   const ops = OPS.filter(([id]) => !p.operation_id || id === p.operation_id)
-  const trend = days(p.date_from, p.date_to).map((day, i) => {
-    const moves = ops.length * (8 + ((i * 7) % 5))
-    return {
-      day,
-      moves,
-      move_qty: String(moves * 25),
-      ct_avg_hours: (3.5 + ((i * 3) % 7) * 0.25).toFixed(2),
+  const trend: CtMoveTrendPoint[] = days(p.date_from, p.date_to).map(
+    (day, i) => {
+      if (i % 6 === 5) return { day, ...emptyMetrics() }
+      const moves = ops.length * (8 + ((i * 7) % 5))
+      const rw = i % 3 === 0 && ops.length ? 1 : 0
+      return {
+        day,
+        moves,
+        move_qty: String(moves * 25),
+        rework_moves: rw,
+        rework_move_qty: String(rw * 25),
+        ct_avg_hours: ops.length
+          ? (3.5 + ((i * 3) % 7) * 0.25).toFixed(2)
+          : null,
+        hold_hours: ops.length ? (0.2 + (i % 4) * 0.1).toFixed(2) : null,
+      }
     }
-  })
+  )
   const by_operation = ops.map(([id, code, name], k) => ({
     operation_id: id,
     operation: code,
     operation_name: name,
     moves: trend.length * (8 + k),
     move_qty: String(trend.length * (8 + k) * 25),
+    rework_moves: k,
+    rework_move_qty: String(k * 25),
     ct_avg_hours: (2 + k * 0.75).toFixed(2),
     ct_p50_hours: (1.8 + k * 0.7).toFixed(2),
     ct_p90_hours: (3.2 + k * 1.1).toFixed(2),
+    hold_hours: (0.1 + k * 0.05).toFixed(2),
     wip_lots: 3 + k,
   }))
   const moves = trend.reduce((n, x) => n + x.moves, 0)
+  const rw = trend.reduce((n, x) => n + x.rework_moves, 0)
   return {
     date_from: p.date_from,
     date_to: p.date_to,
     timezone: 'Asia/Taipei',
     trend,
     by_operation,
-    total: { moves, move_qty: String(moves * 25), ct_avg_hours: '4.25' },
+    total: {
+      moves,
+      move_qty: String(moves * 25),
+      rework_moves: rw,
+      rework_move_qty: String(rw * 25),
+      ct_avg_hours: moves ? '4.25' : null,
+      hold_hours: moves ? '8.50' : null,
+    },
     mock: true,
   }
 }
@@ -118,7 +199,7 @@ export function ctMoveMock(p: CtMoveParams): CtMoveReport {
 export const ctMoveApi = {
   report: async (p: CtMoveParams): Promise<CtMoveReport> => {
     try {
-      return (
+      const r = (
         await http.get<CtMoveReport>('/mes/exec/reports/ct-move', {
           params: {
             ...p,
@@ -127,6 +208,7 @@ export const ctMoveApi = {
           },
         })
       ).data
+      return normalizeReport(r)
     } catch (e) {
       if (e instanceof AxiosError && e.response?.status === 404)
         return ctMoveMock(p)

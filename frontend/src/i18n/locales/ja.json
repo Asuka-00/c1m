@@ -499,7 +499,8 @@
         "qtime_rule_in_use": "Q-Time 規則 {{qtime_rule_code}} は {{hold_count}} 件のホールド記録から参照されているため削除できません。無効化してください",
         "qtime_action_invalid": "Q-Time の違反時処置は警告・ホールド・リワークのみ指定できます",
         "hold_not_found": "ホールド記録が存在しないか削除されています。一覧を更新してください",
-        "too_many_decimals": "小数は最大 6 桁です"
+        "too_many_decimals": "小数は最大 6 桁です",
+        "date_range_too_large": "期間は最大 92 日です。範囲を狭めてください。"
       },
       "tooManyDecimals": "小数は最大 {{n}} 桁です"
     },
@@ -684,7 +685,8 @@
       "qtimeStageSkipped": "今回の {{stage}} は実行されていません。ロット状態を確認してください",
       "checkMsg": {
         "eqp_wait_qual": "設備 {{equipment}} は PM 後の Qual 待ちです。Qual 合格まで着工できません（強制解除不可）"
-      }
+      },
+      "hardBlock": "強制解除できないチェックが含まれています。"
     },
     "trace": {
       "hint": "ロットとユニットの全操作履歴。",
@@ -1656,11 +1658,24 @@
       "name": "名称",
       "trend": "CT と Move の推移",
       "byOperation": "工程別",
-      "mock": "サンプルデータ（API 未提供）"
+      "mock": "サンプルデータ（API 未提供）",
+      "timezone": "タイムゾーン：{{tz}}",
+      "rangeInvalid": "有効な期間を選択してください（開始日は終了日以前）。",
+      "reworkMoves": "リワーク Move（ロット / 枚）",
+      "hold": "Hold 時間（時間）"
     },
     "qual": {
-      "notQualified": "{{user}} は工程 {{op}} の有効な資格がないため、投入できません。資格を取得または更新してください。",
-      "expiringSoon": "資格は {{date}} に期限切れになります。早めに更新してください。"
+      "notQualified": "{{user}} は工程 {{op}} の有効な資格がないため投入できません。強制解除もできません。資格を取得または更新してください。",
+      "expiringSoon": "資格は {{date}} に期限切れになります。早めに更新してください。",
+      "warnDays": "予告日数：{{n}} 日",
+      "expiringTitle": "期限が近い作業者資格",
+      "user": "作業者",
+      "equipmentType": "設備タイプ",
+      "anyEquipment": "（工程のみ）",
+      "expiresOn": "有効期限",
+      "daysLeft": "残り日数",
+      "lastDay": "本日期限（当日有効）",
+      "hint": "期限間近の作業者資格（期限日当日は有効）。"
     }
   },
   "notify": {

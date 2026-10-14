@@ -499,7 +499,8 @@
         "qtime_rule_in_use": "Q-Time 规则 {{qtime_rule_code}} 已被 {{hold_count}} 条 Hold 记录引用，不能删除，请改为停用",
         "qtime_action_invalid": "Q-Time 超时动作只能是警告、Hold 或返工",
         "hold_not_found": "Hold 记录不存在或已被删除，请刷新列表",
-        "too_many_decimals": "最多 6 位小数"
+        "too_many_decimals": "最多 6 位小数",
+        "date_range_too_large": "日期跨度最多 92 天，请缩小范围。"
       },
       "tooManyDecimals": "最多 {{n}} 位小数"
     },
@@ -684,7 +685,8 @@
       "qtimeStageSkipped": "本次 {{stage}} 未执行，请刷新后查看批次状态",
       "checkMsg": {
         "eqp_wait_qual": "设备 {{equipment}} PM 后待 Qual，登记 Qual 通过前不能开工（不可强制放行）"
-      }
+      },
+      "hardBlock": "存在不可放行的检查项，不能强制放行。"
     },
     "trace": {
       "hint": "查看批次及其单元的全部操作记录。",
@@ -1656,11 +1658,24 @@
       "name": "名称",
       "trend": "CT 与 Move 趋势",
       "byOperation": "按工序",
-      "mock": "示例数据（接口未上线）"
+      "mock": "示例数据（接口未上线）",
+      "timezone": "时区：{{tz}}",
+      "rangeInvalid": "请选择有效的日期区间（开始不晚于结束）。",
+      "reworkMoves": "返工 Move（批 / 片）",
+      "hold": "Hold 时长（小时）"
     },
     "qual": {
-      "notQualified": "{{user}} 不具备工序 {{op}} 的有效资质，不能进站。请先取得或续期资质。",
-      "expiringSoon": "资质将于 {{date}} 到期，请尽快续期。"
+      "notQualified": "{{user}} 不具备工序 {{op}} 的有效资质，不能进站，且不可放行。请先取得或续期资质。",
+      "expiringSoon": "资质将于 {{date}} 到期，请尽快续期。",
+      "warnDays": "预警天数：{{n}} 天",
+      "expiringTitle": "即将到期的人员资质",
+      "user": "人员",
+      "equipmentType": "设备类型",
+      "anyEquipment": "（只按工序）",
+      "expiresOn": "到期日",
+      "daysLeft": "剩余天数",
+      "lastDay": "今天到期（当天有效）",
+      "hint": "即将到期的人员资质，到期日当天仍有效。"
     }
   },
   "notify": {

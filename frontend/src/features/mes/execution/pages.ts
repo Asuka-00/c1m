@@ -12,6 +12,7 @@ export const pages: Pages = {
   'mes-page:yield-report': lazy(() => import('./yield-report')),
   // P3：后端菜单未定，组件 key 为前端假设
   'mes-page:ct-move-report': lazy(() => import('./ct-move-report')),
+  'mes-page:qual-expiring': lazy(() => import('./qual-expiring')),
   'mes-page:trace': lazy(() => import('./trace')),
   'mes-page:lot-trace': lazy(() => import('./lot-trace')),
   'mes-page:batch-ops': lazy(() => import('./batch-ops')),

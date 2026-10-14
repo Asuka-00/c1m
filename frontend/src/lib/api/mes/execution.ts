@@ -23,7 +23,12 @@ export interface CheckResult {
   result: 'pass' | 'warn' | 'block' | 'overridden'
   applicable: boolean
   message: string
+  /** 是否可放行；多原因时任一不能放行即 false（前端只看此值） */
   overridable: boolean
+  /** 第一个失败原因（文案，可选） */
+  reason?: string | null
+  /** 全部失败原因（按检查顺序，可选；元素为文案或 {code, message}） */
+  reasons?: unknown[] | null
   /** 附加数据（如 eqp_wait_qual 的 `{equipment, task_id}`） */
   data?: Record<string, unknown> | null
 }

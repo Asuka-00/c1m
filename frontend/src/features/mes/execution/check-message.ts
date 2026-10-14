@@ -16,5 +16,27 @@ export function checkMessage(r: CheckResult): string {
     return toolLifeMessage(r)
   const qual = operatorQualMessage(r)
   if (qual) return qual
+  if (r.result !== 'pass') {
+    const list = reasonTexts(r.reasons)
+    if (list.length > 1) return list.join('；')
+    if (r.reason) return r.reason
+    if (list.length) return list[0]
+  }
   return r.message
+}
+
+/** reasons[] 元素取文案（字符串或 {message|reason|code}）。 */
+export function reasonTexts(v: unknown): string[] {
+  if (!Array.isArray(v)) return []
+  return v
+    .map((x) => {
+      if (typeof x === 'string') return x
+      if (x && typeof x === 'object') {
+        const o = x as Record<string, unknown>
+        const m = o.message ?? o.reason ?? o.code
+        return typeof m === 'string' ? m : ''
+      }
+      return ''
+    })
+    .filter(Boolean)
 }
