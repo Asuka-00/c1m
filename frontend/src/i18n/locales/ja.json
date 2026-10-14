@@ -1814,7 +1814,9 @@
         "scrap": "元に戻せません。装着中なら同時に取り外します",
         "life-reset": "カウントをゼロにして復帰します。先に取り外しが必要です",
         "unmount": "装置から取り外します。使用中以外は装着記録のみ閉じます",
-        "inspection": "合格で使用可能、不合格で保留になります"
+        "inspection": "合格で使用可能、不合格で保留になります",
+        "mount": "装置に装着します。使用可能かつ未装着のときのみ",
+        "incident": "衝突・落下などの異常を登録します。レチクルはホールド（異常）となり検査が必要です"
       },
       "field": {
         "delta": "増減量",
@@ -1837,7 +1839,11 @@
         "status": "状態",
         "kind": "検査項目",
         "result": "結果",
-        "disposition": "処置案"
+        "disposition": "処置案",
+        "equipment_id": "装置",
+        "slot_code": "スロット",
+        "lot_id": "ロット ID",
+        "description": "異常内容"
       },
       "tab": {
         "status": "状態履歴",
@@ -1893,11 +1899,17 @@
         "reticle_unavailable": "現在の状態ではレチクルを装着できません",
         "life_reached": "寿命上限に達しているためトラックインできません",
         "idempotency_in_progress": "前回の送信をまだ処理中です。しばらくしてから再試行してください",
-        "referenced": "レチクルに履歴があるため削除できません。不要な場合は廃棄してください"
+        "referenced": "レチクルに履歴があるため削除できません。不要な場合は廃棄してください",
+        "slot_occupied": "装置のそのスロットには既にレチクルがあります"
       },
       "scrappedHint": "レチクルは廃棄済みのため、カウント・検査登録などの操作はできません",
       "delete": "削除",
-      "deleteConfirm": "レチクル {{code}} を削除しますか？"
+      "deleteConfirm": "レチクル {{code}} を削除しますか？",
+      "incidentKind": {
+        "collision": "衝突",
+        "drop": "落下",
+        "other": "その他"
+      }
     },
     "marking": {
       "tplTitle": "マーキングテンプレート",

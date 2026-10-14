@@ -138,6 +138,8 @@ export type ReticleAction =
   | 'life-reset'
   | 'unmount'
   | 'inspection'
+  | 'mount'
+  | 'incident'
 
 export interface ReticleActionInput {
   delta?: number | string
@@ -149,11 +151,20 @@ export interface ReticleActionInput {
   result?: string
   defect_count?: number | string
   disposition?: string
+  /** mount / incident（MountIn / IncidentIn） */
+  equipment_id?: string
+  sub_unit_id?: string
+  slot_code?: string
+  mounted_at?: string
+  occurred_at?: string
+  lot_id?: string
+  description?: string
 }
 
 /**
- * D80 + 补充一：/mes/reticle 下 10 个手工写接口一律必填 Idempotency-Key。
- * mount、incident 前端暂无入口（上机走设备页 /mes/eqp，异常由 EAP 上报），这里只列出备查。
+ * D80 + 补充一 + 补充二：/mes/reticle 下 14 个手工写接口一律必填 Idempotency-Key
+ * （补充二加入 _flow 动态路由的 clean-start / clean-complete / repair-complete / inspect-start）。
+ * /mes/eqp 下的物料批上机、下机不在范围内。
  */
 export const D80_KEYED = [
   'usage',
@@ -166,22 +177,13 @@ export const D80_KEYED = [
   'restore',
   'life-reset',
   'scrap',
-] as const
-/** 前端有入口、必须带 Idempotency-Key 的光罩动作（D80 清单里属于 ReticleAction 的 8 个）。 */
-export const IDEMPOTENT: ReticleAction[] = (
-  D80_KEYED as readonly string[]
-).filter((a): a is ReticleAction =>
-  [
-    'usage',
-    'hold',
-    'release',
-    'restore',
-    'scrap',
-    'life-reset',
-    'unmount',
-    'inspection',
-  ].includes(a)
-)
+  'clean-start',
+  'clean-complete',
+  'repair-complete',
+  'inspect-start',
+] as const satisfies readonly ReticleAction[]
+/** 必须带 Idempotency-Key 的光罩动作（= 全部 14 个）。 */
+export const IDEMPOTENT: readonly ReticleAction[] = D80_KEYED
 
 /** 各动作请求体白名单。 */
 export const ACTION_BODY: Record<ReticleAction, readonly string[]> = {
@@ -197,6 +199,8 @@ export const ACTION_BODY: Record<ReticleAction, readonly string[]> = {
   'inspect-start': BODY_KEYS.reticleComment,
   unmount: BODY_KEYS.reticleUnmount,
   inspection: BODY_KEYS.reticleInspection,
+  mount: BODY_KEYS.reticleMount,
+  incident: BODY_KEYS.reticleIncident,
 }
 
 /** 按动作挑选请求体（空字符串视为未填）。 */
@@ -531,6 +535,10 @@ function target(
       return s === 'inspecting' || s === 'on_hold' ? 'on_hold' : null
     case 'usage':
       return s
+    case 'mount':
+      return 'in_use'
+    case 'incident':
+      return 'on_hold'
   }
 }
 
@@ -560,14 +568,10 @@ function mockAct(
     const hit = idem.get(key)!
     // D57/D80：同 key 不同内容 → 422 idempotency_key_reused
     if (hit.sig !== sig)
-      throw apiError(422, [
-        {
-          loc: ['header', 'Idempotency-Key'],
-          type: 'idempotency_key_reused',
-          code: 'idempotency_key_reused',
-          msg: 'Idempotency-Key reused with a different body',
-        },
-      ])
+      throw apiError(422, {
+        code: 'idempotency_key_reused',
+        message: 'Idempotency-Key reused with a different body',
+      })
     // 重放返回原响应（D57）
     return structuredClone(hit.out)
   }
@@ -580,6 +584,32 @@ function mockAct(
       status_code: x.status_code,
       hold_reason: x.hold_reason,
     })
+  // mount（service.mount）：已挂载 409 already_mounted；非 available 409 reticle_unavailable
+  if (action === 'mount') {
+    if (!body.equipment_id)
+      throw apiError(422, [
+        {
+          loc: ['body', 'equipment_id'],
+          type: 'missing',
+          code: 'missing',
+          msg: 'equipment_id: field required',
+        },
+      ])
+    if (openMount(id)) throw conflict('already_mounted')
+    if (x.status_code !== 'available') throw conflict('reticle_unavailable')
+  }
+  if (
+    action === 'incident' &&
+    !['collision', 'drop', 'other'].includes(String(body.kind))
+  )
+    throw apiError(422, [
+      {
+        loc: ['body', 'kind'],
+        type: 'literal_error',
+        code: 'literal_error',
+        msg: 'kind',
+      },
+    ])
   // D71：先 invalid_transition，再 still_mounted
   const to = target(x, action, body)
   if (to == null) throw conflict('invalid_transition')
@@ -656,6 +686,47 @@ function mockAct(
     )
       x.status_code = 'pending_maintenance'
     out = { data: { ...row }, reticle: { ...x } }
+  } else if (action === 'mount') {
+    const m: ReticleMount = {
+      id: `m${Date.now()}`,
+      equipment_id: body.equipment_id!,
+      equipment_label: body.equipment_id!,
+      slot_code: body.slot_code?.trim() || null,
+      mounted_at: body.mounted_at ?? at,
+      unmounted_at: null,
+      unmount_reason: null,
+      shots_at_mount: x.shot_count,
+      shots_at_unmount: null,
+      username: 'me',
+    }
+    h.mounts.unshift(m)
+    x.status_code = to
+    x.equipment_id = m.equipment_id
+    x.equipment_label = m.equipment_label
+    x.mounted_at = m.mounted_at
+    x.mount_count += 1
+    out = { data: { ...m } }
+  } else if (action === 'incident') {
+    // 非 scrapped 一律 on_hold(incident) + 待检（service.incident / system_hold）
+    if (from !== 'on_hold')
+      x.status_before_hold = from === 'in_use' ? 'available' : from
+    closeMount('incident')
+    x.hold_reason = 'incident'
+    x.status_code = to
+    x.inspection_required = true
+    x.inspection_pending = true
+    out = {
+      data: {
+        id: `inc${Date.now()}`,
+        kind: body.kind,
+        occurred_at: body.occurred_at ?? at,
+        equipment_id: body.equipment_id ?? null,
+        lot_id: body.lot_id ?? null,
+        description: body.description ?? null,
+        source: 'manual',
+      },
+      reticle: { ...x },
+    }
   } else if (action === 'unmount') {
     const m = closeMount('manual')!
     x.status_code = to

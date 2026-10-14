@@ -1814,7 +1814,9 @@
         "scrap": "报废后不可恢复，挂载中会同时卸载",
         "life-reset": "计数清零并恢复为可用，需先卸载",
         "unmount": "从机台卸下；非使用中时只关闭挂载记录",
-        "inspection": "合格回到可用，不合格转 Hold"
+        "inspection": "合格回到可用，不合格转 Hold",
+        "mount": "挂到机台上使用；仅可用且未挂载时可操作",
+        "incident": "登记碰撞、跌落等异常；光罩转为 Hold（异常）并需检查"
       },
       "field": {
         "delta": "增减量",
@@ -1837,7 +1839,11 @@
         "status": "状态",
         "kind": "检查项",
         "result": "结果",
-        "disposition": "处置建议"
+        "disposition": "处置建议",
+        "equipment_id": "机台",
+        "slot_code": "槽位",
+        "lot_id": "批次 ID",
+        "description": "异常描述"
       },
       "tab": {
         "status": "状态履历",
@@ -1893,11 +1899,17 @@
         "reticle_unavailable": "光罩当前状态不可挂载",
         "life_reached": "光罩已达寿命上限，不能进站",
         "idempotency_in_progress": "上一次提交还在处理中，请稍后重试",
-        "referenced": "光罩已有履历记录，不能删除；如不再使用请报废"
+        "referenced": "光罩已有履历记录，不能删除；如不再使用请报废",
+        "slot_occupied": "该机台槽位已有光罩"
       },
       "scrappedHint": "光罩已报废，不能再计数、录入检查或执行其他动作",
       "delete": "删除",
-      "deleteConfirm": "确定删除光罩 {{code}}？"
+      "deleteConfirm": "确定删除光罩 {{code}}？",
+      "incidentKind": {
+        "collision": "碰撞",
+        "drop": "跌落",
+        "other": "其他"
+      }
     },
     "marking": {
       "tplTitle": "打标模板",

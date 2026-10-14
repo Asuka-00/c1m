@@ -18,7 +18,13 @@ export const MAX_PLACES = 6
 /** storage_location 上限。 */
 export const LOCATION_MAX = 64
 
-type Field = 'delta' | 'reason' | 'comment' | 'inspection'
+type Field =
+  | 'delta'
+  | 'reason'
+  | 'comment'
+  | 'inspection'
+  | 'mount'
+  | 'incident'
 interface Spec {
   perm: string
   from: ReticleStatus[] | 'non_terminal'
@@ -93,7 +99,24 @@ export const ACTIONS: Record<ReticleAction, Spec> = {
     from: ['inspecting', 'on_hold'],
     fields: ['inspection', 'comment'],
   },
+  /** 上机（MountIn，mes.reticle:write）：仅 available 且未挂载 */
+  mount: {
+    perm: MES_PERM.reticleWrite,
+    from: ['available'],
+    fields: ['mount', 'comment'],
+  },
+  /** 登记异常（IncidentIn，mes.reticle:write）：非 scrapped 一律转 on_hold(incident) + 待检 */
+  incident: {
+    perm: MES_PERM.reticleWrite,
+    from: 'non_terminal',
+    fields: ['incident'],
+  },
 }
+
+/** 异常类型（IncidentIn.kind）。 */
+export const INCIDENT_KINDS = ['collision', 'drop', 'other'] as const
+/** slot_code 上限（MountIn）。 */
+export const SLOT_MAX = 64
 
 export const ACTION_LIST = Object.keys(ACTIONS) as ReticleAction[]
 
@@ -108,6 +131,7 @@ export function actionEnabled(
   a: ReticleAction
 ) {
   if (a === 'unmount' && !r.equipment_id) return false
+  if (a === 'mount' && r.equipment_id) return false
   const from = ACTIONS[a].from
   return from === 'non_terminal'
     ? r.status_code !== 'scrapped'
@@ -151,6 +175,17 @@ export function validateAction(
     else if (tooLong(v.reason))
       e.reason = t('mes.reticle.err.tooLong', { max: TEXT_MAX })
   }
+  if (a === 'mount') {
+    if (!(v.equipment_id ?? '').trim()) e.equipment_id = t('mes.err.required')
+    if ((v.slot_code ?? '').length > SLOT_MAX)
+      e.slot_code = t('mes.reticle.err.tooLong', { max: SLOT_MAX })
+  }
+  if (a === 'incident') {
+    if (!(INCIDENT_KINDS as readonly string[]).includes(v.kind ?? ''))
+      e.kind = t('mes.err.required')
+    if (tooLong(v.description))
+      e.description = t('mes.reticle.err.tooLong', { max: TEXT_MAX })
+  }
   if (tooLong(v.comment))
     e.comment = t('mes.reticle.err.tooLong', { max: TEXT_MAX })
   return e
@@ -171,6 +206,8 @@ export const RETICLE_CODES = [
   'still_mounted',
   'reticle_unavailable',
   'life_reached',
+  // mount：同机台同槽位已有光罩
+  'slot_occupied',
   // 409：上次同 key 请求仍在处理；重试时内容不变复用同一 key
   'idempotency_in_progress',
   // D72：有履历的光罩删除 → 409 referenced
@@ -206,6 +243,8 @@ export function reticleErrorMessage(err: unknown, action?: ReticleAction) {
       d && typeof d === 'object' && !Array.isArray(d)
         ? (d as { code?: unknown }).code
         : undefined
+    // D57 对象格式 {code:'idempotency_key_reused', message}（D80 补充二）
+    if (code === 'idempotency_key_reused') return t('mes.reticle.err.keyReused')
     if (
       typeof code === 'string' &&
       (RETICLE_CODES as readonly string[]).includes(code)

@@ -88,3 +88,10 @@
 - 清单 10 个：`POST /mes/reticle/{rid}/` usage、incident、inspection、mount、unmount、hold、release、restore、life-reset、scrap（`D80_KEYED`）。前端有入口的 8 个（无 mount / incident）都经 `IDEMPOTENT` 带头。
 - 统一封装 `OperationKey` / `useOperationKey`（`features/mes/common/idem-key.ts`）：一次用户操作一个 key；请求体不变的重试沿用；请求体变或成功后换新 key。
 - mock：缺 key 422 `missing`（loc `["header","Idempotency-Key"]`）；同 key 同内容重放原响应；同 key 换请求体 422 `idempotency_key_reused`；文案 `mes.reticle.err.keyMissing` / `keyReused`（三语）。
+
+## D80 补充二（14 个接口 + 上机 / 登记异常）
+
+- `D80_KEYED` 扩到 14 个：原 10 个 + `_flow` 动态路由的 clean-start、clean-complete、repair-complete、inspect-start；`IDEMPOTENT = D80_KEYED`，全部经 `useOperationKey` 带头。`/mes/eqp` 下物料批上机 / 下机不动。
+- mock 的 `idempotency_key_reused` 改回 D57 对象格式 `{code, message}`（422）；`reticleErrorMessage` 对象 / 数组两种格式都识别。
+- 光罩页新增「挂载」（`POST /mes/reticle/{rid}/mount`，MountIn：equipment_id 必填、sub_unit_id、slot_code ≤64、mounted_at、comment）和「事故」（`POST /{rid}/incident`，IncidentIn：kind=collision/drop/other 必填、occurred_at、equipment_id、lot_id、description ≤300）对话框，权限都是 `mes.reticle:write`。前端对话框只填 equipment_id / slot_code / comment 和 kind / equipment_id / lot_id / description，时间由后端取当前。
+- mock：mount 仅 available 且未挂载（409 already_mounted / reticle_unavailable）→ in_use；incident 非 scrapped → on_hold(incident) + 待检，scrapped 409 invalid_transition。新增 409 `slot_occupied` 三语文案。

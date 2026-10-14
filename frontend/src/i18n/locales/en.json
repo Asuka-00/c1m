@@ -1814,7 +1814,9 @@
         "scrap": "Cannot be undone; unmounts if mounted",
         "life-reset": "Reset the count to zero and restore; unmount first",
         "unmount": "Remove from the tool; if not in use only the mount record is closed",
-        "inspection": "Pass returns to available; fail puts it on hold"
+        "inspection": "Pass returns to available; fail puts it on hold",
+        "mount": "Mount on an equipment; only when available and not mounted",
+        "incident": "Record a collision, drop or other incident; the reticle goes on hold (incident) and needs inspection"
       },
       "field": {
         "delta": "Delta",
@@ -1837,7 +1839,11 @@
         "status": "Status",
         "kind": "Inspection",
         "result": "Result",
-        "disposition": "Disposition"
+        "disposition": "Disposition",
+        "equipment_id": "Equipment",
+        "slot_code": "Slot",
+        "lot_id": "Lot ID",
+        "description": "Description"
       },
       "tab": {
         "status": "Status history",
@@ -1893,11 +1899,17 @@
         "reticle_unavailable": "The reticle cannot be mounted in its current status",
         "life_reached": "The reticle has reached its life limit and cannot be tracked in",
         "idempotency_in_progress": "The previous submission is still being processed. Please try again shortly.",
-        "referenced": "The reticle has history records and can't be deleted. Scrap it instead."
+        "referenced": "The reticle has history records and can't be deleted. Scrap it instead.",
+        "slot_occupied": "That slot on the equipment already holds a reticle"
       },
       "scrappedHint": "The reticle is scrapped; usage, inspection and other actions are not allowed",
       "delete": "Delete",
-      "deleteConfirm": "Delete reticle {{code}}?"
+      "deleteConfirm": "Delete reticle {{code}}?",
+      "incidentKind": {
+        "collision": "Collision",
+        "drop": "Drop",
+        "other": "Other"
+      }
     },
     "marking": {
       "tplTitle": "Marking templates",

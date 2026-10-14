@@ -146,6 +146,21 @@ export const BODY_KEYS = {
   reticleComment: ['comment'],
   /** UnmountIn / InspectionIn（be/p3 335db8a reticle/router.py） */
   reticleUnmount: ['unmounted_at', 'comment'],
+  /** MountIn / IncidentIn（be/p3 08a1380 reticle/router.py） */
+  reticleMount: [
+    'equipment_id',
+    'sub_unit_id',
+    'slot_code',
+    'mounted_at',
+    'comment',
+  ],
+  reticleIncident: [
+    'kind',
+    'occurred_at',
+    'equipment_id',
+    'lot_id',
+    'description',
+  ],
   reticleInspection: [
     'kind',
     'result',

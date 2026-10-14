@@ -1,8 +1,9 @@
-/** 光罩动作对话框（usage / hold / release / restore / 清洗 / 维修 / 检查 / scrap / life-reset）。 */
+/** 光罩动作对话框（usage / hold / release / restore / 清洗 / 维修 / 检查 / scrap / life-reset / 上机 / 登记异常）。 */
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { t } from '@/i18n'
 import { toast } from 'sonner'
+import { eqpApi } from '@/lib/api/mes/equipment'
 import {
   bodySignature,
   reticleApi,
@@ -25,6 +26,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { useOperationKey } from '@/features/mes/common/idem-key'
 import {
   ACTIONS,
+  INCIDENT_KINDS,
+  SLOT_MAX,
   TEXT_MAX,
   actionLabel,
   reticleErrorMessage,
@@ -96,6 +99,15 @@ function Body({
     },
     onError: (e) => toast.error(reticleErrorMessage(e, action)),
   })
+  // 上机 / 登记异常：机台下拉取设备看板，取不到时退回手填机台 ID
+  const needEqp = fields.includes('mount') || fields.includes('incident')
+  const eqp = useQuery({
+    queryKey: ['mes', 'eqp', 'board'],
+    queryFn: eqpApi.board,
+    enabled: needEqp,
+    retry: false,
+    staleTime: 60_000,
+  })
   const set = (k: keyof ReticleActionInput) => (s: string) =>
     setV((o) => ({ ...o, [k]: s }))
   const submit = () => {
@@ -103,7 +115,55 @@ function Body({
     setErrs(e)
     if (Object.keys(e).length === 0) m.mutate()
   }
-  const text = (k: 'reason' | 'comment' | 'note', required: boolean) => (
+  const line = (k: 'slot_code' | 'lot_id', max?: number) => (
+    <div className='grid gap-1'>
+      <Label htmlFor={`reticle-${k}`}>{t(`mes.reticle.field.${k}`)}</Label>
+      <Input
+        id={`reticle-${k}`}
+        data-testid={`reticle-${k}`}
+        maxLength={max}
+        value={v[k] ?? ''}
+        onChange={(e) => set(k)(e.target.value)}
+      />
+      <FieldErr msg={errs[k]} />
+    </div>
+  )
+  const eqpField = (required: boolean) => (
+    <div className='grid gap-1'>
+      <Label htmlFor='reticle-equipment_id'>
+        {t('mes.reticle.field.equipment_id')}
+        {required ? ' *' : ''}
+      </Label>
+      {eqp.data?.length ? (
+        <select
+          id='reticle-equipment_id'
+          data-testid='reticle-equipment_id'
+          className='h-9 rounded-md border border-input bg-transparent px-2 text-sm'
+          value={v.equipment_id ?? ''}
+          onChange={(e) => set('equipment_id')(e.target.value)}
+        >
+          <option value=''>—</option>
+          {eqp.data.map((x) => (
+            <option key={x.id} value={x.id}>
+              {x.code} {x.name}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <Input
+          id='reticle-equipment_id'
+          data-testid='reticle-equipment_id'
+          value={v.equipment_id ?? ''}
+          onChange={(e) => set('equipment_id')(e.target.value)}
+        />
+      )}
+      <FieldErr msg={errs.equipment_id} />
+    </div>
+  )
+  const text = (
+    k: 'reason' | 'comment' | 'note' | 'description',
+    required: boolean
+  ) => (
     <div className='grid gap-1'>
       <Label htmlFor={`reticle-${k}`}>
         {t(`mes.reticle.field.${k}`)}
@@ -212,6 +272,20 @@ function Body({
               'disposition',
               false
             )}
+          </>
+        )}
+        {fields.includes('mount') && (
+          <>
+            {eqpField(true)}
+            {line('slot_code', SLOT_MAX)}
+          </>
+        )}
+        {fields.includes('incident') && (
+          <>
+            {sel('kind', [...INCIDENT_KINDS], 'incidentKind', true)}
+            {eqpField(false)}
+            {line('lot_id')}
+            {text('description', false)}
           </>
         )}
         {fields.includes('reason') && text('reason', true)}

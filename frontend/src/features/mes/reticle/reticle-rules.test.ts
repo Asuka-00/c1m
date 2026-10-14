@@ -51,7 +51,7 @@ describe('权限', () => {
     const w = only([MES_PERM.reticleWrite])
     expect(w).not.toContain('scrap')
     expect(w).toContain('usage')
-    expect(w).toHaveLength(9)
+    expect(w).toHaveLength(11)
     expect(only([])).toEqual([])
   })
   it('scrapped 终态所有动作都不可用', () => {
@@ -96,7 +96,7 @@ describe('请求体白名单', () => {
     expect(post).toHaveBeenLastCalledWith(
       '/mes/reticle/r1/clean-start',
       { comment: 'c' },
-      undefined
+      { headers: { 'Idempotency-Key': 'k3' } }
     )
     void AxiosHeaders
   })
@@ -291,14 +291,7 @@ describe('幂等键绑定请求体（H-1）', () => {
     expect(err).toMatchObject({
       response: {
         status: 422,
-        data: {
-          detail: [
-            {
-              loc: ['header', 'Idempotency-Key'],
-              type: 'idempotency_key_reused',
-            },
-          ],
-        },
+        data: { detail: { code: 'idempotency_key_reused' } },
       },
     })
     for (const l of ['zh-CN', 'en', 'ja']) {
@@ -495,7 +488,7 @@ describe('D72', () => {
   })
 })
 
-describe('D80：/mes/reticle 10 个手工写接口必填 Idempotency-Key', () => {
+describe('D80 + 补充二：/mes/reticle 14 个手工写接口必填 Idempotency-Key', () => {
   const BODY: Partial<Record<ReticleAction, ReticleActionInput>> = {
     usage: { delta: 1 },
     inspection: { kind: 'cd', result: 'pass', disposition: 'none' },
@@ -505,8 +498,14 @@ describe('D80：/mes/reticle 10 个手工写接口必填 Idempotency-Key', () =>
     restore: { reason: 'x' },
     'life-reset': { reason: 'x' },
     scrap: { reason: 'x' },
+    mount: { equipment_id: 'e9' },
+    incident: { kind: 'drop' },
+    'clean-start': {},
+    'clean-complete': {},
+    'repair-complete': {},
+    'inspect-start': {},
   }
-  it('清单为 10 个；前端有入口的 8 个全部在 IDEMPOTENT 里', () => {
+  it('清单为 14 个，全部在 IDEMPOTENT 里', () => {
     expect([...D80_KEYED].sort()).toEqual(
       [
         'usage',
@@ -519,11 +518,16 @@ describe('D80：/mes/reticle 10 个手工写接口必填 Idempotency-Key', () =>
         'restore',
         'life-reset',
         'scrap',
+        'clean-start',
+        'clean-complete',
+        'repair-complete',
+        'inspect-start',
       ].sort()
     )
+    expect(D80_KEYED).toHaveLength(14)
     expect([...IDEMPOTENT].sort()).toEqual(Object.keys(BODY).sort())
   })
-  it('http：8 个动作都带 Idempotency-Key 头', async () => {
+  it('http：14 个动作都带 Idempotency-Key 头', async () => {
     const post = vi.spyOn(http, 'post').mockResolvedValue({ data: {} })
     for (const a of IDEMPOTENT) {
       await httpReticleApi.act('r1', a, BODY[a]!, `key-${a}`)
@@ -573,7 +577,7 @@ describe('D80：/mes/reticle 10 个手工写接口必填 Idempotency-Key', () =>
     ).rejects.toMatchObject({
       response: {
         status: 422,
-        data: { detail: [{ type: 'idempotency_key_reused' }] },
+        data: { detail: { code: 'idempotency_key_reused' } },
       },
     })
   })
@@ -590,5 +594,132 @@ describe('OperationKey：一次操作一个 key', () => {
     expect(k.key(s2)).toBe('k2')
     k.done()
     expect(k.key(s2)).toBe('k3')
+  })
+})
+
+describe('D80 补充二：上机 / 登记异常对话框的接口与 mock', () => {
+  it('http 请求体按 MountIn / IncidentIn 白名单', async () => {
+    const post = vi.spyOn(http, 'post').mockResolvedValue({ data: {} })
+    await httpReticleApi.act(
+      'r1',
+      'mount',
+      { equipment_id: 'e9', slot_code: 'S1', comment: 'c', reason: 'x' },
+      'km'
+    )
+    expect(post).toHaveBeenLastCalledWith(
+      '/mes/reticle/r1/mount',
+      { equipment_id: 'e9', slot_code: 'S1', comment: 'c' },
+      { headers: { 'Idempotency-Key': 'km' } }
+    )
+    await httpReticleApi.act(
+      'r1',
+      'incident',
+      { kind: 'drop', lot_id: 'L1', description: 'd', comment: 'x' },
+      'ki'
+    )
+    expect(post).toHaveBeenLastCalledWith(
+      '/mes/reticle/r1/incident',
+      { kind: 'drop', lot_id: 'L1', description: 'd' },
+      { headers: { 'Idempotency-Key': 'ki' } }
+    )
+  })
+  it('权限：两者都要 mes.reticle:write；mount 仅 available 且未挂载', () => {
+    expect(visibleActions((p) => p === MES_PERM.reticleWrite)).toEqual(
+      expect.arrayContaining(['mount', 'incident'])
+    )
+    expect(visibleActions(() => false)).not.toContain('mount')
+    expect(
+      actionEnabled({ status_code: 'available', equipment_id: null }, 'mount')
+    ).toBe(true)
+    expect(
+      actionEnabled({ status_code: 'available', equipment_id: 'e1' }, 'mount')
+    ).toBe(false)
+    expect(
+      actionEnabled({ status_code: 'dirty', equipment_id: null }, 'mount')
+    ).toBe(false)
+    expect(actionEnabled({ status_code: 'scrapped' }, 'incident')).toBe(false)
+    expect(actionEnabled({ status_code: 'on_hold' }, 'incident')).toBe(true)
+  })
+  it('表单校验：mount 机台必填、槽位 ≤64；incident 类型必填、描述 ≤300', () => {
+    expect(validateAction('mount', {})).toHaveProperty('equipment_id')
+    expect(
+      validateAction('mount', { equipment_id: 'e', slot_code: 'x'.repeat(65) })
+    ).toHaveProperty('slot_code')
+    expect(validateAction('incident', {})).toHaveProperty('kind')
+    expect(
+      validateAction('incident', { kind: 'drop', description: 'x'.repeat(301) })
+    ).toHaveProperty('description')
+    expect(validateAction('incident', { kind: 'other' })).toEqual({})
+  })
+  it('mock mount：available → in_use 并记挂载；重复 409 already_mounted；同 key 重放', async () => {
+    const a = await act(
+      'r1',
+      'mount',
+      { equipment_id: 'e9', slot_code: 'S1' },
+      'mk'
+    )
+    expect(a.data).toMatchObject({
+      equipment_id: 'e9',
+      slot_code: 'S1',
+      unmounted_at: null,
+    })
+    expect(
+      await act('r1', 'mount', { equipment_id: 'e9', slot_code: 'S1' }, 'mk')
+    ).toEqual(a)
+    expect(await mockReticleApi.get('r1')).toMatchObject({
+      status_code: 'in_use',
+      equipment_id: 'e9',
+      mount_count: 1,
+    })
+    expect(
+      (await mockReticleApi.history('r1')).mounts.filter(
+        (m) => m.unmounted_at == null
+      )
+    ).toHaveLength(1)
+    await expect(
+      act('r1', 'mount', { equipment_id: 'e8' })
+    ).rejects.toMatchObject({
+      response: { status: 409, data: { detail: { code: 'already_mounted' } } },
+    })
+  })
+  it('mock incident：转 on_hold(incident) + 待检；scrapped 409', async () => {
+    const r = await act('r1', 'incident', {
+      kind: 'collision',
+      description: 'd',
+    })
+    expect(r.data).toMatchObject({
+      kind: 'collision',
+      description: 'd',
+      source: 'manual',
+    })
+    expect(r.reticle).toMatchObject({
+      status_code: 'on_hold',
+      hold_reason: 'incident',
+      inspection_required: true,
+    })
+    await act('r1', 'scrap', { reason: 'x' })
+    await expect(act('r1', 'incident', { kind: 'drop' })).rejects.toMatchObject(
+      {
+        response: {
+          status: 409,
+          data: { detail: { code: 'invalid_transition' } },
+        },
+      }
+    )
+  })
+  it('reused 两种格式都识别；slot_occupied 三语', async () => {
+    const arr = apiError(422, [
+      { loc: ['header', 'Idempotency-Key'], type: 'idempotency_key_reused' },
+    ])
+    const obj = apiError(422, { code: 'idempotency_key_reused', message: 'x' })
+    for (const l of ['zh-CN', 'en', 'ja']) {
+      await i18n.changeLanguage(l)
+      expect(reticleErrorMessage(arr)).toBe(t('mes.reticle.err.keyReused'))
+      expect(reticleErrorMessage(obj)).toBe(t('mes.reticle.err.keyReused'))
+      expect(
+        reticleErrorMessage(apiError(409, { code: 'slot_occupied' }), 'mount')
+      ).toBe(t('mes.reticle.code.slot_occupied'))
+      expect(t('mes.reticle.incidentKind.drop')).not.toContain('incidentKind')
+    }
   })
 })
