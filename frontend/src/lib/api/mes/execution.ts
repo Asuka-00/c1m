@@ -713,6 +713,8 @@ export const execApi = {
     http
       .post<{
         results: CheckResult[]
+        /** c6b5907：整体能否放行（任一阻断项不可放行即 false；无阻断时也为 false） */
+        overridable?: boolean
       }>(`/mes/exec/lots/${lotId}/preview/${stage}`, body)
       .then((r) => r.data),
   stage: (lotId: string, stage: ExecStage, body: StageBody) =>
@@ -873,6 +875,22 @@ export const execApi = {
       .then((r) => r.data),
 }
 
+/**
+ * 409 check_blocked 的顶层 `overridable`（c6b5907）：任一阻断项不可放行即 false。
+ * 不是 check_blocked、或旧后端不带该字段时为 null（由调用方按 results[] 兜底判断）。
+ */
+export function blockedOverridable(err: unknown): boolean | null {
+  const r = (
+    err as { response?: { status?: number; data?: { detail?: unknown } } }
+  )?.response
+  const d = r?.data?.detail as { code?: string; overridable?: unknown }
+  return r?.status === 409 &&
+    d?.code === 'check_blocked' &&
+    typeof d.overridable === 'boolean'
+    ? d.overridable
+    : null
+}
+
 /** 被阻断阶段的检查结果（409 check_blocked），否则为 null。 */
 export function blockedResults(err: unknown): CheckResult[] | null {
   const r = (
@@ -882,4 +900,13 @@ export function blockedResults(err: unknown): CheckResult[] | null {
   return r?.status === 409 && d?.code === 'check_blocked'
     ? (d.results ?? [])
     : null
+}
+
+/** 不能强制放行：优先顶层 `overridable`（false 即不可放行），没有时看各阻断项。 */
+export function isHardBlock(
+  results: CheckResult[],
+  overridable?: boolean | null
+): boolean {
+  if (typeof overridable === 'boolean') return !overridable
+  return results.some((r) => r.result === 'block' && !r.overridable)
 }

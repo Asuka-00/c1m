@@ -113,7 +113,8 @@
         "target_state": "遷移先状態",
         "require_qual_on_clear": "解除後 Qual 必要",
         "disposition": "処置",
-        "is_active": "有効"
+        "is_active": "有効",
+        "migration_note": "移行メモ"
       },
       "alarm_log": {
         "equipment": "設備",
@@ -1161,10 +1162,7 @@
       },
       "e10_trigger": {
         "track_in": "トラックイン",
-        "track_out": "トラックアウト（他の処理ロットなし）",
-        "manual": "手動",
-        "equipment": "設備イベント",
-        "system": "システム"
+        "track_out": "トラックアウト（他の処理ロットなし）"
       },
       "pm_result": {
         "ok": "合格",
@@ -1594,6 +1592,11 @@
         "per_wafer": "ウェーハ数",
         "per_unit": "個数",
         "reported": "報告のみ"
+      },
+      "e10_history_trigger": {
+        "manual": "手動",
+        "equipment": "設備イベント",
+        "system": "システム"
       }
     }
   },
@@ -1728,7 +1731,8 @@
     "mes-bin_set": "ビン定義セット",
     "mes-map-import": "座標マップ取込",
     "mes-ct-move-report": "CT / Move レポート",
-    "mes-qual-expiring": "期限間近の資格"
+    "mes-qual-expiring": "期限間近の資格",
+    "mes-customer": "顧客"
   },
   "permName": {
     "users__read": "プラットフォームユーザー閲覧",

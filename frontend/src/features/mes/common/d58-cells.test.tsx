@@ -53,7 +53,7 @@ describe('D58 补充：trigger / source 三语显示', () => {
       expect(i18n.exists('mes.enum.alarm_action.hold_both')).toBe(false)
       expect(i18n.exists('mes.field.alarm_code.hold_reason')).toBe(false)
       expect(t('mes.field.alarm_code.target_state')).toBeTruthy()
-      expect(t('mes.enum.e10_trigger.system')).toBeTruthy()
+      expect(t('mes.enum.e10_history_trigger.system')).toBeTruthy()
     }
   })
 })
@@ -67,8 +67,20 @@ describe('E10 履历 trigger（752503e）', () => {
         const el = await cell('e10_history', 'trigger', { trigger: v })
         await expect
           .element(el)
-          .toHaveTextContent(t(`mes.enum.e10_trigger.${v}`))
+          .toHaveTextContent(t(`mes.enum.e10_history_trigger.${v}`))
       }
     }
   )
+})
+
+describe('E10 履历 trigger 枚举改名 e10_history_trigger（f2d890c）', () => {
+  it('筛选 / _meta 用 e10_history_trigger，e10_trigger 只剩 e10_auto_rule 的两个值', async () => {
+    for (const lng of ['zh-CN', 'en', 'ja']) {
+      await i18n.changeLanguage(lng)
+      for (const v of ['manual', 'equipment', 'system'])
+        expect(i18n.exists(`mes.enum.e10_history_trigger.${v}`)).toBe(true)
+      expect(i18n.exists('mes.enum.e10_trigger.track_in')).toBe(true)
+      expect(i18n.exists('mes.enum.e10_trigger.manual')).toBe(false)
+    }
+  })
 })

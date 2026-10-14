@@ -11,6 +11,26 @@ const FILTER_DEFAULTS: Record<string, Record<string, string>> = {
 }
 
 /**
+ * 实体专用的附加筛选：报警码「迁移待补配」（OQ-20，后端通用 `?has_<字段>=true|false`）。
+ */
+const EXTRA_FILTERS: Record<string, () => FilterDef[]> = {
+  alarm_code: () => [
+    {
+      type: 'select',
+      name: 'has_migration_note',
+      label: t('mes.alarmCode.migration.all'),
+      options: boolOptions(
+        t('mes.alarmCode.migration.pending'),
+        t('mes.alarmCode.migration.none')
+      ),
+    },
+  ],
+}
+
+/** 实体的附加筛选定义（无则空数组）。 */
+export const extraFilters = (code: string) => EXTRA_FILTERS[code]?.() ?? []
+
+/**
  * 引用型下拉筛选：远程搜索目标实体（数据量大时不受单页条数限制）。
  *
  * @param ref - 目标实体编码
@@ -114,6 +134,7 @@ export function useMesFilters(e: MesEntity | undefined, hide: string[] = []) {
         label: t('mes.at'),
         kind: 'datetime',
       })
+    defs.push(...extraFilters(e.code))
     if (e.versioned)
       defs.push({
         type: 'select',

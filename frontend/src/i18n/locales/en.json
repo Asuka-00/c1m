@@ -500,10 +500,14 @@
         "qtime_action_invalid": "The Q-Time action must be Warn, Hold or Rework",
         "hold_not_found": "The hold record does not exist or was deleted; refresh the list",
         "too_many_decimals": "At most 6 decimal places",
-        "date_range_too_large": "The date range can span at most 92 days; narrow it down."
+        "date_range_too_large": "The date range can span at most 92 days; narrow it down.",
+        "read_only_field": "This field is read-only",
+        "unknown_field": "Contains an unknown field"
       },
       "tooManyDecimals": "At most {{n}} decimal places",
-      "onlyWhen": "Only allowed when {{cond}} is “{{value}}”"
+      "onlyWhen": "Only allowed when {{cond}} is “{{value}}”",
+      "readOnlyField": "this field is read-only and cannot be changed",
+      "unknownField": "unknown field, not accepted"
     },
     "autoHint": "Leave blank to generate automatically",
     "currentStep": "Current",
@@ -1603,11 +1607,13 @@
         "has_transactions": "child lot has later transactions",
         "has_descendants": "child lot has been split further",
         "parent_status": "parent lot status has changed",
-        "referenced": "Child lot is referenced by other records"
+        "referenced": "child lot is referenced by other records",
+        "other": "undo conditions not met"
       },
       "already": "This transform was already undone",
       "info": "Undone at {{at}} · by {{by}} · reason {{reason}}",
-      "carrier": "Carrier not restored; rebind if needed"
+      "carrier": "Carrier not restored; rebind if needed",
+      "tables": " (referenced by: {{list}})"
     },
     "mapList": {
       "title": "Imported maps",
@@ -1640,12 +1646,20 @@
         "targetUnknown": "Target state {{state}} does not exist"
       },
       "skip": {
-        "unknown": "target state {{state}} does not exist",
-        "already": "equipment is already {{state}}",
-        "notAllowed": "the state transition table does not allow {{from}} → {{to}}"
+        "unknown_state": "the target state does not exist",
+        "already_in_state": "the equipment is already in the target state",
+        "transition_not_allowed": "the state transition table does not allow this change"
       },
       "stateSkipped": "Equipment state not changed: {{why}}. The alarm was recorded.",
-      "stateUnchanged": "Equipment state not changed. The alarm was recorded."
+      "stateUnchanged": "Equipment state not changed. The alarm was recorded.",
+      "col": {
+        "stateChanged": "State changed",
+        "skipReason": "Skip reason"
+      },
+      "changed": {
+        "yes": "Changed",
+        "no": "Not changed"
+      }
     },
     "toolLife": {
       "warn": "Near end of life",
@@ -1690,6 +1704,15 @@
       "daysLeft": "Days left",
       "lastDay": "Expires today (still valid)",
       "hint": "Qualifications expiring soon; still valid on the expiry date."
+    },
+    "alarmCode": {
+      "migration": {
+        "col": "Migration",
+        "pending": "Needs reconfiguring after migration",
+        "none": "No reconfiguring needed",
+        "all": "All migration states",
+        "hint": "Migration 0029 turned the linkage off; reconfigure \"Set equipment state\""
+      }
     }
   },
   "notify": {

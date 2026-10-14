@@ -12,6 +12,7 @@ import { userEvent } from 'vitest/browser'
 import { execApi, type TraceResult } from '@/lib/api/mes/execution'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import TracePage from './trace'
+import { genealogyRows } from './trace-rows'
 
 const empty = { lots: [], steps: [], materials: [] }
 
@@ -293,5 +294,51 @@ describe('F6 追溯显示客户批号和归属', () => {
     const info = document.querySelectorAll('[data-testid=trace-undone-info]')
     expect(info.length).toBe(1)
     expect(info[0].textContent).toMatch(/· kai · map 选错了$/)
+  })
+
+  it('a46d232：已撤销节点（id=null）不做跳转、不计入谱系数量', async () => {
+    const { s } = await show({
+      kind: 'lot',
+      target: { id: 'L2', code: 'LOT-V', ownership: 'own', customer: null },
+      backward: empty,
+      forward: {
+        lots: [
+          {
+            id: 'C9',
+            code: 'LOT-V-1',
+            relation: 'split',
+            qty: 3,
+            via: 'LOT-V',
+            level: 1,
+            at: null,
+            undone: false,
+          },
+          {
+            id: null,
+            code: 'LOT-V-X',
+            relation: 'transform',
+            qty: null,
+            via: 'LOT-V',
+            level: 1,
+            at: null,
+            undone: true,
+            undone_at: '2026-10-14T08:00:00Z',
+            undone_by: 'kai',
+            undo_reason: null,
+          },
+        ],
+      },
+    } as never)
+    await s.getByLabelText(t('mes.traceq.code')).fill('LOT-V')
+    await userEvent.click(s.getByTestId('trace-search'))
+    await expect.element(s.getByText('LOT-V-X')).toBeVisible()
+    expect(s.getByText('LOT-V-X').element().closest('a')).toBeNull()
+    expect(s.getByText('LOT-V-1').element().closest('a')).not.toBeNull()
+    await expect
+      .element(s.getByText(`${t('mes.traceq.outLots')} (1)`))
+      .toBeVisible()
+    expect(
+      genealogyRows([{ undone: true }, { undone: false }, {}])
+    ).toHaveLength(2)
   })
 })

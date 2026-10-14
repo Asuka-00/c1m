@@ -6,7 +6,12 @@ import { render } from 'vitest-browser-react'
 import type { MesRow } from '@/lib/api/mes/common'
 import { execApi } from '@/lib/api/mes/execution'
 import { HistoryTimeline } from './lot-trace'
-import { undoErrorLines, undoneInfo } from './transform-undo'
+import {
+  UNDO_LOT_REASONS,
+  undoErrorLines,
+  undoLotLine,
+  undoneInfo,
+} from './transform-undo'
 
 function err(status: number, detail: unknown) {
   const e = new AxiosError(String(status))
@@ -214,5 +219,41 @@ describe('F4-02 撤销转换', () => {
     expect(document.querySelectorAll('[data-testid=undo-carrier]').length).toBe(
       1
     )
+  })
+})
+
+describe('B6 行级 reason（6d0fbe1）', () => {
+  it.each(['zh-CN', 'en', 'ja'])('%s：六个码都有文案', async (lng) => {
+    await i18n.changeLanguage(lng)
+    for (const c of UNDO_LOT_REASONS) {
+      expect(i18n.exists(`mes.tundo.why.${c}`)).toBe(true)
+      const line = undoLotLine({ lot_code: 'L1.01', reason: c })
+      expect(line).toContain('L1.01')
+      expect(line).toContain(t(`mes.tundo.why.${c}`))
+    }
+    await i18n.changeLanguage('zh-CN')
+  })
+
+  it('referenced 附上 tables[]，未知码显示原码', () => {
+    const l = undoErrorLines(
+      err(409, {
+        code: 'transform_undo_blocked',
+        reason: 'lots_blocked',
+        lots: [
+          {
+            lot_id: 'x',
+            lot_code: 'L1.02',
+            reason: 'referenced',
+            tables: ['mes_lot_history', 'mes_dc_result'],
+          },
+          { lot_id: 'y', lot_code: 'L1.03', reason: 'brand_new' },
+          { lot_id: 'z', lot_code: 'L1', reason: 'parent_status' },
+        ],
+      })
+    )
+    expect(l).toHaveLength(3)
+    expect(l[0]).toContain('mes_lot_history, mes_dc_result')
+    expect(l[1]).toContain('brand_new')
+    expect(l[2]).toContain(t('mes.tundo.why.parent_status'))
   })
 })

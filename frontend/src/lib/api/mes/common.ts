@@ -41,8 +41,13 @@ export interface MesField {
   search: boolean
   default: unknown
   max_length: number | null
-  /** 定点小数位数（numeric(18, scale)）；元数据不带时 float 按 6 位（D60） */
+  /** 定点小数位数（numeric(18, scale)）；普通浮点为 null */
   scale?: number | null
+  /**
+   * D60（后端 0dd2b4b）：定点字段最大小数位（= scale），超出 422 too_many_decimals；
+   * 普通浮点（规格限、量测值等）为 null，不限位数。
+   */
+  decimal_places?: number | null
   help: boolean
   /** 引用选项按该同级引用字段过滤（如 route） */
   depends: string | null
