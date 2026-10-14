@@ -54,8 +54,17 @@ steps:
   - marking_template: {action: new_version, template: $tpl.id, no_idem: true, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
   - marking_template: {action: new_version, template: $tpl.id, idem: tpl-v1, expect: {status: 201}}   # 创建 / 新版本 201，编辑 / 审批 200（补充七附注）
   - marking_template: {action: approve, template: $tpl.id, no_idem: true, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
-  - marking_template: {action: preview, body: {template_id: $tpl.id}, expect: {status: 200}}
-  - marking_template: {action: validate, body: {template_id: $tpl.id}, expect: {status: 200}}
+  # 附注二：POST /mes/marking-template/preview、/validate（不带 {id}），只读不带 key、200；template_id 与 lines 二选一
+  - marking_template: {action: preview, body: {template_id: $tpl.id}, expect: {status: 200, body: {template_id: $tpl.id, lines: $nonempty}}}
+  - marking_template: {action: preview, body: {lines: ["{lot_id}"]}, expect: {status: 200, body: {template_id: null, lines: $nonempty}}}
+  - marking_template: {action: preview, body: {template_id: $tpl.id, lines: ["{lot_id}"]}, expect: {status: 422, type: value_error}}   # 两个都传
+  - marking_template: {action: preview, body: {}, expect: {status: 422, type: value_error}}   # 都不传
+  - marking_template: {action: preview, body: {template_id: 00000000-0000-0000-0000-000000000000}, expect: {status: 404}}
+  - marking_template: {action: validate, body: {template_id: $tpl.id}, expect: {status: 200, body: {valid: true, unknown_placeholders: []}}}
+  - marking_template: {action: validate, body: {lines: ["{nope_sim}"]}, expect: {status: 200, body: {valid: false, unknown_placeholders: $nonempty}}}
+  - marking_template: {action: validate, body: {template_id: $tpl.id, lines: ["{lot_id}"]}, expect: {status: 422, type: value_error}}
+  - marking_template: {action: validate, body: {}, expect: {status: 422, type: value_error}}
+  - marking_template: {action: validate, body: {template_id: 00000000-0000-0000-0000-000000000000}, expect: {status: 404}}
   # 自己审批自己写的模板：422 self_approval；已批准后作者再批仍先 422 self_approval，别人再批才 409 invalid_transition
   - marking_template: {action: approve, template: $tpl.id, idem: tpl-a1, expect: {status: 422, code: self_approval}}
   - marking_template: {action: approve, template: $tpl.id, idem: tpl-a2, as: approver, expect: {status: 200}}

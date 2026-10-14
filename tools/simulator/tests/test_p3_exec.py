@@ -635,3 +635,36 @@ def test_marking_scenario_d79_supp7_note():
     assert AD["marking_template_version"].candidates == ["/mes/marking-template/{id}/versions"]
     assert AD["marking_template_preview"].candidates == ["/mes/marking-template/preview"]
     assert AD["marking_template_validate"].candidates == ["/mes/marking-template/validate"]
+
+
+def test_template_preview_validate_note2():
+    """D79 补充七附注二：预览 / 校验 POST 不带 {id}、不带 key；二选一 422、404、返回字段。"""
+    from sim.adapters import default_adapters
+    from sim.p3 import template_call
+
+    ad = default_adapters()
+    for act in ("preview", "validate"):
+        assert "{id}" not in ad[f"marking_template_{act}"].candidates[0]
+        c = template_call(
+            {"action": act, "template": "t1", "body": {"template_id": "t1"}},
+            lambda v: v,
+            lambda adapter, **kw: adapter + ":" + kw.get("id", ""),
+            lambda a: "k",
+        )
+        assert c.idem is None and c.path.endswith(":") and c.body == {"template_id": "t1"}
+    sc = load("scenarios/p3-draft/marking-report.yaml")
+    assert sc.draft
+    ro = [s.args for s in sc.steps if s.kind == "marking_template" and s.args["action"] in ("preview", "validate")]
+    for act in ("preview", "validate"):
+        rows = [a for a in ro if a["action"] == act]
+        assert all(not a.get("idem") and not a.get("no_idem") for a in rows)
+        both = [a for a in rows if {"template_id", "lines"} <= set(a["body"])]
+        none = [a for a in rows if not a["body"]]
+        assert [a["expect"] for a in both] == [{"status": 422, "type": "value_error"}]
+        assert [a["expect"] for a in none] == [{"status": 422, "type": "value_error"}]
+        assert any(a["expect"]["status"] == 404 for a in rows)
+        assert all(a["expect"]["status"] in (200, 404, 422) for a in rows)
+    prev = [a["expect"]["body"] for a in ro if a["action"] == "preview" and a["expect"]["status"] == 200]
+    assert {"template_id", "lines"} <= set(prev[0]) and prev[1]["template_id"] is None
+    val = [a["expect"]["body"] for a in ro if a["action"] == "validate" and a["expect"]["status"] == 200]
+    assert all({"valid", "unknown_placeholders"} <= set(b) for b in val)

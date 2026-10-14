@@ -103,7 +103,8 @@ def template_call(a: dict, resolve: Any, path: Any, idem: Any) -> Call:
     from sim.scenario import TEMPLATE_WRITE
 
     method, adapter = TEMPLATE_ROUTE[a["action"]]
-    tid = resolve(a["template"]) if a.get("template") else ""
+    # 附注二：预览 / 校验路径不带 {id}，template_id 或 lines 放请求体
+    tid = resolve(a["template"]) if a.get("template") and a["action"] not in ("preview", "validate") else ""
     body = resolve(a.get("body") or {})
     key = idem(a) if a["action"] in TEMPLATE_WRITE else None
     return Call(method, path(adapter, id=str(tid)), body, key)
@@ -707,7 +708,7 @@ class P3Exec:
         call = Call("POST", self.path("marking_print", marking_id=mid), body, self._idem(a))
         self._as(a, entry, call, "marking_print")
 
-    def _as(self, a: dict, entry: dict, call: Call, kind: str) -> None:
+    def _as(self, a: dict, entry: dict, call: Call, kind: str, flat: bool = False) -> None:
         """``as: <角色>``：用 SIM_AS_<角色>_TOKEN（或 _USER/_PASSWORD）账号发；没配时该步记 skip。"""
         role = a.get("as")
         if role:
@@ -717,12 +718,12 @@ class P3Exec:
                 return
             saved_c, self.r.c = self.r.c, cli
             try:
-                self.send(entry, call, a.get("expect"), kind, a.get("save_as"))
+                self.send(entry, call, a.get("expect"), kind, a.get("save_as"), flat=flat)
             finally:
                 self.r.c = saved_c
             entry["account"] = role
             return
-        self.send(entry, call, a.get("expect"), kind, a.get("save_as"))
+        self.send(entry, call, a.get("expect"), kind, a.get("save_as"), flat=flat)
 
     def _marking_inspect(self, a: dict, entry: dict) -> None:
         mid = self._mid(a["lot"])
@@ -754,7 +755,8 @@ class P3Exec:
         """模板接口（P3-B1）。D79 补充七：create / update / new_version / approve 带 Idempotency-Key，
         preview / validate 是只读 POST、不带 key。``as:`` 换账号（测 self_approval 等）。"""
         call = template_call(a, self.resolve, self.path, self._idem)
-        self._as(a, entry, call, "marking_template")
+        # 附注二：预览 {template_id, lines}、校验 {valid, unknown_placeholders}，{data: …} 与平铺都认
+        self._as(a, entry, call, "marking_template", flat=a["action"] in ("preview", "validate"))
 
     def _lot_scrap(self, a: dict, entry: dict) -> None:
         """批次报废（POST /mes/exec/lots/{id}/adjust kind=scrap）。
