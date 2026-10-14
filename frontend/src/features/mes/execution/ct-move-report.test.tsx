@@ -93,6 +93,41 @@ describe('P3 CT / Move（D62 + D63 + D64）', () => {
     }
   })
 
+  it('422 date_range_too_large 列表形式（架构：所有 422 detail 为列表）也显示文案', async () => {
+    const mk = (detail: unknown) => {
+      const e = new AxiosError('422')
+      e.response = {
+        status: 422,
+        data: { detail },
+        statusText: '',
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+      }
+      return e
+    }
+    const list = mk([
+      {
+        loc: ['query', 'date_to'],
+        msg: 'date range too large (max 92 days)',
+        type: 'date_range_too_large',
+        code: 'date_range_too_large',
+      },
+    ])
+    const typeOnly = mk([
+      { loc: ['query', 'date_to'], msg: 'x', type: 'date_range_too_large' },
+    ])
+    for (const lg of ['zh-CN', 'en', 'ja']) {
+      await i18n.changeLanguage(lg)
+      const want = t('mes.err.code.date_range_too_large')
+      expect(mesErrorMessage(list, undefined)).toBe(want)
+      expect(mesErrorMessage(typeOnly, undefined)).toBe(want)
+      expect(
+        mesErrorMessage(mk({ code: 'date_range_too_large' }), undefined)
+      ).toBe(want)
+    }
+    await i18n.changeLanguage('zh-CN')
+  })
+
   it('空数据补齐：计数 0、时长 null', () => {
     const r = normalizeReport({
       date_from: '2026-10-01',
