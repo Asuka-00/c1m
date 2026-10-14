@@ -131,6 +131,39 @@ describe('EntityTable：KEYED_ENTITIES 与资质错误文案', () => {
     await expect.poll(() => up.mock.calls.length).toBe(2)
     expect(up.mock.calls[1][3]).toBe(key)
   })
+  // QA P3-3：三种资质 reason 都在页面层显示资质文案
+  it.each([
+    [
+      'self_approval',
+      ['body', 'approved_by'],
+      'mes.qualHistory.err.selfApproval',
+    ],
+    [
+      'holder_approval',
+      ['body', 'approved_by'],
+      'mes.qualHistory.err.holderApproval',
+    ],
+    [
+      'conflicting_fields',
+      ['body', 'is_active'],
+      'mes.qualHistory.err.conflictingFields',
+    ],
+  ])('operator_qual 422 %s → 资质三语文案', async (reason, loc, key) => {
+    vi.spyOn(mesApi, 'update').mockRejectedValue(
+      err422([
+        {
+          loc,
+          type: 'value_error',
+          code: 'value_error',
+          msg: `${loc[1]}: x`,
+          ctx: { reason },
+        },
+      ])
+    )
+    const s = await show('operator_qual')
+    await save(s)
+    await expect.element(s.getByText(t(key))).toBeInTheDocument()
+  })
   it('非 KEYED 实体不传 key', async () => {
     const up = vi.spyOn(mesApi, 'update').mockResolvedValue({} as never)
     const s = await show('tool')
