@@ -3,6 +3,9 @@
  * backend/app/platform/menus/layout.py，463d599：GROUPS / ITEMS / TAB_TITLES / PLATFORM_*）。
  * /menus/me 只返回英文标题，界面文字全靠前端语言包 menu.<key>，因此每个 key 都必须有三语翻译。
  * 后端增删菜单时同步更新此清单。
+ *
+ * FE-03（P2-F2）：计划改为由后端 `scripts/export_mes_i18n.py` 一并导出菜单 key 清单、测试直接读取。
+ * 截至后端 be/p2 该脚本只导出 MES 实体 / 枚举翻译，没有菜单 key（P2-B8 未做），本清单暂保留手工维护。
  */
 export const BACKEND_MENU_KEYS = [
   'g-workspace',
