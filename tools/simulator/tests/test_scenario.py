@@ -86,7 +86,7 @@ def test_p3_draft_scenarios_parse_and_skip_without_backend():
     from sim.scenario import load
 
     files = sorted(glob.glob("scenarios/p3-draft/*.yaml"))
-    assert len(files) == 3
+    assert len(files) == 4
     for f in files:
         sc = load(f)
         assert sc.draft
@@ -95,7 +95,7 @@ def test_p3_draft_scenarios_parse_and_skip_without_backend():
         assert rep["status"] == SKIPPED and rep["reason"].startswith("草稿场景"), rep
         assert c.calls == []  # 草稿不连后端
         need = sc.required_adapters()
-        assert "reticle_mount" in need or "reticle_incident" in need or "alarm_track_in_action" in need
+        assert {"reticle_mount", "reticle_incident", "alarm_track_in_action", "marking_create"} & set(need)
 
 
 def test_p3_draft_steps_not_runnable_even_if_paths_exist():
@@ -229,3 +229,25 @@ def test_b8_draft_type_row_rules():
     assert dels == [
         {"eq": "EAP-DA01", "alid": "2101", "level": "type", "expect": {"status": 409, "code": "referenced"}}
     ]
+
+
+def test_marking_draft_covers_dedup_decimals_and_scrapped():
+    import pytest
+
+    from sim.runner import P3_DRAFT_STEPS
+    from sim.scenario import ScenarioError, load, parse
+
+    sc = load("scenarios/p3-draft/marking-report.yaml")
+    assert sc.draft and "P3-B2" in sc.draft
+    kinds = [s.kind for s in sc.steps]
+    assert {k for k in kinds if k.startswith(("marking_", "expect_marking"))} <= P3_DRAFT_STEPS
+    codes = [(s.args.get("expect") or {}).get("code") for s in sc.steps]
+    assert "idempotency_key_reused" in codes and codes.count("invalid_transition") == 3 and "missing" in codes
+    dec = [s for s in sc.steps if (s.args.get("expect") or {}).get("type") == "value_error"]
+    assert dec and dec[0].args["payload"]["qty"] == "1.1234567"
+    reps = [s for s in sc.steps if s.kind == "marking_replay"]
+    assert any((s.args["expect"].get("body") or {}).get("duplicate") is True for s in reps)
+    with pytest.raises(ScenarioError):
+        parse({"run_id": "m", "steps": [{"marking_inspect": {"result": "pass"}}]})  # 缺 lot
+    with pytest.raises(ScenarioError):
+        parse({"run_id": "m", "steps": [{"marking_replay": {"of": "nope"}}]})

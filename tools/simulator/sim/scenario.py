@@ -63,6 +63,10 @@ class Scenario:
         return seen
 
 
+# P3-B2 打标草稿步骤：都要 lot（批次键；EAP 上报另需 eq）
+MARKING_LOT_STEPS = {"marking_report", "marking_manual", "marking_reprint", "marking_inspect", "expect_marking"}
+
+
 def parse(data: dict, path: str | None = None) -> Scenario:
     if not isinstance(data, dict):
         raise ScenarioError("场景必须是 YAML 映射")
@@ -109,8 +113,10 @@ def parse(data: dict, path: str | None = None) -> Scenario:
                 raise ScenarioError(f"第 {i} 步 expect_body_422（{args['endpoint']}）需要 lot")
         elif k == "expect_body_422" and not args.get("to"):
             raise ScenarioError(f"第 {i} 步 expect_body_422 需要 to（填设备当前状态，避免后端不拦时改状态）")
-        if k == "reticle_replay" and not args.get("of"):
-            raise ScenarioError(f"第 {i} 步 reticle_replay 需要 of（前面草稿步骤的 save_as 名）")
+        if k in ("reticle_replay", "marking_replay") and not args.get("of"):
+            raise ScenarioError(f"第 {i} 步 {k} 需要 of（前面草稿步骤的 save_as 名）")
+        if k in MARKING_LOT_STEPS and not args.get("lot"):
+            raise ScenarioError(f"第 {i} 步 {k} 缺少 lot")
         if k == "expect_query_422" and not args.get("path"):
             raise ScenarioError(f"第 {i} 步 expect_query_422 需要 path")
         if k == "expect_alarm_list" and not args.get("eq"):
@@ -122,8 +128,8 @@ def parse(data: dict, path: str | None = None) -> Scenario:
         steps.append(Step(k, args, i))
     saved = {st.args.get("save_as") for st in steps if st.args.get("save_as")}
     for st in steps:
-        if st.kind == "reticle_replay" and st.args["of"] not in saved:
-            raise ScenarioError(f"第 {st.index} 步 reticle_replay 引用的 {st.args['of']} 没有 save_as")
+        if st.kind in ("reticle_replay", "marking_replay") and st.args["of"] not in saved:
+            raise ScenarioError(f"第 {st.index} 步 {st.kind} 引用的 {st.args['of']} 没有 save_as")
     return Scenario(
         run_id=run_id,
         name=str(data.get("name") or run_id),

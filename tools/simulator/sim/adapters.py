@@ -92,6 +92,12 @@ def default_adapters() -> dict[str, Adapter]:
         "alarm_code_get": Adapter("报警码详情", ["/mes/alarm_code/{rid}"], card="P3-B8"),
         # D70 补充：删除仍被单台行引用的类型行 409 referenced（通用 CRUD DELETE），B8 落地后核对
         "alarm_code_delete": Adapter("报警码删除", ["/mes/alarm_code/{rid}"], card="P3-B8"),
+        # P3-B2（打标，未实现）：路径取自 p3-tasks P3-B2；报废接口卡里没写，为提议，B2 落地后以 openapi 为准
+        "marking_create": Adapter("打标 / 重打", ["/mes/marking"], card="P3-B2"),
+        "marking_inspect": Adapter("打标检验", ["/mes/marking/{marking_id}/inspect"], card="P3-B2"),
+        "marking_preview": Adapter("打标预览", ["/mes/marking/preview"], card="P3-B2"),
+        "marking_get": Adapter("打标记录", ["/mes/marking/{marking_id}"], card="P3-B2"),
+        "marking_scrap": Adapter("打标报废（提议）", ["/mes/marking/{marking_id}/scrap"], card="P3-B2"),
     }
 
 
@@ -141,6 +147,14 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "set_track_in_action": ["alarm_track_in_action"],
     "expect_alarm_code": ["alarm_code_get"],
     "reticle_replay": [],  # 重发 save_as 记下的草稿请求：同路径、同请求体、同 Idempotency-Key（或同 external_event_id）
+    # P3-B2 打标草稿步骤（B2 前不执行）
+    "marking_report": ["eap_events"],  # 以后 B11 event_type=marking（本期不做打标机通信）
+    "marking_manual": ["marking_preview", "marking_create"],
+    "marking_reprint": ["marking_create"],
+    "marking_inspect": ["marking_inspect"],
+    "marking_scrap": ["marking_scrap"],
+    "expect_marking": ["marking_get"],
+    "marking_replay": [],  # 同 reticle_replay：同路径、同请求体、同 Idempotency-Key / external_event_id
     "reuse": [],
     "precondition": [],
 }
