@@ -110,6 +110,33 @@ describe('F4-02 撤销转换', () => {
     ])
   })
 
+  it('409 按顶层 reason 区分：already_undone / lots_blocked；无 reason 保持旧行为', () => {
+    const blocked = (x: Record<string, unknown>) =>
+      undoErrorLines(err(409, { code: 'transform_undo_blocked', ...x }))
+    expect(blocked({ reason: 'already_undone', lots: [] })).toEqual([
+      '该转换已撤销，不能重复撤销',
+    ])
+    expect(
+      blocked({
+        reason: 'lots_blocked',
+        lots: [
+          { lot_id: 'a', lot_code: 'S1', reason: 'lot_status' },
+          { lot_id: 'b', lot_code: 'S2', reason: 'on_hold' },
+        ],
+      })
+    ).toEqual(['S1：子批已不在等待状态', 'S2：子批处于 Hold'])
+    expect(blocked({ reason: 'lots_blocked', lots: [] })).toEqual([
+      t('mes.tundo.blockedRef'),
+    ])
+    // 旧后端（无 reason）
+    expect(blocked({ lots: [] })).toEqual([t('mes.tundo.already')])
+    expect(
+      blocked({
+        lots: [{ lot_id: 'a', lot_code: 'S1', reason: 'has_descendants' }],
+      })
+    ).toEqual(['S1：子批已再分出下游批次'])
+  })
+
   it('履历：有权限时未撤销的转换行有撤销入口；提交带原因 / 备注，409 原因显示在对话框', async () => {
     const spy = vi.spyOn(execApi, 'transformUndo').mockRejectedValue(
       err(409, {

@@ -64,8 +64,16 @@ export function undoErrorLines(e: unknown): string[] {
       | undefined
     if (d && d.code === 'transform_undo_blocked') {
       const lots = (d.lots as { lot_code?: string; reason?: string }[]) ?? []
-      // 按错误码判断（不看英文 message）：契约里 lots 为空即“已撤销再撤”
-      if (!lots.length) return [t('mes.tundo.already')]
+      // 顶层 reason（后端新版）：already_undone / lots_blocked；不看英文 message
+      const reason = d.reason
+      if (reason === 'already_undone') return [t('mes.tundo.already')]
+      if (reason == null) {
+        // 旧后端没有 reason：lots 为空即“已撤销再撤”（a30ce60）
+        if (!lots.length) return [t('mes.tundo.already')]
+      } else if (!lots.length) {
+        // lots_blocked 却没列子批、或未知 reason：通用“不能撤销”
+        return [t('mes.tundo.blockedRef')]
+      }
       return lots.map((l) =>
         t('mes.tundo.blocked', {
           lot: l.lot_code ?? '',
