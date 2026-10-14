@@ -96,3 +96,9 @@ steps:
 
 ## 未做
 B9（`0a74f8a`）、B10（`d27b700`/`23c502d`）、B11（`8294b63`）已对齐；还没对真实后端跑过 b11 模式（8013 还没部署 B11）。模式 B（HSMS）、时间偏移 `at`（目前解析后忽略、顺序执行）、乱序/断线场景。
+
+### 422 统一格式（后端 1a7c0fb）
+- 模拟器对见到的每个 422 都检查：detail 为非空列表时逐项必须带 `code`（无专用码时 code = type）；detail 为对象时对象须带 `code`。不满足即该步失败（`Runner(strict_422=True)`，默认开）。
+- detail 不是列表（目前只有 D57 `idempotency_key_reused`）不判失败，在报告该步记 `warn_422`。
+- `expect_query_422` 新增 `loc`（如 `[path, field]`）、`code`、`code_is_type`；params 值 `$eq:CODE` 解析为设备 id。
+- `expect_eap_read` 新增 `allowed_paths`：服务账号对这些路径 GET 须 200（如 `/mes/_meta`）。

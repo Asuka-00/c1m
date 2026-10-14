@@ -908,3 +908,16 @@ def test_replay_same_as_first_detects_d8_regression():
     ]
     rep = Runner(c).run(parse({"run_id": "a", "steps": steps}))
     assert rep["status"] == FAILED and "state_changed" in rep["reason"]
+
+
+def test_shape_422_requires_code():
+    from sim.client import Resp
+    from sim.runner import nonlist_422, shape_422
+
+    assert shape_422(Resp(422, {"detail": [{"loc": ["query", "x"], "type": "t", "code": "t"}]})) == []
+    assert shape_422(Resp(422, {"detail": [{"loc": ["query", "x"], "type": "t"}]}))
+    assert shape_422(Resp(422, {"detail": []}))
+    assert shape_422(Resp(422, {"detail": "boom"}))
+    assert shape_422(Resp(422, {"detail": {"code": "idempotency_key_reused"}})) == []
+    assert nonlist_422(Resp(422, {"detail": {"code": "idempotency_key_reused"}}))
+    assert shape_422(Resp(200, {})) == []

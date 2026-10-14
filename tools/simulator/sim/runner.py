@@ -100,6 +100,30 @@ def check_expect(resp: Resp, expect: dict | None, default_status: int = 200) -> 
     return errs
 
 
+def shape_422(resp: Resp) -> list[str]:
+    """D65 补充（后端 1a7c0fb）：模拟器见到的每个 422 明细都必须带非空 code（没有专用码时 code = type）。
+    detail 是列表时逐项检查；是对象时（如 D57 的 idempotency_key_reused）要求对象本身带 code。
+    非列表 detail 本身不判失败，由 ``nonlist_422`` 记进报告（1a7c0fb 声明 detail 一律为列表）。"""
+    if resp.status != 422:
+        return []
+    det = resp.body.get("detail") if isinstance(resp.body, dict) else None
+    if isinstance(det, dict):
+        return [] if det.get("code") else [f"422 detail 对象缺 code：{det!r}"[:200]]
+    if not isinstance(det, list) or not det:
+        return [f"422 的 detail 既不是列表也不是带 code 的对象：{det!r}"[:200]]
+    bad = [x for x in det if not isinstance(x, dict) or not x.get("code")]
+    if bad:
+        return [f"422 明细缺 code：{bad!r}"[:200]]
+    return []
+
+
+def nonlist_422(resp: Resp) -> str | None:
+    det = resp.body.get("detail") if isinstance(resp.body, dict) else None
+    if resp.status == 422 and not isinstance(det, list):
+        return f"422 detail 不是列表（{type(det).__name__}）：code={resp.code}"
+    return None
+
+
 class Runner:
     def __init__(
         self,
@@ -109,12 +133,14 @@ class Runner:
         stop_on_fail: bool = True,
         mode: str = "manual",
         svc: Client | None = None,
+        strict_422: bool = True,
     ) -> None:
         if mode not in MODES:
             raise ValueError(f"mode 只能是 {MODES}")
         self.mode = mode
         self.c = client
         self.svc = svc  # D65：只有 eap_service 的服务账号；None 时 B11 也用主账号
+        self.strict_422 = strict_422  # 1a7c0fb：模拟器见到的每个 422 都检查 detail 列表 + code
         self.adapters = adapters or default_adapters()
         self._paths = paths
         self.stop_on_fail = stop_on_fail
@@ -219,7 +245,9 @@ class Runner:
         )
         if call.idem:
             entry["idempotency_key"] = call.idem
-        errs = check_expect(self.view(call, r), expect)
+        errs = check_expect(self.view(call, r), expect) + (shape_422(r) if self.strict_422 else [])
+        if nonlist_422(r):
+            entry["warn_422"] = nonlist_422(r)
         if errs:
             raise StepFailed("；".join(errs))
         return r
@@ -547,6 +575,11 @@ class Runner:
             for n, x in (("新增", w1), ("修改", w2), ("导出", ex)):
                 if x.status != 403:
                     errs.append(f"{ent} {n} HTTP {x.status}（期望 403）")
+        for p in a.get("allowed_paths") or ():  # 1a7c0fb：/mes/_meta 对 eap_service 开放
+            r = self.svc.get(p)
+            got[p] = r.status
+            if r.status != 200:
+                errs.append(f"{p} HTTP {r.status}（期望 200）")
         for ent in a.get("denied") or ():
             r = self.svc.get(base.replace("{entity}", ent), page_size=1)
             got[ent] = {"list": r.status}
@@ -561,7 +594,13 @@ class Runner:
         path = a["path"]
         if "{entity}" in path:
             path = path.replace("{entity}", a["entity"])
-        r = self.c.get(path, **{k: self.by_mode(v) for k, v in (a.get("params") or {}).items()})
+        params = {}
+        for k, v in (a.get("params") or {}).items():
+            v = self.by_mode(v)
+            if isinstance(v, str) and v.startswith("$eq:"):  # 设备编码 -> id
+                v = self.rid("equipment", v[4:])
+            params[k] = v
+        r = self.c.get(path, **params)
         entry.update(path=path, status=r.status, code=r.code)
         det = r.body.get("detail") if isinstance(r.body, dict) else None
         entry["detail"] = det if isinstance(det, list) else str(det)[:200]
@@ -570,10 +609,23 @@ class Runner:
         if not isinstance(det, list) or not det or not isinstance(det[0], dict):
             raise StepFailed(f"{path} 422 的 detail 不是列表：{str(det)[:150]}")
         loc = det[0].get("loc") or []
-        if not loc or loc[0] != "query":
-            raise StepFailed(f"{path} 422 的 loc={loc}，期望以 query 开头")
-        if a.get("field") and list(loc) != ["query", a["field"]]:
-            raise StepFailed(f"{path} 422 的 loc={loc}，期望 ['query', {a['field']!r}]")
+        want_loc = a.get("loc")
+        if want_loc is not None:  # 显式 loc，如路径参数 [path, field]
+            if list(loc) != list(want_loc):
+                raise StepFailed(f"{path} 422 的 loc={loc}，期望 {want_loc}")
+        else:
+            if not loc or loc[0] != "query":
+                raise StepFailed(f"{path} 422 的 loc={loc}，期望以 query 开头")
+            if a.get("field") and list(loc) != ["query", a["field"]]:
+                raise StepFailed(f"{path} 422 的 loc={loc}，期望 ['query', {a['field']!r}]")
+        code = det[0].get("code")
+        if a.get("code") and code != a["code"]:
+            raise StepFailed(f"{path} 422 的 code={code!r}，期望 {a['code']!r}")
+        if a.get("code_is_type") and code != det[0].get("type"):
+            raise StepFailed(f"{path} 422 的 code={code!r} 应等于 type={det[0].get('type')!r}")
+        errs = shape_422(r)
+        if errs:
+            raise StepFailed("；".join(errs))
 
     def _expect_alarm_list(self, a: dict, entry: dict) -> None:
         """D65：报警履历列表（GET /mes/eqp/alarms）每行顶层带 state_changed / state_skip_reason。
@@ -664,7 +716,7 @@ class Runner:
                     if errs:
                         raise StepFailed("；".join(errs))
             elif isinstance(mode, dict):
-                errs = check_expect(r, mode)
+                errs = check_expect(r, mode) + (shape_422(r) if self.strict_422 else [])
                 if errs:
                     raise StepFailed("；".join(errs))
 

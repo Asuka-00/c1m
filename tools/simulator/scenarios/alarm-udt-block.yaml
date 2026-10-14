@@ -10,7 +10,7 @@
 #   工步配了 e10_available（允许 SBY/PRD）；FX0002 waiting。1001/1002/1003 由本场景写种子，9999 未登记，9998 从未上报。
 # 跑完 FX0002 已进站，不能原样重跑（precondition 会让场景 skipped）。
 name: alarm-udt-block
-run_id: alarm-udt-04
+run_id: alarm-udt-05
 target: http://127.0.0.1:8013
 equipment: [{code: EAP-DA01, type: DIEBOND}]
 steps:
@@ -18,12 +18,16 @@ steps:
   - precondition: {lot: FX0002, lot_status: waiting}
   # D65：eap_service 只读 equipment / alarm_code / e10_state（mes.eap:read_master），写和导出 403，其他主数据 403
   #   需要 SIM_SVC_* 账号；没给时本步记为跳过
-  - expect_eap_read: {denied: [lot]}
+  - expect_eap_read: {denied: [lot], allowed_paths: [/mes/_meta]}
   # D65：查询参数 422 的 loc 以 query 开头（detail 是列表）
   - expect_query_422: {path: /mes/e10_history, params: {trigger: bogus}, field: trigger}
   - expect_query_422: {path: /mes/alarm_code, params: {has_migration_note: maybe}, field: has_migration_note}
   - expect_query_422: {path: /mes/equipment, params: {sort_by: nope}, field: sort_by}
   - expect_query_422: {path: /mes/lot, params: {lot_status: bogus}, field: lot_status}
+  # 1a7c0fb（D65 补充）：每个 422 都是列表且带 code；路径参数 loc 以 path 开头
+  - expect_query_422: {path: /mes/equipment/distinct/e10_state, loc: [path, field], code: not_text_filter}
+  - expect_query_422: {path: /mes/eqp/mount/at, params: {eq_id: "$eq:EAP-DA01", at: "2026-01-01T00:00:00"}, loc: [query, at], code: timezone_required}
+  - expect_query_422: {path: /mes/eqp/alarms, params: {status: bogus}, field: status, code_is_type: true}
   # D59 报警码种子：1001 切 UDT、1002 切 PRD（从 UDT 不允许）、1003 不联动
   - seed_alarm_code: {eq: EAP-DA01, alid: "1001", action: set_state, target_state: UDT}
   - seed_alarm_code: {eq: EAP-DA01, alid: "1002", action: set_state, target_state: PRD}

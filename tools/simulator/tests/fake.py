@@ -76,8 +76,10 @@ class SvcView(Client):
     def request(self, method, path, json_body=None, params=None, headers=None, form=None):
         f = self.fake
         parts = path.split("/")
-        ok = (method == "POST" and path == "/mes/eap/events") or (
-            method == "GET" and len(parts) in (3, 4) and parts[2] in EAP_READ and parts[-1] != "export"
+        ok = (
+            (method == "POST" and path == "/mes/eap/events")
+            or (method == "GET" and path == "/mes/_meta")
+            or (method == "GET" and len(parts) in (3, 4) and parts[2] in EAP_READ and parts[-1] != "export")
         )
         if not ok:
             f.calls.append((method, path, json_body, headers, params, "svc"))
@@ -87,6 +89,13 @@ class SvcView(Client):
             return f.request(method, path, json_body, params, headers, form)
         finally:
             f.service = saved
+
+
+def _with_code(r):
+    """模拟后端 1a7c0fb 的全局 422 处理：列表明细补 code（没有就用 type）。"""
+    if r.status == 422 and isinstance(r.body, dict) and isinstance(r.body.get("detail"), list):
+        r.body["detail"] = [dict(x, code=x.get("code") or x.get("type") or "value_error") for x in r.body["detail"]]
+    return r
 
 
 class FakeClient(Client):
@@ -124,6 +133,9 @@ class FakeClient(Client):
         return self.paths
 
     def request(self, method, path, json_body=None, params=None, headers=None, form=None):
+        return _with_code(self._request(method, path, json_body, params, headers, form))
+
+    def _request(self, method, path, json_body=None, params=None, headers=None, form=None):
         self.calls.append((method, path, json_body, headers, params))
         key = (headers or {}).get("Idempotency-Key")
         if method == "POST" and key and (path.endswith("/e10") or "/mes/exec/lots/" in path):
@@ -275,6 +287,22 @@ class FakeClient(Client):
                     return Resp(422, {"detail": [{"loc": ["query", k], "msg": k, "type": "value_error"}]})
                 if k.startswith("has_") and str(v).lower() not in ("true", "false", "1", "0"):
                     return Resp(422, {"detail": [{"loc": ["query", k], "msg": k, "type": "value_error"}]})
+        if method == "GET" and "/distinct/" in path:
+            f = path.split("/")[-1]
+            if f not in ("code", "name"):
+                d = [{"loc": ["path", "field"], "msg": f"{f} is not a text filter", "type": "not_text_filter"}]
+                return Resp(422, {"detail": d})
+            return Resp(200, {"data": []})
+        if method == "GET" and path == "/mes/eqp/mount/at":
+            if not str(params.get("at", "")).endswith(("Z", "+00:00", "+08:00")):
+                d = [{"loc": ["query", "at"], "msg": "at: timezone required", "type": "timezone_required"}]
+                return Resp(422, {"detail": d})
+            return Resp(200, {"data": []})
+        if method == "GET" and path == "/mes/_meta":
+            return Resp(200, {"data": {}})
+        if method == "GET" and path == "/mes/eqp/alarms" and params.get("status") not in (None, "active", "cleared"):
+            d = [{"type": "literal_error", "loc": ["query", "status"], "msg": "Input should be 'active' or 'cleared'"}]
+            return Resp(422, {"detail": d})
         if method == "GET" and path == "/mes/eqp/alarms":  # 报警履历列表，新的在前，顶层带联动结果
             rows = [
                 {k: v for k, v in r.items() if not k.startswith("_")} for r in reversed(list(self.alarm_rows.values()))
