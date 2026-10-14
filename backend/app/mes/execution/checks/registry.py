@@ -15,6 +15,7 @@ from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, ENUMS, TABLES
 from app.mes.common.query import find, jsonable, one
+from app.mes.common.sitedate import site_today
 from app.mes.equipment.service import qual_block, tool_block
 
 Row = dict[str, Any]
@@ -81,8 +82,8 @@ class Ctx:
 
     @property
     def today(self) -> date:
-        """当前日期（有效期类检查使用）。"""
-        return self.at.date()
+        """站点时区的当前日期（有效期类检查使用，D74 第 7 条）。"""
+        return site_today(self.s, self.tid, self.at)
 
 
 CheckFn = Callable[[Ctx, Row], Outcome]

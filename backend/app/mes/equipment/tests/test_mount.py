@@ -5,8 +5,9 @@ source=eap 必填事件号、物料批存在且未过期、卸料、按时间点
 """
 
 import uuid
-from datetime import UTC, date, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from fastapi.testclient import TestClient
 from sqlmodel import Session
@@ -138,7 +139,8 @@ def test_manual_mount_unmount_and_port_rules(client: TestClient, db: Session) ->
         json={"port_code": "P9", "material_lot_id": str(uuid.uuid4())},
     )
     assert r.status_code == 422 and "not found" in r.text
-    old = f.ml("OLD", expiry_date=(date.today() - timedelta(days=1)).isoformat())
+    site_day = datetime.now(UTC).astimezone(ZoneInfo("Asia/Taipei")).date()
+    old = f.ml("OLD", expiry_date=(site_day - timedelta(days=1)).isoformat())
     assert "expired" in str(f.mount(old, "P9", 422))
     # 按编码上料
     r = f.c.post(
