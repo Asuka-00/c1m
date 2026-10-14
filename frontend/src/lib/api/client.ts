@@ -60,12 +60,50 @@ http.interceptors.response.use(
 /**
  * 把接口错误转换为当前语言的提示文本。
  */
+/**
+ * 查询参数类 422 的本地化（D65 / 460df8f）：后端改为列表 `{loc:["query", 参数], msg}`，
+ * 旧后端是字符串 detail。两种都按英文消息识别 sort_by 与「不是文本筛选字段」，否则 null。
+ */
+export function queryErrorText(msg: string): string | null {
+  const s = msg.trim()
+  const sort = /^sort_by must be one of: (.*)$/.exec(s)
+  if (sort) return t('errors.query.sortBy', { list: sort[1] })
+  const txt = /^(\S+) is not a text filter$/.exec(s)
+  if (txt) return t('errors.query.notTextFilter', { field: txt[1] })
+  return null
+}
+
+/** 一条查询参数 422（loc 以 query 开头）的文案：已知消息本地化，否则「参数: 原消息」。 */
+export function queryItemText(x: { loc?: unknown[]; msg?: string }): string {
+  const msg = String(x.msg ?? '')
+  const known = queryErrorText(msg)
+  if (known) return known
+  const name = String(x.loc?.[1] ?? '')
+  return name && !msg.startsWith(name) ? `${name}: ${msg}` : msg
+}
+
+/** 422 列表项带固定码（code / type）且有翻译时返回文案，否则 null。 */
+export function codeItemText(x: {
+  code?: string
+  type?: string
+  ctx?: Record<string, unknown>
+}): string | null {
+  for (const c of [x?.code, x?.type]) {
+    if (!c) continue
+    for (const k of [`errors.code.${c}`, `mes.err.code.${c}`])
+      if (i18n.exists(k)) return t(k, { ...(x.ctx ?? {}) })
+  }
+  return null
+}
+
 export function errorMessage(e: unknown): string {
   if (e instanceof AxiosError) {
     if (!e.response) return t('errors.network')
     const status = e.response.status
     const d = (e.response.data as { detail?: unknown })?.detail
     if (typeof d === 'string') {
+      const q = status === 422 ? queryErrorText(d) : null
+      if (q) return q
       const key = `backend.${d}`
       if (i18n.exists(key)) return t(key)
       // 工作区不暴露多租户概念：未翻译且提到 tenant 的后端消息改为通用提示
@@ -75,7 +113,18 @@ export function errorMessage(e: unknown): string {
     }
     if (status === 422) {
       if (Array.isArray(d)) {
-        const msgs = d.map((x: { msg?: string }) => x.msg).filter(Boolean)
+        // 架构定：所有 422 detail 都是列表，带固定码时按码取文案（mes.err.code.* / errors.code.*）
+        const coded = d.map(codeItemText)
+        if (d.length && coded.every(Boolean))
+          return [...new Set(coded)].join('；')
+        const isQ = (x: { loc?: unknown[] }) => x?.loc?.[0] === 'query'
+        // 全是查询参数错误：逐条本地化，不加“校验失败”前缀
+        if (d.length && d.every(isQ)) return d.map(queryItemText).join('；')
+        const msgs = d
+          .map((x: { loc?: unknown[]; msg?: string }) =>
+            isQ(x) ? queryItemText(x) : x.msg
+          )
+          .filter(Boolean)
         return `${t('errors.validation')} ${msgs.join(', ')}`.trim()
       }
       return t('errors.validation')

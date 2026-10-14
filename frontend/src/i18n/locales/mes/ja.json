@@ -1789,13 +1789,16 @@
     "mes_wh__confirm": "倉庫·入庫確認",
     "notify__config": "通知購読設定",
     "mes_equipment__tool_mount": "設備·工具装着 / 取外し",
-    "mes_equipment__tool_count": "設備·工具カウント報告 / リセット"
+    "mes_equipment__tool_count": "設備·工具カウント報告 / リセット",
+    "mes_eap__write": "EAP イベント書込（サービスアカウント）",
+    "mes_eap__read_master": "EAP マスタ参照（サービスアカウント）"
   },
   "roleName": {
     "admin": "管理者",
     "user": "一般ユーザー",
     "owner": "システム管理者",
-    "member": "一般ユーザー"
+    "member": "一般ユーザー",
+    "eap_service": "EAP サービスアカウント"
   },
   "permDesc": {
     "users__read": "許可：プラットフォームユーザー閲覧",
@@ -1854,13 +1857,16 @@
     "mes_wh__confirm": "許可：倉庫·入庫確認",
     "notify__config": "許可：通知購読設定",
     "mes_equipment__tool_mount": "許可：設備·工具装着 / 取外し",
-    "mes_equipment__tool_count": "許可：設備·工具カウント報告 / リセット"
+    "mes_equipment__tool_count": "許可：設備·工具カウント報告 / リセット",
+    "mes_eap__write": "許可：EAP イベント書込（サービスアカウント）",
+    "mes_eap__read_master": "許可：EAP マスタ参照（サービスアカウント）"
   },
   "roleDesc": {
     "platform_admin": "全権限を持つプラットフォーム管理者",
     "platform_user": "プラットフォーム権限のない一般ユーザー",
     "owner": "全権限を持つシステム管理者",
     "admin": "ユーザー・設定・全業務データを管理",
-    "member": "業務データの閲覧のみ"
+    "member": "業務データの閲覧のみ",
+    "eap_service": "/mes/eap/events での設備イベント書込、設備・アラームコード・E10 状態の参照"
   }
 }
