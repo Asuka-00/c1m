@@ -49,7 +49,7 @@ def test_run_uses_env_target(monkeypatch, capsys):
     seen = {}
 
     class Dummy:
-        def __init__(self, client, mode, svc=None):
+        def __init__(self, client, mode, svc=None, xfail=True):
             seen["mode"] = mode
             assert svc is None  # 没设 SIM_SVC_*
 

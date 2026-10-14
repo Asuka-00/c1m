@@ -109,6 +109,7 @@ class FakeClient(Client):
         self.alarms = {}
         self.alarm_rows = {}
         self.e10 = "SBY"
+        self.e10_forbid_extra = False  # 1a7c0fb：E10In 忽略未知字段；True 模拟 D65 补充 4 修好后
         self.usage = 0.0
         self.max_usage = 1000.0
         self.warn_ratio = 0.9
@@ -358,6 +359,10 @@ class FakeClient(Client):
         if path == "/mes/exec/holds":
             return Resp(200, {"data": [{"lot_code": params.get("q") or "L1"}] * self.holds})
         if path.endswith("/e10"):
+            extra = sorted(set(json_body) - {"to_state_id", "reason_id", "comment"})
+            if extra and self.e10_forbid_extra:
+                d = [{"loc": ["body", f], "msg": f"{f}: unknown field", "type": "unknown_field"} for f in extra]
+                return Resp(422, {"detail": d})
             to = {"s-prd": "PRD", "s-sby": "SBY"}.get(json_body.get("to_state_id"), "UDT")
             if to not in TRANSITIONS[self.e10]:  # 迁移表（含不允许原地迁移）
                 return Resp(422, {"detail": [{"loc": ["body", "to_state_id"], "type": "value_error"}]})

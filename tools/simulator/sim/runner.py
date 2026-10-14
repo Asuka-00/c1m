@@ -117,8 +117,14 @@ def shape_422(resp: Resp) -> list[str]:
     return []
 
 
+# D65 补充 4：这些 422 的 detail 用对象 {code, message} 是认可的旧格式，不记 warn_422
+LEGACY_OBJECT_422 = {"idempotency_key_reused"}
+
+
 def nonlist_422(resp: Resp) -> str | None:
     det = resp.body.get("detail") if isinstance(resp.body, dict) else None
+    if isinstance(det, dict) and det.get("code") in LEGACY_OBJECT_422:
+        return None
     if resp.status == 422 and not isinstance(det, list):
         return f"422 detail 不是列表（{type(det).__name__}）：code={resp.code}"
     return None
@@ -134,13 +140,16 @@ class Runner:
         mode: str = "manual",
         svc: Client | None = None,
         strict_422: bool = True,
+        xfail: bool = True,
     ) -> None:
         if mode not in MODES:
             raise ValueError(f"mode 只能是 {MODES}")
         self.mode = mode
         self.c = client
         self.svc = svc  # D65：只有 eap_service 的服务账号；None 时 B11 也用主账号
-        self.strict_422 = strict_422  # 1a7c0fb：模拟器见到的每个 422 都检查 detail 列表 + code
+        self.strict_422 = strict_422
+        # xfail=True：带 xfail 的步骤失败只记 xfail，不判场景失败；False（--strict-xfail / SIM_XFAIL=0）按普通步骤判
+        self.xfail = xfail  # 1a7c0fb：模拟器见到的每个 422 都检查 detail 列表 + code
         self.adapters = adapters or default_adapters()
         self._paths = paths
         self.stop_on_fail = stop_on_fail
@@ -207,11 +216,18 @@ class Runner:
             try:
                 self._step(sc, st, entry, seq, sent, saved)
                 entry.setdefault("ok", True)  # 步骤自己记了 ok=None（如没有服务账号）时保留
+                if st.args.get("xfail") and self.xfail:  # 预期失败的步骤通过了：后端已修，可去掉 xfail
+                    entry["xpass"] = True
+                    rep.setdefault("xpass", []).append(st.index)
             except Skip as e:
                 entry.update(ok=None, message=str(e))
                 rep.update(status=SKIPPED, reason=f"第 {st.index} 步前置条件不满足：{e}")
                 break
             except StepFailed as e:
+                if st.args.get("xfail") and self.xfail:  # 预期失败：后端下个提交前不算失败
+                    entry.update(ok=None, xfail=True, message=f"xfail（{st.args['xfail']}）：{e}")
+                    rep.setdefault("xfail", []).append(st.index)
+                    continue
                 entry.update(ok=False, message=str(e))
                 rep["status"] = FAILED
                 rep["reason"] = rep["reason"] or f"第 {st.index} 步：{e}"
@@ -282,6 +298,8 @@ class Runner:
             return self._tool_set(a, entry)
         if k == "expect_eap_read":
             return self._expect_eap_read(a, entry)
+        if k == "expect_body_422":
+            return self._expect_body_422(a, entry)
         if k == "expect_query_422":
             return self._expect_query_422(a, entry)
         if k == "expect_alarm_list":
@@ -719,6 +737,33 @@ class Runner:
                 errs = check_expect(r, mode) + (shape_422(r) if self.strict_422 else [])
                 if errs:
                     raise StepFailed("；".join(errs))
+
+    def _expect_body_422(self, a: dict, entry: dict) -> None:
+        """D65 补充 4：请求体带未知字段 -> 422 unknown_field（loc [body, 字段]）。走主账号的手工接口。
+        目前支持 endpoint=e10：to 用设备当前状态，这样后端若不拦未知字段只会报原地迁移 422，不会改状态。"""
+        if a.get("endpoint", "e10") != "e10":
+            raise StepFailed(f"expect_body_422 不支持 endpoint={a.get('endpoint')}")
+        eq_id = self.rid("equipment", a["eq"])
+        body = {"to_state_id": self.rid("e10_state", a["to"]), **(a.get("extra") or {"bogus": 1})}
+        field = next(iter(a.get("extra") or {"bogus": 1}))
+        want = {"status": 422, "code": a.get("code", "unknown_field"), "loc": a.get("loc") or ["body", field]}
+        r = self.c.request("POST", fill(self._ad("e10"), eq_id=eq_id), body)
+        entry.update(
+            method="POST", path=fill(self._ad("e10"), eq_id=eq_id), request=redact(body), status=r.status, code=r.code
+        )
+        errs = shape_422(r) if self.strict_422 else []
+        det = r.body.get("detail") if isinstance(r.body, dict) else None
+        hit = (
+            [x for x in det if isinstance(x, dict) and list(x.get("loc") or []) == want["loc"]]
+            if isinstance(det, list)
+            else []
+        )
+        if r.status != 422:
+            errs.append(f"带未知字段 {field} 期望 422，实际 HTTP {r.status}")
+        elif not hit or hit[0].get("code") != want["code"]:
+            errs.append(f"期望 loc {want['loc']} code {want['code']}，实际 {det!r}"[:300])
+        if errs:
+            raise StepFailed("；".join(errs))
 
     def _reuse(self, a: dict, entry: dict, sent) -> None:
         """D57 反例：同一个 key（manual 是 Idempotency-Key，b11 是 external_event_id）换请求内容重发，

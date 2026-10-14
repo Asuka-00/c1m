@@ -102,3 +102,9 @@ B9（`0a74f8a`）、B10（`d27b700`/`23c502d`）、B11（`8294b63`）已对齐�
 - detail 不是列表（目前只有 D57 `idempotency_key_reused`）不判失败，在报告该步记 `warn_422`。
 - `expect_query_422` 新增 `loc`（如 `[path, field]`）、`code`、`code_is_type`；params 值 `$eq:CODE` 解析为设备 id。
 - `expect_eap_read` 新增 `allowed_paths`：服务账号对这些路径 GET 须 200（如 `/mes/_meta`）。
+
+### D65 补充 4：请求体未知字段一律 422 unknown_field
+- `idempotency_key_reused` 的对象格式 `{code, message}` 是认可的旧格式，不再记 `warn_422`。
+- 新步骤 `expect_body_422`（目前 endpoint=e10）：`POST /mes/eqp/{id}/e10` 带未知字段期望 422 `unknown_field`、loc `[body, 字段]`；`to` 填设备当前状态，后端不拦时只会报原地迁移，不改状态。
+- 步骤可标 `xfail: 原因`：失败只记 xfail，不判场景失败；通过记 `xpass`（说明后端已修，可去掉 xfail）。`--strict-xfail` 或 `SIM_XFAIL=0` 时按普通步骤判。e10-state-cycle 的未知字段断言对 1a7c0fb 标了 xfail。
+- `tests/test_body_audit.py`：所有场景在两种模式下发出的请求体逐个对照后端请求模型字段表，有多余字段即失败。

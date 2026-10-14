@@ -95,7 +95,8 @@ def cmd_run(args) -> int:
         print(f"拒绝：{e}", file=sys.stderr)
         return 2
     print(f"目标 {target}  模式 {args.mode}")
-    runner = Runner(_client(target), mode=args.mode, svc=_svc_client(target))
+    xfail = not (args.strict_xfail or os.environ.get("SIM_XFAIL") == "0")
+    runner = Runner(_client(target), mode=args.mode, svc=_svc_client(target), xfail=xfail)
     reports = []
     for sc in scs:
         rep = runner.run(sc)
@@ -103,7 +104,13 @@ def cmd_run(args) -> int:
         mark = {PASSED: "PASS", FAILED: "FAIL", SKIPPED: "SKIP"}.get(rep["status"], "ERR ")
         print(f"[{mark}] {sc.name} (run_id={sc.run_id})" + (f" - {rep['reason']}" if rep["reason"] else ""))
         for s in rep["steps"]:
-            ok = {True: "ok", False: "FAIL", None: "skip"}[s.get("ok")]
+            ok = (
+                "xfail"
+                if s.get("xfail")
+                else "XPASS"
+                if s.get("xpass")
+                else {True: "ok", False: "FAIL", None: "skip"}[s.get("ok")]
+            )
             extra = f" HTTP {s['status']}" if "status" in s else ""
             extra += f" code={s['code']}" if s.get("code") else ""
             extra += f" ext={s['external_event_id']}" if s.get("external_event_id") else ""
@@ -122,6 +129,7 @@ def main(argv: list[str] | None = None) -> int:
     r = sub.add_parser("run", help="执行场景")
     r.add_argument("scenarios", nargs="+")
     r.add_argument("--report", help="JSON 报告输出路径（不含令牌）")
+    r.add_argument("--strict-xfail", action="store_true", help="xfail 步骤按普通步骤判（也可 SIM_XFAIL=0）")
     r.set_defaults(fn=cmd_run)
     v = sub.add_parser("validate", help="只校验场景格式，不连后端")
     v.add_argument("scenarios", nargs="+")

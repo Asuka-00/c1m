@@ -98,6 +98,7 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "tool_set": ["crud_item"],
     "expect_eap_read": ["crud", "crud_item"],
     "expect_query_422": [],
+    "expect_body_422": ["e10"],
     "expect_alarm_list": ["alarm_list"],
     "replay": [],
     "reuse": [],

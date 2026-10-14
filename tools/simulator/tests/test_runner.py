@@ -919,5 +919,54 @@ def test_shape_422_requires_code():
     assert shape_422(Resp(422, {"detail": []}))
     assert shape_422(Resp(422, {"detail": "boom"}))
     assert shape_422(Resp(422, {"detail": {"code": "idempotency_key_reused"}})) == []
-    assert nonlist_422(Resp(422, {"detail": {"code": "idempotency_key_reused"}}))
+    assert nonlist_422(Resp(422, {"detail": {"code": "idempotency_key_reused"}})) is None  # D65 补充 4：认可的旧格式
     assert shape_422(Resp(200, {})) == []
+
+
+def test_reused_object_detail_is_accepted_legacy_no_warn():
+    from sim.runner import nonlist_422, shape_422
+
+    r = Resp(422, {"detail": {"code": "idempotency_key_reused", "message": "x"}})
+    assert shape_422(r) == [] and nonlist_422(r) is None
+    assert nonlist_422(Resp(422, {"detail": {"code": "other"}}))  # 其他对象格式仍记 warn
+
+
+E10_UNKNOWN = {
+    "run_id": "u",
+    "steps": [{"expect_body_422": {"eq": "EQ1", "to": "SBY", "extra": {"bogus": 1}, "xfail": "1a7c0fb"}}],
+}
+
+
+def test_e10_unknown_field_xfail_against_1a7c0fb():
+    c, rep = run(E10_UNKNOWN)  # 假后端默认像 1a7c0fb：忽略未知字段 -> 原地迁移 422 value_error
+    assert rep["status"] == PASSED and rep["xfail"] == [1], rep
+    assert rep["steps"][0]["xfail"] is True and c.e10 == "SBY"
+    body = [x for x in c.calls if x[0] == "POST"][0][2]
+    assert body["bogus"] == 1 and body["to_state_id"] == "s-sby"
+
+
+def test_e10_unknown_field_strict_fails_and_fixed_backend_xpasses():
+    c = FakeClient()
+    assert Runner(c, xfail=False).run(parse(E10_UNKNOWN))["status"] == FAILED
+    c = FakeClient()
+    c.e10_forbid_extra = True  # 模拟后端修好
+    rep = Runner(c).run(parse(E10_UNKNOWN))
+    assert rep["status"] == PASSED and rep["xpass"] == [1] and not rep.get("xfail")
+    c = FakeClient()
+    c.e10_forbid_extra = True
+    assert Runner(c, xfail=False).run(parse(E10_UNKNOWN))["status"] == PASSED
+
+
+def test_cli_strict_xfail_flag(monkeypatch):
+    from sim import cli
+
+    seen = {}
+    monkeypatch.setattr(cli, "Runner", lambda *a, **kw: seen.update(kw) or (_ for _ in ()).throw(SystemExit(0)))
+    monkeypatch.setattr(cli, "_client", lambda t: None)
+    monkeypatch.setattr(cli, "_svc_client", lambda t: None)
+    monkeypatch.setenv("SIM_ALLOWED_PORTS", "8013")
+    import pytest
+
+    with pytest.raises(SystemExit):
+        cli.main(["run", "scenarios/e10-state-cycle.yaml", "--target", "http://127.0.0.1:8013", "--strict-xfail"])
+    assert seen["xfail"] is False
