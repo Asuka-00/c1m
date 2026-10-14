@@ -714,6 +714,13 @@ def test_tool_life(client: TestClient, db: Session) -> None:
     assert "pending_maintenance" in _msgs(
         f.stage(c, "track_in", 409, equipment_id=f.eq["id"], tool_ids=[t1["id"]])
     )
+    # P2-D3: tool at max but still "available" -> rule fails too (no "tools available")
+    t3 = m.post("tool", {"code": "T3", "fixture_id": f.fixture["id"], "usage_count": 3})
+    d = f.stage(c, "track_in", 409, equipment_id=f.eq["id"], tool_ids=[t3["id"]])
+    items = [x for x in d["detail"]["results"] if x["check_type"] == "tool_life"]
+    assert len(items) == 2, items  # built-in block + bound rule
+    assert all(x["result"] == "block" for x in items), items
+    assert all("reached its life (3/3)" in x["message"] for x in items), items
 
 
 def _dc_line(

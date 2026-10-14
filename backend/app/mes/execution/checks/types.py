@@ -10,6 +10,7 @@ from app.mes.common.query import find, one
 from app.mes.equipment.service import (
     e10_current,
     pm_status,
+    tool_block,
     tool_life,
     warn_ratio,
 )
@@ -224,8 +225,11 @@ def _tool(ctx: Ctx, p: Row) -> Outcome:
         fx = one(ctx.s, ctx.tid, "fixture", fid)
         if not t:
             return "fail", f"tool of type {fx and fx['code']} required", {}
-        # 用满 / 过期 / 不可用由内置硬拦截处理（registry.evaluate，overridable=false）；
-        # 规则只给预警区间（D54：max × warn_ratio <= 已用 < max）
+        # P2-D3：用满 / 过期 / 不可用与内置硬拦截（registry.evaluate）口径一致 → fail，
+        # 不再给出 "pass / tools available"；预警区间 D54：max × warn_ratio <= 已用 < max
+        blk = tool_block(ctx.s, ctx.tid, t, ctx.today)
+        if blk:
+            return "fail", blk, {"tool_id": str(t["id"]), "tool": t["code"]}
         mx, used = tool_life(ctx.s, ctx.tid, t)
         if mx and mx * warn_ratio(ctx.s, ctx.tid, t) <= used < mx:
             warn.append(
