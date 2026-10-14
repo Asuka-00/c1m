@@ -5,13 +5,15 @@ mes.equipment:pm（登记 PM 完成）。E10 履历、PM 计划、停机记录�
 """
 
 import uuid
+from datetime import datetime
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.core.deps import SessionDep
 from app.mes.common.query import one
+from app.mes.equipment import mount as mount_svc
 from app.mes.equipment import service as svc
 from app.platform.auth.deps import CurrentTenant
 from app.platform.tenants.service import TenantContext
@@ -69,3 +71,55 @@ def pm_done(
     """Record a PM completion (resets the plan's day / lot interval)."""
     _need(ctx, "mes.equipment:pm")
     return svc.pm_complete(session, ctx.id, plan_id, body.model_dump(), ctx.user)
+
+
+class MountIn(BaseModel):
+    port_code: str = Field(min_length=1, max_length=64)
+    material_lot_id: uuid.UUID | None = None
+    material_lot_code: str | None = Field(default=None, max_length=64)
+    mounted_at: datetime | None = None
+    external_event_id: str | None = Field(default=None, max_length=128)
+    comment: str | None = Field(default=None, max_length=300)
+
+
+class UnmountIn(BaseModel):
+    unmounted_at: datetime | None = None
+
+
+@router.get("/mount/at")
+def mount_at(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    eq_id: uuid.UUID,
+    at: datetime,
+    port_code: str | None = Query(None, max_length=64),
+) -> Any:
+    """Material lots mounted on an equipment at a point in time (traceability)."""
+    _need(ctx, "mes.equipment:read")
+    if at.tzinfo is None:
+        raise HTTPException(status_code=422, detail="at: timezone required")
+    return {"data": mount_svc.mounted_at(session, ctx.id, eq_id, at, port_code)}
+
+
+@router.post("/mount/{mount_id}/unmount")
+def unmount(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    mount_id: uuid.UUID,
+    body: UnmountIn | None = None,
+) -> Any:
+    """Unmount a material lot (unmounted_at defaults to now)."""
+    _need(ctx, "mes.equipment:mount")
+    data = body.model_dump() if body else {}
+    return {"data": mount_svc.unmount(session, ctx.id, mount_id, data, ctx.user)}
+
+
+@router.post("/{eq_id}/mount")
+def mount(
+    session: SessionDep, ctx: CurrentTenant, eq_id: uuid.UUID, body: MountIn
+) -> Any:
+    """Manual mount (409 port_occupied when the port already holds a lot)."""
+    _need(ctx, "mes.equipment:mount")
+    return mount_svc.mount(
+        session, ctx.id, eq_id, body.model_dump(), ctx.user, source="manual"
+    )

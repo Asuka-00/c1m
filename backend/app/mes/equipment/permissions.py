@@ -6,4 +6,5 @@ PERM_MODULES: dict[str, tuple[str, int]] = {"equipment": ("Equipment|设备|設�
 PERMISSIONS: dict[str, str] = {
     "mes.equipment:e10": "MES equipment: change E10 state manually",
     "mes.equipment:pm": "MES equipment: record PM completion",
+    "mes.equipment:mount": "MES equipment: mount / unmount material lots",
 }

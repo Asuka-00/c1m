@@ -90,6 +90,7 @@ register(
         has_code=False,
         has_name=False,
         unique=[("product", "version")],
+        partial_unique=[("uq_mes_bom_active", ("product",), "status = 'active'")],
         children=["bom_line"],
         icon="ListTree",
         order=4,

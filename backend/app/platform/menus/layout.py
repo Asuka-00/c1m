@@ -80,6 +80,10 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-downtime", "Downtime|停机记录|停止記録"),
         ("mes-e10_history", "E10 History|E10 状态履历|E10 状態履歴"),
         ("mes-tool", "Consumable Life|耗材/治具寿命|消耗品・治具寿命"),
+        (
+            "mes-equipment_material_mount",
+            "Equipment Material Mount|机台上料记录|装置資材装着記録",
+        ),
         ("mes-equipment-master", "Equipment Master|机台主数据|装置マスタ"),
         ("mes-e10-model", "E10 State Configuration|E10 状态配置|E10 状態設定"),
     ],

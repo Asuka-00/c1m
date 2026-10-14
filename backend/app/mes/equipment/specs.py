@@ -439,3 +439,93 @@ register(
         label_field="start_at",
     ),
 )
+
+
+ENUMS.update(
+    {
+        "mount_source": [
+            ("manual", "Manual|人工|手動"),
+            ("eap", "EAP|EAP|EAP"),
+        ],
+    }
+)
+
+register(
+    # 机台上料记录（D28 / B3）：上料口 = (equipment, port_code)；同一上料口同时只装一批
+    Entity(
+        "equipment_material_mount",
+        "equipment",
+        "Equipment material mount|机台上料记录|装置資材装着記録",
+        [
+            F(
+                "equipment",
+                "ref",
+                "Equipment|设备|設備",
+                ref="equipment",
+                required=True,
+            ),
+            F(
+                "port_code",
+                "str",
+                "Load port|上料口|投入口",
+                required=True,
+                max_length=64,
+                search=True,
+            ),
+            F(
+                "material_lot",
+                "ref",
+                "Material lot|物料批|資材ロット",
+                ref="material_lot",
+                required=True,
+            ),
+            F("material", "ref", "Material|物料|資材", ref="material"),
+            F("mounted_at", "datetime", "Mounted at|装上时间|装着日時", required=True),
+            F("unmounted_at", "datetime", "Unmounted at|卸下时间|取外し日時"),
+            F(
+                "source",
+                "enum",
+                "Source|来源|ソース",
+                enum="mount_source",
+                required=True,
+                default="manual",
+            ),
+            F(
+                "external_event_id",
+                "str",
+                "External event ID|外部事件号|外部イベント ID",
+                max_length=128,
+                search=True,
+                list=False,
+            ),
+            F("mounted_by", "str", "Mounted by|上料人|装着者", max_length=255),
+            F(
+                "unmounted_by",
+                "str",
+                "Unmounted by|卸料人|取外し者",
+                max_length=255,
+                list=False,
+            ),
+            F("comment", "str", "Comment|备注|コメント", max_length=300, list=False),
+        ],
+        phase=6,
+        has_code=False,
+        readonly=True,
+        partial_unique=[
+            (
+                "uq_mes_eqp_mount_port_open",
+                ("equipment", "port_code"),
+                "unmounted_at IS NULL",
+            ),
+            (
+                "uq_mes_eqp_mount_event",
+                ("source", "external_event_id"),
+                "external_event_id IS NOT NULL",
+            ),
+        ],
+        icon="PackagePlus",
+        order=20,
+        sort_default="mounted_at",
+        label_field="port_code",
+    ),
+)

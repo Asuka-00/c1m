@@ -32,6 +32,7 @@
       "pm_plan": "PM 计划",
       "pm_record": "PM 执行记录",
       "downtime": "停机记录",
+      "equipment_material_mount": "机台上料记录",
       "check_rule": "卡控规则",
       "check_plan": "卡控方案",
       "check_plan_item": "方案规则",
@@ -237,6 +238,19 @@
         "end_at": "结束时间",
         "reason": "原因代码",
         "e10_state": "E10 状态",
+        "comment": "备注"
+      },
+      "equipment_material_mount": {
+        "equipment": "设备",
+        "port_code": "上料口",
+        "material_lot": "物料批",
+        "material": "物料",
+        "mounted_at": "装上时间",
+        "unmounted_at": "卸下时间",
+        "source": "来源",
+        "external_event_id": "外部事件号",
+        "mounted_by": "上料人",
+        "unmounted_by": "卸料人",
         "comment": "备注"
       },
       "check_rule": {
@@ -1060,6 +1074,10 @@
         "ok": "合格",
         "ng": "不合格"
       },
+      "mount_source": {
+        "manual": "人工",
+        "eap": "EAP"
+      },
       "exec_trigger": {
         "move_in": "进站",
         "track_in": "上机",
@@ -1507,6 +1525,7 @@
     "mes-downtime": "停机记录",
     "mes-e10_history": "E10 状态履历",
     "mes-tool": "耗材/治具寿命",
+    "mes-equipment_material_mount": "机台上料记录",
     "mes-equipment-master": "机台主数据",
     "mes-e10-model": "E10 状态配置",
     "mes-dc_result": "量测数据",
@@ -1633,6 +1652,7 @@
     "mes_wh__write": "仓储·编辑",
     "mes_equipment__e10": "设备·变更 E10 状态",
     "mes_equipment__pm": "设备·记录保养",
+    "mes_equipment__mount": "设备·上料 / 卸料",
     "mes_exec__override": "生产执行·强制放行",
     "mes_exec__hold": "生产执行·暂停 / 释放",
     "mes_exec__split": "生产执行·分批",
@@ -1697,6 +1717,7 @@
     "mes_wh__write": "允许：仓储·编辑",
     "mes_equipment__e10": "允许：设备·变更 E10 状态",
     "mes_equipment__pm": "允许：设备·记录保养",
+    "mes_equipment__mount": "允许：设备·上料 / 卸料",
     "mes_exec__override": "允许：生产执行·强制放行",
     "mes_exec__hold": "允许：生产执行·暂停 / 释放",
     "mes_exec__split": "允许：生产执行·分批",

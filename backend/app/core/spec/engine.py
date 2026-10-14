@@ -123,6 +123,8 @@ class Entity:
     tree: bool = False  # 自引用 `parent_id`
     versioned: bool = False  # `version` + `status`（draft/active/inactive）
     unique: list[tuple[str, ...]] = field(default_factory=list)  # 业务唯一键
+    # 部分唯一索引：(索引名, 字段名..., WHERE 条件 SQL)；tenant_id 自动作为首列
+    partial_unique: list[tuple[str, tuple[str, ...], str]] = field(default_factory=list)
     parent: str | None = None  # 作为该引用字段的子表（在详情抽屉中显示）
     children: list[str] = field(default_factory=list)  # 子实体编码
     readonly: bool = False  # 如审计日志
@@ -278,6 +280,17 @@ def build_table(e: Entity) -> sa.Table:
                 *colnames,
                 name=f"uq_{e.table_name}_{i}",
                 postgresql_nulls_not_distinct=True,  # 唯一键中的可选部分
+            )
+        )
+    for name, key, where in e.partial_unique:
+        colnames = [(fld.column if (fld := e.field(k)) else k) for k in key]
+        cols.append(
+            sa.Index(
+                name,
+                "tenant_id",
+                *colnames,
+                unique=True,
+                postgresql_where=sa.text(where),
             )
         )
     return sa.Table(e.table_name, SQLModel.metadata, *cols)

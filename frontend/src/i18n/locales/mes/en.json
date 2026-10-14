@@ -32,6 +32,7 @@
       "pm_plan": "PM plan",
       "pm_record": "PM record",
       "downtime": "Downtime",
+      "equipment_material_mount": "Equipment material mount",
       "check_rule": "Check rule",
       "check_plan": "Check plan",
       "check_plan_item": "Plan rule",
@@ -237,6 +238,19 @@
         "end_at": "End",
         "reason": "Reason code",
         "e10_state": "E10 state",
+        "comment": "Comment"
+      },
+      "equipment_material_mount": {
+        "equipment": "Equipment",
+        "port_code": "Load port",
+        "material_lot": "Material lot",
+        "material": "Material",
+        "mounted_at": "Mounted at",
+        "unmounted_at": "Unmounted at",
+        "source": "Source",
+        "external_event_id": "External event ID",
+        "mounted_by": "Mounted by",
+        "unmounted_by": "Unmounted by",
         "comment": "Comment"
       },
       "check_rule": {
@@ -1060,6 +1074,10 @@
         "ok": "OK",
         "ng": "NG"
       },
+      "mount_source": {
+        "manual": "Manual",
+        "eap": "EAP"
+      },
       "exec_trigger": {
         "move_in": "Move in",
         "track_in": "Track in",
@@ -1507,6 +1525,7 @@
     "mes-downtime": "Downtime",
     "mes-e10_history": "E10 History",
     "mes-tool": "Consumable Life",
+    "mes-equipment_material_mount": "Equipment Material Mount",
     "mes-equipment-master": "Equipment Master",
     "mes-e10-model": "E10 State Configuration",
     "mes-dc_result": "Metrology / DC Data",
@@ -1633,6 +1652,7 @@
     "mes_wh__write": "Warehouse·Edit",
     "mes_equipment__e10": "Equipment·Change E10 state",
     "mes_equipment__pm": "Equipment·Record PM",
+    "mes_equipment__mount": "Equipment·Mount / unmount material",
     "mes_exec__override": "Execution·Override checks",
     "mes_exec__hold": "Execution·Hold / release",
     "mes_exec__split": "Execution·Split lots",
@@ -1697,6 +1717,7 @@
     "mes_wh__write": "Allows: Warehouse·Edit",
     "mes_equipment__e10": "Allows: Equipment·Change E10 state",
     "mes_equipment__pm": "Allows: Equipment·Record PM",
+    "mes_equipment__mount": "Allows: Equipment·Mount / unmount material",
     "mes_exec__override": "Allows: Execution·Override checks",
     "mes_exec__hold": "Allows: Execution·Hold / release",
     "mes_exec__split": "Allows: Execution·Split lots",

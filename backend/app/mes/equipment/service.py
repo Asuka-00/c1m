@@ -18,6 +18,8 @@ from app.mes.equipment.maint import (
 from app.mes.equipment.maint import (
     pm_status as pm_status,
 )
+from app.mes.equipment.mount import mount as mount
+from app.mes.equipment.mount import unmount as unmount
 from app.mes.equipment.status import (
     e10_current as e10_current,
 )
