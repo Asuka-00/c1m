@@ -1,29 +1,30 @@
-# 首批验收场景 2（设计 §6.1）：耗材寿命预警与到期拦截。依赖 B10，接口不存在时整体 skipped。
-# D53-5 / D54 OQ-7：检查项 tool_life，返回 409 check_blocked。
-#   - 预警区间 max_usage × warn_ratio（默认 0.9）<= 用量 < max_usage：overridable=true（可人工放行）
-#   - 用量 >= max_usage：硬拦，overridable=false
-# 前提：T-SIM-01 的 max_usage=1000、warn_ratio 默认 0.9、起始用量 0。
+# 首批验收场景 2（设计 §6.1）：耗材寿命预警与到期拦截。依赖 B10（d27b700），接口不存在时整体 skipped。
+# B10 实际行为：
+#   - 计数上报 POST /mes/eqp/tools/{tool_id}/usage，返回 {data, tool: {usage_count, life_state, ...}, duplicate, life_reached}
+#   - 预警区间 max_usage × warn_ratio（默认 0.9）<= 用量 < max_usage：Track In 照常 200（规则只给 warn，不拦）
+#   - 用量 >= max_usage：Track In 返回 409 check_blocked，检查项 tool_life，overridable=false（只在 track_in 判断，move_in 不判断）
+# 前提：T-SIM-01 的 max_usage=1000、warn_ratio 默认 0.9、count_basis=reported（Track Out 不自动计数）；
+#       FX0001、FX0003 是 waiting 的批，工步要求 T-SIM-01 的工具类型；reason_code 里有 REWORK。
 name: tool-life-block
-run_id: tool-life-02
+run_id: tool-life-03
 target: http://127.0.0.1:8013
 equipment: [{code: EAP-DA01, type: DIEBOND}]
 steps:
   - precondition: {lot: FX0001, lot_status: waiting}
-  - tool_usage: {eq: EAP-DA01, tool: T-SIM-01, delta: 900}    # 900 = 1000 × 0.9，进入预警区间
-  - move_in:
+  - precondition: {lot: FX0003, lot_status: waiting}
+  - tool_reset: {tool: T-SIM-01, reason: REWORK, expect: {body: {tool.usage_count: "0"}}}   # 从 0 开始，可重复跑
+  - tool_usage: {eq: EAP-DA01, tool: T-SIM-01, delta: 900, expect: {body: {tool.life_state: warning, life_reached: false}}}
+  - replay: {eq: EAP-DA01, seq: 1, expect: {status: 200, body: {duplicate: true, tool.usage_count: "900"}}}
+  - move_in: {eq: EAP-DA01, lot: FX0001}
+  - track_in: {eq: EAP-DA01, lot: FX0001, tools: [T-SIM-01]}     # 预警区间：可放行，200
+  - tool_usage: {eq: EAP-DA01, tool: T-SIM-01, delta: 100, expect: {body: {life_reached: true, tool.tool_status: pending_maintenance}}}
+  - move_in: {eq: EAP-DA01, lot: FX0003}
+  - track_in:
       eq: EAP-DA01
-      lot: FX0001
+      lot: FX0003
       tools: [T-SIM-01]
       expect:
         status: 409
         code: check_blocked
-        check: {check_type: tool_life, overridable: true}
-  - tool_usage: {eq: EAP-DA01, tool: T-SIM-01, delta: 100}    # 1000 = max_usage，>= 即硬拦
-  - move_in:
-      eq: EAP-DA01
-      lot: FX0001
-      tools: [T-SIM-01]
-      expect:
-        status: 409
-        code: check_blocked
-        check: {check_type: tool_life, overridable: false}
+        check: {check_type: tool_life, overridable: false, result: block}
+  - expect_tool_log: {tool: T-SIM-01, last: {kind: report, delta: "100", count_after: "1000"}}

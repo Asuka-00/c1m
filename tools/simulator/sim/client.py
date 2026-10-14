@@ -27,6 +27,11 @@ class Resp:
             d = b.get("detail")
             if isinstance(d, dict) and d.get("code"):
                 return d["code"]
+            # 422 校验错误是列表：取第一条的 code（如 time_in_future），没有则取 type
+            if isinstance(d, list) and d and isinstance(d[0], dict):
+                c = d[0].get("code") or d[0].get("type")
+                if isinstance(c, str):
+                    return c
             if isinstance(b.get("code"), str):
                 return b["code"]
         return None

@@ -183,15 +183,39 @@ def test_unregistered_alarm_changing_e10_fails():
     assert rep["status"] == FAILED and "E10" in rep["reason"]
 
 
-def test_clear_without_active_alarm_expects_cleared_false():
+def test_clear_already_cleared_alarm_expects_cleared_false():
+    """D55 OQ-5 / B9：报警已不是 active 时 clear -> 200，顶层 cleared=false。"""
     c = FakeClient(paths=BASE_PATHS | B9)
-    ok = {"alarm_clear": {"eq": "EQ1", "alid": "1001", "expect": {"data": {"cleared": False}}}}
-    rep = Runner(c).run(parse({"run_id": "c", "steps": [ok]}))
+    steps = [
+        {"alarm_set": {"eq": "EQ1", "alid": "1001", "save_as": "x"}},
+        {"alarm_clear": {"eq": "EQ1", "alarm": "$x", "expect": {"body": {"cleared": True}}}},
+        {"alarm_clear": {"eq": "EQ1", "alarm": "$x", "expect": {"body": {"cleared": False, "duplicate": False}}}},
+    ]
+    rep = Runner(c).run(parse({"run_id": "c", "steps": steps}))
     assert rep["status"] == PASSED, rep
-    assert c.calls[-1][1] == "/mes/eqp/e-1/alarms/clear"
-    bad = {"alarm_clear": {"eq": "EQ1", "alid": "1001", "expect": {"data": {"cleared": True}}}}
-    rep = Runner(FakeClient(paths=BASE_PATHS | B9)).run(parse({"run_id": "c", "steps": [bad]}))
-    assert rep["status"] == FAILED and "data.cleared" in rep["reason"]
+    assert c.calls[-1][1] == "/mes/eqp/alarms/a-1/clear"
+    assert "cleared_at" in c.calls[-1][2] and "occurred_at" not in c.calls[-1][2]
+    bad = steps[:2] + [{"alarm_clear": {"eq": "EQ1", "alarm": "$x", "expect": {"body": {"cleared": True}}}}]
+    rep = Runner(FakeClient(paths=BASE_PATHS | B9)).run(parse({"run_id": "c", "steps": bad}))
+    assert rep["status"] == FAILED and "body.cleared" in rep["reason"]
+
+
+def test_alarm_set_uses_set_at_and_list_detail_code():
+    c = FakeClient(paths=BASE_PATHS | B9)
+    rep = Runner(c).run(parse({"run_id": "s", "steps": [{"alarm_set": {"eq": "EQ1", "alid": "1001"}}]}))
+    assert rep["status"] == PASSED, rep
+    body = [x for x in c.calls if x[0] == "POST"][0][2]
+    assert "set_at" in body and "occurred_at" not in body and "source" not in body
+    assert Resp(422, {"detail": [{"type": "time_in_future", "code": "time_in_future"}]}).code == "time_in_future"
+
+
+def test_alarm_clear_by_alid_rejected():
+    import pytest
+
+    from sim.scenario import ScenarioError
+
+    with pytest.raises(ScenarioError, match="ALID"):
+        parse({"run_id": "x", "steps": [{"alarm_clear": {"eq": "EQ1", "alid": "1001"}}]})
 
 
 def test_future_time_offset():
@@ -207,6 +231,11 @@ def test_bundled_tool_life_warn_then_hard_block():
     rep = Runner(c).run(load(SCN / "tool-life-block.yaml"))
     assert rep["status"] == PASSED, rep
     assert c.usage == 1000  # 等于上限即硬拦（>=）
+    ins = [x for x in c.calls if x[1].endswith("/track_in")]
+    assert len(ins) == 2 and all(x[2]["tool_ids"] == ["t-sim"] for x in ins)
+    assert c.calls[0][0] == "GET"
+    reset = [x for x in c.calls if x[1] == "/mes/eqp/tools/t-sim/reset"]
+    assert reset and reset[0][2]["reason_id"] == "r-rw" and "external_event_id" not in reset[0][2]
 
 
 def test_tool_life_below_warn_not_blocked():
@@ -214,11 +243,65 @@ def test_tool_life_below_warn_not_blocked():
     data = {
         "run_id": "w",
         "steps": [
-            {"tool_usage": {"eq": "EQ1", "tool": "T1", "delta": 899}},
-            {"move_in": {"eq": "EQ1", "lot": "L1", "tools": ["T1"]}},
+            {
+                "tool_usage": {
+                    "eq": "EQ1",
+                    "tool": "T1",
+                    "delta": 950,
+                    "expect": {"body": {"tool.life_state": "warning"}},
+                }
+            },
+            {"track_in": {"eq": "EQ1", "lot": "L1", "tools": ["T1"]}},  # 预警区间不拦
         ],
     }
     assert Runner(c).run(parse(data))["status"] == PASSED
+
+
+def test_tool_mount_replace_unmount_and_logs():
+    c = FakeClient(paths=BASE_PATHS | B10)
+    steps = [
+        {"tool_mount": {"eq": "EQ1", "tool": "T1", "port": "P1"}},
+        {"tool_mount": {"eq": "EQ1", "tool": "T1", "expect": {"status": 409, "code": "tool_already_mounted"}}},
+        {
+            "tool_replace": {
+                "tool": "T1",
+                "new_tool": "T2",
+                "reason": "broken",
+                "expect": {"body": {"unmounted.unmount_reason": "broken", "mounted.port_code": "P1"}},
+            }
+        },
+        {"tool_unmount": {"tool": "T1", "reason": "pm", "expect": {"status": 409, "code": "tool_not_mounted"}}},
+        {"tool_unmount": {"tool": "T2", "reason": "pm"}},
+        {"expect_tool_log": {"tool": "T2", "log": "mounts", "count": 1, "last": {"unmount_reason": "pm"}}},
+        {"tool_usage": {"eq": "EQ1", "tool": "T1", "delta": -1, "expect": {"status": 422, "code": "reason_required"}}},
+        {"tool_usage": {"eq": "EQ1", "tool": "T1", "delta": 3}},
+        {"tool_usage": {"eq": "EQ1", "tool": "T1", "delta": -1, "reason": "REWORK"}},
+        {"expect_tool_log": {"tool": "T1", "count": 2, "last": {"kind": "adjust", "count_after": "2"}}},
+    ]
+    rep = Runner(c).run(parse({"run_id": "tm", "steps": steps}))
+    assert rep["status"] == PASSED, rep
+    posts = [x for x in c.calls if x[0] == "POST"]
+    assert posts[0][1] == "/mes/eqp/tools/t-1/mount" and posts[0][2]["equipment_id"] == "e-1"
+    assert all("source" not in x[2] for x in posts)  # D30
+    assert all(x[3] and x[3].get("Idempotency-Key") for x in posts)
+    gets = [x[1] for x in c.calls if x[0] == "GET" and "/tools/" in x[1]]
+    assert gets == ["/mes/eqp/tools/t-2/mounts", "/mes/eqp/tools/t-1/usage"]
+
+
+def test_tool_steps_validation():
+    import pytest
+
+    from sim.scenario import ScenarioError
+
+    for bad in (
+        {"tool_reset": {"tool": "T1"}},
+        {"tool_unmount": {"tool": "T1"}},
+        {"tool_replace": {"tool": "T1", "reason": "pm"}},
+        {"tool_mount": {"tool": "T1"}},
+        {"expect_tool_log": {}},
+    ):
+        with pytest.raises(ScenarioError):
+            parse({"run_id": "x", "steps": [bad]})
 
 
 def test_b11_mode_disabled_by_default_and_placeholder():

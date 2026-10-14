@@ -17,13 +17,21 @@ BASE_PATHS = {
     "/mes/eqp/mount/{mount_id}/unmount",
     "/mes/exec/holds",
 }
+# 与后端 B9 0a74f8a / B10 d27b700 的路由一致
 B9 = {
     "/mes/eqp/{eq_id}/alarms",
     "/mes/eqp/alarms/{alarm_id}/clear",
-    "/mes/eqp/{eq_id}/alarms/clear",
+    "/mes/eqp/alarms",
     "/mes/eqp/alarms/{alarm_id}",
 }
-B10 = {"/mes/eqp/tools/{tool_id}/usage"}
+B10 = {
+    "/mes/eqp/tools/{tool_id}/usage",
+    "/mes/eqp/tools/{tool_id}/reset",
+    "/mes/eqp/tools/{tool_id}/mount",
+    "/mes/eqp/tools/{tool_id}/unmount",
+    "/mes/eqp/tools/{tool_id}/replace",
+    "/mes/eqp/tools/{tool_id}/mounts",
+}
 B11 = {"/mes/eap/events"}
 REGISTERED_ALIDS = {"1001"}
 
@@ -38,7 +46,10 @@ IDS = {
     ("equipment", "EAP-DA01"): "e-da01",
     ("lot", "FX0001"): "l-fx1",
     ("lot", "FX0002"): "l-fx2",
+    ("lot", "FX0003"): "l-fx3",
     ("tool", "T-SIM-01"): "t-sim",
+    ("tool", "T2"): "t-2",
+    ("reason_code", "REWORK"): "r-rw",
 }
 
 
@@ -56,6 +67,10 @@ class FakeClient(Client):
         self.usage = 0.0
         self.max_usage = 1000.0
         self.warn_ratio = 0.9
+        self.usage_events = {}  # external_event_id -> 履历行
+        self.usage_log = []  # newest first
+        self.tool_mounts = {}  # tool_id -> 是否在机
+        self.mount_log = []
 
     def openapi_paths(self):
         return self.paths
@@ -78,25 +93,19 @@ class FakeClient(Client):
         if method == "GET" and path.startswith("/mes/eqp/alarms/"):
             row = self.alarm_rows.get(path.split("/")[-1])
             return Resp(200, {"data": row}) if row else Resp(404, {"detail": "Not Found"})
-        if path.endswith("/alarms/clear"):
-            active = [r for r in self.alarm_rows.values() if r["alid"] == json_body["alid"] and r["state"] == "active"]
-            for r in active:
-                r["state"] = "cleared"
-            return Resp(200, {"data": {"cleared": bool(active)}})
-        if path.endswith("/usage"):
-            self.usage += float(json_body["delta"])
-            return Resp(200, {"data": {"usage_count": str(self.usage)}})
+        if path.startswith("/mes/eqp/tools/"):
+            return self._tools(method, path, json_body or {})
         if path == "/mes/exec/holds":
             return Resp(200, {"data": [{"lot_code": params.get("q") or "L1"}] * self.holds})
         if path.endswith("/e10"):
             return Resp(200, {"data": {"id": "log"}})
-        if path.endswith("/move_in"):
-            if json_body.get("tool_ids") and self.usage >= self.max_usage * self.warn_ratio:
-                hard = self.usage >= self.max_usage
-                res = [{"check_type": "tool_life", "overridable": not hard, "result": "fail"}]
+        if path.endswith("/move_in") or path.endswith("/track_in"):
+            # B10：tool_life 只在 track_in 判断，用量 >= 上限硬拦（overridable=false）；预警区间不拦
+            if path.endswith("/track_in") and json_body.get("tool_ids") and self.usage >= self.max_usage:
+                res = [{"check_type": "tool_life", "overridable": False, "result": "block"}]
                 return Resp(409, {"detail": {"code": "check_blocked", "results": res}})
             if self.qual == "wait_qual":
-                res = [{"check_type": "eqp_wait_qual", "overridable": False, "result": "fail"}]
+                res = [{"check_type": "eqp_wait_qual", "overridable": False, "result": "block"}]
                 return Resp(409, {"detail": {"code": "check_blocked", "results": res}})
             return Resp(200, {"data": {"id": "l-1"}})
         if path.endswith("/mount"):
@@ -105,28 +114,139 @@ class FakeClient(Client):
             self.mounts.setdefault(ext, f"m-{len(self.mounts) + 1}")
             return Resp(200, {"data": {"id": self.mounts[ext]}, "duplicate": dup})
         if path.endswith("/alarms"):
-            if json_body["occurred_at"] > _plus5min():
-                return Resp(422, {"detail": {"code": "time_in_future"}})
+            if json_body["set_at"] > _plus5min():
+                d = [{"loc": ["body", "set_at"], "type": "time_in_future", "code": "time_in_future"}]
+                return Resp(422, {"detail": d})
             ext = json_body["external_event_id"]
-            if ext not in self.alarms:
-                aid = self.alarms[ext] = f"a-{len(self.alarms) + 1}"
-                unreg = json_body["alid"] not in REGISTERED_ALIDS
-                self.alarm_rows[aid] = {
-                    "id": aid,
-                    "alid": json_body["alid"],
-                    "state": "active",
-                    "unregistered": unreg,
-                    "lots": [{"lot_id": x} for x in json_body.get("lot_ids", [])],
-                }
-                if not unreg:
-                    self.holds += 1
-                    self.e10 = "UDT"
-            return Resp(200, {"data": {"id": self.alarms[ext]}})
+            alid = json_body["alid"]
+            act = [r for r in self.alarm_rows.values() if r["alid"] == alid and r["alarm_status"] == "active"]
+            if ext in self.alarms or act:
+                aid = self.alarms.get(ext) or act[0]["id"]
+                return Resp(200, {"data": self.alarm_rows[aid], "duplicate": True})
+            aid = self.alarms[ext] = f"a-{len(self.alarms) + 1}"
+            unreg = alid not in REGISTERED_ALIDS
+            self.alarm_rows[aid] = {
+                "id": aid,
+                "alid": alid,
+                "alarm_status": "active",
+                "unregistered": unreg,
+                "clear_event_id": None,
+                "lots": [{"lot_id": x} for x in json_body.get("lot_ids", [])],
+            }
+            if not unreg:
+                self.holds += 1
+                self.e10 = "UDT"
+            return Resp(200, {"data": self.alarm_rows[aid], "duplicate": False})
         if path.endswith("/clear"):
-            aid = path.split("/")[-2]
-            if aid in self.alarm_rows:
-                self.alarm_rows[aid]["state"] = "cleared"
-            return Resp(200, {"data": {"id": aid, "cleared": True}})
+            row = self.alarm_rows.get(path.split("/")[-2])
+            if not row:
+                return Resp(404, {"detail": "alarm not found"})
+            ext = json_body.get("external_event_id")
+            if row["alarm_status"] == "cleared":
+                dup = bool(ext) and row["clear_event_id"] == ext
+                return Resp(200, {"data": row, "duplicate": dup, "cleared": False})
+            row.update(alarm_status="cleared", clear_event_id=ext)
+            return Resp(200, {"data": row, "duplicate": False, "cleared": True})
         if path.endswith("/unmount"):
             return Resp(200, {"data": {"id": path.split("/")[-2]}})
+        return Resp(404, {"detail": "Not Found"})
+
+    def _tool_brief(self):
+        st = "pending_maintenance" if self.usage >= self.max_usage else "available"
+        life = (
+            "reached"
+            if self.usage >= self.max_usage
+            else ("warning" if self.usage >= self.max_usage * self.warn_ratio else "ok")
+        )
+        n = lambda v: f"{v:g}"  # noqa: E731  十进制字符串（D50）
+        return {
+            "usage_count": n(self.usage),
+            "max_usage": n(self.max_usage),
+            "life_state": life,
+            "tool_status": st,
+            "warn_ratio": n(self.warn_ratio),
+        }
+
+    def _tools(self, method, path, body):
+        parts = path.split("/")  # ['', 'mes', 'eqp', 'tools', id, action]
+        tid, act = parts[4], parts[5]
+        extra = set(body) - {
+            "usage": {"delta", "equipment_id", "lot_id", "occurred_at", "reason_id", "comment", "external_event_id"},
+            "reset": {"reason_id", "comment"},
+            "mount": {"equipment_id", "sub_unit_id", "port_code", "mounted_at", "comment"},
+            "unmount": {"reason", "unmounted_at", "comment"},
+            "replace": {"new_tool_id", "reason", "comment"},
+        }.get(act, set())
+        if method == "POST" and extra:  # extra=forbid
+            return Resp(422, {"detail": [{"loc": ["body", sorted(extra)[0]], "type": "extra_forbidden"}]})
+        if method == "GET":
+            rows = self.usage_log if act == "usage" else [m for m in self.mount_log if m["tool_id"] == tid]
+            return Resp(200, {"data": rows, "count": len(rows)})
+        if act == "usage":
+            ext = body.get("external_event_id")
+            if ext and ext in self.usage_events:
+                return Resp(
+                    200,
+                    {
+                        "data": self.usage_events[ext],
+                        "tool": self._tool_brief(),
+                        "duplicate": True,
+                        "life_reached": False,
+                    },
+                )
+            d = float(body["delta"])
+            if d < 0 and not body.get("reason_id"):
+                return Resp(422, {"detail": [{"loc": ["body", "reason_id"], "code": "reason_required"}]})
+            before = self.usage
+            self.usage += d
+            row = {
+                "id": f"u-{len(self.usage_log) + 1}",
+                "kind": "report" if d > 0 else "adjust",
+                "delta": body["delta"],
+                "count_after": f"{self.usage:g}",
+            }
+            self.usage_log.insert(0, row)
+            if ext:
+                self.usage_events[ext] = row
+            reached = before < self.max_usage <= self.usage
+            return Resp(200, {"data": row, "tool": self._tool_brief(), "duplicate": False, "life_reached": reached})
+        if act == "reset":
+            n = len(self.usage_log) + 1
+            row = {"id": f"u-{n}", "kind": "reset", "delta": f"{-self.usage:g}", "count_after": "0"}
+            self.usage = 0.0
+            self.usage_log.insert(0, row)
+            return Resp(200, {"data": row, "tool": self._tool_brief()})
+        if act == "mount":
+            if self.tool_mounts.get(tid):
+                return Resp(409, {"detail": {"code": "tool_already_mounted"}})
+            self.tool_mounts[tid] = True
+            row = {
+                "id": f"tm-{len(self.mount_log) + 1}",
+                "tool_id": tid,
+                "port_code": body.get("port_code"),
+                "unmounted_at": None,
+                "unmount_reason": None,
+            }
+            self.mount_log.insert(0, row)
+            return Resp(200, {"data": row, "tool": {"equipment_id": body["equipment_id"]}})
+        if act in ("unmount", "replace"):
+            if not self.tool_mounts.get(tid):
+                return Resp(409, {"detail": {"code": "tool_not_mounted"}})
+            self.tool_mounts[tid] = False
+            cur = next(m for m in self.mount_log if m["tool_id"] == tid and m["unmounted_at"] is None)
+            cur.update(unmounted_at="2026-10-14T00:00:00Z", unmount_reason=body["reason"])
+            if act == "unmount":
+                return Resp(200, {"data": cur})
+            new = body["new_tool_id"]
+            self.tool_mounts[new] = True
+            row = {
+                "id": f"tm-{len(self.mount_log) + 1}",
+                "tool_id": new,
+                "port_code": cur["port_code"],
+                "unmounted_at": None,
+                "unmount_reason": None,
+            }
+            self.mount_log.insert(0, row)
+            cur["replaced_by_tool_id"] = new
+            return Resp(200, {"unmounted": cur, "mounted": row, "new_tool": {"id": new}})
         return Resp(404, {"detail": "Not Found"})

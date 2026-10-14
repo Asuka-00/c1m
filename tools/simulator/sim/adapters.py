@@ -48,35 +48,22 @@ def default_adapters() -> dict[str, Adapter]:
         "mount": Adapter("上料", ["/mes/eqp/{eq_id}/mount"]),
         "unmount": Adapter("卸料", ["/mes/eqp/mount/{mount_id}/unmount"]),
         "holds": Adapter("Hold 查询", ["/mes/exec/holds"]),
-        "alarm_set": Adapter(
-            "报警上报",
-            ["/mes/eqp/{eq_id}/alarms", "/mes/equipment/{eq_id}/alarms"],
-            card="B9",
-        ),
-        "alarm_clear": Adapter(
-            "报警清除",
-            ["/mes/eqp/alarms/{alarm_id}/clear", "/mes/alarms/{alarm_id}/clear"],
-            card="B9",
-        ),
-        # D55 OQ-5：按 ALID 清除（可能没有 active 报警 -> 200 cleared=false）
-        "alarm_clear_alid": Adapter(
-            "按 ALID 清除报警",
-            ["/mes/eqp/{eq_id}/alarms/clear", "/mes/equipment/{eq_id}/alarms/clear"],
-            card="B9",
-        ),
-        # D55 OQ-3：查报警记录及关联在制批（mes_alarm_lot）
-        "alarm_get": Adapter(
-            "报警记录查询",
-            ["/mes/eqp/alarms/{alarm_id}", "/mes/alarms/{alarm_id}"],
-            card="B9",
-        ),
+        # B9（0a74f8a）：/mes/eqp 下的报警接口。B9 没有按 ALID 清除的接口，清除只能按报警 id。
+        "alarm_set": Adapter("报警上报", ["/mes/eqp/{eq_id}/alarms"], card="B9"),
+        "alarm_clear": Adapter("报警清除", ["/mes/eqp/alarms/{alarm_id}/clear"], card="B9"),
+        # D55 OQ-3：查报警记录及关联在制批（mes_alarm_lot -> data.lots）
+        "alarm_get": Adapter("报警记录查询", ["/mes/eqp/alarms/{alarm_id}"], card="B9"),
         # D54：EAP 写入入口，仅 --mode b11 使用
         "eap_events": Adapter("EAP 事件入口", ["/mes/eap/events"], card="B11"),
-        "tool_usage": Adapter(
-            "耗材计数",
-            ["/mes/eqp/tools/{tool_id}/usage", "/mes/tools/{tool_id}/usage"],
-            card="B10",
-        ),
+        # B10（d27b700）：/mes/eqp/tools/{tool_id}/...
+        "tool_usage": Adapter("耗材计数", ["/mes/eqp/tools/{tool_id}/usage"], card="B10"),
+        "tool_reset": Adapter("耗材计数重置", ["/mes/eqp/tools/{tool_id}/reset"], card="B10"),
+        "tool_mount": Adapter("工具上机", ["/mes/eqp/tools/{tool_id}/mount"], card="B10"),
+        "tool_unmount": Adapter("工具下机", ["/mes/eqp/tools/{tool_id}/unmount"], card="B10"),
+        "tool_replace": Adapter("工具更换", ["/mes/eqp/tools/{tool_id}/replace"], card="B10"),
+        # GET 与上报同一路径模板
+        "tool_usage_log": Adapter("耗材用量履历", ["/mes/eqp/tools/{tool_id}/usage"], card="B10"),
+        "tool_mounts": Adapter("工具上下机履历", ["/mes/eqp/tools/{tool_id}/mounts"], card="B10"),
     }
 
 
@@ -92,6 +79,11 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "alarm_set": ["alarm_set"],
     "alarm_clear": ["alarm_clear"],
     "tool_usage": ["tool_usage"],
+    "tool_reset": ["tool_reset"],
+    "tool_mount": ["tool_mount"],
+    "tool_unmount": ["tool_unmount"],
+    "tool_replace": ["tool_replace"],
+    "expect_tool_log": ["tool_usage_log"],
     "expect_alarm": ["alarm_get"],
     "expect_e10": [],
     "replay": [],
@@ -107,8 +99,8 @@ MODES = ("manual", "b11")
 def step_adapters(kind: str, args: dict | None = None, mode: str = "manual") -> list[str]:
     if mode == "b11" and kind in B11_STEPS:
         return ["eap_events"]
-    if kind == "alarm_clear" and args and "alid" in args and "alarm" not in args:
-        return ["alarm_clear_alid"]
+    if kind == "expect_tool_log" and args and args.get("log") == "mounts":
+        return ["tool_mounts"]
     return STEP_ADAPTERS[kind]
 
 

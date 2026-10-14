@@ -19,6 +19,7 @@ EQ_STEPS = {
     "alarm_set",
     "alarm_clear",
     "tool_usage",
+    "tool_mount",
     "expect_e10",
 }
 
@@ -82,8 +83,19 @@ def parse(data: dict, path: str | None = None) -> Scenario:
             raise ScenarioError(f"第 {i} 步 {k} 的参数必须是映射")
         if k in EQ_STEPS and not args.get("eq"):
             raise ScenarioError(f"第 {i} 步 {k} 缺少 eq")
-        if k == "alarm_clear" and not (args.get("alarm") or args.get("alid") is not None):
-            raise ScenarioError(f"第 {i} 步 alarm_clear 需要 alarm: $名 或 alid")
+        if k == "alarm_clear" and not args.get("alarm"):
+            raise ScenarioError(
+                f"第 {i} 步 alarm_clear 需要 alarm: $名（B9 只能按报警 id 清除，没有按 ALID 清除的接口）"
+            )
+        if k.startswith("tool_") or k == "expect_tool_log":
+            if not args.get("tool"):
+                raise ScenarioError(f"第 {i} 步 {k} 缺少 tool")
+        if k == "tool_reset" and not args.get("reason"):
+            raise ScenarioError(f"第 {i} 步 tool_reset 缺少 reason（reason_code 编码）")
+        if k in ("tool_unmount", "tool_replace") and not args.get("reason"):
+            raise ScenarioError(f"第 {i} 步 {k} 缺少 reason（life_end/broken/pm/swap/other）")
+        if k == "tool_replace" and not args.get("new_tool"):
+            raise ScenarioError(f"第 {i} 步 tool_replace 缺少 new_tool")
         if k == "expect_alarm" and not args.get("alarm"):
             raise ScenarioError(f"第 {i} 步 expect_alarm 缺少 alarm")
         steps.append(Step(k, args, i))

@@ -49,6 +49,14 @@ def check_expect(resp: Resp, expect: dict | None, default_status: int = 200) -> 
         for k, v in want_data.items():
             if d.get(k) != v:
                 errs.append(f"data.{k} {d.get(k)!r} != 期望 {v!r}")
+    # body: 比较整个响应体的字段，支持点号路径，例如 B9 清除的顶层 {cleared: false}、
+    # B10 上报的 {"tool.life_state": warning, life_reached: true}
+    for k, v in (expect.get("body") or {}).items():
+        cur: Any = resp.body
+        for part in str(k).split("."):
+            cur = cur.get(part) if isinstance(cur, dict) else None
+        if cur != v:
+            errs.append(f"body.{k} {cur!r} != 期望 {v!r}")
     chk = expect.get("check")
     if chk:
         want_type = chk.get("check_type")
@@ -195,6 +203,10 @@ class Runner:
             return self._expect_e10(a, entry, saved)
         if k == "expect_alarm":
             return self._expect_alarm(a, entry, saved)
+        if k in ("tool_reset", "tool_unmount", "tool_replace"):
+            return self._tool_action(sc, st, entry)
+        if k == "expect_tool_log":
+            return self._expect_tool_log(a, entry)
         if k == "unmount":
             mid = saved.get(str(a.get("mount", "")).lstrip("$"))
             if not mid:
@@ -236,23 +248,26 @@ class Runner:
         elif k == "alarm_set":
             # time_offset_s：事件时间相对现在的偏移，D55 OQ-2 用 >300 秒测 422 time_in_future
             occurred = utcnow(float(a.get("time_offset_s", 0)))
-            body = {"alid": str(a["alid"]), "external_event_id": ext, "occurred_at": occurred}
+            body = {"alid": str(a["alid"]), "external_event_id": ext, "set_at": occurred}
             if a.get("lots"):
                 body["lot_ids"] = [self.rid("lot", x) for x in a["lots"]]
             call = Call("POST", fill(self._ad("alarm_set"), eq_id=eq_id), body, ext)
         elif k == "alarm_clear":
-            body = {"external_event_id": ext, "occurred_at": utcnow(float(a.get("time_offset_s", 0)))}
-            if a.get("alarm"):
-                aid = saved.get(str(a["alarm"]).lstrip("$"))
-                if not aid:
-                    raise StepFailed(f"alarm_clear 找不到保存的报警 {a.get('alarm')}")
-                call = Call("POST", fill(self._ad("alarm_clear"), alarm_id=aid), body, ext)
-            else:  # 按 ALID 清除（D55 OQ-5：没有 active 报警 -> 200 cleared=false）
-                body["alid"] = str(a["alid"])
-                call = Call("POST", fill(self._ad("alarm_clear_alid"), eq_id=eq_id), body, ext)
+            body = {"external_event_id": ext, "cleared_at": utcnow(float(a.get("time_offset_s", 0)))}
+            aid = saved.get(str(a["alarm"]).lstrip("$"))
+            if not aid:
+                raise StepFailed(f"alarm_clear 找不到保存的报警 {a.get('alarm')}")
+            call = Call("POST", fill(self._ad("alarm_clear"), alarm_id=aid), body, ext)
         elif k == "tool_usage":
             body = {"delta": str(a["delta"]), "equipment_id": eq_id, "external_event_id": ext}
+            if a.get("reason"):  # 负数调整必须带 reason_id（reason_code）
+                body["reason_id"] = self.rid("reason_code", a["reason"])
             call = Call("POST", fill(self._ad("tool_usage"), tool_id=self.rid("tool", a["tool"])), body, ext)
+        elif k == "tool_mount":
+            body = {"equipment_id": eq_id, "comment": tag[:300]}
+            if a.get("port"):
+                body["port_code"] = a["port"]
+            call = Call("POST", fill(self._ad("tool_mount"), tool_id=self.rid("tool", a["tool"])), body, ext)
         else:  # pragma: no cover - scenario.parse 已拦
             raise StepFailed(f"未知步骤 {k}")
         if self.mode == "b11" and k in B11_STEPS:
@@ -276,6 +291,38 @@ class Runner:
             "payload": payload,
         }
         return Call("POST", self._ad("eap_events"), body, ext)
+
+    def _tool_action(self, sc, st: Step, entry: dict) -> None:
+        """B10 reset / unmount / replace：请求体严格（extra=forbid），不收 external_event_id，
+        模拟器标识放 comment 和 Idempotency-Key 请求头。"""
+        a, k = st.args, st.kind
+        tid = self.rid("tool", a["tool"])
+        idem = f"{sc.run_id}:{a['tool']}:{st.index}"
+        body: dict[str, Any] = {"comment": f"sim_run_id={sc.run_id} step={st.index}"}
+        if k == "tool_reset":
+            body["reason_id"] = self.rid("reason_code", a["reason"])
+        else:
+            body["reason"] = a["reason"]
+        if k == "tool_replace":
+            body["new_tool_id"] = self.rid("tool", a["new_tool"])
+        self._send(entry, Call("POST", fill(self._ad(k), tool_id=tid), body, idem), a.get("expect"))
+
+    def _expect_tool_log(self, a: dict, entry: dict) -> None:
+        """GET usage / mounts 履历：count 精确匹配，last 比较最新一条（newest first）。"""
+        name = "tool_mounts" if a.get("log") == "mounts" else "tool_usage_log"
+        r = self.c.get(fill(self._ad(name), tool_id=self.rid("tool", a["tool"])), page_size=200)
+        entry.update(status=r.status, code=r.code)
+        if r.status != 200:
+            raise StepFailed(f"查 {a['tool']} 履历 HTTP {r.status}")
+        b = r.body if isinstance(r.body, dict) else {}
+        rows = b.get("data") or []
+        entry["count"] = b.get("count", len(rows))
+        if "count" in a and entry["count"] != a["count"]:
+            raise StepFailed(f"{a['tool']} 履历条数={entry['count']}，期望 {a['count']}")
+        for f, v in (a.get("last") or {}).items():
+            got = rows[0].get(f) if rows else None
+            if got != v:
+                raise StepFailed(f"{a['tool']} 最新履历 {f}={got!r}，期望 {v!r}")
 
     def _e10_code(self, eq: str) -> str | None:
         board = self.c.get("/mes/eqp/board").body or {}
@@ -308,7 +355,7 @@ class Runner:
         if r.status != 200:
             raise StepFailed(f"查报警 {aid} HTTP {r.status}")
         d = _data(r) if isinstance(_data(r), dict) else {}
-        for f in ("unregistered", "state", "cleared"):
+        for f in ("unregistered", "alarm_status", "alid"):
             if f in a and d.get(f) != a[f]:
                 raise StepFailed(f"报警 {aid} 的 {f}={d.get(f)!r}，期望 {a[f]!r}")
         if a.get("lots"):
