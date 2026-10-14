@@ -12,7 +12,7 @@ import { IconButton } from '@/components/icon-button'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { ReleaseDialog } from './lot-console/release-dialog'
 import { lotPageLink } from './lot-links'
-import { toolLifeLevel, warnRatio } from './tool-life'
+import { maxUsage, toolLifeLevel, warnRatio } from './tool-life'
 
 /** 批次行操作：在操作台 / 履历时间线中打开。 */
 export function LotActions({ row }: { row: MesRow }) {
@@ -85,7 +85,7 @@ export function HoldActions({ row }: { row: MesRow }) {
 /** 工具寿命条：已用 / 上限（定点字符串原样显示；预警区间黄、达到上限红）。 */
 export function ToolLife({ row }: { row: MesRow }) {
   const used = decimalText(row.usage_count as string) || '0'
-  const max = decimalText(row.max_usage as string)
+  const max = maxUsage(row) ?? ''
   const level = toolLifeLevel(used, max, warnRatio(row))
   if (!level) return <span className='tabular-nums'>{used}</span>
   const pct = Math.min(100, (Number(used) / Number(max)) * 100)

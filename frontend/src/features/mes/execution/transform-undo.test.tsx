@@ -91,15 +91,16 @@ describe('F4-02 撤销转换', () => {
       'S2：子批已有后续作业',
       'P1：母批状态已变化',
     ])
+    // 按错误码判断，不依赖英文 message
     expect(
       undoErrorLines(err(409, { code: 'transform_undo_blocked', lots: [] }))
-    ).toEqual([t('mes.tundo.blockedRef')])
+    ).toEqual([t('mes.tundo.already')])
     // D54：第二次撤销 409，lots 为空
     expect(
       undoErrorLines(
         err(409, {
           code: 'transform_undo_blocked',
-          message: 'transform already undone',
+          message: '任意文案',
           lots: [],
         })
       )

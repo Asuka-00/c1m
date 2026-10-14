@@ -41,4 +41,34 @@ describe('F9 报警履历：清除', () => {
     await expect.poll(() => spy.mock.calls.length).toBe(1)
     expect(spy).toHaveBeenCalledWith('A1', { comment: '已处理' })
   })
+
+  it('已清除（cleared=false、data=null）提示未改动；idempotency_key_reused 给三语文案', async () => {
+    const { AxiosError, AxiosHeaders } = await import('axios')
+    const { toast } = await import('sonner')
+    const info = vi.spyOn(toast, 'info')
+    const error = vi.spyOn(toast, 'error')
+    const spy = vi.spyOn(eqpApi, 'alarmClear').mockResolvedValueOnce({
+      data: null as never,
+      duplicate: false,
+      cleared: false,
+    })
+    const s = await show([MES_PERM.alarmWrite])
+    await s.getByTestId('alarm-clear').click()
+    await s.getByTestId('alarm-clear-ok').click()
+    await expect.poll(() => info.mock.calls.length).toBe(1)
+    expect(info).toHaveBeenCalledWith(t('mes.alarm.already'))
+    const e = new AxiosError('422')
+    e.response = {
+      status: 422,
+      data: { detail: { code: 'idempotency_key_reused', message: 'x' } },
+      statusText: '',
+      headers: {},
+      config: { headers: new AxiosHeaders() },
+    }
+    spy.mockRejectedValueOnce(e)
+    await s.getByTestId('alarm-clear').click()
+    await s.getByTestId('alarm-clear-ok').click()
+    await expect.poll(() => error.mock.calls.length).toBe(1)
+    expect(error).toHaveBeenCalledWith(t('mes.err.code.idempotency_key_reused'))
+  })
 })

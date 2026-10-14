@@ -64,12 +64,8 @@ export function undoErrorLines(e: unknown): string[] {
       | undefined
     if (d && d.code === 'transform_undo_blocked') {
       const lots = (d.lots as { lot_code?: string; reason?: string }[]) ?? []
-      if (!lots.length)
-        return [
-          /already undone/.test(String(d.message ?? ''))
-            ? t('mes.tundo.already')
-            : t('mes.tundo.blockedRef'),
-        ]
+      // 按错误码判断（不看英文 message）：契约里 lots 为空即“已撤销再撤”
+      if (!lots.length) return [t('mes.tundo.already')]
       return lots.map((l) =>
         t('mes.tundo.blocked', {
           lot: l.lot_code ?? '',

@@ -5,6 +5,7 @@ import type { CheckResult } from '@/lib/api/mes/execution'
 import { checkMessage } from './check-message'
 import { ToolLife } from './exec-actions'
 import {
+  maxUsage,
   toolLifeLevel,
   toolLifeMessage,
   toolLifeWarning,
@@ -79,5 +80,38 @@ describe('F9 刀具寿命（B10 / D54-5）', () => {
     )
     expect(toolLifeWarning([w])).toContain(t('mes.toolLife.logged'))
     expect(toolLifeWarning([chk({ result: 'pass', message: 'ok' })])).toBeNull()
+  })
+
+  it('23c502d：优先用 effective_max_usage / effective_warn_ratio，缺失或 null 回退旧逻辑', async () => {
+    expect(
+      warnRatio({ effective_warn_ratio: '0.750000', warn_ratio: '0.9' })
+    ).toBe(0.75)
+    expect(warnRatio({ effective_warn_ratio: null, warn_pct: 80 })).toBe(0.8)
+    expect(
+      maxUsage({ effective_max_usage: '500.000000', max_usage: null })
+    ).toBe('500')
+    expect(maxUsage({ effective_max_usage: null, max_usage: '20' })).toBe('20')
+    expect(maxUsage({})).toBeNull()
+    // 工具自身没有上限、沿用类型上限：仍按有效值着色
+    const s = await render(
+      <ToolLife
+        row={{
+          id: 'T2',
+          usage_count: '380.000000',
+          max_usage: null,
+          effective_max_usage: '500.000000',
+          effective_warn_ratio: '0.750000',
+        }}
+      />
+    )
+    const el = s.getByTestId('tool-life')
+    await expect.element(el).toHaveAttribute('data-level', 'warn')
+    await expect.element(el).toHaveTextContent('380/500')
+  })
+
+  it('进站上下文 options[].warn_ratio（字符串）优先于 warn_pct', () => {
+    const o = { warn_pct: 90, warn_ratio: '0.5' }
+    expect(toolLifeLevel('6', '10', warnRatio(o))).toBe('warn')
+    expect(toolLifeLevel('6', '10', warnRatio({ warn_pct: 90 }))).toBe('ok')
   })
 })

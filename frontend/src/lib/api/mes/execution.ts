@@ -407,6 +407,8 @@ export interface ExecContext {
       max: DecimalValue | null
       expiry: string | null
       warn_pct: number
+      /** 有效预警比例（23c502d：工具 → 类型 → warn_pct/100，定点字符串；旧后端没有） */
+      warn_ratio?: string | null
     })[]
   }[]
   materials?: {

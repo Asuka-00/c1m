@@ -10,13 +10,32 @@ import { decimalGreater, decimalText } from '@/lib/decimal'
 
 export type ToolLifeLevel = 'ok' | 'warn' | 'over'
 
-/** 预警比例：工具 warn_ratio → warn_pct / 100 → 0.9。 */
+const has = (v: unknown) => v != null && v !== ''
+
+/** 比例文本 → 数字；不在 (0, 1] 内为 null。 */
+const ratioOf = (v: unknown) => {
+  if (!has(v)) return null
+  const r = Number(decimalText(v as string))
+  return r > 0 && r <= 1 ? r : null
+}
+
+/**
+ * 预警比例：后端有效值 effective_warn_ratio（23c502d，工具 → 类型 → warn_pct/100）→
+ * 工具 warn_ratio → warn_pct / 100 → 0.9。
+ */
 export function warnRatio(row: Record<string, unknown>): number {
-  const r = Number(row.warn_ratio)
-  if (row.warn_ratio != null && row.warn_ratio !== '' && r > 0 && r <= 1)
-    return r
+  const r = ratioOf(row.effective_warn_ratio) ?? ratioOf(row.warn_ratio)
+  if (r != null) return r
   const p = Number(row.warn_pct)
-  return row.warn_pct != null && p > 0 ? p / 100 : 0.9
+  return has(row.warn_pct) && p > 0 ? p / 100 : 0.9
+}
+
+/** 寿命上限：effective_max_usage（含工具类型的上限）→ max_usage；没有为 null。 */
+export function maxUsage(row: Record<string, unknown>): string | null {
+  const v = has(row.effective_max_usage)
+    ? row.effective_max_usage
+    : row.max_usage
+  return has(v) ? decimalText(v as string) : null
 }
 
 /** 寿命等级；没有上限为 null。 */
