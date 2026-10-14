@@ -26,12 +26,15 @@
 #     未绑定不检查；check_blocked 只看未作废主记录（作废前 fail、重建后 pass → 放行）；result_overridden 始终带
 #   - D79 补充二：同一打印可多次检验、以最新为准；离开打标工步后检验 409 invalid_transition；长度按码点；
 #     E7：主记录 marked_at=首打（seq=1）时间、之后不变，只读 last_printed_at=最近一次打印；marked_at_from/_to 只按首打
+#   - D79 补充四：超长 ctx {reason: max_length, max_length}（trace_code 取 config，read_code 固定 128）；
+#     格式 ctx {reason: pattern, pattern: <config 原样正则>}（仅 trace_code）；逐条按 ctx.reason + 字段断言
+#   - D79 补充五（N-X1）：写 config 只收单个 ^[...]+$，不合规 422 value_error ctx.reason=pattern_unsupported，配置不变
 #     read_code 不校验格式（原值存、按不一致强制 fail），空 422 missing，>128 码点 422 max_length；未检验也可重打（须填原因）
 #     （不规范化，原值提交；本地预校验 sim/marking.check_trace_code 用 config 正则全串匹配；
 #       补充五：纯空白按 re.fullmatch(r"[ \t\r\n\u3000]*") 判断，不用 strip()，U+FEFF / \x1f 报 pattern）
 # 打标记录没有 numeric 列（D78），不测超位小数。
 name: marking-report
-run_id: marking-08
+run_id: marking-09
 draft: "等 P3-B2/B3 打标接口（POST /mes/marking 建主记录、/prints、/inspect、/void、/inspections、/config、/mes/exec/trace kind=trace_code，D78、D79；B11 event_type=marking 本期不做）"
 target: http://127.0.0.1:8013
 equipment: [{code: EAP-MK01, type: MARKER}]
@@ -58,6 +61,28 @@ steps:
   - marking_print: {lot: MK0001, eq: EAP-MK01, no_idem: true,
                      expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
   - marking_config: {save_as: cfg, expect: {status: 200, body: {trace_code_max_length: 32, trace_code_pattern: $nonempty}, pattern_allowed: true}}
+  # D79 补充五：config 正则白名单反例（写入被拒，库里不变）
+  - marking_config: {set: {trace_code_pattern: "^[A-Z][0-9]+$"}, idem: mk-cfg-01,   # 多类串联
+                     expect: {status: 422, errors: [{type: value_error, loc: [body, trace_code_pattern], ctx: {reason: pattern_unsupported}}]}}
+  - marking_config: {set: {trace_code_pattern: "^[A-Z]{1,32}$"}, idem: mk-cfg-02,   # 量词 {m,n}
+                     expect: {status: 422, errors: [{type: value_error, loc: [body, trace_code_pattern], ctx: {reason: pattern_unsupported}}]}}
+  - marking_config: {set: {trace_code_pattern: "^[^a-z]+$"}, idem: mk-cfg-03,   # 否定类
+                     expect: {status: 422, errors: [{type: value_error, loc: [body, trace_code_pattern], ctx: {reason: pattern_unsupported}}]}}
+  - marking_config: {set: {trace_code_pattern: "^[A-Z\\-]+$"}, idem: mk-cfg-04,   # 反斜杠
+                     expect: {status: 422, errors: [{type: value_error, loc: [body, trace_code_pattern], ctx: {reason: pattern_unsupported}}]}}
+  - marking_config: {set: {trace_code_pattern: "^\\d+$"}, idem: mk-cfg-05,   # 反斜杠简写
+                     expect: {status: 422, errors: [{type: value_error, loc: [body, trace_code_pattern], ctx: {reason: pattern_unsupported}}]}}
+  - marking_config: {set: {trace_code_pattern: "^[Z-A]+$"}, idem: mk-cfg-06,   # 降序区间
+                     expect: {status: 422, errors: [{type: value_error, loc: [body, trace_code_pattern], ctx: {reason: pattern_unsupported}}]}}
+  - marking_config: {set: {trace_code_pattern: "^[]+$"}, idem: mk-cfg-07,   # 空类
+                     expect: {status: 422, errors: [{type: value_error, loc: [body, trace_code_pattern], ctx: {reason: pattern_unsupported}}]}}
+  - marking_config: {set: {trace_code_pattern: "^[-A-Z]+$"}, idem: mk-cfg-08,   # - 不在最后
+                     expect: {status: 422, errors: [{type: value_error, loc: [body, trace_code_pattern], ctx: {reason: pattern_unsupported}}]}}
+  - marking_config: {set: {trace_code_pattern: "[A-Z]+"}, idem: mk-cfg-09,   # 缺 ^$
+                     expect: {status: 422, errors: [{type: value_error, loc: [body, trace_code_pattern], ctx: {reason: pattern_unsupported}}]}}
+  - marking_config: {set: {trace_code_pattern: "^[A-Z]*$"}, idem: mk-cfg-10,   # * 量词
+                     expect: {status: 422, errors: [{type: value_error, loc: [body, trace_code_pattern], ctx: {reason: pattern_unsupported}}]}}
+  - marking_config: {expect: {status: 200, body: {trace_code_pattern: $cfg.trace_code_pattern}}}   # 未被改写
   # trace_code 每违反一条规则列一项，值取生效配置
   - marking_print: {lot: MK0001, eq: EAP-MK01, idem: mk-tc-1, trace_code: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456",
                      expect: {status: 422, errors: [{type: value_error, loc: [body, trace_code], ctx: {reason: max_length, max_length: $cfg.trace_code_max_length}}]}}

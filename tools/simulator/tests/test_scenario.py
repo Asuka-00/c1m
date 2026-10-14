@@ -513,3 +513,21 @@ def test_reticle_write_requires_idem():
     parse(base)
     base["steps"] = [{"reticle_hold": {"reticle": "R", "reason": "x", "idem": "k"}}]
     parse(base)
+
+
+def test_marking_draft_d79_s4_s5():
+    from sim.marking import check_pattern_config
+    from sim.scenario import load
+
+    sc = load("scenarios/p3-draft/marking-report.yaml")
+    bad = [s for s in sc.steps if s.kind == "marking_config" and "set" in s.args]
+    assert len(bad) == 10
+    for s in bad:
+        assert check_pattern_config(s.args["set"]["trace_code_pattern"]), s.args["set"]
+        assert s.args["expect"]["errors"][0]["ctx"] == {"reason": "pattern_unsupported"}
+    ctxs = [e["ctx"] for s in sc.steps for e in (s.args.get("expect") or {}).get("errors", []) if "ctx" in e]
+    for c in ctxs:
+        if c["reason"] == "max_length":
+            assert c["max_length"] in ("$cfg.trace_code_max_length", 128)
+        if c["reason"] == "pattern":
+            assert c["pattern"] == "$cfg.trace_code_pattern"

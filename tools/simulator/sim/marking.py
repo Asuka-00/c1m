@@ -9,21 +9,26 @@ from __future__ import annotations
 import re
 from typing import Any
 
-# 补充四 2 + D79 补充二 4：^ 开头、$ 结尾，中间是若干「正向字符类[+]」；类里只能有大写字母、数字、区间（A-Z、0-9），
-# 字面 - 只能放在类的最后；不允许 [^…]，不允许任何反斜杠
-_ITEM = r"(?:[A-Z]-[A-Z]|[0-9]-[0-9]|[A-Z0-9])"
-_CLASS = rf"\[{_ITEM}+-?\]|\[-\]"
-_ALLOWED = re.compile(rf"\^(?:(?:{_CLASS})\+?)+\$")
+# D79 补充五（N-X1）：只允许单个正向字符类 ^[...]+$；类里只能有大写字母、数字和同类升序区间，- 只能放最后。
+# 不允许：多个字符类串联、{m,n} 等量词、[^…]、反斜杠、降序区间、空类。与前端 isAllowedTracePattern
+# （POSITIVE_CLASS_RE，fsft-fe 245a721）同一写法；后端写 config 不合规 → 422 value_error ctx.reason=pattern_unsupported
+_ALLOWED = re.compile(r"\^\[(?:[A-Z](?:-[A-Z])?|[0-9](?:-[0-9])?)+-?\]\+\$")
+PATTERN_UNSUPPORTED = {"type": "value_error", "ctx": {"reason": "pattern_unsupported"}}
 # 补充五：「纯空白」只认这几种（含全角空格 U+3000）；不用 str.strip()（它还会吃掉 \x1c–\x1f 等）
 _BLANK = re.compile("[ \t\r\n\u3000]*")
 
 
 def pattern_allowed(pattern: str) -> bool:
-    """config 返回的 pattern 是否符合补充四 2 / D79 补充二 4 的白名单语法。"""
-    if not isinstance(pattern, str) or "\\" in pattern or _ALLOWED.fullmatch(pattern) is None:
+    """config 的 pattern 是否符合 D79 补充二 4 / 补充五 的白名单（单个 ^[...]+$）。"""
+    if not isinstance(pattern, str) or _ALLOWED.fullmatch(pattern) is None:
         return False
-    # 区间必须是升序（Z-A 这类 re 也会报错）
-    return all(a <= b for a, b in re.findall(r"([A-Z0-9])-([A-Z0-9])", pattern))
+    # 区间必须是升序（Z-A、9-0 不收）
+    return all(a <= b for a, b in re.findall(r"([A-Z0-9])-([A-Z0-9])", pattern[2:-3]))
+
+
+def check_pattern_config(pattern: Any) -> list[dict[str, Any]]:
+    """写 config 时的本地预检（D79 补充五）：不合规 → value_error ctx.reason=pattern_unsupported。"""
+    return [] if pattern_allowed(pattern) else [PATTERN_UNSUPPORTED]
 
 
 READ_CODE_MAX = 128  # D79 补充二 3
@@ -35,9 +40,9 @@ def check_read_code(value: Any) -> list[dict[str, Any]]:
         return [{"type": "missing"}]
     if not isinstance(value, str):
         return [{"type": "string_type"}]
-    if value == "":
+    if _BLANK.fullmatch(value):  # D79 补充三：空串 / 纯空白一律 missing
         return [{"type": "missing"}]
-    if len(value) > READ_CODE_MAX:
+    if len(value) > READ_CODE_MAX:  # D79 补充四：ctx {reason: max_length, max_length: 128}
         return [{"type": "value_error", "ctx": {"reason": "max_length", "max_length": READ_CODE_MAX}}]
     return []
 
@@ -48,8 +53,8 @@ def check_trace_code(value: Any, cfg: dict[str, Any]) -> list[dict[str, Any]]:
     - ``None``：``missing``；其他非字符串（数字等）：``string_type``，同后端 pydantic（评审 E4）
     - 空串 / 纯空白（``re.fullmatch(r"[ \t\r\n\u3000]*")``）：只报一条 ``missing``（补充四 3、补充五）；
       U+FEFF、\x1f 等不算空白，落到 pattern
-    - 超长：``value_error`` ctx ``{reason: max_length, max_length}``
-    - 不匹配：``value_error`` ctx ``{reason: pattern, pattern}``，config 正则全串匹配
+    - 超长（D79 补充四）：``value_error`` ctx ``{reason: max_length, max_length: <config 值>}``
+    - 不匹配（D79 补充四）：``value_error`` ctx ``{reason: pattern, pattern: <config 原样正则>}``，config 正则全串匹配
       （不去空格、不转大小写，补充四 4）
     """
     if value is None:
