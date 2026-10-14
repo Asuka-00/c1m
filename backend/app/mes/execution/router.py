@@ -19,6 +19,7 @@ from app.core.spec.errors import http_422
 from app.core.spec.serialize import serialize
 from app.mes.common.guard import perm_body
 from app.mes.common.query import one
+from app.mes.execution import bin_split as bin_split_svc
 from app.mes.execution import dispatch, shift_log
 from app.mes.execution import service as sm
 from app.mes.execution import service as svc
@@ -700,3 +701,50 @@ def transform(session: SessionDep, ctx: CurrentTenant, body: TransformBody) -> A
     """Unit transform (dicing / die attach / singulation), whole lots, multi-in
     multi-out; parents become converted, children start on their own route."""
     return transform_svc.transform(session, ctx.id, body.model_dump(), ctx.user)
+
+
+# ---------------- 按 bin 拆批（B8） ----------------
+class BinQtyIn(_Strict):
+    bin_code: str = Field(min_length=1, max_length=32)
+    qty: int = Field(ge=0)
+
+
+class ManualBinsIn(_Strict):
+    wafer_id: uuid.UUID
+    bins: list[BinQtyIn] = Field(min_length=1, max_length=500)
+
+
+class BinOutputIn(_Strict):
+    bin_codes: list[str] = Field(min_length=1, max_length=100)
+    product_id: uuid.UUID | None = None
+    route_id: uuid.UUID | None = None
+
+
+class BinSplitIn(_Strict):
+    """按 bin 拆批请求（严格载荷；source / external_event_id 等未知字段 422）。"""
+
+    input_lot_ids: list[uuid.UUID] = Field(min_length=1, max_length=50)
+    outputs: list[BinOutputIn] | None = Field(default=None, max_length=100)
+    manual_bins: list[ManualBinsIn] | None = Field(default=None, max_length=500)
+    reason_id: uuid.UUID | None = None
+    comment: str | None = Field(default=None, max_length=300)
+
+
+BinSplitBody = Annotated[
+    BinSplitIn, Depends(perm_body("mes.exec:transform", BinSplitIn))
+]
+
+
+@router.post("/bin-split/preview")
+def bin_split_preview(
+    session: SessionDep, ctx: CurrentTenant, body: BinSplitBody
+) -> Any:
+    """Validate a bin split: per-wafer bin quantities (map / manual), excluded bins
+    by bin_type, conservation and child lot quantities; nothing is written."""
+    return bin_split_svc.preview(session, ctx.id, body.model_dump())
+
+
+@router.post("/bin-split")
+def bin_split(session: SessionDep, ctx: CurrentTenant, body: BinSplitBody) -> Any:
+    """Split whole lots into child lots by bin code (unit transform bin_split)."""
+    return bin_split_svc.bin_split(session, ctx.id, body.model_dump(), ctx.user)

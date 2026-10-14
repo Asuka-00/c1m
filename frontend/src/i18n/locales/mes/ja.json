@@ -474,6 +474,7 @@
         "bonus_qty": "追加数",
         "rework_count": "リワーク回数",
         "site": "工場",
+        "bin_code": "ビン",
         "current_step": "現在ステップ",
         "lot_status": "状態",
         "on_hold": "ホールド中",
@@ -605,7 +606,10 @@
         "good_qty": "良品数",
         "fail_qty": "不良数",
         "excluded_qty": "除外数",
-        "good_source": "良品数の出所"
+        "good_source": "良品数の出所",
+        "bin_set": "定義セット",
+        "bin_set_version": "定義セット版",
+        "bin_counts": "ビン別数量"
       },
       "unit_transform_output": {
         "unit_transform": "変換",
@@ -613,7 +617,8 @@
         "product": "製品",
         "track_unit_kind": "ユニット種別",
         "qty": "数量",
-        "die_qty": "ダイ数"
+        "die_qty": "ダイ数",
+        "bin_code": "ビン"
       },
       "unit_origin": {
         "unit_transform": "変換",
@@ -624,7 +629,8 @@
         "parent_wafer": "親ウェーハ",
         "die_row": "ダイ行",
         "die_col": "ダイ列",
-        "qty": "数量"
+        "qty": "数量",
+        "bin_code": "ビン"
       },
       "bin_set": {
         "code": "定義セット",

@@ -237,6 +237,13 @@ def test_start_strict_payload_d40(client: TestClient, db: Session) -> None:
         ("body", "lots", 0, "foo"),
     ]
     assert all(x["type"] == "extra_forbidden" for x in d)
+    # D41：wafer_sources 允许，子字段严格（非字符串 / 超长），路径 0 基
+    d = f.post(url, {"lots": [{"qty": 2, "wafer_sources": ["a", 1]}]}, 422)["detail"]
+    assert [x["loc"] for x in d] == [["body", "lots", 0, "wafer_sources", 1]], d
+    d = f.post(
+        url, {"lots": [{"qty": 1}, {"qty": 1, "wafer_sources": ["x" * 101]}]}, 422
+    )["detail"]
+    assert [x["loc"] for x in d] == [["body", "lots", 1, "wafer_sources", 0]], d
     r = f.c.post(url, headers=_member(client, db, f.m), json={"lots": [{"x": 1}]})
     assert r.status_code == 403 and "loc" not in r.text, r.text
     assert f.m.list("lot")["count"] == 0

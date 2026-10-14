@@ -355,6 +355,8 @@ register(
                 list=False,
             ),
             F("site", "ref", ref="site"),
+            # B8：按 bin 拆出的子批所属 bin（多个 bin 合成一个子批时用逗号连接）
+            F("bin_code", "str", "Bin|bin 码|ビン", max_length=64, search_exact=True),
             F(
                 "current_step",
                 "ref",
@@ -897,6 +899,10 @@ register(
                 "Good qty from|良品数来源|良品数の出所",
                 enum="good_source",
             ),
+            # B8：所用坐标图的 bin 定义集与版本、各 bin 数量
+            F("bin_set", "ref", "Bin set|定义集|定義セット", ref="bin_set"),
+            F("bin_set_version", "int", "Bin set version|定义集版本|定義セット版"),
+            F("bin_counts", "json", "Bin counts|各 bin 数量|ビン別数量", list=False),
         ],
         phase=6,
         has_code=False,
@@ -930,6 +936,7 @@ register(
             ),
             F("qty", "int", "Qty|数量|数量", required=True),
             F("die_qty", "int", "Dies|颗数|ダイ数"),
+            F("bin_code", "str", "Bin|bin 码|ビン", max_length=64),
         ],
         phase=6,
         has_code=False,
@@ -971,6 +978,7 @@ register(
             F("die_row", "int", "Die row|die 行|ダイ行"),
             F("die_col", "int", "Die col|die 列|ダイ列"),
             F("qty", "int", "Qty|数量|数量", required=True, default=1),
+            F("bin_code", "str", "Bin|bin 码|ビン", max_length=64),
         ],
         phase=6,
         has_code=False,

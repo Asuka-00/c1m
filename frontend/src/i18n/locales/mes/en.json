@@ -474,6 +474,7 @@
         "bonus_qty": "Bonus",
         "rework_count": "Reworks",
         "site": "Site",
+        "bin_code": "Bin",
         "current_step": "Current step",
         "lot_status": "Status",
         "on_hold": "On hold",
@@ -605,7 +606,10 @@
         "good_qty": "Good",
         "fail_qty": "Fail",
         "excluded_qty": "Excluded",
-        "good_source": "Good qty from"
+        "good_source": "Good qty from",
+        "bin_set": "Bin set",
+        "bin_set_version": "Bin set version",
+        "bin_counts": "Bin counts"
       },
       "unit_transform_output": {
         "unit_transform": "Transform",
@@ -613,7 +617,8 @@
         "product": "Product",
         "track_unit_kind": "Unit kind",
         "qty": "Qty",
-        "die_qty": "Dies"
+        "die_qty": "Dies",
+        "bin_code": "Bin"
       },
       "unit_origin": {
         "unit_transform": "Transform",
@@ -624,7 +629,8 @@
         "parent_wafer": "Parent wafer",
         "die_row": "Die row",
         "die_col": "Die col",
-        "qty": "Qty"
+        "qty": "Qty",
+        "bin_code": "Bin"
       },
       "bin_set": {
         "code": "Bin set",

@@ -474,6 +474,7 @@
         "bonus_qty": "补数",
         "rework_count": "返工次数",
         "site": "工厂",
+        "bin_code": "bin 码",
         "current_step": "当前步骤",
         "lot_status": "状态",
         "on_hold": "Hold 中",
@@ -605,7 +606,10 @@
         "good_qty": "良品数",
         "fail_qty": "不良数",
         "excluded_qty": "排除数",
-        "good_source": "良品数来源"
+        "good_source": "良品数来源",
+        "bin_set": "定义集",
+        "bin_set_version": "定义集版本",
+        "bin_counts": "各 bin 数量"
       },
       "unit_transform_output": {
         "unit_transform": "转换",
@@ -613,7 +617,8 @@
         "product": "产品",
         "track_unit_kind": "单元类型",
         "qty": "数量",
-        "die_qty": "颗数"
+        "die_qty": "颗数",
+        "bin_code": "bin 码"
       },
       "unit_origin": {
         "unit_transform": "转换",
@@ -624,7 +629,8 @@
         "parent_wafer": "母晶圆",
         "die_row": "die 行",
         "die_col": "die 列",
-        "qty": "数量"
+        "qty": "数量",
+        "bin_code": "bin 码"
       },
       "bin_set": {
         "code": "定义集",

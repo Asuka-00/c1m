@@ -386,3 +386,28 @@ def good_cells(s: Session, tid: uuid.UUID, m: Row) -> list[tuple[int, int]]:
         .order_by(c.c.row, c.c.col)
     )
     return [(r, cc) for r, cc, b in rs if types.get(b) in GOOD_BIN_TYPES]
+
+
+def map_for_wafer(
+    s: Session, tid: uuid.UUID, code: str, lot_id: Any = None
+) -> Row | None:
+    """晶圆可用的最新坐标图。
+
+    优先关联到该批次（D39 lot_id）的版本，其次未关联批次的版本；关联到其他批次的版本不用。
+    """
+    rows = _by_code(s, tid, "substrate_map", code)
+    mine = [r for r in rows if lot_id is not None and r.get("lot_id") == lot_id]
+    free = [r for r in rows if r.get("lot_id") is None]
+    pool = mine or free
+    return max(pool, key=lambda r: r["map_version"]) if pool else None
+
+
+def all_cells(s: Session, tid: uuid.UUID, m: Row) -> list[tuple[int, int, str]]:
+    """坐标图全部坐标 ``(row, col, bin_code)``，按 (row, col) 排序。"""
+    c = TABLES["map_cell"]
+    rs = conn(s).execute(
+        sa.select(c.c.row, c.c.col, c.c.bin_code)
+        .where(c.c.tenant_id == tid, c.c.substrate_map_id == m["id"])
+        .order_by(c.c.row, c.c.col)
+    )
+    return [(r, cc, b) for r, cc, b in rs]

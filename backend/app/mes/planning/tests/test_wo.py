@@ -260,7 +260,7 @@ def test_carrier_and_slots(client: TestClient, db: Session) -> None:
             {"qty": 2, "carrier_id": c1["id"]},
             {"qty": 2, "carrier_id": c1["id"]},
         ],  # twice
-        [{"qty": 2, "wafer_sources": ["only-one"]}],  # D40：未知字段
+        [{"qty": 2, "wafer_sources": ["only-one"]}],
         [{"qty": 2, "carrier": c1["id"]}],  # D40：旧字段 carrier
     ]
     for lots in bad:
@@ -274,14 +274,18 @@ def test_carrier_and_slots(client: TestClient, db: Session) -> None:
                     "qty": 3,
                     "carrier_id": c1["id"],
                     "slots": [5, 10, 15],
-                    "source_ref": "SRC-1",
+                    "wafer_sources": ["a", "b", "c"],
                 }
             ]
         },
     )["data"][0]
     assert lot["carrier_id"] == c1["id"]
     ws = m.list("wafer", lot_id=lot["id"], sort_by="slot")["data"]
-    assert [x["slot"] for x in ws] == [5, 10, 15]
+    assert [(x["slot"], x["source_ref"]) for x in ws] == [
+        (5, "a"),
+        (10, "b"),
+        (15, "c"),
+    ]
     assert ws[0]["code"].endswith(".05")
     assert "already in use" in _msgs(
         f.call(w, "start", {"lots": [{"qty": 1, "carrier_id": c1["id"]}]}, 422)

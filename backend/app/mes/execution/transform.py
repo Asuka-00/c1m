@@ -60,10 +60,9 @@ def _qty_error(code: str, message: str, **extra: Any) -> HTTPException:
     )
 
 
-def _plan(s: Session, tid: uuid.UUID, body: Row) -> Row:
-    """校验并生成转换方案（preview 与 commit 共用，不写库）。"""
+def check_lots(s: Session, tid: uuid.UUID, body: Row) -> list[Row]:
+    """输入批次：存在、不重复、可转换（状态 / Hold）、客户与客户批号一致（B5 / B8 共用）。"""
     errs: list[tuple[Any, str]] = []
-    warnings: list[Row] = []
     lots: list[Row] = []
     seen: set[Any] = set()
     for i, lid in enumerate(body["input_lot_ids"]):
@@ -100,6 +99,14 @@ def _plan(s: Session, tid: uuid.UUID, body: Row) -> Row:
                 target_customer_lot_no=first.get("customer_lot_no"),
                 source_customer_lot_no=lot.get("customer_lot_no"),
             )
+    return lots
+
+
+def _plan(s: Session, tid: uuid.UUID, body: Row) -> Row:
+    """校验并生成转换方案（preview 与 commit 共用，不写库）。"""
+    errs: list[tuple[Any, str]] = []
+    warnings: list[Row] = []
+    lots = check_lots(s, tid, body)
     # 输入晶圆与良品颗数
     manual = {
         m["wafer_id"]: (j, m) for j, m in enumerate(body.get("manual_good") or [])
@@ -112,7 +119,7 @@ def _plan(s: Session, tid: uuid.UUID, body: Row) -> Row:
                 (("input_lot_ids", i), f"{lot['code']}: no wafer units to transform")
             )
         for w in ws:
-            m = map_svc.latest_map(s, tid, w["code"])
+            m = map_svc.map_for_wafer(s, tid, w["code"], lot["id"])
             mg = manual.pop(w["id"], None)
             info: Row = {"wafer": w, "lot": lot, "map": m}
             if m:
@@ -276,6 +283,37 @@ def transform(s: Session, tid: uuid.UUID, body: Row, user: Any) -> Row:
     _plan(s, tid, body)  # 先校验（422），再加锁后按最新数据重算
     lock_lots(s, tid, body["input_lot_ids"])
     p = _plan(s, tid, body)
+    _alloc_good(s, tid, p)
+    return execute(s, tid, body, user, p)
+
+
+def _alloc_good(s: Session, tid: uuid.UUID, p: Row) -> None:
+    """B5：每片晶圆的良品坐标按行列顺序依次分给各输出（``o["alloc"]``）。"""
+    wafers = p["wafers"]
+    cells = {
+        wid: (map_svc.good_cells(s, tid, x["map"]) if x["map"] else None)
+        for wid, x in wafers.items()
+    }
+    taken: dict[Any, int] = defaultdict(int)
+    for o in p["outputs"]:
+        o["alloc"] = []
+        for src in o["sources"]:
+            wid, n = src["wafer_id"], src["qty"]
+            cs = cells[wid]
+            coords = None
+            if cs is not None:
+                coords = [(r, c, None) for r, c in cs[taken[wid] : taken[wid] + n]]
+                taken[wid] += n
+            o["alloc"].append((wafers[wid], n, coords))
+
+
+def execute(s: Session, tid: uuid.UUID, body: Row, user: Any, p: Row) -> Row:
+    """写转换事件、子批、位置映射、谱系 / 履历 / 审计，母批 → converted（B5 / B8 共用）。
+
+    ``p["outputs"]`` 每项：product_id、route_id（None 时子批继承母批路线与当前工步）、
+    track_unit_kind、qty、die_qty、可选 bin_code，以及 ``alloc``：
+    ``[(晶圆信息, 颗数, [(row, col, bin_code)] 或 None)]``。
+    """
     lots, wafers, outs, warnings = (
         p["lots"],
         p["wafers"],
@@ -288,7 +326,7 @@ def transform(s: Session, tid: uuid.UUID, body: Row, user: Any) -> Row:
         tid,
         "unit_transform",
         user,
-        transform_type=body["transform_type"],
+        transform_type=body.get("transform_type", "bin_split"),
         route_step_id=first["current_step_id"],
         reason_id=body.get("reason_id"),
         comment=body.get("comment"),
@@ -313,14 +351,11 @@ def transform(s: Session, tid: uuid.UUID, body: Row, user: Any) -> Row:
             fail_qty=x["fail"],
             excluded_qty=x["excluded"],
             good_source=x["source"],
+            bin_set_id=x.get("bin_set_id"),
+            bin_set_version=x.get("bin_set_version"),
+            bin_counts=x.get("bin_counts"),
         )
     codes = _child_codes(s, tid, first, {}, len(outs))
-    # 每片晶圆的良品坐标（按行列顺序依次分给各子批）
-    cells = {
-        wid: (map_svc.good_cells(s, tid, x["map"]) if x["map"] else None)
-        for wid, x in wafers.items()
-    }
-    taken: dict[Any, int] = defaultdict(int)
     origins: list[Row] = []
     children: list[Row] = []
     sysv = {
@@ -331,9 +366,13 @@ def transform(s: Session, tid: uuid.UUID, body: Row, user: Any) -> Row:
         "updated_by": getattr(user, "id", None),
     }
     for o, code in zip(outs, codes, strict=True):
-        step, site = first_step(s, tid, o["route_id"])
-        stack: list[Row] = []
-        step = step and process_svc.enter_route(s, tid, step, stack, [])
+        if o["route_id"] is None:  # B8：子批留在母批当前位置
+            step = one(s, tid, "route_step", first["current_step_id"])
+            site, stack = first["site_id"], list(first.get("route_stack") or [])
+        else:
+            step, site = first_step(s, tid, o["route_id"])
+            stack = []
+            step = step and process_svc.enter_route(s, tid, step, stack, [])
         if not step:
             raise http_422(
                 [
@@ -359,7 +398,7 @@ def transform(s: Session, tid: uuid.UUID, body: Row, user: Any) -> Row:
             code=code,
             work_order_id=first["work_order_id"],
             product_id=o["product_id"],
-            route_id=o["route_id"],
+            route_id=o["route_id"] or first["route_id"],
             lot_type_id=first["lot_type_id"],
             priority_id=first["priority_id"],
             qty=o["qty"],
@@ -380,6 +419,7 @@ def transform(s: Session, tid: uuid.UUID, body: Row, user: Any) -> Row:
             started_by=actor_name(user),
             bom_id=bom and bom["id"],
             attrs={"transform_id": str(tr)},
+            bin_code=o.get("bin_code"),
             **inherit_customer(first),
         )
         strips: list[uuid.UUID] = []
@@ -413,16 +453,15 @@ def transform(s: Session, tid: uuid.UUID, body: Row, user: Any) -> Row:
             track_unit_kind=o["track_unit_kind"],
             qty=o["qty"],
             die_qty=o["die_qty"],
+            bin_code=o.get("bin_code"),
         )
         seq = 0
         per_lot: dict[Any, list[int]] = defaultdict(lambda: [0, 0])
         per_codes: dict[Any, list[str]] = defaultdict(list)
-        for src in o["sources"]:
-            x = wafers[src["wafer_id"]]
-            w, n = x["wafer"], src["qty"]
+        for x, n, cs in o["alloc"]:
+            w = x["wafer"]
             per_lot[x["lot"]["id"]][0] += n
             per_codes[x["lot"]["id"]].append(w["code"])
-            cs = cells[w["id"]]
             base = {
                 **sysv,
                 "unit_transform_id": tr,
@@ -431,7 +470,7 @@ def transform(s: Session, tid: uuid.UUID, body: Row, user: Any) -> Row:
                 "parent_wafer_id": w["id"],
             }
             if cs is not None:
-                for r, c in cs[taken[w["id"]] : taken[w["id"]] + n]:
+                for r, c, bc in cs:
                     seq += 1
                     su = (
                         strips[(seq - 1) * len(strips) // o["die_qty"]]
@@ -446,10 +485,10 @@ def transform(s: Session, tid: uuid.UUID, body: Row, user: Any) -> Row:
                             "child_unit_id": su,
                             "die_row": r,
                             "die_col": c,
+                            "bin_code": bc,
                             "qty": 1,
                         }
                     )
-                taken[w["id"]] += n
             else:
                 origins.append(
                     {
@@ -459,6 +498,7 @@ def transform(s: Session, tid: uuid.UUID, body: Row, user: Any) -> Row:
                         "child_unit_id": None,
                         "die_row": None,
                         "die_col": None,
+                        "bin_code": o.get("bin_code"),
                         "qty": n,
                     }
                 )
@@ -488,7 +528,7 @@ def transform(s: Session, tid: uuid.UUID, body: Row, user: Any) -> Row:
             "transform",
             child,
             user,
-            {"transform": (None, body["transform_type"])},
+            {"transform": (None, body.get("transform_type", "bin_split"))},
         )
     if origins:
         conn(s).execute(sa.insert(TABLES["unit_origin"]), origins)

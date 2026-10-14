@@ -8,7 +8,7 @@ import uuid
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from app.core.deps import SessionDep
 from app.core.spec.serialize import serialize
@@ -36,7 +36,8 @@ class PlanIn(BaseModel):
 
 
 class LotIn(BaseModel):
-    """开批的一个批次（D40 严格载荷：只接受下列字段，其余含旧的 carrier 一律 422）。"""
+    """开批的一个批次（D40 严格载荷：只接受下列字段，其余含旧的 carrier 一律 422；
+    D41 加回 wafer_sources）。"""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -44,6 +45,10 @@ class LotIn(BaseModel):
     carrier_id: uuid.UUID | None = None
     slots: list[int] | None = None
     source_ref: str | None = Field(default=None, max_length=100)
+    # D41：按片指定来源（数量须等于 qty），每项与 source_ref 同长度上限
+    wafer_sources: (
+        list[Annotated[str, StringConstraints(max_length=100, strict=True)]] | None
+    ) = Field(default=None, max_length=1000)
     # B7 客户来料
     customer_lot_no: str | None = Field(default=None, max_length=100)
     ownership: Literal["own", "customer"] | None = None
