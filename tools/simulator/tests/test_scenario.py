@@ -598,7 +598,7 @@ def test_d81_order_and_read_code_absent():
     mv = [s for s in st if s.kind == "marking_void" and s.args.get("marking") == "MK-NOT-EXIST"]
     assert [s.args["expect"]["status"] for s in mv] == [422, 404]
     rt = load("scenarios/p3-draft/reticle-report.yaml").steps
-    nx = [s for s in rt if s.args.get("reticle") == "R-NOT-EXIST"]
+    nx = [s for s in rt if s.args.get("reticle") == "R-NOT-EXIST" and s.kind == "reticle_hold"]
     assert [s.args["expect"]["status"] for s in nx] == [422, 404]
     od = [s.args["expect"]["status"] for s in rt if str(s.args.get("idem", "")).startswith("ret-rep-ord")]
     assert od == [404, 422, 409]
