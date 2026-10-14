@@ -2096,6 +2096,10 @@
         "is_active": "有効",
         "operation_id": "工程",
         "equipment_type_id": "設備タイプ"
+      },
+      "err": {
+        "selfApproval": "承認者は申請者本人にできません",
+        "holderApproval": "承認者はこの資格の保有者本人にできません"
       }
     }
   },

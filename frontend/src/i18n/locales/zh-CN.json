@@ -2096,6 +2096,10 @@
         "is_active": "启用",
         "operation_id": "工序",
         "equipment_type_id": "设备类型"
+      },
+      "err": {
+        "selfApproval": "批准人不能是提交人本人",
+        "holderApproval": "批准人不能是该资质的持有人"
       }
     }
   },

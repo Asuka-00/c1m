@@ -113,16 +113,43 @@ describe('B6 资质履历 mock', () => {
     })
   })
 
-  it('self_approval 在 404 之后、409 之前；comment 超长 value_error max_length', async () => {
+  it('D85 self_approval（=请求人）先于 404；holder_approval（=持有人）404 之后、409 之前', async () => {
+    const selfBody = { expires_on: '2030-01-01', ...R, approved_by: 'admin' }
+    for (const id of ['q1', 'nope'])
+      expect(await fail(api.update(id, selfBody, k()))).toMatchObject({
+        status: 422,
+        detail: [
+          {
+            type: 'value_error',
+            loc: ['body', 'approved_by'],
+            ctx: { reason: 'self_approval' },
+          },
+        ],
+      })
     const body = { expires_on: '2030-01-01', ...R, approved_by: 'op1' }
     expect(await fail(api.update('nope', body, k()))).toMatchObject({
       status: 404,
     })
     expect(await fail(api.update('q1', body, k()))).toMatchObject({
       status: 422,
-      detail: [{ type: 'value_error', ctx: { reason: 'self_approval' } }],
+      detail: [
+        {
+          type: 'value_error',
+          loc: ['body', 'approved_by'],
+          ctx: { reason: 'holder_approval' },
+        },
+      ],
     })
+    // holder_approval 先于 409：停用后再以持有人批准停用
     await api.update('q1', { is_active: false, ...R }, k())
+    expect(
+      await fail(
+        api.update('q1', { is_active: false, ...R, approved_by: 'op1' }, k())
+      )
+    ).toMatchObject({
+      status: 422,
+      detail: [{ ctx: { reason: 'holder_approval' } }],
+    })
     expect(
       await fail(api.update('q1', { is_active: false, ...R }, k()))
     ).toMatchObject({ status: 409, detail: { code: 'invalid_transition' } })

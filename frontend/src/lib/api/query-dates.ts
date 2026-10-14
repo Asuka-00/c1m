@@ -113,6 +113,20 @@ export function mockQueryDateCheck(
   return null
 }
 
+/** mock：通用列表查询按实体字段类型校验，datetime 等值与 _from/_to 走同一套（D85）。 */
+export function mockListQueryDateCheck(
+  e: Pick<MesEntity, 'fields'>,
+  query: Record<string, unknown>
+) {
+  const kinds: Record<string, Kind> = {}
+  for (const k of Object.keys(query)) {
+    const base = fieldOf(k)
+    const f = e.fields.find((x) => x.column === base || x.name === base)
+    if (f && (f.type === 'date' || f.type === 'datetime')) kinds[k] = f.type
+  }
+  return mockQueryDateCheck(query, kinds)
+}
+
 const patternErr = (k: string, s: string) =>
   apiError(422, [
     {

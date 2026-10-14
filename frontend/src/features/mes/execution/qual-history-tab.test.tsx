@@ -6,7 +6,7 @@ import {
   mockQualWriteApi,
   resetQualHistoryMock,
 } from '@/lib/api/mes/qual-history'
-import { qualChanges } from './qual-history-format'
+import { qualChanges, qualErrorMessage } from './qual-history-format'
 import { QualHistoryTab } from './qual-history-tab'
 
 const wrap = (id: string) => (
@@ -61,5 +61,23 @@ describe('资质履历页签', () => {
         after: { expires_on: '2027-10-20' },
       })
     ).toBe(`${t('mes.qualHistory.field.expires_on')}: 2026-10-20 → 2027-10-20`)
+  })
+  it.each(['zh-CN', 'en', 'ja'])('%s D85 自批两种文案', async (lng) => {
+    await i18n.changeLanguage(lng)
+    const run = (b: object) =>
+      mockQualWriteApi
+        .update(
+          'q1',
+          { expires_on: '2030-01-01', reason_id: 'R', comment: 'c', ...b },
+          `m-${lng}-${JSON.stringify(b)}`
+        )
+        .catch((x) => x)
+    expect(qualErrorMessage(await run({ approved_by: 'admin' }))).toBe(
+      t('mes.qualHistory.err.selfApproval')
+    )
+    expect(qualErrorMessage(await run({ approved_by: 'op1' }))).toBe(
+      t('mes.qualHistory.err.holderApproval')
+    )
+    expect(t('mes.qualHistory.err.holderApproval')).not.toMatch(/mes\./)
   })
 })

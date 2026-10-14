@@ -2096,6 +2096,10 @@
         "is_active": "Active",
         "operation_id": "Operation",
         "equipment_type_id": "Equipment type"
+      },
+      "err": {
+        "selfApproval": "The approver cannot be the person submitting the request",
+        "holderApproval": "The approver cannot be the holder of this qualification"
       }
     }
   },

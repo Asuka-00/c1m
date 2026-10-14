@@ -14,6 +14,7 @@ import { execApi } from './mes/execution'
 import { shiftLogApi } from './mes/shift-log'
 import {
   STRICT_DATE_FIELDS,
+  mockListQueryDateCheck,
   mockQueryDateCheck,
   normalizeListQuery,
   offsetDatetime,
@@ -192,4 +193,29 @@ describe('a72b85b mock 校验与文案', () => {
       expect(errorMessage(e)).toBe(t('mes.err.code.timezone_required'))
     }
   )
+})
+
+describe('D85：datetime 等值与 _from/_to 同一套校验', () => {
+  it('前端等值带偏移；mock 等值与范围报同样的错', () => {
+    expect(
+      normalizeListQuery(ent, { released_at: '2026-10-15' }).released_at
+    ).toBe('2026-10-15T00:00:00+08:00')
+    for (const k of ['released_at', 'released_at_from', 'released_at_to']) {
+      const tz = mockListQueryDateCheck(ent, { [k]: '2026-10-15T08:00' })
+      expect(
+        (tz!.response!.data as { detail: { type: string; loc: unknown[] }[] })
+          .detail[0]
+      ).toMatchObject({ type: 'timezone_required', loc: ['query', k] })
+      const bad = mockListQueryDateCheck(ent, { [k]: 'nope' })
+      expect(
+        (bad!.response!.data as { detail: { ctx: object }[] }).detail[0].ctx
+      ).toEqual({ reason: 'pattern' })
+      expect(
+        mockListQueryDateCheck(ent, { [k]: '2026-10-15T08:00:00+08:00' })
+      ).toBeNull()
+    }
+    expect(
+      mockListQueryDateCheck(ent, { due_date: '2026-10-15T00:00:00Z', q: 'x' })
+    ).not.toBeNull()
+  })
 })

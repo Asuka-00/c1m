@@ -1,5 +1,7 @@
 /** 资质履历的显示格式（P3-F2）。 */
+import { AxiosError } from 'axios'
 import { t } from '@/i18n'
+import { errorMessage } from '@/lib/api/client'
 import type { QualLogRow } from '@/lib/api/mes/qual-history'
 
 export const dash = (v: unknown) =>
@@ -20,4 +22,22 @@ export function qualChanges(r: Pick<QualLogRow, 'before' | 'after'>): string {
         : `${label}: ${dash(b)}`
     })
     .join('；')
+}
+
+/** 资质写入错误文案（D85：self_approval / holder_approval），其余走通用。 */
+export function qualErrorMessage(e: unknown): string {
+  if (e instanceof AxiosError) {
+    const d = (e.response?.data as { detail?: unknown })?.detail
+    if (Array.isArray(d)) {
+      const r = (d as { ctx?: { reason?: unknown } }[]).find(
+        (x) =>
+          x?.ctx?.reason === 'self_approval' ||
+          x?.ctx?.reason === 'holder_approval'
+      )?.ctx?.reason
+      if (r === 'self_approval') return t('mes.qualHistory.err.selfApproval')
+      if (r === 'holder_approval')
+        return t('mes.qualHistory.err.holderApproval')
+    }
+  }
+  return errorMessage(e)
 }

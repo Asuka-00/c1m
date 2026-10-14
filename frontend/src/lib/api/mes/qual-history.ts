@@ -254,6 +254,11 @@ export function qualBodyCheck(body: Partial<QualInput> & QualReason) {
     if (intent === 'renew' && blank(body.approved_by))
       throw missing('approved_by')
   }
+  // D85：approved_by 等于发请求的用户 → 422 self_approval（请求体阶段，先于 404）
+  if (!blank(body.approved_by) && body.approved_by === mockUser)
+    throw valueErr('approved_by', 'approver cannot be the requester', {
+      reason: 'self_approval',
+    })
   if (
     typeof body.comment === 'string' &&
     [...body.comment].length > QUAL_COMMENT_MAX
@@ -354,11 +359,15 @@ function mockUpdate(
 ): OperatorQual {
   const x = findQ(id)
   const intent = qualIntent(body)
-  // Q6-2 补充：延期的 approved_by 不能是被授予人本人（需查到记录才能判断，404 之后、409 之前）
-  if (intent === 'renew' && body.approved_by === x.username)
-    throw valueErr('approved_by', 'approver cannot be the operator', {
-      reason: 'self_approval',
-    })
+  // D85：approved_by 等于被授予资质的人 → 422 holder_approval（需查记录，404 之后、409 之前）
+  if (!blank(body.approved_by) && body.approved_by === x.username)
+    throw valueErr(
+      'approved_by',
+      'approver cannot be the qualification holder',
+      {
+        reason: 'holder_approval',
+      }
+    )
   if (intent === 'deactivate' && !x.is_active)
     throw apiError(409, {
       code: 'invalid_transition',
