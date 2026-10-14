@@ -145,6 +145,9 @@ export interface ReticleActionInput {
   disposition?: string
 }
 
+/** 带 Idempotency-Key 的动作（D57；检查录入 D71 补充）。 */
+export const IDEMPOTENT: ReticleAction[] = ['usage', 'inspection']
+
 /** 各动作请求体白名单。 */
 export const ACTION_BODY: Record<ReticleAction, readonly string[]> = {
   usage: BODY_KEYS.reticleUsage,
@@ -233,7 +236,7 @@ export const httpReticleApi: Api = {
       .post<ReticleActionOut>(
         `/mes/reticle/${id}/${action}`,
         actionBody(action, input),
-        action === 'usage' && key
+        IDEMPOTENT.includes(action) && key
           ? { headers: { 'Idempotency-Key': key } }
           : undefined
       )
@@ -482,7 +485,7 @@ function mockAct(
   key?: string
 ): ReticleActionOut {
   const body = actionBody(action, input) as ReticleActionInput
-  if (action === 'usage' && key && idem.has(key))
+  if (IDEMPOTENT.includes(action) && key && idem.has(key))
     return structuredClone(idem.get(key)!)
   const x = find(id)
   const conflict = (code: string) =>
@@ -660,7 +663,7 @@ function mockAct(
       username: 'me',
       at,
     })
-  if (action === 'usage' && key) idem.set(key, structuredClone(out))
+  if (IDEMPOTENT.includes(action) && key) idem.set(key, structuredClone(out))
   return out
 }
 

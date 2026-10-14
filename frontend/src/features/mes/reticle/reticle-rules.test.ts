@@ -211,6 +211,40 @@ describe('对齐 B4 接口', () => {
   })
 })
 
+describe('检查录入 D57（D71 补充）', () => {
+  it('inspection 带 Idempotency-Key', async () => {
+    const post = vi.spyOn(http, 'post').mockResolvedValue({ data: {} })
+    await httpReticleApi.act(
+      'r1',
+      'inspection',
+      { kind: 'cd', result: 'pass', disposition: 'none' },
+      'k9'
+    )
+    expect(post).toHaveBeenCalledWith(
+      '/mes/reticle/r1/inspection',
+      { kind: 'cd', result: 'pass', disposition: 'none' },
+      { headers: { 'Idempotency-Key': 'k9' } }
+    )
+  })
+  it('mock 同 key 重放不重复写检查记录；不传 disposition 默认 none', async () => {
+    const a = await mockReticleApi.act(
+      'r6',
+      'inspection',
+      { kind: 'particle', result: 'pass' },
+      'ik'
+    )
+    const b = await mockReticleApi.act(
+      'r6',
+      'inspection',
+      { kind: 'particle', result: 'pass' },
+      'ik'
+    )
+    expect(b).toEqual(a)
+    expect(a.data).toMatchObject({ disposition: 'none' })
+    expect((await mockReticleApi.history('r6')).inspections).toHaveLength(2)
+  })
+})
+
 describe('mock', () => {
   it('仍挂载时返回 still_mounted；状态不对先 invalid_transition（D71）', async () => {
     // r3：pending_maintenance 且仍挂着

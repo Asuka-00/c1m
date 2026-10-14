@@ -68,7 +68,9 @@ function Body({
   onClose: () => void
 }) {
   const qc = useQueryClient()
-  const [v, setV] = useState<ReticleActionInput>({})
+  const [v, setV] = useState<ReticleActionInput>(
+    action === 'inspection' ? { disposition: 'none' } : {}
+  )
   const [errs, setErrs] = useState<Record<string, string>>({})
   // 同一次提交（含失败后重试）用同一个 Idempotency-Key；成功后关闭对话框
   const [key] = useState(newEventId)

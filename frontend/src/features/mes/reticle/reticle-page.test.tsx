@@ -94,4 +94,12 @@ describe('光罩页面', () => {
       .element(s.getByTestId('reticle-row-RTC-M1-001'))
       .toHaveTextContent('1000 / 100000')
   })
+  it('检查录入对话框处置建议默认 none', async () => {
+    const s = await render(wrap([MES_PERM.reticleWrite]))
+    await s.getByTestId('reticle-row-RTC-M2-002').click()
+    await s.getByTestId('reticle-act-inspection').click()
+    await expect
+      .element(s.getByTestId('reticle-disposition'))
+      .toHaveValue('none')
+  })
 })
