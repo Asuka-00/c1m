@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import time
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from sim.adapters import B11_STEPS, MODES, STEP_ADAPTERS, Adapter, Call, default_adapters, fill
@@ -22,6 +23,27 @@ class Skip(Exception):
 
 class StepFailed(Exception):
     pass
+
+
+def num(v: Any) -> Decimal | None:
+    """CRUD numeric 列是定点字符串（D72）：按字符串转 Decimal，不当 float 读。bool / 非数字返回 None。"""
+    if isinstance(v, bool) or v is None or not isinstance(v, (str, int, float, Decimal)):
+        return None
+    try:
+        d = Decimal(str(v))
+    except InvalidOperation:
+        return None
+    return d if d.is_finite() else None
+
+
+def same(got: Any, want: Any) -> bool:
+    """期望值比较：两边都是数值（含定点字符串）时按 Decimal 比，"130" == "130.000000"；否则原样比。"""
+    if isinstance(got, bool) or isinstance(want, bool):
+        return type(got) is type(want) and got == want
+    if got == want:
+        return True
+    g, w = num(got), num(want)
+    return g is not None and w is not None and g == w
 
 
 def utcnow(offset_s: float = 0) -> str:
@@ -62,7 +84,7 @@ def check_expect(resp: Resp, expect: dict | None, default_status: int = 200) -> 
         d = _data(resp)
         d = d if isinstance(d, dict) else {}
         for k, v in want_data.items():
-            if d.get(k) != v:
+            if not same(d.get(k), v):
                 errs.append(f"data.{k} {d.get(k)!r} != 期望 {v!r}")
     # body: 比较整个响应体的字段，支持点号路径，例如 B9 清除的顶层 {cleared: false}、
     # B10 上报的 {"tool.life_state": warning, life_reached: true}
@@ -73,7 +95,7 @@ def check_expect(resp: Resp, expect: dict | None, default_status: int = 200) -> 
         if v == "$nonempty":  # 只要求非空（D59 补充前 state_skip_reason 是英文原文）
             if cur in (None, "", [], {}):
                 errs.append(f"body.{k} {cur!r} 期望非空")
-        elif cur != v:
+        elif not same(cur, v):
             errs.append(f"body.{k} {cur!r} != 期望 {v!r}")
     chk = expect.get("check")
     if chk:
@@ -95,7 +117,7 @@ def check_expect(resp: Resp, expect: dict | None, default_status: int = 200) -> 
                 if k in ("check_type", "all", "not_message", "min_count"):
                     continue
                 pick = all if every is True or (isinstance(every, list) and k in every) else any
-                if not pick(h.get(k) == v for h in hits):
+                if not pick(same(h.get(k), v) for h in hits):
                     errs.append(f"检查项 {want_type} 的 {k} != {v!r}（实际 {[h.get(k) for h in hits]}）")
     return errs
 
@@ -484,7 +506,7 @@ class Runner:
             raise StepFailed(f"{a['tool']} 履历条数={entry['count']}，期望 {a['count']}")
         for f, v in (a.get("last") or {}).items():
             got = rows[0].get(f) if rows else None
-            if got != v:
+            if not same(got, v):
                 raise StepFailed(f"{a['tool']} 最新履历 {f}={got!r}，期望 {v!r}")
 
     def _e10_code(self, eq: str) -> str | None:
@@ -580,7 +602,7 @@ class Runner:
         if r.status != 200 or not rows:
             raise StepFailed(f"{a['eq']} 查不到 E10 履历（HTTP {r.status}）")
         for f, v in q.items():  # 筛选结果每一条都要符合
-            bad = [x.get(f) for x in rows if x.get(f) != v]
+            bad = [x.get(f) for x in rows if not same(x.get(f), v)]
             if bad:
                 raise StepFailed(f"{a['eq']} E10 履历按 {f}={v} 筛选，结果里有 {bad}")
         last = rows[0]
@@ -591,7 +613,7 @@ class Runner:
                 got, want = last.get("to_state_id"), self.rid("e10_state", want)
             else:
                 got = last.get(f)
-            if got != want:
+            if not same(got, want):
                 raise StepFailed(f"{a['eq']} 最新 E10 履历 {f}={got!r}，期望 {want!r}")
 
     def _expect_eap_read(self, a: dict, entry: dict) -> None:
@@ -691,7 +713,7 @@ class Runner:
             if not hit:
                 raise StepFailed(f"报警列表里没有 ALID {alid}")
             for f, v in want.items():
-                if hit[0].get(f) != v:
+                if not same(hit[0].get(f), v):
                     raise StepFailed(f"报警列表 ALID {alid} 的 {f}={hit[0].get(f)!r}，期望 {v!r}")
 
     def _tool_set(self, a: dict, entry: dict) -> None:

@@ -1022,3 +1022,11 @@ def test_alarm_set_optional_sub_unit_id_resolves_equipment_code():
     c2 = FakeClient(paths=BASE_PATHS | B9)
     Runner(c2).run(parse({"run_id": "su0", "steps": [{"alarm_set": {"eq": "EQ1", "alid": "1001"}}]}))
     assert "sub_unit_id" not in [x for x in c2.calls if x[0] == "POST"][0][2]
+
+
+def test_same_compares_crud_numeric_strings_as_decimal():
+    from sim.runner import num, same
+
+    assert same("130.000000", "130") and same("0.90", 0.9) and same("10", 10)
+    assert not same("130.000001", "130") and not same(True, 1) and not same("abc", "abd")
+    assert num("1.1234567") == __import__("decimal").Decimal("1.1234567") and num("x") is None and num("NaN") is None
