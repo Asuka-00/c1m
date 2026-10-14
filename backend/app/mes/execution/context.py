@@ -9,9 +9,9 @@ from sqlmodel import Session
 from app.core.spec.base import now
 from app.core.spec.engine import ENTITIES
 from app.core.spec.errors import http_422
-from app.core.spec.serialize import serialize, to_json
+from app.core.spec.serialize import dec_str, serialize, to_json
 from app.mes.common.query import find, one
-from app.mes.equipment.service import num
+from app.mes.equipment.service import num, warn_ratio
 from app.mes.execution.checks import service as ck
 from app.mes.execution.checks.registry import Ctx
 from app.mes.execution.constants import NEXT_STAGE, STAGES
@@ -222,6 +222,8 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
                         "max": num(mx),
                         "expiry": to_json(t["expiry_date"]),
                         "warn_pct": t["warn_pct"],
+                        # D54：有效预警比例（工具 → 类型 → warn_pct/100），十进制字符串
+                        "warn_ratio": dec_str(warn_ratio(s, tid, t)),
                     }
                 )
             out["tools"].append(

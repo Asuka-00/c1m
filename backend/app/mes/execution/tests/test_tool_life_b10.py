@@ -178,3 +178,50 @@ def test_tool_validators(client: TestClient, db: Session) -> None:
         "tool", {"code": "X2", "fixture_id": f.fixture["id"], "usage_count": "1.25"}
     )
     assert float(t["usage_count"]) == 1.25
+
+
+def test_effective_life_fields(client: TestClient, db: Session) -> None:
+    """前端用：有效上限 / 预警比例（工具 → 类型 → warn_pct/100），十进制字符串。"""
+    from app.mes.execution.tests.test_exec import EXEC
+
+    f = Line(client, db)
+    m = f.m
+    fx = _setup(f, max_uses=10, count_basis="reported", warn_ratio=0.8)
+    t1 = m.post("tool", {"code": "PE1", "fixture_id": fx["id"]})
+    t2 = m.post(
+        "tool",
+        {"code": "PE2", "fixture_id": fx["id"], "max_usage": 2.5, "warn_ratio": 0.6},
+    )
+    rows = {r["code"]: r for r in m.list("tool", q="PE")["data"]}
+    assert (
+        rows["PE1"]["effective_max_usage"],
+        rows["PE1"]["effective_warn_ratio"],
+    ) == (
+        "10",
+        "0.8",
+    )
+    assert (
+        rows["PE2"]["effective_max_usage"],
+        rows["PE2"]["effective_warn_ratio"],
+    ) == (
+        "2.5",
+        "0.6",
+    )
+    one = _get(f, f"{API}/tool/{t2['id']}")
+    one = one.get("data", one)
+    assert one["effective_max_usage"] == "2.5"
+    r = f.post(f"{TOOLS}/{t1['id']}/usage", {"delta": "1"})
+    assert r["tool"]["effective_max_usage"] == "10"
+    assert r["tool"]["effective_warn_ratio"] == "0.8"
+    # 类型无上限、工具无覆盖 → null；无 warn_ratio → warn_pct/100
+    fx2 = m.post("fixture", {"code": "PN", "name": "no limit", "kind": "tool"})
+    t3 = m.post("tool", {"code": "PN1", "fixture_id": fx2["id"], "warn_pct": 75})
+    r3 = {r["code"]: r for r in m.list("tool", q="PN")["data"]}["PN1"]
+    assert r3["effective_max_usage"] is None and r3["effective_warn_ratio"] == "0.75"
+    assert t3["id"]
+    # 进站执行上下文的工具选项带有效 warn_ratio，warn_pct 保留
+    (lot,) = f.start(3)
+    ctx = _get(f, f"{EXEC}/lots/{lot['id']}")
+    opts = {o["code"]: o for x in ctx["tools"] for o in x["options"]}
+    assert opts["PE1"]["warn_ratio"] == "0.8" and opts["PE2"]["warn_ratio"] == "0.6"
+    assert "warn_pct" in opts["PE1"]

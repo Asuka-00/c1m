@@ -103,6 +103,8 @@ def tool_brief(s: Session, tid: uuid.UUID, tool: Row) -> Row:
         "usage_count": dec_str(used),
         "max_usage": dec_str(mx),
         "warn_ratio": dec_str(warn_ratio(s, tid, tool)),
+        "effective_max_usage": dec_str(mx),
+        "effective_warn_ratio": dec_str(warn_ratio(s, tid, tool)),
         "life_state": life_state(s, tid, tool),
         "equipment_id": tool["equipment_id"] and str(tool["equipment_id"]),
         "mounted_at": tool.get("mounted_at"),

@@ -155,6 +155,10 @@ def ref_labels(
     return out
 
 
+# 按实体名追加计算字段：hook(session, tenant_id, rows, out) 原地修改 out（通用列表 / 详情共用）
+SERIALIZE_HOOKS: dict[str, Any] = {}
+
+
 def serialize(
     session: Session, tenant_id: uuid.UUID, e: Entity, rows: list[Row]
 ) -> list[Row]:
@@ -169,4 +173,7 @@ def serialize(
         )
         for src, dst in zip(rows, out, strict=True):
             dst[f"{f.name}_label"] = labels.get(src[f.column])
+    hook = SERIALIZE_HOOKS.get(e.code)
+    if hook and rows:
+        hook(session, tenant_id, rows, out)
     return out

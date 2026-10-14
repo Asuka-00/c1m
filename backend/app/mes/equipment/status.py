@@ -7,7 +7,7 @@ from typing import Any
 
 from sqlmodel import Session
 
-from app.core.spec.serialize import dec_str
+from app.core.spec.serialize import SERIALIZE_HOOKS, dec_str
 from app.mes.common.query import find, one
 
 Row = dict[str, Any]
@@ -46,6 +46,24 @@ def warn_ratio(s: Session, tid: uuid.UUID, tool: Row) -> Decimal:
     if fx and fx.get("warn_ratio") is not None:
         return Decimal(str(fx["warn_ratio"]))
     return Decimal(tool.get("warn_pct") or 90) / 100
+
+
+def effective_life(s: Session, tid: uuid.UUID, tool: Row) -> Row:
+    """前端用的有效寿命参数（D50 十进制字符串）：上限取工具→类型，无则 null。"""
+    mx, _ = tool_life(s, tid, tool)
+    return {
+        "effective_max_usage": dec_str(mx),
+        "effective_warn_ratio": dec_str(warn_ratio(s, tid, tool)),
+    }
+
+
+def _tool_hook(s: Session, tid: uuid.UUID, rows: list[Row], out: list[Row]) -> None:
+    for r, o in zip(rows, out, strict=True):
+        if "fixture_id" in r and "max_usage" in r:
+            o.update(effective_life(s, tid, r))
+
+
+SERIALIZE_HOOKS["tool"] = _tool_hook
 
 
 def tool_block(s: Session, tid: uuid.UUID, tool: Row, today: date) -> str | None:
