@@ -5,8 +5,9 @@
  * 数量是定点字符串（numeric(18,6)），显示与比较都走 lib/decimal。
  */
 import { t } from '@/i18n'
-import type { CheckResult } from '@/lib/api/mes/execution'
+import type { CheckResult, ExecContext } from '@/lib/api/mes/execution'
 import { decimalGreater, decimalText } from '@/lib/decimal'
+import { enumLabel } from '@/features/mes/common/labels'
 
 export type ToolLifeLevel = 'ok' | 'warn' | 'over'
 
@@ -82,12 +83,31 @@ const RULES: [RegExp, (m: RegExpExecArray) => string][] = [
   ],
   [
     /^tool (\S+) is (\S+)$/,
-    (m) => t('mes.toolLife.status', { tool: m[1], status: m[2] }),
+    (m) =>
+      t('mes.toolLife.status', { tool: m[1], status: toolStatusText(m[2]) }),
   ],
 ]
 
+/** 工具状态三语；未登记的状态码不原样显示（P2-D4）。 */
+export function toolStatusText(code: string): string {
+  const v = enumLabel('tool_status', code)
+  return v === code ? t('mes.toolLife.unknownStatus') : v
+}
+
 /** tool_life 检查说明的本地化（多条以 "; " 分隔）；不认识的部分保留原文。 */
 export function toolLifeMessage(r: CheckResult): string {
+  // P2-D4：用量 >= 上限时优先显示“已达寿命上限（用量/上限）”，即使后端给的是状态类说明
+  const dt = r.data ?? {}
+  if (r.result !== 'warn' && has(dt.usage) && has(dt.max)) {
+    const used = decimalText(dt.usage as string)
+    const max = decimalText(dt.max as string)
+    if (toolLifeLevel(used, max, 1) === 'over')
+      return t('mes.toolLife.reached', {
+        tool: String(dt.tool ?? ''),
+        used,
+        max,
+      })
+  }
   return r.message
     .split('; ')
     .map((part) => {
@@ -107,4 +127,24 @@ export function toolLifeWarning(results: CheckResult[] | undefined) {
   )
   if (!w.length) return null
   return `${w.map(toolLifeMessage).join('；')} · ${t('mes.toolLife.logged')}`
+}
+
+/**
+ * 给 tool_life 检查结果补上进站上下文里的用量 / 上限（按 data.tool_id 或 tool 编码匹配），
+ * 供说明优先显示“已达寿命上限”。
+ */
+export function withToolUsage(
+  results: CheckResult[],
+  cx: Pick<ExecContext, 'tools'>
+): CheckResult[] {
+  const opts = (cx.tools ?? []).flatMap((g) => g.options)
+  return results.map((r) => {
+    if (r.check_type !== 'tool_life' || !r.data) return r
+    const o = opts.find(
+      (x) =>
+        x.id === r.data?.tool_id || (r.data?.tool && x.code === r.data.tool)
+    )
+    if (!o || r.data.usage != null) return r
+    return { ...r, data: { ...r.data, usage: o.usage, max: o.max } }
+  })
 }

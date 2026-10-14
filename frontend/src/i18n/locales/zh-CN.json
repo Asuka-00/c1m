@@ -1637,7 +1637,8 @@
       "expired": "工具 {{tool}} 已于 {{date}} 过期，不能进站",
       "expiring": "工具 {{tool}} 将于 {{date}} 到期",
       "status": "工具 {{tool}} 当前状态为 {{status}}，不能进站",
-      "logged": "已记入检查记录和批次履历"
+      "logged": "已记入检查记录和批次履历",
+      "unknownStatus": "状态未知"
     }
   },
   "notify": {

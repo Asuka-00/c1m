@@ -1637,7 +1637,8 @@
       "expired": "Tool {{tool}} expired on {{date}}; track-in blocked",
       "expiring": "Tool {{tool}} expires on {{date}}",
       "status": "Tool {{tool}} is {{status}}; track-in blocked",
-      "logged": "Recorded in the check log and lot history"
+      "logged": "Recorded in the check log and lot history",
+      "unknownStatus": "unknown status"
     }
   },
   "notify": {

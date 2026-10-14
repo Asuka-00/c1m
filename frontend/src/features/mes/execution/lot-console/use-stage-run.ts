@@ -15,7 +15,7 @@ import {
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
 import { overWarningText } from '../over-consumption'
-import { toolLifeWarning } from '../tool-life'
+import { toolLifeWarning, withToolUsage } from '../tool-life'
 
 const detailOf = (e: unknown) =>
   e instanceof AxiosError
@@ -104,7 +104,7 @@ export function useStageRun(cx: ExecContext, body: () => StageBody) {
     onError: (e) => {
       const res = blockedResults(e)
       if (res) {
-        setResults(res)
+        setResults(withToolUsage(res, cx))
         setBlocked(true)
         toast.error(t('mes.exec.blocked'))
         return
@@ -118,7 +118,7 @@ export function useStageRun(cx: ExecContext, body: () => StageBody) {
     mutationFn: () =>
       execApi.preview(String(lot.id), stage as ExecStage, body()),
     onSuccess: (r) => {
-      setResults(r.results)
+      setResults(withToolUsage(r.results, cx))
       setBlocked(false)
     },
     onError: (e) => toast.error(mesErrorMessage(e, lotE)),

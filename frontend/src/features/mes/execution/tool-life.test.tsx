@@ -9,7 +9,9 @@ import {
   toolLifeLevel,
   toolLifeMessage,
   toolLifeWarning,
+  toolStatusText,
   warnRatio,
+  withToolUsage,
 } from './tool-life'
 
 const chk = (p: Partial<CheckResult>): CheckResult => ({
@@ -113,5 +115,52 @@ describe('F9 刀具寿命（B10 / D54-5）', () => {
     const o = { warn_pct: 90, warn_ratio: '0.5' }
     expect(toolLifeLevel('6', '10', warnRatio(o))).toBe('warn')
     expect(toolLifeLevel('6', '10', warnRatio({ warn_pct: 90 }))).toBe('ok')
+  })
+
+  it('P2-D4：用量 >= 上限时即使后端给状态类说明，也显示已达寿命上限（用量/上限）', () => {
+    const r = chk({
+      message: 'tool PC-01 is pending_maintenance',
+      data: { tool_id: 'T1', tool: 'PC-01' },
+    })
+    const cx = {
+      tools: [
+        {
+          fixture: null,
+          options: [
+            {
+              id: 'T1',
+              code: 'PC-01',
+              status: 'pending_maintenance',
+              usage: '10.000000',
+              max: '10',
+              expiry: null,
+              warn_pct: 90,
+            },
+          ],
+        },
+      ],
+    }
+    const [x] = withToolUsage([r], cx as never)
+    expect(checkMessage(x)).toBe(
+      t('mes.toolLife.reached', { tool: 'PC-01', used: '10', max: '10' })
+    )
+    // 没拿到用量：状态走三语翻译
+    expect(checkMessage(r)).toBe(
+      t('mes.toolLife.status', { tool: 'PC-01', status: '待保养' })
+    )
+    expect(checkMessage(r)).not.toMatch(/pending_maintenance/)
+  })
+
+  it('未登记的工具状态码不原样显示（三语）', async () => {
+    for (const lng of ['zh-CN', 'en', 'ja']) {
+      await i18n.changeLanguage(lng)
+      expect(toolStatusText('pending_maintenance')).not.toBe(
+        'pending_maintenance'
+      )
+      const m = checkMessage(chk({ message: 'tool PC-01 is frozen_xyz' }))
+      expect(m).not.toMatch(/frozen_xyz/)
+      expect(m).toContain(t('mes.toolLife.unknownStatus'))
+    }
+    await i18n.changeLanguage('zh-CN')
   })
 })

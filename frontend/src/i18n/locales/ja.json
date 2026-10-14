@@ -1637,7 +1637,8 @@
       "expired": "工具 {{tool}} は {{date}} に期限切れです。トラックイン不可",
       "expiring": "工具 {{tool}} は {{date}} に期限切れになります",
       "status": "工具 {{tool}} の状態は {{status}} です。トラックイン不可",
-      "logged": "チェック記録とロット履歴に記録済み"
+      "logged": "チェック記録とロット履歴に記録済み",
+      "unknownStatus": "不明な状態"
     }
   },
   "notify": {
