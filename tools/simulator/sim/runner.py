@@ -170,6 +170,7 @@ P3_DRAFT_STEPS = {
     "set_track_in_action",
     "expect_alarm_code",
     "reticle_replay",
+    "reticle_report",
     # P3-B2 打标（未实现）
     "marking_report",
     "marking_create",

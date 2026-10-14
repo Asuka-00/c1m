@@ -86,7 +86,7 @@ def test_p3_draft_scenarios_parse_and_skip_without_backend():
     from sim.scenario import load
 
     files = sorted(glob.glob("scenarios/p3-draft/*.yaml"))
-    assert len(files) == 4
+    assert len(files) == 5
     for f in files:
         sc = load(f)
         assert sc.draft
@@ -95,7 +95,9 @@ def test_p3_draft_scenarios_parse_and_skip_without_backend():
         assert rep["status"] == SKIPPED and rep["reason"].startswith("草稿场景"), rep
         assert c.calls == []  # 草稿不连后端
         need = sc.required_adapters()
-        assert {"reticle_mount", "reticle_incident", "alarm_track_in_action", "marking_create"} & set(need)
+        assert {"reticle_mount", "reticle_incident", "alarm_track_in_action", "marking_create", "reticle_scrap"} & set(
+            need
+        )
 
 
 def test_p3_draft_steps_not_runnable_even_if_paths_exist():
@@ -447,3 +449,32 @@ def test_marking_draft_e7_marked_at_is_first_print():
         {"lot": "MK0003", "marked_at_from": "$print_seq_2.printed_at", "count": 0},
         {"lot": "MK0003", "marked_at_to": "$print_seq_2.printed_at", "count": 1},
     ]
+
+
+def test_reticle_report_draft_e2():
+    import pytest
+
+    from sim.runner import P3_DRAFT_STEPS
+    from sim.scenario import ScenarioError, load, parse
+
+    sc = load("scenarios/p3-draft/reticle-report.yaml")
+    assert sc.draft and "G1" in sc.draft and "reticle_report" in P3_DRAFT_STEPS
+    st = sc.steps
+    rep = [s for s in st if s.kind == "reticle_report"]
+    assert {s.args["kind"] for s in rep} == {"mount", "unmount", "usage"}
+    exp = [s.args.get("expect") or {} for s in st]
+    codes = [e.get("code") for e in exp]
+    assert codes.count("idempotency_key_reused") == 2 and codes.count("invalid_transition") == 1
+    assert any((e.get("ctx") or {}).get("max_places") == 6 for e in exp)
+    # EAP 重放 duplicate=true；手工重放无 duplicate
+    for s in st:
+        if s.kind == "reticle_replay":
+            of = next(x for x in st if x.args.get("save_as") == s.args["of"])
+            if of.kind == "reticle_report":
+                assert s.args["expect"]["body"]["duplicate"] is True
+            else:
+                assert "duplicate" in s.args["expect"]["absent"]
+    um = [s for s in st if s.kind == "expect_reticle_history" and "unmount_external_event_id" in s.args["fields"]]
+    assert len(um) == 1 and um[0].args["fields"]["unmount_source"] == "simulator"
+    with pytest.raises(ScenarioError):
+        parse({"run_id": "r", "steps": [{"reticle_report": {"eq": "E", "reticle": "R", "kind": "inspect"}}]})

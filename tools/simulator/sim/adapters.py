@@ -172,6 +172,8 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "reticle_unmount": ["reticle_unmount"],
     "set_track_in_action": ["alarm_track_in_action"],
     "expect_alarm_code": ["alarm_code_get"],
+    # P3-E2 光罩预审：以后 B11 event_type=reticle_mount/reticle_unmount/reticle_usage（D67：P3 不开）
+    "reticle_report": ["eap_events"],
     "reticle_replay": [],  # 重发 save_as 记下的草稿请求：同路径、同请求体、同 Idempotency-Key（或同 external_event_id）
     # P3-B2 打标草稿步骤（B2 前不执行）
     "marking_report": ["eap_events"],  # 以后 B11 event_type=marking；按批次未作废主记录定位，无则 409 no_active_marking

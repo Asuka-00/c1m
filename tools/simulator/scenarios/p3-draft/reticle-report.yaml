@@ -1,0 +1,56 @@
+# 草稿（P3-E2 光罩预审 eap/p3/docs/p3-e2-reticle-prereview.md，对照 be/p3 08a1380）。整体 skipped：
+# B11 还没有光罩 event_type（D67：P3 不开放 EAP 光罩写入），reticle_report 是以后 reticle_mount/reticle_unmount/reticle_usage 的形状。
+# 表已支持（不改表）：mount_log / usage / incident 带 source、external_event_id，部分唯一 (tenant_id, source, external_event_id)。
+# 覆盖：
+#   - EAP 上机：mount_log.source=simulator、external_event_id；同号重发 duplicate=true、不新增挂载行；同号不同内容 422 idempotency_key_reused
+#   - EAP 计数：同号重发 duplicate=true、shot_count 不重复加；7 位小数 422 value_error ctx.max_places=6
+#   - EAP 下机：差距 G1——挂载行只有一组 source/external_event_id，下机事件号无处存；按建议字段 unmount_external_event_id 断言
+#   - 已报废：EAP 计数 409 invalid_transition，不计数、不发 life_reached（D72）
+#   - 对照：手工 usage 重放（D57）原状态码、无 duplicate 字段；手工 mount 不支持 Idempotency-Key（G3）
+#   - 事件：reticle.mounted / unmounted 公共字段 source；external_event_id 按 G5 建议断言
+name: reticle-report
+run_id: ret-report-01
+draft: "等 B11 光罩 event_type（D67 P3 不开）与 G1 下机事件号字段（架构师定）"
+target: http://127.0.0.1:8013
+equipment: [{code: EAP-LT01, type: LITHO}]
+steps:
+  - precondition: {eq: EAP-LT01, e10: SBY}
+  # ---- 上机
+  - reticle_report: {eq: EAP-LT01, reticle: R-SIM-03, kind: mount, seq: 1, payload: {slot_code: S1}, save_as: m1,
+                     expect: {status: 200, body: {duplicate: false}}}
+  - reticle_replay: {of: m1, expect: {status: 200, body: {duplicate: true}}}
+  - expect_reticle_history: {reticle: R-SIM-03, latest_of: mount, count_of: {mount: 1},
+                             fields: {source: simulator, external_event_id: $ext.m1, slot_code: S1, unmounted_at: null}}
+  - reticle_report: {eq: EAP-LT01, reticle: R-SIM-03, kind: mount, seq: 1, payload: {slot_code: S2},
+                     expect: {status: 422, code: idempotency_key_reused}}
+  - expect_reticle: {reticle: R-SIM-03, fields: {status_code: in_use, mount_count: 1}}
+  - expect_reticle_events: {reticle: R-SIM-03, latest: {event: reticle.mounted, payload.source: simulator, payload.external_event_id: $ext.m1}}   # G5
+  # ---- 计数
+  - reticle_report: {eq: EAP-LT01, reticle: R-SIM-03, kind: usage, seq: 2, payload: {delta: "100"}, save_as: u1,
+                     expect: {status: 200, body: {duplicate: false}}}
+  - reticle_replay: {of: u1, expect: {status: 200, body: {duplicate: true}}}
+  - expect_reticle: {reticle: R-SIM-03, fields: {shot_count: "100"}}
+  - expect_reticle_history: {reticle: R-SIM-03, latest_of: usage, count_of: {usage: 1}, fields: {source: simulator, external_event_id: $ext.u1, delta: "100"}}
+  - reticle_report: {eq: EAP-LT01, reticle: R-SIM-03, kind: usage, seq: 2, payload: {delta: "101"},
+                     expect: {status: 422, code: idempotency_key_reused}}
+  - reticle_report: {eq: EAP-LT01, reticle: R-SIM-03, kind: usage, seq: 3, payload: {delta: "1.1234567"},
+                     expect: {status: 422, type: value_error, loc: [body, payload, delta], ctx: {max_places: 6}}}
+  - expect_reticle: {reticle: R-SIM-03, fields: {shot_count: "100"}}
+  # ---- 对照：手工 usage 重放（D57）无 duplicate 字段
+  - reticle_adjust: {reticle: R-SIM-03, delta: "5", idem: ret-man-1, save_as: a1, expect: {status: 200, absent: [duplicate]}}
+  - reticle_replay: {of: a1, expect: {status: 200, absent: [duplicate]}}
+  - expect_reticle: {reticle: R-SIM-03, fields: {shot_count: "105"}}
+  # ---- 下机（G1）
+  - reticle_report: {eq: EAP-LT01, reticle: R-SIM-03, kind: unmount, seq: 4, save_as: um1, expect: {status: 200, body: {duplicate: false}}}
+  - reticle_replay: {of: um1, expect: {status: 200, body: {duplicate: true}}}
+  - expect_reticle_history: {reticle: R-SIM-03, latest_of: mount, count_of: {mount: 1},
+                             fields: {source: simulator, external_event_id: $ext.m1, unmounted_at: $utc_z,
+                                      unmount_source: simulator, unmount_external_event_id: $ext.um1}}   # G1 建议字段
+  - expect_reticle_events: {reticle: R-SIM-03, latest: {event: reticle.unmounted, payload.source: simulator, payload.trigger: manual,
+                                                        payload.external_event_id: $ext.um1}}
+  # ---- 已报废：EAP 计数 409，不计数、不发 life_reached（D72）
+  - reticle_scrap: {reticle: R-SIM-03, reason: R-scrap, expect: {status: 200}}
+  - reticle_report: {eq: EAP-LT01, reticle: R-SIM-03, kind: usage, seq: 5, payload: {delta: "500"},
+                     expect: {status: 409, code: invalid_transition}}
+  - expect_reticle: {reticle: R-SIM-03, fields: {status_code: scrapped, shot_count: "105"}}
+  - expect_reticle_events: {reticle: R-SIM-03, absent_after: {event: reticle.scrapped}, events: [reticle.life_reached]}

@@ -123,6 +123,10 @@ def parse(data: dict, path: str | None = None) -> Scenario:
             raise ScenarioError(f"第 {i} 步 expect_body_422 需要 to（填设备当前状态，避免后端不拦时改状态）")
         if k in ("reticle_replay", "marking_replay") and not args.get("of"):
             raise ScenarioError(f"第 {i} 步 {k} 需要 of（前面草稿步骤的 save_as 名）")
+        if k == "reticle_report" and (
+            not args.get("eq") or not args.get("reticle") or args.get("kind") not in ("mount", "unmount", "usage")
+        ):
+            raise ScenarioError(f"第 {i} 步 reticle_report 需要 eq、reticle，kind 只能是 mount/unmount/usage")
         if k in MARKING_LOT_STEPS and not args.get("lot"):
             raise ScenarioError(f"第 {i} 步 {k} 缺少 lot")
         if k == "expect_query_422" and not args.get("path"):
