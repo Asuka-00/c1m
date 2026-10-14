@@ -9,7 +9,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
-# 补充四 2：允许的正则语法——^ 开头、$ 结尾，中间是若干「字符类[+]」；字符类里不能有 \\d、\\w 等转义类
+# 补充四 2：允许的正则语法（否定类、类内转义是否允许待定，PEND-MK-05）
+# ^ 开头、$ 结尾，中间是若干「字符类[+]」；字符类里不能有 \\d、\\w 等转义类
 _CLASS = r"\[(?:[^\]\\]|\\[-\]\\^])+\]"
 _ALLOWED = re.compile(rf"\^(?:{_CLASS}\+?)+\$")
 # 补充五：「纯空白」只认这几种（含全角空格 U+3000）；不用 str.strip()（它还会吃掉 \x1c–\x1f 等）
@@ -24,15 +25,21 @@ def pattern_allowed(pattern: str) -> bool:
 def check_trace_code(value: Any, cfg: dict[str, Any]) -> list[dict[str, Any]]:
     """按后端规则列出违规项（形状同 422 detail 的 ctx），空列表为通过。
 
-    - 空串 / 纯空白（``re.fullmatch(r"[ \t\r\n\u3000]*")``）/ 非字符串：只报一条 ``missing``（补充四 3、补充五）；
+    - ``None``：``missing``；其他非字符串（数字等）：``string_type``，同后端 pydantic（评审 E4）
+    - 空串 / 纯空白（``re.fullmatch(r"[ \t\r\n\u3000]*")``）：只报一条 ``missing``（补充四 3、补充五）；
       U+FEFF、\x1f 等不算空白，落到 pattern
     - 超长：``value_error`` ctx ``{reason: max_length, max_length}``
     - 不匹配：``value_error`` ctx ``{reason: pattern, pattern}``，config 正则全串匹配
       （不去空格、不转大小写，补充四 4）
     """
-    if not isinstance(value, str) or _BLANK.fullmatch(value):
+    if value is None:
+        return [{"type": "missing"}]
+    if not isinstance(value, str):
+        return [{"type": "string_type"}]
+    if _BLANK.fullmatch(value):
         return [{"type": "missing"}]
     out: list[dict[str, Any]] = []
+    # 长度口径待定（PEND-MK-02：码点 vs UTF-16）；暂按 Python len()（码点）
     mx = int(cfg["trace_code_max_length"])
     if len(value) > mx:
         out.append({"type": "value_error", "ctx": {"reason": "max_length", "max_length": mx}})

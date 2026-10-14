@@ -242,14 +242,16 @@ def test_marking_draft_follows_d78():
     assert {s.kind for s in sc.steps if "marking" in s.kind or s.kind == "lot_scrap"} <= P3_DRAFT_STEPS
     exp = [s.args.get("expect") or {} for s in sc.steps]
     codes = [e.get("code") for e in exp]
-    assert codes.count("invalid_transition") == 7 and "trace_code_mismatch" in codes
-    assert codes.count("check_blocked") == 3 and "idempotency_key_reused" in codes
+    assert (
+        codes.count("invalid_transition") == 6
+    )  # 作废后上报改为 no_active_marking（D79 补充 2） and "trace_code_mismatch" in codes
+    assert codes.count("check_blocked") == 6 and "idempotency_key_reused" in codes
     assert sum(1 for e in exp if e.get("loc") == ["header", "Idempotency-Key"]) == 3  # 打印、检验、作废
     # 补充三 4：逐条列出，值取 config；手工和 EAP 两个入口各有单条和双条
     errs = [e["errors"] for e in exp if "errors" in e]
-    assert len(errs) == 10 and sum(1 for x in errs if len(x) == 2) == 2
+    assert len(errs) == 14 and sum(1 for x in errs if len(x) == 2) == 2
     miss = [x for x in errs if x[0]["type"] == "missing"]
-    assert len(miss) == 2 and all(len(x) == 1 for x in miss)  # 空串 / 纯空白只一条
+    assert len(miss) == 3 and all(len(x) == 1 for x in miss)  # 空串 / 纯空白只一条
     for x in errs:
         for it in x:
             if it["type"] == "missing":
@@ -271,14 +273,20 @@ def test_marking_draft_follows_d78():
     seqs = [s.args["seqs"] for s in sc.steps if s.kind == "expect_marking_prints" and "seqs" in s.args]
     assert all(q == list(range(1, len(q) + 1)) for q in seqs) and [1, 2] in seqs
     # 出站：pending / fail / 重打后 pending → 409，pass → 200
-    outs = [s.args["expect"]["status"] for s in sc.steps if s.kind == "track_out"]
+    outs = [s.args["expect"]["status"] for s in sc.steps if s.kind == "track_out" and s.args["lot"] == "MK0001"]
     assert outs == [409, 409, 409, 200]
     lis = [
         s.args["fields"]["latest_inspection_status"]
         for s in sc.steps
         if s.kind == "expect_marking" and "latest_inspection_status" in s.args.get("fields", {})
     ]
-    assert lis == ["fail", "pass", "fail", "fail"]  # 第 3 个是 pass 被强制成 fail（D79-4）
+    assert lis == [
+        "fail",
+        "pass",
+        "fail",
+        "fail",
+        "fail",
+    ]  # 第 3 个是 pass 被强制成 fail（D79-4）；第 5 个是作废旧主记录保留
     # 手工重放不带 duplicate；EAP 重发 duplicate=true
     for s in sc.steps:
         if s.kind == "marking_replay":
@@ -310,7 +318,7 @@ def test_marking_draft_supplement4_trace_code_cases_match_precheck():
             ]
             assert got == want, s.args["trace_code"]
             n += 1
-    assert n == 7
+    assert n == 11
     seq1 = next(
         s
         for s in sc.steps
@@ -347,3 +355,43 @@ def test_marking_draft_follows_d79():
     ro = next(s for s in sc.steps if s.args.get("as") == "read_only")
     assert ro.kind == "marking_print" and ro.args["expect"]["status"] == 403
     assert "qty" not in open("scenarios/p3-draft/marking-report.yaml").read()
+
+
+def test_marking_draft_follows_d79_supplement():
+    from sim.marking import check_trace_code
+    from sim.scenario import load
+
+    sc = load("scenarios/p3-draft/marking-report.yaml")
+    st = sc.steps
+    # a. no_active_marking：无主记录 / 只有已作废主记录，各一次，且不写打印
+    nam = [i for i, s in enumerate(st) if (s.args.get("expect") or {}).get("code") == "no_active_marking"]
+    assert [st[i].args["lot"] for i in nam] == ["MK0004", "MK0002"]
+    assert all(st[i].kind == "marking_report" for i in nam)
+    assert st[nam[0] + 1].kind == "expect_marking_prints" and st[nam[0] + 1].args["count"] == 0
+    void_i = next(i for i, s in enumerate(st) if s.args.get("save_as") == "void1")
+    recreate_i = next(i for i, s in enumerate(st) if s.args.get("save_as") == "c2b")
+    assert void_i < nam[1] < recreate_i
+    # b. 出站
+    outs = [
+        (s.args["lot"], s.args["expect"]["status"], (s.args["expect"].get("ctx") or {}).get("reason"))
+        for s in st
+        if s.kind == "track_out"
+    ]
+    assert ("MK0009", 200, None) in outs and ("MK0004", 409, "not_marked") in outs
+    assert {r for _, c, r in outs if c == 409} == {"not_marked", "pending", "fail"}
+    for s in st:
+        if s.kind == "track_out" and s.args["expect"]["status"] == 409:
+            ctx = s.args["expect"]["ctx"]
+            assert ctx["check"] == "marking_inspection" and s.args["expect"]["overridable"] is False
+            if ctx["reason"] == "not_marked":
+                assert "marking_id" not in ctx and s.args["expect"]["absent_ctx"] == ["marking_id"]
+            else:
+                assert "marking_id" in ctx
+    mk2 = [o for o in outs if o[0] == "MK0002"]
+    assert mk2 == [("MK0002", 409, "not_marked"), ("MK0002", 409, "pending"), ("MK0002", 200, None)]
+    tpl = [s.args for s in st if s.kind == "marking_template_ready"]
+    assert [t["approved"] for t in tpl] == [True, False] and "MK0009" in tpl[1]["lots"]
+    # E4：None → missing，非字符串 → string_type
+    cfg = {"trace_code_max_length": 32, "trace_code_pattern": "^[A-Z0-9-]+$"}
+    assert check_trace_code(None, cfg) == [{"type": "missing"}]
+    assert check_trace_code(123, cfg) == [{"type": "string_type"}]

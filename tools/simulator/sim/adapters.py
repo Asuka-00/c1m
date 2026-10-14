@@ -102,7 +102,8 @@ def default_adapters() -> dict[str, Adapter]:
         ),
         # D79-6：筛选 marked_at_from / marked_at_to（D77 半开区间）
         "marking_list": Adapter("打标记录列表", ["/mes/marking"], card="P3-B2"),
-        # D79-5/6 + P3-B3：追溯 kind=trace_code，默认不含已作废，include_voided=true 才含；沿用现有 /mes/exec/trace
+        # D79-5/6 + 补充 1：追溯 GET /mes/exec/trace?kind=trace_code&code=，权限 mes.exec:read；
+        #   默认不含已作废，include_voided=true 才含
         "marking_trace": Adapter("追溯（kind=trace_code）", ["/mes/exec/trace"], card="P3-B3"),
         "marking_inspect": Adapter(
             "打标检验（新增 inspection 行）", ["/mes/marking/{marking_id}/inspect"], card="P3-B2"
@@ -118,6 +119,9 @@ def default_adapters() -> dict[str, Adapter]:
         "marking_void": Adapter("打标记录作废", ["/mes/marking/{marking_id}/void"], card="P3-B2"),
         # D78 补充三 6：trace_code 生效配置（trace_code_max_length / trace_code_pattern），权限 mes.marking:exec
         "marking_config": Adapter("打标配置", ["/mes/marking/config"], card="P3-B2"),
+        # P3-B1 模板（D79-1/2）：建模板 + 审批；产品绑定已批准模板 = 要求打标（D79 补充 5）
+        "marking_template": Adapter("打标模板", ["/mes/marking-template"], card="P3-B1"),
+        "marking_template_approve": Adapter("打标模板审批", ["/mes/marking-template/{id}/approve"], card="P3-B1"),
         # 批次整批报废：P1 数量调整 kind=scrap 报废到 0 → lot_status=scrapped（后端确认 adjust.py:128）
         "lot_adjust": Adapter("批次数量调整（报废）", ["/mes/exec/lots/{lot_id}/adjust"], card="P1"),
     }
@@ -170,7 +174,7 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "expect_alarm_code": ["alarm_code_get"],
     "reticle_replay": [],  # 重发 save_as 记下的草稿请求：同路径、同请求体、同 Idempotency-Key（或同 external_event_id）
     # P3-B2 打标草稿步骤（B2 前不执行）
-    "marking_report": ["eap_events"],  # 以后 B11 event_type=marking（本期不做打标机通信）
+    "marking_report": ["eap_events"],  # 以后 B11 event_type=marking；按批次未作废主记录定位，无则 409 no_active_marking
     "marking_create": ["marking_preview", "marking_create"],
     "marking_print": ["marking_print"],  # seq=1 首打；seq>1 重打必填 reason + comment
     "expect_marking_list": ["marking_list"],
@@ -179,6 +183,7 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "marking_void": ["marking_void"],
     "lot_scrap": ["lot_adjust"],
     "marking_config": ["marking_config"],
+    "marking_template_ready": ["marking_template", "marking_template_approve"],
     "expect_marking": ["marking_get"],
     "expect_marking_prints": ["marking_prints"],
     "expect_marking_inspections": ["marking_inspections"],
