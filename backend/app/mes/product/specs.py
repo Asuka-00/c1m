@@ -472,8 +472,46 @@ register(
         "Fixture / tool|治具 / 工具|治具・工具",
         [
             F("kind", "enum", "Kind|类型|種別", required=True, enum="fixture_kind"),
-            F("max_uses", "int", "Max uses|最大使用次数|最大使用回数"),
+            # P2-B10：上限按 life_unit 计，numeric(18,6)（0026）
+            F("max_uses", "float", "Max life|寿命上限|寿命上限", scale=6),
             F("status_code", "enum", enum="asset_status", default="available"),
+            F(
+                "consumable_kind",
+                "enum",
+                "Consumable kind|耗材类别|消耗品種別",
+                enum="consumable_kind",
+                default="other",
+            ),
+            F(
+                "life_unit",
+                "enum",
+                "Life unit|寿命单位|寿命単位",
+                enum="life_unit",
+                default="use",
+            ),
+            F(
+                "count_basis",
+                "enum",
+                "Count basis|计数基准|カウント基準",
+                enum="count_basis",
+                default="per_track_out",
+            ),
+            F(
+                "warn_ratio",
+                "float",
+                "Warn ratio|预警比例|警告比率",
+                scale=4,
+                list=False,
+                help="Default warn ratio for tools of this type (0-1)"
+                "|该类型工具的默认预警比例（0–1）|この種別の工具の既定警告比率（0–1）",
+            ),
+            F(
+                "require_qual_on_replace",
+                "bool",
+                "Qual after replace|更换后需 Qual|交換後 Qual 必要",
+                default=False,
+                list=False,
+            ),
         ],
         phase=2,
         icon="Hammer",
@@ -541,3 +579,31 @@ register(
 )
 
 ENTITIES["carrier"].children.append("carrier_event")
+
+
+ENUMS.update(
+    {
+        "consumable_kind": [
+            ("probe_card", "Probe card|探针卡|プローブカード"),
+            ("capillary", "Capillary|劈刀|キャピラリ"),
+            ("mold", "Mold|模具|金型"),
+            ("blade", "Blade|刀片|ブレード"),
+            ("other", "Other|其他|その他"),
+        ],
+        "life_unit": [
+            ("use", "Uses|次数|回数"),
+            ("wafer", "Wafers|片数|ウェーハ数"),
+            ("unit", "Units / dies|颗数|個数"),
+            ("touchdown", "Touchdowns|触点次数|タッチダウン"),
+            ("shot", "Shots|冲次|ショット"),
+            ("length_mm", "Length (mm)|长度（mm）|長さ（mm）"),
+            ("hours", "Hours|小时|時間"),
+        ],
+        "count_basis": [
+            ("per_track_out", "Per track-out (+1)|每次出站 +1|トラックアウト毎 +1"),
+            ("per_wafer", "Per wafer|按片数|ウェーハ数"),
+            ("per_unit", "Per unit / die|按颗数|個数"),
+            ("reported", "Reported only|仅上报|報告のみ"),
+        ],
+    }
+)

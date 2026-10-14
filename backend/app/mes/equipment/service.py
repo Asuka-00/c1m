@@ -29,7 +29,22 @@ from app.mes.equipment.status import (
     e10_current as e10_current,
 )
 from app.mes.equipment.status import (
+    tool_block as tool_block,
+)
+from app.mes.equipment.status import (
     tool_life as tool_life,
+)
+from app.mes.equipment.status import (
+    warn_ratio as warn_ratio,
+)
+from app.mes.equipment.tools import (  # noqa: E402
+    num as num,
+)
+from app.mes.equipment.tools import (  # noqa: E402
+    tool_count as tool_count,
+)
+from app.mes.equipment.tools import (  # noqa: E402
+    tool_delta as tool_delta,
 )
 from app.mes.equipment.validators import (
     check_recipe_equipment_type as check_recipe_equipment_type,

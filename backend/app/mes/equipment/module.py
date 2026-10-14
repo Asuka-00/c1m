@@ -14,7 +14,10 @@ register(
             "app.mes.equipment.validators",
             "app.mes.equipment.events",
         ),
-        routers=("app.mes.equipment.router:router",),
+        routers=(
+            "app.mes.equipment.router:router",
+            "app.mes.equipment.router_tools:router",
+        ),
         menus=MENUS,
     )
 )

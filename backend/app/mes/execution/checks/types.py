@@ -5,8 +5,14 @@ from datetime import date, timedelta
 from typing import Any
 
 from app.core.models import iso_utc
+from app.core.spec.serialize import dec_str
 from app.mes.common.query import find, one
-from app.mes.equipment.service import e10_current, pm_status, tool_life
+from app.mes.equipment.service import (
+    e10_current,
+    pm_status,
+    tool_life,
+    warn_ratio,
+)
 from app.mes.execution.checks.registry import Ctx, check_type
 from app.mes.execution.usage import clean_due
 from app.mes.lot.service import qtime_status
@@ -218,15 +224,13 @@ def _tool(ctx: Ctx, p: Row) -> Outcome:
         fx = one(ctx.s, ctx.tid, "fixture", fid)
         if not t:
             return "fail", f"tool of type {fx and fx['code']} required", {}
-        if t["tool_status"] not in ("available", "in_use"):
-            return "fail", f"tool {t['code']} is {t['tool_status']}", {}
+        # 用满 / 过期 / 不可用由内置硬拦截处理（registry.evaluate，overridable=false）；
+        # 规则只给预警区间（D54：max × warn_ratio <= 已用 < max）
         mx, used = tool_life(ctx.s, ctx.tid, t)
-        if mx and used >= mx:
-            return "fail", f"tool {t['code']} reached its life ({used}/{mx})", {}
-        if t["expiry_date"] and t["expiry_date"] < ctx.today:
-            return "fail", f"tool {t['code']} expired on {t['expiry_date']}", {}
-        if mx and used >= mx * (t["warn_pct"] or 90) / 100:
-            warn.append(f"tool {t['code']} near end of life ({used}/{mx})")
+        if mx and mx * warn_ratio(ctx.s, ctx.tid, t) <= used < mx:
+            warn.append(
+                f"tool {t['code']} near end of life ({dec_str(used)}/{dec_str(mx)})"
+            )
         days = int(p.get("expiry_warn_days", 7))
         if t["expiry_date"] and (t["expiry_date"] - ctx.today).days <= days:
             warn.append(f"tool {t['code']} expires on {t['expiry_date']}")

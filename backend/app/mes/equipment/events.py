@@ -45,3 +45,12 @@ def notify_eqp(
         link="/mes/eqp-board",
         dedupe_key=dedupe_key,
     )
+
+
+# P2-B10 / D54：工具寿命到达上限（P2 验收只要求事件 + 履历，不要求真实推送渠道）
+TOOL_LIFE_REACHED = register_event(
+    "mes.tool_life_reached",
+    "Tool life reached|工具寿命到期|工具寿命到達",
+    "warning",
+    "equipment",
+).code

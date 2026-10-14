@@ -11,6 +11,7 @@ from app.core.spec.engine import ENTITIES
 from app.core.spec.errors import http_422
 from app.core.spec.serialize import serialize, to_json
 from app.mes.common.query import find, one
+from app.mes.equipment.service import num
 from app.mes.execution.checks import service as ck
 from app.mes.execution.checks.registry import Ctx
 from app.mes.execution.constants import NEXT_STAGE, STAGES
@@ -217,8 +218,8 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
                         "id": str(t["id"]),
                         "code": t["code"],
                         "status": t["tool_status"],
-                        "usage": used,
-                        "max": mx,
+                        "usage": num(used),
+                        "max": num(mx),
                         "expiry": to_json(t["expiry_date"]),
                         "warn_pct": t["warn_pct"],
                     }

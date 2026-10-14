@@ -15,7 +15,7 @@ from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, ENUMS, TABLES
 from app.mes.common.query import find, jsonable, one
-from app.mes.equipment.service import qual_block
+from app.mes.equipment.service import qual_block, tool_block
 
 Row = dict[str, Any]
 Outcome = tuple[str, str, Row]  # ("pass" | "fail" | "warn" | "na", 消息, 数据)
@@ -353,6 +353,21 @@ def evaluate(
                 overridable=False,
             )
         )
+    # P2-B10 / D53-5 / D54：工具用满 / 过期 / 不可用 → 检查项 tool_life 硬拦截（不可放行）
+    if ctx.trigger == "track_in":
+        for tl in ctx.tools:
+            msg = tool_block(ctx.s, ctx.tid, tl, ctx.today)
+            if msg:
+                builtin.append(
+                    result(
+                        "tool_life",
+                        "fail",
+                        msg,
+                        severity="block",
+                        data={"tool_id": str(tl["id"]), "tool": tl["code"]},
+                        overridable=False,
+                    )
+                )
     results = [*builtin, *(extra or []), *run(ctx)]
     blocks = [r for r in results if r["result"] == "block"]
     hard = [r for r in blocks if not r["overridable"]]

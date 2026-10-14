@@ -229,24 +229,52 @@ register(
                 max_length=64,
                 search=True,
             ),
+            # P2-B10：按 life_unit 计数，numeric(18,6)（0026）
             F(
                 "usage_count",
-                "int",
-                "Usage count|使用次数|使用回数",
+                "float",
+                "Usage|已用寿命|使用量",
                 required=True,
                 default=0,
+                scale=6,
             ),
             F(
                 "max_usage",
-                "int",
-                "Max usage|最大使用次数|最大使用回数",
-                help="Blank: the tool type's max uses|留空则使用工具类型的最大使用次数|空欄：工具タイプの最大使用回数",
+                "float",
+                "Max life|寿命上限|寿命上限",
+                scale=6,
+                help="Blank: the tool type's max life|留空则使用工具类型的寿命上限|空欄：工具タイプの寿命上限",
             ),
             F(
                 "warn_pct",
                 "int",
                 "Warn at (% of life)|预警阈值（寿命%）|警告しきい値（寿命%）",
                 default=90,
+                list=False,
+            ),
+            # D54：预警区间 max × warn_ratio <= 已用 < max（可放行）；
+            # 空则取工具类型的 warn_ratio，再空取 warn_pct / 100（默认 90 → 0.9）
+            F(
+                "warn_ratio",
+                "float",
+                "Warn ratio|预警比例|警告比率",
+                scale=4,
+                list=False,
+            ),
+            F(
+                "sub_unit",
+                "ref",
+                "Sub-unit|子单元|サブユニット",
+                ref="equipment",
+                list=False,
+                filter=False,
+            ),
+            F("mounted_at", "datetime", "Mounted at|安装时间|装着日時", list=False),
+            F(
+                "life_reset_count",
+                "int",
+                "Refurbish count|修磨次数|再生回数",
+                default=0,
                 list=False,
             ),
             F("expiry_date", "date", "Expiry|有效期|有効期限"),
@@ -272,6 +300,153 @@ register(
         icon="Wrench",
         order=1,
     ),
+)
+
+
+register(
+    # ---------------- P2-B10 工具寿命履历 ----------------
+    Entity(
+        "tool_usage",
+        "inventory",
+        "Tool usage|工具计数履历|工具使用履歴",
+        [
+            F("tool", "ref", "Tool|工具|工具", ref="tool", required=True, cascade=True),
+            F("equipment", "ref", "Equipment|设备|設備", ref="equipment"),
+            F(
+                "sub_unit",
+                "ref",
+                "Sub-unit|子单元|サブユニット",
+                ref="equipment",
+                list=False,
+                filter=False,
+            ),
+            F("lot", "ref", "Lot|批次|ロット", ref="lot"),
+            F("operation", "ref", "Operation|工序|工程", ref="operation"),
+            F("delta", "float", "Delta|增量|増分", required=True, scale=6),
+            F("count_after", "float", "Count after|计数后|カウント後", scale=6),
+            F("kind", "enum", "Kind|类型|種別", enum="tool_usage_kind", required=True),
+            F("occurred_at", "datetime", "Time|时间|日時", required=True),
+            F("reason", "ref", "Reason|原因|理由", ref="reason_code", list=False),
+            F("comment", "str", "Comment|备注|コメント", max_length=300, list=False),
+            F(
+                "source",
+                "enum",
+                "Source|来源|ソース",
+                enum="alarm_source",
+                required=True,
+                default="manual",
+            ),
+            F(
+                "external_event_id",
+                "str",
+                "External event ID|外部事件号|外部イベント ID",
+                max_length=128,
+                list=False,
+            ),
+            F("username", "str", "User|用户|ユーザー", max_length=255, search=True),
+        ],
+        phase=6,
+        has_code=False,
+        readonly=True,
+        menu=False,
+        partial_unique=[
+            (
+                "uq_mes_tool_usage_event",
+                ("source", "external_event_id"),
+                "external_event_id IS NOT NULL",
+            ),
+        ],
+        sort_default="occurred_at",
+        label_field="delta",
+    ),
+    Entity(
+        "tool_mount_log",
+        "inventory",
+        "Tool mount log|工具装卸履历|工具装着履歴",
+        [
+            F("tool", "ref", "Tool|工具|工具", ref="tool", required=True, cascade=True),
+            F(
+                "equipment",
+                "ref",
+                "Equipment|设备|設備",
+                ref="equipment",
+                required=True,
+            ),
+            F(
+                "sub_unit",
+                "ref",
+                "Sub-unit|子单元|サブユニット",
+                ref="equipment",
+                list=False,
+                filter=False,
+            ),
+            F("port_code", "str", "Position|位置|位置", max_length=64),
+            F("mounted_at", "datetime", "Mounted at|安装时间|装着日時", required=True),
+            F("unmounted_at", "datetime", "Unmounted at|卸下时间|取外し日時"),
+            F(
+                "unmount_reason",
+                "enum",
+                "Unmount reason|卸下原因|取外し理由",
+                enum="tool_unmount_reason",
+            ),
+            F("replaced_by_tool", "ref", "Replaced by|更换为|交換先", ref="tool"),
+            F("usage_at_mount", "float", "Usage at mount|安装时计数|装着時", scale=6),
+            F(
+                "usage_at_unmount",
+                "float",
+                "Usage at unmount|卸下时计数|取外し時",
+                scale=6,
+            ),
+            F("comment", "str", "Comment|备注|コメント", max_length=300, list=False),
+            F(
+                "source",
+                "enum",
+                "Source|来源|ソース",
+                enum="alarm_source",
+                required=True,
+                default="manual",
+            ),
+            F(
+                "external_event_id",
+                "str",
+                "External event ID|外部事件号|外部イベント ID",
+                max_length=128,
+                list=False,
+            ),
+            F("username", "str", "User|用户|ユーザー", max_length=255, search=True),
+        ],
+        phase=6,
+        has_code=False,
+        readonly=True,
+        menu=False,
+        partial_unique=[
+            (
+                "uq_mes_tool_mount_open",
+                ("tool_id",),
+                "unmounted_at IS NULL",
+            ),
+        ],
+        sort_default="mounted_at",
+        label_field="mounted_at",
+    ),
+)
+
+ENUMS.update(
+    {
+        "tool_usage_kind": [
+            ("track_out", "Track out|出站|トラックアウト"),
+            ("report", "Reported|上报|報告"),
+            ("adjust", "Adjust|调整|調整"),
+            ("reset", "Reset / refurbish|重置 / 修磨|リセット・再生"),
+        ],
+        "tool_unmount_reason": [
+            ("life_end", "End of life|寿命到期|寿命到達"),
+            ("broken", "Broken|损坏|破損"),
+            ("pm", "PM|保养|PM"),
+            ("swap", "Swap|更换|交換"),
+            ("other", "Other|其他|その他"),
+        ],
+    }
 )
 
 

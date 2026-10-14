@@ -42,6 +42,8 @@ ACTIONS: dict[str, str] = {
     "activate": "Activate / void|生效 / 作废|有効化 / 無効化",
     "mount": "Mount / unmount material|上料 / 卸料|資材装着 / 取外し",
     "qual": "Record Qual result|登记 Qual 结果|Qual 結果登録",
+    "tool_mount": "Mount / unmount tools|工具装卸 / 更换|工具装着 / 取外し",
+    "tool_count": "Report / reset tool usage|工具计数上报 / 重置|工具カウント報告 / リセット",
     "transform": "Unit transform|单位转换|単位変換",
     "import": "Import maps / bin sets|导入坐标图 / bin 定义|マップ・ビン定義インポート",
 }

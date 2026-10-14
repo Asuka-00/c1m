@@ -8,4 +8,6 @@ PERMISSIONS: dict[str, str] = {
     "mes.equipment:pm": "MES equipment: record PM completion",
     "mes.equipment:mount": "MES equipment: mount / unmount material lots",
     "mes.equipment:qual": "MES equipment: record Qual results after PM",
+    "mes.equipment:tool_mount": "MES equipment: mount / unmount / replace tools",
+    "mes.equipment:tool_count": "MES equipment: report / adjust / reset tool usage",
 }

@@ -32,6 +32,8 @@
       "equipment": "Equipment",
       "equipment_capability": "Equipment capability",
       "tool": "Tool",
+      "tool_usage": "Tool usage",
+      "tool_mount_log": "Tool mount log",
       "e10_auto_rule": "E10 auto transition",
       "e10_history": "E10 history",
       "pm_plan": "PM plan",
@@ -252,13 +254,49 @@
         "code": "Tool ID",
         "fixture": "Tool type",
         "serial_no": "Serial no.",
-        "usage_count": "Usage count",
-        "max_usage": "Max usage",
+        "usage_count": "Usage",
+        "max_usage": "Max life",
         "warn_pct": "Warn at (% of life)",
+        "warn_ratio": "Warn ratio",
+        "sub_unit": "Sub-unit",
+        "mounted_at": "Mounted at",
+        "life_reset_count": "Refurbish count",
         "expiry_date": "Expiry",
         "tool_status": "Status",
         "equipment": "Mounted on",
         "description": "Description"
+      },
+      "tool_usage": {
+        "tool": "Tool",
+        "equipment": "Equipment",
+        "sub_unit": "Sub-unit",
+        "lot": "Lot",
+        "operation": "Operation",
+        "delta": "Delta",
+        "count_after": "Count after",
+        "kind": "Kind",
+        "occurred_at": "Time",
+        "reason": "Reason",
+        "comment": "Comment",
+        "source": "Source",
+        "external_event_id": "External event ID",
+        "username": "User"
+      },
+      "tool_mount_log": {
+        "tool": "Tool",
+        "equipment": "Equipment",
+        "sub_unit": "Sub-unit",
+        "port_code": "Position",
+        "mounted_at": "Mounted at",
+        "unmounted_at": "Unmounted at",
+        "unmount_reason": "Unmount reason",
+        "replaced_by_tool": "Replaced by",
+        "usage_at_mount": "Usage at mount",
+        "usage_at_unmount": "Usage at unmount",
+        "comment": "Comment",
+        "source": "Source",
+        "external_event_id": "External event ID",
+        "username": "User"
       },
       "e10_auto_rule": {
         "trigger": "Trigger",
@@ -979,8 +1017,13 @@
         "code": "Code",
         "name": "Name",
         "kind": "Kind",
-        "max_uses": "Max uses",
+        "max_uses": "Max life",
         "status_code": "State",
+        "consumable_kind": "Consumable kind",
+        "life_unit": "Life unit",
+        "count_basis": "Count basis",
+        "warn_ratio": "Warn ratio",
+        "require_qual_on_replace": "Qual after replace",
         "description": "Description"
       },
       "material_lot": {
@@ -1128,7 +1171,7 @@
         "ideal_uph": "Optional; reserved for OEE performance rate"
       },
       "tool": {
-        "max_usage": "Blank: the tool type's max uses"
+        "max_usage": "Blank: the tool type's max life"
       },
       "e10_auto_rule": {
         "equipment_type": "Blank: all types"
@@ -1178,6 +1221,9 @@
       },
       "product": {
         "tracking_level": "Blank: inherit from the technology node"
+      },
+      "fixture": {
+        "warn_ratio": "Default warn ratio for tools of this type (0-1)"
       },
       "sampling_rule": {
         "fixed_slots": "Comma separated slot numbers, e.g. 1,13,25"
@@ -1296,6 +1342,19 @@
         "workday": "Workday",
         "holiday": "Holiday",
         "maintenance": "Maintenance"
+      },
+      "tool_usage_kind": {
+        "track_out": "Track out",
+        "report": "Reported",
+        "adjust": "Adjust",
+        "reset": "Reset / refurbish"
+      },
+      "tool_unmount_reason": {
+        "life_end": "End of life",
+        "broken": "Broken",
+        "pm": "PM",
+        "swap": "Swap",
+        "other": "Other"
       },
       "e10_source": {
         "manual": "Manual",
@@ -1706,6 +1765,28 @@
         "UDT": "UDT · Unscheduled down",
         "NST": "NST · Non-scheduled"
       },
+      "consumable_kind": {
+        "probe_card": "Probe card",
+        "capillary": "Capillary",
+        "mold": "Mold",
+        "blade": "Blade",
+        "other": "Other"
+      },
+      "life_unit": {
+        "use": "Uses",
+        "wafer": "Wafers",
+        "unit": "Units / dies",
+        "touchdown": "Touchdowns",
+        "shot": "Shots",
+        "length_mm": "Length (mm)",
+        "hours": "Hours"
+      },
+      "count_basis": {
+        "per_track_out": "Per track-out (+1)",
+        "per_wafer": "Per wafer",
+        "per_unit": "Per unit / die",
+        "reported": "Reported only"
+      },
       "child_id_mode": {
         "suffix": "Parent no. + suffix",
         "code_rule": "Lot type ID rule"
@@ -1966,6 +2047,8 @@
     "mes_equipment__pm": "Equipment·Record PM",
     "mes_equipment__mount": "Equipment·Mount / unmount material",
     "mes_equipment__qual": "Equipment·Record Qual result",
+    "mes_equipment__tool_mount": "Equipment·Mount / unmount tools",
+    "mes_equipment__tool_count": "Equipment·Report / reset tool usage",
     "mes_exec__override": "Execution·Override checks",
     "mes_exec__hold": "Execution·Hold / release",
     "mes_exec__split": "Execution·Split lots",
@@ -2038,6 +2121,8 @@
     "mes_equipment__pm": "Allows: Equipment·Record PM",
     "mes_equipment__mount": "Allows: Equipment·Mount / unmount material",
     "mes_equipment__qual": "Allows: Equipment·Record Qual result",
+    "mes_equipment__tool_mount": "Allows: Equipment·Mount / unmount tools",
+    "mes_equipment__tool_count": "Allows: Equipment·Report / reset tool usage",
     "mes_exec__override": "Allows: Execution·Override checks",
     "mes_exec__hold": "Allows: Execution·Hold / release",
     "mes_exec__split": "Allows: Execution·Split lots",

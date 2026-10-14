@@ -12,7 +12,7 @@ from app.core.spec.engine import ENTITIES
 from app.core.spec.errors import http_422
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
-from app.mes.equipment.service import e10_apply
+from app.mes.equipment.service import e10_apply, num, tool_count, tool_delta
 from app.mes.execution import bom_usage
 from app.mes.execution.checks import service as ck
 from app.mes.execution.constants import OOS_RANK
@@ -212,15 +212,33 @@ def track_out(
     bom_warn = bom_usage.over_warning(bom_usage.new_overs(s, tid, lot, bom_rows))
     tools = []
     for t in ctx.tools:
+        # P2-B10：按工具类型 count_basis 计数（Decimal），每次写 tool_usage 履历
+        delta = tool_delta(s, tid, t, lot)
+        if delta:
+            r = tool_count(
+                s,
+                tid,
+                t,
+                delta,
+                "track_out",
+                user,
+                at=at,
+                lot_id=lot["id"],
+                equipment_id=ctx.equipment["id"] if ctx.equipment else None,
+                operation_id=ctx.step["operation_id"],
+            )
+            t = r["tool"]
         mx, used = ck.tool_life(s, tid, t)
-        used += 1
-        st = "available"
-        if mx and used >= mx:
-            st = "pending_maintenance"
+        st = t["tool_status"]
+        if st == "in_use":
+            st = "available"
         if t["expiry_date"] and t["expiry_date"] < at.date():
             st = "expired"
-        _upd(s, tid, "tool", t["id"], user, usage_count=used, tool_status=st)
-        tools.append({"tool": t["code"], "usage": used, "max": mx, "status": st})
+        if st != t["tool_status"]:
+            _upd(s, tid, "tool", t["id"], user, tool_status=st)
+        tools.append(
+            {"tool": t["code"], "usage": num(used), "max": num(mx), "status": st}
+        )
     n_scrap = len(scrap_units) + sum(n for n, _ in scrap_qty)
     for u, r in scrap_units:
         _upd(
