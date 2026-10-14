@@ -812,7 +812,8 @@ def test_operator_qual_d85_supp2():
     assert any(a["expect"]["status"] == 404 and a["qual"] == "$missing_uuid" for a in dels)
     cf = next(a for a in ops if a["expect"].get("ctx", {}).get("reason") == "conflicting_fields")
     assert cf["qual"] == "$missing_uuid" and cf["body"]["is_active"] is False and "expires_on" in cf["body"]
-    assert cf["expect"]["code"] == "value_error"
+    assert cf["expect"]["type"] == "value_error" and cf["expect"]["loc"] == ["body", "is_active"]
+    assert cf["expect"]["ctx"] == {"reason": "conflicting_fields", "fields": ["is_active", "expires_on"]}
     # D86：4xx 不缓存 → 删除的同 key 重发重新校验，没有 reused、没有删除回放步骤
     assert not [s for s in sc.steps if s.kind == "operator_qual_replay" and s.args["of"] == "del1"]
     by_key = {}

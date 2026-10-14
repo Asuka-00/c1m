@@ -7,7 +7,7 @@
 #   - D86 补充二：回放的成功响应带头 Idempotent-Replayed: true；第一次执行和 4xx 重发没有这个头；响应体不变
 #   - D86：幂等缓存只存 2xx；4xx（409/422/404）不缓存、key 不占用，同 key 重发重新校验；reused 只出现在 key 已存过成功响应且请求体/目标变了
 #   - 授予不要求 reason_id / approved_by；可直接新建已过期资质当种子（补充二-5/6）
-#   - PATCH 同时带 is_active=false 和 expires_on → 422 value_error ctx.reason=conflicting_fields，请求体校验阶段（404 之前）（补充二-9）
+#   - PATCH 同时带 is_active=false 和 expires_on → 422 value_error loc [body, is_active]、ctx {reason: conflicting_fields, fields: [is_active, expires_on]}，请求体校验阶段（404 之前）（补充二-9、补充三）
 #   - 停用：缺 reason_id / comment → 422 missing；成功发 operator_qual.deactivated
 #   - 延期：缺 reason_id / comment / approved_by → 422 missing；更晚 renewed、更早 changed，发对应事件
 #   - 自批：self_approval 在 404 前；holder_approval 在 404 后、409 前（loc [body, approved_by]）
@@ -48,7 +48,7 @@ steps:
   - operator_qual: {action: get, as: readonly, skip_if_no_creds: readonly, qual: $qexp.id, expect: {status: 200}}   # 只读能读
   # ---- 冲突字段（补充二-9）：请求体校验阶段，404 之前 → 不存在的 id 也是 422
   - operator_qual: {action: patch, idem: opq-cf1, qual: $missing_uuid, body: {is_active: false, expires_on: $date.+60, reason_id: $reason.qual, comment: x, approved_by: $user.lead},
-      expect: {status: 422, code: value_error, ctx: {reason: conflicting_fields}}}
+      expect: {status: 422, type: value_error, loc: [body, is_active], ctx: {reason: conflicting_fields, fields: [is_active, expires_on]}}}   # D85 补充三
   # ---- 自批（D85）：self_approval 在 404 前 → 用不存在的 id 也是 422；holder_approval 在 404 后
   - operator_qual: {action: patch, idem: opq-sa1, qual: $missing_uuid, body: {expires_on: $date.+60, reason_id: $reason.qual, comment: 延期, approved_by: $user.self},
       expect: {status: 422, code: value_error, loc: [body, approved_by], ctx: {reason: self_approval}}}
