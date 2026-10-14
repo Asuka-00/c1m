@@ -163,6 +163,7 @@ export const RETICLE_CODES = [
   'still_mounted',
   'reticle_unavailable',
   'life_reached',
+  'idempotency_key_mismatch',
 ] as const
 
 /** 错误提示：光罩 409 码 → 三语；其他交给通用 MES 处理。 */

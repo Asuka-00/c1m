@@ -1883,7 +1883,8 @@
         "already_mounted": "光罩已挂在其他机台，请先卸载",
         "still_mounted": "光罩仍挂在机台上，请先卸载再执行「{{action}}」",
         "reticle_unavailable": "光罩当前状态不可挂载",
-        "life_reached": "光罩已达寿命上限，不能进站"
+        "life_reached": "光罩已达寿命上限，不能进站",
+        "idempotency_key_mismatch": "提交内容与上次不一致，请刷新页面后重试"
       }
     }
   },

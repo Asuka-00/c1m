@@ -172,6 +172,28 @@ export function actionBody(action: ReticleAction, input: ReticleActionInput) {
   return pickBody(clean, ACTION_BODY[action])
 }
 
+/** 请求体指纹（经 pickBody 白名单、键排序）；用于把 Idempotency-Key 绑定到内容。 */
+export function bodySignature(
+  action: ReticleAction,
+  input: ReticleActionInput
+): string {
+  const b = actionBody(action, input) as Record<string, unknown>
+  return JSON.stringify(
+    Object.keys(b)
+      .sort()
+      .map((k) => [k, b[k]])
+  )
+}
+
+/** 幂等键绑定：内容不变复用旧 key；内容变了（或首次）生成新 key（后端 H-1）。 */
+export function bindKey(
+  prev: { sig: string; key: string } | null,
+  sig: string,
+  gen: () => string
+): { sig: string; key: string } {
+  return prev && prev.sig === sig ? prev : { sig, key: gen() }
+}
+
 interface Api {
   list: () => Promise<Reticle[]>
   get: (id: string) => Promise<Reticle>
@@ -397,7 +419,7 @@ function seed() {
 }
 
 let store = seed()
-const idem = new Map<string, ReticleActionOut>()
+const idem = new Map<string, { sig: string; out: ReticleActionOut }>()
 
 /** 测试用：重置 mock 数据。 */
 export function resetReticleMock() {
@@ -485,8 +507,17 @@ function mockAct(
   key?: string
 ): ReticleActionOut {
   const body = actionBody(action, input) as ReticleActionInput
-  if (IDEMPOTENT.includes(action) && key && idem.has(key))
-    return structuredClone(idem.get(key)!)
+  const sig = `${id}|${action}|${bodySignature(action, input)}`
+  if (IDEMPOTENT.includes(action) && key && idem.has(key)) {
+    const hit = idem.get(key)!
+    // H-1：同 key 不同内容 → 422 idempotency_key_mismatch
+    if (hit.sig !== sig)
+      throw apiError(422, {
+        code: 'idempotency_key_mismatch',
+        message: 'Idempotency-Key reused with a different body',
+      })
+    return structuredClone(hit.out)
+  }
   const x = find(id)
   const conflict = (code: string) =>
     apiError(409, {
@@ -663,7 +694,8 @@ function mockAct(
       username: 'me',
       at,
     })
-  if (IDEMPOTENT.includes(action) && key) idem.set(key, structuredClone(out))
+  if (IDEMPOTENT.includes(action) && key)
+    idem.set(key, { sig, out: structuredClone(out) })
   return out
 }
 

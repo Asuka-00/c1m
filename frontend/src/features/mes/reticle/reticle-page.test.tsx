@@ -102,4 +102,18 @@ describe('光罩页面', () => {
       .element(s.getByTestId('reticle-disposition'))
       .toHaveValue('none')
   })
+  it('计数调整失败后改字段再提交换新 key，不撞 mismatch', async () => {
+    const s = await render(wrap([MES_PERM.reticleWrite]))
+    await s.getByTestId('reticle-row-RTC-M1-001').click()
+    await s.getByTestId('reticle-act-usage').click()
+    // 先提交一个会让计数小于 0 的值（mock 422），再改成合法值
+    await userEvent.fill(s.getByTestId('reticle-delta').element(), '-5000')
+    await userEvent.fill(s.getByTestId('reticle-reason-id').element(), 'R01')
+    await s.getByTestId('reticle-action-ok').click()
+    await userEvent.fill(s.getByTestId('reticle-delta').element(), '-100')
+    await s.getByTestId('reticle-action-ok').click()
+    await expect
+      .element(s.getByTestId('reticle-row-RTC-M1-001'))
+      .toHaveTextContent('1100 / 100000')
+  })
 })

@@ -1883,7 +1883,8 @@
         "already_mounted": "The reticle is mounted on another tool. Unmount it first.",
         "still_mounted": "The reticle is still mounted. Unmount it before \"{{action}}\".",
         "reticle_unavailable": "The reticle cannot be mounted in its current status",
-        "life_reached": "The reticle has reached its life limit and cannot be tracked in"
+        "life_reached": "The reticle has reached its life limit and cannot be tracked in",
+        "idempotency_key_mismatch": "The submission differs from the previous attempt. Refresh the page and try again."
       }
     }
   },

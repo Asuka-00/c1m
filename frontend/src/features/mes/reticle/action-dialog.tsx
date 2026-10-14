@@ -1,9 +1,11 @@
 /** 光罩动作对话框（usage / hold / release / restore / 清洗 / 维修 / 检查 / scrap / life-reset）。 */
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { t } from '@/i18n'
 import { toast } from 'sonner'
 import {
+  bindKey,
+  bodySignature,
   reticleApi,
   type Reticle,
   type ReticleAction,
@@ -72,23 +74,25 @@ function Body({
     action === 'inspection' ? { disposition: 'none' } : {}
   )
   const [errs, setErrs] = useState<Record<string, string>>({})
-  // 同一次提交（含失败后重试）用同一个 Idempotency-Key；成功后关闭对话框
-  const [key] = useState(newEventId)
+  // Idempotency-Key 绑定请求体：内容不变的重试复用旧 key，改了字段就换新 key（H-1）
+  const bound = useRef<{ sig: string; key: string } | null>(null)
   const fields = ACTIONS[action].fields
   const m = useMutation({
-    mutationFn: () =>
-      reticleApi.act(
-        reticle.id,
-        action,
-        {
-          ...v,
-          defect_count:
-            String(v.defect_count ?? '').trim() === ''
-              ? undefined
-              : Number(v.defect_count),
-        },
-        key
-      ),
+    mutationFn: () => {
+      const input: ReticleActionInput = {
+        ...v,
+        defect_count:
+          String(v.defect_count ?? '').trim() === ''
+            ? undefined
+            : Number(v.defect_count),
+      }
+      bound.current = bindKey(
+        bound.current,
+        bodySignature(action, input),
+        newEventId
+      )
+      return reticleApi.act(reticle.id, action, input, bound.current.key)
+    },
     onSuccess: () => {
       toast.success(t('mes.reticle.done', { action: actionLabel(action) }))
       qc.invalidateQueries({ queryKey: ['mes', 'reticle'] })

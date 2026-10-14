@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { http } from '@/lib/api/client'
 import {
   actionBody,
+  bindKey,
+  bodySignature,
   actionReticle,
   apiError,
   httpReticleApi,
@@ -242,6 +244,43 @@ describe('检查录入 D57（D71 补充）', () => {
     expect(b).toEqual(a)
     expect(a.data).toMatchObject({ disposition: 'none' })
     expect((await mockReticleApi.history('r6')).inspections).toHaveLength(2)
+  })
+})
+
+describe('幂等键绑定请求体（H-1）', () => {
+  it('内容不变复用 key，内容变了换新 key；白名单外字段不影响', () => {
+    let n = 0
+    const gen = () => `k${++n}`
+    const a = bindKey(null, bodySignature('usage', { delta: '5' }), gen)
+    const b = bindKey(
+      a,
+      bodySignature('usage', { delta: '5', reason: 'ignored' }),
+      gen
+    )
+    expect(b.key).toBe(a.key)
+    const c = bindKey(b, bodySignature('usage', { delta: '6' }), gen)
+    expect(c.key).not.toBe(a.key)
+    expect(bodySignature('usage', { note: 'n', delta: 1 })).toBe(
+      bodySignature('usage', { delta: 1, note: 'n' })
+    )
+  })
+  it('mock 同 key 不同内容 422 idempotency_key_mismatch，三语提示', async () => {
+    await mockReticleApi.act('r1', 'usage', { delta: 1 }, 'same')
+    const err = await mockReticleApi
+      .act('r1', 'usage', { delta: 2 }, 'same')
+      .catch((e: unknown) => e)
+    expect(err).toMatchObject({
+      response: {
+        status: 422,
+        data: { detail: { code: 'idempotency_key_mismatch' } },
+      },
+    })
+    for (const l of ['zh-CN', 'en', 'ja']) {
+      await i18n.changeLanguage(l)
+      const m = reticleErrorMessage(err, 'usage')
+      expect(m).toBe(t('mes.reticle.code.idempotency_key_mismatch'))
+      expect(m).not.toContain('idempotency')
+    }
   })
 })
 
