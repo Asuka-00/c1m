@@ -156,7 +156,7 @@ def _migration_roundtrip(
     backend = Path(__file__).resolve().parents[4]
 
     def alembic(*args: str) -> None:
-        env = {**os.environ, "MIGRATION_DATABASE_URL": url}
+        env = {**os.environ, "MIGRATION_DATABASE_URL": url, "POSTGRES_DB": name}
         r = subprocess.run(
             ["alembic", *args], cwd=backend, env=env, capture_output=True, text=True
         )

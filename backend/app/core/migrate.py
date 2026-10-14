@@ -22,3 +22,29 @@ def disable_rls(op: Any, tables: list[str]) -> None:
     for t in tables:
         for stmt in disable_tenant_rls_sql(t):
             op.execute(stmt)
+
+
+def check_db_target(url: str, env: dict[str, str] | None = None) -> None:
+    """防误迁移：设置了环境变量 ``POSTGRES_DB`` 而实际迁移连接的库名不同 → 报错退出。
+
+    配置读的是 ``MIGRATION_DATABASE_URL``（常来自 .env），只设 ``POSTGRES_DB`` 不会改变目标库，
+    曾因此误迁移了 ``app``。确需不一致时设 ``ALEMBIC_ALLOW_DB_MISMATCH=1`` 跳过。
+    """
+    import os
+    import sys
+
+    from sqlalchemy.engine import make_url
+
+    e = os.environ if env is None else env
+    got = make_url(url).database
+    sys.stderr.write(f"alembic: target database = {got!r}\n")
+    want = (e.get("POSTGRES_DB") or "").strip()
+    if not want or e.get("ALEMBIC_ALLOW_DB_MISMATCH") == "1":
+        return
+    if got != want:
+        raise SystemExit(
+            f"alembic: refusing to run: POSTGRES_DB={want!r} but the migration URL "
+            f"targets database {got!r}. Set MIGRATION_DATABASE_URL to the intended "
+            "database (POSTGRES_DB alone does not change it), or set "
+            "ALEMBIC_ALLOW_DB_MISMATCH=1 to bypass."
+        )

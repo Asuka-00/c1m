@@ -18,7 +18,7 @@ backend/
     testing/         共享测试工具（用户、令牌、MES 测试客户端）
     tests/           架构（导入规则）测试
     alembic/         数据库迁移
-  conftest.py        共享 pytest fixtures（独立测试库 app_test）
+  conftest.py        共享 pytest fixtures（独立测试库，库名必须用 TEST_DATABASE_NAME 指定）
   scripts/           prestart、DB 角色、演示数据、i18n 导出、测试、lint
 frontend/
   src/
@@ -135,7 +135,7 @@ def resolve(ctx: Ctx) -> list[tuple[Row, Row]]:
 uv run ruff check app scripts conftest.py && uv run ruff format --check app scripts conftest.py   # 含 pydocstyle（D）
 uv run mypy app && uv run ty check app
 uv run alembic check            # 模型与迁移一致
-bash scripts/test.sh            # pytest（含导入规则测试）+ coverage，使用 app_test 数据库
+TEST_DATABASE_NAME=app_test_<you> bash scripts/test.sh   # pytest（含导入规则测试）+ coverage；未设 TEST_DATABASE_NAME 直接退出
 ```
 
 前端（`frontend/`）：

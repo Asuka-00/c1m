@@ -65,11 +65,16 @@ pnpm dev                      # http://localhost:5173
 
 ### 测试数据库
 
-后端测试自动使用独立数据库 `app_test`（可通过 `TEST_DATABASE_NAME` 修改），不存在时自动创建并迁移：
+后端测试使用独立数据库，库名**必须**用环境变量 `TEST_DATABASE_NAME` 显式指定（没设或等于应用库名时
+pytest 直接退出，不再默认 `app_test`）；库不存在时自动创建并迁移，跑完清空：
 
 ```bash
-cd backend && bash scripts/test.sh
+cd backend && TEST_DATABASE_NAME=app_test_<你的名字> bash scripts/test.sh
 ```
+
+迁移防误操作：`alembic` 启动时打印目标库名；如果设置了 `POSTGRES_DB` 而 `MIGRATION_DATABASE_URL`
+里的库名不同，直接报错退出（`.env` 里的连接地址优先于 `POSTGRES_DB`，只设 `POSTGRES_DB` 改不了目标库）。
+确需不一致时设 `ALEMBIC_ALLOW_DB_MISMATCH=1`。
 
 ## 项目结构
 

@@ -271,7 +271,11 @@ def test_migration_0014_and_metadata_indexes() -> None:
     backend = Path(__file__).resolve().parents[4]
 
     def alembic(*args: str) -> None:
-        env = {**os.environ, "MIGRATION_DATABASE_URL": url}
+        env = {
+            **os.environ,
+            "MIGRATION_DATABASE_URL": url,
+            "ALEMBIC_ALLOW_DB_MISMATCH": "1",
+        }
         r = subprocess.run(
             ["alembic", *args], cwd=backend, env=env, capture_output=True, text=True
         )
