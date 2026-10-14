@@ -24,6 +24,7 @@
 #   expect_effective_track_in_action {eq, alid, value, source?}、delete_alarm_code {eq, alid, level: type|equipment}。
 # 报警码 action=none，不联动设备状态；设备全程 SBY。前提：EAP-DA01 SBY；EAP-NT01 没有设备类型（只用于 equipment_type_missing 反例）；FX0001～FX0006 waiting；EAP-MC01（两个腔体子单元）SBY；9999 未登记。
 # ---- 06:0x 按 D86：幂等缓存只存 2xx；4xx 不缓存、key 不占用，同 key 重发重新校验（不回放、不 reused）；reused 只在已存成功响应时换体
+#   D86 补充二：回放成功响应带 Idempotent-Replayed: true，第一次执行 / 4xx 重发没有；报警码 referenced 的 ref_type=alarm_record
 #   D86 补充一：报警码 referenced 统一顶层 ref_type/ref_count（不用 tables[] / ctx）
 # ---- 05:0x 细化（对照 D81 / D82 / D82 补充三、四）；05:15 按 D84 / D84 补充一收掉全部待定项；05:20 B8-Q10 已定、timezone_required 按 D77 补充一
 #   - D81 校验顺序：401/403 → 缺 key 422 missing → body 422（enum / null）→ 重放（换体 422 reused）→ 404 → 409
@@ -73,18 +74,17 @@ steps:
   # D82 补充三：单一原因 409，detail {code, message} + 顶层附加字段，不用 ctx。
   # D84 Q5：顶层附加 ref_type、ref_count（不用 ctx）；2101 类型行被 EAP-DA01 的 1 条单台行引用
   - delete_alarm_code: {idem: tia-d1, eq: EAP-DA01, alid: "2101", level: type,
-                        expect: {status: 409, code: referenced, body: {detail.ref_type: $nonempty, detail.ref_count: 1}, absent: [tables, ctx]}}
+                        expect: {status: 409, code: referenced, body: {detail.ref_type: alarm_record, detail.ref_count: 1}, absent: [tables, ctx], absent_headers: [Idempotent-Replayed]}}
   # D86：409 不缓存 → 同 key 同体重发重新校验，仍 409 referenced（不是回放，也不是 reused）
   - delete_alarm_code: {idem: tia-d1, eq: EAP-DA01, alid: "2101", level: type,
-                        expect: {status: 409, code: referenced, body: {detail.ref_type: $nonempty, detail.ref_count: 1},
-                                 absent_headers: [Idempotent-Replayed, Idempotency-Replayed], absent_fields: [replayed, duplicate]}}
+                        expect: {status: 409, code: referenced, body: {detail.ref_type: alarm_record, detail.ref_count: 1}, absent_headers: [Idempotent-Replayed]}}
   # 同 key 换目标：rid 不存在 → 按重新校验 404 not_found（不是 reused）
   - delete_alarm_code: {idem: tia-d1, eq: EAP-DA01, rid: 00000000-0000-0000-0000-000000000000, level: type,
                         expect: {status: 404, code: not_found}}
   # 同 key 换到未被引用的类型行（2107 无单台行）→ 重新校验后正常删除 200；之后同 key 同体 → 回放；换体 → reused
   - seed_alarm_code: {idem: tia-c14, eq: EAP-DA01, alid: "2107", action: none, level: type}
-  - delete_alarm_code: {idem: tia-d1, eq: EAP-DA01, alid: "2107", level: type, expect: {status: 200}}
-  - delete_alarm_code: {idem: tia-d1, eq: EAP-DA01, alid: "2107", level: type, expect: {status: 200, absent: [duplicate]}}
+  - delete_alarm_code: {idem: tia-d1, eq: EAP-DA01, alid: "2107", level: type, expect: {status: 200, absent_headers: [Idempotent-Replayed]}}
+  - delete_alarm_code: {idem: tia-d1, eq: EAP-DA01, alid: "2107", level: type, expect: {status: 200, headers: {Idempotent-Replayed: "true"}}}   # 回放
   - delete_alarm_code: {idem: tia-d1, eq: EAP-DA01, alid: "2101", level: type,
                         expect: {status: 422, code: idempotency_key_reused, detail_object: true}}
   # D84 Q6：新建、修改、删除报警码都必须带 key → 缺 key 422 missing（修改的缺 key 见下方 set_track_in_action）
@@ -101,7 +101,7 @@ steps:
   - set_track_in_action: {idem: tia-s4, eq: EAP-DA01, alid: "2104", level: equipment, value: bogus,
                           expect: {status: 422, code: enum, loc: [body, track_in_action], ctx: {expected: ["off", warn, block]}}}
   # D86：422 不缓存 → 同 key 改成合法值重发重新校验 → 200（不是 reused）
-  - set_track_in_action: {idem: tia-s4, eq: EAP-DA01, alid: "2104", level: equipment, value: "off", expect: {status: 200, absent: [duplicate]}}
+  - set_track_in_action: {idem: tia-s4, eq: EAP-DA01, alid: "2104", level: equipment, value: "off", expect: {status: 200, absent_headers: [Idempotent-Replayed]}}
   - expect_effective_track_in_action: {eq: EAP-DA01, alid: "2104", value: "off", source: equipment}
   # 只读字段不能写
   - set_track_in_action: {idem: tia-s5, eq: EAP-DA01, alid: "2104", level: equipment, field: effective_track_in_action, value: block,
@@ -118,7 +118,7 @@ steps:
                           expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
   # 重放：同 key 同体 → 原状态码 + 原记录（D57），无 duplicate；同 key 换体 → 422 reused
   # D84 Q3：reused 本期对象格式 422 {code: idempotency_key_reused, message}
-  - set_track_in_action: {idem: tia-s3, eq: EAP-DA01, alid: "2103", level: equipment, value: block, expect: {status: 200, absent: [duplicate]}}
+  - set_track_in_action: {idem: tia-s3, eq: EAP-DA01, alid: "2103", level: equipment, value: block, expect: {status: 200, absent: [duplicate], headers: {Idempotent-Replayed: "true"}}}
   - set_track_in_action: {idem: tia-s3, eq: EAP-DA01, alid: "2103", level: equipment, value: warn, expect: {status: 422, code: idempotency_key_reused, detail_object: true}}
   - expect_effective_track_in_action: {eq: EAP-DA01, alid: "2103", value: block, source: equipment}
   # 404：本机没有这个 ALID 的报警码行（9998 未登记）——404 在 body 422 之后、409 之前
@@ -127,8 +127,8 @@ steps:
                           expect: {status: 404, code: not_found}}
   # D86：404 不缓存 → 同 key 同体重发仍 404（不是回放标记），同 key 换到存在的行 → 重新校验 200
   - set_track_in_action: {idem: tia-s404, eq: EAP-DA01, rid: 00000000-0000-0000-0000-000000000000, level: equipment, value: block,
-                          expect: {status: 404, code: not_found, absent_headers: [Idempotent-Replayed, Idempotency-Replayed]}}
-  - set_track_in_action: {idem: tia-s404, eq: EAP-DA01, alid: "2104", level: equipment, value: warn, expect: {status: 200}}
+                          expect: {status: 404, code: not_found, absent_headers: [Idempotent-Replayed]}}
+  - set_track_in_action: {idem: tia-s404, eq: EAP-DA01, alid: "2104", level: equipment, value: warn, expect: {status: 200, absent_headers: [Idempotent-Replayed]}}
   - set_track_in_action: {idem: tia-s404, eq: EAP-DA01, alid: "2104", level: equipment, value: "off",
                           expect: {status: 422, code: idempotency_key_reused, detail_object: true}}   # 已存 2xx 后换体 → reused
   - set_track_in_action: {idem: tia-s12, eq: EAP-DA01, alid: "2104", level: equipment, value: "off", expect: {status: 200}}   # 复原 off

@@ -250,7 +250,7 @@ def test_b8_draft_type_row_rules():
     # D84 Q5：referenced 顶层 ref_type / ref_count；Q6：删除缺 key 422 missing
     # D86：tia-d1 同 key 重发重新校验（409/404/200），已有 2xx 后换体才 reused；最后是缺 key
     assert [d["expect"]["status"] for d in dels] == [409, 409, 404, 200, 200, 422, 422]
-    assert dels[0]["expect"]["body"] == {"detail.ref_type": "$nonempty", "detail.ref_count": 1} and dels[0]["idem"]
+    assert dels[0]["expect"]["body"] == {"detail.ref_type": "alarm_record", "detail.ref_count": 1} and dels[0]["idem"]
     assert dels[-1]["no_idem"] and dels[-1]["expect"]["code"] == "missing"
 
 
@@ -872,3 +872,19 @@ def test_d86_no_cache_for_4xx():
     fut = [s.args for s in sc.steps if s.kind == "alarm_set" and "occurred_at" in s.args]
     assert [f["occurred_at"] for f in fut] == ["$now+301s", "$now+3600s", "$now+300s"]
     assert all(f["expect"]["ctx"]["reason"] == "future_time" for f in fut if f["expect"]["status"] == 422)
+
+
+def test_d86_supp2_replayed_header():
+    """D86 补充二：回放成功带 Idempotent-Replayed: true；首次 / 4xx 重发断言没有；不再用猜的头和字段。"""
+    for f in ("scenarios/p3-draft/operator-qual.yaml", "scenarios/p3-draft/alarm-track-in-action.yaml"):
+        text = open(f, encoding="utf-8").read()
+        assert "Idempotency-Replayed" not in text and "replayed, duplicate" not in text
+        sc = load(f)
+        exps = [s.args.get("expect") or {} for s in sc.steps]
+        rep = [e for e in exps if e.get("headers", {}).get("Idempotent-Replayed") == "true"]
+        assert rep and all(200 <= e["status"] < 300 for e in rep)
+        no = [e for e in exps if "Idempotent-Replayed" in e.get("absent_headers", [])]
+        assert any(e["status"] >= 400 for e in no) and any(e["status"] < 300 for e in no)
+    sc = load("scenarios/p3-draft/alarm-track-in-action.yaml")
+    d409 = [s.args["expect"] for s in sc.steps if s.kind == "delete_alarm_code" and s.args["expect"]["status"] == 409]
+    assert d409 and all(e["body"]["detail.ref_type"] == "alarm_record" for e in d409)
