@@ -597,10 +597,6 @@ function EditDialog({
     [lines]
   )
   const uoms = useUomOptions(extra)
-  // 已保存状态：逐行保存中途失败后重试，不会重复提交已成功的部分
-  const [saved] = useState(
-    () => new Map(lines.map((l) => [l.id, toLineDraft(l)]))
-  )
   const set = (i: number, patch: Partial<LineDraft>) =>
     setRows((r) => r.map((x, j) => (j === i ? { ...x, ...patch } : x)))
   const setSub = (i: number, j: number, patch: Partial<SubDraft>) =>
@@ -621,31 +617,21 @@ function EditDialog({
     mutationFn: () => {
       setErrs([])
       setBanner(null)
-      return saveDraft({
-        bom,
-        desc,
-        rows,
-        saved,
-        patchRow: set,
-      })
+      return saveDraft({ bom, desc, rows })
     },
     onSuccess: () => {
       toast.success(t('mes.bomTab.done.save', { version: bom.version }))
       onClose()
     },
     onError: (x: unknown) => {
-      const se = x instanceof BomSaveError ? x : new BomSaveError(x, null)
+      // 整单在一个事务里，失败什么都没改：弹窗不关、输入保留，改完直接重试
+      const se = x instanceof BomSaveError ? x : new BomSaveError(x)
       const be = bomError(se.error)
-      // 整单接口：loc ["body","lines",k,...] 的 k 换回编辑框下标（D38，从 0 开始）；
-      // 通用接口：loc 是 ["body","qty"]，归到正在保存的那一行 / 那条替代料
+      // loc ["body","lines",k,...] 的 k 是请求下标（D38，从 0 开始），换回编辑框下标
       setErrs(
-        be.fields.map((f) => {
-          if (f.line != null)
-            return { ...f, line: se.lineMap?.[f.line] ?? f.line }
-          if (se.line == null) return f
-          const field = se.sub == null ? f.field : `sub.${se.sub}.${f.field}`
-          return { ...f, line: se.line, field }
-        })
+        be.fields.map((f) =>
+          f.line == null ? f : { ...f, line: se.lineMap?.[f.line] ?? f.line }
+        )
       )
       setBanner(be.message)
     },

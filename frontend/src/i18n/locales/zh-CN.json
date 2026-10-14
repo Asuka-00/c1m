@@ -1376,7 +1376,17 @@
         "subMaterialOnly": "只有物料行可以设置替代料",
         "positive": "必须大于 0",
         "dupSubPriority": "同一行的替代料优先级重复",
-        "dupSubMaterial": "同一行的替代物料重复"
+        "dupSubMaterial": "同一行的替代物料重复",
+        "bomCycle": "不能生效：会形成循环引用，涉及 {{items}}",
+        "bomDepth": "不能生效：会超过两级 BOM，涉及 {{items}}",
+        "componentNoActive": "不能生效：引用的半成品没有生效的 BOM：{{items}}",
+        "referenced": "不能作废：这是该产品唯一生效的 BOM，仍被以下生效 BOM 引用：{{items}}",
+        "bomCycleField": "不能引用本产品，也不能形成循环引用",
+        "bomDepthField": "该半成品的生效 BOM 已含半成品，P1 只允许两级",
+        "componentNoActiveField": "该半成品没有生效的 BOM",
+        "referencedField": "该 BOM 仍被其他生效 BOM 引用",
+        "refItem": "{{product}}（BOM v{{bom}}）",
+        "refSep": "、"
       },
       "componentType": {
         "material": "物料",

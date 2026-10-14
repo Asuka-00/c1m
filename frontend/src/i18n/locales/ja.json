@@ -1376,7 +1376,17 @@
         "subMaterialOnly": "代替資材は資材行のみ設定できます",
         "positive": "0 より大きい値が必要です",
         "dupSubPriority": "同じ行で代替資材の優先度が重複しています",
-        "dupSubMaterial": "同じ行で代替資材が重複しています"
+        "dupSubMaterial": "同じ行で代替資材が重複しています",
+        "bomCycle": "有効化できません：循環参照になります（{{items}}）",
+        "bomDepth": "有効化できません：2 階層を超えます（{{items}}）",
+        "componentNoActive": "有効化できません：参照する半製品に有効な BOM がありません：{{items}}",
+        "referenced": "無効化できません：製品で唯一の有効 BOM で、次の有効 BOM から参照されています：{{items}}",
+        "bomCycleField": "自製品の参照や循環参照はできません",
+        "bomDepthField": "この半製品の有効 BOM には半製品行があります（2 階層まで）",
+        "componentNoActiveField": "この半製品に有効な BOM がありません",
+        "referencedField": "他の有効 BOM から参照されています",
+        "refItem": "{{product}}（BOM v{{bom}}）",
+        "refSep": "、"
       },
       "componentType": {
         "material": "資材",

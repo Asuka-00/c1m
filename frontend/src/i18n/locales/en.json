@@ -1376,7 +1376,17 @@
         "subMaterialOnly": "Only material lines can have substitutes",
         "positive": "Must be greater than 0",
         "dupSubPriority": "Duplicate substitute priority on this line",
-        "dupSubMaterial": "Duplicate substitute material on this line"
+        "dupSubMaterial": "Duplicate substitute material on this line",
+        "bomCycle": "Cannot activate: circular reference involving {{items}}",
+        "bomDepth": "Cannot activate: BOM would exceed two levels, involving {{items}}",
+        "componentNoActive": "Cannot activate: these semi-finished components have no active BOM: {{items}}",
+        "referenced": "Cannot void: this is the only active BOM of the product and is still used by: {{items}}",
+        "bomCycleField": "Cannot use its own product or form a circular reference",
+        "bomDepthField": "Its active BOM already has semi-finished lines (two levels max)",
+        "componentNoActiveField": "This semi-finished product has no active BOM",
+        "referencedField": "Still used by other active BOMs",
+        "refItem": "{{product}} (BOM v{{bom}})",
+        "refSep": ", "
       },
       "componentType": {
         "material": "Material",

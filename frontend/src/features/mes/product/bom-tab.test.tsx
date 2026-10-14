@@ -1,6 +1,7 @@
 import { AxiosError, AxiosHeaders } from 'axios'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import i18n, { fmtDateTime, t } from '@/i18n'
+import { toast } from 'sonner'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
 import { userEvent } from 'vitest/browser'
@@ -270,10 +271,10 @@ describe('F3 BOM 页签', () => {
 
   it('编辑草稿：单位来自单位换算；422 按下标定位到字段（验收 3、7）', async () => {
     mockApi()
-    vi.spyOn(bomApi, 'updateLine').mockRejectedValue(
+    vi.spyOn(bomApi, 'replaceLines').mockRejectedValue(
       axiosErr(422, [
         {
-          loc: ['body', 'qty'],
+          loc: ['body', 'lines', 1, 'qty'],
           msg: 'qty: must be a whole number for a count unit',
           type: 'value_error',
         },
@@ -303,7 +304,9 @@ describe('F3 BOM 页签', () => {
       .element(s.getByTestId('bom-edit-line-1').getByTestId('bom-field-error'))
       .toHaveTextContent(t('mes.bomTab.err.wholeNumber'))
     expect(document.body.textContent).not.toContain('qty: must be')
-    expect(bomApi.updateLine).toHaveBeenCalledWith('l20', { qty: '1.5' })
+    expect(vi.mocked(bomApi.replaceLines).mock.calls[0][1][1].qty).toBe('1.5')
+    // 整单回滚：弹窗不关，输入保留
+    await expect.element(qty1).toHaveValue('1.5')
   })
 
   it('没有权限：按钮全部置灰（验收 8）', async () => {
@@ -407,14 +410,7 @@ describe('F3 v1.1 半成品与替代料', () => {
   it('草稿编辑：可切换组件类型；替代料增删改优先级（验收 11、12）', async () => {
     mockApi()
     mockTree([subLine])
-    vi.spyOn(bomApi, 'removeSubstitute').mockResolvedValue(undefined)
-    vi.spyOn(bomApi, 'addSubstitute').mockImplementation(async (lineId, b) => ({
-      id: 'sx',
-      bom_line_id: lineId,
-      material_id: b.material_id!,
-      material_label: null,
-      priority: b.priority,
-    }))
+    const put = vi.spyOn(bomApi, 'replaceLines').mockResolvedValue({} as never)
     const s = await setup(ALL)
     await s
       .getByRole('button', { name: t('mes.bomTab.edit'), exact: true })
@@ -429,14 +425,68 @@ describe('F3 v1.1 半成品与替代料', () => {
       .getByLabelText(t('mes.bomTab.subPriority'))
     await pri.fill('3')
     await s.getByRole('button', { name: t('common.save') }).click()
-    await expect
-      .poll(() => vi.mocked(bomApi.addSubstitute).mock.calls.length)
-      .toBe(1)
-    expect(bomApi.removeSubstitute).toHaveBeenCalledWith('s1')
-    expect(bomApi.addSubstitute).toHaveBeenCalledWith('l10', {
+    await expect.poll(() => put.mock.calls.length).toBe(1)
+    expect(put.mock.calls[0][1][0].substitutes).toContainEqual({
       material_id: 'm2',
       priority: 3,
     })
+  })
+
+  it('整单 422 bom_cycle：标在对应行的半成品输入框下', async () => {
+    mockApi()
+    mockTree([prodLine])
+    vi.spyOn(bomApi, 'replaceLines').mockRejectedValue(
+      axiosErr(422, [
+        {
+          loc: ['body', 'lines', 0, 'component_product_id'],
+          msg: 'component_product: circular reference',
+          type: 'bom_cycle',
+          code: 'bom_cycle',
+        },
+      ])
+    )
+    const s = await setup(ALL)
+    await s
+      .getByRole('button', { name: t('mes.bomTab.edit'), exact: true })
+      .click()
+    await s.getByRole('button', { name: t('common.save') }).click()
+    await expect
+      .element(s.getByTestId('bom-edit-line-0').getByTestId('bom-field-error'))
+      .toHaveTextContent(t('mes.bomTab.err.bomCycleField'))
+  })
+
+  it('生效 409 bom_depth_exceeded：提示里列出导致问题的产品和版本（D47）', async () => {
+    mockApi()
+    const err = vi.spyOn(toast, 'error')
+    vi.spyOn(http, 'post').mockRejectedValue(
+      axiosErr(409, {
+        code: 'bom_depth_exceeded',
+        message: 'x',
+        details: [
+          {
+            product_id: 'pa',
+            product: 'FG-A',
+            product_version: 2,
+            bom_id: 'ba',
+            bom_version: 3,
+          },
+        ],
+      })
+    )
+    const s = await setup(ALL)
+    await s
+      .getByRole('button', { name: t('mes.bomTab.activate'), exact: true })
+      .click()
+    await s
+      .getByRole('alertdialog')
+      .getByRole('button', { name: t('mes.bomTab.activate') })
+      .click()
+    await expect.poll(() => err.mock.calls.length).toBe(1)
+    expect(err.mock.calls[0][0]).toBe(
+      t('mes.bomTab.err.bomDepth', {
+        items: t('mes.bomTab.err.refItem', { product: 'FG-A v2', bom: 3 }),
+      })
+    )
   })
 
   it('半成品行没有替代料编辑区（验收 12）', async () => {
@@ -507,6 +557,67 @@ describe('bomError', () => {
     expect(bomError(axiosErr(409, 'something else')).message).toBe(
       t('mes.bomTab.err.conflict')
     )
+  })
+
+  it('结构校验：422 按 code 标在半成品字段，逐行路径也能解析', () => {
+    expect(parseLoc(['body', 'component_product_id'])).toEqual({
+      line: null,
+      field: 'component_product_id',
+    })
+    const r = bomError(
+      axiosErr(422, [
+        {
+          loc: ['body', 'lines', 3, 'component_product_id'],
+          msg: 'component_product: its active BOM already contains semi-finished lines',
+          type: 'bom_depth_exceeded',
+          code: 'bom_depth_exceeded',
+        },
+      ])
+    )
+    expect(r.fields).toEqual([
+      {
+        line: 3,
+        field: 'component_product_id',
+        message: t('mes.bomTab.err.bomDepthField'),
+      },
+    ])
+  })
+
+  it('409 结构 / 引用校验按 details 列出产品和版本（D47、D48），中英日都有', async () => {
+    const ref = (p: string, v: number, b: number) => ({
+      product_id: p,
+      product: p,
+      product_version: v,
+      bom_id: `b-${p}`,
+      bom_version: b,
+    })
+    const two = [ref('FG-A', 1, 2), ref('FG-B', 3, 4)]
+    for (const lng of ['zh-CN', 'en', 'ja']) {
+      await i18n.changeLanguage(lng)
+      for (const code of [
+        'bom_cycle',
+        'bom_depth_exceeded',
+        'bom_component_no_active',
+        'bom_referenced',
+      ]) {
+        const m = bomError(
+          axiosErr(409, { code, message: 'x', details: two })
+        ).message
+        expect(m).toContain('FG-A v1')
+        expect(m).toContain('FG-B v3')
+        expect(m).not.toContain('mes.bomTab')
+      }
+    }
+    await i18n.changeLanguage('zh-CN')
+    expect(
+      bomError(
+        axiosErr(409, {
+          code: 'bom_referenced',
+          message: 'x',
+          details: [ref('FG-A', 1, 2)],
+        })
+      ).message
+    ).toBe(t('mes.bomTab.err.referenced', { items: 'FG-A v1（BOM v2）' }))
   })
 
   it('无明细生效 422 提示至少一行', () => {

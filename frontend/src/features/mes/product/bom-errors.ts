@@ -20,10 +20,42 @@ interface Item {
   loc?: unknown[]
   msg?: string
   type?: string
+  code?: string
+}
+
+/** 两级结构 / 引用校验的 code（422 编辑时 / 409 生效、作废时，D47 / D48）。 */
+const STRUCT: Record<string, string> = {
+  bom_cycle: 'mes.bomTab.err.bomCycle',
+  bom_depth_exceeded: 'mes.bomTab.err.bomDepth',
+  bom_component_no_active: 'mes.bomTab.err.componentNoActive',
+  bom_referenced: 'mes.bomTab.err.referenced',
+}
+
+/** 409 details 的一项：涉及的产品及其 BOM 版本。 */
+export interface BomRef {
+  product_id?: string
+  product?: string | null
+  product_version?: number | null
+  bom_id?: string
+  bom_version?: number | null
+}
+
+/** 「FG-A v2（BOM v3）」这样的列表，用顿号 / 逗号分隔。 */
+export function refList(refs: BomRef[]): string {
+  return refs
+    .map((r) => {
+      const p = `${r.product ?? r.product_id ?? '?'}${r.product_version != null ? ` v${r.product_version}` : ''}`
+      return r.bom_version != null
+        ? t('mes.bomTab.err.refItem', { product: p, bom: r.bom_version })
+        : p
+    })
+    .join(t('mes.bomTab.err.refSep'))
 }
 
 function fieldMessage(it: Item): string {
   const msg = it.msg ?? ''
+  const sc = STRUCT[it.code ?? it.type ?? '']
+  if (sc) return t(`${sc}Field`)
   if (it.type === 'extra_forbidden' || /not writable|set by POST/.test(msg))
     return t('mes.bomTab.err.notWritable')
   if (/required|missing/i.test(msg) || it.type === 'missing')
@@ -91,7 +123,21 @@ export function bomError(e: unknown): BomError {
   }
   if (status === 409) {
     // 替代料唯一键冲突：{code: "duplicate", field: "priority" | "material"}
-    const o = d as { code?: string; field?: string } | null
+    const o = d as {
+      code?: string
+      field?: string
+      details?: BomRef[]
+    } | null
+    // D47 / D48：结构校验，details 列出导致问题的产品与 BOM 版本
+    if (o && typeof o === 'object' && o.code && STRUCT[o.code]) {
+      const refs = Array.isArray(o.details) ? o.details : []
+      return {
+        message: t(STRUCT[o.code], {
+          items: refs.length ? refList(refs) : '-',
+        }),
+        fields: [],
+      }
+    }
     if (o && typeof o === 'object' && o.code === 'duplicate') {
       const message = t(
         o.field === 'priority'

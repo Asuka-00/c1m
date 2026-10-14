@@ -1,12 +1,12 @@
 /**
  * BOM 接口（P1 / F3，bom.md v1.1）。
  *
- * - 主表 / 明细 / 替代料走通用接口：`/mes/bom`、`/mes/bom-line`、`/mes/bom-line-substitute`
- *   （`mes.bom:read` / `mes.bom:write`；替代料只能挂在物料行上，同一行内优先级、物料各自唯一，冲突 409）
+ * - 主表走通用接口 `/mes/bom`（`mes.bom:read` / `mes.bom:write`）；替代料只能挂在物料行上，
+ *   同一行内优先级、物料各自唯一。
  * - `GET /mes/bom/tree?bom_id=`：某版本的明细（含替代料）；半成品行带 `child`，
  *   为该半成品当前生效版本的明细（只读，§7.1 两级）
- * - 草稿明细整单替换（`PUT /mes/bom/{id}/lines`，§7.2 / 验收 13）后端尚未提供，
- *   见 `replaceLines` 与 `features/mes/product/bom-save.ts` 的 `BOM_REPLACE_LINES`。
+ * - 草稿明细整单替换：`PUT /mes/bom/{id}/lines`（§7.2 / 验收 13，后端 99cc18b），
+ *   页面只用它保存明细与替代料，见 `features/mes/product/bom-save.ts`。
  * - `POST /mes/bom/{id}/activate`、`/void`（`mes.bom:activate`）、`/copy`（`mes.bom:write`）：
  *   请求体必须为空（D32，带任何字段 422），这里不传 data。
  * - `GET /mes/uom-conversion`：单位换算，明细单位只能从中选择。
@@ -85,27 +85,22 @@ export interface UomConversion {
   factor: number
 }
 
-/** 新建 / 修改明细的请求体（数量以字符串传，避免浮点误差）。 */
-export interface BomLineBody {
-  line_no?: number
-  component_type?: 'material' | 'product'
-  material_id?: string | null
-  component_product_id?: string | null
-  qty?: string
-  uom_id?: string
-  per_basis?: string
-  scrap_rate?: number
-  consume_mode?: string
-  remark?: string | null
-}
-
 export interface BomSubstituteBody {
   material_id: string | null
   priority: number
 }
 
 /** 整单替换的一行：明细字段 + 替代料。 */
-export interface BomReplaceLine extends BomLineBody {
+export interface BomReplaceLine {
+  line_no: number
+  component_type: 'material' | 'product'
+  material_id?: string | null
+  component_product_id?: string | null
+  qty: string
+  uom_id?: string
+  per_basis: string
+  scrap_rate: number
+  consume_mode: string
   substitutes: BomSubstituteBody[]
 }
 
@@ -140,26 +135,9 @@ export const bomApi = {
   /** 复制为新草稿：请求体为空（D32）。 */
   copy: (id: string) =>
     http.post<Bom>(`/mes/bom/${id}/copy`).then((r) => r.data),
-  addLine: (bomId: string, body: BomLineBody) =>
-    http
-      .post<BomLine>('/mes/bom-line', { bom_id: bomId, ...body })
-      .then((r) => r.data),
-  updateLine: (id: string, body: BomLineBody) =>
-    http.patch<BomLine>(`/mes/bom-line/${id}`, body).then((r) => r.data),
-  removeLine: (id: string) =>
-    http.delete(`/mes/bom-line/${id}`).then((r) => r.data),
-  addSubstitute: (lineId: string, body: BomSubstituteBody) =>
-    http
-      .post<BomSubstitute>('/mes/bom-line-substitute', {
-        bom_line_id: lineId,
-        ...body,
-      })
-      .then((r) => r.data),
-  removeSubstitute: (id: string) =>
-    http.delete(`/mes/bom-line-substitute/${id}`).then((r) => r.data),
   /**
-   * 整单替换草稿明细（含替代料），后端一个事务完成；非草稿 409。
-   * 后端尚未提供该接口（架构师已提给后端），提供后把 `BOM_REPLACE_LINES` 置为 true 即可切换。
+   * 整单替换草稿明细（含替代料），后端一个事务完成，失败整单回滚。
+   * 错误顺序：403 无权限 → 422 请求体 → 404 → 409 非草稿；业务 422 只报第一条出错行。
    */
   replaceLines: (bomId: string, lines: BomReplaceLine[]) =>
     http.put<BomTree>(`/mes/bom/${bomId}/lines`, { lines }).then((r) => r.data),

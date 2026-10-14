@@ -1,24 +1,21 @@
 /**
  * 草稿明细保存（F3，bom.md §7.2，验收 13）。
  *
- * 两种实现，页面只调用 `saveDraft`：
- * - `replace`：`PUT /mes/bom/{id}/lines` 整单提交（含替代料），后端一个事务完成，失败时整单不生效。
- * - `perLine`：逐行调用通用接口（明细 / 替代料），中途失败时已提交的部分不回滚。
- *
- * 后端目前没有整单替换接口，`BOM_REPLACE_LINES` 先为 false；接口上线后改成 true 即可切换，
- * 页面与错误定位（`BomSaveError.line` 为编辑框里的行下标）不用改。
+ * `PUT /mes/bom/{id}/lines` 整单提交（含替代料），后端一个事务完成：任一处失败整单回滚，
+ * 什么都不改，所以失败后页面保留输入、改完直接重试即可。
+ * - 物料字段 `material_id`，半成品字段 `component_product_id`，只带当前组件类型那一个。
+ * - 每行必须带 `line_no`（后端不自动编号）；编辑框留空的行按顺序接在最大行号后面（+10）。
+ * - 请求体严格校验，多出字段 422 `extra_forbidden`，只发白名单字段。
+ * - `{lines: []}` 清空明细（删光所有行时就是这样）。
+ * - 422 的 loc 是 `["body","lines",k,...]`，k 为请求里的下标，`BomSaveError.lineMap[k]` 换回编辑框下标。
  */
 import {
   bomApi,
   type Bom,
   type BomLine,
-  type BomLineBody,
   type BomReplaceLine,
   type BomSubstituteBody,
 } from '@/lib/api/mes/bom'
-
-/** 后端提供 `PUT /mes/bom/{id}/lines` 后置为 true。 */
-export const BOM_REPLACE_LINES = false
 
 /** 编辑中的一条替代料。 */
 export interface SubDraft {
@@ -49,14 +46,11 @@ export interface LineDraft {
 }
 
 /**
- * 保存失败：`line` 为编辑框行下标（主表字段为 null），`sub` 为该行替代料下标。
- * 整单模式下 `lineMap[k]` 把请求里第 k 行换回编辑框下标（422 的 loc 为 ["body","lines",k,...]）。
+ * 保存失败：`lineMap[k]` 把请求里第 k 行换回编辑框下标；主表说明保存失败时为 null。
  */
 export class BomSaveError {
   constructor(
     readonly error: unknown,
-    readonly line: number | null,
-    readonly sub: number | null = null,
     readonly lineMap: number[] | null = null
   ) {}
 }
@@ -94,20 +88,21 @@ export const toLineDraft = (l: BomLine): LineDraft => ({
   subs: (l.substitutes ?? []).map(toSubDraft),
 })
 
-/** 明细请求体：只带当前组件类型对应的引用字段（另一个由后端清空）。 */
-export function lineBody(d: LineDraft): BomLineBody {
+/** 整单的一行：只带白名单字段和当前组件类型对应的引用字段。 */
+export function replaceLine(d: LineDraft, lineNo: number): BomReplaceLine {
   const product = d.component_type === 'product'
   return {
-    line_no: Number(d.line_no),
+    line_no: lineNo,
     component_type: d.component_type,
     ...(product
-      ? { component_product_id: d.component_product_id ?? undefined }
-      : { material_id: d.material_id ?? undefined }),
+      ? { component_product_id: d.component_product_id }
+      : { material_id: d.material_id }),
     qty: d.qty.trim(),
-    uom_id: d.uom_id || undefined,
+    ...(d.uom_id ? { uom_id: d.uom_id } : {}),
     per_basis: d.per_basis,
     scrap_rate: Number(d.scrap_rate || 0),
     consume_mode: d.consume_mode,
+    substitutes: product ? [] : d.subs.map(subBody),
   }
 }
 
@@ -116,113 +111,40 @@ export const subBody = (s: SubDraft): BomSubstituteBody => ({
   priority: Number(s.priority),
 })
 
-/** 只传改过的字段。 */
-export function diff(a: BomLineBody, b: BomLineBody): BomLineBody {
-  const out: Record<string, unknown> = {}
-  for (const [k, v] of Object.entries(b))
-    if (a[k as keyof BomLineBody] !== v) out[k] = v
-  return out as BomLineBody
+/** 行号：编辑框里填了正整数就用它，留空 / 非法的按顺序接在最大行号后面（+10）。 */
+function lineNos(rows: LineDraft[]): number[] {
+  const valid = (v: string) => /^\d+$/.test(v.trim()) && Number(v) > 0
+  let next = Math.max(
+    0,
+    ...rows.filter((r) => valid(r.line_no)).map((r) => Number(r.line_no))
+  )
+  return rows.map((r) => (valid(r.line_no) ? Number(r.line_no) : (next += 10)))
 }
-
-/** 替代料只对物料行有效。 */
-const liveSubs = (d: LineDraft) =>
-  d.component_type === 'material' ? d.subs : []
 
 export interface SaveArgs {
   bom: Bom
   desc: string
   rows: LineDraft[]
-  /** 已保存状态（按明细 id）；逐行模式下每步成功后就地更新，重试不会重复提交 */
-  saved: Map<string, LineDraft>
-  /** 逐行模式：某行 / 替代料拿到新 id 时回写到编辑框 */
-  patchRow: (i: number, patch: Partial<LineDraft>) => void
 }
 
-/** 保存草稿（主表说明 + 明细 + 替代料）。失败时抛 `BomSaveError`。 */
-export async function saveDraft(
-  a: SaveArgs,
-  mode: 'replace' | 'perLine' = BOM_REPLACE_LINES ? 'replace' : 'perLine'
-): Promise<void> {
-  if (a.desc !== (a.bom.description ?? '')) {
+/** 保存草稿（主表说明 + 整单明细与替代料）。失败时抛 `BomSaveError`。 */
+export async function saveDraft({ bom, desc, rows }: SaveArgs): Promise<void> {
+  if (desc !== (bom.description ?? '')) {
     try {
-      await bomApi.update(a.bom.id, a.desc.trim())
+      await bomApi.update(bom.id, desc.trim())
     } catch (e) {
       throw new BomSaveError(e, null)
     }
   }
-  if (mode === 'replace') return saveReplace(a)
-  return savePerLine(a)
-}
-
-async function saveReplace({ bom, rows }: SaveArgs) {
-  const idx: number[] = []
-  const lines: BomReplaceLine[] = []
-  rows.forEach((r, i) => {
-    if (r.removed) return
-    idx.push(i)
-    lines.push({ ...lineBody(r), substitutes: liveSubs(r).map(subBody) })
-  })
+  const live = rows.map((r, i) => ({ r, i })).filter((x) => !x.r.removed)
+  const nos = lineNos(live.map((x) => x.r))
+  const lines = live.map((x, k) => replaceLine(x.r, nos[k]))
   try {
     await bomApi.replaceLines(bom.id, lines)
   } catch (e) {
-    throw new BomSaveError(e, null, null, idx)
-  }
-}
-
-const sameSub = (a: SubDraft, b: SubDraft) =>
-  a.material_id === b.material_id && Number(a.priority) === Number(b.priority)
-
-async function savePerLine({ bom, rows, saved, patchRow }: SaveArgs) {
-  for (let i = 0; i < rows.length; i++) {
-    const r = rows[i]
-    const old = r.id ? saved.get(r.id) : undefined
-    let id = r.id
-    const subs = liveSubs(r).map((s) => ({ ...s }))
-    try {
-      if (r.removed) {
-        // 删除明细时后端级联删除其替代料
-        if (r.id) {
-          await bomApi.removeLine(r.id)
-          saved.delete(r.id)
-        }
-        continue
-      }
-      // 1) 先删掉去掉的 / 改过的替代料（同一行内优先级唯一，先删后建才能互换优先级）
-      if (old) {
-        for (const s of [...old.subs]) {
-          const now = subs.find((x) => x.id === s.id)
-          if (now && sameSub(now, s)) continue
-          await bomApi.removeSubstitute(s.id!)
-          old.subs = old.subs.filter((x) => x !== s)
-          if (now) now.id = undefined
-        }
-      }
-      // 2) 明细本身
-      if (!id) {
-        id = (await bomApi.addLine(bom.id, lineBody(r))).id
-        saved.set(id, { ...r, id, subs: [] })
-        patchRow(i, { id, subs: subs.map((x) => ({ ...x })) })
-      } else if (old) {
-        const ch = diff(lineBody(old), lineBody(r))
-        if (Object.keys(ch).length) await bomApi.updateLine(id, ch)
-        saved.set(id, { ...r, subs: old.subs })
-        patchRow(i, { subs: subs.map((x) => ({ ...x })) })
-      }
-    } catch (e) {
-      throw new BomSaveError(e, i)
-    }
-    // 3) 新建替代料（新加的，或改过、上一步已删掉的）
-    const target = saved.get(id!)!
-    for (let j = 0; j < subs.length; j++) {
-      if (subs[j].id) continue
-      try {
-        const created = await bomApi.addSubstitute(id!, subBody(subs[j]))
-        subs[j] = { ...subs[j], id: created.id }
-        target.subs = [...target.subs, subs[j]]
-        patchRow(i, { subs: subs.map((x) => ({ ...x })) })
-      } catch (e) {
-        throw new BomSaveError(e, i, j)
-      }
-    }
+    throw new BomSaveError(
+      e,
+      live.map((x) => x.i)
+    )
   }
 }
