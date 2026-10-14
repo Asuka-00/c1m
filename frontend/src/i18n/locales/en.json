@@ -1517,11 +1517,12 @@
         "strip": "Output {{n}}: strip count is required",
         "alloc": "Output {{n}}: allocated dies must be non-negative integers",
         "noDie": "Output {{n}}: allocate at least 1 die",
-        "balance": "{{wafer}}: allocated {{allocated}}, good {{good}}; quantities don't balance"
+        "balance": "{{wafer}}: allocated {{allocated}}, good {{good}}; quantities don't balance",
+        "noGross": "{{wafer}}: the product has no gross die; please enter the good qty"
       },
       "be": {
         "manualWithMap": "Has a substrate map; manual good qty not allowed",
-        "noGross": "No substrate map and the product has no gross die; enter good qty with a reason",
+        "noGross": "The product has no gross die; please enter the good qty",
         "reason": "A reason code is required for manual good qty",
         "reasonNotFound": "Reason code not found",
         "noWafer": "No wafers to transform",

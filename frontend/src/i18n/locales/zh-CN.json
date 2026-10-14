@@ -1517,11 +1517,12 @@
         "strip": "输出 {{n}}：转换为条时必须填条数",
         "alloc": "输出 {{n}}：分配颗数必须是非负整数",
         "noDie": "输出 {{n}}：至少分配 1 颗",
-        "balance": "{{wafer}}：已分配 {{allocated}}，良品 {{good}}，数量不守恒"
+        "balance": "{{wafer}}：已分配 {{allocated}}，良品 {{good}}，数量不守恒",
+        "noGross": "{{wafer}}：产品没有 gross die，请填写良品数"
       },
       "be": {
         "manualWithMap": "已有坐标图，不能人工录入良品数",
-        "noGross": "没有坐标图且产品未设 gross die，请人工录入良品数并填原因",
+        "noGross": "产品没有 gross die，请填写良品数",
         "reason": "人工录入良品数必须填原因码",
         "reasonNotFound": "原因码不存在",
         "noWafer": "没有可转换的晶圆",

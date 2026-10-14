@@ -50,6 +50,7 @@ export function useWaferMaps(cx: ExecContext, open: boolean): TrfWafer[] {
       code: u.code,
       map: q?.isSuccess ? q.data : undefined,
       gross,
+      noGross: prod.isSuccess && gross === undefined,
     }
   })
 }

@@ -105,6 +105,44 @@ describe('F8 单位转换：纯函数', () => {
     expect(draftErrors(g, two)).toContain(t('mes.trf.e.noDie', { n: 1 }))
   })
 
+  it('FE-F8-2 产品没有 gross die 且良品数留空：提交前三语提示，后端 422 也不显示英文', async () => {
+    const w: TrfWafer[] = [
+      { id: 'U2', code: 'FX1074-W1', map: null, noGross: true },
+    ]
+    expect(draftErrors(w, draft())).toEqual([
+      t('mes.trf.e.noGross', { wafer: 'FX1074-W1' }),
+    ])
+    // 填了良品数（带原因码）后不再提示
+    expect(
+      draftErrors(
+        w,
+        draft({ manual: { U2: { good: '20', fail: '' } }, reason_id: 'RC1' })
+      )
+    ).toEqual([])
+    const e = err(422, [
+      {
+        loc: ['body', 'manual_good'],
+        msg: 'FX1074-W1: no substrate map and product has no gross die; enter good qty with a reason',
+        type: 'value_error',
+      },
+      {
+        loc: ['body', 'outputs', 0, 'sources'],
+        msg: 'at least one die',
+        type: 'value_error',
+      },
+    ])
+    expect(transformErrorText(e)).toBe(`FX1074-W1: ${t('mes.trf.be.noGross')}`)
+    for (const [lng, text] of [
+      ['zh-CN', '产品没有 gross die，请填写良品数'],
+      ['en', 'The product has no gross die; please enter the good qty'],
+      ['ja', '製品に gross die がありません。良品数を入力してください'],
+    ]) {
+      await i18n.changeLanguage(lng)
+      expect(t('mes.trf.be.noGross')).toBe(text)
+      expect(transformErrorText(e)).not.toMatch(/no substrate map/)
+    }
+  })
+
   it('人工良品不带原因码、分配不守恒、条数缺失都在本地拦下', () => {
     const d = draft({
       manual: { U2: { good: '20', fail: '' } },

@@ -40,6 +40,8 @@ export interface TrfWafer {
   } | null
   /** 产品 gross die（没有坐标图且不人工录入时的良品数；未知为 undefined） */
   gross?: number
+  /** 已查到产品且产品没有 gross die（此时无图晶圆必须人工录入良品数） */
+  noGross?: boolean
 }
 
 export interface TrfOutput {
@@ -138,6 +140,10 @@ export function draftErrors(wafers: TrfWafer[], d: TrfDraft): string[] {
         if (Number.isNaN(intOf(v)))
           out.push(t('mes.trf.e.int', { wafer: w.code }))
   }
+  // FE-F8-2：无图、良品数留空且产品没有 gross die → 提交前就提示（后端会 422）
+  for (const w of wafers)
+    if (w.map === null && w.noGross && intOf(d.manual[w.id]?.good) === null)
+      out.push(t('mes.trf.e.noGross', { wafer: w.code }))
   if (wafers.some((w) => isManual(w, d)) && !d.reason_id)
     out.push(t('mes.trf.e.reason'))
   d.outputs.forEach((o, i) => {
@@ -216,7 +222,7 @@ const MSG_RULES: [RegExp, string][] = [
   [/duplicate bin/, 'mes.bin.be.duplicate'],
   [/no gross die to check bins/, 'mes.bin.be.noGross'],
   [/different steps; route required/, 'mes.bin.be.route'],
-  [/no substrate map and product has no gross die/, 'mes.trf.be.noGross'],
+  [/product has no gross die(?!\s+to check)/, 'mes.trf.be.noGross'],
   [/reason required/, 'mes.trf.be.reason'],
   [/reason not found/, 'mes.trf.be.reasonNotFound'],
   [/no wafer units/, 'mes.trf.be.noWafer'],
@@ -255,7 +261,11 @@ export function transformErrorText(e: unknown): string {
         if (!hit) return msg
         return wafer ? `${wafer}: ${t(hit[1])}` : t(hit[1])
       })
-      return [...new Set(msgs)].join('；')
+      // 缺 gross die 时后端同时报“至少分配 1 颗”，只保留前者
+      const gross = msgs.some((m) => m.endsWith(t('mes.trf.be.noGross')))
+      return [...new Set(msgs)]
+        .filter((m) => !(gross && m === t('mes.trf.be.noDie')))
+        .join('；')
     }
   }
   return mesErrorMessage(e, undefined)
