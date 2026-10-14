@@ -2080,6 +2080,7 @@
     "mes_wh__read": "倉庫·閲覧",
     "mes_wh__write": "倉庫·編集",
     "mes_eap__write": "EAP イベント書込（サービスアカウント）",
+    "mes_eap__read_master": "EAP マスタ参照（サービスアカウント）",
     "mes_equipment__e10": "設備·E10 状態変更",
     "mes_equipment__pm": "設備·PM 記録",
     "mes_equipment__mount": "設備·資材装着 / 取外し",
@@ -2156,6 +2157,7 @@
     "mes_wh__read": "許可：倉庫·閲覧",
     "mes_wh__write": "許可：倉庫·編集",
     "mes_eap__write": "許可：EAP イベント書込（サービスアカウント）",
+    "mes_eap__read_master": "許可：EAP マスタ参照（サービスアカウント）",
     "mes_equipment__e10": "許可：設備·E10 状態変更",
     "mes_equipment__pm": "許可：設備·PM 記録",
     "mes_equipment__mount": "許可：設備·資材装着 / 取外し",
@@ -2182,6 +2184,6 @@
     "owner": "全権限を持つシステム管理者",
     "admin": "ユーザー・設定・全業務データを管理",
     "member": "業務データの閲覧のみ",
-    "eap_service": "/mes/eap/events での設備イベント書込のみ"
+    "eap_service": "/mes/eap/events での設備イベント書込、設備・アラームコード・E10 状態の参照"
   }
 }

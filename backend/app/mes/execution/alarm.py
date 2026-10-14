@@ -28,7 +28,7 @@ from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, TABLES
 from app.core.spec.errors import http_422
-from app.core.spec.serialize import serialize
+from app.core.spec.serialize import SERIALIZE_HOOKS, serialize
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
 from app.mes.equipment.service import e10_current, e10_log
@@ -199,6 +199,17 @@ def _e10(s: Session, tid: uuid.UUID, eq: Row, code: Row, user: Any, source: str)
     return {**base, "state_changed": True, "state_skip_reason": None}
 
 
+def _log_hook(_s: Session, _t: uuid.UUID, rows: list[Row], out: list[Row]) -> None:
+    """报警履历的通用列表 / 详情也平铺状态联动结果（未联动时 false / null）。"""
+    for src, dst in zip(rows, out, strict=True):
+        ch = src.get("e10_change") or {}
+        dst["state_changed"] = bool(ch.get("state_changed"))
+        dst["state_skip_reason"] = ch.get("state_skip_reason")
+
+
+SERIALIZE_HOOKS[LOG] = _log_hook
+
+
 def detail(s: Session, tid: uuid.UUID, row: Row) -> Row:
     """报警详情：履历行 + 设备编码 + 关联批次。"""
     out = serialize(s, tid, ENTITIES[LOG], [row])[0]
@@ -287,11 +298,13 @@ def set_alarm(
         dup = act[0] if act else None
     if dup:
         s.commit()
+        # D57 / P2-D8：重复上报返回原记录的状态联动结果
+        ch = dup.get("e10_change") or {}
         return {
             "data": detail(s, tid, dup),
             "duplicate": True,
-            "state_changed": False,
-            "state_skip_reason": None,
+            "state_changed": bool(ch.get("state_changed")),
+            "state_skip_reason": ch.get("state_skip_reason"),
         }
     at = _time(body.get("set_at"), "set_at")
     lots: list[Row] = []

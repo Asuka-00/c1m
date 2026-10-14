@@ -2080,6 +2080,7 @@
     "mes_wh__read": "仓储·查看",
     "mes_wh__write": "仓储·编辑",
     "mes_eap__write": "EAP 事件写入（服务账号）",
+    "mes_eap__read_master": "EAP 主数据只读（服务账号）",
     "mes_equipment__e10": "设备·变更 E10 状态",
     "mes_equipment__pm": "设备·记录保养",
     "mes_equipment__mount": "设备·上料 / 卸料",
@@ -2156,6 +2157,7 @@
     "mes_wh__read": "允许：仓储·查看",
     "mes_wh__write": "允许：仓储·编辑",
     "mes_eap__write": "允许：EAP 事件写入（服务账号）",
+    "mes_eap__read_master": "允许：EAP 主数据只读（服务账号）",
     "mes_equipment__e10": "允许：设备·变更 E10 状态",
     "mes_equipment__pm": "允许：设备·记录保养",
     "mes_equipment__mount": "允许：设备·上料 / 卸料",
@@ -2182,6 +2184,6 @@
     "owner": "拥有全部权限的系统管理员",
     "admin": "管理用户、系统设置与全部业务数据",
     "member": "只读访问业务数据",
-    "eap_service": "只能调用 /mes/eap/events 写设备事件"
+    "eap_service": "调用 /mes/eap/events 写设备事件；只读设备、报警码、E10 状态"
   }
 }

@@ -20,9 +20,11 @@ class MesError(Exception):
         self.errors = errors
 
 
-def _item(f: Any, m: str, code: str | None = None) -> dict[str, Any]:
+def _item(
+    f: Any, m: str, code: str | None = None, *, where: str = "body"
+) -> dict[str, Any]:
     d: dict[str, Any] = {
-        "loc": ["body", *f] if isinstance(f, tuple | list) else ["body", f],
+        "loc": [where, *f] if isinstance(f, tuple | list) else [where, f],
         "msg": m,
         "type": code or "value_error",
     }
@@ -41,6 +43,14 @@ def http_422(errors: Sequence[tuple[Any, ...]]) -> HTTPException:
     return HTTPException(
         status_code=422,
         detail=[_item(*e) for e in errors],
+    )
+
+
+def query_422(errors: Sequence[tuple[Any, ...]]) -> HTTPException:
+    """查询参数错误的 422（D65）：格式同 :func:`http_422`，但 ``loc`` 以 ``query`` 开头。"""
+    return HTTPException(
+        status_code=422,
+        detail=[_item(*e, where="query") for e in errors],
     )
 
 

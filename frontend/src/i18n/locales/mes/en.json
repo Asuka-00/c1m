@@ -2080,6 +2080,7 @@
     "mes_wh__read": "Warehouse·View",
     "mes_wh__write": "Warehouse·Edit",
     "mes_eap__write": "EAP events (service account)",
+    "mes_eap__read_master": "EAP master data read (service account)",
     "mes_equipment__e10": "Equipment·Change E10 state",
     "mes_equipment__pm": "Equipment·Record PM",
     "mes_equipment__mount": "Equipment·Mount / unmount material",
@@ -2156,6 +2157,7 @@
     "mes_wh__read": "Allows: Warehouse·View",
     "mes_wh__write": "Allows: Warehouse·Edit",
     "mes_eap__write": "Allows: EAP events (service account)",
+    "mes_eap__read_master": "Allows: EAP master data read (service account)",
     "mes_equipment__e10": "Allows: Equipment·Change E10 state",
     "mes_equipment__pm": "Allows: Equipment·Record PM",
     "mes_equipment__mount": "Allows: Equipment·Mount / unmount material",
@@ -2182,6 +2184,6 @@
     "owner": "System administrator with all permissions",
     "admin": "Manages users, settings and all business data",
     "member": "Read-only access to business data",
-    "eap_service": "Posts equipment events via /mes/eap/events only"
+    "eap_service": "Posts equipment events via /mes/eap/events; reads equipment, alarm codes and E10 states"
   }
 }

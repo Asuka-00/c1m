@@ -12,7 +12,7 @@ from app.core.spec.base import Row, conn, table
 from app.core.spec.engine import (
     Entity,
 )
-from app.core.spec.errors import http_422
+from app.core.spec.errors import query_422
 from app.core.spec.serialize import coerce, serialize
 
 
@@ -61,7 +61,7 @@ def apply_filters(
             try:
                 ids = [uuid.UUID(x) for x in raw.split(",") if x]
             except ValueError as ex:
-                raise http_422([("id", "id: invalid uuid")]) from ex
+                raise query_422([("id", "id: invalid uuid")]) from ex
             stmt = stmt.where(t.c.id.in_(ids))
             continue
         if not f and name.startswith("has_"):
@@ -72,7 +72,7 @@ def apply_filters(
                 yes = raw.lower() in ("true", "1")
                 stmt = stmt.where(col.is_not(None) if yes else col.is_(None))
                 continue
-            raise http_422([(name, f"{name}: must be true or false")])
+            raise query_422([(name, f"{name}: must be true or false")])
         if not f and name.endswith(("_from", "_to")):
             stmt = _range(e, stmt, name, raw)
             continue
@@ -84,7 +84,7 @@ def apply_filters(
         try:
             v = coerce(f, raw)
         except ValueError as ex:
-            raise http_422([(name, f"{name} {ex}")]) from ex
+            raise query_422([(name, f"{name} {ex}")]) from ex
         stmt = stmt.where(t.c[f.column] == v)
     return stmt
 
@@ -108,7 +108,7 @@ def _range(e: Entity, stmt: sa.Select[Any], name: str, raw: str) -> sa.Select[An
             else datetime.fromisoformat(raw.replace("Z", "+00:00"))
         )
     except ValueError as ex:
-        raise http_422([(name, f"{name}: invalid date")]) from ex
+        raise query_422([(name, f"{name}: invalid date")]) from ex
     c = t.c[col]
     return stmt.where(c >= v if bound == "from" else c <= v)
 
@@ -157,8 +157,8 @@ def list_rows(
     cols = sortable(e)
     key = sort_by or e.sort_default
     if key not in cols:
-        raise HTTPException(
-            status_code=422, detail=f"sort_by must be one of: {', '.join(sorted(cols))}"
+        raise query_422(
+            [("sort_by", f"sort_by must be one of: {', '.join(sorted(cols))}")]
         )
     order = sort_order if sort_by else default_order(e, key)
     col = cols[key]
@@ -223,7 +223,7 @@ def distinct_values(
     """
     f = e.field(name)
     if not f or f.type != "str" or not f.filterable:
-        raise HTTPException(status_code=422, detail=f"{name} is not a text filter")
+        raise query_422([("field", f"{name} is not a text filter")])
     sub = base_select(e, tenant_id).subquery()
     stmt = sa.select(sub.c[f.column]).where(sub.c[f.column].is_not(None)).distinct()
     if q:

@@ -3,7 +3,7 @@ from sqlmodel import Session, col, select
 
 from app.core.config import settings
 from app.platform.rbac.models import Role
-from app.platform.rbac.permissions import DEFAULT_PERMISSIONS
+from app.platform.rbac.permissions import DEFAULT_PERMISSIONS, SERVICE_ONLY_PERMISSIONS
 from app.platform.rbac.service import has_permissions
 from app.platform.users import service as crud
 from app.platform.users.models import User
@@ -44,10 +44,10 @@ def test_seeded_roles(db: Session) -> None:
     user = db.exec(
         select(Role).where(Role.name == "user", col(Role.tenant_id).is_(None))
     ).one()
-    # 服务账号专用权限（mes.eap:write，D54-1）不进平台 admin
-    assert {p.code for p in admin.permissions} == set(DEFAULT_PERMISSIONS) - {
-        "mes.eap:write"
-    }
+    # 服务账号专用权限（mes.eap:write D54-1、mes.eap:read_master D65）不进平台 admin
+    assert {p.code for p in admin.permissions} == set(
+        DEFAULT_PERMISSIONS
+    ) - SERVICE_ONLY_PERMISSIONS
     # business access is tenant-level; the platform "user" role carries no perms
     assert {p.code for p in user.permissions} == set()
 

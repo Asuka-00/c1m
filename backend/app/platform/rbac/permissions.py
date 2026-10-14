@@ -40,7 +40,7 @@ MES_PERMISSIONS: dict[str, str] = {
 MES_PERMISSIONS.update(_MES_EXTRA)
 TENANT_PERMISSIONS.update(MES_PERMISSIONS)
 # 只给服务账号的权限：不进 owner / admin 等通用角色（D54-1）
-SERVICE_ONLY_PERMISSIONS = {"mes.eap:write"}
+SERVICE_ONLY_PERMISSIONS = {"mes.eap:write", "mes.eap:read_master"}
 EAP_SERVICE_ROLE = "eap_service"
 DEFAULT_PERMISSIONS = {**PLATFORM_PERMISSIONS, **TENANT_PERMISSIONS}
 
@@ -71,7 +71,7 @@ TENANT_ROLES: dict[str, tuple[str, list[str]]] = {
         ["members:read", *(p for p in MES_PERMISSIONS if p.endswith(":read"))],
     ),
     EAP_SERVICE_ROLE: (
-        "EAP / simulator service account (POST /mes/eap/events only)",
+        "EAP / simulator service account (POST /mes/eap/events; D65 read-only equipment, alarm codes, E10 states)",
         sorted(SERVICE_ONLY_PERMISSIONS),
     ),
 }

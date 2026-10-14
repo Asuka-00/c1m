@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.core.deps import SessionDep
 from app.core.models import iso_utc
 from app.core.spec.engine import ENTITIES
-from app.core.spec.errors import http_422
+from app.core.spec.errors import http_422, query_422
 from app.core.spec.serialize import serialize
 from app.mes.common import idempotency as idem
 from app.mes.common.guard import perm_body
@@ -399,7 +399,7 @@ def customer_lots(
     """B7: look up internal lot numbers by customer lot no., or the reverse."""
     _need(ctx, "mes.exec:read")
     if not customer_lot_no and not lot_no:
-        raise http_422([("customer_lot_no", "customer_lot_no or lot_no required")])
+        raise query_422([("customer_lot_no", "customer_lot_no or lot_no required")])
     return {"data": lookup_customer_lots(session, ctx.id, customer_lot_no, lot_no)}
 
 

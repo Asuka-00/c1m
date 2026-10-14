@@ -37,11 +37,18 @@ from app.platform.auth.deps import CurrentTenant
 from app.platform.tenants.service import TenantContext
 
 router = APIRouter(prefix="/mes", tags=["mes"])
+# D65：mes.eap:read_master 只放开这三个实体的列表与详情（不含导出、树、去重等）
+EAP_READ_PERM = "mes.eap:read_master"
+EAP_READ_ENTITIES = frozenset({"equipment", "alarm_code", "e10_state"})
 RESERVED = {"page", "page_size", "skip", "limit", "sort_by", "sort_order", "q"}
 
 
 def require_entity(
-    ctx: TenantContext, code: str, action: Literal["read", "write"]
+    ctx: TenantContext,
+    code: str,
+    action: Literal["read", "write"],
+    *,
+    eap: bool = False,
 ) -> Entity:
     """获取实体并校验当前租户上下文是否具备其模块权限。
 
@@ -49,6 +56,13 @@ def require_entity(
         HTTPException: 实体不存在（404）或无权限（403）。
     """
     e = get_entity(code)
+    if (
+        eap
+        and action == "read"
+        and e.code in EAP_READ_ENTITIES
+        and ctx.can(EAP_READ_PERM)
+    ):
+        return e
     if not ctx.can(perm(e.pmod, action)):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     return e
@@ -168,7 +182,7 @@ def mes_list(
 ) -> Any:
     """Paginated list (20/page default) with ?q= search, ?sort_by=, and filters
     on any enum/bool/ref field (`?site_id=<uuid>`, `?status=active`, ...)."""
-    e = require_entity(ctx, entity, "read")
+    e = require_entity(ctx, entity, "read", eap=True)
     filters = {
         k: v for k, v in request.query_params.items() if k not in RESERVED and v != ""
     }
@@ -244,7 +258,7 @@ async def mes_import(
 def mes_get(
     session: SessionDep, ctx: CurrentTenant, entity: str, rid: uuid.UUID
 ) -> Any:
-    e = require_entity(ctx, entity, "read")
+    e = require_entity(ctx, entity, "read", eap=True)
     return _one(session, ctx, e, get_row(session, e, ctx.id, rid))
 
 
