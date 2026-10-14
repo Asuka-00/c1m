@@ -21,6 +21,7 @@ import {
   type BomStatus,
 } from '@/lib/api/mes/bom'
 import type { MesRow } from '@/lib/api/mes/common'
+import { decimalText } from '@/lib/decimal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -65,9 +66,9 @@ const STATUS_VARIANT: Record<
 /** 状态的本地化名称。 */
 const statusLabel = (s: string) => t(`mes.bomTab.status.${s}`)
 
-/** 数量原样显示（后端 Decimal(18,6)，前端不四舍五入）。 */
+/** 数量按完整十进制显示（接口返回数字，不四舍五入，不出现指数写法）。 */
 const qtyText = (q: number | string | null | undefined) =>
-  q == null ? '—' : String(q)
+  q == null ? '—' : decimalText(q)
 
 /** BOM 权限：写（新建 / 编辑 / 复制）与生效（生效 / 作废）。 */
 function useBomPerms() {
@@ -626,6 +627,11 @@ function EditDialog({
     onError: (x: unknown) => {
       // 整单在一个事务里，失败什么都没改：弹窗不关、输入保留，改完直接重试
       const se = x instanceof BomSaveError ? x : new BomSaveError(x)
+      if (se.local) {
+        setErrs(se.local)
+        setBanner(t('mes.bomTab.err.validation'))
+        return
+      }
       const be = bomError(se.error)
       // loc ["body","lines",k,...] 的 k 是请求下标（D38，从 0 开始），换回编辑框下标
       setErrs(

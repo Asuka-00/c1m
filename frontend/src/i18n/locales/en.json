@@ -1386,7 +1386,10 @@
         "componentNoActiveField": "This semi-finished product has no active BOM",
         "referencedField": "Still used by other active BOMs",
         "refItem": "{{product}} (BOM v{{bom}})",
-        "refSep": ", "
+        "refSep": ", ",
+        "notNumber": "Enter a number",
+        "scrapRange": "Scrap rate must be between 0 and 1",
+        "tooManyDecimals": "At most {{n}} decimal places"
       },
       "componentType": {
         "material": "Material",

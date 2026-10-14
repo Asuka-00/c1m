@@ -99,7 +99,7 @@ export interface BomReplaceLine {
   qty: string
   uom_id?: string
   per_basis: string
-  scrap_rate: number
+  scrap_rate: string
   consume_mode: string
   substitutes: BomSubstituteBody[]
 }

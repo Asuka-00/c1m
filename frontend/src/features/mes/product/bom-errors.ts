@@ -56,6 +56,12 @@ function fieldMessage(it: Item): string {
   const msg = it.msg ?? ''
   const sc = STRUCT[it.code ?? it.type ?? '']
   if (sc) return t(`${sc}Field`)
+  if (it.code === 'too_many_decimals' || it.type === 'too_many_decimals') {
+    const f = it.loc?.[it.loc.length - 1]
+    return t('mes.bomTab.err.tooManyDecimals', {
+      n: f === 'scrap_rate' ? 4 : 6,
+    })
+  }
   if (it.type === 'extra_forbidden' || /not writable|set by POST/.test(msg))
     return t('mes.bomTab.err.notWritable')
   if (/required|missing/i.test(msg) || it.type === 'missing')

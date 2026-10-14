@@ -1,9 +1,11 @@
+import { t } from '@/i18n'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { bomApi, type Bom, type BomLine } from '@/lib/api/mes/bom'
 import {
   BomSaveError,
   type LineDraft,
   saveDraft,
+  validateRows,
   toLineDraft,
 } from './bom-save'
 
@@ -89,7 +91,7 @@ describe('saveDraft 整单提交（PUT /mes/bom/{id}/lines）', () => {
         qty: '0.3',
         uom_id: 'g',
         per_basis: 'die',
-        scrap_rate: 0.02,
+        scrap_rate: '0.02',
         consume_mode: 'issue',
         substitutes: [
           { material_id: 'm2', priority: 1 },
@@ -103,7 +105,7 @@ describe('saveDraft 整单提交（PUT /mes/bom/{id}/lines）', () => {
         qty: '0.3',
         uom_id: 'g',
         per_basis: 'die',
-        scrap_rate: 0.02,
+        scrap_rate: '0.02',
         consume_mode: 'issue',
         substitutes: [],
       },
@@ -148,5 +150,64 @@ describe('saveDraft 整单提交（PUT /mes/bom/{id}/lines）', () => {
     }).catch((e) => e)
     expect(err.lineMap).toBeNull()
     expect(put).not.toHaveBeenCalled()
+  })
+})
+
+describe('validateRows（D49）', () => {
+  const row = (qty: string, scrap_rate: string): LineDraft => ({
+    ...toLineDraft(LINE),
+    qty,
+    scrap_rate,
+  })
+  const errs = (qty: string, scrap: string) =>
+    validateRows([row(qty, scrap)]).map((e) => `${e.field}:${e.message}`)
+
+  it('qty：必须大于 0，最多 6 位小数（去末尾零后算）', () => {
+    expect(errs('0.000001', '0')).toEqual([])
+    expect(errs('1.5000000', '0')).toEqual([])
+    expect(errs('0', '0')).toEqual([`qty:${t('mes.bomTab.err.positive')}`])
+    expect(errs('-1', '0')).toEqual([`qty:${t('mes.bomTab.err.positive')}`])
+    expect(errs('abc', '0')).toEqual([`qty:${t('mes.bomTab.err.notNumber')}`])
+    expect(errs('0.0000001', '0')).toEqual([
+      `qty:${t('mes.bomTab.err.tooManyDecimals', { n: 6 })}`,
+    ])
+    expect(errs('1e-7', '0')).toEqual([
+      `qty:${t('mes.bomTab.err.tooManyDecimals', { n: 6 })}`,
+    ])
+    expect(errs('1e-6', '0')).toEqual([])
+  })
+
+  it('scrap_rate：0 和 1 合法，<0、>1 报错，最多 4 位小数', () => {
+    expect(errs('1', '0')).toEqual([])
+    expect(errs('1', '1')).toEqual([])
+    expect(errs('1', '1.0000')).toEqual([])
+    expect(errs('1', '0.0001')).toEqual([])
+    const range = `scrap_rate:${t('mes.bomTab.err.scrapRange')}`
+    expect(errs('1', '-0.01')).toEqual([range])
+    expect(errs('1', '1.0001')).toEqual([range])
+    expect(errs('1', '1e1')).toEqual([range])
+    expect(errs('1', '0.00001')).toEqual([
+      `scrap_rate:${t('mes.bomTab.err.tooManyDecimals', { n: 4 })}`,
+    ])
+    expect(errs('1', 'x')).toEqual([
+      `scrap_rate:${t('mes.bomTab.err.notNumber')}`,
+    ])
+  })
+
+  it('删除的行不查；校验不过不发请求', async () => {
+    expect(validateRows([{ ...row('-1', '2'), removed: true }])).toEqual([])
+    const put = vi.spyOn(bomApi, 'replaceLines')
+    const err = await saveDraft(args([row('1e-7', '0')])).catch((e) => e)
+    expect(err.local).toHaveLength(1)
+    expect(put).not.toHaveBeenCalled()
+  })
+
+  it('提交去掉末尾零的字符串（含科学计数法换算）', async () => {
+    const put = vi.spyOn(bomApi, 'replaceLines').mockResolvedValue({} as never)
+    await saveDraft(args([row('1.5000000', '1.5e-2')]))
+    expect(put.mock.calls[0][1][0]).toMatchObject({
+      qty: '1.5',
+      scrap_rate: '0.015',
+    })
   })
 })

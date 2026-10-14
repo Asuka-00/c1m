@@ -432,6 +432,24 @@ describe('F3 v1.1 半成品与替代料', () => {
     })
   })
 
+  it('编辑框 qty 超 6 位小数：输入框下提示、不提交（D49）', async () => {
+    mockApi()
+    const put = vi.spyOn(bomApi, 'replaceLines')
+    const s = await setup(ALL)
+    await s
+      .getByRole('button', { name: t('mes.bomTab.edit'), exact: true })
+      .click()
+    const qty1 = s
+      .getByTestId('bom-edit-line-1')
+      .getByLabelText(t('mes.bomTab.col.qty'))
+    await qty1.fill('1e-7')
+    await s.getByRole('button', { name: t('common.save') }).click()
+    await expect
+      .element(s.getByTestId('bom-edit-line-1').getByTestId('bom-field-error'))
+      .toHaveTextContent(t('mes.bomTab.err.tooManyDecimals', { n: 6 }))
+    expect(put).not.toHaveBeenCalled()
+  })
+
   it('整单 422 bom_cycle：标在对应行的半成品输入框下', async () => {
     mockApi()
     mockTree([prodLine])
@@ -618,6 +636,40 @@ describe('bomError', () => {
         })
       ).message
     ).toBe(t('mes.bomTab.err.referenced', { items: 'FG-A v1（BOM v2）' }))
+  })
+
+  it('422 too_many_decimals 标在 qty / scrap_rate（D49）', () => {
+    const r = bomError(
+      axiosErr(422, [
+        {
+          loc: ['body', 'lines', 1, 'scrap_rate'],
+          msg: 'scrap_rate: too many decimals',
+          type: 'too_many_decimals',
+          code: 'too_many_decimals',
+        },
+      ])
+    )
+    expect(r.fields).toEqual([
+      {
+        line: 1,
+        field: 'scrap_rate',
+        message: t('mes.bomTab.err.tooManyDecimals', { n: 4 }),
+      },
+    ])
+    const q = bomError(
+      axiosErr(422, [
+        {
+          loc: ['body', 'lines', 0, 'qty'],
+          msg: 'x',
+          type: 'too_many_decimals',
+        },
+      ])
+    )
+    expect(q.fields[0]).toMatchObject({
+      line: 0,
+      field: 'qty',
+      message: t('mes.bomTab.err.tooManyDecimals', { n: 6 }),
+    })
   })
 
   it('无明细生效 422 提示至少一行', () => {

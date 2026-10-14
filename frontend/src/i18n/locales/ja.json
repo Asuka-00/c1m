@@ -1386,7 +1386,10 @@
         "componentNoActiveField": "この半製品に有効な BOM がありません",
         "referencedField": "他の有効 BOM から参照されています",
         "refItem": "{{product}}（BOM v{{bom}}）",
-        "refSep": "、"
+        "refSep": "、",
+        "notNumber": "数値を入力してください",
+        "scrapRange": "ロス率は 0 から 1 の間で入力してください",
+        "tooManyDecimals": "小数は {{n}} 桁までです"
       },
       "componentType": {
         "material": "資材",
