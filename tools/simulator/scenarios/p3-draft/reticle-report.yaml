@@ -11,7 +11,7 @@
 #     重放按 D57 原状态码 + 原记录、无 duplicate；同 key 不同请求体 422 idempotency_key_reused
 #   - D80 G5：mounted / unmounted / life_reached 带 source、external_event_id（手工为 null）；G6：source ∈ manual/eap/simulator/system
 name: reticle-report
-run_id: ret-report-04
+run_id: ret-report-05
 draft: "等 B11 光罩 event_type（D67 P3 不开）与 D80 落地（下机事件行、10 个写接口 Idempotency-Key 必填、source CHECK）"
 target: http://127.0.0.1:8013
 equipment: [{code: EAP-LT01, type: LITHO}]
@@ -58,8 +58,8 @@ steps:
   - expect_reticle_events: {reticle: R-SIM-03, count: {reticle.unmounted: 1},
                             latest: {event: reticle.unmounted, payload.source: simulator, payload.trigger: manual, payload.external_event_id: $ext.um1}}
   # ---- D80 补充一：10 个手工写接口缺 Idempotency-Key → 422 missing（loc header），不进业务
-  # 前提（QA N-E6，待后端确认）：后端先校验 Idempotency-Key header（D57 依赖层）、再校验状态。R-SIM-04 为 available，
-  #   clean-complete / repair-complete 等对 available 本应 409；若后端先查状态，这些步会得 409 而非 422，等后端定顺序后对齐
+  # 前提（QA N-E6，D81 已定）：缺 Idempotency-Key 422 先于状态 409 / 资源 404，故对 available 的 R-SIM-04 调
+  #   clean-complete / repair-complete 也是 422 missing
   - reticle_mount: {no_idem: true, eq: EAP-LT01, reticle: R-SIM-04, slot: S9, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
   - reticle_unmount: {no_idem: true, reticle: R-SIM-04, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
   - reticle_adjust: {no_idem: true, reticle: R-SIM-04, delta: "1", expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
@@ -106,3 +106,10 @@ steps:
   - reticle_replay: {of: cc6, expect: {status: 200, absent: [duplicate]}}   # 原状态码，不是 409
   - reticle_clean_complete: {idem: ret-rep-cc6b, reticle: R-SIM-06, expect: {status: 409, code: invalid_transition}}   # 新 key 才是真冲突
   - expect_reticle_events: {reticle: R-SIM-06, count: {reticle.clean_completed: 1}}
+  # D81 校验顺序：不存在的 rid 不带 key → 422（不是 404）；带 key → 404
+  - reticle_hold: {no_idem: true, reticle: R-NOT-EXIST, reason: x,
+                   expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
+  - reticle_hold: {idem: ret-rep-ord1, reticle: R-NOT-EXIST, reason: x, expect: {status: 404}}
+  # 状态不对（R-SIM-03 已报废）+ 非法 body → 422（不是 409）；合法 body → 409
+  - reticle_adjust: {idem: ret-rep-ord2, reticle: R-SIM-03, delta: "1.1234567", expect: {status: 422, loc: [body, delta]}}
+  - reticle_adjust: {idem: ret-rep-ord3, reticle: R-SIM-03, delta: "1", expect: {status: 409}}

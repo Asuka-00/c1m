@@ -34,9 +34,18 @@ def check_pattern_config(pattern: Any) -> list[dict[str, Any]]:
 READ_CODE_MAX = 128  # D79 补充二 3
 
 
-def check_read_code(value: Any) -> list[dict[str, Any]]:
-    """OCR 读回码：不校验格式（不合规也记录，按不一致强制 fail）；空值 missing；超过 128 码点 max_length。"""
-    if value is None:
+ABSENT = object()  # 请求体里完全没有 read_code 字段
+
+
+def check_inspect_body(body: dict[str, Any]) -> list[dict[str, Any]]:
+    """检验请求体的 read_code 预校验：缺字段也算 missing（D81 补记）。"""
+    return check_read_code(body.get("read_code", ABSENT))
+
+
+def check_read_code(value: Any = ABSENT) -> list[dict[str, Any]]:
+    """OCR 读回码：不校验格式（不合规也记录，按不一致强制 fail）；缺字段 / null / 空白 missing（D79 补充三、D81）；
+    超过 128 码点 max_length。"""
+    if value is ABSENT or value is None:
         return [{"type": "missing"}]
     if not isinstance(value, str):
         return [{"type": "string_type"}]

@@ -253,7 +253,9 @@ def test_marking_draft_follows_d78():
         codes.count("invalid_transition") == 7
     )  # 作废后上报改为 no_active_marking（D79 补充 2） and "trace_code_mismatch" in codes
     assert codes.count("check_blocked") == 7 and "idempotency_key_reused" in codes
-    assert sum(1 for e in exp if e.get("loc") == ["header", "Idempotency-Key"]) == 3  # 打印、检验、作废
+    assert (
+        sum(1 for e in exp if e.get("loc") == ["header", "Idempotency-Key"]) == 4
+    )  # 打印、检验、作废，D81 不存在主记录作废
     # 补充三 4：逐条列出，值取 config；手工和 EAP 两个入口各有单条和双条
     errs = [e["errors"] for e in exp if "errors" in e and e["errors"][0]["loc"][-1] == "trace_code"]
     assert len(errs) == 15 and sum(1 for x in errs if len(x) == 2) == 2
@@ -271,7 +273,7 @@ def test_marking_draft_follows_d78():
     bad = next(s for s in sc.steps if s.args.get("save_as") == "bad8")
     nxt = sc.steps[sc.steps.index(bad) + 1]
     assert nxt.kind == "expect_marking_events" and nxt.args["audit_count"] == {"trace_code_mismatch": 1}
-    voids = [s for s in sc.steps if s.kind == "marking_void"]
+    voids = [s for s in sc.steps if s.kind == "marking_void" and s.args.get("marking") != "MK-NOT-EXIST"]
     assert [v.args["expect"]["status"] for v in voids] == [422, 403, 422, 422, 422, 200, 409]
     assert voids[0].args["no_idem"] and voids[0].args["expect"]["loc"] == ["header", "Idempotency-Key"]
     evs = [(s.args.get("latest") or {}).get("event") for s in sc.steps if s.kind == "expect_marking_events"]
@@ -420,6 +422,8 @@ def test_marking_draft_follows_d79_supplement2():
     for s in st:
         if s.kind == "marking_inspect" and "read_code" in s.args and not str(s.args["read_code"]).startswith("$"):
             e = s.args["expect"]
+            if e["status"] == 409 or s.args["idem"].startswith("mk-ord"):  # 状态 / 顺序用例，read_code 只是占位
+                continue
             got = check_read_code(s.args["read_code"])
             if e["status"] == 200:
                 assert got == [] and e["body"]["data.result"] == "fail"
@@ -521,7 +525,7 @@ def test_marking_draft_d79_s4_s5():
 
     sc = load("scenarios/p3-draft/marking-report.yaml")
     bad = [s for s in sc.steps if s.kind == "marking_config" and "set" in s.args]
-    assert len(bad) == 10
+    assert len(bad) == 11  # 含 D81 补记 ^[-]+$
     for s in bad:
         assert check_pattern_config(s.args["set"]["trace_code_pattern"]), s.args["set"]
         assert s.args["expect"]["errors"][0]["ctx"] == {"reason": "pattern_unsupported"}
@@ -569,4 +573,34 @@ def test_marking_draft_read_code_n_e4():
     assert check_read_code("\ufeff") == []
     assert fe["status"] == 200 and fe["body"]["data.result"] == "fail" and fe["body"]["data.result_overridden"] is True
     txt = open("scenarios/p3-draft/reticle-report.yaml").read()
-    assert "N-E6" in txt and "先校验 Idempotency-Key header" in txt
+    assert "N-E6" in txt and "D81 已定" in txt
+
+
+def test_d81_order_and_read_code_absent():
+    from sim.marking import check_inspect_body, check_pattern_config, check_read_code
+    from sim.scenario import load
+
+    assert check_read_code() == [{"type": "missing"}] and check_inspect_body({"result": "pass"}) == [
+        {"type": "missing"}
+    ]
+    assert check_inspect_body({"read_code": "A"}) == []
+    assert check_pattern_config("^[-]+$")
+    st = load("scenarios/p3-draft/marking-report.yaml").steps
+    ins = [s for s in st if s.kind == "marking_inspect"]
+    for s in ins:  # 不带 read_code 的检验只能是 422 用例（缺 key 或缺字段）
+        if "read_code" not in s.args:
+            assert s.args["expect"]["status"] == 422 and "read_code" in s.args.get("omit", []), s.args
+    absent = [s for s in ins if "read_code" in s.args.get("omit", []) and not s.args.get("no_idem")]
+    assert all(s.args["expect"]["errors"] == [{"type": "missing", "loc": ["body", "read_code"]}] for s in absent)
+    assert len(absent) >= 2
+    cfg = [s.args["set"]["trace_code_pattern"] for s in st if s.kind == "marking_config" and "set" in s.args]
+    assert "^[-]+$" in cfg
+    mv = [s for s in st if s.kind == "marking_void" and s.args.get("marking") == "MK-NOT-EXIST"]
+    assert [s.args["expect"]["status"] for s in mv] == [422, 404]
+    rt = load("scenarios/p3-draft/reticle-report.yaml").steps
+    nx = [s for s in rt if s.args.get("reticle") == "R-NOT-EXIST"]
+    assert [s.args["expect"]["status"] for s in nx] == [422, 404]
+    od = [s.args["expect"]["status"] for s in rt if str(s.args.get("idem", "")).startswith("ret-rep-ord")]
+    assert od == [404, 422, 409]
+    txt = open("scenarios/p3-draft/reticle-report.yaml").read()
+    assert "待后端确认" not in txt and "等后端定顺序" not in txt
