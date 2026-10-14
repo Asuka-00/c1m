@@ -247,9 +247,13 @@ def test_marking_draft_follows_d78():
     assert sum(1 for e in exp if e.get("loc") == ["header", "Idempotency-Key"]) == 3  # 打印、检验、作废
     # 补充三 4：逐条列出，值取 config；手工和 EAP 两个入口各有单条和双条
     errs = [e["errors"] for e in exp if "errors" in e]
-    assert len(errs) == 6 and sum(1 for x in errs if len(x) == 2) == 2
+    assert len(errs) == 10 and sum(1 for x in errs if len(x) == 2) == 2
+    miss = [x for x in errs if x[0]["type"] == "missing"]
+    assert len(miss) == 2 and all(len(x) == 1 for x in miss)  # 空串 / 纯空白只一条
     for x in errs:
         for it in x:
+            if it["type"] == "missing":
+                continue
             want = {"max_length": "$cfg.trace_code_max_length", "pattern": "$cfg.trace_code_pattern"}[
                 it["ctx"]["reason"]
             ]
@@ -289,3 +293,27 @@ def test_marking_draft_follows_d78():
         parse({"run_id": "m", "steps": [{"marking_inspect": {"result": "pass"}}]})  # 缺 lot
     with pytest.raises(ScenarioError):
         parse({"run_id": "m", "steps": [{"marking_replay": {"of": "nope"}}]})
+
+
+def test_marking_draft_supplement4_trace_code_cases_match_precheck():
+    from sim.marking import check_trace_code
+    from sim.scenario import load
+
+    sc = load("scenarios/p3-draft/marking-report.yaml")
+    cfg = {"trace_code_max_length": 32, "trace_code_pattern": "^[A-Z0-9-]+$"}
+    n = 0
+    for s in sc.steps:
+        if s.kind == "marking_manual" and "trace_code" in s.args:
+            want = [(it["type"], (it.get("ctx") or {}).get("reason")) for it in s.args["expect"]["errors"]]
+            got = [
+                (it["type"], (it.get("ctx") or {}).get("reason")) for it in check_trace_code(s.args["trace_code"], cfg)
+            ]
+            assert got == want, s.args["trace_code"]
+            n += 1
+    assert n == 7
+    seq1 = next(
+        s
+        for s in sc.steps
+        if s.kind == "expect_marking_events" and (s.args.get("latest") or {}).get("payload.seq") == 1
+    )
+    assert "payload.reason_id" in seq1.args["latest"] and seq1.args["latest"]["payload.reason_id"] is None

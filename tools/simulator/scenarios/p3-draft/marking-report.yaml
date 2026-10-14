@@ -1,4 +1,4 @@
-# 草稿（P3-E2 打标，按 D78、补充一至三，eap/p3/docs/p3-e2-marking-prereview.md）。P3-B2 接口还没有，整体 skipped。
+# 草稿（P3-E2 打标，按 D78、补充一至四，eap/p3/docs/p3-e2-marking-prereview.md）。P3-B2 接口还没有，整体 skipped。
 # 表：mes_marking_record（主记录；只读 reprint_count、latest_inspection_status=pending|pass|fail）
 #     + mes_marking_print（每次打印一行，seq 后端分配，(marking_id, seq) 唯一）
 #     + mes_marking_inspection（挂 print_id，履历带 print_id 和 seq）。print/inspection 各带 source/external_event_id。
@@ -17,9 +17,11 @@
 #   - 补充三：void 必须带 Idempotency-Key、无 mes.marking:void 403；trace_code 422 逐条列出（ctx.max_length / ctx.pattern
 #     取 GET /mes/marking/config 的生效值，save_as: cfg，用 $cfg.trace_code_max_length / $cfg.trace_code_pattern 引用）；
 #     EAP 上报 422 先于业务：不 409、不写 audit、不发事件；事件 payload 按 domain-events.md 断言
+#   - 补充四：lot.marked 始终带 reason_id（seq=1 为 null）；空串/纯空白只报一条 missing；小写、首尾空格报 pattern
+#     （不规范化，原值提交；本地预校验 sim/marking.check_trace_code 用 config 正则全串匹配）
 # 打标记录没有 numeric 列（D78），不测超位小数。
 name: marking-report
-run_id: marking-04
+run_id: marking-05
 draft: "等 P3-B2 打标接口（/mes/marking、/inspect、/void、/prints、/inspections、/config，D78 补充三；B11 event_type=marking 本期不做）"
 target: http://127.0.0.1:8013
 equipment: [{code: EAP-MK01, type: MARKER}]
@@ -28,7 +30,7 @@ steps:
   # ---- 批次 MK0001：手工打印、重打、出站放行规则
   - marking_manual: {lot: MK0001, eq: EAP-MK01, no_idem: true,
                      expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
-  - marking_config: {save_as: cfg, expect: {status: 200, body: {trace_code_max_length: 32, trace_code_pattern: $nonempty}}}
+  - marking_config: {save_as: cfg, expect: {status: 200, body: {trace_code_max_length: 32, trace_code_pattern: $nonempty}, pattern_allowed: true}}
   # trace_code 每违反一条规则列一项，值取生效配置
   - marking_manual: {lot: MK0001, eq: EAP-MK01, idem: mk-tc-1, trace_code: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456",
                      expect: {status: 422, errors: [{type: value_error, loc: [body, trace_code], ctx: {reason: max_length, max_length: $cfg.trace_code_max_length}}]}}
@@ -38,6 +40,16 @@ steps:
                      expect: {status: 422, errors: [
                        {type: value_error, loc: [body, trace_code], ctx: {reason: max_length, max_length: $cfg.trace_code_max_length}},
                        {type: value_error, loc: [body, trace_code], ctx: {reason: pattern, pattern: $cfg.trace_code_pattern}}]}}
+  # 空串 / 纯空白：只报一条 missing，不叠加 pattern（补充四 3）
+  - marking_manual: {lot: MK0001, eq: EAP-MK01, idem: mk-tc-4, trace_code: "",
+                     expect: {status: 422, errors: [{type: missing, loc: [body, trace_code]}]}}
+  - marking_manual: {lot: MK0001, eq: EAP-MK01, idem: mk-tc-5, trace_code: "   ",
+                     expect: {status: 422, errors: [{type: missing, loc: [body, trace_code]}]}}
+  # 不规范化：小写、首尾空格原值提交 → pattern（补充四 4）
+  - marking_manual: {lot: MK0001, eq: EAP-MK01, idem: mk-tc-6, trace_code: "abc-12",
+                     expect: {status: 422, errors: [{type: value_error, loc: [body, trace_code], ctx: {reason: pattern, pattern: $cfg.trace_code_pattern}}]}}
+  - marking_manual: {lot: MK0001, eq: EAP-MK01, idem: mk-tc-7, trace_code: " ABC-12 ",
+                     expect: {status: 422, errors: [{type: value_error, loc: [body, trace_code], ctx: {reason: pattern, pattern: $cfg.trace_code_pattern}}]}}
   - marking_manual: {lot: MK0001, eq: EAP-MK01, idem: mk-man-1, save_as: man1,
                      expect: {status: 200, absent: [duplicate],
                               body: {data.source: manual, data.reprint_count: 0, data.latest_inspection_status: pending, data.trace_code: $nonempty}}}
@@ -45,8 +57,9 @@ steps:
   - expect_marking_prints: {lot: MK0001, seqs: [1], last: {source: manual, printed_at: $utc_z}}   # 重放不占 seq
   - expect_marking_events: {lot: MK0001, count: {lot.marked: 1},
                             latest: {event: lot.marked, payload.seq: 1, payload.print_id: $print_seq_1, payload.trace_code: $issued,
-                                     payload.source: manual, payload.external_event_id: null, payload.equipment_id: $eq.EAP-MK01},
-                            payload_absent: {lot.marked: [reason_id]}}
+                                     payload.source: manual, payload.external_event_id: null, payload.equipment_id: $eq.EAP-MK01,
+                                     payload.reason_id: null},   # 补充四 1：键始终存在，seq=1 为 null
+                            payload_absent: {lot.marked: [comment]}}
   # 未检验（pending）→ 出站 409
   - track_out: {eq: EAP-MK01, lot: MK0001,
                 expect: {status: 409, code: check_blocked, ctx: {check: marking_inspection}, overridable: false}}
