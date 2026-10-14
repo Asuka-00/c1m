@@ -168,6 +168,28 @@ describe('F7 按 bin 拆批：纯函数', () => {
         ])
       )
     ).toBe(`WF009-01: ${t('mes.bin.be.needManual')}`)
+    // FE-F8-2：pydantic 英文报错不原样显示
+    const py = binSplitErrorText(
+      err(422, [
+        {
+          type: 'too_short',
+          loc: ['body', 'manual_bins', 0, 'bins'],
+          msg: 'List should have at least 1 item after validation, not 0',
+        },
+      ])
+    )
+    expect(py).toBe(t('mes.trf.be.invalid'))
+    expect(
+      binSplitErrorText(
+        err(422, [
+          {
+            type: 'too_short',
+            loc: ['body', 'outputs', 0, 'sources'],
+            msg: 'List should have at least 1 item after validation, not 0',
+          },
+        ])
+      )
+    ).toBe('产品没有 gross die，请填写良品数')
   })
 })
 

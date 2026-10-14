@@ -91,10 +91,12 @@ describe('F8 单位转换：纯函数', () => {
     expect(g.outputs[0].sources).toEqual([{ wafer_id: 'U1', qty: 30 }])
   })
 
-  it('FE-F8-1 无坐标图留空：不拦“至少分配 1 颗”，有 gross die 时默认全分', () => {
+  it('FE-F8-1 无坐标图留空：有 gross die 时默认全分，拿不到时提示填良品数', () => {
     const only: TrfWafer[] = [{ id: 'U2', code: 'FX1074-W1', map: null }]
-    // gross die 未知：本地不拦，交给后端预览判定
-    expect(draftErrors(only, draft())).toEqual([])
+    // gross die 拿不到：不报“至少分配 1 颗”，改为提示填写良品数（FE-F8-2，后端会 422）
+    expect(draftErrors(only, draft())).toEqual([
+      t('mes.trf.e.noGross', { wafer: 'FX1074-W1' }),
+    ])
     const g: TrfWafer[] = [{ ...only[0], gross: 25 }]
     expect(draftErrors(g, draft())).toEqual([])
     const b = transformBody('L1', g, draft())
@@ -141,6 +143,55 @@ describe('F8 单位转换：纯函数', () => {
       expect(t('mes.trf.be.noGross')).toBe(text)
       expect(transformErrorText(e)).not.toMatch(/no substrate map/)
     }
+  })
+
+  it('FE-F8-2 QA 复现：pydantic 422 sources 为空映射为三语提示，未映射英文给通用提示', async () => {
+    const e = err(422, [
+      {
+        type: 'too_short',
+        loc: ['body', 'outputs', 0, 'sources'],
+        msg: 'List should have at least 1 item after validation, not 0',
+      },
+    ])
+    expect(transformErrorText(e)).toBe(t('mes.trf.be.noGross'))
+    const odd = err(422, [
+      {
+        type: 'uuid_parsing',
+        loc: ['body', 'reason_id'],
+        msg: 'Input should be a valid UUID',
+      },
+    ])
+    expect(transformErrorText(odd)).toBe(t('mes.trf.be.invalid'))
+    for (const lng of ['zh-CN', 'en', 'ja']) {
+      await i18n.changeLanguage(lng)
+      expect(transformErrorText(e)).not.toMatch(/List should/)
+      expect(transformErrorText(odd)).not.toMatch(/Input should/)
+    }
+    await i18n.changeLanguage('zh-CN')
+    expect(transformErrorText(e)).toBe('产品没有 gross die，请填写良品数')
+  })
+
+  it('FE-F8-2 对话框：产品查不到 gross die、良品数留空时提交前提示且不能预览', async () => {
+    vi.spyOn(mesApi, 'get').mockResolvedValue({ id: 'P0', gross_die: null })
+    const pv = vi.spyOn(execApi, 'transformPreview')
+    vi.spyOn(mapApi, 'bySubstrate').mockRejectedValue(err(404, 'not found'))
+    const cx = waferCtx()
+    ;(cx.lot as Record<string, unknown>).product_id = 'P0'
+    const s = await render(
+      <Providers qc={makeQc(Object.values(MES_PERM))}>
+        <TransformDialog
+          cx={cx}
+          open
+          onOpenChange={() => {}}
+          initial={{ outputs: [out] }}
+        />
+      </Providers>
+    )
+    await expect
+      .element(s.getByTestId('trf-local-errors'))
+      .toHaveTextContent(t('mes.trf.e.noGross', { wafer: 'W1' }))
+    expect(btn('trf-preview').disabled).toBe(true)
+    expect(pv).not.toHaveBeenCalled()
   })
 
   it('人工良品不带原因码、分配不守恒、条数缺失都在本地拦下', () => {

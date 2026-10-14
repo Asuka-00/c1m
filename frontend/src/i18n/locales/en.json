@@ -1533,7 +1533,8 @@
         "notInput": "Not an input wafer",
         "extra": "The request contains fields that are not allowed",
         "mapQty": "Quantities don't balance: children {{children}} + excluded {{excluded}} ≠ map total {{total}}",
-        "trfQty": "{{wafer}}: allocated {{allocated}} ≠ good {{good}}"
+        "trfQty": "{{wafer}}: allocated {{allocated}} ≠ good {{good}}",
+        "invalid": "Some input is invalid; please check and try again"
       }
     },
     "bin": {

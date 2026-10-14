@@ -1533,7 +1533,8 @@
         "notInput": "今回の投入ウェーハではありません",
         "extra": "許可されていない項目が含まれています",
         "mapQty": "数量不一致：子ロット {{children}} + 除外 {{excluded}} ≠ マップ総数 {{total}}",
-        "trfQty": "{{wafer}}：割当 {{allocated}} ≠ 良品数 {{good}}"
+        "trfQty": "{{wafer}}：割当 {{allocated}} ≠ 良品数 {{good}}",
+        "invalid": "入力内容に誤りがあります。確認して再試行してください"
       }
     },
     "bin": {

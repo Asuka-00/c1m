@@ -1533,7 +1533,8 @@
         "notInput": "不是本次输入的晶圆",
         "extra": "请求包含不允许的字段",
         "mapQty": "数量不守恒：子批 {{children}} + 排除 {{excluded}} ≠ 坐标图总数 {{total}}",
-        "trfQty": "{{wafer}}：已分配 {{allocated}} ≠ 良品数 {{good}}"
+        "trfQty": "{{wafer}}：已分配 {{allocated}} ≠ 良品数 {{good}}",
+        "invalid": "提交内容有误，请检查后重试"
       }
     },
     "bin": {

@@ -155,10 +155,18 @@ export function draftErrors(wafers: TrfWafer[], d: TrfDraft): string[] {
       out.push(t('mes.trf.e.strip', { n }))
     if (Object.values(o.alloc).some((v) => Number.isNaN(intOf(v))))
       out.push(t('mes.trf.e.alloc', { n }))
-    // 良品数未知（如留空且查不到 gross die）时不拦，交给后端预览判定。
-    const known = wafers.every((w) => goodOf(w, d) !== null)
-    if (known && wafers.reduce((s, w) => s + allocOf(o, w, d), 0) < 1)
-      out.push(t('mes.trf.e.noDie', { n }))
+    if (wafers.reduce((s, w) => s + allocOf(o, w, d), 0) < 1) {
+      // 无图、良品数留空、拿不到 gross die：后端会以 pydantic 422（sources 为空）拒绝，
+      // 提交前就提示填写良品数（FE-F8-2）；坐标图未知（查询中）时交给预览判定
+      const lacking = wafers.filter(
+        (w) => w.map === null && goodOf(w, d) === null
+      )
+      if (lacking.length)
+        for (const w of lacking)
+          out.push(t('mes.trf.e.noGross', { wafer: w.code }))
+      else if (wafers.every((w) => goodOf(w, d) !== null))
+        out.push(t('mes.trf.e.noDie', { n }))
+    }
   })
   for (const b of balance(wafers, d))
     if (b.diff)
@@ -253,12 +261,18 @@ export function transformErrorText(e: unknown): string {
         })
     }
     if (Array.isArray(d)) {
-      const msgs = (d as { msg?: string; type?: string }[]).map((it) => {
+      type Item = { msg?: string; type?: string; loc?: unknown[] }
+      const msgs = (d as Item[]).map((it) => {
         const msg = String(it.msg ?? '')
         if (it.type === 'extra_forbidden') return t('mes.trf.be.extra')
+        // pydantic：输出的 sources 为空（无图且没有 gross die、良品数留空）
+        const last = it.loc?.[it.loc.length - 1]
+        if (it.type === 'too_short' && last === 'sources')
+          return t('mes.trf.be.noGross')
         const hit = MSG_RULES.find(([re]) => re.test(msg))
         const wafer = /^([^:]+):/.exec(msg)?.[1]
-        if (!hit) return msg
+        // 未映射的英文原文不直接给用户
+        if (!hit) return t('mes.trf.be.invalid')
         return wafer ? `${wafer}: ${t(hit[1])}` : t(hit[1])
       })
       // 缺 gross die 时后端同时报“至少分配 1 颗”，只保留前者
