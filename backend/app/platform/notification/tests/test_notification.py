@@ -219,3 +219,55 @@ def test_mes_events_qtime_oos_e10_pm(client: TestClient, db: Session) -> None:
     assert eq["object_type"] == "equipment" and eq["link"] == "/mes/eqp-board"
     # 筛选：事件类型
     assert _mine(f, event_type="mes.oos")["count"] == 1
+
+
+def test_pm_notify_dedupe_key_format_independent(
+    client: TestClient, db: Session
+) -> None:
+    """D33：PM 通知去重键 = 计划 ID + 到期 epoch 秒；旧格式键已发过的周期不再重发。"""
+    from datetime import UTC, datetime, timedelta, timezone
+
+    from app.mes.equipment import maint
+
+    f = Line(client, db)
+    _sub_all(f)
+    tid = uuid.UUID(str(f.m.tid))
+    eq_id = f.eq["id"]
+    p = f.m.post(
+        "pm_plan",
+        {"code": "PM-D", "name": "pm", "equipment_id": eq_id, "interval_days": 1},
+    )
+    done = datetime.now(UTC).replace(microsecond=0) - timedelta(days=2)
+    f.sql(
+        "INSERT INTO mes_pm_record (id, tenant_id, pm_plan_id, equipment_id, result, done_at) "
+        "VALUES (gen_random_uuid(), :t, :p, :e, 'ok', :d)",
+        t=tid,
+        p=p["id"],
+        e=eq_id,
+        d=done,
+    )
+    set_tenant(db, tid)
+    ev = maint.PM_OVERDUE
+    # 旧格式：上次 PM 时间按 +08:00 显示的字符串
+    old = done.astimezone(timezone(timedelta(hours=8))).isoformat()
+    kw: dict[str, Any] = {"title": "t", "object_type": "equipment", "object_id": eq_id}
+    assert svc.notify(db, tid, ev, dedupe_key=f"{ev}:{eq_id}:{p['id']}:{old}", **kw)
+    db.commit()
+    assert maint.pm_notify(db, tid) == 0  # 旧键已发过，不重发
+    db.commit()
+    # 清掉旧通知后按新键发一次；新键与显示格式无关，多次扫描不重复
+    f.sql("DELETE FROM notification WHERE tenant_id = :t", t=tid)
+    set_tenant(db, tid)
+    assert maint.pm_notify(db, tid) == 1
+    db.commit()
+    due = done + timedelta(days=1)
+    key = maint.pm_dedupe_key(ev, eq_id, p["id"], due)
+    assert key.endswith(f":e{int(due.timestamp())}")
+    assert key == maint.pm_dedupe_key(
+        ev, eq_id, p["id"], due.astimezone(timezone(timedelta(hours=8)))
+    )
+    assert _types(f).count(ev) == 1
+    set_tenant(db, tid)
+    assert maint.pm_notify(db, tid) == 0
+    db.commit()
+    assert _types(f).count(ev) == 1

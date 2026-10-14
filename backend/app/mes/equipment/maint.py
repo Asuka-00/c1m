@@ -1,7 +1,7 @@
 """设备维护：E10 手动改状态与状态履历、PM 计划到期判定与执行、设备状态看板。"""
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import sqlalchemy as sa
@@ -25,6 +25,7 @@ from app.mes.equipment.events import (
 )
 from app.mes.equipment.qual import open_task, start_qual
 from app.mes.equipment.status import e10_current
+from app.platform.notification.models import Notification
 
 Row = dict[str, Any]
 #: 视为宕机（触发设备宕机通知）的 E10 类别：计划 / 非计划停机
@@ -177,6 +178,16 @@ def pm_status(
         每计划 ``{plan_id, plan, last_done, next_due, days_left, lots_since,
         interval_lots, due, warn}``。
     """
+    return [
+        {k: v for k, v in x.items() if not k.startswith("_")}
+        for x in _pm_cycles(s, tid, eq, at)
+    ]
+
+
+def _pm_cycles(
+    s: Session, tid: uuid.UUID, eq: Row, at: datetime | None = None
+) -> list[Row]:
+    """``pm_status`` 的原始结果，额外带 ``_last``（最近 OK 时间）与 ``_due_at``（到期时间）。"""
     at = at or now()
     out = []
     for p in _plans(s, tid, eq):
@@ -204,6 +215,8 @@ def pm_status(
         )
         out.append(
             {
+                "_last": last,
+                "_due_at": nxt or base,
                 "plan_id": str(p["id"]),
                 "plan": p["code"],
                 "last_done": last and iso_utc(last),
@@ -327,15 +340,60 @@ def equipment_board(s: Session, tid: uuid.UUID) -> list[Row]:
     return out
 
 
+def pm_dedupe_key(ev: str, eq_id: Any, plan_id: Any, due_at: datetime) -> str:
+    """PM 通知去重键（D33）：事件 + 设备 + PM 计划 ID + 到期时间 epoch 秒，与时间显示格式无关。
+
+    无天数周期的计划以起算点（最近 OK PM / 设备创建时间）作为该周期的到期锚点。
+    """
+    return f"{ev}:{eq_id}:{plan_id}:e{int(due_at.timestamp())}"
+
+
+def _legacy_keys(ev: str, eq_id: Any, plan_id: Any, last: datetime | None) -> list[str]:
+    """D33 之前的旧格式去重键（按上次 PM 时间的字符串）的所有可能写法，用于兼容判断。"""
+    if last is None:
+        bases = ["initial"]
+    else:
+        u = last.astimezone(UTC)
+        bases = list(
+            dict.fromkeys(
+                [
+                    last.isoformat(),
+                    u.isoformat(),
+                    iso_utc(last),
+                    u.replace(tzinfo=None).isoformat(),
+                ]
+            )
+        )
+    return [f"{ev}:{eq_id}:{plan_id}:{b}" for b in bases]
+
+
+def _sent(s: Session, tid: uuid.UUID, keys: list[str]) -> bool:
+    return bool(
+        s.execute(
+            sa.select(sa.literal(1))
+            .select_from(Notification)
+            .where(
+                sa.column("tenant_id") == tid,
+                sa.column("dedupe_key").in_(keys),
+            )
+            .limit(1)
+        ).first()
+    )
+
+
 def pm_notify(s: Session, tid: uuid.UUID) -> int:
-    """PM 到期通知：即将到期 / 已超期各在每个周期内通知一次（按上次 PM 时间去重），返回发送数。"""
+    """PM 到期通知：即将到期 / 已超期各在每个周期内通知一次，返回发送数。
+
+    去重键见 :func:`pm_dedupe_key`；旧格式键已发过的周期同样视为已通知，不再重发。
+    """
     n = 0
     for eq in find(s, tid, "equipment", unit_kind="main", is_active=True):
-        for x in pm_status(s, tid, eq):
+        for x in _pm_cycles(s, tid, eq):
             if not (x["due"] or x["warn"]):
                 continue
             ev = PM_OVERDUE if x["due"] else PM_DUE
-            base = x["last_done"] or "initial"
+            if _sent(s, tid, _legacy_keys(ev, eq["id"], x["plan_id"], x["_last"])):
+                continue
             title = (
                 f"PM {x['plan']} overdue on {eq['code']}"
                 if x["due"]
@@ -353,7 +411,7 @@ def pm_notify(s: Session, tid: uuid.UUID) -> int:
                         "days_left": x["days_left"] or 0,
                         "lots": x["lots_since"],
                     },
-                    f"{ev}:{eq['id']}:{x['plan_id']}:{base}",
+                    pm_dedupe_key(ev, eq["id"], x["plan_id"], x["_due_at"]),
                 )
             )
     return n

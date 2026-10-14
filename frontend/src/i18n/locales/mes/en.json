@@ -265,7 +265,10 @@
         "requested_at": "Requested at",
         "done_by": "Recorded by",
         "done_at": "Recorded at",
-        "comment": "Comment"
+        "comment": "Comment",
+        "chamber": "Chamber / sub-unit",
+        "source": "Source",
+        "external_event_id": "External event ID"
       },
       "check_rule": {
         "code": "Code",

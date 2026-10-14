@@ -57,6 +57,7 @@ def _new_task(
         retry_of_id=retry_of,
         qual_status="open",
         requested_at=now(),
+        source="manual",
     )
     row = one(s, tid, ENT, rid)
     assert row

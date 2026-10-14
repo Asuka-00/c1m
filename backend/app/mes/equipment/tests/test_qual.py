@@ -126,8 +126,9 @@ def test_qual_payload_and_permission(client: TestClient, db: Session) -> None:
     assert f.post(f"{EQP}/qual/{f.eq['id']}/result", {"result": "pass"}, 404)
 
 
-def test_migration_0017_up_down() -> None:
-    """0017 可重复执行；表定义与迁移一致。"""
+def _migration_roundtrip(prev: str, tag: str, check: Any) -> None:
+    """升到 head → 与表定义对比 → stamp prev 再升（已存在）→ 降回 prev → stamp head 再降
+    （已不在）→ 再升。``check(insp)`` 返回 (升级后期望, 降级后期望) 之一的当前状态。"""
     import os
     import subprocess
     from pathlib import Path
@@ -141,7 +142,7 @@ def test_migration_0017_up_down() -> None:
     from app.core.config import settings
 
     base = make_url(settings.migration_database_url)
-    name = f"{base.database}_mig_b6"
+    name = f"{base.database}_mig_{tag}"
     server = create_engine(base.set(database="postgres"), isolation_level="AUTOCOMMIT")
     with server.connect() as c:
         c.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
@@ -158,16 +159,13 @@ def test_migration_0017_up_down() -> None:
 
     eng = create_engine(url)
 
-    def state() -> tuple[bool, bool]:
+    def state() -> Any:
         with eng.connect() as c:
-            i = inspect(c)
-            col = any(x["name"] == "qual_state" for x in i.get_columns("mes_equipment"))
-            return col, "mes_equipment_qual" in i.get_table_names()
+            return check(inspect(c))
 
-    prev = "0016_material_consumption_event"
     try:
         alembic("upgrade", "head")
-        assert state() == (True, True)
+        up = state()
         with eng.connect() as c:
             diffs = compare_metadata(MigrationContext.configure(c), SQLModel.metadata)
         flat = [d for x in diffs for d in (x if isinstance(x, list) else [x])]
@@ -177,14 +175,68 @@ def test_migration_0017_up_down() -> None:
         assert not bad, bad
         alembic("stamp", prev)
         alembic("upgrade", "head")  # 已存在：不报错
+        assert state() == up
         alembic("downgrade", prev)
-        assert state() == (False, False)
+        down = state()
+        assert down != up
         alembic("stamp", "head")
         alembic("downgrade", prev)  # 已不在：不报错
+        assert state() == down
         alembic("upgrade", "head")
-        assert state() == (True, True)
+        assert state() == up
     finally:
         eng.dispose()
         with server.connect() as c:
             c.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
         server.dispose()
+
+
+def test_migration_0017_up_down() -> None:
+    """0017 可重复执行；表定义与迁移一致。"""
+
+    def check(i: Any) -> tuple[bool, bool]:
+        col = any(x["name"] == "qual_state" for x in i.get_columns("mes_equipment"))
+        return col, "mes_equipment_qual" in i.get_table_names()
+
+    _migration_roundtrip("0016_material_consumption_event", "b6", check)
+
+
+def test_migration_0018_qual_source_index() -> None:
+    """0018 可重复执行：source / external_event_id / chamber_id 与部分唯一索引。"""
+
+    def check(i: Any) -> tuple[frozenset[str], bool]:
+        cols = frozenset(
+            x["name"]
+            for x in i.get_columns("mes_equipment_qual")
+            if x["name"] in ("source", "external_event_id", "chamber_id")
+        )
+        idx = any(
+            x["name"] == "uq_mes_eqp_qual_event"
+            for x in i.get_indexes("mes_equipment_qual")
+        )
+        return cols, idx
+
+    _migration_roundtrip("0017_equipment_qual", "b6s", check)
+
+
+def test_qual_reserved_fields_rejected(client: TestClient, db: Session) -> None:
+    """人工登记不开放 source / external_event_id / chamber（子单元）：传了 422；本期一律
+    manual / 空。"""
+    f = Line(client, db)
+    _, r = _pm(f)
+    task = r["qual_task"]
+    assert (task["source"], task["external_event_id"], task["chamber_id"]) == (
+        "manual",
+        None,
+        None,
+    )
+    for k, v in (
+        ("source", "eap"),
+        ("source", "manual"),
+        ("external_event_id", "EV-1"),
+        ("chamber_id", f.eq["id"]),
+        ("chamber", "C1"),
+    ):
+        d = _qual(f, task, 422, result="pass", **{k: v})["detail"]
+        assert any(x["loc"][-1] == k for x in d), (k, d)
+    assert _qual(f, task, result="pass")["data"]["source"] == "manual"

@@ -265,7 +265,10 @@
         "requested_at": "作成日時",
         "done_by": "登録者",
         "done_at": "登録日時",
-        "comment": "コメント"
+        "comment": "コメント",
+        "chamber": "チャンバー・サブユニット",
+        "source": "ソース",
+        "external_event_id": "外部イベント ID"
       },
       "check_rule": {
         "code": "コード",

@@ -265,7 +265,10 @@
         "requested_at": "生成时间",
         "done_by": "登记人",
         "done_at": "登记时间",
-        "comment": "备注"
+        "comment": "备注",
+        "chamber": "腔体 / 子单元",
+        "source": "来源",
+        "external_event_id": "外部事件号"
       },
       "check_rule": {
         "code": "编码",
