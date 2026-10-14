@@ -12,6 +12,7 @@ import {
   type TraceResult,
   type TraceRow,
 } from '@/lib/api/mes/execution'
+import { MARKING_MOCK, mockTraceByCode } from '@/lib/api/mes/marking'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -28,6 +29,10 @@ import { Page } from '@/components/crud'
 import { CustomerBadges, OwnershipLabel } from '@/features/mes/common/customer'
 import { enumLabel } from '@/features/mes/common/labels'
 import { mesErrorMessage } from '@/features/mes/common/required'
+import {
+  traceErrorTexts,
+  useTraceRule,
+} from '@/features/mes/marking/marking-rules'
 import { Pick } from './exec-parts'
 import { genealogyRows } from './trace-rows'
 
@@ -49,6 +54,7 @@ const KINDS: TraceKind[] = [
   'equipment',
   'material_lot',
   'customer_lot',
+  'trace_code',
 ]
 
 /** 批次表的列（含客户批号与归属，F6）。 */
@@ -69,7 +75,9 @@ function cell(col: string, v: unknown, row: TraceRow): React.ReactNode {
   if (col === 'ownership')
     return row.code || row.lot_no ? <OwnershipLabel info={row as never} /> : '—'
   if (v === null || v === undefined || v === '') return '—'
-  if (col === 'at') return fmtDateTime(String(v))
+  if (col === 'at' || col === 'marked_at') return fmtDateTime(String(v))
+  if (col === 'latest_inspection_status')
+    return t(`mes.marking.insp.${String(v)}`)
   if (col === 'relation') {
     const rel = enumLabel('genealogy_relation', String(v))
     return row.undone === true ? <UndoneRelation rel={rel} row={row} /> : rel
@@ -214,10 +222,16 @@ export default function TracePage() {
   )
   const q = useQuery({
     queryKey: ['mes', 'exec', tk, 'trace', query],
-    queryFn: () => execApi.trace(query!.kind, query!.code),
+    // P3-B3 未就绪：trace_code 在 mock 模式下走打标 mock
+    queryFn: () =>
+      query!.kind === 'trace_code' && MARKING_MOCK
+        ? mockTraceByCode(query!.code)
+        : execApi.trace(query!.kind, query!.code),
     enabled: !!query,
     retry: false,
   })
+  const [codeErr, setCodeErr] = useState<string[]>([])
+  const rule = useTraceRule()
   const d = q.data
   return (
     <Page title={t('menu.mes-trace')} description={t('mes.traceq.hint')}>
@@ -225,7 +239,11 @@ export default function TracePage() {
         className='mb-4 flex flex-wrap items-end gap-3'
         onSubmit={(e) => {
           e.preventDefault()
-          if (code.trim()) setQuery({ kind, code: code.trim() })
+          const c = code.trim()
+          // D78：追溯码 ≤32、[A-Z0-9-]，前端先校验（同后端 422 value_error ctx.reason）
+          const bad = kind === 'trace_code' && c ? traceErrorTexts(c, rule) : []
+          setCodeErr(bad)
+          if (c && !bad.length) setQuery({ kind, code: c })
         }}
       >
         <div className='w-40'>
@@ -256,6 +274,37 @@ export default function TracePage() {
           {t('mes.traceq.search')}
         </Button>
       </form>
+      {codeErr.length > 0 && (
+        <div className='text-sm text-destructive' data-testid='trace-code-err'>
+          {codeErr.map((m) => (
+            <p key={m}>{m}</p>
+          ))}
+        </div>
+      )}
+      {d?.marking && (
+        <TraceTable
+          title={t('mes.traceq.marking')}
+          rows={[d.marking]}
+          cols={[
+            'trace_code',
+            'content',
+            'template',
+            'date_code',
+            'equipment',
+            'user',
+            'reprint_count',
+            'latest_inspection_status',
+            'marked_at',
+          ]}
+        />
+      )}
+      {d?.wafers && (
+        <TraceTable
+          title={`${t('mes.traceq.wafers')} · ${d.target.code ?? ''}`}
+          rows={d.wafers}
+          cols={['wafer', 'slot']}
+        />
+      )}
       {q.error && (
         <p className='text-sm text-destructive'>
           {mesErrorMessage(q.error, undefined)}

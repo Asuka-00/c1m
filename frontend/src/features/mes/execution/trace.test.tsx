@@ -342,3 +342,46 @@ describe('F6 追溯显示客户批号和归属', () => {
     ).toHaveLength(2)
   })
 })
+
+describe('P3-F4 追溯码（kind=trace_code）', () => {
+  it('显示打标记录和晶圆', async () => {
+    const { s } = await show({
+      kind: 'trace_code',
+      target: { code: 'LOT-A001', id: 'lot1' },
+      marking: {
+        trace_code: '26420001',
+        content: 'FS3201 / 2642 26420001',
+        latest_inspection_status: 'pass',
+      },
+      wafers: [{ wafer: 'LOT-A001-W01', slot: 1 }],
+    })
+    await userEvent.fill(
+      s.getByLabelText(t('mes.traceq.code')).element(),
+      'LOT-A001'
+    )
+    await s.getByTestId('trace-search').click()
+    await expect.element(s.getByText('26420001', { exact: true })).toBeVisible()
+    await expect.element(s.getByText('LOT-A001-W01')).toBeVisible()
+    await expect
+      .element(s.getByText(t('mes.marking.insp.pass'), { exact: true }))
+      .toBeVisible()
+  })
+  it('追溯码格式不符前端逐条提示，不发请求', async () => {
+    const { s, spy } = await show({ kind: 'lot', target: {} })
+    await s.getByLabelText(t('mes.traceq.kind')).click()
+    await s.getByRole('option', { name: t('mes.traceq.k.trace_code') }).click()
+    await userEvent.fill(
+      s.getByLabelText(t('mes.traceq.code')).element(),
+      'a'.repeat(33)
+    )
+    await s.getByTestId('trace-search').click()
+    const err = s.getByTestId('trace-code-err')
+    await expect
+      .element(err)
+      .toHaveTextContent(t('mes.marking.err.trace_max_length', { n: 32 }))
+    await expect
+      .element(err)
+      .toHaveTextContent(t('mes.marking.err.trace_pattern'))
+    expect(spy).not.toHaveBeenCalled()
+  })
+})

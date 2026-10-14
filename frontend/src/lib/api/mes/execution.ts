@@ -162,6 +162,8 @@ export type TraceKind =
   | 'equipment'
   | 'material_lot'
   | 'customer_lot'
+  /** P3-B3：按打标追溯码反查批次 / 谱系 / 晶圆 */
+  | 'trace_code'
 /** 追溯行（各列按场景出现）。 */
 export type TraceRow = Record<string, unknown>
 /** 追溯结果。 */
@@ -187,6 +189,10 @@ export interface TraceResult {
   }
   forward?: { lots: TraceRow[]; origins?: TraceRow[]; dies?: TraceRow[] }
   lots?: TraceRow[]
+  /** kind=trace_code：命中的打标记录（形状待 B3 确认） */
+  marking?: TraceRow
+  /** kind=trace_code：该批次的晶圆 */
+  wafers?: TraceRow[]
 }
 /** 按客户批号追溯：每个匹配批次带客户信息和各自的正反向追溯（kind=customer_lot）。 */
 export interface CustomerLotTrace {
