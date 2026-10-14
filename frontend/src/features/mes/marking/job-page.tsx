@@ -426,7 +426,8 @@ function ActDialog({
       if (act === 'inspect') {
         const body = {
           result,
-          read_code: readCode.trim() || null,
+          // D78 补充四：原值提交，不去空格
+          read_code: readCode === '' ? null : readCode,
           comment: comment.trim() || null,
         }
         return markingApi.inspect(
@@ -460,8 +461,8 @@ function ActDialog({
   })
   const submit = () => {
     const e: Record<string, string> = {}
-    if (act === 'inspect' && readCode.trim()) {
-      const bad = traceErrorTexts(readCode.trim(), rule)
+    if (act === 'inspect' && readCode !== '') {
+      const bad = traceErrorTexts(readCode, rule)
       if (bad.length) e.read_code = bad.join('\n')
     }
     if (act !== 'inspect') {

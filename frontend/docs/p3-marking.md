@@ -22,6 +22,7 @@
 - 打印 / 重打 / 检验 / 作废都带 Idempotency-Key：同一请求体重试沿用同一个 key（重放返回原记录，不加行），改了内容换新 key；缺 key 422 `missing`（loc `["header","Idempotency-Key"]`）、同 key 不同内容 422 `idempotency_key_reused`，都有文案。
 - 作废或批次已报废：打印 / 检验 / 重打 / 作废按钮禁用；mock 409 `invalid_transition`。作废按钮由 `mes.marking:void` 控制，与 `mes.marking:exec` 分开。
 - 追溯码：以 `GET /mes/marking/config` 为准（取不到用 32、`^[A-Z0-9-]+$`），违反几条显示几条（对应后端逐条 422 `value_error`，`ctx.reason`=max_length/pattern）。
+- D78 补充四/五：config 的 pattern 直接 `new RegExp(pattern)`、不加 flag、全串匹配，长度单独按 `trace_code_max_length`；纯空白只按 `/^[ \t\r\n\u3000]*$/` 判断（不用 trim），命中只提示「必填」（对应 422 `missing`）；其他值原样提交、不去空格、不转大写，U+FEFF、`\x1f` 等按格式错误。
 - `trace_code_mismatch`（ctx.expected/actual）、`check_blocked`+`ctx.check=marking_inspection`（不可强制放行）三语文案。
 - D77：作业页打标日期范围用 `rangeParam`（`marked_at_from` 站点当天 0 点、`marked_at_to` 站点次日 0 点）；D75：日期码按站点日期、默认日期 `siteToday()`；D76：数量等定点字段用 `lib/decimal`，超位 422 `value_error`+`ctx.max_places` 有文案。
 

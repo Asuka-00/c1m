@@ -12,7 +12,11 @@ import {
   type TraceResult,
   type TraceRow,
 } from '@/lib/api/mes/execution'
-import { MARKING_MOCK, mockTraceByCode } from '@/lib/api/mes/marking'
+import {
+  isBlankTraceCode,
+  MARKING_MOCK,
+  mockTraceByCode,
+} from '@/lib/api/mes/marking'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -239,11 +243,13 @@ export default function TracePage() {
         className='mb-4 flex flex-wrap items-end gap-3'
         onSubmit={(e) => {
           e.preventDefault()
-          const c = code.trim()
+          // trace_code 原值提交（D78 补充四）；其他类型沿用去空格
+          const c = kind === 'trace_code' ? code : code.trim()
           // D78：追溯码 ≤32、[A-Z0-9-]，前端先校验（同后端 422 value_error ctx.reason）
-          const bad = kind === 'trace_code' && c ? traceErrorTexts(c, rule) : []
+          const bad = kind === 'trace_code' ? traceErrorTexts(c, rule) : []
           setCodeErr(bad)
-          if (c && !bad.length) setQuery({ kind, code: c })
+          if (c && !isBlankTraceCode(c) && !bad.length)
+            setQuery({ kind, code: c })
         }}
       >
         <div className='w-40'>

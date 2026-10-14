@@ -121,14 +121,20 @@ export const MAX_PLACES = 6
 /** 追溯码规则（D78 Q7：待工艺专家确认，暂按 ≤32、[A-Z0-9-]，可配置）。 */
 export const TRACE_CODE_RULE = { maxLength: 32, pattern: /^[A-Z0-9-]+$/ }
 
+/** 「纯空白」判断（D78 补充五）：只认空格、\t、\r、\n、U+3000；不用 trim()（U+FEFF、\x1f 等按格式错误）。 */
+export const BLANK_RE = /^[ \t\r\n\u3000]*$/
+export const isBlankTraceCode = (v: string) => BLANK_RE.test(v)
+
 export type TraceRule = { maxLength: number; pattern: RegExp }
-export type TraceCodeReason = 'max_length' | 'pattern'
+export type TraceCodeReason = 'missing' | 'max_length' | 'pattern'
 
 /** 追溯码逐条校验：违反几条返回几条（D78 补充三，同后端 422 value_error 逐条 ctx.reason）。 */
 export function traceCodeErrors(
   v: string,
   rule: TraceRule = TRACE_CODE_RULE
 ): TraceCodeReason[] {
+  // D78 补充四：空串 / 纯空白只报一条必填；不改写输入（不去空格、不转大写），全串匹配
+  if (isBlankTraceCode(v)) return ['missing']
   const out: TraceCodeReason[] = []
   if (v.length > rule.maxLength) out.push('max_length')
   if (!rule.pattern.test(v)) out.push('pattern')
@@ -176,13 +182,15 @@ function traceCode422(
     422,
     bad.map((reason) => ({
       loc: ['body', loc],
-      type: 'value_error',
-      code: 'value_error',
+      type: reason === 'missing' ? 'missing' : 'value_error',
+      code: reason === 'missing' ? 'missing' : 'value_error',
       msg: `${loc}: ${reason}`,
       ctx:
-        reason === 'max_length'
-          ? { reason, max_length: rule.maxLength }
-          : { reason, pattern: rule.pattern.source },
+        reason === 'missing'
+          ? undefined
+          : reason === 'max_length'
+            ? { reason, max_length: rule.maxLength }
+            : { reason, pattern: rule.pattern.source },
     }))
   )
 }
@@ -500,7 +508,11 @@ export const effectiveResult = (
   input: InspectInput,
   expected: string
 ): InspectResult =>
-  input.read_code && input.read_code !== expected ? 'fail' : input.result
+  input.read_code != null &&
+  input.read_code !== '' &&
+  input.read_code !== expected
+    ? 'fail'
+    : input.result
 
 /** 检验履历按打印分组（seq 升序）。 */
 export function inspectionsByPrint(

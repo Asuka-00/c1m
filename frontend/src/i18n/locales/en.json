@@ -2008,7 +2008,8 @@
         "commentTooLong": "Comment must be at most {{n}} characters",
         "maxPlaces": "At most {{n}} decimal places",
         "trace_max_length": "Trace code must be at most {{n}} characters",
-        "trace_pattern": "Trace code may only contain A–Z, 0–9 and hyphens"
+        "trace_pattern": "Trace code may only contain A–Z, 0–9 and hyphens",
+        "traceRequired": "Trace code is required"
       },
       "code": {
         "self_approval": "The drafter cannot approve their own template",

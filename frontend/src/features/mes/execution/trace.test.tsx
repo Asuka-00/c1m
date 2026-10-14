@@ -384,4 +384,22 @@ describe('P3-F4 追溯码（kind=trace_code）', () => {
       .toHaveTextContent(t('mes.marking.err.trace_pattern'))
     expect(spy).not.toHaveBeenCalled()
   })
+  it('追溯码纯空白只提示必填一条', async () => {
+    const { s, spy } = await show({ kind: 'lot', target: {} })
+    await s.getByLabelText(t('mes.traceq.kind')).click()
+    await s.getByRole('option', { name: t('mes.traceq.k.trace_code') }).click()
+    await userEvent.fill(
+      s.getByLabelText(t('mes.traceq.code')).element(),
+      '   '
+    )
+    await s.getByTestId('trace-search').click()
+    const err = s.getByTestId('trace-code-err')
+    await expect
+      .element(err)
+      .toHaveTextContent(t('mes.marking.err.traceRequired'))
+    await expect
+      .element(err)
+      .not.toHaveTextContent(t('mes.marking.err.trace_pattern'))
+    expect(spy).not.toHaveBeenCalled()
+  })
 })

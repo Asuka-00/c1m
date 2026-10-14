@@ -317,3 +317,59 @@ describe('D78 补充三', () => {
     })
   })
 })
+
+describe('D78 补充四', () => {
+  it('空串 / 纯空白只报必填；不改写输入；全串匹配', async () => {
+    const { traceCodeErrors, ruleFromConfig } = await import('./marking')
+    expect(traceCodeErrors('')).toEqual(['missing'])
+    expect(traceCodeErrors('   ')).toEqual(['missing'])
+    expect(traceCodeErrors(' AB1')).toEqual(['pattern'])
+    expect(traceCodeErrors('ab1')).toEqual(['pattern'])
+    const r = ruleFromConfig({
+      trace_code_max_length: 4,
+      trace_code_pattern: '^[A-Z]+$',
+    })
+    expect(traceCodeErrors('ABCDE', r)).toEqual(['max_length'])
+    expect(traceCodeErrors('AB1', r)).toEqual(['pattern'])
+  })
+  it('读回码纯空白 422 missing，原值不去空格（开头空格报格式错）', async () => {
+    const r = await api.mark({ lot_id: 'lot1' }, 'k1')
+    expect(
+      await detail(api.inspect(r.id, { result: 'pass', read_code: '  ' }, 'ki'))
+    ).toMatchObject({
+      status: 422,
+      detail: [{ type: 'missing', loc: ['body', 'read_code'] }],
+    })
+    // 原值提交：开头带空格不去掉，按格式错误报
+    expect(
+      await detail(
+        api.inspect(
+          r.id,
+          { result: 'pass', read_code: ` ${r.trace_code}` },
+          'ki2'
+        )
+      )
+    ).toMatchObject({ status: 422, detail: [{ ctx: { reason: 'pattern' } }] })
+  })
+})
+
+describe('D78 补充五：纯空白只认 /^[ \\t\\r\\n\\u3000]*$/', () => {
+  it.each([
+    ['末尾带 \\n', 'AB12\n', ['pattern']],
+    ['开头带 \\n', '\nAB12', ['pattern']],
+    ['中间带空格', 'AB 12', ['pattern']],
+    ['全角 ＡＢＣ', 'ＡＢＣ', ['pattern']],
+    ['刚好 32 位', 'A'.repeat(32), []],
+    ['33 位', 'A'.repeat(33), ['max_length']],
+    ['33 位且含小写', 'a'.repeat(33), ['max_length', 'pattern']],
+    ['只有一个 -', '-', []],
+    ['U+3000', '\u3000', ['missing']],
+    ['空格 + \\t\\r\\n + U+3000', ' \t\r\n\u3000', ['missing']],
+    ['U+FEFF', '\ufeff', ['pattern']],
+    ['\\x1f', '\x1f', ['pattern']],
+    ['空串', '', ['missing']],
+  ])('%s', async (_, v, want) => {
+    const { traceCodeErrors } = await import('./marking')
+    expect(traceCodeErrors(v)).toEqual(want)
+  })
+})

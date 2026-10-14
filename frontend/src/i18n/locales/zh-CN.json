@@ -2008,7 +2008,8 @@
         "commentTooLong": "备注不能超过 {{n}} 字",
         "maxPlaces": "最多 {{n}} 位小数",
         "trace_max_length": "追溯码不能超过 {{n}} 位",
-        "trace_pattern": "追溯码只能包含大写字母、数字和连字符"
+        "trace_pattern": "追溯码只能包含大写字母、数字和连字符",
+        "traceRequired": "请填写追溯码"
       },
       "code": {
         "self_approval": "起草人不能审批自己的模板",

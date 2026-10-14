@@ -102,7 +102,9 @@ export function useIdemKey() {
 
 /** 追溯码单条错误文案。 */
 export const traceReasonText = (r: TraceCodeReason, n: number) =>
-  t(`mes.marking.err.trace_${r}`, { n: Number.isFinite(n) ? n : 32 })
+  r === 'missing'
+    ? t('mes.marking.err.traceRequired')
+    : t(`mes.marking.err.trace_${r}`, { n: Number.isFinite(n) ? n : 32 })
 
 /** 追溯码逐条错误文案（违反几条显示几条）。 */
 export const traceErrorTexts = (v: string, rule: TraceRule) =>
