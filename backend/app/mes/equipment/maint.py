@@ -43,8 +43,14 @@ def e10_log(
     user: Any,
     reason_id: Any = None,
     comment: str | None = None,
+    trigger: str | None = None,
 ) -> None:
-    """写一条 E10 状态履历（手动 / 自动迁移共用）。"""
+    """写一条 E10 状态履历（手动 / 自动迁移共用）。
+
+    ``trigger``（D58）缺省按来源推断：manual → manual，auto → system，其余 → equipment。
+    """
+    if trigger is None:
+        trigger = {"manual": "manual", "auto": "system"}.get(source, "equipment")
     _ins(
         s,
         tid,
@@ -54,6 +60,7 @@ def e10_log(
         from_state_id=frm and frm["id"],
         to_state_id=to["id"],
         source=source,
+        trigger=trigger,
         reason_id=reason_id,
         comment=comment,
         username=actor_name(user),
@@ -68,6 +75,7 @@ def e10_change(
     body: Row,
     user: Any,
     source: str = "manual",
+    trigger: str = "manual",
 ) -> Row:
     """手动变更设备 E10 状态。
 
@@ -80,7 +88,8 @@ def e10_change(
         eq_id: 设备 id。
         body: ``{to_state_id, reason_id?, comment?}``。
         user: 操作人。
-        source: E10 履历来源（人工 ``manual``；EAP 事件 ``equipment``）。
+        source: E10 履历来源（人工 ``manual``；EAP 事件为事件来源 ``eap`` / ``simulator``）。
+        trigger: 触发方式（D58）：人工 ``manual``，设备事件 ``equipment``。
 
     Returns:
         ``{equipment, from, to}``。
@@ -119,6 +128,7 @@ def e10_change(
         user,
         reason and reason["id"],
         body.get("comment"),
+        trigger,
     )
     audit(
         s,
@@ -144,7 +154,13 @@ def e10_change(
             },
         )
     s.commit()
-    return {"equipment": eq["code"], "from": cur and cur["code"], "to": to["code"]}
+    return {
+        "equipment": eq["code"],
+        "from": cur and cur["code"],
+        "to": to["code"],
+        "source": source,
+        "trigger": trigger,
+    }
 
 
 def _plans(s: Session, tid: uuid.UUID, eq: Row) -> list[Row]:

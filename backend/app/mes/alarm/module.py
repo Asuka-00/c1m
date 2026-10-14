@@ -8,6 +8,6 @@ register(
         name="mes.alarm",
         perm_modules=PERM_MODULES,
         permissions=PERMISSIONS,
-        specs=("app.mes.alarm.specs",),
+        specs=("app.mes.alarm.specs", "app.mes.alarm.validators"),
     )
 )

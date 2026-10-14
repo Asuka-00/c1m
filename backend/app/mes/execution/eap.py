@@ -8,7 +8,8 @@ equipment_id, payload}``，事件字段放 ``payload``，也可以平铺在信�
   重放原样返回首次的 ``result``，``duplicate=true``，不再执行任何动作。处理失败（4xx）不入账，
   可修正后用同一事件号重发。下层表（alarm_log / tool_usage / 清除事件号）也带同一事件号，
   并发重放由它们的唯一约束兜底。
-- ``state``：E10 迁移（迁移表照常校验），履历 ``source=equipment``；``event_at`` 超前 5 分钟
+- ``state``：E10 迁移（迁移表照常校验），履历 ``source`` = 事件来源（eap / simulator），
+  ``trigger=equipment``（D53-4 / D58）；``event_at`` 超前 5 分钟
   422 ``time_in_future``。
 - ``alarm_set`` / ``alarm_clear``：走 B9（D55 规则一致）；clear 按 (equipment_id, alid)，
   没有 active 报警 → 200、``cleared=false``。
@@ -157,7 +158,9 @@ def handle(s: Session, tid: uuid.UUID, body: Row, user: Any) -> Row:
     if typ == "state":
         alarm_svc._time(p.pop("event_at"), "event_at")
         p.pop("external_event_id")
-        result = eqp_svc.e10_change(s, tid, eq_id, p, user, source="equipment")
+        result = eqp_svc.e10_change(
+            s, tid, eq_id, p, user, source=source, trigger="equipment"
+        )
     elif typ == "alarm_set":
         p["raw"] = p.get("raw") or {"payload": jsonable_encoder(body["payload"])}
         result = alarm_svc.set_alarm(s, tid, eq_id, p, user, source=source)

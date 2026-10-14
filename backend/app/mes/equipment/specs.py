@@ -494,8 +494,17 @@ ENUMS.update(
         "e10_source": [
             ("manual", "Manual|手动|手動"),
             ("auto", "Automatic|自动|自動"),
-            # D53-3：报警等设备上报触发
+            # D53-3：报警等设备上报触发（D58 前的旧记录）
             ("equipment", "Equipment|设备|設備"),
+            # D53-4 / D58：EAP / 模拟器上报
+            ("eap", "EAP|EAP|EAP"),
+            ("simulator", "Simulator|模拟器|シミュレータ"),
+        ],
+        # D58：E10 变化的触发方式（人工 / 设备事件或报警 / 系统规则）
+        "e10_trigger": [
+            ("manual", "Manual|人工|手動"),
+            ("equipment", "Equipment|设备|設備"),
+            ("system", "System|系统|システム"),
         ],
         "pm_result": [
             ("ok", "OK|合格|合格"),
@@ -526,6 +535,7 @@ register(
             F("from_state", "ref", "From state|源状态|遷移元", ref="e10_state"),
             F("to_state", "ref", "To state|目标状态|遷移先", ref="e10_state"),
             F("source", "enum", "Source|来源|ソース", enum="e10_source"),
+            F("trigger", "enum", "Trigger|触发|トリガー", enum="e10_trigger"),
             F("reason", "ref", "Reason code|原因代码|理由コード", ref="reason_code"),
             F("comment", "str", "Comment|备注|コメント", max_length=300, search=True),
             F("username", "str", "User|用户|ユーザー", max_length=255, search=True),

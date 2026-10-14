@@ -35,7 +35,7 @@ def test_transform_undo(client: TestClient, db: Session) -> None:
     # TRF-11b：子批进站后不能撤销
     f.stage(ch, "move_in", equipment_id=f.eq["id"])
     d = f.post(url, {}, 409)["detail"]
-    assert d["code"] == "transform_undo_blocked"
+    assert d["code"] == "transform_undo_blocked" and d["reason"] == "lots_blocked"
     assert d["lots"] == [
         {"lot_id": ch["id"], "lot_code": ch["code"], "reason": "lot_status"}
     ]
@@ -85,6 +85,7 @@ def test_transform_undo_restores_and_retransform(
     # 再撤一次：已撤销 → 409，lots 为空
     d = f.post(f"{TF}/{tid}/undo", {}, 409)["detail"]
     assert d["code"] == "transform_undo_blocked" and d["lots"] == []
+    assert d["reason"] == "already_undone"
     # TRF-11c：撤销后可以再次转换，谱系无残留
     r2 = f.post(TF, _body(f, [lot], src))
     assert f.lot(lot)["lot_status"] == "converted"
@@ -103,3 +104,38 @@ def test_migration_0027_up_down() -> None:
         return frozenset(set(cols) & have), True
 
     _migration_roundtrip("0026_tool_life", "b6", check, cols)
+
+
+def test_transform_undo_referenced_child_lists_lots(
+    client: TestClient, db: Session
+) -> None:
+    """D58：子批被其他记录引用（外键）→ 409 lots_blocked，lots 逐批列出引用表（原先为空）。"""
+    f = _line(client, db)
+    lot = _start(f)
+    _maps(f, [w["code"] for w in _wafers(f, lot)])
+    r, _src = _transform(f, lot)
+    tid, (ch,) = r["transform"]["id"], r["children"]
+    # 绕过前置检查：直接在一张 RESTRICT 外键表里引用子批（报警关联批次）
+    et = f.eq["equipment_type_id"]
+    f.sql(
+        "INSERT INTO mes_alarm_log (id, tenant_id, equipment_id, alid, alarm_status, set_at, source) VALUES (gen_random_uuid(), :t, :e, 'X', 'cleared', now(), 'manual')",
+        t=f.m.tid,
+        e=f.eq["id"],
+    )
+    f.sql(
+        "INSERT INTO mes_alarm_lot (id, tenant_id, alarm_log_id, lot_id) SELECT gen_random_uuid(), :t, id, :l FROM mes_alarm_log WHERE tenant_id = :t AND alid = 'X'",
+        t=f.m.tid,
+        l=ch["id"],
+    )
+    d = f.post(f"{TF}/{tid}/undo", {}, 409)["detail"]
+    assert d["code"] == "transform_undo_blocked" and d["reason"] == "lots_blocked"
+    assert d["lots"] == [
+        {
+            "lot_id": ch["id"],
+            "lot_code": ch["code"],
+            "reason": "referenced",
+            "tables": ["mes_alarm_lot"],
+        }
+    ]
+    assert f.lot(lot)["lot_status"] == "converted"  # 整体回滚
+    assert et

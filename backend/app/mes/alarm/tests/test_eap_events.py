@@ -85,11 +85,15 @@ def test_eap_events_service_only_alarm_flow(client: TestClient, db: Session) -> 
     a = r["result"]["data"]
     assert a["source"] == "simulator" and a["external_event_id"] == "S-1"
     assert [x["lot_code"] for x in a["lots"]] == [lot["code"]]
-    assert len(a["hold_ids"]["holds"]) == 1
+    # D58：不 Hold；状态事件 source=simulator、trigger=equipment
+    assert a["hold_ids"] is None and f.lot(lot)["on_hold"] is False
+    assert r["result"]["state_changed"] is True
+    eh = f.m.list("e10_history", equipment=f.eq["id"])["data"]
+    assert [(x["source"], x["trigger"]) for x in eh] == [("simulator", "equipment")]
     # 重放：原样返回，不再联动
     again = _ev(f, svc, "S-1", "alarm_set", alid="1001", set_at=at, lot_ids=[lot["id"]])
     assert again["duplicate"] is True and again["result"] == r["result"]
-    assert len(f.m.list("lot_hold", lot=lot["id"])["data"]) == 1
+    assert len(f.m.list("e10_history", equipment=f.eq["id"])["data"]) == 1
     # D57：同事件号内容不同 → 422 idempotency_key_reused
     d = _ev(f, svc, "S-1", "alarm_set", 422, alid="9999")["detail"]
     assert d["code"] == "idempotency_key_reused"
@@ -139,8 +143,10 @@ def test_eap_events_state_and_tool_usage(client: TestClient, db: Session) -> Non
         payload={"to_state_id": f.st["DOWN"]["id"]},
     )
     assert (r["result"]["from"], r["result"]["to"]) == ("SBY", "DOWN")
+    # D53-4 / D58：source = 事件来源，trigger=equipment
+    assert (r["result"]["source"], r["result"]["trigger"]) == ("eap", "equipment")
     eh = f.m.list("e10_history", equipment=f.eq["id"])["data"]
-    assert [x["source"] for x in eh].count("equipment") == 1
+    assert [(x["source"], x["trigger"]) for x in eh] == [("eap", "equipment")]
     # 重放不再校验（DOWN->DOWN 不会 422），不写新履历
     again = _ev(
         f,

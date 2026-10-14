@@ -129,8 +129,7 @@
         "text_ja": "Text (JA)",
         "category": "Category",
         "action": "Action",
-        "target_e10_state": "Target E10 state",
-        "hold_reason": "Hold reason",
+        "target_state": "Target state",
         "require_qual_on_clear": "Qual after clear",
         "disposition": "Disposition",
         "is_active": "Active"
@@ -322,6 +321,7 @@
         "from_state": "From state",
         "to_state": "To state",
         "source": "Source",
+        "trigger": "Trigger",
         "reason": "Reason code",
         "comment": "Comment",
         "username": "User",
@@ -1185,7 +1185,7 @@
     },
     "help": {
       "alarm_code": {
-        "hold_reason": "Blank: system reason equipment_alarm"
+        "target_state": "E10 state code, required when action=set_state"
       },
       "code_rule": {
         "pattern": "Tokens: {YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}"
@@ -1277,9 +1277,7 @@
       },
       "alarm_action": {
         "none": "None",
-        "hold_lot": "Hold lots",
-        "hold_equipment": "Equipment state",
-        "hold_both": "Both"
+        "set_state": "Set equipment state"
       },
       "alarm_status": {
         "active": "Active",
@@ -1389,7 +1387,13 @@
       "e10_source": {
         "manual": "Manual",
         "auto": "Automatic",
-        "equipment": "Equipment"
+        "equipment": "Equipment",
+        "eap": "EAP",
+        "simulator": "Simulator"
+      },
+      "e10_trigger": {
+        "track_in": "Track in",
+        "track_out": "Track out (no other running lots)"
       },
       "pm_result": {
         "ok": "OK",
@@ -1484,10 +1488,6 @@
         "pending_maintenance": "Pending maintenance",
         "expired": "Expired",
         "retired": "Retired"
-      },
-      "e10_trigger": {
-        "track_in": "Track in",
-        "track_out": "Track out (no other running lots)"
       },
       "hold_type": {
         "manual": "Manual",

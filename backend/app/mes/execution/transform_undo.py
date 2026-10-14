@@ -34,11 +34,78 @@ from app.mes.lot.service import history, lock_lots
 Row = dict[str, Any]
 
 
-def _blocked(message: str, lots: list[Row]) -> HTTPException:
+def _blocked(message: str, lots: list[Row], reason: str) -> HTTPException:
+    """409 ``transform_undo_blocked``。
+
+    ``reason``（D58）：``already_undone``（lots 为空）或 ``lots_blocked``（lots 逐批给出原因）。
+    """
     return HTTPException(
         status_code=409,
-        detail={"code": "transform_undo_blocked", "message": message, "lots": lots},
+        detail={
+            "code": "transform_undo_blocked",
+            "reason": reason,
+            "message": message,
+            "lots": lots,
+        },
     )
+
+
+def _referenced(s: Session, children: list[Row]) -> list[Row]:
+    """子批被其他记录引用（外键 RESTRICT）时，逐批列出引用它的表（``reason=referenced``）。
+
+    从 PG 目录找出所有引用 ``mes_lot.id`` 的外键列，再按子批 id 计数；转换本身会删的表跳过。
+    """
+    own = {
+        "mes_lot",
+        "mes_lot_history",
+        "mes_lot_genealogy",
+        "mes_unit_origin",
+        "mes_unit_transform_output",
+        "mes_unit_transform_input",
+        "mes_wafer",
+        "mes_audit_log",
+    }
+    fks = (
+        conn(s)
+        .execute(
+            sa.text(
+                """
+            SELECT cl.relname AS tbl, att.attname AS col
+            FROM pg_constraint c
+            JOIN pg_class cl ON cl.oid = c.conrelid
+            JOIN pg_class ref ON ref.oid = c.confrelid
+            JOIN pg_attribute att ON att.attrelid = c.conrelid AND att.attnum = ANY (c.conkey)
+            WHERE c.contype = 'f' AND ref.relname = 'mes_lot' AND c.confdeltype <> 'c'
+            """
+            )
+        )
+        .all()
+    )
+    out: list[Row] = []
+    for c in children:
+        tables = sorted(
+            {
+                r.tbl
+                for r in fks
+                if r.tbl not in own
+                and conn(s)
+                .execute(
+                    sa.text(f'SELECT 1 FROM "{r.tbl}" WHERE "{r.col}" = :i LIMIT 1'),
+                    {"i": c["id"]},
+                )
+                .first()
+            }
+        )
+        if tables:
+            out.append(
+                {
+                    "lot_id": str(c["id"]),
+                    "lot_code": c["code"],
+                    "reason": "referenced",
+                    "tables": tables,
+                }
+            )
+    return out
 
 
 def _rows(s: Session, tid: uuid.UUID, ent: str, **eq: Any) -> list[Row]:
@@ -68,7 +135,7 @@ def undo(
         raise HTTPException(status_code=404, detail="Record not found")
     tr = dict(found)
     if tr.get("undone_at") is not None:
-        raise _blocked("transform already undone", [])
+        raise _blocked("transform already undone", [], "already_undone")
     ins = _rows(s, tid, "unit_transform_input", unit_transform_id=transform_id)
     outs = _rows(s, tid, "unit_transform_output", unit_transform_id=transform_id)
     parent_ids = list(dict.fromkeys(x["lot_id"] for x in ins))
@@ -123,7 +190,9 @@ def undo(
                 }
             )
     if bad:
-        raise _blocked("transform cannot be undone: lots already processed", bad)
+        raise _blocked(
+            "transform cannot be undone: lots already processed", bad, "lots_blocked"
+        )
     # 母批转换前状态：转换时写的 input 履历
     before: dict[Any, str] = {}
     for r in conn(s).execute(
@@ -243,11 +312,19 @@ def undo(
                 {"lot_status": ("converted", old)},
             )
         s.flush()
-    except IntegrityError as ex:
+    except IntegrityError:
+        s.rollback()
+        # 之前 lots 为空：只回滚不定位。现在查出是哪个子批被哪张表引用（D58）
+        refs = _referenced(s, children)
         s.rollback()
         raise _blocked(
-            f"transform cannot be undone: child lots are referenced ({ex.orig.__class__.__name__})",
-            [],
+            "transform cannot be undone: child lots are referenced by other records",
+            refs
+            or [
+                {"lot_id": str(c["id"]), "lot_code": c["code"], "reason": "referenced"}
+                for c in children
+            ],
+            "lots_blocked",
         ) from None
     s.commit()
     lt = TABLES["lot"]

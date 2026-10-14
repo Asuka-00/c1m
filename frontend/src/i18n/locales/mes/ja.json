@@ -129,8 +129,7 @@
         "text_ja": "テキスト（日）",
         "category": "分類",
         "action": "連動",
-        "target_e10_state": "遷移先 E10 状態",
-        "hold_reason": "ホールド理由",
+        "target_state": "遷移先状態",
         "require_qual_on_clear": "解除後 Qual 必要",
         "disposition": "処置",
         "is_active": "有効"
@@ -322,6 +321,7 @@
         "from_state": "遷移元",
         "to_state": "遷移先",
         "source": "ソース",
+        "trigger": "トリガー",
         "reason": "理由コード",
         "comment": "コメント",
         "username": "ユーザー",
@@ -1185,7 +1185,7 @@
     },
     "help": {
       "alarm_code": {
-        "hold_reason": "空欄：システム理由 equipment_alarm"
+        "target_state": "E10 状態コード（設備状態変更のとき必須）"
       },
       "code_rule": {
         "pattern": "トークン：{YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}"
@@ -1277,9 +1277,7 @@
       },
       "alarm_action": {
         "none": "連動なし",
-        "hold_lot": "ロットホールド",
-        "hold_equipment": "設備状態変更",
-        "hold_both": "両方"
+        "set_state": "設備状態変更"
       },
       "alarm_status": {
         "active": "発生中",
@@ -1389,7 +1387,13 @@
       "e10_source": {
         "manual": "手動",
         "auto": "自動",
-        "equipment": "設備"
+        "equipment": "設備",
+        "eap": "EAP",
+        "simulator": "シミュレータ"
+      },
+      "e10_trigger": {
+        "track_in": "トラックイン",
+        "track_out": "トラックアウト（他の処理ロットなし）"
       },
       "pm_result": {
         "ok": "合格",
@@ -1484,10 +1488,6 @@
         "pending_maintenance": "保全待ち",
         "expired": "期限切れ",
         "retired": "廃棄"
-      },
-      "e10_trigger": {
-        "track_in": "トラックイン",
-        "track_out": "トラックアウト（他の処理ロットなし）"
       },
       "hold_type": {
         "manual": "手動",

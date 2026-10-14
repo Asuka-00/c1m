@@ -68,22 +68,15 @@ register(
                 required=True,
                 default="none",
             ),
+            # D59：action=set_state 时必填，填 E10 状态编码（如 UDT）；action=none 时不能填
             F(
-                "target_e10_state",
-                "ref",
-                "Target E10 state|目标 E10 状态|遷移先 E10 状態",
-                ref="e10_state",
-                required_when={"action": ("hold_equipment", "hold_both")},
-            ),
-            F(
-                "hold_reason",
-                "ref",
-                "Hold reason|Hold 原因|ホールド理由",
-                ref="reason_code",
-                list=False,
-                help="Blank: system reason equipment_alarm"
-                "|留空使用系统原因码 equipment_alarm"
-                "|空欄：システム理由 equipment_alarm",
+                "target_state",
+                "str",
+                "Target state|目标状态|遷移先状態",
+                max_length=40,
+                help="E10 state code, required when action=set_state"
+                "|E10 状态编码，联动为切换设备状态时必填"
+                "|E10 状態コード（設備状態変更のとき必須）",
             ),
             F(
                 "require_qual_on_clear",
@@ -326,10 +319,9 @@ ENUMS.update(
             ("other", "Other|其他|その他"),
         ],
         "alarm_action": [
+            # D58 / D59：报警不 Hold 批次，只能选择切设备状态（state 事件，trigger=equipment）
             ("none", "None|不联动|連動なし"),
-            ("hold_lot", "Hold lots|Hold 批次|ロットホールド"),
-            ("hold_equipment", "Equipment state|切换设备状态|設備状態変更"),
-            ("hold_both", "Both|两者|両方"),
+            ("set_state", "Set equipment state|切换设备状态|設備状態変更"),
         ],
         "alarm_status": [
             ("active", "Active|报警中|発生中"),

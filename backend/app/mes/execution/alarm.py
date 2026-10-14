@@ -1,14 +1,13 @@
 """设备报警联动（P2-B9，eap/p2/alarm-code-model.md 定稿 + D53）。
 
 - set：写 ``alarm_log`` + ``alarm_lot``（发生时在该设备上 moved_in / running 的批次，加上报文
-  里带的 ``lot_ids``），再按报警码 ``action`` 联动：
-  * hold_lot / hold_both：逐批 ``hold_lot(source="equipment")``，原因码取报警码配置，否则系统
-    原因码 ``equipment_alarm``；D17 终态批次跳过；
-  * hold_equipment / hold_both：设备切到 ``target_e10_state``，E10 履历 ``source=equipment``
-    （D53-3）；不在迁移表里的迁移跳过并记在 ``e10_change.skipped``；
+  里带的 ``lot_ids``），再按报警码 ``action`` 联动。D58：报警**不 Hold 批次、不拦进站**，唯一
+  的联动是 ``set_state``：设备切到 ``target_state``（E10 状态编码），E10 履历 ``source`` = 报警来源
+  （manual / eap / simulator），``trigger=equipment``；不在迁移表里的迁移跳过并记在
+  ``e10_change.skipped``；进站由现有设备状态检查拦截；
   * 未登记 ALID（``unregistered=true``）或报警码停用：只记录，不联动（D53-2）。
 - 幂等：同 (source, external_event_id) 或同设备同 ALID 已有 active 报警 → 返回已有记录，
-  ``duplicate=true``，不重复 Hold；已清除后再报同 ALID 是新的一次发生（新记录、正常联动）。
+  ``duplicate=true``；同事件号但内容不同 → 422 ``idempotency_key_reused``（D57）；已清除后再报同 ALID 是新的一次发生（新记录、正常联动）。
 - 未登记 ALID 也写 ``alarm_lot``（D55 OQ-3），但不 Hold、不切 E10。
 - clear：写清除时间，不自动解除 Hold、不恢复 E10（人工确认），``cleared=true``；
   报警已不是 active（D55 OQ-5）→ 200、不改数据、``cleared=false``；同一清除事件号重放
@@ -33,9 +32,26 @@ from app.core.spec.serialize import serialize
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
 from app.mes.equipment.service import e10_current, e10_log
-from app.mes.execution.hold import default_reason, hold_lot
 
 Row = dict[str, Any]
+
+
+def state_by_code(
+    s: Session, tid: uuid.UUID, code: str | None
+) -> dict[str, Any] | None:
+    """按编码取 E10 状态行（D59 target_state）。"""
+    if not code:
+        return None
+    t = TABLES["e10_state"]
+    r = (
+        conn(s)
+        .execute(sa.select(t).where(t.c.tenant_id == tid, t.c.code == code))
+        .mappings()
+        .first()
+    )
+    return dict(r) if r else None
+
+
 CLOCK_SKEW = timedelta(minutes=5)  # set_at / cleared_at 允许超前服务器时间的上限
 EQUIPMENT_ALARM = "equipment_alarm"
 RAW_MAX = 65_536  # raw JSON 序列化后的上限（字节）
@@ -91,18 +107,6 @@ def lookup_code(s: Session, tid: uuid.UUID, eq: Row, alid: str) -> Row | None:
     return pick[0] if pick else None
 
 
-def _alarm_reason(s: Session, tid: uuid.UUID, code: Row) -> Row:
-    rr = one(s, tid, "reason_code", code.get("hold_reason_id"))
-    if rr and rr["reason_type"] == "hold":
-        return rr
-    rs = [
-        r
-        for r in find(s, tid, "reason_code", reason_type="hold")
-        if r["code"] == EQUIPMENT_ALARM and r["is_active"]
-    ]
-    return rs[0] if rs else default_reason(s, tid, "hold")
-
-
 def _lots_on(s: Session, tid: uuid.UUID, eq_id: Any) -> list[Row]:
     t = TABLES["lot"]
     return [
@@ -121,23 +125,60 @@ def _lots_on(s: Session, tid: uuid.UUID, eq_id: Any) -> list[Row]:
     ]
 
 
-def _e10(s: Session, tid: uuid.UUID, eq: Row, code: Row, user: Any) -> Row:
-    to = one(s, tid, "e10_state", code.get("target_e10_state_id"))
-    if not to:
-        return {"skipped": "no target E10 state"}
+def _e10(s: Session, tid: uuid.UUID, eq: Row, code: Row, user: Any, source: str) -> Row:
+    """报警引起的设备状态事件（D58 / D59）：切到 ``target_state``，``trigger=equipment``。
+
+    迁移表不允许 / 目标状态不存在 / 已是目标状态 → 不改状态，``state_changed=false`` 并给出
+    ``state_skip_reason``；迁移表不允许时另写设备审计 ``alarm_state_skipped``。报警照常记录。
+    """
+    ts = code.get("target_state")
+    to = state_by_code(s, tid, ts)
     cur = e10_current(s, tid, eq)
+    base: Row = {
+        "from": cur and cur["code"],
+        "to": ts,
+        "source": source,
+        "trigger": "equipment",
+    }
+    if not to:
+        return {
+            **base,
+            "state_changed": False,
+            "state_skip_reason": f"unknown E10 state {ts}",
+        }
     if cur and cur["id"] == to["id"]:
-        return {"skipped": f"already {to['code']}", "to": to["code"]}
+        return {
+            **base,
+            "state_changed": False,
+            "state_skip_reason": f"already {to['code']}",
+        }
     if cur and not find(
         s, tid, "e10_transition", from_state_id=cur["id"], to_state_id=to["id"]
     ):
-        return {
-            "skipped": f"{cur['code']} -> {to['code']} not allowed",
-            "from": cur["code"],
-            "to": to["code"],
-        }
+        why = f"{cur['code']} -> {to['code']} not allowed"
+        audit(
+            s,
+            tid,
+            ENTITIES["equipment"],
+            "alarm_state_skipped",
+            eq,
+            user,
+            {"e10_state": (cur["code"], cur["code"]), "skip": (None, why)},
+        )
+        return {**base, "state_changed": False, "state_skip_reason": why}
     _upd(s, tid, "equipment", eq["id"], user, e10_state_id=to["id"])
-    e10_log(s, tid, eq, cur, to, "equipment", user, None, f"alarm {code['alid']}")
+    e10_log(
+        s,
+        tid,
+        eq,
+        cur,
+        to,
+        source,
+        user,
+        None,
+        f"alarm {code['alid']}",
+        trigger="equipment",
+    )
     audit(
         s,
         tid,
@@ -150,7 +191,7 @@ def _e10(s: Session, tid: uuid.UUID, eq: Row, code: Row, user: Any) -> Row:
             "trigger": (None, "equipment"),
         },
     )
-    return {"from": cur and cur["code"], "to": to["code"]}
+    return {**base, "state_changed": True, "state_skip_reason": None}
 
 
 def detail(s: Session, tid: uuid.UUID, row: Row) -> Row:
@@ -174,6 +215,32 @@ def detail(s: Session, tid: uuid.UUID, row: Row) -> Row:
 def _by_event(s: Session, tid: uuid.UUID, source: str, ext: str | None) -> Row | None:
     rows = find(s, tid, LOG, source=source, external_event_id=ext) if ext else []
     return rows[0] if rows else None
+
+
+def _same_set(s: Session, dup: Row, alid: str, body: Row) -> None:
+    """D57：同一事件号、内容不同 → 422 ``idempotency_key_reused``，不写入。
+
+    比较 ALID、请求里给出的 ``set_at`` / ``alcd_raw`` / ``raw``，以及 ``lot_ids`` 须都已关联。
+    """
+    from app.mes.common.idempotency import reused
+
+    same = dup["alid"] == alid
+    for k in ("alcd_raw", "raw"):
+        if same and body.get(k) is not None:
+            same = dup.get(k) == body[k]
+    at = body.get("set_at")
+    if same and at is not None and at.tzinfo is not None:
+        same = at.astimezone(UTC) == dup["set_at"].astimezone(UTC)
+    if same and body.get("lot_ids"):
+        al = TABLES["alarm_lot"]
+        have = set(
+            conn(s)
+            .execute(sa.select(al.c.lot_id).where(al.c.alarm_log_id == dup["id"]))
+            .scalars()
+        )
+        same = {uuid.UUID(str(x)) for x in body["lot_ids"]} <= have
+    if not same:
+        raise reused()
 
 
 def set_alarm(
@@ -204,12 +271,19 @@ def set_alarm(
         raise http_422([("alid", "alid: required")])
     ext = (str(body.get("external_event_id") or "").strip()) or None
     dup = _by_event(s, tid, source, ext)
+    if dup:
+        _same_set(s, dup, alid, body)
     if not dup:
         act = find(s, tid, LOG, equipment_id=eq["id"], alid=alid, alarm_status="active")
         dup = act[0] if act else None
     if dup:
         s.commit()
-        return {"data": detail(s, tid, dup), "duplicate": True}
+        return {
+            "data": detail(s, tid, dup),
+            "duplicate": True,
+            "state_changed": False,
+            "state_skip_reason": None,
+        }
     at = _time(body.get("set_at"), "set_at")
     lots: list[Row] = []
     seen: set[Any] = set()
@@ -253,47 +327,22 @@ def set_alarm(
     )
     for lot in lots:
         _ins(s, tid, "alarm_lot", user, alarm_log_id=aid, lot_id=lot["id"])
-    hold_ids: list[str] = []
-    skipped: list[str] = []
     e10: Row | None = None
-    if code and action in ("hold_lot", "hold_both"):
-        reason = _alarm_reason(s, tid, code)
-        for lot in lots:
-            hid = hold_lot(
-                s,
-                tid,
-                lot,
-                user,
-                reason,
-                hold_type="auto",
-                source="equipment",
-                comment=f"alarm {alid} on {eq['code']}",
-                details={"alarm_log_id": str(aid), "alid": alid},
-            )
-            if hid:
-                hold_ids.append(str(hid))
-            else:
-                skipped.append(lot["code"])
-    if code and action in ("hold_equipment", "hold_both"):
-        e10 = _e10(s, tid, eq, code, user)
-    _upd(
-        s,
-        tid,
-        LOG,
-        aid,
-        user,
-        hold_ids={"holds": hold_ids, "skipped_lots": skipped}
-        if hold_ids or skipped
-        else None,
-        e10_change=e10,
-    )
+    if code and action == "set_state":  # D58：不 Hold 批次，只切设备状态
+        e10 = _e10(s, tid, eq, code, user, source)
+    _upd(s, tid, LOG, aid, user, e10_change=e10)
     row = one(s, tid, LOG, aid)
     assert row
     audit(s, tid, ENTITIES[LOG], "alarm_set", row, user, {"alid": (None, alid)})
     s.commit()
     row = one(s, tid, LOG, aid)
     assert row
-    return {"data": detail(s, tid, row), "duplicate": False}
+    return {
+        "data": detail(s, tid, row),
+        "duplicate": False,
+        "state_changed": bool(e10 and e10["state_changed"]),
+        "state_skip_reason": e10 and e10["state_skip_reason"],
+    }
 
 
 def clear_alarm(
