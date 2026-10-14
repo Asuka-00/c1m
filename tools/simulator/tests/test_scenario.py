@@ -15,13 +15,15 @@ def test_bundled_scenarios_parse(f):
 
 
 def test_required_adapters():
-    assert load(ROOT / "alarm-hold.yaml").required_adapters() == [
+    assert load(ROOT / "alarm-udt-block.yaml").required_adapters() == [
+        "stage",
         "alarm_set",
-        "holds",
-        "alarm_clear_alid",
         "alarm_get",
+        "holds",
+        "e10",
+        "alarm_clear_alid",
     ]
-    assert load(ROOT / "alarm-hold.yaml").required_adapters("b11") == ["eap_events", "holds", "alarm_get"]
+    assert load(ROOT / "alarm-udt-block.yaml").required_adapters("b11") == ["stage", "eap_events", "alarm_get", "holds"]
     assert "tool_usage" in load(ROOT / "tool-life-block.yaml").required_adapters()
 
 

@@ -41,6 +41,7 @@ IDS = {
     ("equipment", "EQ2"): "e-2",
     ("e10_state", "PRD"): "s-prd",
     ("e10_state", "SBY"): "s-sby",
+    ("e10_state", "UDT"): "s-udt",
     ("lot", "L1"): "l-1",
     ("tool", "T1"): "t-1",
     # 随包场景用到的编码
@@ -172,6 +173,9 @@ class FakeClient(Client):
             if path.endswith("/track_in") and json_body.get("tool_ids") and self.usage >= self.max_usage:
                 res = [{"check_type": "tool_life", "overridable": False, "result": "block"}]
                 return Resp(409, {"detail": {"code": "check_blocked", "results": res}})
+            if path.endswith("/track_in") and self.e10 not in ("SBY", "PRD"):  # e10_available
+                res = [{"check_type": "e10_available", "result": "fail"}]
+                return Resp(409, {"detail": {"code": "check_blocked", "results": res}})
             if self.qual == "wait_qual":
                 res = [{"check_type": "eqp_wait_qual", "overridable": False, "result": "block"}]
                 return Resp(409, {"detail": {"code": "check_blocked", "results": res}})
@@ -201,9 +205,7 @@ class FakeClient(Client):
                 "clear_event_id": None,
                 "lots": [{"lot_id": x} for x in json_body.get("lot_ids", [])],
             }
-            if not unreg:
-                self.holds += 1
-                self.e10 = "UDT"
+            # D58：报警只记录、关联批次，不 Hold、不改 E10
             return Resp(200, {"data": self.alarm_rows[aid], "duplicate": False})
         if path.endswith("/clear"):
             row = self.alarm_rows.get(path.split("/")[-2])

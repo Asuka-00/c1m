@@ -1,0 +1,57 @@
+# 首批验收场景 1（原名 alarm-hold，D58 后改名 alarm-udt-block）。
+# D58：报警本身（含未登记 ALID）只记录、关联批次，不 Hold、不拦进站。报警影响进站的唯一路径是：
+#   报警后发状态事件（trigger=equipment）把设备切到 UDT -> 设备状态检查（e10_available）拦进站。
+# manual 模式依赖 B9 + B11 新增的 POST /mes/eqp/alarms/clear；b11 模式依赖 POST /mes/eap/events。接口不存在时整体 skipped。
+# 前提：EAP-DA01 起始 SBY，工步配置了 e10_available 检查（允许 SBY/PRD）；FX0002 waiting。
+# 1001 是 DIEBOND 已登记的 ALID；9999 是未登记 ALID（D53-2）；9998 从未上报过。
+# 跑完 FX0002 已进站，不能原样重跑（precondition 会让场景 skipped）。
+name: alarm-udt-block
+run_id: alarm-udt-01
+target: http://127.0.0.1:8013
+equipment: [{code: EAP-DA01, type: DIEBOND}]
+steps:
+  - precondition: {eq: EAP-DA01, e10: SBY}
+  - precondition: {lot: FX0002, lot_status: waiting}
+  - move_in: {eq: EAP-DA01, lot: FX0002}                                                       # seq 1
+  # 报警 set：只记录、关联批次，不 Hold，不改 E10（D58）
+  - alarm_set: {eq: EAP-DA01, alid: "1001", lots: [FX0002], save_as: alm1, expect: {body: {duplicate: false}}}   # seq 2
+  - replay: {eq: EAP-DA01, seq: 2, expect: idempotent}
+  - expect_alarm: {alarm: $alm1, alarm_status: active, lots: [FX0002]}
+  - expect_hold: {lot: FX0002, present: false}
+  - expect_e10: {eq: EAP-DA01, state: SBY}
+  # 报警后的状态事件把设备切到 UDT（b11 模式下 E10 履历 source=equipment）
+  - state: {eq: EAP-DA01, to: UDT}                                                             # seq 3
+  # D57 反例：同一个键换目标状态重发 -> 422 idempotency_key_reused，状态不变
+  - reuse: {eq: EAP-DA01, seq: 3, change: {to: PRD}}
+  - expect_e10: {eq: EAP-DA01, state: UDT}
+  - replay: {eq: EAP-DA01, seq: 3, expect: idempotent}                                        # 同键同内容 -> 首次响应
+  # 进站被设备状态检查拦下
+  - track_in:                                                                                   # seq 4
+      eq: EAP-DA01
+      lot: FX0002
+      expect: {status: 409, code: check_blocked, check: {check_type: e10_available}}
+  # OQ-5 ①：有 active 报警，按设备 + ALID 清除 -> cleared=true；不自动恢复设备状态
+  - alarm_clear: {eq: EAP-DA01, alid: "1001", expect: {body: {cleared: true, data.alarm_status: cleared}}}   # seq 5
+  - replay: {eq: EAP-DA01, seq: 5, expect: idempotent}
+  - expect_e10: {eq: EAP-DA01, state: UDT}
+  # OQ-5 ②：没有 active 报警（已清除的 1001、从未上报的 9998）-> 200，cleared=false，data=null
+  - alarm_clear: {eq: EAP-DA01, alid: "1001", expect: {status: 200, body: {cleared: false, duplicate: false, data: null}}}   # seq 6
+  - alarm_clear: {eq: EAP-DA01, alid: "9998", expect: {status: 200, body: {cleared: false, data: null}}}   # seq 7
+  - expect_alarm: {alarm: $alm1, alarm_status: cleared}
+  # 状态切回，进站通过
+  - state: {eq: EAP-DA01, to: SBY}                                                             # seq 8
+  - track_in: {eq: EAP-DA01, lot: FX0002}                                                      # seq 9
+  # OQ-5 ③：未登记 ALID -> unregistered=true，照样写 mes_alarm_lot，不 Hold、不改 E10；按 ALID 清除 cleared=true
+  - expect_e10: {eq: EAP-DA01, save_as: e10_before}
+  - alarm_set: {eq: EAP-DA01, alid: "9999", lots: [FX0002], save_as: alm_unreg}                # seq 10
+  - expect_alarm: {alarm: $alm_unreg, unregistered: true, alarm_status: active, lots: [FX0002]}
+  - alarm_clear: {eq: EAP-DA01, alid: "9999", expect: {body: {cleared: true}}}                  # seq 11
+  - expect_alarm: {alarm: $alm_unreg, unregistered: true, alarm_status: cleared}
+  - expect_hold: {lot: FX0002, present: false}
+  - expect_e10: {eq: EAP-DA01, same_as: $e10_before}
+  # D55 OQ-2：事件时间晚于服务器时间超过 5 分钟 -> 422 time_in_future
+  - alarm_set:
+      eq: EAP-DA01
+      alid: "1001"
+      time_offset_s: 600
+      expect: {status: 422, code: time_in_future}

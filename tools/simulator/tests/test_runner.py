@@ -71,9 +71,9 @@ ALARM = {
     "run_id": "a",
     "steps": [
         {"alarm_set": {"eq": "EQ1", "alid": 1001, "lots": ["L1"], "save_as": "x"}},
-        {"expect_hold": {"lot": "L1", "count": 1}},
+        {"expect_hold": {"lot": "L1", "present": False}},  # D58：报警不 Hold
         {"replay": {"eq": "EQ1", "seq": 1}},
-        {"expect_hold": {"lot": "L1", "count": 1}},
+        {"expect_hold": {"lot": "L1", "present": False}},
         {"alarm_clear": {"eq": "EQ1", "alarm": "$x"}},
     ],
 }
@@ -91,7 +91,7 @@ def test_alarm_runs_with_b9_and_replay_is_idempotent():
     sets = [x for x in c.calls if x[1].endswith("/alarms")]
     assert len(sets) == 2 and sets[0][2] == sets[1][2]
     assert sets[0][2]["external_event_id"] == "sim:a:EQ1:1"
-    assert c.holds == 1
+    assert c.holds == 0
     clear = [x for x in c.calls if x[1].endswith("/clear")][0]
     assert clear[1] == "/mes/eqp/alarms/a-1/clear"
 
@@ -150,18 +150,21 @@ from sim.scenario import load  # noqa: E402
 SCN = __import__("pathlib").Path(__file__).resolve().parents[1] / "scenarios"
 
 
-def test_bundled_alarm_hold_skipped_without_b9():
+def test_bundled_alarm_udt_skipped_without_b9():
     c = FakeClient()
-    rep = Runner(c).run(load(SCN / "alarm-hold.yaml"))
+    rep = Runner(c).run(load(SCN / "alarm-udt-block.yaml"))
     assert rep["status"] == SKIPPED and "B9" in rep["reason"]
     assert not [x for x in c.calls if x[0] == "POST"]
 
 
-def test_bundled_alarm_hold_d55_passes_with_b9_b11():
+def test_bundled_alarm_udt_block_d58_passes_with_b9_b11():
     c = FakeClient(paths=BASE_PATHS | B9 | B11)
-    rep = Runner(c).run(load(SCN / "alarm-hold.yaml"))
+    rep = Runner(c).run(load(SCN / "alarm-udt-block.yaml"))
     assert rep["status"] == PASSED, rep
-    assert c.holds == 1  # 未登记 ALID 不 Hold
+    assert c.holds == 0  # D58：报警不 Hold
+    blocked = [x for x in rep["steps"] if x["kind"] == "track_in"]
+    assert [x["status"] for x in blocked] == [409, 200]  # UDT 拦，切回 SBY 后通过
+    assert c.e10 == "SBY"
     unreg = [r for r in c.alarm_rows.values() if r["unregistered"]]
     assert len(unreg) == 1 and unreg[0]["lots"] == [{"lot_id": "l-fx2"}]  # 仍写 mes_alarm_lot
     posts = [x for x in c.calls if x[0] == "POST"]
@@ -169,13 +172,13 @@ def test_bundled_alarm_hold_d55_passes_with_b9_b11():
     assert all(x[3] and x[3].get("Idempotency-Key") for x in posts)
 
 
-def test_unregistered_alarm_changing_e10_fails():
+def test_expect_e10_same_as_detects_change():
     c = FakeClient(paths=BASE_PATHS | B9)
     data = {
         "run_id": "u",
         "steps": [
             {"expect_e10": {"eq": "EQ1", "save_as": "b"}},
-            {"alarm_set": {"eq": "EQ1", "alid": "1001", "save_as": "x"}},  # 已登记 -> 改 E10
+            {"state": {"eq": "EQ1", "to": "PRD"}},
             {"expect_e10": {"eq": "EQ1", "same_as": "$b"}},
         ],
     }
@@ -486,7 +489,23 @@ def test_bundled_scenarios_pass_in_both_modes():
     from sim.scenario import load
 
     for mode in ("manual", "b11"):
-        for name in ("alarm-hold", "tool-life-block", "idempotency-d57"):
+        for name in ("alarm-udt-block", "tool-life-block", "idempotency-d57"):
             c = FakeClient(paths=ALL)
             rep = Runner(c, mode=mode).run(load(f"scenarios/{name}.yaml"))
             assert rep["status"] == PASSED, (mode, name, rep)
+
+
+def test_alarm_udt_block_fails_if_backend_holds_on_alarm():
+    """D58 回归：后端若仍因报警 Hold 批次，场景要失败。"""
+    c = FakeClient(paths=ALL)
+    orig = c._dispatch
+
+    def holding(method, path, body, params):
+        r = orig(method, path, body, params)
+        if method == "POST" and path.endswith("/alarms") and r.status == 200:
+            c.holds = 1
+        return r
+
+    c._dispatch = holding
+    rep = Runner(c).run(load(SCN / "alarm-udt-block.yaml"))
+    assert rep["status"] == FAILED and "Hold" in rep["reason"]

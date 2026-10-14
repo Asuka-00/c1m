@@ -20,7 +20,7 @@ def test_validate_checks_target_override(monkeypatch, capsys):
 
 
 def test_validate_b11_mode_needs(capsys):
-    assert main(["validate", str(ROOT / "alarm-hold.yaml"), "--mode", "b11"]) == 0
+    assert main(["validate", str(ROOT / "alarm-udt-block.yaml"), "--mode", "b11"]) == 0
     out = capsys.readouterr().out
     assert "eap_events" in out and "alarm_set" not in out.split("needs=")[1]
 
