@@ -238,19 +238,39 @@ def test_marking_draft_follows_d78():
     from sim.scenario import ScenarioError, load, parse
 
     sc = load("scenarios/p3-draft/marking-report.yaml")
-    assert sc.draft and "P3-B2" in sc.draft and "D78" in sc.draft
-    assert {s.kind for s in sc.steps if "marking" in s.kind} <= P3_DRAFT_STEPS
+    assert sc.draft and "P3-B2" in sc.draft and "/void" in sc.draft
+    assert {s.kind for s in sc.steps if "marking" in s.kind or s.kind == "lot_scrap"} <= P3_DRAFT_STEPS
     exp = [s.args.get("expect") or {} for s in sc.steps]
     codes = [e.get("code") for e in exp]
-    assert codes.count("invalid_transition") == 3 and "trace_code_mismatch" in codes and "check_blocked" in codes
-    assert "idempotency_key_reused" in codes and codes.count("missing") >= 4
+    assert codes.count("invalid_transition") == 7 and "trace_code_mismatch" in codes
+    assert codes.count("check_blocked") == 3 and "idempotency_key_reused" in codes
     assert sum(1 for e in exp if e.get("loc") == ["header", "Idempotency-Key"]) == 2
-    assert sum(1 for e in exp if e.get("type") == "value_error") == 2  # trace_code 超长 / 非法字符
-    assert not any("qty" in (s.args.get("payload") or {}) for s in sc.steps)  # D78 无 numeric 列
+    reasons = [(e.get("ctx") or {}).get("reason") for e in exp if e.get("type") == "value_error"]
+    assert sorted(reasons) == ["max_length", "max_length", "pattern", "pattern"]  # 手工 + EAP 两个入口
+    voids = [s for s in sc.steps if s.kind == "marking_void"]
+    assert [v.args["expect"]["status"] for v in voids] == [422, 422, 422, 200, 409]
+    assert not any("qty" in (s.args.get("payload") or {}) for s in sc.steps)
     seqs = [s.args["seqs"] for s in sc.steps if s.kind == "expect_marking_prints" and "seqs" in s.args]
     assert all(q == list(range(1, len(q) + 1)) for q in seqs) and [1, 2] in seqs
-    tb = next(s for s in sc.steps if s.kind == "track_out")
-    assert tb.args["expect"]["ctx"]["check"] == "marking_inspection" and tb.args["expect"]["overridable"] is False
+    # 出站：pending / fail / 重打后 pending → 409，pass → 200
+    outs = [s.args["expect"]["status"] for s in sc.steps if s.kind == "track_out"]
+    assert outs == [409, 409, 409, 200]
+    lis = [
+        s.args["fields"]["latest_inspection_status"]
+        for s in sc.steps
+        if s.kind == "expect_marking" and "latest_inspection_status" in s.args.get("fields", {})
+    ]
+    assert lis == ["fail", "pass", "fail"]
+    # 手工重放不带 duplicate；EAP 重发 duplicate=true
+    for s in sc.steps:
+        if s.kind == "marking_replay":
+            of = next(x for x in sc.steps if x.args.get("save_as") == s.args["of"])
+            if of.kind == "marking_report":
+                assert s.args["expect"]["body"]["duplicate"] is True
+            else:
+                assert "duplicate" in s.args["expect"]["absent"]
+    text = open("scenarios/p3-draft/marking-report.yaml").read()
+    assert "lot.marking_mismatched" in text and "event: label_marking_mismatch" not in text
     with pytest.raises(ScenarioError):
         parse({"run_id": "m", "steps": [{"marking_inspect": {"result": "pass"}}]})  # 缺 lot
     with pytest.raises(ScenarioError):

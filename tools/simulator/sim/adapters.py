@@ -107,7 +107,10 @@ def default_adapters() -> dict[str, Adapter]:
             "检验履历 mes_marking_inspection（提议）", ["/mes/marking/{marking_id}/inspections"], card="P3-B2"
         ),
         "marking_events": Adapter("打标领域事件（audit_log）", ["/mes/audit_log"], card="P3-B2"),
-        "marking_scrap": Adapter("打标报废（提议）", ["/mes/marking/{marking_id}/scrap"], card="P3-B2"),
+        # D78 补充二 3：作废（必填 reason_id + comment，reason_type=marking_void，不可恢复）
+        "marking_void": Adapter("打标记录作废", ["/mes/marking/{marking_id}/void"], card="P3-B2"),
+        # 批次整批报废：沿用 P1 数量调整 kind=scrap（全部数量）；整批报废后 lot_status 是否为 scrapped 待 B2 核对
+        "lot_adjust": Adapter("批次数量调整（报废）", ["/mes/exec/lots/{lot_id}/adjust"], card="P1"),
     }
 
 
@@ -162,7 +165,8 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "marking_manual": ["marking_preview", "marking_create"],
     "marking_reprint": ["marking_create"],
     "marking_inspect": ["marking_inspect"],
-    "marking_scrap": ["marking_scrap"],
+    "marking_void": ["marking_void"],
+    "lot_scrap": ["lot_adjust"],
     "expect_marking": ["marking_get"],
     "expect_marking_prints": ["marking_prints"],
     "expect_marking_inspections": ["marking_inspections"],
