@@ -27,8 +27,6 @@ def _no_err(m: Mes, e: str, body: dict[str, Any], field: str) -> None:
         ("equipment_group", "equipment_type"),
         ("product_family", "tech_node"),
         ("product", "uom"),
-        ("reticle", "product"),
-        ("reticle", "layer"),
         ("operation", "area"),
         ("recipe", "equipment_type"),
         ("dc_plan", "operation"),

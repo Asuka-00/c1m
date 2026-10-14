@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 130,
+  "count": 131,
   "items": [
     {
       "key": "g-workspace",
@@ -1449,12 +1449,27 @@
       "parent": "g-product",
       "path": "/mes/reticle",
       "component": "mes:reticle",
-      "permission": "mes.product:read",
+      "permission": "mes.reticle:read",
       "i18n_key": "menu.mes-reticle",
       "titles": {
         "en": "Reticle",
         "zh-CN": "光罩",
         "ja": "レチクル"
+      }
+    },
+    {
+      "key": "mes-reticle-console",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-product",
+      "path": "/mes/reticle-console",
+      "component": "mes-page:reticle",
+      "permission": "mes.reticle:read",
+      "i18n_key": "menu.mes-reticle-console",
+      "titles": {
+        "en": "Reticle Console",
+        "zh-CN": "光罩工作台",
+        "ja": "レチクルコンソール"
       }
     },
     {

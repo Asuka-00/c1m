@@ -15,6 +15,7 @@
       "product": "製品・資材",
       "bom": "部品表（BOM）",
       "quality": "品質",
+      "reticle": "レチクル",
       "wh": "倉庫"
     },
     "entity": {
@@ -111,6 +112,12 @@
       "defect_code": "欠陥コード",
       "reason_code": "理由コード",
       "dc_result": "測定データ",
+      "reticle_applicability": "レチクル適用",
+      "reticle_incident": "レチクル事故",
+      "reticle_mount_log": "レチクル装着履歴",
+      "reticle_usage": "レチクル使用履歴",
+      "reticle_inspection": "レチクル検査記録",
+      "reticle_status_log": "レチクル状態履歴",
       "warehouse": "倉庫",
       "storage_location": "ロケーション",
       "receipt": "完成品入庫伝票",
@@ -1031,11 +1038,31 @@
       "reticle": {
         "code": "コード",
         "name": "名称",
+        "revision": "リビジョン",
         "product": "製品",
         "layer": "レイヤー",
         "grade": "グレード",
         "max_shots": "最大ショット数",
         "status_code": "状態",
+        "hold_reason": "ホールド理由",
+        "status_before_hold": "ホールド前状態",
+        "inspection_required": "要検査",
+        "shot_count": "累計ショット数",
+        "warn_ratio": "警告比率",
+        "mount_count": "装着回数",
+        "life_reset_count": "寿命リセット回数",
+        "count_basis": "カウント基準",
+        "shots_per_wafer_default": "ウェーハ当たりショット数",
+        "received_at": "入庫日時",
+        "first_used_at": "初回使用日時",
+        "storage_location": "保管場所",
+        "carrier": "ポッド",
+        "equipment": "装着設備",
+        "mounted_at": "装着日時",
+        "last_inspected_at": "前回検査",
+        "next_inspection_due_at": "次回検査期限",
+        "inspection_interval_shots": "検査周期（ショット）",
+        "inspection_interval_days": "検査周期（日）",
         "description": "説明"
       },
       "fixture": {
@@ -1131,6 +1158,87 @@
         "is_oos": "規格外",
         "oos_action": "規格外処置",
         "username": "ユーザー"
+      },
+      "reticle_applicability": {
+        "reticle": "レチクル",
+        "product": "製品",
+        "layer": "レイヤー",
+        "shots_per_wafer": "ウェーハ当たりショット数",
+        "is_primary": "主適用",
+        "comment": "コメント"
+      },
+      "reticle_incident": {
+        "reticle": "レチクル",
+        "kind": "種別",
+        "occurred_at": "日時",
+        "equipment": "設備",
+        "lot": "ロット",
+        "description": "説明",
+        "source": "ソース",
+        "external_event_id": "外部イベント ID",
+        "username": "ユーザー"
+      },
+      "reticle_mount_log": {
+        "reticle": "レチクル",
+        "equipment": "設備",
+        "sub_unit": "サブユニット",
+        "slot_code": "スロット",
+        "mounted_at": "装着日時",
+        "unmounted_at": "取外し日時",
+        "unmount_reason": "取外し理由",
+        "shots_at_mount": "装着時ショット",
+        "shots_at_unmount": "取外し時ショット",
+        "comment": "コメント",
+        "source": "ソース",
+        "external_event_id": "外部イベント ID",
+        "username": "ユーザー"
+      },
+      "reticle_usage": {
+        "reticle": "レチクル",
+        "equipment": "設備",
+        "lot": "ロット",
+        "operation": "工程",
+        "delta": "増分",
+        "count_after": "カウント後",
+        "kind": "種別",
+        "occurred_at": "日時",
+        "reason": "理由",
+        "comment": "コメント",
+        "source": "ソース",
+        "external_event_id": "外部イベント ID",
+        "username": "ユーザー",
+        "counted": "加算済",
+        "estimated": "推定",
+        "corrected_at": "修正日時",
+        "estimated_delta": "推定増分"
+      },
+      "reticle_inspection": {
+        "reticle": "レチクル",
+        "kind": "種別",
+        "result": "結果",
+        "defect_count": "欠陥数",
+        "measured": "測定データ",
+        "equipment": "検査機",
+        "inspected_at": "検査日時",
+        "disposition": "処置",
+        "shots_at_inspection": "ショット数",
+        "comment": "コメント",
+        "source": "ソース",
+        "external_event_id": "外部イベント ID",
+        "username": "ユーザー"
+      },
+      "reticle_status_log": {
+        "reticle": "レチクル",
+        "from_status": "変更前",
+        "to_status": "変更後",
+        "action": "操作",
+        "hold_reason_from": "変更前ホールド理由",
+        "hold_reason_to": "変更後ホールド理由",
+        "reason": "理由",
+        "comment": "コメント",
+        "trigger": "トリガー",
+        "username": "ユーザー",
+        "at": "日時"
       },
       "warehouse": {
         "code": "コード",
@@ -1757,6 +1865,24 @@
         "hold": "ホールド",
         "retired": "廃棄"
       },
+      "reticle_status": {
+        "available": "使用可",
+        "in_use": "使用中",
+        "dirty": "洗浄中",
+        "inspecting": "検査中",
+        "on_hold": "ホールド",
+        "pending_maintenance": "保守待ち",
+        "scrapped": "廃棄"
+      },
+      "reticle_hold_reason": {
+        "incident": "事故",
+        "inspection_failed": "検査不合格",
+        "manual": "手動"
+      },
+      "reticle_count_basis": {
+        "track_out": "トラックアウト",
+        "eap": "設備報告"
+      },
       "reticle_grade": {
         "binary": "バイナリ",
         "psm": "位相シフト",
@@ -1877,6 +2003,60 @@
         "hold": "ロットをホールド",
         "rework": "リワーク"
       },
+      "reticle_usage_kind": {
+        "track_out": "トラックアウト",
+        "report": "報告",
+        "adjust": "調整",
+        "reset": "寿命リセット"
+      },
+      "reticle_incident_kind": {
+        "collision": "衝突",
+        "drop": "落下",
+        "other": "その他"
+      },
+      "reticle_inspection_kind": {
+        "particle": "パーティクル",
+        "haze": "ヘイズ",
+        "cd": "CD",
+        "other": "その他"
+      },
+      "reticle_inspection_result": {
+        "pass": "合格",
+        "fail": "不合格"
+      },
+      "reticle_disposition": {
+        "none": "なし",
+        "clean": "洗浄",
+        "hold": "ホールド",
+        "repair": "修理",
+        "scrap": "廃棄"
+      },
+      "reticle_unmount_reason": {
+        "manual": "手動",
+        "hold": "ホールド",
+        "incident": "事故",
+        "scrap": "廃棄"
+      },
+      "reticle_action": {
+        "mount": "装着",
+        "unmount": "取外し",
+        "hold": "ホールド",
+        "release": "解除",
+        "restore": "復帰",
+        "life_reset": "寿命リセット",
+        "clean_start": "洗浄開始",
+        "clean_complete": "洗浄完了",
+        "repair_complete": "修理完了",
+        "inspect_start": "検査開始",
+        "inspection": "検査",
+        "incident": "事故",
+        "scrap": "廃棄",
+        "system": "システム"
+      },
+      "reticle_trigger": {
+        "manual": "手動",
+        "system": "システム"
+      },
       "warehouse_type": {
         "finished_goods": "完成品倉庫",
         "semi_finished": "半製品倉庫",
@@ -1965,6 +2145,7 @@
     "mes-material-master": "資材マスタ",
     "mes-carrier-master": "キャリアマスタ",
     "mes-reticle": "レチクル",
+    "mes-reticle-console": "レチクルコンソール",
     "mes-fixture": "治具",
     "mes-factory-model": "工場モデル",
     "mes-calendar": "カレンダー・シフト",
@@ -2077,6 +2258,8 @@
     "mes_bom__write": "部品表（BOM）·編集",
     "mes_quality__read": "品質·閲覧",
     "mes_quality__write": "品質·編集",
+    "mes_reticle__read": "レチクル·閲覧",
+    "mes_reticle__write": "レチクル·編集",
     "mes_wh__read": "倉庫·閲覧",
     "mes_wh__write": "倉庫·編集",
     "mes_eap__write": "EAP イベント書込（サービスアカウント）",
@@ -2098,6 +2281,7 @@
     "mes_wo__release": "作業指示·発行 / クローズ",
     "mes_lot__start": "ロット・ウェーハ規則·投入",
     "mes_bom__activate": "部品表（BOM）·有効化 / 無効化",
+    "mes_reticle__override": "レチクル·強制解除",
     "mes_wh__confirm": "倉庫·入庫確認",
     "notify__config": "通知購読設定"
   },
@@ -2154,6 +2338,8 @@
     "mes_bom__write": "許可：部品表（BOM）·編集",
     "mes_quality__read": "許可：品質·閲覧",
     "mes_quality__write": "許可：品質·編集",
+    "mes_reticle__read": "許可：レチクル·閲覧",
+    "mes_reticle__write": "許可：レチクル·編集",
     "mes_wh__read": "許可：倉庫·閲覧",
     "mes_wh__write": "許可：倉庫·編集",
     "mes_eap__write": "許可：EAP イベント書込（サービスアカウント）",
@@ -2175,6 +2361,7 @@
     "mes_wo__release": "許可：作業指示·発行 / クローズ",
     "mes_lot__start": "許可：ロット・ウェーハ規則·投入",
     "mes_bom__activate": "許可：部品表（BOM）·有効化 / 無効化",
+    "mes_reticle__override": "許可：レチクル·強制解除",
     "mes_wh__confirm": "許可：倉庫·入庫確認",
     "notify__config": "許可：通知購読設定"
   },

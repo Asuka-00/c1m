@@ -15,6 +15,7 @@
       "product": "产品与物料",
       "bom": "物料清单（BOM）",
       "quality": "质量",
+      "reticle": "光罩",
       "wh": "仓储"
     },
     "entity": {
@@ -111,6 +112,12 @@
       "defect_code": "缺陷代码",
       "reason_code": "原因代码",
       "dc_result": "量测数据",
+      "reticle_applicability": "光罩适用关系",
+      "reticle_incident": "光罩事故",
+      "reticle_mount_log": "光罩挂载履历",
+      "reticle_usage": "光罩计数履历",
+      "reticle_inspection": "光罩检查记录",
+      "reticle_status_log": "光罩状态履历",
       "warehouse": "仓库",
       "storage_location": "库位",
       "receipt": "完工入库单",
@@ -1031,11 +1038,31 @@
       "reticle": {
         "code": "编码",
         "name": "名称",
+        "revision": "版本",
         "product": "产品",
         "layer": "层",
         "grade": "类型",
         "max_shots": "最大曝光次数",
         "status_code": "状态",
+        "hold_reason": "Hold 原因",
+        "status_before_hold": "Hold 前状态",
+        "inspection_required": "待检",
+        "shot_count": "累计曝光次数",
+        "warn_ratio": "预警比例",
+        "mount_count": "挂载次数",
+        "life_reset_count": "寿命复位次数",
+        "count_basis": "计数来源",
+        "shots_per_wafer_default": "每片曝光次数",
+        "received_at": "入库时间",
+        "first_used_at": "首次启用",
+        "storage_location": "库位",
+        "carrier": "光罩盒",
+        "equipment": "挂载机台",
+        "mounted_at": "挂载时间",
+        "last_inspected_at": "上次检查",
+        "next_inspection_due_at": "下次检查",
+        "inspection_interval_shots": "检查周期（shot）",
+        "inspection_interval_days": "检查周期（天）",
         "description": "描述"
       },
       "fixture": {
@@ -1131,6 +1158,87 @@
         "is_oos": "超规",
         "oos_action": "超规动作",
         "username": "用户"
+      },
+      "reticle_applicability": {
+        "reticle": "光罩",
+        "product": "产品",
+        "layer": "层",
+        "shots_per_wafer": "每片曝光次数",
+        "is_primary": "主适用",
+        "comment": "备注"
+      },
+      "reticle_incident": {
+        "reticle": "光罩",
+        "kind": "类型",
+        "occurred_at": "时间",
+        "equipment": "设备",
+        "lot": "批次",
+        "description": "说明",
+        "source": "来源",
+        "external_event_id": "外部事件号",
+        "username": "用户"
+      },
+      "reticle_mount_log": {
+        "reticle": "光罩",
+        "equipment": "设备",
+        "sub_unit": "子单元",
+        "slot_code": "槽位",
+        "mounted_at": "挂载时间",
+        "unmounted_at": "卸载时间",
+        "unmount_reason": "卸载原因",
+        "shots_at_mount": "挂载时 shot",
+        "shots_at_unmount": "卸载时 shot",
+        "comment": "备注",
+        "source": "来源",
+        "external_event_id": "外部事件号",
+        "username": "用户"
+      },
+      "reticle_usage": {
+        "reticle": "光罩",
+        "equipment": "设备",
+        "lot": "批次",
+        "operation": "工序",
+        "delta": "增量",
+        "count_after": "计数后",
+        "kind": "类型",
+        "occurred_at": "时间",
+        "reason": "原因",
+        "comment": "备注",
+        "source": "来源",
+        "external_event_id": "外部事件号",
+        "username": "用户",
+        "counted": "已累加",
+        "estimated": "估算",
+        "corrected_at": "修正时间",
+        "estimated_delta": "估算增量"
+      },
+      "reticle_inspection": {
+        "reticle": "光罩",
+        "kind": "类型",
+        "result": "结果",
+        "defect_count": "缺陷数",
+        "measured": "测量数据",
+        "equipment": "检查机",
+        "inspected_at": "检查时间",
+        "disposition": "处置",
+        "shots_at_inspection": "shot 数",
+        "comment": "备注",
+        "source": "来源",
+        "external_event_id": "外部事件号",
+        "username": "用户"
+      },
+      "reticle_status_log": {
+        "reticle": "光罩",
+        "from_status": "原状态",
+        "to_status": "新状态",
+        "action": "动作",
+        "hold_reason_from": "原 Hold 原因",
+        "hold_reason_to": "新 Hold 原因",
+        "reason": "原因",
+        "comment": "备注",
+        "trigger": "触发",
+        "username": "用户",
+        "at": "时间"
       },
       "warehouse": {
         "code": "编码",
@@ -1757,6 +1865,24 @@
         "hold": "Hold",
         "retired": "报废"
       },
+      "reticle_status": {
+        "available": "可用",
+        "in_use": "使用中",
+        "dirty": "清洗中",
+        "inspecting": "检查中",
+        "on_hold": "Hold",
+        "pending_maintenance": "待维修",
+        "scrapped": "报废"
+      },
+      "reticle_hold_reason": {
+        "incident": "事故",
+        "inspection_failed": "检查不合格",
+        "manual": "人工"
+      },
+      "reticle_count_basis": {
+        "track_out": "出站",
+        "eap": "设备上报"
+      },
       "reticle_grade": {
         "binary": "二元掩模",
         "psm": "相移掩模",
@@ -1877,6 +2003,60 @@
         "hold": "Hold 批次",
         "rework": "返工"
       },
+      "reticle_usage_kind": {
+        "track_out": "出站",
+        "report": "上报",
+        "adjust": "调整",
+        "reset": "寿命复位"
+      },
+      "reticle_incident_kind": {
+        "collision": "碰撞",
+        "drop": "掉落",
+        "other": "其他"
+      },
+      "reticle_inspection_kind": {
+        "particle": "颗粒",
+        "haze": "雾化",
+        "cd": "CD",
+        "other": "其他"
+      },
+      "reticle_inspection_result": {
+        "pass": "合格",
+        "fail": "不合格"
+      },
+      "reticle_disposition": {
+        "none": "无",
+        "clean": "清洗",
+        "hold": "Hold",
+        "repair": "维修",
+        "scrap": "报废"
+      },
+      "reticle_unmount_reason": {
+        "manual": "人工",
+        "hold": "Hold",
+        "incident": "事故",
+        "scrap": "报废"
+      },
+      "reticle_action": {
+        "mount": "挂载",
+        "unmount": "卸载",
+        "hold": "Hold",
+        "release": "释放",
+        "restore": "恢复",
+        "life_reset": "寿命复位",
+        "clean_start": "开始清洗",
+        "clean_complete": "清洗完成",
+        "repair_complete": "维修完成",
+        "inspect_start": "开始检查",
+        "inspection": "检查",
+        "incident": "事故",
+        "scrap": "报废",
+        "system": "系统"
+      },
+      "reticle_trigger": {
+        "manual": "人工",
+        "system": "系统"
+      },
       "warehouse_type": {
         "finished_goods": "成品仓",
         "semi_finished": "半成品仓",
@@ -1965,6 +2145,7 @@
     "mes-material-master": "物料主数据",
     "mes-carrier-master": "载具主数据",
     "mes-reticle": "光罩",
+    "mes-reticle-console": "光罩工作台",
     "mes-fixture": "治具",
     "mes-factory-model": "工厂模型",
     "mes-calendar": "日历与班次",
@@ -2077,6 +2258,8 @@
     "mes_bom__write": "物料清单（BOM）·编辑",
     "mes_quality__read": "质量·查看",
     "mes_quality__write": "质量·编辑",
+    "mes_reticle__read": "光罩·查看",
+    "mes_reticle__write": "光罩·编辑",
     "mes_wh__read": "仓储·查看",
     "mes_wh__write": "仓储·编辑",
     "mes_eap__write": "EAP 事件写入（服务账号）",
@@ -2098,6 +2281,7 @@
     "mes_wo__release": "工单·下达 / 关闭",
     "mes_lot__start": "批次与晶圆规则·投产",
     "mes_bom__activate": "物料清单（BOM）·生效 / 作废",
+    "mes_reticle__override": "光罩·强制放行",
     "mes_wh__confirm": "仓储·确认入库",
     "notify__config": "配置通知订阅"
   },
@@ -2154,6 +2338,8 @@
     "mes_bom__write": "允许：物料清单（BOM）·编辑",
     "mes_quality__read": "允许：质量·查看",
     "mes_quality__write": "允许：质量·编辑",
+    "mes_reticle__read": "允许：光罩·查看",
+    "mes_reticle__write": "允许：光罩·编辑",
     "mes_wh__read": "允许：仓储·查看",
     "mes_wh__write": "允许：仓储·编辑",
     "mes_eap__write": "允许：EAP 事件写入（服务账号）",
@@ -2175,6 +2361,7 @@
     "mes_wo__release": "允许：工单·下达 / 关闭",
     "mes_lot__start": "允许：批次与晶圆规则·投产",
     "mes_bom__activate": "允许：物料清单（BOM）·生效 / 作废",
+    "mes_reticle__override": "允许：光罩·强制放行",
     "mes_wh__confirm": "允许：仓储·确认入库",
     "notify__config": "允许：配置通知订阅"
   },

@@ -111,6 +111,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-material-master", "Material Master|物料主数据|資材マスタ"),
         ("mes-carrier-master", "Carrier Master|载具主数据|キャリアマスタ"),
         ("mes-reticle", "Reticle|光罩|レチクル"),
+        ("mes-reticle-console", "Reticle Console|光罩工作台|レチクルコンソール"),
         ("mes-fixture", "Fixture|治具|治具"),
     ],
     "g-factory": [

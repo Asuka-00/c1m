@@ -556,9 +556,10 @@ def test_reticle_carrier_hold_wo_checks(client: TestClient, db: Session) -> None
             "name": "rt",
             "product_id": f.product["id"],
             "layer": "L1",
-            "status_code": "hold",
         },
     )
+    # P3-B4：status_code 只读（动作接口改），这里直接置 on_hold 构造数据
+    f.sql("UPDATE mes_reticle SET status_code = 'on_hold' WHERE id = :r", r=rt["id"])
     f.sql(
         "INSERT INTO mes_step_resource (id, tenant_id, route_step_id, resource_kind, reticle_id) VALUES (gen_random_uuid(), :t, :s, 'reticle', :r)",
         t=f.m.tid,
@@ -586,10 +587,10 @@ def test_reticle_carrier_hold_wo_checks(client: TestClient, db: Session) -> None
     )
     a, b = f.start(1, 1)
     assert "reticle required" in _ti_block(f, a)
-    assert "is hold" in _msgs(
+    assert "is on_hold" in _msgs(
         f.stage(a, "track_in", 409, equipment_id=f.eq["id"], reticle_id=rt["id"])
     )
-    f.m.patch("reticle", rt["id"], {"status_code": "available"})
+    f.sql("UPDATE mes_reticle SET status_code = 'available' WHERE id = :r", r=rt["id"])
     assert "carrier C1 is dirty" in _msgs(
         f.stage(
             a,

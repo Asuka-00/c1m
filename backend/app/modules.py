@@ -15,6 +15,7 @@ from app.mes.planning import module as _mes_planning  # noqa: F401
 from app.mes.process import module as _mes_process  # noqa: F401
 from app.mes.product import module as _mes_product  # noqa: F401
 from app.mes.quality import module as _mes_quality  # noqa: F401
+from app.mes.reticle import module as _mes_reticle  # noqa: F401
 from app.mes.warehouse import module as _mes_warehouse  # noqa: F401
 from app.platform.audit import module as _audit  # noqa: F401
 from app.platform.auth import module as _auth  # noqa: F401

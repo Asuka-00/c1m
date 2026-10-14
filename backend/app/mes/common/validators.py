@@ -54,7 +54,25 @@ def _get(session: Session, tid: uuid.UUID, code: str, rid: Any) -> Row | None:
 
 
 # 只读（仅迁移 / 系统写入）的字段：客户端写入 422 read_only_field，而非 unknown_field
-READ_ONLY_FIELDS: dict[str, set[str]] = {"alarm_code": {"migration_note"}}
+READ_ONLY_FIELDS: dict[str, set[str]] = {
+    "alarm_code": {"migration_note"},
+    # P3-B4（D66 Q15 / D67 / v0.8 §3.2）：光罩状态与计数只经动作接口 / 系统规则改变
+    "reticle": {
+        "status_code",
+        "hold_reason",
+        "status_before_hold",
+        "inspection_required",
+        "shot_count",
+        "mount_count",
+        "life_reset_count",
+        "first_used_at",
+        "equipment",
+        "equipment_id",
+        "mounted_at",
+        "last_inspected_at",
+        "next_inspection_due_at",
+    },
+}
 
 
 def reject_unwritable(e: Entity, data: Row) -> None:
