@@ -612,7 +612,9 @@ def test_marking_scenario_d79_supp7():
     assert len(cl) == 2 and all(e["errors"][0]["ctx"] == {"reason": "max_length", "max_length": 300} for e in cl)
     blocked = [e for e in exp if e.get("code") == "check_blocked"]
     assert blocked and all(e.get("results") for e in blocked)
-    assert any(r["ctx"].get("trace_code", "x") is None for e in blocked for r in e["results"])
+    # D89-6：项 check_type=marking、result=block、ctx {reason, mark_id}，not_marked 时 mark_id=null（不再断言 trace_code）
+    assert all(r["check_type"] == "marking" and r["result"] == "block" and set(r["ctx"]) == {"reason", "mark_id"} for e in blocked for r in e["results"])
+    assert all(r["ctx"]["mark_id"] is None for e in blocked for r in e["results"] if r["ctx"]["reason"] == "not_marked")
     # 作废后重打：缺原因 422 在 409 之前
     mk2 = [
         (s.args.get("expect") or {}).get("code")
