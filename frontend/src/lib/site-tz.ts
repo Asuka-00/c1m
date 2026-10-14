@@ -5,7 +5,7 @@
  * `toISOString().slice(0, 10)`（那是 UTC 日期；台北 00:00–08:00 时 UTC 还是前一天）。
  *
  * 站点时区来源（优先级从高到低）：
- * 1. 会话 / 租户信息里的 `site_tz`（D75，随 B6 交付；先预留读取位置）；
+ * 1. `/tenants/me` 的 `tenant.site_tz`（D75，随 B6 交付）；会话 / 菜单顶层 `site_tz` 作备用；
  * 2. 厂区列表：第一个启用厂区（按编码排序）的 `timezone`（与后端 `tenant_tz()` 一致），
  *    兼容 `tenant_tz` / `tz` 字段名；
  * 3. 默认 `Asia/Taipei`。
@@ -106,15 +106,19 @@ export function toSiteDate(v: string, tz: string = current): string {
 
 type SiteRow = Record<string, unknown>
 
-/** 从会话 / 租户信息里读 `site_tz`（D75 / B6）；没有返回 null。 */
+/**
+ * 从会话 / 租户信息里读 `site_tz`（D75 / B6）；没有返回 null。
+ * 优先 `/tenants/me` 的 `tenant.site_tz`，其次各来源顶层的 `site_tz`（备用）。
+ */
 export function sessionSiteTz(...sources: unknown[]): string | null {
-  for (const s of sources) {
-    if (!s || typeof s !== 'object') continue
-    const o = s as Record<string, unknown>
-    if (isValidTz(o.site_tz)) return o.site_tz
+  const objs = sources.filter(
+    (s): s is Record<string, unknown> => !!s && typeof s === 'object'
+  )
+  for (const o of objs) {
     const tenant = o.tenant as Record<string, unknown> | undefined
     if (tenant && isValidTz(tenant.site_tz)) return tenant.site_tz
   }
+  for (const o of objs) if (isValidTz(o.site_tz)) return o.site_tz
   return null
 }
 
@@ -137,4 +141,73 @@ export function resolveSiteTz(
   sites: SiteRow[] | null | undefined
 ): string {
   return sessionSiteTz(...session) ?? siteListTz(sites) ?? DEFAULT_SITE_TZ
+}
+
+const offFmtCache = new Map<string, Intl.DateTimeFormat>()
+
+/** 某时刻在时区 tz 的 UTC 偏移（分钟，东正西负），含夏令时。 */
+export function tzOffsetMinutes(at: number, tz: string): number {
+  let f = offFmtCache.get(tz)
+  if (!f) {
+    f = new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
+    offFmtCache.set(tz, f)
+  }
+  const p = Object.fromEntries(
+    f.formatToParts(new Date(at)).map((x) => [x.type, x.value])
+  )
+  const wall = Date.UTC(
+    +p.year,
+    +p.month - 1,
+    +p.day,
+    +p.hour,
+    +p.minute,
+    +p.second
+  )
+  return Math.round((wall - Math.floor(at / 1000) * 1000) / 60_000)
+}
+
+/** 站点时区的墙上时间（按 UTC 字段给出的毫秒）→ 该时刻所用的偏移（Intl 反算，两次收敛）。 */
+function offsetAtWall(wall: number, tz: string): number {
+  let off = tzOffsetMinutes(wall, tz)
+  for (let i = 0; i < 2; i++) {
+    const next = tzOffsetMinutes(wall - off * 60_000, tz)
+    if (next === off) break
+    off = next
+  }
+  return off
+}
+
+const fmtOffset = (min: number) => {
+  const s = min < 0 ? '-' : '+'
+  const a = Math.abs(min)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${s}${p(Math.floor(a / 60))}:${p(a % 60)}`
+}
+
+/**
+ * 站点日期的当天边界（D75，带偏移，后端不换算时区、两头都含）：
+ * 开始 `YYYY-MM-DDT00:00:00+HH:MM`，结束 `YYYY-MM-DDT23:59:59.999999+HH:MM`。
+ * 偏移按当天该时刻的实际偏移算（夏令时切换日开始和结束的偏移可以不同）。
+ */
+export function siteDayBoundary(
+  ymd: string,
+  end: boolean,
+  tz: string = current
+): string {
+  const zone = isValidTz(tz) ? tz : DEFAULT_SITE_TZ
+  const [y, m, d] = ymd.split('-').map(Number)
+  const wall = end
+    ? Date.UTC(y, m - 1, d, 23, 59, 59)
+    : Date.UTC(y, m - 1, d, 0, 0, 0)
+  const time = end ? '23:59:59.999999' : '00:00:00'
+  return `${ymd.slice(0, 10)}T${time}${fmtOffset(offsetAtWall(wall, zone))}`
 }

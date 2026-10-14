@@ -44,11 +44,19 @@ describe('date range filters', () => {
     expect(filterKeys({ type: 'text', name: 'q' })).toEqual(['q'])
   })
 
-  it('converts local days to inclusive instants for datetime fields', () => {
-    const a = new Date(rangeParam('2026-10-01', false))
-    const b = new Date(rangeParam('2026-10-01', true))
-    expect([a.getHours(), a.getMinutes(), a.getDate()]).toEqual([0, 0, 1])
-    expect([b.getHours(), b.getMinutes(), b.getDate()]).toEqual([23, 59, 1])
+  it('datetime 字段按站点时区当天边界带偏移发送，date 字段只取前 10 位（D75）', () => {
+    expect(rangeParam('2026-10-01', false)).toBe('2026-10-01T00:00:00+08:00')
+    expect(rangeParam('2026-10-01', true)).toBe(
+      '2026-10-01T23:59:59.999999+08:00'
+    )
     expect(rangeParam('2026-10-01', true, 'date')).toBe('2026-10-01')
+    expect(rangeParam('2026-10-01T05:00:00Z', false, 'date')).toBe('2026-10-01')
+    // 浏览器时区（测试机台北）与站点不一致：按站点洛杉矶
+    expect(
+      rangeParam('2026-10-01', false, 'datetime', 'America/Los_Angeles')
+    ).toBe('2026-10-01T00:00:00-07:00')
+    expect(
+      rangeParam('2026-12-01', true, 'datetime', 'America/Los_Angeles')
+    ).toBe('2026-12-01T23:59:59.999999-08:00')
   })
 })

@@ -1,3 +1,5 @@
+import { getSiteTz, siteDayBoundary } from '@/lib/site-tz'
+
 /** 文本筛选的防抖时长（毫秒）。 */
 export const SEARCH_DEBOUNCE_MS = 300
 
@@ -48,30 +50,31 @@ export function filterKeys(def: FilterDef): string[] {
     : [def.name]
 }
 
-/** 本地日期（YYYY-MM-DD）。 */
+/** 浏览器本地日期（YYYY-MM-DD；业务日期请用 lib/site-tz 的站点日期）。 */
 export function ymd(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
 /**
- * 日期范围参数转换为接口参数：datetime 字段把本地日期转为当日 00:00 / 23:59:59.999 的 ISO 时刻。
+ * 日期范围参数转换为接口参数（D75）：
+ * - datetime 字段：按站点时区算当天 00:00:00 / 23:59:59.999999，带偏移发送（后端不换算、两头都含）；
+ * - date 字段：只取前 10 位，直接传站点日期。
  *
  * @param v - YYYY-MM-DD
  * @param end - 是否为上限
  * @param kind - 字段类型
+ * @param tz - 站点时区（默认当前站点时区）
  */
 export function rangeParam(
   v: string,
   end: boolean,
-  kind: 'date' | 'datetime' = 'datetime'
+  kind: 'date' | 'datetime' = 'datetime',
+  tz: string = getSiteTz()
 ): string {
-  if (kind === 'date') return v
-  const [y, m, d] = v.split('-').map(Number)
-  const dt = end
-    ? new Date(y, m - 1, d, 23, 59, 59, 999)
-    : new Date(y, m - 1, d, 0, 0, 0, 0)
-  return dt.toISOString()
+  const ymd = v.trim().slice(0, 10)
+  if (kind === 'date') return ymd
+  return siteDayBoundary(ymd, end, tz)
 }
 
 /** 所有表格的默认筛选：一个绑定 ?q= 的关键字搜索框 */

@@ -75,10 +75,13 @@ describe('坐标图列表（P2-F8 / B5）', () => {
       q: 'map',
       substrate_id: 'WF001-01',
       latest_only: true,
-      imported_from: new Date(2026, 9, 14).toISOString(),
-      imported_to: new Date(2026, 9, 15).toISOString(),
+      imported_from: '2026-10-14T00:00:00+08:00',
+      imported_to: '2026-10-15T00:00:00+08:00',
     })
     expect(localDayStart('bad')).toBeUndefined()
+    expect(localDayStart('2026-11-01', 1, 'America/Los_Angeles')).toBe(
+      '2026-11-02T00:00:00-08:00'
+    )
   })
 
   it('同一基板多版本都列出并标出最新；时间按本地显示；只看最新传 latest_only', async () => {

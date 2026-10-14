@@ -14,6 +14,8 @@ import {
   resolveSiteTz,
   setSiteTz,
   siteDate,
+  siteDayBoundary,
+  tzOffsetMinutes,
   siteListTz,
   siteToday,
   toSiteDate,
@@ -81,6 +83,13 @@ describe('site_tz 来源（D75）', () => {
     )
     expect(
       resolveSiteTz([null, { tenant: { site_tz: 'Asia/Tokyo' } }], sites)
+    ).toBe('Asia/Tokyo')
+    // /tenants/me 的 tenant.site_tz 优先于其他来源顶层的 site_tz
+    expect(
+      resolveSiteTz(
+        [{ site_tz: 'Europe/Berlin' }, { tenant: { site_tz: 'Asia/Tokyo' } }],
+        sites
+      )
     ).toBe('Asia/Tokyo')
     expect(resolveSiteTz([{ site_tz: 'bad' }], sites)).toBe(
       'America/Los_Angeles'
@@ -160,6 +169,57 @@ describe('到期判断按站点日期（台北 0–8 点固定时钟）', () => 
     } as unknown as CheckResult
     expect(operatorQualMessage(r2, TPE_0300, 'Asia/Taipei')).toContain(
       '2026-10-16'
+    )
+  })
+})
+
+describe('站点当天边界（带偏移，D75）', () => {
+  it('台北：+08:00，两头都含', () => {
+    expect(siteDayBoundary('2026-10-15', false, 'Asia/Taipei')).toBe(
+      '2026-10-15T00:00:00+08:00'
+    )
+    expect(siteDayBoundary('2026-10-15', true, 'Asia/Taipei')).toBe(
+      '2026-10-15T23:59:59.999999+08:00'
+    )
+    // 解析回来是 UTC 前一天 16:00（台北 0–8 点 UTC 还是前一天）
+    expect(
+      new Date(
+        siteDayBoundary('2026-10-15', false, 'Asia/Taipei')
+      ).toISOString()
+    ).toBe('2026-10-14T16:00:00.000Z')
+  })
+
+  it('洛杉矶夏令时切换日：开始和结束的偏移不同', () => {
+    // 2026-03-08 02:00 PST → PDT
+    expect(siteDayBoundary('2026-03-08', false, 'America/Los_Angeles')).toBe(
+      '2026-03-08T00:00:00-08:00'
+    )
+    expect(siteDayBoundary('2026-03-08', true, 'America/Los_Angeles')).toBe(
+      '2026-03-08T23:59:59.999999-07:00'
+    )
+    // 2026-11-01 02:00 PDT → PST
+    expect(siteDayBoundary('2026-11-01', false, 'America/Los_Angeles')).toBe(
+      '2026-11-01T00:00:00-07:00'
+    )
+    expect(siteDayBoundary('2026-11-01', true, 'America/Los_Angeles')).toBe(
+      '2026-11-01T23:59:59.999999-08:00'
+    )
+  })
+
+  it('偏移与浏览器时区无关；默认用当前站点时区；半小时时区', () => {
+    expect(tzOffsetMinutes(Date.UTC(2026, 6, 1), 'America/Los_Angeles')).toBe(
+      -420
+    )
+    expect(tzOffsetMinutes(Date.UTC(2026, 6, 1), 'Asia/Kolkata')).toBe(330)
+    expect(siteDayBoundary('2026-10-15', false, 'Asia/Kolkata')).toBe(
+      '2026-10-15T00:00:00+05:30'
+    )
+    expect(siteDayBoundary('2026-10-15', false, 'UTC')).toBe(
+      '2026-10-15T00:00:00+00:00'
+    )
+    setSiteTz('America/Los_Angeles')
+    expect(siteDayBoundary('2026-10-15', true)).toBe(
+      '2026-10-15T23:59:59.999999-07:00'
     )
   })
 })

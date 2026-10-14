@@ -1,5 +1,6 @@
-/** 坐标图列表筛选 → 请求参数（日期按本地时区换成 UTC，结束日含当天：to = 次日 0 点）。 */
+/** 坐标图列表筛选 → 请求参数（日期按站点时区 0 点带偏移发送，结束日含当天：to = 次日 0 点）。 */
 import type { MapListParams } from '@/lib/api/mes/map'
+import { addDays, getSiteTz, siteDayBoundary } from '@/lib/site-tz'
 
 export interface MapListFilter {
   q: string
@@ -21,12 +22,16 @@ export const emptyMapFilter = (): MapListFilter => ({
   page: 1,
 })
 
-/** `YYYY-MM-DD`（本地日期）→ 当天本地 0 点的 UTC ISO 字符串；`plusDays` 用于结束日。 */
-export function localDayStart(d: string, plusDays = 0): string | undefined {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d)
-  if (!m) return undefined
-  const x = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + plusDays)
-  return x.toISOString()
+/**
+ * `YYYY-MM-DD`（站点日期）→ 当天站点 0 点（带偏移，D75）；`plusDays` 用于结束日（次日 0 点）。
+ */
+export function localDayStart(
+  d: string,
+  plusDays = 0,
+  tz: string = getSiteTz()
+): string | undefined {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return undefined
+  return siteDayBoundary(addDays(d, plusDays), false, tz)
 }
 
 export function mapListParams(f: MapListFilter): MapListParams {
