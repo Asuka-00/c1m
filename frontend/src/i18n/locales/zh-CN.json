@@ -1622,6 +1622,16 @@
       "clearDesc": "清除后不会自动解除 Hold 或恢复设备状态。",
       "cleared": "报警已清除",
       "already": "该报警已清除，未做改动"
+    },
+    "toolLife": {
+      "warn": "接近寿命上限",
+      "over": "已达寿命上限",
+      "reached": "工具 {{tool}} 已达寿命上限（{{used}}/{{max}}），不能进站，不可强制放行",
+      "near": "工具 {{tool}} 接近寿命上限（{{used}}/{{max}}）",
+      "expired": "工具 {{tool}} 已于 {{date}} 过期，不能进站",
+      "expiring": "工具 {{tool}} 将于 {{date}} 到期",
+      "status": "工具 {{tool}} 当前状态为 {{status}}，不能进站",
+      "logged": "已记入检查记录和批次履历"
     }
   },
   "notify": {

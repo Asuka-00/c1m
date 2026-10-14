@@ -1622,6 +1622,16 @@
       "clearDesc": "Holds and equipment state are not restored automatically.",
       "cleared": "Alarm cleared",
       "already": "Alarm was already cleared; nothing changed"
+    },
+    "toolLife": {
+      "warn": "Near end of life",
+      "over": "Life limit reached",
+      "reached": "Tool {{tool}} reached its life limit ({{used}}/{{max}}); track-in blocked, no override",
+      "near": "Tool {{tool}} is near end of life ({{used}}/{{max}})",
+      "expired": "Tool {{tool}} expired on {{date}}; track-in blocked",
+      "expiring": "Tool {{tool}} expires on {{date}}",
+      "status": "Tool {{tool}} is {{status}}; track-in blocked",
+      "logged": "Recorded in the check log and lot history"
     }
   },
   "notify": {

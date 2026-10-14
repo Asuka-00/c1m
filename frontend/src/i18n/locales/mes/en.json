@@ -94,7 +94,9 @@
       "receipt": "Finished-goods receipt",
       "receipt_line": "Receipt line",
       "audit_log": "Audit log",
-      "customer": "Customer"
+      "customer": "Customer",
+      "tool_usage": "Tool usage",
+      "tool_mount_log": "Tool mount log"
     },
     "field": {
       "alarm_code": {
@@ -234,13 +236,17 @@
         "code": "Tool ID",
         "fixture": "Tool type",
         "serial_no": "Serial no.",
-        "usage_count": "Usage count",
-        "max_usage": "Max usage",
+        "usage_count": "Usage",
+        "max_usage": "Max life",
         "warn_pct": "Warn at (% of life)",
         "expiry_date": "Expiry",
         "tool_status": "Status",
         "equipment": "Mounted on",
-        "description": "Description"
+        "description": "Description",
+        "warn_ratio": "Warn ratio",
+        "sub_unit": "Sub-unit",
+        "mounted_at": "Mounted at",
+        "life_reset_count": "Refurbish count"
       },
       "e10_auto_rule": {
         "trigger": "Trigger",
@@ -789,9 +795,14 @@
         "code": "Code",
         "name": "Name",
         "kind": "Kind",
-        "max_uses": "Max uses",
+        "max_uses": "Max life",
         "status_code": "State",
-        "description": "Description"
+        "description": "Description",
+        "consumable_kind": "Consumable kind",
+        "life_unit": "Life unit",
+        "count_basis": "Count basis",
+        "warn_ratio": "Warn ratio",
+        "require_qual_on_replace": "Qual after replace"
       },
       "material_lot": {
         "code": "Material lot no.",
@@ -929,6 +940,38 @@
         "code": "Customer code",
         "name": "Customer name",
         "short_name": "Short name"
+      },
+      "tool_usage": {
+        "tool": "Tool",
+        "equipment": "Equipment",
+        "sub_unit": "Sub-unit",
+        "lot": "Lot",
+        "operation": "Operation",
+        "delta": "Delta",
+        "count_after": "Count after",
+        "kind": "Kind",
+        "occurred_at": "Time",
+        "reason": "Reason",
+        "comment": "Comment",
+        "source": "Source",
+        "external_event_id": "External event ID",
+        "username": "User"
+      },
+      "tool_mount_log": {
+        "tool": "Tool",
+        "equipment": "Equipment",
+        "sub_unit": "Sub-unit",
+        "port_code": "Position",
+        "mounted_at": "Mounted at",
+        "unmounted_at": "Unmounted at",
+        "unmount_reason": "Unmount reason",
+        "replaced_by_tool": "Replaced by",
+        "usage_at_mount": "Usage at mount",
+        "usage_at_unmount": "Usage at unmount",
+        "comment": "Comment",
+        "source": "Source",
+        "external_event_id": "External event ID",
+        "username": "User"
       }
     },
     "help": {
@@ -942,7 +985,7 @@
         "ideal_uph": "Optional; reserved for OEE performance rate"
       },
       "tool": {
-        "max_usage": "Blank: the tool type's max uses"
+        "max_usage": "Blank: the tool type's max life"
       },
       "e10_auto_rule": {
         "equipment_type": "Blank: all types"
@@ -994,6 +1037,9 @@
       },
       "receipt_line": {
         "lot": "Only finished lots awaiting receipt"
+      },
+      "fixture": {
+        "warn_ratio": "Default warn ratio for tools of this type (0-1)"
       }
     },
     "enum": {
@@ -1505,6 +1551,41 @@
       "ownership": {
         "own": "Own",
         "customer": "Customer-owned"
+      },
+      "tool_usage_kind": {
+        "track_out": "Track out",
+        "report": "Reported",
+        "adjust": "Adjust",
+        "reset": "Reset / refurbish"
+      },
+      "tool_unmount_reason": {
+        "life_end": "End of life",
+        "broken": "Broken",
+        "pm": "PM",
+        "swap": "Swap",
+        "other": "Other"
+      },
+      "consumable_kind": {
+        "probe_card": "Probe card",
+        "capillary": "Capillary",
+        "mold": "Mold",
+        "blade": "Blade",
+        "other": "Other"
+      },
+      "life_unit": {
+        "use": "Uses",
+        "wafer": "Wafers",
+        "unit": "Units / dies",
+        "touchdown": "Touchdowns",
+        "shot": "Shots",
+        "length_mm": "Length (mm)",
+        "hours": "Hours"
+      },
+      "count_basis": {
+        "per_track_out": "Per track-out (+1)",
+        "per_wafer": "Per wafer",
+        "per_unit": "Per unit / die",
+        "reported": "Reported only"
       }
     }
   },
@@ -1694,7 +1775,9 @@
     "mes_wo__release": "Work orders·Release / close",
     "mes_lot__start": "Lot & wafer rules·Start lots",
     "mes_wh__confirm": "Warehouse·Confirm receipts",
-    "notify__config": "Configure subscriptions"
+    "notify__config": "Configure subscriptions",
+    "mes_equipment__tool_mount": "Equipment·Mount / unmount tools",
+    "mes_equipment__tool_count": "Equipment·Report / reset tool usage"
   },
   "roleName": {
     "admin": "Administrator",
@@ -1757,7 +1840,9 @@
     "mes_wo__release": "Allows: Work orders·Release / close",
     "mes_lot__start": "Allows: Lot & wafer rules·Start lots",
     "mes_wh__confirm": "Allows: Warehouse·Confirm receipts",
-    "notify__config": "Allows: Configure subscriptions"
+    "notify__config": "Allows: Configure subscriptions",
+    "mes_equipment__tool_mount": "Allows: Equipment·Mount / unmount tools",
+    "mes_equipment__tool_count": "Allows: Equipment·Report / reset tool usage"
   },
   "roleDesc": {
     "platform_admin": "Platform administrator with all permissions",

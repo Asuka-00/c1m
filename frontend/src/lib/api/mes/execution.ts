@@ -403,8 +403,8 @@ export interface ExecContext {
     fixture: Opt | null
     options: (Opt & {
       status: string
-      usage: number
-      max: number | null
+      usage: DecimalValue
+      max: DecimalValue | null
       expiry: string | null
       warn_pct: number
     })[]

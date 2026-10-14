@@ -94,7 +94,9 @@
       "receipt": "完工入库单",
       "receipt_line": "入库明细",
       "audit_log": "审计日志",
-      "customer": "客户"
+      "customer": "客户",
+      "tool_usage": "工具计数履历",
+      "tool_mount_log": "工具装卸履历"
     },
     "field": {
       "alarm_code": {
@@ -234,13 +236,17 @@
         "code": "工具编号",
         "fixture": "工具类型",
         "serial_no": "序列号",
-        "usage_count": "使用次数",
-        "max_usage": "最大使用次数",
+        "usage_count": "已用寿命",
+        "max_usage": "寿命上限",
         "warn_pct": "预警阈值（寿命%）",
         "expiry_date": "有效期",
         "tool_status": "状态",
         "equipment": "安装设备",
-        "description": "描述"
+        "description": "描述",
+        "warn_ratio": "预警比例",
+        "sub_unit": "子单元",
+        "mounted_at": "安装时间",
+        "life_reset_count": "修磨次数"
       },
       "e10_auto_rule": {
         "trigger": "触发时机",
@@ -789,9 +795,14 @@
         "code": "编码",
         "name": "名称",
         "kind": "类型",
-        "max_uses": "最大使用次数",
+        "max_uses": "寿命上限",
         "status_code": "状态",
-        "description": "描述"
+        "description": "描述",
+        "consumable_kind": "耗材类别",
+        "life_unit": "寿命单位",
+        "count_basis": "计数基准",
+        "warn_ratio": "预警比例",
+        "require_qual_on_replace": "更换后需 Qual"
       },
       "material_lot": {
         "code": "物料批号",
@@ -929,6 +940,38 @@
         "code": "客户编码",
         "name": "客户名称",
         "short_name": "简称"
+      },
+      "tool_usage": {
+        "tool": "工具",
+        "equipment": "设备",
+        "sub_unit": "子单元",
+        "lot": "批次",
+        "operation": "工序",
+        "delta": "增量",
+        "count_after": "计数后",
+        "kind": "类型",
+        "occurred_at": "时间",
+        "reason": "原因",
+        "comment": "备注",
+        "source": "来源",
+        "external_event_id": "外部事件号",
+        "username": "用户"
+      },
+      "tool_mount_log": {
+        "tool": "工具",
+        "equipment": "设备",
+        "sub_unit": "子单元",
+        "port_code": "位置",
+        "mounted_at": "安装时间",
+        "unmounted_at": "卸下时间",
+        "unmount_reason": "卸下原因",
+        "replaced_by_tool": "更换为",
+        "usage_at_mount": "安装时计数",
+        "usage_at_unmount": "卸下时计数",
+        "comment": "备注",
+        "source": "来源",
+        "external_event_id": "外部事件号",
+        "username": "用户"
       }
     },
     "help": {
@@ -942,7 +985,7 @@
         "ideal_uph": "可选，预留给 OEE 性能稼动率"
       },
       "tool": {
-        "max_usage": "留空则使用工具类型的最大使用次数"
+        "max_usage": "留空则使用工具类型的寿命上限"
       },
       "e10_auto_rule": {
         "equipment_type": "留空表示所有类型"
@@ -994,6 +1037,9 @@
       },
       "receipt_line": {
         "lot": "仅可选择待入库的批次"
+      },
+      "fixture": {
+        "warn_ratio": "该类型工具的默认预警比例（0–1）"
       }
     },
     "enum": {
@@ -1505,6 +1551,41 @@
       "ownership": {
         "own": "自有",
         "customer": "客户来料"
+      },
+      "tool_usage_kind": {
+        "track_out": "出站",
+        "report": "上报",
+        "adjust": "调整",
+        "reset": "重置 / 修磨"
+      },
+      "tool_unmount_reason": {
+        "life_end": "寿命到期",
+        "broken": "损坏",
+        "pm": "保养",
+        "swap": "更换",
+        "other": "其他"
+      },
+      "consumable_kind": {
+        "probe_card": "探针卡",
+        "capillary": "劈刀",
+        "mold": "模具",
+        "blade": "刀片",
+        "other": "其他"
+      },
+      "life_unit": {
+        "use": "次数",
+        "wafer": "片数",
+        "unit": "颗数",
+        "touchdown": "触点次数",
+        "shot": "冲次",
+        "length_mm": "长度（mm）",
+        "hours": "小时"
+      },
+      "count_basis": {
+        "per_track_out": "每次出站 +1",
+        "per_wafer": "按片数",
+        "per_unit": "按颗数",
+        "reported": "仅上报"
       }
     }
   },
@@ -1694,7 +1775,9 @@
     "mes_wo__release": "工单·下达 / 关闭",
     "mes_lot__start": "批次与晶圆规则·投产",
     "mes_wh__confirm": "仓储·确认入库",
-    "notify__config": "配置通知订阅"
+    "notify__config": "配置通知订阅",
+    "mes_equipment__tool_mount": "设备·工具装卸 / 更换",
+    "mes_equipment__tool_count": "设备·工具计数上报 / 重置"
   },
   "roleName": {
     "admin": "管理员",
@@ -1757,7 +1840,9 @@
     "mes_wo__release": "允许：工单·下达 / 关闭",
     "mes_lot__start": "允许：批次与晶圆规则·投产",
     "mes_wh__confirm": "允许：仓储·确认入库",
-    "notify__config": "允许：配置通知订阅"
+    "notify__config": "允许：配置通知订阅",
+    "mes_equipment__tool_mount": "允许：设备·工具装卸 / 更换",
+    "mes_equipment__tool_count": "允许：设备·工具计数上报 / 重置"
   },
   "roleDesc": {
     "platform_admin": "拥有全部权限的平台管理员",

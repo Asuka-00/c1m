@@ -94,7 +94,9 @@
       "receipt": "完成品入庫伝票",
       "receipt_line": "入庫明細",
       "audit_log": "監査ログ",
-      "customer": "顧客"
+      "customer": "顧客",
+      "tool_usage": "工具使用履歴",
+      "tool_mount_log": "工具装着履歴"
     },
     "field": {
       "alarm_code": {
@@ -234,13 +236,17 @@
         "code": "工具 ID",
         "fixture": "工具タイプ",
         "serial_no": "シリアル番号",
-        "usage_count": "使用回数",
-        "max_usage": "最大使用回数",
+        "usage_count": "使用量",
+        "max_usage": "寿命上限",
         "warn_pct": "警告しきい値（寿命%）",
         "expiry_date": "有効期限",
         "tool_status": "状態",
         "equipment": "装着設備",
-        "description": "説明"
+        "description": "説明",
+        "warn_ratio": "警告比率",
+        "sub_unit": "サブユニット",
+        "mounted_at": "装着日時",
+        "life_reset_count": "再生回数"
       },
       "e10_auto_rule": {
         "trigger": "トリガー",
@@ -789,9 +795,14 @@
         "code": "コード",
         "name": "名称",
         "kind": "種別",
-        "max_uses": "最大使用回数",
+        "max_uses": "寿命上限",
         "status_code": "状態",
-        "description": "説明"
+        "description": "説明",
+        "consumable_kind": "消耗品種別",
+        "life_unit": "寿命単位",
+        "count_basis": "カウント基準",
+        "warn_ratio": "警告比率",
+        "require_qual_on_replace": "交換後 Qual 必要"
       },
       "material_lot": {
         "code": "資材ロット番号",
@@ -929,6 +940,38 @@
         "code": "顧客コード",
         "name": "顧客名",
         "short_name": "略称"
+      },
+      "tool_usage": {
+        "tool": "工具",
+        "equipment": "設備",
+        "sub_unit": "サブユニット",
+        "lot": "ロット",
+        "operation": "工程",
+        "delta": "増分",
+        "count_after": "カウント後",
+        "kind": "種別",
+        "occurred_at": "日時",
+        "reason": "理由",
+        "comment": "コメント",
+        "source": "ソース",
+        "external_event_id": "外部イベント ID",
+        "username": "ユーザー"
+      },
+      "tool_mount_log": {
+        "tool": "工具",
+        "equipment": "設備",
+        "sub_unit": "サブユニット",
+        "port_code": "位置",
+        "mounted_at": "装着日時",
+        "unmounted_at": "取外し日時",
+        "unmount_reason": "取外し理由",
+        "replaced_by_tool": "交換先",
+        "usage_at_mount": "装着時",
+        "usage_at_unmount": "取外し時",
+        "comment": "コメント",
+        "source": "ソース",
+        "external_event_id": "外部イベント ID",
+        "username": "ユーザー"
       }
     },
     "help": {
@@ -942,7 +985,7 @@
         "ideal_uph": "任意。OEE 性能稼働率用に予約"
       },
       "tool": {
-        "max_usage": "空欄：工具タイプの最大使用回数"
+        "max_usage": "空欄：工具タイプの寿命上限"
       },
       "e10_auto_rule": {
         "equipment_type": "空欄：全タイプ"
@@ -994,6 +1037,9 @@
       },
       "receipt_line": {
         "lot": "入庫待ちロットのみ"
+      },
+      "fixture": {
+        "warn_ratio": "この種別の工具の既定警告比率（0–1）"
       }
     },
     "enum": {
@@ -1505,6 +1551,41 @@
       "ownership": {
         "own": "自社",
         "customer": "顧客支給"
+      },
+      "tool_usage_kind": {
+        "track_out": "トラックアウト",
+        "report": "報告",
+        "adjust": "調整",
+        "reset": "リセット・再生"
+      },
+      "tool_unmount_reason": {
+        "life_end": "寿命到達",
+        "broken": "破損",
+        "pm": "PM",
+        "swap": "交換",
+        "other": "その他"
+      },
+      "consumable_kind": {
+        "probe_card": "プローブカード",
+        "capillary": "キャピラリ",
+        "mold": "金型",
+        "blade": "ブレード",
+        "other": "その他"
+      },
+      "life_unit": {
+        "use": "回数",
+        "wafer": "ウェーハ数",
+        "unit": "個数",
+        "touchdown": "タッチダウン",
+        "shot": "ショット",
+        "length_mm": "長さ（mm）",
+        "hours": "時間"
+      },
+      "count_basis": {
+        "per_track_out": "トラックアウト毎 +1",
+        "per_wafer": "ウェーハ数",
+        "per_unit": "個数",
+        "reported": "報告のみ"
       }
     }
   },
@@ -1694,7 +1775,9 @@
     "mes_wo__release": "作業指示·発行 / クローズ",
     "mes_lot__start": "ロット・ウェーハ規則·投入",
     "mes_wh__confirm": "倉庫·入庫確認",
-    "notify__config": "通知購読設定"
+    "notify__config": "通知購読設定",
+    "mes_equipment__tool_mount": "設備·工具装着 / 取外し",
+    "mes_equipment__tool_count": "設備·工具カウント報告 / リセット"
   },
   "roleName": {
     "admin": "管理者",
@@ -1757,7 +1840,9 @@
     "mes_wo__release": "許可：作業指示·発行 / クローズ",
     "mes_lot__start": "許可：ロット・ウェーハ規則·投入",
     "mes_wh__confirm": "許可：倉庫·入庫確認",
-    "notify__config": "許可：通知購読設定"
+    "notify__config": "許可：通知購読設定",
+    "mes_equipment__tool_mount": "許可：設備·工具装着 / 取外し",
+    "mes_equipment__tool_count": "許可：設備·工具カウント報告 / リセット"
   },
   "roleDesc": {
     "platform_admin": "全権限を持つプラットフォーム管理者",
