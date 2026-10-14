@@ -336,6 +336,22 @@ class Opq:
         self.step("履历 deactivated", lambda e: self.latest(q, "deactivated", comment="离岗", reason_id=R, approved_by=None))
         self.step("事件 operator_qual.deactivated", ev("operator_qual.deactivated"))
 
+        def deact_again(e):
+            nh, ne = len(self.hist(q)), len(self.events(q))
+            r = self.req("PATCH", qp, {**db, "comment": "再停用"})
+            self.rec(e, "PATCH", qp, r, db)
+            assert r.status == 200, f"HTTP {r.status} {r.body}"
+            assert len(self.hist(q)) == nh, "已停用再停用不应写履历"
+            assert len(self.events(q)) == ne, "已停用再停用不应发事件"
+        self.step("已停用再停用（D88 补充二）→ 200，履历条数不变、无事件", deact_again)
+
+        def ab65(e):
+            b = {"expires_on": d(60), "reason_id": R, "comment": "延期", "approved_by": "a" * 65}
+            r = self.req("PATCH", qp, b)
+            self.rec(e, "PATCH", qp, r, b)
+            self.err422(r, "value_error", ["body", "approved_by"], {"reason": "user_not_found"})
+        self.step("approved_by 65 字符（D88 补充二）→ 422 user_not_found（无单独 max_length）", ab65)
+
         def react(e):
             b = {"is_active": True, "reason_id": R, "comment": "返岗"}
             r = self.req("PATCH", qp, b)
