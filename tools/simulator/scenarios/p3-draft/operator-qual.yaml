@@ -24,7 +24,7 @@
 #   授予成功是 200（不是 201）；D88：任何带 expires_on 的 PATCH 都算延期（缩短也要 approved_by），缩短的履历/事件是 changed
 #   已定 TODO-4：reason_code.reason_type=operator_qual 且 is_active；app_it_eap 不跑 initial_data，sim/opq.py 自建 OPQ-SIM 一行
 #   进站卡控：本库无 demo 方案，sim/opq.py 自建 CR-QUAL-SIM(block)/CP-QUAL-SIM 绑 track_in+OP-MK；用 EAP-MK01 / OP-MK 新开一批代替 EAP-DA01/FX0001
-#   TODO-8：本租户只有模拟器一个成员 → 没有第二批准人，延期/缩短/holder_approval/延期回放步骤跳过（与 TODO-7 同一待决项）
+#   D88 补充一：第二批准人 / 只读账号相关步骤 skip「由 QA 覆盖」（8012），8013 不建额外账号；履历 at 须 UTC 带 Z，xfail 等 D88-3 小提交
 #   TODO-7 creds-ro.json 尚未建成（缺租户管理员凭据），建好前 as: readonly 步骤跳过
 name: operator-qual
 run_id: opq-01

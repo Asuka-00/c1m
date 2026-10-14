@@ -141,7 +141,7 @@ class Opq:
         MISSING = str(uuid.uuid4())
         pr = self.req("PATCH", f"{Q}/{MISSING}", {"expires_on": d(60), "reason_id": R, "comment": "probe", "approved_by": self.lead})
         lead_ok = pr.status == 404
-        NOLEAD = f"环境限制：本租户只有模拟器一个成员，{self.lead} 不是租户成员（探测 PATCH 不存在 id → {pr.status} {(pr.body or {}).get('detail') if pr.status != 404 else ''}），没有可用的第二批准人；建成员需租户管理员凭据（与只读账号同一待决项）"
+        NOLEAD = "由 QA 覆盖"  # D88 补充一：8012 上 QA 覆盖，8013 不建额外账号
         orig_step = self.step
 
         def gated(name, fn, xfail=None, need_lead=False):
@@ -218,7 +218,7 @@ class Opq:
                 self.rec(e, m, p, r, b)
                 self.err422(r, "missing", ["header", "Idempotency-Key"])
             self.step(f"{m} 缺 key → 422 missing", f)
-        self.step("只读账号 403（creds-ro.json 未建，跳过）", lambda e: e.update(result_override="skip"))
+        self.step("只读账号 403（由 QA 覆盖）", lambda e: e.update(result_override="skip", note="由 QA 覆盖"))
 
         def chk(name, m, p, b, typ, loc, ctxw=None, status=422, code=None, need_lead=False):
             def f(e):
@@ -367,17 +367,19 @@ class Opq:
         self.step("404 用过的 key 换到存在目标 → 409", lambda e: del409(e, x0))
         self.step("删除不改数据（GET is_active=true）", still_active)
 
-        def overview(e):
+        def overview(e, z):
             h = self.hist(q)
             acts = [x.get("action") for x in h]
             e["actions"] = acts
             want = ["reactivated", "deactivated", "changed", "renewed", "granted"] if lead_ok else ["reactivated", "deactivated", "granted"]
             assert acts == want, f"履历 {acts} 期望 {want}"
             for x in h:
-                assert str(x.get("at", "")).endswith("Z"), f"at 不带 Z：{x.get('at')}"
+                if z:
+                    assert str(x.get("at", "")).endswith("Z"), f"at 不带 Z：{x.get('at')}"
                 for k in ("comment", "reason_id", "approved_by"):
                     assert k in x
-        self.step("履历总览：5 条倒序、at UTC 带 Z、三列齐全", overview)
+        self.step("履历总览：倒序、三列齐全", lambda e: overview(e, False))
+        self.step("履历 at 为 UTC 带 Z（D88-3）", lambda e: overview(e, True), xfail="D88-3 小提交未落地")
 
         def expiring(e):
             r = c.get("/mes/exec/operator-qual/expiring", days=0)
