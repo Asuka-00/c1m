@@ -43,10 +43,14 @@ def _no_err(m: Mes, e: str, body: dict[str, Any], field: str) -> None:
 def test_required_fields(
     client: TestClient, db: Session, entity: str, field: str
 ) -> None:
+    from app.core.spec.engine import ENTITIES
+
     m = Mes(client, db)
-    errs = _errs(
-        m, entity, {"code": "X", "name": "x", f"{field}_id": None, field: None}
-    )
+    f = ENTITIES[entity].field(field)
+    body = {"code": "X", "name": "x", field: None}
+    if f and f.type == "ref":
+        body[f"{field}_id"] = None  # D65 补充 4：只发存在的字段
+    errs = _errs(m, entity, body)
     assert errs[field] == f"{field}: required"
 
 

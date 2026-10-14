@@ -40,10 +40,10 @@ def test_bom_payload_rejects_unwritable_fields(client: TestClient, db: Session) 
     assert m.patch("bom_line", ln["id"], {"qty": 3})["qty"] == 3
 
 
-def test_existing_entity_full_row_patch_still_ok(
+def test_existing_entity_full_row_patch_rejected(
     client: TestClient, db: Session
 ) -> None:
-    """回归：已有实体的通用增删改查保持原行为，GET 的整行原样 PATCH 回去仍 200。"""
+    """D65 补充 4 / D38：已有实体也严格载荷，GET 的整行原样 PATCH 回去 422 unknown_field。"""
     m = Mes(client, db)
     b = B(m)
     for ent, row in (
@@ -67,7 +67,9 @@ def test_existing_entity_full_row_patch_still_ok(
         assert g.status_code == 200, g.text
         full = g.json()
         r = client.patch(m.url(ent, row["id"]), headers=m.h, json=full)
-        assert r.status_code == 200, (ent, r.text)
+        assert r.status_code == 422, (ent, r.text)
+        assert {d["code"] for d in r.json()["detail"]} == {"unknown_field"}
+        assert any(d["loc"] == ["body", "created_at"] for d in r.json()["detail"])
 
 
 def test_product_new_version_bom_copy_needs_bom_write(

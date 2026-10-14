@@ -643,8 +643,15 @@ def test_qa_02_reenabled_rule_not_retroactive(client: TestClient, db: Session) -
     assert not f.lot(old)["on_hold"] and f.lot(new)["on_hold"]
     # 修改其他字段不改变启用时间
     since = f.m.list("qtime_rule", code=rule["code"])["data"][0]["active_since"]
-    got = f.m.patch("qtime_rule", rule["id"], {"name": "x", "active_since": None})
-    assert got["active_since"] == since  # 只读，且改其他字段不变
+    r = f.m.c.patch(
+        f.m.url("qtime_rule", rule["id"]),
+        headers=f.m.h,
+        json={"name": "x", "active_since": None},
+    )
+    assert r.status_code == 422  # D65 补充 4：系统字段 unknown_field
+    assert r.json()["detail"][0]["code"] == "unknown_field"
+    got = f.m.patch("qtime_rule", rule["id"], {"name": "x"})
+    assert got["active_since"] == since  # 改其他字段不变
 
 
 def test_qa_03_form_meta_is_active(client: TestClient, db: Session) -> None:

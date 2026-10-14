@@ -34,6 +34,7 @@ from app.mes.common import coderule
 from app.mes.common.guard import raw_json
 from app.mes.common.meta import all_meta
 from app.mes.common.uom import convert, count_errors
+from app.mes.common.validators import reject_unwritable
 from app.platform.auth.deps import CurrentTenant
 from app.platform.tenants.service import TenantContext
 
@@ -73,7 +74,7 @@ async def write_body(
     ctx: CurrentTenant, entity: str, request: Request
 ) -> dict[str, Any]:
     """通用新建 / 修改的请求体：先查实体写权限，再解析 JSON 对象（D34）。"""
-    require_entity(ctx, entity, "write")
+    e = require_entity(ctx, entity, "write")
     data = await raw_json(request)
     if not isinstance(data, dict):
         raise RequestValidationError(
@@ -86,6 +87,8 @@ async def write_body(
                 }
             ]
         )
+    # D65 补充 4 / D38：通用增删改查对所有实体（含旧实体）严格载荷，未知 / 系统字段 422。
+    reject_unwritable(e, data)
     return data
 
 

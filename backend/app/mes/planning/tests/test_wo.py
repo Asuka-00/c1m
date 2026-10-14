@@ -91,8 +91,27 @@ def test_create_defaults_and_validation(client: TestClient, db: Session) -> None
     assert w["code"] == "WO0001" and w["wo_status"] == "draft" and w["started_qty"] == 0
     assert w["priority_id"] == f.m.fx("default_priority")  # lot type default
     assert w["route_id"] is None
-    # system fields are ignored on input
-    w2 = f.wo(code="MY-WO", wo_status="closed", started_qty=99, route_id=f.route["id"])
+    # D65 补充 4：系统字段不再静默忽略，422 unknown_field
+    r = client.post(
+        f.m.url("work_order"),
+        headers=f.m.h,
+        json={
+            "product_id": f.product["id"],
+            "lot_type_id": f.lt,
+            "planned_qty": 10,
+            "wo_status": "closed",
+            "started_qty": 99,
+            "route_id": f.route["id"],
+        },
+    )
+    assert r.status_code == 422, r.text
+    assert {d["loc"][1] for d in r.json()["detail"]} == {
+        "wo_status",
+        "started_qty",
+        "route_id",
+    }
+    assert {d["code"] for d in r.json()["detail"]} == {"unknown_field"}
+    w2 = f.wo(code="MY-WO")
     assert (w2["code"], w2["wo_status"], w2["started_qty"], w2["route_id"]) == (
         "MY-WO",
         "draft",
