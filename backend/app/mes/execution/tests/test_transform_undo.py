@@ -91,6 +91,19 @@ def test_transform_undo_restores_and_retransform(
     assert f.lot(lot)["lot_status"] == "converted"
     g = m.list("lot_genealogy", parent_lot=lot["id"])["data"]
     assert [x["child_lot_id"] for x in g] == [r2["children"][0]["id"]]
+    # D60b: trace keeps the undone transform as display-only node (undone=true)
+    tr = f.c.get(
+        f"{EXEC}/trace", headers=f.m.h, params={"kind": "lot", "code": lot["code"]}
+    ).json()
+    live = [x for x in tr["forward"]["lots"] if not x["undone"]]
+    dead = [x for x in tr["forward"]["lots"] if x["undone"]]
+    assert [x["id"] for x in live] == [r2["children"][0]["id"]]
+    assert len(dead) == 1, dead
+    n = dead[0]
+    assert n["transform_id"] == tid and n["code"] == ch["code"] and n["id"] is None
+    assert n["undone_at"].endswith("Z") and n["undone_by"] == out["undone_by"]
+    assert n["undo_reason"] == out["undo_reason"] and n["via"] == lot["code"]
+    assert n["level"] == 1 and n["relation"] == "transform"
 
 
 def test_migration_0027_up_down() -> None:

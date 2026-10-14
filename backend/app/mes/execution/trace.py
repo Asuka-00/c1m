@@ -55,6 +55,7 @@ def _walk(s: Session, tid: uuid.UUID, start: Any, up: bool) -> list[Row]:
                     "transform_id": _transform_id(s, tid, lid if up else o)
                     if g["relation"] == "transform"
                     else None,
+                    "undone": False,
                 }
                 nxt.append(o)
         todo = nxt
@@ -105,6 +106,45 @@ def _origins(s: Session, tid: uuid.UUID, where: Any, limit: int = 5000) -> list[
     ]
 
 
+def _undone(s: Session, tid: uuid.UUID, parents: dict[Any, int]) -> list[Row]:
+    """D60：已撤销转换的子批节点（``undone=true``），仅供展示，不参与谱系计算。
+
+    子批与谱系行在撤销时已删除，节点取自母批 ``transform_undo`` 履历快照与转换记录。
+    ``parents``：母批 id → 其层级（目标批为 0）。
+    """
+    if not parents:
+        return []
+    out: list[Row] = []
+    seen: set[tuple[str, str]] = set()
+    for r in _hist(s, tid, list(parents), "transform_undo"):
+        d = r["details"] or {}
+        tr = one(s, tid, "unit_transform", d.get("transform_id"))
+        if not tr or tr.get("undone_at") is None:
+            continue
+        for code in d.get("children") or []:
+            if (str(tr["id"]), code) in seen:
+                continue
+            seen.add((str(tr["id"]), code))
+            out.append(
+                {
+                    "id": None,
+                    "code": code,
+                    "relation": "transform",
+                    "qty": None,
+                    "via": _code(s, tid, "lot", r["lot_id"]),
+                    "level": parents[r["lot_id"]] + 1,
+                    "at": tr["at"],
+                    "transform_id": str(tr["id"]),
+                    "transform_type": tr["transform_type"],
+                    "undone": True,
+                    "undone_at": tr["undone_at"],
+                    "undone_by": tr["undone_by"],
+                    "undo_reason": tr["undo_reason"],
+                }
+            )
+    return out
+
+
 def _lot_trace(s: Session, tid: uuid.UUID, lot: Row) -> Row:
     back = _walk(s, tid, lot["id"], True)
     fwd = _walk(s, tid, lot["id"], False)
@@ -143,7 +183,15 @@ def _lot_trace(s: Session, tid: uuid.UUID, lot: Row) -> Row:
             "origins": _origins(s, tid, o.c.child_lot_id.in_(ids)),
         },
         "forward": {
-            "lots": fwd,
+            # 已撤销转换节点追加在后（undone=true，仅展示；谱系计算请过滤）
+            "lots": [
+                *fwd,
+                *_undone(
+                    s,
+                    tid,
+                    {lot["id"]: 0, **{uuid.UUID(x["id"]): x["level"] for x in fwd}},
+                ),
+            ],
             "origins": _origins(s, tid, o.c.parent_lot_id.in_(fids)),
         },
     }
