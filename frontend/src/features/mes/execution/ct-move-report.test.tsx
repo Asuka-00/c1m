@@ -80,7 +80,7 @@ describe('P3 CT / Move（D62 + D63 + D64）', () => {
     const e = new AxiosError('422')
     e.response = {
       status: 422,
-      data: { detail: { code: 'date_range_too_large' } },
+      data: { detail: { code: 'date_range_too_large', max_days: 92 } },
       statusText: '',
       headers: {},
       config: { headers: new AxiosHeaders() },
@@ -111,21 +111,40 @@ describe('P3 CT / Move（D62 + D63 + D64）', () => {
         msg: 'date range too large (max 92 days)',
         type: 'date_range_too_large',
         code: 'date_range_too_large',
+        ctx: { max_days: 92 },
       },
     ])
     const typeOnly = mk([
-      { loc: ['query', 'date_to'], msg: 'x', type: 'date_range_too_large' },
+      {
+        loc: ['query', 'date_to'],
+        msg: 'x',
+        type: 'date_range_too_large',
+        ctx: { max_days: 92 },
+      },
+    ])
+    const noMax = mk([
+      { loc: ['query', 'date_to'], msg: 'x', code: 'date_range_too_large' },
     ])
     for (const lg of ['zh-CN', 'en', 'ja']) {
       await i18n.changeLanguage(lg)
-      const want = t('mes.err.code.date_range_too_large')
+      const want = t('mes.err.code.date_range_too_large', { max_days: 92 })
+      expect(want).toContain('92')
       expect(mesErrorMessage(list, undefined)).toBe(want)
       expect(mesErrorMessage(typeOnly, undefined)).toBe(want)
+      const nolimit = t('mes.err.code.date_range_too_large_nolimit')
+      expect(mesErrorMessage(noMax, undefined)).toBe(nolimit)
       expect(
         mesErrorMessage(mk({ code: 'date_range_too_large' }), undefined)
-      ).toBe(want)
+      ).toBe(nolimit)
+      expect(mesErrorMessage(noMax, undefined)).not.toContain('{{')
     }
     await i18n.changeLanguage('zh-CN')
+  })
+
+  it('页面前端校验超 92 天时按 CT_MOVE_MAX_DAYS 插值', () => {
+    expect(
+      t('mes.err.code.date_range_too_large', { max_days: CT_MOVE_MAX_DAYS })
+    ).toContain(String(CT_MOVE_MAX_DAYS))
   })
 
   it('空数据补齐：计数 0、时长 null', () => {

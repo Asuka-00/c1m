@@ -15,6 +15,7 @@ import {
 } from 'recharts'
 import { useTenantKey } from '@/lib/api/hooks'
 import {
+  CT_MOVE_MAX_DAYS,
   ctMoveApi,
   rangeProblem,
   type CtMoveOperationRow,
@@ -148,7 +149,9 @@ export default function CtMoveReport() {
       {problem && (
         <p className='text-sm text-destructive' data-testid='ct-move-range'>
           {problem === 'too_large'
-            ? t('mes.err.code.date_range_too_large')
+            ? t('mes.err.code.date_range_too_large', {
+                max_days: CT_MOVE_MAX_DAYS,
+              })
             : t('mes.ctMove.rangeInvalid')}
         </p>
       )}

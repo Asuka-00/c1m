@@ -219,6 +219,14 @@ export function mesCodeMessage(err: unknown): string | null {
   const { code, action, lot_status } = d as Record<string, unknown>
   if (!isCode(code)) return null
   if (code === 'lot_status') return lotStatusMessage(action, lot_status)
+  // 旧对象形式：max_days 可能在 ctx 或顶层；没有时用不带天数的文案
+  if (code === 'date_range_too_large') {
+    const o = d as { ctx?: Record<string, unknown>; max_days?: unknown }
+    return codeItemText({
+      code,
+      ctx: o.ctx ?? (o.max_days != null ? { max_days: o.max_days } : {}),
+    })
+  }
   return t(`mes.err.code.${code}`, codeParams(d as Record<string, unknown>))
 }
 
