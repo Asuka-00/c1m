@@ -1,13 +1,14 @@
 """规格行的（反）序列化：值转换、引用标签、JSON 输出。"""
 
 import uuid
-from datetime import UTC, date, datetime, time
+from datetime import date, datetime, time
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 
 import sqlalchemy as sa
 from sqlmodel import Session
 
+from app.core.models import iso_utc
 from app.core.spec.base import Row, conn, table
 from app.core.spec.engine import (
     ENTITIES,
@@ -18,13 +19,6 @@ from app.core.spec.engine import (
 
 
 # ---------------- (de)serialization ----------------
-def iso_utc(v: datetime) -> str:
-    """带时区的时间统一输出为 ISO 8601 UTC（``Z`` 结尾）；无时区的原样输出。"""
-    if v.tzinfo is None:
-        return v.isoformat()
-    return v.astimezone(UTC).isoformat().replace("+00:00", "Z")
-
-
 def to_json(v: Any) -> Any:
     """把数据库值转换为 JSON 可序列化值（UUID / 日期 / Decimal）。
 

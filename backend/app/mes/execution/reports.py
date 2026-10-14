@@ -16,6 +16,7 @@ from typing import Any
 import sqlalchemy as sa
 from sqlmodel import Session
 
+from app.core.models import iso_utc
 from app.core.spec.base import conn, now
 from app.core.spec.engine import TABLES
 from app.mes.common.query import find, one
@@ -126,7 +127,7 @@ def wip_summary(
                 "on_hold": bool(lot["on_hold"]),
                 "step_seq": step and step["seq"],
                 "qty": q,
-                "since": since and since.isoformat(),
+                "since": since and iso_utc(since),
                 "hours": since and round((at - since).total_seconds() / 3600, 1),
             }
         )

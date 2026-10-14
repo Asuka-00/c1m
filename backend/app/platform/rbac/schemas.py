@@ -1,10 +1,10 @@
 """RBAC 接口模型：权限与角色的 CRUD 及用户权限输出。"""
 
 import uuid
-from datetime import datetime
 
 from sqlmodel import Field, SQLModel
 
+from app.core.models import UtcDateTime
 from app.platform.rbac.models import PermissionBase, RoleBase
 
 
@@ -50,7 +50,7 @@ class RoleUpdate(SQLModel):
 class RolePublic(RoleBase):
     id: uuid.UUID
     tenant_id: uuid.UUID | None = None
-    updated_at: datetime | None = None
+    updated_at: UtcDateTime | None = None
     updated_by: str | None = None
     permissions: list[PermissionPublic] = []
 

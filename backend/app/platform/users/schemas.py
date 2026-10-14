@@ -1,12 +1,12 @@
 """用户接口模型：创建、注册、更新、改密与输出。"""
 
 import uuid
-from datetime import datetime
 from typing import Annotated
 
 from pydantic import AfterValidator, EmailStr, StringConstraints
 from sqlmodel import Field, SQLModel
 
+from app.core.models import UtcDateTime
 from app.platform.users.models import USERNAME_RE, UserBase
 
 # 以小写存储，使唯一索引实际上不区分大小写
@@ -44,8 +44,8 @@ class UpdatePassword(SQLModel):
 # 通过 API 返回的属性，id 必有
 class UserPublic(UserBase):
     id: uuid.UUID
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
+    created_at: UtcDateTime | None = None
+    updated_at: UtcDateTime | None = None
     updated_by: str | None = None
     # 平台角色（编码）；仅管理列表填充
     role_names: list[str] = []

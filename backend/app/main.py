@@ -4,8 +4,10 @@ import asyncio
 import contextlib
 import logging
 from collections.abc import AsyncIterator
+from datetime import datetime
 from pathlib import Path
 
+import fastapi.encoders
 import sentry_sdk
 from fastapi import APIRouter, FastAPI
 from fastapi.routing import APIRoute
@@ -14,6 +16,7 @@ from starlette.middleware.cors import CORSMiddleware
 from app import models as _models  # noqa: F401  (registers tables + MES specs first)
 from app.core import registry
 from app.core.config import settings
+from app.core.models import iso_utc
 
 FRONTEND_DIR = Path(__file__).parent / "frontend"
 
@@ -60,6 +63,10 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         with contextlib.suppress(asyncio.CancelledError):
             await task
 
+
+# 无 response_model 的接口（直接返回 dict）由 jsonable_encoder 编码：
+# datetime 统一输出 UTC ``Z``（bom.md §12），与数据库会话时区无关。
+fastapi.encoders.ENCODERS_BY_TYPE[datetime] = iso_utc
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

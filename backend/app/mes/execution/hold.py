@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from fastapi import HTTPException
 from sqlmodel import Session
 
-from app.core.models import actor_name
+from app.core.models import actor_name, iso_utc
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, TABLES
@@ -288,11 +288,11 @@ def hold_row(s: Session, tid: uuid.UUID, h: Row, lot: Row, at: datetime) -> Row:
         "source": h["source"] or "manual",
         "hold_type": h["hold_type"],
         "is_active": bool(h["is_active"]),
-        "held_at": ha and ha.isoformat(),
+        "held_at": ha and iso_utc(ha),
         "held_by": h["held_by"],
         "hours": ha and end and round((end - ha).total_seconds() / 3600, 1),
         "comment": h["comment"],
-        "released_at": h["released_at"] and h["released_at"].isoformat(),
+        "released_at": h["released_at"] and iso_utc(h["released_at"]),
         "released_by": h["released_by"],
         "release_reason": rr and f"{rr['code']} · {rr['name'] or ''}",
         "release_comment": h["release_comment"],

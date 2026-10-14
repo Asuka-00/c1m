@@ -14,6 +14,7 @@ import sqlalchemy as sa
 from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core.models import iso_utc
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, TABLES
@@ -230,7 +231,7 @@ def qtime_monitor(s: Session, tid: uuid.UUID) -> list[Row]:
                     "route": route and route["code"],
                     "step_seq": step["seq"],
                     "rule": r["code"],
-                    "since": x["since"].isoformat(),
+                    "since": iso_utc(x["since"]),
                     "minutes": x["minutes"],
                     "max_minutes": mx,
                     "remaining": round(mx - x["minutes"], 1) if mx else None,

@@ -17,12 +17,12 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
-from app.core.models import actor_name
+from app.core.models import actor_name, iso_utc
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, TABLES
 from app.core.spec.errors import http_422
-from app.core.spec.serialize import iso_utc, serialize
+from app.core.spec.serialize import serialize
 from app.mes.common.query import find, one
 
 Row = dict[str, Any]

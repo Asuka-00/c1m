@@ -1,10 +1,11 @@
 """平台控制台接口模型。"""
 
 import uuid
-from datetime import datetime
 from typing import Any
 
 from sqlmodel import Field, SQLModel
+
+from app.core.models import UtcDateTime
 
 
 class PlatformTenant(SQLModel):
@@ -15,8 +16,8 @@ class PlatformTenant(SQLModel):
     slug: str
     status: str
     plan: str
-    expires_at: datetime | None = None
-    created_at: datetime | None = None
+    expires_at: UtcDateTime | None = None
+    created_at: UtcDateTime | None = None
     member_count: int = 0
     owners: list[str] = []
 
@@ -36,7 +37,7 @@ class PlatformTenantCreate(SQLModel):
     plan: str = Field(
         default="standard", schema_extra={"pattern": r"^(trial|standard|enterprise)$"}
     )
-    expires_at: datetime | None = None
+    expires_at: UtcDateTime | None = None
     owner: str | None = Field(default=None, max_length=255)
 
 
@@ -48,7 +49,7 @@ class PlatformTenantUpdate(SQLModel):
     plan: str | None = Field(
         default=None, schema_extra={"pattern": r"^(trial|standard|enterprise)$"}
     )
-    expires_at: datetime | None = None
+    expires_at: UtcDateTime | None = None
 
 
 class LoginLogPublic(SQLModel):
@@ -59,7 +60,7 @@ class LoginLogPublic(SQLModel):
     reason: str | None = None
     ip: str | None = None
     user_agent: str | None = None
-    created_at: datetime | None = None
+    created_at: UtcDateTime | None = None
 
 
 class LoginLogsPublic(SQLModel):
@@ -75,7 +76,7 @@ class PlatformAuditPublic(SQLModel):
     target_id: str | None = None
     tenant_id: uuid.UUID | None = None
     detail: dict[str, Any] | None = None
-    created_at: datetime | None = None
+    created_at: UtcDateTime | None = None
 
 
 class PlatformAuditsPublic(SQLModel):
@@ -94,7 +95,7 @@ class CrossTenantAudit(SQLModel):
     record_code: str | None = None
     username: str | None = None
     changes: Any = None
-    created_at: datetime | None = None
+    created_at: UtcDateTime | None = None
 
 
 class CrossTenantAudits(SQLModel):

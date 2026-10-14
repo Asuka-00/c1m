@@ -4,6 +4,7 @@ import uuid
 from datetime import date, timedelta
 from typing import Any
 
+from app.core.models import iso_utc
 from app.mes.common.query import find, one
 from app.mes.equipment.service import e10_current, pm_status, tool_life
 from app.mes.execution.checks.registry import Ctx, check_type
@@ -405,7 +406,7 @@ def _carrier_clean(ctx: Ctx, p: Row) -> Outcome:
     due = clean_due(ctx.s, ctx.tid, c)
     if not due:
         return "na", "no cleaning interval", {}
-    data = {"carrier": c["code"], "due": due.isoformat()}
+    data = {"carrier": c["code"], "due": iso_utc(due)}
     if ctx.at > due:
         return "fail", f"carrier {c['code']} cleaning overdue", data
     if ctx.at > due - timedelta(hours=float(p.get("warn_hours", 24))):
