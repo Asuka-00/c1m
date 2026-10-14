@@ -95,6 +95,7 @@ const days = (from: string, to: string) => {
   const d = new Date(`${from}T00:00:00Z`)
   const end = new Date(`${to}T00:00:00Z`)
   while (d <= end && out.length < 400) {
+    // 纯日历迭代（输入已是站点日期，按 UTC 零点逐日加），不是取「今天」
     out.push(d.toISOString().slice(0, 10))
     d.setUTCDate(d.getUTCDate() + 1)
   }

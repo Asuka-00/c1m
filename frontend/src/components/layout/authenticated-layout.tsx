@@ -3,6 +3,7 @@ import { Outlet } from '@tanstack/react-router'
 import { useCurrentTenant } from '@/lib/api/hooks'
 import { rememberBrandTenant, useBranding } from '@/lib/branding'
 import { getCookie } from '@/lib/cookies'
+import { useSiteTzSync } from '@/lib/site-tz-sync'
 import { cn } from '@/lib/utils'
 import { LayoutProvider } from '@/context/layout-provider'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
@@ -21,6 +22,8 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   const slug = useCurrentTenant()?.tenant.slug
   const branding = useBranding(slug)
   useEffect(() => rememberBrandTenant(slug), [slug])
+  // D75：业务日期按站点时区
+  useSiteTzSync()
   return (
     <LayoutProvider>
       <SidebarProvider defaultOpen={defaultOpen}>

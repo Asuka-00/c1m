@@ -1,11 +1,13 @@
 /** 报表工具函数：日期与百分比格式。 */
+import { addDays, getSiteTz, siteToday } from '@/lib/site-tz'
 
-/** 本地日期 YYYY-MM-DD（偏移 ``days`` 天）。 */
-export function isoDay(days = 0): string {
-  const d = new Date()
-  d.setDate(d.getDate() + days)
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+/** 站点日期 YYYY-MM-DD（D75：按站点时区的今天，偏移 ``days`` 天）。 */
+export function isoDay(
+  days = 0,
+  now: Date = new Date(),
+  tz: string = getSiteTz()
+): string {
+  return addDays(siteToday(now, tz), days)
 }
 
 /** 百分比显示（null 为 —）。 */
