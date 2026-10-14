@@ -49,9 +49,7 @@ export interface Reticle {
   equipment_label: string | null
   mounted_at: string | null
   inspection_required: boolean
-  /** v0.8.2 §2 计算字段；B4（335db8a）列表/详情暂未返回，缺省按 inspection_required 显示 */
-  inspection_pending?: boolean
-  /** 仅动作响应（brief）带：ok / warning / reached */
+  /** D87：GET 详情 / 列表 / 写操作 brief 都带（后端为准）；缺省时前端按同规则自算 */
   life_state?: 'ok' | 'warning' | 'reached'
   last_inspected_at: string | null
   next_inspection_due_at: string | null
@@ -412,7 +410,6 @@ const base = (o: Partial<Reticle> & Pick<Reticle, 'id' | 'code'>): Reticle => ({
   equipment_label: null,
   mounted_at: null,
   inspection_required: false,
-  inspection_pending: false,
   last_inspected_at: '2026-10-01T02:00:00Z',
   next_inspection_due_at: '2026-11-01T02:00:00Z',
   ...o,
@@ -449,7 +446,6 @@ function seed() {
       hold_reason: 'incident',
       status_before_hold: 'available',
       inspection_required: true,
-      inspection_pending: true,
     }),
     base({ id: 'r5', code: 'RTC-M2-001', status_code: 'dirty' }),
     base({
@@ -457,7 +453,6 @@ function seed() {
       code: 'RTC-M2-002',
       status_code: 'inspecting',
       inspection_required: true,
-      inspection_pending: true,
     }),
     base({ id: 'r7', code: 'RTC-OLD-001', status_code: 'scrapped' }),
   ]
@@ -893,7 +888,6 @@ function mockAct(
     x.hold_reason = 'incident'
     x.status_code = to
     x.inspection_required = true
-    x.inspection_pending = true
     out = {
       data: {
         id: `inc${Date.now()}`,
@@ -969,7 +963,6 @@ function mockAct(
       })
       if (body.result === 'pass') {
         x.inspection_required = false
-        x.inspection_pending = false
       } else {
         if (from !== 'on_hold') x.status_before_hold = from
         x.hold_reason = 'inspection_failed'
@@ -981,7 +974,6 @@ function mockAct(
       )
     ) {
       x.inspection_required = true
-      x.inspection_pending = true
     }
     x.status_code = to
     out =

@@ -295,6 +295,13 @@ export function reticleErrorMessage(err: unknown, action?: ReticleAction) {
       if (at)
         return t('mes.reticle.err.timeOutOfOrderAt', { at: fmtDateTime(at) })
     }
+    // D87：available 直接出检验结果 → 409 invalid_transition（有意设计），提示先开始检验
+    if (
+      code === 'invalid_transition' &&
+      action === 'inspection' &&
+      (d as { status_code?: unknown }).status_code === 'available'
+    )
+      return t('mes.reticle.inspectStartFirst')
     // D57 对象格式 {code:'idempotency_key_reused', message}（D80 补充二）
     if (code === 'idempotency_key_reused') return t('mes.reticle.err.keyReused')
     if (
@@ -340,3 +347,20 @@ export function reticleLifeLevel(
 /** 预警比例：warn_ratio（0 < r <= 1）否则 0.9（后端 DEFAULT_WARN）。 */
 export const reticleWarnRatio = (r: Pick<Reticle, 'warn_ratio'>) =>
   warnRatio({ warn_ratio: r.warn_ratio })
+
+/** D87：是否待检验——不读 inspection_pending，用 status + inspection_required（报废除外）。 */
+export const inspectionPending = (
+  r: Pick<Reticle, 'status_code' | 'inspection_required'>
+) => r.inspection_required && r.status_code !== 'scrapped'
+
+/** 单个动作的禁用提示：报废终态；D87 available 时出检验结果要先开始检验。 */
+export function actionHint(
+  r: Pick<Reticle, 'status_code'>,
+  a: ReticleAction
+): string | undefined {
+  const h = disabledHint(r)
+  if (h) return h
+  if (a === 'inspection' && r.status_code === 'available')
+    return t('mes.reticle.inspectStartFirst')
+  return undefined
+}

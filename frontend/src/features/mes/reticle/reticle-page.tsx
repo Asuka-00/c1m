@@ -31,6 +31,8 @@ import { ReticleLifeBar } from './life-bar'
 import { ReticleMasterDialog } from './master-dialog'
 import {
   actionEnabled,
+  actionHint,
+  inspectionPending,
   actionLabel,
   disabledHint,
   reticleErrorMessage,
@@ -140,7 +142,7 @@ export function ReticleDetail({ reticle }: { reticle: Reticle }) {
       <div className='flex flex-wrap items-center gap-2'>
         <h3 className='text-lg font-semibold'>{reticle.code}</h3>
         <StatusBadge status={reticle.status_code} />
-        {(reticle.inspection_pending ?? reticle.inspection_required) && (
+        {inspectionPending(reticle) && (
           <Badge variant='secondary'>
             {t('mes.reticle.inspectionPending')}
           </Badge>
@@ -185,7 +187,7 @@ export function ReticleDetail({ reticle }: { reticle: Reticle }) {
               size='sm'
               variant={a === 'scrap' ? 'destructive' : 'outline'}
               disabled={!actionEnabled(reticle, a)}
-              title={hint || t(`mes.reticle.actionDesc.${a}`)}
+              title={actionHint(reticle, a) || t(`mes.reticle.actionDesc.${a}`)}
               onClick={() => setAction(a)}
               data-testid={`reticle-act-${a}`}
             >

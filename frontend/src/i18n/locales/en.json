@@ -1982,7 +1982,8 @@
         "shots": "Shots used / life limit; yellow = warning, red = limit reached",
         "equipment": "Equipment it is mounted on",
         "location": "Storage location"
-      }
+      },
+      "inspectStartFirst": "Start inspection first (available → inspecting) before entering a result"
     },
     "marking": {
       "tplTitle": "Marking templates",

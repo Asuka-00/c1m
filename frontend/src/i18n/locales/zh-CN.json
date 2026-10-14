@@ -1982,7 +1982,8 @@
         "shots": "已用 shot 数 / 寿命上限；黄色为预警，红色为已达上限",
         "equipment": "当前挂载的机台",
         "location": "存放库位"
-      }
+      },
+      "inspectStartFirst": "检验需先「开始检验」（可用 → 检验中）后才能出结果"
     },
     "marking": {
       "tplTitle": "打标模板",
