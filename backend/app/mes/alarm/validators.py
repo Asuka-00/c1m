@@ -10,6 +10,7 @@ from app.core.spec.base import conn
 from app.core.spec.engine import TABLES, Entity
 from app.core.spec.errors import MesError
 from app.core.spec.validate import validator
+from app.mes.common.validators import reject_unwritable
 
 Row = dict[str, Any]
 
@@ -28,6 +29,17 @@ def state_by_code(
         .first()
     )
     return dict(r) if r else None
+
+
+@validator("alarm_code:payload")
+def _alarm_code_payload(
+    _s: Session, _tid: uuid.UUID, _e: Entity, data: Row, _o: Row | None
+) -> None:
+    """P2-D6 / D38：报警码严格载荷，未知字段与系统字段 422。
+
+    报警码是 P2 新实体，与 BOM 一样不静默忽略未知字段（如已删除的 ``target_e10_state_id``）。
+    """
+    reject_unwritable(_e, data)
 
 
 @validator("alarm_code")

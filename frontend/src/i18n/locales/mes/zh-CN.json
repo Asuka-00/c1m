@@ -132,7 +132,8 @@
         "target_state": "目标状态",
         "require_qual_on_clear": "清除后需 Qual",
         "disposition": "处置说明",
-        "is_active": "启用"
+        "is_active": "启用",
+        "migration_note": "迁移说明"
       },
       "alarm_log": {
         "equipment": "设备",
@@ -1391,9 +1392,10 @@
         "eap": "EAP",
         "simulator": "模拟器"
       },
-      "e10_trigger": {
-        "track_in": "上机",
-        "track_out": "下机（无其他加工批次）"
+      "e10_history_trigger": {
+        "manual": "人工",
+        "equipment": "设备",
+        "system": "系统"
       },
       "pm_result": {
         "ok": "合格",
@@ -1488,6 +1490,10 @@
         "pending_maintenance": "待保养",
         "expired": "已过期",
         "retired": "已报废"
+      },
+      "e10_trigger": {
+        "track_in": "上机",
+        "track_out": "下机（无其他加工批次）"
       },
       "hold_type": {
         "manual": "手动",

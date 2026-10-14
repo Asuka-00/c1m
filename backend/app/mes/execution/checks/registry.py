@@ -212,6 +212,10 @@ def enabled(ctx: Ctx, check: str) -> bool:
 
 
 # ---------------- evaluation ----------------
+# 规则产生的阻断也不可放行的检查类型（P2-D3）
+HARD_CHECKS = frozenset({"tool_life"})
+
+
 def overall_overridable(results: list[Row]) -> bool:
     """整体能否放行：任一阻断项 ``overridable=false`` 即整体不可放行（适用于全部检查类型）。
 
@@ -314,6 +318,8 @@ def run(ctx: Ctx) -> list[Row]:
                 rule=rule,
                 plan=plan,
                 data=data,
+                # P2-D3：规则产生的 tool_life 与内置硬拦截一致，不可放行
+                overridable=rule["check_type"] not in HARD_CHECKS,
             )
         )
     return out

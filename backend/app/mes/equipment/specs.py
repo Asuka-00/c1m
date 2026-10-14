@@ -501,7 +501,7 @@ ENUMS.update(
             ("simulator", "Simulator|模拟器|シミュレータ"),
         ],
         # D58：E10 变化的触发方式（人工 / 设备事件或报警 / 系统规则）
-        "e10_trigger": [
+        "e10_history_trigger": [
             ("manual", "Manual|人工|手動"),
             ("equipment", "Equipment|设备|設備"),
             ("system", "System|系统|システム"),
@@ -535,7 +535,7 @@ register(
             F("from_state", "ref", "From state|源状态|遷移元", ref="e10_state"),
             F("to_state", "ref", "To state|目标状态|遷移先", ref="e10_state"),
             F("source", "enum", "Source|来源|ソース", enum="e10_source"),
-            F("trigger", "enum", "Trigger|触发|トリガー", enum="e10_trigger"),
+            F("trigger", "enum", "Trigger|触发|トリガー", enum="e10_history_trigger"),
             F("reason", "ref", "Reason code|原因代码|理由コード", ref="reason_code"),
             F("comment", "str", "Comment|备注|コメント", max_length=300, search=True),
             F("username", "str", "User|用户|ユーザー", max_length=255, search=True),

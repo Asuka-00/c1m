@@ -86,6 +86,22 @@ def test_alarm_set_links_holds_e10_and_clear(client: TestClient, db: Session) ->
     assert a["e10_change"]["trigger"] == "equipment"
     eh = m.list("e10_history", equipment=f.eq["id"])["data"]
     assert [(x["source"], x["trigger"]) for x in eh] == [("manual", "equipment")]
+    # e10_history.trigger 枚举不再与 e10_auto_rule 的 e10_trigger 冲突：过滤 200
+    r = f.c.get(
+        m.url("e10_history"),
+        headers=m.h,
+        params={"trigger": "equipment", "equipment": f.eq["id"]},
+    )
+    assert r.status_code == 200, r.text
+    assert [x["trigger"] for x in r.json()["data"]] == ["equipment"]
+    meta = f.c.get(f"{settings.API_V1_STR}/mes/_meta", headers=m.h).json()
+    ent = {e["code"]: e for e in meta["entities"]}
+    tf = next(x for x in ent["e10_history"]["fields"] if x["name"] == "trigger")
+    assert tf["enum"] == "e10_history_trigger"
+    rf = next(x for x in ent["e10_auto_rule"]["fields"] if x["name"] == "trigger")
+    assert rf["enum"] == "e10_trigger"
+    assert meta["enums"]["e10_history_trigger"] == ["manual", "equipment", "system"]
+    assert meta["enums"]["e10_trigger"] == ["track_in", "track_out"]
     # 幂等：同 active ALID / 同事件号 → 已有记录
     for body in ({"alid": "1001"}, {"alid": "1001", "external_event_id": "EV-1"}):
         d = _set(f, **body)
@@ -203,3 +219,24 @@ def test_migration_0029_up_down() -> None:
         check,
         ("mes_e10_history", "mes_alarm_code", "trigger", "target_state"),
     )
+
+
+def test_alarm_code_unknown_fields_422(client: TestClient, db: Session) -> None:
+    """P2-D6 / D38：报警码未知字段（含已删除的 target_e10_state_id）→ 422（严格载荷）。"""
+    f = _line(client, db)
+    url = f"{settings.API_V1_STR}/mes/alarm-code"
+    base = {"equipment_type_id": f.eq["equipment_type_id"], "alid": "D6"}
+    for extra in ({"foo": 1}, {"target_e10_state_id": f.st["DOWN"]["id"]}):
+        r = f.c.post(url, headers=f.m.h, json={**base, **extra})
+        assert r.status_code == 422, r.text
+        d = r.json()["detail"]
+        assert [x["loc"][-1] for x in d] == list(extra)
+    r = f.c.post(url, headers=f.m.h, json=base)
+    assert r.status_code == 200, r.text
+    rid = r.json()["id"]
+    r = f.c.patch(f"{url}/{rid}", headers=f.m.h, json={"foo": "x"})
+    assert r.status_code == 422 and r.json()["detail"][0]["loc"][-1] == "foo"
+    # 字段名与列名（xxx_id）都可用
+    r = f.c.patch(f"{url}/{rid}", headers=f.m.h, json={"severity": "minor"})
+    assert r.status_code == 200, r.text
+

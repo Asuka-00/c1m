@@ -132,7 +132,8 @@
         "target_state": "Target state",
         "require_qual_on_clear": "Qual after clear",
         "disposition": "Disposition",
-        "is_active": "Active"
+        "is_active": "Active",
+        "migration_note": "Migration note"
       },
       "alarm_log": {
         "equipment": "Equipment",
@@ -1391,9 +1392,10 @@
         "eap": "EAP",
         "simulator": "Simulator"
       },
-      "e10_trigger": {
-        "track_in": "Track in",
-        "track_out": "Track out (no other running lots)"
+      "e10_history_trigger": {
+        "manual": "Manual",
+        "equipment": "Equipment",
+        "system": "System"
       },
       "pm_result": {
         "ok": "OK",
@@ -1488,6 +1490,10 @@
         "pending_maintenance": "Pending maintenance",
         "expired": "Expired",
         "retired": "Retired"
+      },
+      "e10_trigger": {
+        "track_in": "Track in",
+        "track_out": "Track out (no other running lots)"
       },
       "hold_type": {
         "manual": "Manual",

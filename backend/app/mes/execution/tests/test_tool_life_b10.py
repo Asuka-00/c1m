@@ -80,6 +80,7 @@ def test_track_out_counts_by_wafer_and_hard_blocks(
     assert items and items[0]["overridable"] is False and items[0]["result"] == "block"
     # P2-D3: rule-based tool_life agrees with the built-in block (no "tools available")
     assert all(x["result"] == "block" for x in items), items
+    assert all(x["overridable"] is False for x in items), items
     assert not any("tools available" in x["message"] for x in items), items
 
 
