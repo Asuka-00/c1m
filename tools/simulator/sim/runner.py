@@ -56,7 +56,10 @@ def check_expect(resp: Resp, expect: dict | None, default_status: int = 200) -> 
         cur: Any = resp.body
         for part in str(k).split("."):
             cur = cur.get(part) if isinstance(cur, dict) else None
-        if cur != v:
+        if v == "$nonempty":  # 只要求非空（D59 补充前 state_skip_reason 是英文原文）
+            if cur in (None, "", [], {}):
+                errs.append(f"body.{k} {cur!r} 期望非空")
+        elif cur != v:
             errs.append(f"body.{k} {cur!r} != 期望 {v!r}")
     chk = expect.get("check")
     if chk:
@@ -71,10 +74,13 @@ def check_expect(resp: Resp, expect: dict | None, default_status: int = 200) -> 
             bad = chk.get("not_message")
             if bad and any(bad in str(h.get("message") or "") for h in hits):
                 errs.append(f"检查项 {want_type} 的 message 不应含 {bad!r}（实际 {[h.get('message') for h in hits]}）")
-            pick = all if chk.get("all") else any  # all: 每一条命中的检查项都要满足（P2-D3：规则和内置一致）
+            # all: true = 每个字段每一条命中项都要满足；all: [字段...] = 只有这些字段要求每一条都满足，其余任一条满足
+            # （P2-D3：规则项和内置项 result 都是 block；overridable=false 由内置硬拦截给出）
+            every = chk.get("all")
             for k, v in chk.items():
                 if k in ("check_type", "all", "not_message", "min_count"):
                     continue
+                pick = all if every is True or (isinstance(every, list) and k in every) else any
                 if not pick(h.get(k) == v for h in hits):
                     errs.append(f"检查项 {want_type} 的 {k} != {v!r}（实际 {[h.get(k) for h in hits]}）")
     return errs
@@ -151,6 +157,10 @@ class Runner:
         for st in sc.steps:
             entry: dict[str, Any] = {"step": st.index, "kind": st.kind, "eq": st.eq}
             rep["steps"].append(entry)
+            if st.args.get("pending"):  # 写好但先跳过的断言（等后端提交），不算失败
+                entry.update(ok=None, pending=True, message=f"pending：{st.args['pending']}")
+                rep.setdefault("pending", []).append(st.index)
+                continue
             t0 = time.monotonic()
             try:
                 self._step(sc, st, entry, seq, sent, saved)
@@ -404,7 +414,7 @@ class Runner:
         if r.status != 200:
             raise StepFailed(f"查报警 {aid} HTTP {r.status}")
         d = _data(r) if isinstance(_data(r), dict) else {}
-        for f in ("unregistered", "alarm_status", "alid", "source", "action"):
+        for f in ("unregistered", "alarm_status", "alid", "source", "action", "state_changed", "state_skip_reason"):
             if f in a and d.get(f) != self.by_mode(a[f]):
                 raise StepFailed(f"报警 {aid} 的 {f}={d.get(f)!r}，期望 {self.by_mode(a[f])!r}")
         if a.get("lots"):

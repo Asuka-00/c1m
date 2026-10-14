@@ -585,7 +585,7 @@ def test_alarm_state_skip_returns_200_with_reason():
                     "alid": "1002",
                     "expect": {
                         "status": 200,
-                        "body": {"state_changed": False, "state_skip_reason": "UDT -> PRD not allowed"},
+                        "body": {"state_changed": False, "state_skip_reason": "$nonempty"},
                     },
                 }
             },
@@ -685,3 +685,58 @@ def test_tool_set_expired_and_unavailable_block():
         )
     )
     assert rep["status"] == PASSED, rep
+
+
+def test_check_all_fields_list():
+    """all: [result] 只要求 result 每条都满足，overridable 任一条满足即可（内置硬拦截给 false）。"""
+    hits = [
+        {"check_type": "tool_life", "result": "block", "overridable": False},
+        {"check_type": "tool_life", "result": "block", "overridable": True},
+    ]
+    r = Resp(409, {"detail": {"code": "check_blocked", "results": hits}})
+    ok = {
+        "status": 409,
+        "check": {"check_type": "tool_life", "result": "block", "overridable": False, "all": ["result"]},
+    }
+    assert check_expect(r, ok) == []
+    strict = {"status": 409, "check": {"check_type": "tool_life", "overridable": False, "all": True}}
+    assert check_expect(r, strict)
+
+
+def test_pending_step_is_skipped_not_failed_and_nonempty():
+    c, rep = _alarm_steps(
+        [
+            {"alarm_set": {"eq": "EAP-DA01", "alid": "1001", "expect": {"body": {"state_skip_reason": "$nonempty"}}}},
+        ]
+    )
+    assert rep["status"] == FAILED and "非空" in rep["reason"]  # 切换成功时 reason 为空
+    c, rep = _alarm_steps(
+        [
+            {"expect_alarm": {"alarm": "$none", "state_skip_reason": "transition_not_allowed", "pending": "等后端"}},
+        ]
+    )
+    assert rep["status"] == PASSED and rep["pending"] == [1]
+
+
+@__import__("pytest").mark.skip(
+    reason="等后端 D59 补充提交：state_skip_reason 改错误码，报警履历带 state_changed/state_skip_reason"
+)
+def test_d59_skip_reason_error_codes():
+    cases = {"NOPE": "unknown_state", "UDT": "already_in_state", "PRD": "transition_not_allowed"}
+    for target, code in cases.items():
+        c = FakeClient(paths=ALL)
+        c.e10 = "UDT"
+        c.alarm_codes["1001"].update(action="set_state", target_state=target)
+        steps = [
+            {
+                "alarm_set": {
+                    "eq": "EAP-DA01",
+                    "alid": "1001",
+                    "save_as": "a",
+                    "expect": {"body": {"state_changed": False, "state_skip_reason": code}},
+                }
+            },
+            {"expect_alarm": {"alarm": "$a", "state_changed": False, "state_skip_reason": code}},
+        ]
+        rep = Runner(c).run(parse({"run_id": "a", "steps": steps}))
+        assert rep["status"] == PASSED, (target, rep)

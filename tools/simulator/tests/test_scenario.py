@@ -49,7 +49,7 @@ def test_tool_life_expectation_follows_b10():
                 "check_type": "tool_life",
                 "overridable": False,
                 "result": "block",
-                "all": True,
+                "all": ["result"],
                 "min_count": 2,
                 "not_message": "tools available",
             },

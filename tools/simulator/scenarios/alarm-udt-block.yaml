@@ -44,8 +44,11 @@ steps:
       eq: EAP-DA01
       alid: "1002"
       save_as: alm2
-      expect: {status: 200, body: {duplicate: false, state_changed: false, state_skip_reason: "UDT -> PRD not allowed"}}
+      expect: {status: 200, body: {duplicate: false, state_changed: false, state_skip_reason: $nonempty}}
   - expect_alarm: {alarm: $alm2, alarm_status: active, unregistered: false}
+  # D59 补充（后端 D60 之后的单独提交）：state_skip_reason 改错误码、报警履历带 state_changed / state_skip_reason。
+  # 517b0a0 返回的还是英文原文，先 pending（跳过），后端提交出来后删掉 pending。
+  - expect_alarm: {alarm: $alm2, state_changed: false, state_skip_reason: transition_not_allowed, pending: 等后端 D59 补充提交（错误码化）}
   - expect_e10: {eq: EAP-DA01, state: UDT}
   - expect_e10_history: {eq: EAP-DA01, last: {to: UDT, trigger: equipment}}                   # 没多写履历
   # 不联动的报警：不改状态
