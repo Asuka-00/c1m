@@ -28,6 +28,7 @@
 #     E7：主记录 marked_at=首打（seq=1）时间、之后不变，只读 last_printed_at=最近一次打印；marked_at_from/_to 只按首打
 #   - D79 补充四：超长 ctx {reason: max_length, max_length}（trace_code 取 config，read_code 固定 128）；
 #     格式 ctx {reason: pattern, pattern: <config 原样正则>}（仅 trace_code）；逐条按 ctx.reason + 字段断言
+#   - 前端 80a36a3：打标记录 create/print/inspect/void 四个写接口 key 必填（场景里一律写 idem，测缺失写 no_idem）
 #   - D81 校验顺序（P3 新接口 + D80 14 个）：401/403 → 缺 key 422 → body/query 422 → 幂等重放（换体 422 reused）→ 404 → 409
 #   - D79 补充七：查记录才能判的 422（重打 reason/comment、self_approval）在 404 后 409 前；自审先 422 self_approval；
 #     comment 超长 ctx {reason: max_length, max_length: N}；reused 对象格式；check_blocked results[] 含 check_type/result/ctx；模板写接口必带 key
@@ -92,6 +93,14 @@ steps:
                 expect: {status: 409, code: check_blocked, ctx: {check: marking_inspection, reason: not_marked, marking_id: $marking.MK0001}, overridable: false,
                          results: [{check_type: marking_inspection, result: $nonempty, ctx: {reason: not_marked, marking_id: $marking.MK0001, trace_code: null}}]}}
   - marking_print: {lot: MK0001, eq: EAP-MK01, idem: mk-ro-0, as: read_only, expect: {status: 403}}   # 只有 mes.marking:read
+  # 前端 80a36a3：打标记录 create / print / inspect / void 四个写接口 Idempotency-Key 必填（D81：缺 key 422 先于 body 422 / 404 / 409）
+  - marking_create: {lot: MK0001, no_idem: true, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}   # 已有主记录，带 key 才会 409
+  - marking_print: {lot: MK0001, eq: EAP-MK01, no_idem: true, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
+  - marking_inspect: {lot: MK0001, result: pass, read_code: X, no_idem: true, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
+  - marking_void: {marking: MK0001, reason: R-MKVOID, comment: "缺 key", no_idem: true, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
+  # 无权限账号不带 key → 403（D81：401/403 排在缺 key 422 之前）。需要 SIM_AS_READ_ONLY_* 凭据（只有 mes.marking:read）；
+  # 当前 eap/env 下没有这类账号的凭据文件，执行器会把本步记为 skip（「没有 SIM_AS_READ_ONLY_* 账号」），不算失败
+  - marking_print: {lot: MK0001, eq: EAP-MK01, no_idem: true, as: read_only, expect: {status: 403}}
   - marking_print: {lot: MK0001, eq: EAP-MK01, no_idem: true,
                      expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
   - marking_config: {save_as: cfg, expect: {status: 200, body: {trace_code_max_length: 32, trace_code_pattern: $nonempty}, pattern_allowed: true}}

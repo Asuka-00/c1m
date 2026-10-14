@@ -83,6 +83,9 @@ RETICLE_IDEM_STEPS = {
 }
 
 # P3-B2 打标草稿步骤：都要 lot（批次键；EAP 上报另需 eq）
+# 前端 80a36a3：打标记录四个写接口 Idempotency-Key 必填
+MARKING_IDEM_STEPS = frozenset({"marking_create", "marking_print", "marking_inspect", "marking_void"})
+
 # D79 补充七：模板写接口必须带 Idempotency-Key；只读的预览 / 校验 POST 不带
 TEMPLATE_WRITE = frozenset({"create", "update", "new_version", "approve"})
 TEMPLATE_READONLY = frozenset({"preview", "validate"})
@@ -151,6 +154,10 @@ def parse(data: dict, path: str | None = None) -> Scenario:
             not args.get("eq") or not args.get("reticle") or args.get("kind") not in ("mount", "unmount", "usage")
         ):
             raise ScenarioError(f"第 {i} 步 reticle_report 需要 eq、reticle，kind 只能是 mount/unmount/usage")
+        if k in MARKING_IDEM_STEPS and not args.get("idem") and not args.get("no_idem"):
+            raise ScenarioError(
+                f"第 {i} 步 {k} 缺少 idem（前端 80a36a3：打标记录写接口 key 必填；测缺失写 no_idem: true）"
+            )
         if k in RETICLE_IDEM_STEPS and not args.get("idem") and not args.get("no_idem"):
             raise ScenarioError(f"第 {i} 步 {k} 缺少 idem（D80：Idempotency-Key 必填；测缺失请写 no_idem: true）")
         if k == "marking_template":
@@ -169,6 +176,15 @@ def parse(data: dict, path: str | None = None) -> Scenario:
             raise ScenarioError(f"第 {i} 步 {k} 缺少 lot")
         if k == "expect_query_422" and not args.get("path"):
             raise ScenarioError(f"第 {i} 步 expect_query_422 需要 path")
+        if k == "expect_alarm_list" and not args.get("raw_time"):
+            from sim.runner import has_tz
+
+            for f in ("from", "to"):
+                v = args.get(f)
+                if v is not None and not str(v).startswith("$now") and not has_tz(str(v)):
+                    raise ScenarioError(
+                        f"第 {i} 步 expect_alarm_list {f} 必须带时区（a72b85b）；负向用例写 raw_time: true"
+                    )
         if k == "expect_alarm_list" and not args.get("eq"):
             raise ScenarioError(f"第 {i} 步 expect_alarm_list 缺少 eq")
         if k == "tool_set" and not isinstance(args.get("fields"), dict):

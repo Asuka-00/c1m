@@ -164,10 +164,15 @@ def test_b8_draft_reuses_alarm_and_track_in_steps():
     assert any(a.get("level") == "equipment" and a.get("value") is None and a["expect"]["status"] == 200 for a in sets)
     assert "expect_effective_track_in_action" in kinds
     # B8 补充：ctx.alarms[] 带 sub_unit_id；多腔体整机拦截后清除放行；已清除不再拦；覆盖层 null 继承类型层
-    assert sc.run_id == "alarm-tia-04"
-    blocks = [s.args["expect"] for s in tis if s.args["expect"].get("status") == 409 and "body" in s.args["expect"]]
+    assert sc.run_id == "alarm-tia-05"
+    # D82 补充四：check_blocked 用 results[]，alarm_severity 项 ctx.alarms[] 每条带 sub_unit_id
+    blocks = [s.args["expect"] for s in tis if s.args["expect"].get("status") == 409 and "results" in s.args["expect"]]
+    assert len(blocks) == 2 and all("body" not in b for b in blocks)
     assert all(
-        v.get("sub_unit_id", "missing") != "missing" for b in blocks for k, v in b["body"].items() if ".alarms." in k
+        "sub_unit_id" in al and set(r) == {"check_type", "result", "ctx"}
+        for b in blocks
+        for r in b["results"]
+        for al in r["ctx"]["alarms"]
     )
     mc = [s for s in tis if s.args["eq"] == "EAP-MC01"]
     assert [t.args["expect"]["status"] for t in mc] == [409, 200]
@@ -258,7 +263,7 @@ def test_marking_draft_follows_d78():
     )  # 作废后上报改为 no_active_marking（D79 补充 2） and "trace_code_mismatch" in codes
     assert codes.count("check_blocked") == 8 and "idempotency_key_reused" in codes
     assert (
-        sum(1 for e in exp if e.get("loc") == ["header", "Idempotency-Key"]) == 8
+        sum(1 for e in exp if e.get("loc") == ["header", "Idempotency-Key"]) == 12
     )  # 打印、检验、作废，D81 不存在主记录作废；+4 D79 补充七 模板四个写接口缺 key
     # 补充三 4：逐条列出，值取 config；手工和 EAP 两个入口各有单条和双条
     errs = [e["errors"] for e in exp if "errors" in e and e["errors"][0]["loc"][-1] == "trace_code"]
@@ -278,7 +283,8 @@ def test_marking_draft_follows_d78():
     nxt = sc.steps[sc.steps.index(bad) + 1]
     assert nxt.kind == "expect_marking_events" and nxt.args["audit_count"] == {"trace_code_mismatch": 1}
     voids = [s for s in sc.steps if s.kind == "marking_void" and s.args.get("marking") != "MK-NOT-EXIST"]
-    assert [v.args["expect"]["status"] for v in voids] == [422, 403, 422, 422, 422, 200, 409]
+    # 80a36a3：多一步缺 key（第二项）
+    assert [v.args["expect"]["status"] for v in voids] == [422, 422, 403, 422, 422, 422, 200, 409]
     assert voids[0].args["no_idem"] and voids[0].args["expect"]["loc"] == ["header", "Idempotency-Key"]
     evs = [(s.args.get("latest") or {}).get("event") for s in sc.steps if s.kind == "expect_marking_events"]
     assert {"lot.marked", "lot.marking_inspected", "lot.marking_voided", "lot.marking_mismatched"} <= set(evs)
@@ -435,7 +441,12 @@ def test_marking_draft_follows_d79_supplement2():
     for s in st:
         if s.kind == "marking_inspect" and "read_code" in s.args and not str(s.args["read_code"]).startswith("$"):
             e = s.args["expect"]
-            if e["status"] == 409 or s.args["idem"].startswith("mk-ord"):  # 状态 / 顺序用例，read_code 只是占位
+            if (
+                e["status"] in (409, 422)
+                and s.args.get("no_idem")
+                or e["status"] == 409
+                or s.args.get("idem", "").startswith("mk-ord")
+            ):  # 状态 / 顺序用例，read_code 只是占位
                 continue
             got = check_read_code(s.args["read_code"])
             if e["status"] == 200:
@@ -655,3 +666,70 @@ def test_reticle_report_386c4e0_tightened():
     assert st["ret-rep-bt10b"]["expect"] == {"status": 409, "code": "invalid_transition"}
     e = st["ret-rep-c7"]["expect"]
     assert e["code"] == "time_out_of_order" and e["body"] == {"detail.latest_event_at": "$m11.mounted_at"}
+
+
+def test_b8_draft_d81_d82_refined():
+    """B8 草稿细化：写接口带 key、缺 key / 只读 403 / 重放 / reused / 404 / future_time 边界；TODO 待问清单。"""
+    import pathlib
+
+    from sim.scenario import load
+
+    text = pathlib.Path("scenarios/p3-draft/alarm-track-in-action.yaml").read_text()
+    sc = load("scenarios/p3-draft/alarm-track-in-action.yaml")
+    assert sc.draft
+    sets = [s.args for s in sc.steps if s.kind == "set_track_in_action"]
+    assert all(a.get("idem") or a.get("no_idem") for a in sets)
+    miss = [a for a in sets if a.get("no_idem") and not a.get("as")]
+    assert len(miss) == 2 and all(a["expect"]["code"] == "missing" for a in miss)
+    assert any(a["value"] == "bogus" for a in miss)  # 缺 key 先于 enum 422
+    assert any(a.get("no_idem") and a.get("as") == "read_only" and a["expect"]["status"] == 403 for a in sets)
+    keys = [a["idem"] for a in sets if a.get("idem")]
+    dup = {k for k in keys if keys.count(k) > 1}
+    assert dup and any(a.get("idem") in dup and a["expect"].get("code") == "idempotency_key_reused" for a in sets)
+    assert any(a["expect"]["status"] == 404 for a in sets)
+    fut = [s.args for s in sc.steps if s.kind == "alarm_set" and "occurred_at" in s.args]
+    assert [a["occurred_at"] for a in fut] == ["$now+301s", "$now+300s"]
+    assert fut[0]["expect"]["ctx"] == {"reason": "future_time"}
+    assert "detail.ctx" not in text  # check_blocked 不再用 detail.ctx（D82 补充四）
+    qs = [ln for ln in text.splitlines() if ln.startswith("# B8-Q")]
+    assert len(qs) >= 6 and all(f"TODO(B8-Q{n})" in text for n in range(1, 7))
+
+
+def test_marking_record_writes_require_idem():
+    from sim.scenario import ScenarioError, load, parse
+
+    for k in ("marking_create", "marking_print", "marking_inspect", "marking_void"):
+        with pytest.raises(ScenarioError, match="80a36a3"):
+            parse({"name": "t", "run_id": "r", "steps": [{k: {"lot": "L", "marking": "M"}}]})
+    sc = load("scenarios/p3-draft/marking-report.yaml")
+    st = [s for s in sc.steps if s.kind in ("marking_create", "marking_print", "marking_inspect", "marking_void")]
+    miss = {
+        s.kind
+        for s in st
+        if s.args.get("no_idem") and not s.args.get("as") and s.args["expect"].get("code") == "missing"
+    }
+    assert miss == {"marking_create", "marking_print", "marking_inspect", "marking_void"}
+    assert any(
+        s.args.get("no_idem") and s.args.get("as") == "read_only" and s.args["expect"]["status"] == 403 for s in st
+    )
+
+
+def test_alarm_list_time_filters_need_tz():
+    """a72b85b：报警列表 from/to 必须带时区；负向用例 raw_time 原样发。"""
+    from sim.runner import alarm_time_query, has_tz
+    from sim.scenario import ScenarioError, load, parse
+
+    assert has_tz("2026-10-15T01:00:00Z") and has_tz("2026-10-15T09:00:00+08:00")
+    assert not has_tz("2026-10-15") and not has_tz("2026-10-15T01:00:00") and not has_tz("x")
+    q = alarm_time_query({"from": "$now-1h", "to": "2026-10-15T01:00:00Z"})
+    assert q["from"].endswith("Z") and q["to"] == "2026-10-15T01:00:00Z"
+    with pytest.raises(ValueError, match="timezone_required"):
+        alarm_time_query({"from": "2026-10-15"})
+    assert alarm_time_query({"from": "2026-10-15", "raw_time": True}) == {"from": "2026-10-15"}
+    with pytest.raises(ScenarioError, match="时区"):
+        parse({"name": "t", "run_id": "r", "steps": [{"expect_alarm_list": {"eq": "E", "to": "2026-10-15T01:00:00"}}]})
+    sc = load("scenarios/p3-draft/alarm-track-in-action.yaml")
+    lists = [s.args for s in sc.steps if s.kind == "expect_alarm_list"]
+    neg = [a for a in lists if a.get("raw_time")]
+    assert {e["type"] for a in neg for e in a["expect"]["errors"]} >= {"timezone_required", "pattern"}
+    assert all(not a.get("raw_time") and str(a["from"]).startswith("$now") for a in lists if "expect" not in a)

@@ -57,6 +57,37 @@ def _data(resp: Resp) -> Any:
     return resp.body.get("data", resp.body) if isinstance(resp.body, dict) else resp.body
 
 
+ALARM_TIME_FILTERS = ("from", "to")
+
+
+def alarm_time_query(a: dict) -> dict[str, str]:
+    """a72b85b：GET /mes/eqp/alarms 的 from / to 是 datetime，必须带时区（只给日期或无时区 → 422 timezone_required）。
+
+    场景写 ``from: $now-1h`` 等相对时间（解析成 UTC Z）或带时区的 ISO 串；没带时区直接拒绝，
+    除非 ``raw_time: true``（负向用例，原样发给后端）。"""
+    from sim.reticle import resolve_relative
+
+    out: dict[str, str] = {}
+    for k in ALARM_TIME_FILTERS:
+        if a.get(k) is None:
+            continue
+        v = resolve_relative(str(a[k]), datetime.now(timezone.utc))
+        if not a.get("raw_time") and not has_tz(v):
+            raise ValueError(
+                f"报警列表 {k}={v!r} 没带时区（a72b85b：422 timezone_required）；负向用例请写 raw_time: true"
+            )
+        out[k] = v
+    return out
+
+
+def has_tz(v: str) -> bool:
+    """ISO datetime 串是否带时区（Z 或 ±HH:MM）；只给日期算不带。"""
+    try:
+        return datetime.fromisoformat(v.replace("Z", "+00:00")).tzinfo is not None and "T" in v
+    except ValueError:
+        return False
+
+
 def check_expect(resp: Resp, expect: dict | None, default_status: int = 200) -> list[str]:
     """返回不满足的断言列表（空表示通过）。"""
     expect = expect or {}
@@ -771,9 +802,15 @@ class Runner:
     def _expect_alarm_list(self, a: dict, entry: dict) -> None:
         """D65：报警履历列表（GET /mes/eqp/alarms）每行顶层带 state_changed / state_skip_reason。
         rows 按 ALID 给期望值，取该 ALID 最新一行比较；每一行都必须有这两个键。"""
-        r = self.c.get(self._ad("alarm_list"), equipment_id=self.rid("equipment", a["eq"]), page_size=100)
+        q = alarm_time_query(a)
+        r = self.c.get(self._ad("alarm_list"), equipment_id=self.rid("equipment", a["eq"]), page_size=100, **q)
         rows = (r.body or {}).get("data", []) if isinstance(r.body, dict) else []
-        entry.update(status=r.status, rows=len(rows))
+        entry.update(status=r.status, rows=len(rows), query=q)
+        if a.get("expect"):  # 负向用例（如 timezone_required）：只按 expect 判
+            errs = check_expect(r, a["expect"]) + check_p3_expect(r, a["expect"])
+            if errs:
+                raise StepFailed("；".join(errs))
+            return
         if r.status != 200:
             raise StepFailed(f"报警列表 HTTP {r.status}")
         miss = [x.get("alid") for x in rows if "state_changed" not in x or "state_skip_reason" not in x]
