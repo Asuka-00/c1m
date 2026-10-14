@@ -1547,7 +1547,7 @@
     "mes-equipment_qual": "Qual 任务",
     "mes-substrate_map": "坐标图",
     "mes-bin_set": "bin 定义集",
-    "mes-map-import": "Map 导入"
+    "mes-map-import": "坐标图导入"
   },
   "permName": {
     "users__read": "查看平台用户",

@@ -92,6 +92,7 @@ export const BACKEND_MENU_KEYS = [
   'mes-equipment_material_mount',
   'mes-equipment_qual',
   'mes-substrate_map',
+  'mes-map-import',
   'mes-bin_set',
   'mes-lot-trace',
   'mes-lot_priority',
@@ -120,7 +121,7 @@ export const BACKEND_MENU_KEYS = [
 ] as const
 
 /** 菜单方案 A 新增、后端 layout.py 尚未落地的 key（待与后端对齐）。 */
-export const PENDING_MENU_KEYS = ['g-exception', 'mes-map-import'] as const
+export const PENDING_MENU_KEYS = ['g-exception'] as const
 
 export const PLATFORM_MENU_KEYS = [
   'p-g-tenants',

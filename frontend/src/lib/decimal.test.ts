@@ -40,3 +40,11 @@ describe('parseDecimal（D49）', () => {
     expect(decimalGreater('10', '9')).toBe(true)
   })
 })
+
+describe('D50 真实样例（2d65b94）', () => {
+  it('_convert 返回定点字符串原样显示，数字也兼容', () => {
+    expect(decimalText('123456789123.456')).toBe('123456789123.456')
+    expect(decimalText(0.05)).toBe('0.05')
+    expect(decimalText('0.050')).toBe('0.05')
+  })
+})

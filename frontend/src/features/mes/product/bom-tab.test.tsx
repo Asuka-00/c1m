@@ -672,6 +672,77 @@ describe('bomError', () => {
     })
   })
 
+  it('2d65b94 真实样例：bom_component_no_active 的 bom 为 null 时只显示产品和版本', () => {
+    const m = bomError(
+      axiosErr(409, {
+        code: 'bom_component_no_active',
+        message: 'bom: a referenced semi-finished product has no active BOM',
+        details: [
+          {
+            product_id: 'a',
+            product: 'A-DEMO',
+            product_version: 1,
+            bom_id: 'b',
+            bom_version: 1,
+          },
+          {
+            product_id: 'e',
+            product: 'B-DEMO',
+            product_version: 1,
+            bom_id: null,
+            bom_version: null,
+          },
+        ],
+      })
+    ).message
+    expect(m).toBe(
+      t('mes.bomTab.err.componentNoActive', {
+        items: [
+          t('mes.bomTab.err.refItem', { product: 'A-DEMO v1', bom: 1 }),
+          'B-DEMO v1',
+        ].join(t('mes.bomTab.err.refSep')),
+      })
+    )
+    expect(m).not.toContain('null')
+  })
+
+  it('2d65b94 真实样例：too_many_decimals 整单与逐行路径', () => {
+    const whole = bomError(
+      axiosErr(422, [
+        {
+          loc: ['body', 'lines', 1, 'qty'],
+          msg: 'qty: at most 6 decimal places (got 7)',
+          type: 'too_many_decimals',
+          code: 'too_many_decimals',
+        },
+      ])
+    )
+    expect(whole.fields).toEqual([
+      {
+        line: 1,
+        field: 'qty',
+        message: t('mes.bomTab.err.tooManyDecimals', { n: 6 }),
+      },
+    ])
+    const single = bomError(
+      axiosErr(422, [
+        {
+          loc: ['body', 'scrap_rate'],
+          msg: 'scrap_rate: at most 4 decimal places (got 5)',
+          type: 'too_many_decimals',
+          code: 'too_many_decimals',
+        },
+      ])
+    )
+    expect(single.fields).toEqual([
+      {
+        line: null,
+        field: 'scrap_rate',
+        message: t('mes.bomTab.err.tooManyDecimals', { n: 4 }),
+      },
+    ])
+  })
+
   it('无明细生效 422 提示至少一行', () => {
     const r = bomError(
       axiosErr(422, [

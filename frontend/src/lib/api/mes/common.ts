@@ -152,7 +152,7 @@ export const mesApi = {
       .post<{ created: number; updated: number }>(`${base(code)}/import`, fd)
       .then((r) => r.data)
   },
-  /** 单位换算：数量按十进制字符串传，返回值 D50 为定点字符串（也兼容数字）。 */
+  /** 单位换算：数量按十进制字符串传，返回值为定点字符串（D50，2d65b94；也兼容数字）。 */
   convert: (from_uom: string, to_uom: string, value: string) =>
     http
       .get<{ value: number | string; path: string[] }>('/mes/_convert', {

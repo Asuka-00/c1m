@@ -472,6 +472,33 @@ export interface StageResult {
   next_step?: { id: string; seq: number } | null
 }
 
+/** 十进制数量：P1 新接口按定点字符串返回（D50），老接口为数字；只用 `lib/decimal` 显示。 */
+export type DecimalValue = number | string
+/** 批次 BOM 用量的一条明细（`GET /mes/exec/lots/{id}/bom-usage`）。 */
+export interface BomUsageLine {
+  bom_line_id: string
+  line_no: number
+  material: string | null
+  operation: string | null
+  uom: string | null
+  per_basis: string
+  basis: DecimalValue
+  planned: DecimalValue
+  actual: DecimalValue
+  over: boolean
+  excess: DecimalValue
+  unconverted?: unknown
+}
+/** 批次 BOM 用量总览（D50：basis / planned / actual / excess 为定点字符串）。 */
+export interface BomUsage {
+  lot: string
+  scope: string
+  bom_id: string | null
+  bom_version: number | null
+  basis: DecimalValue
+  lines: BomUsageLine[]
+}
+
 /** 批次执行接口：上下文、阶段作业、检查预览、Hold、拆合批、履历。 */
 /** 晶圆图中的一片晶圆。 */
 export interface WaferCell {
@@ -620,6 +647,9 @@ export const execApi = {
         failed: { id: string; error: string }[]
       }>('/mes/exec/holds/release-batch', body)
       .then((r) => r.data),
+  /** 批次 BOM 用量（计划 / 实际 / 超量；需 mes.exec:read，不存在 404）。 */
+  bomUsage: (lotId: string) =>
+    http.get<BomUsage>(`/mes/exec/lots/${lotId}/bom-usage`).then((r) => r.data),
   /** 追溯查询（批次 / 晶圆 / 设备 / 物料批）。 */
   trace: (kind: TraceKind, code: string) =>
     http
