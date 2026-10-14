@@ -79,6 +79,7 @@ def test_alarm_set_links_holds_e10_and_clear(client: TestClient, db: Session) ->
     assert [x["lot_code"] for x in a["lots"]] == [lot["code"]]
     # D58：不 Hold；设备切到 DOWN，E10 履历 source=manual（报警来源）、trigger=equipment
     assert r["state_changed"] is True and r["state_skip_reason"] is None
+    assert r["data"]["state_changed"] is True and r["data"]["state_skip_reason"] is None
     assert a["hold_ids"] is None and f.lot(lot)["on_hold"] is False
     assert m.list("lot_hold", lot=lot["id"])["count"] == 0
     assert a["e10_change"]["from"] == "SBY" and a["e10_change"]["to"] == "DOWN"
@@ -114,7 +115,11 @@ def test_alarm_set_links_holds_e10_and_clear(client: TestClient, db: Session) ->
     # 清除后同 ALID 再报：新的一次发生；设备已是 DOWN → state_changed=false
     r2 = _set(f, alid="1001")
     assert r2["data"]["id"] != a["id"]
-    assert r2["state_changed"] is False and "already DOWN" in r2["state_skip_reason"]
+    assert (
+        r2["state_changed"] is False and r2["state_skip_reason"] == "already_in_state"
+    )
+    assert r2["data"]["state_changed"] is False
+    assert r2["data"]["state_skip_reason"] == "already_in_state"
     assert client.get(f"{EQP}/alarms/{a['id']}", headers=m.h).json()["raw"]
     r = client.get(f"{EQP}/alarms/{f.lot(lot)['id']}", headers=m.h)
     assert r.status_code == 404 and r.json()["detail"]["code"] == "alarm_not_found"
@@ -167,7 +172,10 @@ def test_alarm_explicit_lot_ids_and_skip(client: TestClient, db: Session) -> Non
     assert {x["lot_code"] for x in a["lots"]} == {lot["code"], idle["code"]}
     assert f.lot(idle)["on_hold"] is False and f.lot(lot)["on_hold"] is False
     # D59：DOWN -> PRD 不在迁移表：报警照记，状态不变，200 state_changed=false + 原因 + 审计
-    assert r["state_changed"] is False and "not allowed" in r["state_skip_reason"]
+    assert (
+        r["state_changed"] is False
+        and r["state_skip_reason"] == "transition_not_allowed"
+    )
     assert a["e10_change"]["state_changed"] is False
     eh = f.m.list("e10_history", equipment=f.eq["id"])["data"]
     assert len(eh) == 1 and eh[0]["trigger"] == "manual"  # 只有人工那条

@@ -4,7 +4,7 @@
   里带的 ``lot_ids``），再按报警码 ``action`` 联动。D58：报警**不 Hold 批次、不拦进站**，唯一
   的联动是 ``set_state``：设备切到 ``target_state``（E10 状态编码），E10 履历 ``source`` = 报警来源
   （manual / eap / simulator），``trigger=equipment``；不在迁移表里的迁移跳过并记在
-  ``e10_change.skipped``；进站由现有设备状态检查拦截；
+  ``state_changed=false`` + ``state_skip_reason`` 代码；进站由现有设备状态检查拦截；
   * 未登记 ALID（``unregistered=true``）或报警码停用：只记录，不联动（D53-2）。
 - 幂等：同 (source, external_event_id) 或同设备同 ALID 已有 active 报警 → 返回已有记录，
   ``duplicate=true``；同事件号但内容不同 → 422 ``idempotency_key_reused``（D57）；已清除后再报同 ALID 是新的一次发生（新记录、正常联动）。
@@ -129,7 +129,8 @@ def _e10(s: Session, tid: uuid.UUID, eq: Row, code: Row, user: Any, source: str)
     """报警引起的设备状态事件（D58 / D59）：切到 ``target_state``，``trigger=equipment``。
 
     迁移表不允许 / 目标状态不存在 / 已是目标状态 → 不改状态，``state_changed=false`` 并给出
-    ``state_skip_reason``；迁移表不允许时另写设备审计 ``alarm_state_skipped``。报警照常记录。
+    ``state_skip_reason``（代码：``unknown_state`` / ``already_in_state`` /
+    ``transition_not_allowed``）；迁移表不允许时另写设备审计 ``alarm_state_skipped``。报警照常记录。
     """
     ts = code.get("target_state")
     to = state_by_code(s, tid, ts)
@@ -144,13 +145,13 @@ def _e10(s: Session, tid: uuid.UUID, eq: Row, code: Row, user: Any, source: str)
         return {
             **base,
             "state_changed": False,
-            "state_skip_reason": f"unknown E10 state {ts}",
+            "state_skip_reason": "unknown_state",
         }
     if cur and cur["id"] == to["id"]:
         return {
             **base,
             "state_changed": False,
-            "state_skip_reason": f"already {to['code']}",
+            "state_skip_reason": "already_in_state",
         }
     if cur and not find(
         s, tid, "e10_transition", from_state_id=cur["id"], to_state_id=to["id"]
@@ -165,7 +166,11 @@ def _e10(s: Session, tid: uuid.UUID, eq: Row, code: Row, user: Any, source: str)
             user,
             {"e10_state": (cur["code"], cur["code"]), "skip": (None, why)},
         )
-        return {**base, "state_changed": False, "state_skip_reason": why}
+        return {
+            **base,
+            "state_changed": False,
+            "state_skip_reason": "transition_not_allowed",
+        }
     _upd(s, tid, "equipment", eq["id"], user, e10_state_id=to["id"])
     e10_log(
         s,
@@ -199,6 +204,10 @@ def detail(s: Session, tid: uuid.UUID, row: Row) -> Row:
     out = serialize(s, tid, ENTITIES[LOG], [row])[0]
     eq = one(s, tid, "equipment", row["equipment_id"])
     out["equipment_code"] = eq and eq["code"]
+    # 履历记录也带状态联动结果（未联动时 false / null）
+    ch = row.get("e10_change") or {}
+    out["state_changed"] = bool(ch.get("state_changed"))
+    out["state_skip_reason"] = ch.get("state_skip_reason")
     lt, al = TABLES["lot"], TABLES["alarm_lot"]
     out["lots"] = [
         {"lot_id": str(r.id), "lot_code": r.code}
