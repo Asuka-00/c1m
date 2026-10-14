@@ -85,6 +85,10 @@ def default_adapters() -> dict[str, Adapter]:
         "reticle_restore": Adapter("光罩人工恢复", ["/mes/reticle/{reticle_id}/restore"], card="P3-B4"),
         "reticle_scrap": Adapter("光罩报废", ["/mes/reticle/{reticle_id}/scrap"], card="P3-B4"),
         "reticle_unmount": Adapter("光罩卸载", ["/mes/reticle/{reticle_id}/unmount"], card="P3-B4"),
+        "reticle_inspection": Adapter("光罩检查录入", ["/mes/reticle/{reticle_id}/inspection"], card="P3-B4"),
+        "reticle_life_reset": Adapter("光罩寿命重置", ["/mes/reticle/{reticle_id}/life-reset"], card="P3-B4"),
+        # D80+补充一：10 个写接口（usage/incident/inspection/mount/unmount/hold/release/restore/life-reset/scrap）
+        #   Idempotency-Key 必填，缺失 422 missing loc [header, Idempotency-Key]；重放按 D57
         # P3-B8（D70，未实现）：报警码 track_in_action 配置。路径为提议（通用 CRUD PATCH 或专用接口），B8 落地后核对
         # D70 补充：改配置走通用 CRUD PATCH /mes/alarm_code/{rid}；非法值 422 enum（ctx.expected=[off,warn,block]）；
         #   设备类型层传 null 422，单台设备覆盖层传 null = 清空改为继承；eap_service 不能改（403）
@@ -170,6 +174,8 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "reticle_restore": ["reticle_restore"],
     "reticle_scrap": ["reticle_scrap"],
     "reticle_unmount": ["reticle_unmount"],
+    "reticle_inspection": ["reticle_inspection"],
+    "reticle_life_reset": ["reticle_life_reset"],
     "set_track_in_action": ["alarm_track_in_action"],
     "expect_alarm_code": ["alarm_code_get"],
     # P3-E2 光罩预审：以后 B11 event_type=reticle_mount/reticle_unmount/reticle_usage（D67：P3 不开）

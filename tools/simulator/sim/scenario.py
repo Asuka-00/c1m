@@ -63,6 +63,20 @@ class Scenario:
         return seen
 
 
+# D80 + 补充一：光罩 10 个手工写接口，Idempotency-Key 必填（场景必须写 idem，或 no_idem: true 测缺失）
+RETICLE_IDEM_STEPS = {
+    "reticle_adjust",  # /usage
+    "reticle_incident",
+    "reticle_inspection",
+    "reticle_mount",
+    "reticle_unmount",
+    "reticle_hold",
+    "reticle_release",
+    "reticle_restore",
+    "reticle_life_reset",
+    "reticle_scrap",
+}
+
 # P3-B2 打标草稿步骤：都要 lot（批次键；EAP 上报另需 eq）
 MARKING_LOT_STEPS = {
     "marking_report",
@@ -127,6 +141,8 @@ def parse(data: dict, path: str | None = None) -> Scenario:
             not args.get("eq") or not args.get("reticle") or args.get("kind") not in ("mount", "unmount", "usage")
         ):
             raise ScenarioError(f"第 {i} 步 reticle_report 需要 eq、reticle，kind 只能是 mount/unmount/usage")
+        if k in RETICLE_IDEM_STEPS and not args.get("idem") and not args.get("no_idem"):
+            raise ScenarioError(f"第 {i} 步 {k} 缺少 idem（D80：Idempotency-Key 必填；测缺失请写 no_idem: true）")
         if k in MARKING_LOT_STEPS and not args.get("lot"):
             raise ScenarioError(f"第 {i} 步 {k} 缺少 lot")
         if k == "expect_query_422" and not args.get("path"):

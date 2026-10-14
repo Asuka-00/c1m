@@ -171,6 +171,8 @@ P3_DRAFT_STEPS = {
     "expect_alarm_code",
     "reticle_replay",
     "reticle_report",
+    "reticle_inspection",
+    "reticle_life_reset",
     # P3-B2 打标（未实现）
     "marking_report",
     "marking_create",

@@ -106,7 +106,12 @@ def test_p3_draft_steps_not_runnable_even_if_paths_exist():
     from sim.runner import FAILED, Runner
     from sim.scenario import parse
 
-    sc = parse({"run_id": "d", "steps": [{"reticle_incident": {"eq": "EQ1", "reticle": "R1", "kind": "collision"}}]})
+    sc = parse(
+        {
+            "run_id": "d",
+            "steps": [{"reticle_incident": {"eq": "EQ1", "reticle": "R1", "kind": "collision", "idem": "k1"}}],
+        }
+    )
     c = FakeClient(paths=None)
     c.paths |= {"/mes/reticle/{reticle_id}/incident"}
     rep = Runner(c).run(sc)
@@ -121,7 +126,7 @@ def test_reticle_replay_requires_saved_step():
     ok = {
         "run_id": "r",
         "steps": [
-            {"reticle_adjust": {"reticle": "R1", "delta": "-5", "reason": "RC", "save_as": "a1"}},
+            {"reticle_adjust": {"reticle": "R1", "delta": "-5", "reason": "RC", "save_as": "a1", "idem": "k1"}},
             {"reticle_replay": {"of": "a1"}},
         ],
     }
@@ -458,13 +463,13 @@ def test_reticle_report_draft_e2():
     from sim.scenario import ScenarioError, load, parse
 
     sc = load("scenarios/p3-draft/reticle-report.yaml")
-    assert sc.draft and "G1" in sc.draft and "reticle_report" in P3_DRAFT_STEPS
+    assert sc.draft and "D80" in sc.draft and "reticle_report" in P3_DRAFT_STEPS
     st = sc.steps
     rep = [s for s in st if s.kind == "reticle_report"]
     assert {s.args["kind"] for s in rep} == {"mount", "unmount", "usage"}
     exp = [s.args.get("expect") or {} for s in st]
     codes = [e.get("code") for e in exp]
-    assert codes.count("idempotency_key_reused") == 2 and codes.count("invalid_transition") == 1
+    assert codes.count("idempotency_key_reused") == 4 and codes.count("invalid_transition") == 1
     assert any((e.get("ctx") or {}).get("max_places") == 6 for e in exp)
     # EAP 重放 duplicate=true；手工重放无 duplicate
     for s in st:
@@ -474,7 +479,37 @@ def test_reticle_report_draft_e2():
                 assert s.args["expect"]["body"]["duplicate"] is True
             else:
                 assert "duplicate" in s.args["expect"]["absent"]
-    um = [s for s in st if s.kind == "expect_reticle_history" and "unmount_external_event_id" in s.args["fields"]]
-    assert len(um) == 1 and um[0].args["fields"]["unmount_source"] == "simulator"
+    # D80 G1：下机单独一行事件，上机行不写下机事件号
+    hist = [s for s in st if s.kind == "expect_reticle_history"]
+    assert not any("unmount_source" in s.args.get("fields", {}) for s in hist)
+    assert not any("unmount_external_event_id" in s.args.get("fields", {}) for s in hist)
+    assert any(
+        s.args.get("latest_of") == "unmount" and s.args["fields"].get("external_event_id") == "$ext.um1" for s in hist
+    )
+    assert sum(1 for s in hist if s.args.get("count_of", {}).get("unmount") == 1) >= 3
+    assert any(s.args.get("fields", {}).get("unmounted_at") == "$mrow1.unmounted_at" for s in hist)
+    dup = [s for s in st if s.kind == "reticle_report" and s.args["kind"] == "unmount"]
+    assert [d.args["expect"]["body"]["duplicate"] for d in dup] == [False, True]
+    # D80 补充一：10 个接口缺 key 422 missing
+    from sim.scenario import RETICLE_IDEM_STEPS
+
+    miss = {s.kind for s in st if s.args.get("no_idem")}
+    assert miss == RETICLE_IDEM_STEPS and len(miss) == 10
+    for s in st:
+        if s.args.get("no_idem"):
+            assert s.args["expect"]["loc"] == ["header", "Idempotency-Key"]
+    assert sum(1 for s in st if s.args.get("expect", {}).get("code") == "idempotency_key_reused") == 4
     with pytest.raises(ScenarioError):
         parse({"run_id": "r", "steps": [{"reticle_report": {"eq": "E", "reticle": "R", "kind": "inspect"}}]})
+
+
+def test_reticle_write_requires_idem():
+    from sim.scenario import ScenarioError, parse
+
+    base = {"name": "x", "run_id": "x1", "draft": "d", "steps": [{"reticle_hold": {"reticle": "R", "reason": "x"}}]}
+    with pytest.raises(ScenarioError, match="idem"):
+        parse(base)
+    base["steps"] = [{"reticle_hold": {"reticle": "R", "reason": "x", "no_idem": True}}]
+    parse(base)
+    base["steps"] = [{"reticle_hold": {"reticle": "R", "reason": "x", "idem": "k"}}]
+    parse(base)

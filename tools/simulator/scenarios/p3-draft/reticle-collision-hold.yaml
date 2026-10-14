@@ -12,8 +12,8 @@ target: http://127.0.0.1:8013
 equipment: [{code: EAP-LT01, type: LITHO}]
 steps:
   - precondition: {eq: EAP-LT01, e10: SBY}
-  - reticle_mount: {eq: EAP-LT01, reticle: R-SIM-02, slot: S1, expect: {status: 200}}
-  - reticle_incident: {eq: EAP-LT01, reticle: R-SIM-02, kind: collision, save_as: inc1,
+  - reticle_mount: {idem: ret-incident-03-k01, eq: EAP-LT01, reticle: R-SIM-02, slot: S1, expect: {status: 200}}
+  - reticle_incident: {idem: ret-incident-03-k02, eq: EAP-LT01, reticle: R-SIM-02, kind: collision, save_as: inc1,
                        expect: {status: 201, absent: [duplicate], body: {data.source: manual}}}
   - expect_reticle: {reticle: R-SIM-02, fields: {status_code: on_hold, hold_reason: incident, status_before_hold: available,
                                                  inspection_required: true, equipment_id: null}}
@@ -29,34 +29,34 @@ steps:
   # D57/D67（G-3）：带同一个 Idempotency-Key、同一请求体再 POST 一次 /incident → 原状态码 201、原记录，不带 duplicate 字段，不重复写事故
   - reticle_replay: {of: inc1, expect: {status: 201, absent: [duplicate], body: {data.id: $inc1}}}
   # D30 + D65 补充 4：带 source → 422 unknown_field；hold_reason 只读（OQ-20 决定 D60 补充）
-  - reticle_incident: {eq: EAP-LT01, reticle: R-SIM-02, kind: collision, extra: {source: eap},
+  - reticle_incident: {idem: ret-incident-03-k03, eq: EAP-LT01, reticle: R-SIM-02, kind: collision, extra: {source: eap},
                        expect: {status: 422, code: unknown_field, loc: [body, source]}}
   # D67：已 on_hold 时人工再 hold → 409 invalid_transition
-  - reticle_hold: {reticle: R-SIM-02, reason: sim manual hold, expect: {status: 409, code: invalid_transition}}
+  - reticle_hold: {idem: ret-incident-03-k04, reticle: R-SIM-02, reason: sim manual hold, expect: {status: 409, code: invalid_transition}}
   # 同等严格的系统 hold（再录一次碰撞）：hold_reason 不变，只记事故
-  - reticle_incident: {eq: EAP-LT01, reticle: R-SIM-02, kind: drop, expect: {status: 201}}
+  - reticle_incident: {idem: ret-incident-03-k05, eq: EAP-LT01, reticle: R-SIM-02, kind: drop, expect: {status: 201}}
   - expect_reticle: {reticle: R-SIM-02, fields: {status_code: on_hold, hold_reason: incident, status_before_hold: available}}
   # 通用 CRUD 不能写状态
   - expect_reticle: {reticle: R-SIM-02, patch: {status_code: available}, expect: {status: 422, code: read_only_field}}
   # release 不收目标：incident → inspecting；清空 hold_reason / status_before_hold
-  - reticle_release: {reticle: R-SIM-02, extra: {to: available}, expect: {status: 422, code: unknown_field, loc: [body, to]}}
-  - reticle_release: {reticle: R-SIM-02, expect: {status: 200}}
+  - reticle_release: {idem: ret-incident-03-k06, reticle: R-SIM-02, extra: {to: available}, expect: {status: 422, code: unknown_field, loc: [body, to]}}
+  - reticle_release: {idem: ret-incident-03-k07, reticle: R-SIM-02, expect: {status: 200}}
   - expect_reticle: {reticle: R-SIM-02, fields: {status_code: inspecting, hold_reason: null, status_before_hold: null}}
   - expect_reticle_history: {reticle: R-SIM-02, latest_of: status, fields: {action: release, from_status: on_hold, to_status: inspecting}}
   - expect_reticle_events: {reticle: R-SIM-02, latest: {event: reticle.released, payload.hold_reason: incident}}
   # 检查中再碰撞（D68 Q20：非 scrapped 一律 on_hold）→ status_before_hold=inspecting；release(incident) 回 inspecting
-  - reticle_incident: {eq: EAP-LT01, reticle: R-SIM-02, kind: collision, expect: {status: 201}}
+  - reticle_incident: {idem: ret-incident-03-k08, eq: EAP-LT01, reticle: R-SIM-02, kind: collision, expect: {status: 201}}
   - expect_reticle: {reticle: R-SIM-02, fields: {status_code: on_hold, hold_reason: incident, status_before_hold: inspecting}}
-  - reticle_release: {reticle: R-SIM-02, expect: {status: 200}}
+  - reticle_release: {idem: ret-incident-03-k09, reticle: R-SIM-02, expect: {status: 200}}
   - expect_reticle: {reticle: R-SIM-02, fields: {status_code: inspecting}}
   # 报废（D68：scrap {reason}，需 mes.reticle:override）→ scrapped，发 reticle.scrapped；之后碰撞 409 invalid_transition
-  - reticle_scrap: {reticle: R-SIM-02, reason: sim scrap, expect: {status: 200}}
+  - reticle_scrap: {idem: ret-incident-03-k10, reticle: R-SIM-02, reason: sim scrap, expect: {status: 200}}
   - expect_reticle: {reticle: R-SIM-02, fields: {status_code: scrapped, hold_reason: null, status_before_hold: null}}
   - expect_reticle_events: {reticle: R-SIM-02, latest: {event: reticle.scrapped}}
-  - reticle_incident: {eq: EAP-LT01, reticle: R-SIM-02, kind: collision, expect: {status: 409, code: invalid_transition}}
+  - reticle_incident: {idem: ret-incident-03-k11, eq: EAP-LT01, reticle: R-SIM-02, kind: collision, expect: {status: 409, code: invalid_transition}}
   # 在用时报废（D69 补充）：顺带卸载，只发 reticle.scrapped（payload 带 equipment_id 和卸载时 shots），不发 reticle.unmounted
-  - reticle_mount: {eq: EAP-LT01, reticle: R-SIM-03, slot: S2, expect: {status: 200}}
-  - reticle_scrap: {reticle: R-SIM-03, reason: sim scrap in use, expect: {status: 200}}
+  - reticle_mount: {idem: ret-incident-03-k12, eq: EAP-LT01, reticle: R-SIM-03, slot: S2, expect: {status: 200}}
+  - reticle_scrap: {idem: ret-incident-03-k13, reticle: R-SIM-03, reason: sim scrap in use, expect: {status: 200}}
   - expect_reticle: {reticle: R-SIM-03, fields: {status_code: scrapped, equipment_id: null, mounted_at: null}}
   - expect_reticle_events: {reticle: R-SIM-03, latest: {event: reticle.scrapped, payload.equipment_id: $eq:EAP-LT01, payload.shots_at_unmount: "0"},
                             absent_events: [reticle.unmounted]}
