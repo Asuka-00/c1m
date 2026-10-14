@@ -1,5 +1,6 @@
 /** 站内通知接口：我的通知、未读汇总、已读、事件元数据、订阅配置。 */
 import { del, get, post, put, type ListQuery } from '../request'
+import { BODY_KEYS, pickBody } from '../request-body'
 import type { Paged } from '../types'
 
 /** 通知严重度。 */
@@ -73,9 +74,15 @@ export const notificationsApi = {
   subscriptions: (q: ListQuery) =>
     get<Paged<Subscription>>('/notification-subscriptions', q),
   createSubscription: (b: SubscriptionIn) =>
-    post<Subscription>('/notification-subscriptions', b),
+    post<Subscription>(
+      '/notification-subscriptions',
+      pickBody(b, BODY_KEYS.subscription)
+    ),
   updateSubscription: (id: string, b: SubscriptionIn) =>
-    put<Subscription>(`/notification-subscriptions/${id}`, b),
+    put<Subscription>(
+      `/notification-subscriptions/${id}`,
+      pickBody(b, BODY_KEYS.subscription)
+    ),
   removeSubscription: (id: string) =>
     del<{ ok: boolean }>(`/notification-subscriptions/${id}`),
 }
