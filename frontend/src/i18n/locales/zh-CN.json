@@ -170,7 +170,8 @@
     "generic": "操作失败，请联系管理员。",
     "query": {
       "sortBy": "不支持按该列排序（可选：{{list}}）",
-      "notTextFilter": "{{field}} 不是可筛选的文本字段"
+      "notTextFilter": "{{field}} 不是可筛选的文本字段",
+      "pattern": "{{field}} 格式不正确，日期请用 YYYY-MM-DD"
     },
     "rangeInverted": "开始日期不能晚于结束日期"
   },
@@ -510,7 +511,6 @@
         "timezone_required": "时间必须带时区（如 2026-10-14T08:00:00+08:00）",
         "date_range_too_large": "日期跨度最多 {{max_days}} 天，请缩小范围。",
         "date_range_too_large_nolimit": "日期跨度过大，请缩小范围。",
-        "date_range_invalid": "开始日期不能晚于结束日期。",
         "unknown_columns": "导入文件有无法识别的列：{{columns}}",
         "no_conversion_path": "没有从 {{from_uom}} 到 {{to_uom}} 的换算关系。",
         "ref_not_found": "找不到对应的{{entity}}。",
@@ -1898,6 +1898,7 @@
         "nonNegInt": "须为非负整数",
         "maxPlaces": "增减量最多 {{max}} 位小数",
         "futureTime": "补录时间不能晚于当前时间 5 分钟以上",
+        "timeOutOfOrderAt": "时间早于这张光罩最近一次事件（{{at}}），请改到这个时间之后",
         "backfillInvalid": "请输入有效的补录时间"
       },
       "code": {

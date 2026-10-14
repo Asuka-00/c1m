@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { t } from '@/i18n'
 import { Download } from 'lucide-react'
+import { errorMessage } from '@/lib/api/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -136,11 +137,14 @@ export function DateRange({
   to,
   setFrom,
   setTo,
+  error,
 }: {
   from: string
   to: string
   setFrom: (v: string) => void
   setTo: (v: string) => void
+  /** 报表查询错误（D77 补充二：422 range_inverted / pattern 等），显示后端文案 */
+  error?: unknown
 }) {
   // D77 补充一：from 晚于 to 时拦住（不写入），并提示
   const [inverted, setInverted] = useState(false)
@@ -202,6 +206,11 @@ export function DateRange({
       {inverted && (
         <p className='text-sm text-destructive' data-testid='range-inverted'>
           {t('errors.rangeInverted')}
+        </p>
+      )}
+      {!inverted && error != null && (
+        <p className='text-sm text-destructive' data-testid='report-error'>
+          {errorMessage(error)}
         </p>
       )}
     </div>

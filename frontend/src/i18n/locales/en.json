@@ -170,7 +170,8 @@
     "generic": "The request failed; please contact your administrator.",
     "query": {
       "sortBy": "Cannot sort by this column (allowed: {{list}})",
-      "notTextFilter": "{{field}} is not a filterable text field"
+      "notTextFilter": "{{field}} is not a filterable text field",
+      "pattern": "{{field}} has an invalid format; use YYYY-MM-DD for dates"
     },
     "rangeInverted": "The start date cannot be later than the end date"
   },
@@ -510,7 +511,6 @@
         "timezone_required": "The time must include a time zone (e.g. 2026-10-14T08:00:00+08:00)",
         "date_range_too_large": "The date range can span at most {{max_days}} days; narrow it down.",
         "date_range_too_large_nolimit": "The date range is too large; narrow it down.",
-        "date_range_invalid": "The start date cannot be later than the end date.",
         "unknown_columns": "The import file has unrecognized columns: {{columns}}",
         "no_conversion_path": "No conversion from {{from_uom}} to {{to_uom}}.",
         "ref_not_found": "The {{entity}} was not found.",
@@ -1898,6 +1898,7 @@
         "nonNegInt": "Must be a non-negative integer",
         "maxPlaces": "Delta allows at most {{max}} decimal places",
         "futureTime": "The backfill time cannot be more than 5 minutes in the future",
+        "timeOutOfOrderAt": "The time is earlier than this reticle’s latest event ({{at}}); use a later time",
         "backfillInvalid": "Enter a valid backfill time"
       },
       "code": {

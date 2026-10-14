@@ -170,7 +170,8 @@
     "generic": "処理に失敗しました。管理者にお問い合わせください。",
     "query": {
       "sortBy": "この列では並べ替えできません（指定可能：{{list}}）",
-      "notTextFilter": "{{field}} はフィルタ可能なテキスト項目ではありません"
+      "notTextFilter": "{{field}} はフィルタ可能なテキスト項目ではありません",
+      "pattern": "{{field}} の形式が正しくありません。日付は YYYY-MM-DD で指定してください"
     },
     "rangeInverted": "開始日は終了日より後にできません"
   },
@@ -510,7 +511,6 @@
         "timezone_required": "時刻にはタイムゾーンが必要です（例：2026-10-14T08:00:00+08:00）",
         "date_range_too_large": "期間は最大 {{max_days}} 日です。範囲を狭めてください。",
         "date_range_too_large_nolimit": "期間が長すぎます。範囲を狭めてください。",
-        "date_range_invalid": "開始日は終了日より後にできません。",
         "unknown_columns": "取込ファイルに認識できない列があります：{{columns}}",
         "no_conversion_path": "{{from_uom}} から {{to_uom}} への換算がありません。",
         "ref_not_found": "{{entity}}が見つかりません。",
@@ -1898,6 +1898,7 @@
         "nonNegInt": "0 以上の整数で入力してください",
         "maxPlaces": "増減量は小数点以下 {{max}} 桁までです",
         "futureTime": "補録時刻は現在より 5 分以上先にできません",
+        "timeOutOfOrderAt": "このレチクルの直近のイベント（{{at}}）より前です。それ以降の時刻を指定してください",
         "backfillInvalid": "有効な補録時刻を入力してください"
       },
       "code": {

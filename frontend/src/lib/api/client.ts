@@ -78,6 +78,9 @@ export function queryItemText(x: ParamItem): string {
   const known = queryErrorText(String(x.msg ?? ''))
   if (known) return known
   const name = paramName(x)
+  // D77 补充二：通用 date 筛选非严格 YYYY-MM-DD → 422 pattern，loc=["query", 字段名]
+  if (x.code === 'pattern' || x.type === 'pattern')
+    return t('errors.query.pattern', { field: name })
   const m = paramMessage(x)
   return name ? `${name}: ${m}` : m
 }

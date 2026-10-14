@@ -68,7 +68,13 @@ export default function YieldReport() {
   return (
     <Page title={t('menu.mes-yield-report')} description={t('mes.yield.hint')}>
       <div className='flex flex-wrap items-end gap-3'>
-        <DateRange from={from} to={to} setFrom={setFrom} setTo={setTo} />
+        <DateRange
+          from={from}
+          to={to}
+          setFrom={setFrom}
+          setTo={setTo}
+          error={q.error}
+        />
         <Select value={group} onValueChange={(v) => setGroup(v as YieldGroup)}>
           <SelectTrigger
             className='max-w-72 min-w-40'

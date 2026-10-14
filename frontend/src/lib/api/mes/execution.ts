@@ -11,6 +11,7 @@ import {
   transformBody,
 } from '../request-body'
 import type { MesRow } from './common'
+import { apiError } from './reticle'
 
 /** 执行阶段。 */
 export type ExecStage = 'move_in' | 'track_in' | 'track_out' | 'move_out'
@@ -649,6 +650,56 @@ export interface TransformResult {
   warnings: { code: string; message?: string; wafer?: string }[]
 }
 
+/** D77 补充三：报表 date_from / date_to 只收严格 YYYY-MM-DD。 */
+export const REPORT_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+/** 报表日期参数归一：带时间 / 偏移的值截到日期部分，保证发出的是严格 YYYY-MM-DD。 */
+export function reportDates<T extends { date_from?: string; date_to?: string }>(
+  p: T
+): T {
+  const day = (v?: string) =>
+    v == null || v === ''
+      ? undefined
+      : /^\d{4}-\d{2}-\d{2}/.test(v)
+        ? v.slice(0, 10)
+        : v
+  return { ...p, date_from: day(p.date_from), date_to: day(p.date_to) }
+}
+
+/**
+ * mock 校验（D77 补充二 / 三，与后端同序）：先查格式 422 pattern（loc=["query", 字段名]），
+ * 再查 from>to 422 value_error ctx.reason=range_inverted。通过返回 null。
+ */
+export function mockReportDateCheck(p: {
+  date_from?: string
+  date_to?: string
+}) {
+  for (const f of ['date_from', 'date_to'] as const) {
+    const v = p[f]
+    if (v != null && !REPORT_DATE.test(v))
+      return apiError(422, [
+        {
+          loc: ['query', f],
+          type: 'pattern',
+          code: 'pattern',
+          msg: "String should match pattern '^\\d{4}-\\d{2}-\\d{2}$'",
+          ctx: { pattern: REPORT_DATE.source },
+        },
+      ])
+  }
+  if (p.date_from && p.date_to && p.date_from > p.date_to)
+    return apiError(422, [
+      {
+        loc: ['query', 'date_from'],
+        type: 'value_error',
+        code: 'value_error',
+        msg: 'Value error, date_from must not be after date_to',
+        ctx: { reason: 'range_inverted' },
+      },
+    ])
+  return null
+}
+
 export const execApi = {
   /** 良率统计与报废帕累托。 */
   yieldReport: (p: {
@@ -657,7 +708,7 @@ export const execApi = {
     group: YieldGroup
   }) =>
     http
-      .get<YieldReport>('/mes/exec/reports/yield', { params: p })
+      .get<YieldReport>('/mes/exec/reports/yield', { params: reportDates(p) })
       .then((r) => r.data),
   /** 晶圆整理（Sorter）：重排槽位，可移入另一载具。 */
   sortWafers: (
@@ -756,18 +807,22 @@ export const execApi = {
   }) =>
     http
       .get<{ data: OeeTrendRow[] }>('/mes/exec/reports/oee-trend', {
-        params: p,
+        params: reportDates(p),
       })
       .then((r) => r.data.data),
   /** 产出日报。 */
   output: (p: { date_from?: string; date_to?: string }) =>
     http
-      .get<{ data: DailyOutput[] }>('/mes/exec/reports/output', { params: p })
+      .get<{ data: DailyOutput[] }>('/mes/exec/reports/output', {
+        params: reportDates(p),
+      })
       .then((r) => r.data.data),
   /** 设备 OEE。 */
   oee: (p: { date_from?: string; date_to?: string }) =>
     http
-      .get<{ data: OeeRow[] }>('/mes/exec/reports/oee', { params: p })
+      .get<{ data: OeeRow[] }>('/mes/exec/reports/oee', {
+        params: reportDates(p),
+      })
       .then((r) => r.data.data),
   /** Hold 列表（服务端分页 / 搜索 / 筛选）；Hold 时间范围映射为 date_from / date_to。 */
   holds: (p: Record<string, string | number | undefined>) => {
