@@ -72,6 +72,7 @@ export interface MarkingPreview {
 }
 
 export type InspectResult = 'pass' | 'fail'
+export type InspectionStatus = 'pending' | InspectResult
 
 /** 记录来源（同 e10_source）。 */
 export const MARKING_SOURCES = ['manual', 'eap', 'simulator'] as const
@@ -94,8 +95,10 @@ export interface MarkingPrint {
 /** 检验 `mes_marking_inspection`（D78 Q3/Q4：OCR 读回不一致记 fail，存 expected_code / read_code）。 */
 export interface MarkingInspection {
   id: string
-  /** 检验的是第几次打印 */
-  print_seq: number
+  /** 对应的打印子记录（D78 补充二：按打印分组显示） */
+  print_id: string
+  /** 对应打印的 seq */
+  seq: number
   result: InspectResult
   expected_code: string | null
   read_code: string | null
@@ -117,11 +120,24 @@ export const MAX_PLACES = 6
 /** 追溯码规则（D78 Q7：待工艺专家确认，暂按 ≤32、[A-Z0-9-]，可配置）。 */
 export const TRACE_CODE_RULE = { maxLength: 32, pattern: /^[A-Z0-9-]+$/ }
 
+/** 追溯码校验：不通过返回 ctx.reason（max_length / pattern，同后端 422 value_error）。 */
+export function traceCodeError(
+  v: string,
+  rule: { maxLength: number; pattern: RegExp } = TRACE_CODE_RULE
+): 'max_length' | 'pattern' | null {
+  if (v.length > rule.maxLength) return 'max_length'
+  if (!rule.pattern.test(v)) return 'pattern'
+  return null
+}
 /** 追溯码格式校验。 */
 export const isValidTraceCode = (
   v: string,
   rule: { maxLength: number; pattern: RegExp } = TRACE_CODE_RULE
-) => v.length > 0 && v.length <= rule.maxLength && rule.pattern.test(v)
+) => traceCodeError(v, rule) === null
+
+/** 作废 / 批次报废后禁用打印、检验、作废。 */
+export const isLocked = (r: Pick<MarkingRecord, 'voided' | 'scrapped'>) =>
+  !!r.voided || !!r.scrapped
 
 /** `mes_marking_record`（主记录）。 */
 export interface MarkingRecord {
@@ -141,10 +157,16 @@ export interface MarkingRecord {
   equipment: string | null
   operator: string | null
   marked_at: string
-  /** 最近一次检验结果（派生，便于列表） */
-  inspect_result: InspectResult | null
+  /** 只读：最近一次打印的检验状态；拦出站直接看它，重打后回到 pending（D78 补充二） */
+  latest_inspection_status: InspectionStatus
   /** 已报废（批次或记录）：后续操作 409 invalid_transition */
   scrapped?: boolean
+  /** 已作废（不可恢复） */
+  voided?: boolean
+  voided_at?: string | null
+  voided_by?: string | null
+  void_reason_id?: string | null
+  void_comment?: string | null
   /** 只读派生：prints.length - 1 */
   reprint_count: number
   prints: MarkingPrint[]
@@ -172,6 +194,14 @@ export interface InspectInput {
   comment?: string | null
 }
 
+/** 作废（POST /mes/marking/{id}/void）：reason_id（reason_type=marking_void）+ comment 必填。 */
+export interface VoidInput {
+  reason_id: string
+  comment: string
+}
+/** 作废原因码类型。 */
+export const VOID_REASON_TYPE = 'marking_void'
+
 /** 记录列表筛选：lot_id、marked_at 范围（D77 半开区间，调用方经 rangeParam 生成）。 */
 export interface RecordQuery {
   lot_id?: string
@@ -191,6 +221,7 @@ export const MARKING_BODY = {
   ],
   mark: ['lot_id', 'equipment_id', 'record_id', 'reason_id', 'comment', 'qty'],
   inspect: ['result', 'read_code', 'comment'],
+  void: ['reason_id', 'comment'],
 } as const
 
 export interface MarkingApi {
@@ -214,6 +245,7 @@ export interface MarkingApi {
     input: InspectInput,
     key?: string
   ) => Promise<MarkingRecord>
+  void: (id: string, input: VoidInput, key?: string) => Promise<MarkingRecord>
 }
 
 const idemHeaders = (key?: string) =>
@@ -283,6 +315,14 @@ export const httpMarkingApi: MarkingApi = {
       .post<MarkingRecord>(
         `/mes/marking/${id}/inspect`,
         pickBody(input, MARKING_BODY.inspect),
+        idemHeaders(key)
+      )
+      .then((r) => r.data),
+  void: (id, input, key) =>
+    http
+      .post<MarkingRecord>(
+        `/mes/marking/${id}/void`,
+        pickBody(input, MARKING_BODY.void),
         idemHeaders(key)
       )
       .then((r) => r.data),
@@ -400,6 +440,18 @@ export const effectiveResult = (
   expected: string
 ): InspectResult =>
   input.read_code && input.read_code !== expected ? 'fail' : input.result
+
+/** 检验履历按打印分组（seq 升序）。 */
+export function inspectionsByPrint(
+  r: Pick<MarkingRecord, 'prints' | 'inspections'>
+) {
+  return [...r.prints]
+    .sort((a, b) => a.seq - b.seq)
+    .map((p) => ({
+      print: p,
+      inspections: r.inspections.filter((i) => i.print_id === p.id),
+    }))
+}
 
 /** 最新一条检验（按时间）。 */
 export const lastInspection = (r: Pick<MarkingRecord, 'inspections'>) =>
@@ -758,8 +810,8 @@ function mockMark(input: MarkInput): MarkingRecord {
       })
     const r = store.rec.find((x) => x.id === input.record_id)
     if (!r || r.lot_id !== lot.id) throw apiError(404, 'not found')
-    if (lot.scrapped || r.scrapped) throw scrappedErr()
-    if (r.inspect_result !== 'fail')
+    if (lot.scrapped || isLocked(r)) throw scrappedErr()
+    if (r.latest_inspection_status !== 'fail')
       throw err409('invalid_transition', 'only failed marking can be reprinted')
     const at = mockNow().toISOString()
     r.prints.push({
@@ -775,7 +827,7 @@ function mockMark(input: MarkInput): MarkingRecord {
       external_event_id: null,
     })
     r.reprint_count = r.prints.length - 1
-    r.inspect_result = null
+    r.latest_inspection_status = 'pending'
     r.marked_at = at
     r.operator = mockUser
     if (input.equipment_id) {
@@ -812,7 +864,7 @@ function mockMark(input: MarkInput): MarkingRecord {
     equipment: input.equipment_id ?? null,
     operator: mockUser,
     marked_at: mockNow().toISOString(),
-    inspect_result: null,
+    latest_inspection_status: 'pending',
     reprint_count: 0,
     prints: [],
     inspections: [],
@@ -837,19 +889,24 @@ function mockMark(input: MarkInput): MarkingRecord {
 function mockInspect(id: string, input: InspectInput) {
   const r = store.rec.find((x) => x.id === id)
   if (!r) throw apiError(404, 'not found')
-  if (r.scrapped || LOTS.find((l) => l.id === r.lot_id)?.scrapped)
+  if (isLocked(r) || LOTS.find((l) => l.id === r.lot_id)?.scrapped)
     throw scrappedErr()
   if (input.result !== 'pass' && input.result !== 'fail')
     throw err422('result', 'enum', 'result: pass or fail')
-  if (r.inspect_result) throw err409('invalid_transition', 'already inspected')
-  if (input.read_code && !isValidTraceCode(input.read_code))
-    throw err422('read_code', 'value_error', 'read_code: invalid format', {
+  if (r.latest_inspection_status !== 'pending')
+    throw err409('invalid_transition', 'already inspected')
+  const bad = input.read_code ? traceCodeError(input.read_code) : null
+  if (bad)
+    throw err422('read_code', 'value_error', 'read_code: invalid', {
+      reason: bad,
       max_length: TRACE_CODE_RULE.maxLength,
     })
+  const print = r.prints[r.prints.length - 1]
   const result = effectiveResult(input, r.trace_code)
   r.inspections.push({
     id: `${r.id}-i${r.inspections.length + 1}`,
-    print_seq: r.prints.length,
+    print_id: print.id,
+    seq: print.seq,
     result,
     expected_code: r.trace_code,
     read_code: input.read_code ?? null,
@@ -859,7 +916,28 @@ function mockInspect(id: string, input: InspectInput) {
     source: 'manual',
     external_event_id: null,
   })
-  r.inspect_result = result
+  r.latest_inspection_status = result
+  return r
+}
+
+function mockVoid(id: string, input: VoidInput) {
+  const r = store.rec.find((x) => x.id === id)
+  if (!r) throw apiError(404, 'not found')
+  if (isLocked(r) || LOTS.find((l) => l.id === r.lot_id)?.scrapped)
+    throw scrappedErr()
+  if (!input.reason_id?.trim())
+    throw err422('reason_id', 'missing', 'reason_id: field required')
+  if (!input.comment?.trim())
+    throw err422('comment', 'missing', 'comment: field required')
+  if (input.comment.length > COMMENT_MAX)
+    throw err422('comment', 'string_too_long', 'comment: max 300', {
+      max_length: COMMENT_MAX,
+    })
+  r.voided = true
+  r.voided_at = mockNow().toISOString()
+  r.voided_by = mockUser
+  r.void_reason_id = input.reason_id
+  r.void_comment = input.comment
   return r
 }
 
@@ -903,6 +981,14 @@ export const mockMarkingApi: MarkingApi = {
         () => mockInspect(id, input)
       )
     ),
+  void: (id, input, key) =>
+    later(() =>
+      withIdem(
+        key,
+        markingSignature(`void:${id}`, pickBody(input, MARKING_BODY.void)),
+        () => mockVoid(id, input)
+      )
+    ),
 }
 
 /**
@@ -920,7 +1006,13 @@ export function mockEapPrintReport(
   return later(() => {
     const r = store.rec.find((x) => x.id === recordId)
     if (!r) throw apiError(404, 'not found')
-    if (r.scrapped) throw scrappedErr()
+    if (isLocked(r)) throw scrappedErr()
+    const bad = traceCodeError(report.trace_code)
+    if (bad)
+      throw err422('trace_code', 'value_error', 'trace_code: invalid', {
+        reason: bad,
+        max_length: TRACE_CODE_RULE.maxLength,
+      })
     if (report.trace_code !== r.trace_code)
       throw err409('trace_code_mismatch', 'reported trace code differs', {
         ctx: { expected: r.trace_code, actual: report.trace_code },

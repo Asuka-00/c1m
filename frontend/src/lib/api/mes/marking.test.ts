@@ -5,7 +5,9 @@ import {
   effectiveResult,
   isoYyww,
   isSelfApproval,
+  inspectionsByPrint,
   isValidTraceCode,
+  traceCodeError,
   MARKING_BODY,
   mockEapPrintReport,
   mockMarkingApi as api,
@@ -74,6 +76,8 @@ describe('打标规则', () => {
       true
     )
     expect(TRACE_CODE_RULE.maxLength).toBe(32)
+    expect(traceCodeError('A'.repeat(33))).toBe('max_length')
+    expect(traceCodeError('ab')).toBe('pattern')
   })
   it('读回码不一致强制 fail', () => {
     expect(effectiveResult({ result: 'pass', read_code: 'X' }, 'Y')).toBe(
@@ -175,7 +179,7 @@ describe('打标作业 mock（D78）', () => {
       { result: 'pass', read_code: '26420002' },
       'ki'
     )
-    expect(i.inspect_result).toBe('fail')
+    expect(i.latest_inspection_status).toBe('fail')
     expect(i.inspections[0]).toMatchObject({
       expected_code: '26420001',
       read_code: '26420002',
@@ -198,7 +202,10 @@ describe('打标作业 mock（D78）', () => {
     expect(r2.prints.map((p) => p.seq)).toEqual([1, 2])
     expect(r2.reprint_count).toBe(1)
     expect(r2.trace_code).toBe(r.trace_code)
-    expect(r2.inspect_result).toBeNull()
+    expect(r2.latest_inspection_status).toBe('pending')
+    expect(inspectionsByPrint(r2).map((g) => g.inspections.length)).toEqual([
+      1, 0,
+    ])
   })
   it('报废对象 409 invalid_transition', async () => {
     expect(await detail(api.mark({ lot_id: 'lot4' }, 'ks'))).toMatchObject({
@@ -210,6 +217,29 @@ describe('打标作业 mock（D78）', () => {
     expect(
       await detail(api.inspect(r.id, { result: 'pass' }, 'ki'))
     ).toMatchObject({ status: 409, detail: { code: 'invalid_transition' } })
+  })
+  it('作废：原因必填；作废后打印 / 检验 / 作废 409；读回码格式 422 ctx.reason', async () => {
+    const r = await api.mark({ lot_id: 'lot1' }, 'k1')
+    expect(
+      await detail(api.inspect(r.id, { result: 'pass', read_code: 'ab' }, 'kx'))
+    ).toMatchObject({
+      status: 422,
+      detail: [{ type: 'value_error', ctx: { reason: 'pattern' } }],
+    })
+    expect(
+      await detail(api.void(r.id, { reason_id: 'V1', comment: '' }, 'kv0'))
+    ).toMatchObject({
+      status: 422,
+      detail: [{ type: 'missing', loc: ['body', 'comment'] }],
+    })
+    const v = await api.void(r.id, { reason_id: 'V1', comment: '错批' }, 'kv1')
+    expect(v.voided).toBe(true)
+    expect(
+      await detail(api.inspect(r.id, { result: 'pass' }, 'ki'))
+    ).toMatchObject({ status: 409, detail: { code: 'invalid_transition' } })
+    expect(
+      await detail(api.void(r.id, { reason_id: 'V1', comment: 'x' }, 'kv2'))
+    ).toMatchObject({ status: 409 })
   })
   it('EAP 回报号不一致 409 trace_code_mismatch', async () => {
     const r = await api.mark({ lot_id: 'lot1' }, 'k1')
