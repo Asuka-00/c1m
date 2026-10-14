@@ -1,7 +1,7 @@
 /** 坐标图列表筛选 → 请求参数（日期按站点时区 0 点带偏移发送，结束日含当天：to = 次日 0 点）。 */
 import type { MapListParams } from '@/lib/api/mes/map'
 import { addDays, getSiteTz } from '@/lib/site-tz'
-import { rangeParam } from '@/components/crud/filter-defs'
+import { rangeInverted, rangeParam } from '@/components/crud/filter-defs'
 
 export interface MapListFilter {
   q: string
@@ -37,6 +37,8 @@ export function localDayStart(
 }
 
 export function mapListParams(f: MapListFilter): MapListParams {
+  // D77 补充一：倒置区间不发导入时间范围
+  const inv = rangeInverted(f.from, f.to)
   return {
     page: f.page,
     page_size: MAP_PAGE_SIZE,
@@ -45,7 +47,11 @@ export function mapListParams(f: MapListFilter): MapListParams {
     ...(f.q.trim() ? { q: f.q.trim() } : {}),
     ...(f.substrate.trim() ? { substrate_id: f.substrate.trim() } : {}),
     ...(f.latestOnly ? { latest_only: true } : {}),
-    ...(localDayStart(f.from) ? { imported_from: localDayStart(f.from) } : {}),
-    ...(localDayStart(f.to, 1) ? { imported_to: localDayStart(f.to, 1) } : {}),
+    ...(!inv && localDayStart(f.from)
+      ? { imported_from: localDayStart(f.from) }
+      : {}),
+    ...(!inv && localDayStart(f.to, 1)
+      ? { imported_to: localDayStart(f.to, 1) }
+      : {}),
   }
 }

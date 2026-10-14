@@ -95,3 +95,8 @@
 - mock 的 `idempotency_key_reused` 改回 D57 对象格式 `{code, message}`（422）；`reticleErrorMessage` 对象 / 数组两种格式都识别。
 - 光罩页新增「挂载」（`POST /mes/reticle/{rid}/mount`，MountIn：equipment_id 必填、sub_unit_id、slot_code ≤64、mounted_at、comment）和「事故」（`POST /{rid}/incident`，IncidentIn：kind=collision/drop/other 必填、occurred_at、equipment_id、lot_id、description ≤300）对话框，权限都是 `mes.reticle:write`。前端对话框只填 equipment_id / slot_code / comment 和 kind / equipment_id / lot_id / description，时间由后端取当前。
 - mock：mount 仅 available 且未挂载（409 already_mounted / reticle_unavailable）→ in_use；incident 非 scrapped → on_hold(incident) + 待检，scrapped 409 invalid_transition。新增 409 `slot_occupied` 三语文案。
+
+## D77 补充一 / D79 补充六
+
+- 范围倒置：`rangeInverted(from, to)`（`components/crud/filter-defs.ts`，按前 10 位比较；相等不拦）。通用筛选弹层、报表 `DateRange`、打标作业页、坐标图列表在 from 晚于 to 时拦住并提示（`errors.rangeInverted`），`use-list-params` / `mapListParams` 倒置时不发范围参数。后端 422 `value_error` + `ctx.reason=range_inverted|timezone_required` 由 `codeItemText` 兜底三语文案。mock：打标记录 marked_at 倒置 422 range_inverted。
+- 未首打主记录：`marked_at`、`last_printed_at`、`latest_inspection_status` 为 null；`InspectBadge` 显示「未打印」，时间显示「—」；出站校验按 `not_marked`；mock 按 marked_at 筛选时排除 null 行。

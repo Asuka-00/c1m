@@ -45,7 +45,7 @@ import {
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { Page } from '@/components/crud'
-import { rangeParam } from '@/components/crud/filter-defs'
+import { rangeInverted, rangeParam } from '@/components/crud/filter-defs'
 import { useMesCan } from '@/features/mes/common/mes-perm'
 import {
   MARKING_PERM,
@@ -59,7 +59,14 @@ const REC_KEY = ['mes', 'marking', 'records']
 const dash = (v: unknown) => (v == null || v === '' ? '—' : String(v))
 
 /** 检验状态徽标（只读 latest_inspection_status）。 */
-export function InspectBadge({ status }: { status: string }) {
+export function InspectBadge({ status }: { status: string | null }) {
+  // D79 补充六：未首打为 null，显示「未打印」，不当成待检
+  if (status == null)
+    return (
+      <Badge variant='outline' data-testid='insp-none'>
+        {t('mes.marking.insp.none')}
+      </Badge>
+    )
   const tone =
     status === 'pass'
       ? 'default'
@@ -96,10 +103,14 @@ export default function MarkingJobPage() {
     retry: false,
   })
   // D77：marked_at 半开区间，_from 站点当天 0 点、_to 站点次日 0 点
-  const range = {
-    marked_at_from: from ? rangeParam(from, false) : undefined,
-    marked_at_to: to ? rangeParam(to, true) : undefined,
-  }
+  // D77 补充一：倒置区间不发（输入框已拦住，这里兜底）
+  const inverted = rangeInverted(from, to)
+  const range = inverted
+    ? {}
+    : {
+        marked_at_from: from ? rangeParam(from, false) : undefined,
+        marked_at_to: to ? rangeParam(to, true) : undefined,
+      }
   const records = useQuery({
     queryKey: [...REC_KEY, range],
     queryFn: () => markingApi.records(range),
@@ -240,6 +251,7 @@ export default function MarkingJobPage() {
             id='mk-from'
             type='date'
             value={from}
+            max={to || undefined}
             onChange={(e) => setFrom(e.target.value)}
           />
         </div>
@@ -249,9 +261,15 @@ export default function MarkingJobPage() {
             id='mk-to'
             type='date'
             value={to}
+            min={from || undefined}
             onChange={(e) => setTo(e.target.value)}
           />
         </div>
+        {inverted && (
+          <p className='text-sm text-destructive' data-testid='range-inverted'>
+            {t('errors.rangeInverted')}
+          </p>
+        )}
       </div>
       <Table data-testid='mk-records'>
         <TableHeader>

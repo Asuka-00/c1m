@@ -77,6 +77,16 @@ export function rangeParam(
   return siteDayBoundary(end ? addDays(ymd, 1) : ymd, false, tz)
 }
 
+/**
+ * D77 补充一：from 晚于 to（按日期前 10 位比较）为倒置区间，后端 422 value_error ctx.reason=range_inverted。
+ * from 等于 to 不算倒置（datetime 半开区间返回空，date 返回当天）。
+ */
+export function rangeInverted(from?: string | null, to?: string | null) {
+  const a = (from ?? '').trim().slice(0, 10)
+  const b = (to ?? '').trim().slice(0, 10)
+  return !!a && !!b && a > b
+}
+
 /** 所有表格的默认筛选：一个绑定 ?q= 的关键字搜索框 */
 export const DEFAULT_FILTERS: FilterDef[] = [{ type: 'text', name: 'q' }]
 

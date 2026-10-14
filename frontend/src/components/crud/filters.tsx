@@ -31,6 +31,7 @@ import { IconButton } from '@/components/icon-button'
 import {
   type FilterDef,
   filterKeys,
+  rangeInverted,
   filterOptionsKey,
   SEARCH_DEBOUNCE_MS,
 } from './filter-defs'
@@ -327,8 +328,12 @@ function DateRangeFilter({
   const [kf, kt] = filterKeys(def)
   const from = params.filters[kf] ?? ''
   const to = params.filters[kt] ?? ''
+  // D77 补充一：from 晚于 to 时拦住，不写入筛选
+  const [inverted, setInverted] = useState(false)
   const setRange = (a: string, b: string) => {
-    params.setRange(kf, a, kt, b)
+    const bad = rangeInverted(a, b)
+    setInverted(bad)
+    if (!bad) params.setRange(kf, a, kt, b)
   }
   // D75：预设范围按站点日期
   const today = siteToday()
@@ -389,6 +394,14 @@ function DateRangeFilter({
               onChange={(e) => setRange(from, e.target.value)}
             />
           </div>
+          {inverted && (
+            <p
+              className='text-sm text-destructive'
+              data-testid='range-inverted'
+            >
+              {t('errors.rangeInverted')}
+            </p>
+          )}
           {active && (
             <Button variant='ghost' size='sm' onClick={() => setRange('', '')}>
               {t('table.range.clear')}

@@ -171,7 +171,8 @@
     "query": {
       "sortBy": "Cannot sort by this column (allowed: {{list}})",
       "notTextFilter": "{{field}} is not a filterable text field"
-    }
+    },
+    "rangeInverted": "The start date cannot be later than the end date"
   },
   "backend": {
     "Incorrect email or password": "Incorrect email or password",
@@ -515,7 +516,8 @@
         "ref_not_found": "The {{entity}} was not found.",
         "enum": "Invalid value; allowed: {{expected}}",
         "step_ids_mismatch": "The step list does not match the current route; refresh and try again.",
-        "not_text_filter": "{{field}} is not a filterable text field"
+        "not_text_filter": "{{field}} is not a filterable text field",
+        "range_inverted": "The start cannot be later than the end"
       },
       "tooManyDecimals": "At most {{n}} decimal places",
       "onlyWhen": "Only allowed when {{cond}} is “{{value}}”",
@@ -1965,7 +1967,8 @@
       "insp": {
         "pending": "Pending",
         "pass": "Pass",
-        "fail": "Fail"
+        "fail": "Fail",
+        "none": "Not printed"
       },
       "source": {
         "manual": "Manual",

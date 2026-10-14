@@ -339,7 +339,8 @@ export interface MarkingRecord {
   /** 只读：最近一次打印时间 */
   last_printed_at: string | null
   /** 只读：最近一次打印的检验状态；拦出站直接看它，重打后回到 pending（D78 补充二） */
-  latest_inspection_status: InspectionStatus
+  /** D79 补充六：还没首打时为 null（不是 pending） */
+  latest_inspection_status: InspectionStatus | null
   /** 已报废（批次或记录）：后续操作 409 invalid_transition */
   scrapped?: boolean
   /** 已作废（不可恢复） */
@@ -700,6 +701,8 @@ export function trackOutBlock(
 ): 'not_marked' | 'pending' | 'fail' | null {
   const live = records.find((r) => !r.voided)
   if (!live) return hasApprovedTemplate ? 'not_marked' : null
+  // D79 补充六：未首打（null）按未打标处理
+  if (live.latest_inspection_status == null) return 'not_marked'
   return live.latest_inspection_status === 'pass'
     ? null
     : live.latest_inspection_status
@@ -1119,7 +1122,7 @@ function mockCreateRec(input: CreateInput): MarkingRecord {
     marked_at: null,
     last_printed_at: null,
     at_marking_step: true,
-    latest_inspection_status: 'pending',
+    latest_inspection_status: null,
     reprint_count: 0,
     prints: [],
     inspections: [],
@@ -1245,10 +1248,29 @@ function mockVoid(id: string, input: VoidInput) {
   return r
 }
 
-/** D77：marked_at 范围半开区间 [from, to)。 */
+/**
+ * D77：marked_at 范围半开区间 [from, to)；D77 补充一：from 晚于 to → 422 value_error range_inverted；
+ * D79 补充六：按 marked_at 筛选时排除 marked_at 为 null（未首打）的行。
+ */
 function mockRecords(q: RecordQuery) {
   const t = (s: string | null) => (s ? new Date(s).getTime() : NaN)
+  if (
+    q.marked_at_from &&
+    q.marked_at_to &&
+    t(q.marked_at_from) > t(q.marked_at_to)
+  )
+    throw apiError(422, [
+      {
+        loc: ['query', 'marked_at_from'],
+        type: 'value_error',
+        code: 'value_error',
+        msg: 'marked_at: from is after to',
+        ctx: { reason: 'range_inverted' },
+      },
+    ])
+  const ranged = !!(q.marked_at_from || q.marked_at_to)
   return store.rec
+    .filter((r) => !ranged || r.marked_at != null)
     .filter((r) => !q.lot_id || r.lot_id === q.lot_id || r.lot === q.lot_id)
     .filter((r) => !q.marked_at_from || t(r.marked_at) >= t(q.marked_at_from))
     .filter((r) => !q.marked_at_to || t(r.marked_at) < t(q.marked_at_to))

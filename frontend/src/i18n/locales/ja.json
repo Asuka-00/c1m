@@ -171,7 +171,8 @@
     "query": {
       "sortBy": "この列では並べ替えできません（指定可能：{{list}}）",
       "notTextFilter": "{{field}} はフィルタ可能なテキスト項目ではありません"
-    }
+    },
+    "rangeInverted": "開始日は終了日より後にできません"
   },
   "backend": {
     "Incorrect email or password": "メールアドレスまたはパスワードが正しくありません",
@@ -515,7 +516,8 @@
         "ref_not_found": "{{entity}}が見つかりません。",
         "enum": "値が無効です。指定可能：{{expected}}",
         "step_ids_mismatch": "工程リストが現在のルートと一致しません。更新して再試行してください。",
-        "not_text_filter": "{{field}} はフィルタ可能なテキスト項目ではありません"
+        "not_text_filter": "{{field}} はフィルタ可能なテキスト項目ではありません",
+        "range_inverted": "開始は終了より後にできません"
       },
       "tooManyDecimals": "小数は最大 {{n}} 桁です",
       "onlyWhen": "{{cond}}が「{{value}}」のときのみ入力できます",
@@ -1965,7 +1967,8 @@
       "insp": {
         "pending": "検査待ち",
         "pass": "合格",
-        "fail": "不合格"
+        "fail": "不合格",
+        "none": "未印字"
       },
       "source": {
         "manual": "手動",

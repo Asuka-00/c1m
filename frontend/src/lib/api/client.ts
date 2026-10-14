@@ -127,6 +127,13 @@ export function codeItemText(x: {
     Number.isInteger(places)
   )
     return t('mes.err.tooManyDecimals', { n: places })
+  // D77 补充一：422 value_error + ctx.reason=range_inverted / timezone_required
+  const reason = typeof x?.ctx?.reason === 'string' ? x.ctx.reason : ''
+  if (
+    [x?.code, x?.type].includes('value_error') &&
+    (reason === 'range_inverted' || reason === 'timezone_required')
+  )
+    return t(`mes.err.code.${reason}`)
   for (const c of [x?.code, x?.type]) {
     if (!c) continue
     // date_range_too_large：有 ctx.max_days 用带天数的文案，否则用不带天数的
