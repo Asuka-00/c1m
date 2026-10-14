@@ -87,6 +87,15 @@ register(
             ),
             F("disposition", "text", "Disposition|处置说明|処置", list=False),
             F("is_active", "bool", default=True),
+            # OQ-20：仅迁移 0029 写入（无 UDT 时 hold_* 降为 none 的说明）；只读，客户端写入 422；
+            # action 改为 set_state 时自动清空
+            F(
+                "migration_note",
+                "text",
+                "Migration note|迁移说明|移行メモ",
+                system=True,
+                list=False,
+            ),
         ],
         phase=6,
         has_code=False,

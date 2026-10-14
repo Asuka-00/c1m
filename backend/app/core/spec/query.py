@@ -64,6 +64,15 @@ def apply_filters(
                 raise http_422([("id", "id: invalid uuid")]) from ex
             stmt = stmt.where(t.c.id.in_(ids))
             continue
+        if not f and name.startswith("has_"):
+            # has_<字段>=true|false：非空 / 为空（如 alarm_code ?has_migration_note=true）
+            g = e.field(name[4:])
+            if g and raw.lower() in ("true", "false", "1", "0"):
+                col = t.c[g.column]
+                yes = raw.lower() in ("true", "1")
+                stmt = stmt.where(col.is_not(None) if yes else col.is_(None))
+                continue
+            raise http_422([(name, f"{name}: must be true or false")])
         if not f and name.endswith(("_from", "_to")):
             stmt = _range(e, stmt, name, raw)
             continue

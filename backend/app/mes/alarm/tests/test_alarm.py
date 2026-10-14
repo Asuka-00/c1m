@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 from sqlmodel import Session
 
 from app.core.config import settings
@@ -240,3 +241,144 @@ def test_alarm_code_unknown_fields_422(client: TestClient, db: Session) -> None:
     r = f.c.patch(f"{url}/{rid}", headers=f.m.h, json={"severity": "minor"})
     assert r.status_code == 200, r.text
 
+
+def test_migration_0029_no_udt_note() -> None:
+    """OQ-20：租户无 UDT 时 hold_equipment / hold_both 降为 none，写 migration_note、记 WARNING；
+    升 → 降 → 升，降级删列。"""
+    import os
+    import subprocess
+    import uuid as _u
+    from pathlib import Path
+
+    from sqlalchemy import create_engine, inspect
+    from sqlalchemy.engine import make_url
+
+    base = make_url(settings.migration_database_url)
+    name = f"{base.database}_mig_oq20"
+    server = create_engine(base.set(database="postgres"), isolation_level="AUTOCOMMIT")
+    with server.connect() as c:
+        c.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
+        c.execute(text(f'CREATE DATABASE "{name}"'))
+    url = base.set(database=name).render_as_string(hide_password=False)
+    backend = Path(__file__).resolve().parents[4]
+
+    def alembic(*args: str) -> str:
+        env = {**os.environ, "MIGRATION_DATABASE_URL": url, "POSTGRES_DB": name}
+        r = subprocess.run(
+            ["alembic", *args], cwd=backend, env=env, capture_output=True, text=True
+        )
+        assert r.returncode == 0, r.stderr[-2000:]
+        return r.stderr + r.stdout
+
+    eng = create_engine(url)
+    ids = {k: _u.uuid4() for k in ("he", "hb", "hl", "ok", "t1", "t2", "s")}
+    try:
+        alembic("upgrade", "0028_eap_events_idempotency")
+        with eng.begin() as c:
+            # 临时库：去掉租户 / 设备类型外键，只造报警码与状态行
+            for t in ("mes_alarm_code", "mes_e10_state"):
+                for (fk,) in c.execute(
+                    text(
+                        "SELECT conname FROM pg_constraint WHERE contype = 'f'"
+                        " AND conrelid = CAST(:t AS regclass)"
+                    ),
+                    {"t": t},
+                ):
+                    c.execute(text(f'ALTER TABLE {t} DROP CONSTRAINT "{fk}"'))
+            # t1 无 UDT；t2 有 UDT
+            c.execute(
+                text(
+                    "INSERT INTO mes_e10_state (id, tenant_id, code, name, e10_category,"
+                    " created_at, updated_at) VALUES (:s, :t2, 'UDT', 'UDT', 'UDT', now(), now())"
+                ),
+                {"s": ids["s"], "t2": ids["t2"]},
+            )
+            for k, t, act in (
+                ("he", "t1", "hold_equipment"),
+                ("hb", "t1", "hold_both"),
+                ("hl", "t1", "hold_lot"),
+                ("ok", "t2", "hold_both"),
+            ):
+                c.execute(
+                    text(
+                        "INSERT INTO mes_alarm_code (id, tenant_id, equipment_type_id, alid,"
+                        " alcd_category, category, severity, action, require_qual_on_clear, is_active,"
+                        " created_at, updated_at) VALUES (:i, :t, :et, :a, 0, 'other', 'major', :act,"
+                        " false, true, now(), now())"
+                    ),
+                    {"i": ids[k], "t": ids[t], "et": _u.uuid4(), "a": k, "act": act},
+                )
+        out = alembic("upgrade", "head")
+        assert out.count("no UDT state") >= 2, out
+        assert str(ids["he"]) in out and str(ids["t1"]) in out and "hold_both" in out
+
+        def rows() -> dict[str, tuple[str, str | None]]:
+            with eng.connect() as c:
+                return {
+                    r.alid: (r.action, r.migration_note)
+                    for r in c.execute(
+                        text("SELECT alid, action, migration_note FROM mes_alarm_code")
+                    )
+                }
+
+        want = {
+            "he": ("none", "0029: was hold_equipment, no UDT state"),
+            "hb": ("none", "0029: was hold_both, no UDT state"),
+            "hl": ("none", None),
+            "ok": ("set_state", None),
+        }
+        assert rows() == want
+        alembic("downgrade", "0028_eap_events_idempotency")
+        with eng.connect() as c:
+            cols = {x["name"] for x in inspect(c).get_columns("mes_alarm_code")}
+        assert "migration_note" not in cols
+        alembic("upgrade", "head")
+        with eng.connect() as c:
+            cols = {x["name"] for x in inspect(c).get_columns("mes_alarm_code")}
+        assert "migration_note" in cols
+    finally:
+        eng.dispose()
+        with server.connect() as c:
+            c.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
+        server.dispose()
+
+
+def test_alarm_code_migration_note_api(client: TestClient, db: Session) -> None:
+    """OQ-20：migration_note 只读（写入 422）；改为 set_state 自动清空；?has_migration_note。"""
+    f = _line(client, db)
+    url = f"{settings.API_V1_STR}/mes/alarm-code"
+    base = {"equipment_type_id": f.eq["equipment_type_id"], "alid": "N1"}
+    r = f.c.post(url, headers=f.m.h, json={**base, "migration_note": "x"})
+    assert r.status_code == 422 and r.json()["detail"][0]["type"] == "read_only_field"
+    a = f.c.post(url, headers=f.m.h, json=base).json()
+    b = f.c.post(url, headers=f.m.h, json={**base, "alid": "N2"}).json()
+    assert a["migration_note"] is None
+    r = f.c.patch(f"{url}/{a['id']}", headers=f.m.h, json={"migration_note": None})
+    assert r.status_code == 422
+    f.sql(
+        "UPDATE mes_alarm_code SET migration_note = '0029: was hold_both, no UDT state'"
+        " WHERE id IN (:a, :b)",
+        a=a["id"],
+        b=b["id"],
+    )
+    got = f.c.get(
+        url, headers=f.m.h, params={"has_migration_note": "true", "alid": "N1"}
+    ).json()
+    assert [x["id"] for x in got["data"]] == [a["id"]]
+    assert got["data"][0]["migration_note"] == "0029: was hold_both, no UDT state"
+    r = f.c.patch(
+        f"{url}/{a['id']}",
+        headers=f.m.h,
+        json={"action": "set_state", "target_state": "DOWN"},
+    )
+    assert r.status_code == 200 and r.json()["migration_note"] is None, r.text
+    ids = {
+        x["id"]
+        for x in f.c.get(
+            url, headers=f.m.h, params={"has_migration_note": "false"}
+        ).json()["data"]
+    }
+    assert a["id"] in ids and b["id"] not in ids
+    # 改其他字段不清空
+    r = f.c.patch(f"{url}/{b['id']}", headers=f.m.h, json={"severity": "minor"})
+    assert r.json()["migration_note"] == "0029: was hold_both, no UDT state"
