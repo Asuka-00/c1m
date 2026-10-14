@@ -35,7 +35,7 @@
 #       补充五：纯空白按 re.fullmatch(r"[ \t\r\n\u3000]*") 判断，不用 strip()，U+FEFF / \x1f 报 pattern）
 # 打标记录没有 numeric 列（D78），不测超位小数。
 name: marking-report
-run_id: marking-11
+run_id: marking-12
 draft: "等 P3-B2/B3 打标接口（POST /mes/marking 建主记录、/prints、/inspect、/void、/inspections、/config、/mes/exec/trace kind=trace_code，D78、D79；B11 event_type=marking 本期不做）"
 target: http://127.0.0.1:8013
 equipment: [{code: EAP-MK01, type: MARKER}]
@@ -297,7 +297,8 @@ steps:
   - expect_marking_list: {lot: MK0003, marked_at_from: $print_seq_2.printed_at, count: 0}   # 首打早于 seq=2
   - expect_marking_list: {lot: MK0003, marked_at_to: $print_seq_2.printed_at, count: 1}
   # 晶圆级批次报废按 unit_ids（adjust.py:82-94）：units: all = 剩下的全部片，执行器从 GET /mes/wafer?lot_id= 取片号
-  # 注意：59fb7c5 下 running（已进站）批次报废到 0 返回 422 lot_status「cannot scrap a running lot」（adjust.py:97），此步前批次需非 running——待架构师定
+  # running（已进站）批次不能报废到 0（adjust.py:97 422 lot_status），先出站再报废
+  - track_out: {eq: EAP-MK01, lot: MK0003, expect: {status: 200}}
   - lot_scrap: {lot: MK0003, reason: R-scrap, units: all, override: true, override_reason: "整批报废（调整上限 10% 放行）", comment: "整批报废到 0", save_as: scrap3, expect: {status: 200, body: {lot.lot_status: scrapped}}}
   - marking_print: {lot: MK0003, eq: EAP-MK01, reason: R-MKREPRINT, comment: "报废后", idem: mk-rep-30,
                       expect: {status: 409, code: invalid_transition}}

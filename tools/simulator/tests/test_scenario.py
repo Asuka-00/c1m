@@ -605,3 +605,23 @@ def test_d81_order_and_read_code_absent():
     assert od == [404, 422, 409]
     txt = open("scenarios/p3-draft/reticle-report.yaml").read()
     assert "待后端确认" not in txt and "等后端定顺序" not in txt
+
+
+def test_marking_draft_mk0003_track_out_before_scrap():
+    """running 批次不能报废到 0：MK0003 先出站再 lot_scrap（units: all + override）。"""
+    from sim.scenario import load
+
+    sc = load("scenarios/p3-draft/marking-report.yaml")
+    assert sc.run_id == "marking-12" and sc.draft
+    st = sc.steps
+    scrap = next(s for s in st if s.kind == "lot_scrap" and s.args.get("lot") == "MK0003")
+    assert scrap.args["units"] == "all" and scrap.args.get("override") is True
+    assert "qty" not in scrap.args and scrap.args["expect"]["status"] == 200
+    assert scrap.args["expect"]["body"]["lot.lot_status"] == "scrapped"
+    i = st.index(scrap)
+    assert i > 0 and st[i - 1].kind == "track_out"
+    out = st[i - 1]
+    assert out.args["lot"] == "MK0003" and out.args["eq"] == "EAP-MK01"
+    assert out.args["expect"]["status"] == 200
+    # 报废前未对 MK0003 出站过（出站只出现在 scrap 前一步）
+    assert not any(s.kind == "track_out" and s.args.get("lot") == "MK0003" for s in st[: i - 1])
