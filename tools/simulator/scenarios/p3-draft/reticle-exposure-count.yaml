@@ -3,7 +3,8 @@
 # 覆盖：count_basis=eap 出站先估算（estimated=true）→ EAP 实际 shot（kind=report）修正最早一条未修正估算记录
 #       → B11 同 external_event_id 同内容重放（信封 duplicate=true，不重复计）→ 不同内容 422 idempotency_key_reused（D57）
 #       → 人工调整 POST /mes/reticle/{id}/usage（D68：delta>0 report、否则 adjust，负数必带 reason_id；D57 重放无 duplicate）
-#       → 130+10−5+75=210 达上限 pending_maintenance（reticle.life_reached）→ restore 409 life_limit_reached
+#       → 130+10−5+75=210 达上限 pending_maintenance（reticle.life_reached）→ 仍挂着进站 life_reached、restore 409 still_mounted
+#       → 卸载（不改状态，发 reticle.unmounted）→ restore 409 life_limit_reached
 #       → −10=200 仍在上限，不自动恢复，restore 仍 409 life_limit_reached。
 name: reticle-exposure-count
 run_id: ret-count-03
@@ -49,6 +50,18 @@ steps:
   - reticle_adjust: {reticle: R-SIM-01, delta: "75", expect: {status: 200, body: {data.kind: report, data.count_after: "210"}}}
   - expect_reticle: {reticle: R-SIM-01, fields: {status_code: pending_maintenance, shot_count: "210"}}
   - expect_reticle_history: {reticle: R-SIM-01, latest: {event: reticle.life_reached}}
+  # D69 补充：到上限仍挂着 → 状态 pending_maintenance，本机进站按已有阻断码 life_reached 拦（不可放行）
+  - track_in:
+      eq: EAP-LT01
+      lot: FX0003
+      reticle: R-SIM-01
+      expect: {status: 409, code: check_blocked, body: {detail.reason: life_reached, detail.overridable: false}}
+  # 还挂着 → restore / life-reset / repair-complete / inspect-start / clean-start 一律 409 still_mounted
+  - reticle_restore: {reticle: R-SIM-01, reason: sim restore, expect: {status: 409, code: still_mounted}}
+  # 非 in_use 卸载：只关挂载记录、不改状态，照常发 reticle.unmounted
+  - reticle_unmount: {reticle: R-SIM-01, expect: {status: 200}}
+  - expect_reticle: {reticle: R-SIM-01, fields: {status_code: pending_maintenance, equipment_id: null, mounted_at: null}}
+  - expect_reticle_history: {reticle: R-SIM-01, latest: {event: reticle.unmounted}}
   - reticle_restore: {reticle: R-SIM-01, reason: sim restore, expect: {status: 409, code: life_limit_reached}}
   # −10 → 200，仍 ≥ max_shots：不自动恢复；restore 仍 409 life_limit_reached
   - reticle_adjust: {reticle: R-SIM-01, delta: "-10", reason: RC-ADJ, expect: {status: 200, body: {data.kind: adjust, data.count_after: "200"}}}

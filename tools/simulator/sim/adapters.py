@@ -82,6 +82,7 @@ def default_adapters() -> dict[str, Adapter]:
         "reticle_release": Adapter("光罩解除 Hold", ["/mes/reticle/{reticle_id}/release"], card="P3-B4"),
         "reticle_restore": Adapter("光罩人工恢复", ["/mes/reticle/{reticle_id}/restore"], card="P3-B4"),
         "reticle_scrap": Adapter("光罩报废", ["/mes/reticle/{reticle_id}/scrap"], card="P3-B4"),
+        "reticle_unmount": Adapter("光罩卸载", ["/mes/reticle/{reticle_id}/unmount"], card="P3-B4"),
     }
 
 
@@ -124,6 +125,7 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "reticle_release": ["reticle_release"],
     "reticle_restore": ["reticle_restore"],
     "reticle_scrap": ["reticle_scrap"],
+    "reticle_unmount": ["reticle_unmount"],
     "reticle_replay": [],  # 重发 save_as 记下的草稿请求：同路径、同请求体、同 Idempotency-Key（或同 external_event_id）
     "reuse": [],
     "precondition": [],

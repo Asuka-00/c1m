@@ -116,7 +116,7 @@ B9（`0a74f8a`）、B10（`d27b700`/`23c502d`）、B11（`8294b63`）已对齐�
 - 请求体审计：`/mes/eap/events` 按“顶层多余字段并进 payload”后的 payload 审计。
 
 ### P3 草稿场景（分支 eap/p3-sim）
-- `scenarios/p3-draft/`：光罩曝光计数上报、碰撞 → Hold，依据 P3-E1 草案 v0.8（D66/D67/D68）。场景顶层 `draft: 原因` → 整体 skipped，不连后端。
-- 草稿步骤（`reticle_mount`、`reticle_usage`、`reticle_incident`、`reticle_adjust`、`reticle_hold`、`reticle_release`、`reticle_restore`、`reticle_scrap`、`expect_reticle`、`expect_reticle_history`）只做格式校验，P3-B4 落地前执行会失败；落地后按 openapi 校正路径与字段，再实现。
+- `scenarios/p3-draft/`：光罩曝光计数上报、碰撞 → Hold，依据 P3-E1 草案 v0.8.2（D66～D69 及补充）。场景顶层 `draft: 原因` → 整体 skipped，不连后端。
+- 草稿步骤（`reticle_mount`、`reticle_usage`、`reticle_incident`、`reticle_adjust`、`reticle_hold`、`reticle_release`、`reticle_restore`、`reticle_scrap`、`reticle_unmount`、`expect_reticle`、`expect_reticle_history`）只做格式校验，P3-B4 落地前执行会失败；落地后按 openapi 校正路径与字段，再实现。
 - `scenarios/*.yaml` 不含草稿目录，现有 5 个场景和请求体审计不受影响。
 - **重放（G-3）**：现有 `replay: {eq, seq}` 只重发按设备序号记下的事件步骤（state/stage/alarm/tool_usage 等，带原 `Idempotency-Key` 或 `external_event_id`），草稿光罩步骤不进这个序号。光罩草稿改用 `reticle_replay: {of: <save_as 名>, change?: {...}}`：对 `save_as` 记下的那次请求**用同一个 `Idempotency-Key`（B11 为同一个 external_event_id）、同一路径**再发一次（如 `/mes/reticle/{id}/usage`、`/incident`）；给 `change` 时改请求体，期望 422 `idempotency_key_reused`。P3-B4 落地后在 runner 实现。

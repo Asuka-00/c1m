@@ -141,6 +141,7 @@ P3_DRAFT_STEPS = {
     "reticle_release",
     "reticle_restore",
     "reticle_scrap",
+    "reticle_unmount",
     "reticle_replay",
 }
 

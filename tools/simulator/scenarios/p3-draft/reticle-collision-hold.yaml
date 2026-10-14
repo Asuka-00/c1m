@@ -51,3 +51,9 @@ steps:
   - expect_reticle: {reticle: R-SIM-02, fields: {status_code: scrapped, hold_reason: null, status_before_hold: null}}
   - expect_reticle_history: {reticle: R-SIM-02, latest: {event: reticle.scrapped}}
   - reticle_incident: {eq: EAP-LT01, reticle: R-SIM-02, kind: collision, expect: {status: 409, code: invalid_transition}}
+  # 在用时报废（D69 补充）：顺带卸载，只发 reticle.scrapped（payload 带 equipment_id 和卸载时 shots），不发 reticle.unmounted
+  - reticle_mount: {eq: EAP-LT01, reticle: R-SIM-03, slot: S2, expect: {status: 200}}
+  - reticle_scrap: {reticle: R-SIM-03, reason: sim scrap in use, expect: {status: 200}}
+  - expect_reticle: {reticle: R-SIM-03, fields: {status_code: scrapped, equipment_id: null, mounted_at: null}}
+  - expect_reticle_history: {reticle: R-SIM-03, latest: {event: reticle.scrapped, payload.equipment_id: $eq:EAP-LT01, payload.shots_at_unmount: "0"},
+                             absent_events: [reticle.unmounted], status_log: {action: scrap, reason: sim scrap in use}}
