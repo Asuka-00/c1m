@@ -1,10 +1,10 @@
-/** P3 即将到期人员汇总（D62-8）：按剩余天数排序，0 天（当天）仍有效。 */
+/** P3 即将到期人员汇总（D62-8 / D64）：保持后端顺序，兜底过滤已过期，0 天（当天）仍有效。 */
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
 import { useTenantKey } from '@/lib/api/hooks'
 import {
   qualExpiringApi,
-  sortExpiring,
+  visibleExpiring,
   type QualExpiringReport,
   type QualExpiringRow,
 } from '@/lib/api/mes/qual-expiring'
@@ -14,7 +14,7 @@ import { DataCard } from './report-parts'
 
 /** 汇总视图（无数据请求，便于测试）。 */
 export function QualExpiringView({ data }: { data?: QualExpiringReport }) {
-  const rows = sortExpiring(data?.rows ?? [])
+  const rows = visibleExpiring(data?.rows ?? [])
   return (
     <>
       <div className='flex flex-wrap items-center gap-3 text-sm text-muted-foreground'>

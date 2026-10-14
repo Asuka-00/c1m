@@ -64,6 +64,13 @@ describe('P3 人员资质（D62 / D64）', () => {
     expect(warnDaysOf('14')).toBe(14)
     expect(warnDaysOf(undefined)).toBe(30)
     expect(warnDaysOf('x')).toBe(30)
+    expect(warnDaysOf(0)).toBe(30)
+    expect(warnDaysOf(-5)).toBe(30)
+    expect(warnDaysOf(1)).toBe(1)
+    expect(warnDaysOf(365)).toBe(365)
+    expect(warnDaysOf(366)).toBe(30)
+    expect(warnDaysOf(7.5)).toBe(30)
+    expect(warnDaysOf(null)).toBe(30)
     expect(qualState({ id: 'q', expires_on: '2026-10-24' }, today, 7)).toBe(
       'valid'
     )

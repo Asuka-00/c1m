@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { render } from 'vitest-browser-react'
 import type { MesEntity } from '@/lib/api/mes/common'
 import type { CheckResult } from '@/lib/api/mes/execution'
-import { qualExpiringMock, sortExpiring } from '@/lib/api/mes/qual-expiring'
+import { qualExpiringMock, visibleExpiring } from '@/lib/api/mes/qual-expiring'
 import { CELLS } from '@/features/mes/common/row-rules'
 import { CheckPanel } from './exec-parts'
 import { QualExpiringView } from './qual-expiring'
@@ -104,15 +104,31 @@ describe('D64 补充：warn_days 元数据与汇总排序', () => {
       .toHaveTextContent(t('mes.due.expiring'))
   })
 
-  it('days_left 相同按 username 排序；示例数据不含已过期', () => {
+  it('保持后端顺序、兜底过滤已过期；示例数据已按后端规则排好', () => {
     const m = qualExpiringMock()
     expect(m.rows.every((r) => r.days_left >= 0)).toBe(true)
-    expect(m.rows.slice(0, 2).map((r) => r.username)).toEqual(['op1', 'op2'])
-    const s = sortExpiring([
+    const sorted = [...m.rows].sort(
+      (a, b) => a.days_left - b.days_left || (a.username < b.username ? -1 : 1)
+    )
+    expect(m.rows).toEqual(sorted)
+    const v = visibleExpiring([
       { ...m.rows[0], username: 'b', days_left: 3 },
+      { ...m.rows[0], username: 'x', days_left: -1 },
       { ...m.rows[0], username: 'a', days_left: 3 },
-      { ...m.rows[0], username: 'z', days_left: 1 },
     ])
-    expect(s.map((r) => r.username)).toEqual(['z', 'a', 'b'])
+    expect(v.map((r) => r.username)).toEqual(['b', 'a'])
+  })
+
+  it('页面不显示已过期行', async () => {
+    const m = qualExpiringMock()
+    const s = await render(
+      <QualExpiringView
+        data={{
+          ...m,
+          rows: [{ ...m.rows[0], username: 'gone', days_left: -2 }, ...m.rows],
+        }}
+      />
+    )
+    expect(s.container.textContent).not.toContain('gone')
   })
 })

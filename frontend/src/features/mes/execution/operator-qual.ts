@@ -7,10 +7,17 @@ import { daysUntil } from '@/features/mes/common/due'
 /** 默认到期预警天数（D62-5：由后端设置下发 `warn_days`，读不到时用 30）。 */
 export const QUAL_WARN_DAYS = 30
 
-/** 后端下发的预警天数；非正整数或缺失时用默认 30。 */
+/** 预警天数合法范围（含两端）。 */
+export const QUAL_WARN_DAYS_MIN = 1
+export const QUAL_WARN_DAYS_MAX = 365
+
+/** 后端下发的预警天数：须为 1–365 的整数；缺失或非法（含 0、负数、小数、超 365）一律用默认 30。 */
 export function warnDaysOf(v: unknown): number {
   const n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v
-  return typeof n === 'number' && Number.isInteger(n) && n >= 0
+  return typeof n === 'number' &&
+    Number.isInteger(n) &&
+    n >= QUAL_WARN_DAYS_MIN &&
+    n <= QUAL_WARN_DAYS_MAX
     ? n
     : QUAL_WARN_DAYS
 }
