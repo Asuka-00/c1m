@@ -499,10 +499,14 @@
         "qtime_rule_in_use": "Q-Time 規則 {{qtime_rule_code}} は {{hold_count}} 件のホールド記録から参照されているため削除できません。無効化してください",
         "qtime_action_invalid": "Q-Time の違反時処置は警告・ホールド・リワークのみ指定できます",
         "hold_not_found": "ホールド記録が存在しないか削除されています。一覧を更新してください",
-        "too_many_decimals": "小数は最大 6 桁です"
+        "too_many_decimals": "小数は最大 6 桁です",
+        "read_only_field": "この項目は読み取り専用です",
+        "unknown_field": "不明な項目が含まれています"
       },
       "tooManyDecimals": "小数は最大 {{n}} 桁です",
-      "onlyWhen": "{{cond}}が「{{value}}」のときのみ入力できます"
+      "onlyWhen": "{{cond}}が「{{value}}」のときのみ入力できます",
+      "readOnlyField": "読み取り専用の項目です",
+      "unknownField": "不明な項目のため受け付けられません"
     },
     "autoHint": "空欄の場合は自動採番",
     "currentStep": "現在",
@@ -1601,11 +1605,13 @@
         "has_transactions": "子ロットに後続作業があります",
         "has_descendants": "子ロットが再分割されています",
         "parent_status": "親ロットの状態が変わっています",
-        "referenced": "子ロットが他のレコードから参照されています"
+        "referenced": "子ロットが他のレコードから参照されています",
+        "other": "取り消し条件を満たしていません"
       },
       "already": "この変換は取り消し済みです",
       "info": "取消日時 {{at}} · 取消者 {{by}} · 取消理由 {{reason}}",
-      "carrier": "キャリアは復元されません。必要に応じて再割当してください"
+      "carrier": "キャリアは復元されません。必要に応じて再割当してください",
+      "tables": "（参照元テーブル：{{list}}）"
     },
     "mapList": {
       "title": "取り込み済みマップ",
@@ -1638,12 +1644,20 @@
         "targetUnknown": "遷移先状態 {{state}} は存在しません"
       },
       "skip": {
-        "unknown": "遷移先状態 {{state}} は存在しません",
-        "already": "設備はすでに {{state}} です",
-        "notAllowed": "状態遷移表で {{from}} → {{to}} は許可されていません"
+        "unknown_state": "遷移先の状態が存在しません",
+        "already_in_state": "設備はすでに遷移先の状態です",
+        "transition_not_allowed": "状態遷移表でこの遷移は許可されていません"
       },
       "stateSkipped": "設備状態は変更されませんでした：{{why}}。アラームは記録済みです。",
-      "stateUnchanged": "設備状態は変更されませんでした。アラームは記録済みです。"
+      "stateUnchanged": "設備状態は変更されませんでした。アラームは記録済みです。",
+      "col": {
+        "stateChanged": "状態切替",
+        "skipReason": "未切替の理由"
+      },
+      "changed": {
+        "yes": "切替済み",
+        "no": "未切替"
+      }
     },
     "toolLife": {
       "warn": "寿命上限間近",
@@ -1655,6 +1669,15 @@
       "status": "工具 {{tool}} の状態は {{status}} です。トラックイン不可",
       "logged": "チェック記録とロット履歴に記録済み",
       "unknownStatus": "不明な状態"
+    },
+    "alarmCode": {
+      "migration": {
+        "col": "移行",
+        "pending": "移行後の再設定待ち",
+        "none": "再設定不要",
+        "all": "すべての移行状態",
+        "hint": "移行 0029 で連動がなしに変更されました。「設備状態の切替」を再設定してください"
+      }
     }
   },
   "notify": {

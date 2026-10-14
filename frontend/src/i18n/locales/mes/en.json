@@ -113,7 +113,8 @@
         "target_state": "Target state",
         "require_qual_on_clear": "Qual after clear",
         "disposition": "Disposition",
-        "is_active": "Active"
+        "is_active": "Active",
+        "migration_note": "Migration note"
       },
       "alarm_log": {
         "equipment": "Equipment",
@@ -1161,7 +1162,9 @@
       },
       "e10_trigger": {
         "track_in": "Track in",
-        "track_out": "Track out (no other running lots)",
+        "track_out": "Track out (no other running lots)"
+      },
+      "e10_history_trigger": {
         "manual": "Manual",
         "equipment": "Equipment event",
         "system": "System"
@@ -1726,7 +1729,8 @@
     "mes-equipment_qual": "Qual Task",
     "mes-substrate_map": "Substrate Map",
     "mes-bin_set": "Bin Definition Set",
-    "mes-map-import": "Map Import"
+    "mes-map-import": "Map Import",
+    "mes-customer": "Customer"
   },
   "permName": {
     "users__read": "View platform users",

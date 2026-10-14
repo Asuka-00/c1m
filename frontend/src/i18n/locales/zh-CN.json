@@ -499,10 +499,14 @@
         "qtime_rule_in_use": "Q-Time 规则 {{qtime_rule_code}} 已被 {{hold_count}} 条 Hold 记录引用，不能删除，请改为停用",
         "qtime_action_invalid": "Q-Time 超时动作只能是警告、Hold 或返工",
         "hold_not_found": "Hold 记录不存在或已被删除，请刷新列表",
-        "too_many_decimals": "最多 6 位小数"
+        "too_many_decimals": "最多 6 位小数",
+        "read_only_field": "该字段只读，不能修改",
+        "unknown_field": "包含未知字段"
       },
       "tooManyDecimals": "最多 {{n}} 位小数",
-      "onlyWhen": "仅当{{cond}}为「{{value}}」时才能填写"
+      "onlyWhen": "仅当{{cond}}为「{{value}}」时才能填写",
+      "readOnlyField": "只读字段，不能修改",
+      "unknownField": "未知字段，不能提交"
     },
     "autoHint": "留空则自动生成",
     "currentStep": "当前",
@@ -1601,11 +1605,13 @@
         "has_transactions": "子批已有后续作业",
         "has_descendants": "子批已再分出下游批次",
         "parent_status": "母批状态已变化",
-        "referenced": "子批已被其他记录引用"
+        "referenced": "子批已被其他记录引用",
+        "other": "不满足撤销条件"
       },
       "already": "该转换已撤销，不能重复撤销",
       "info": "撤销时间 {{at}} · 撤销人 {{by}} · 撤销原因 {{reason}}",
-      "carrier": "载具未恢复，请按需重新绑定"
+      "carrier": "载具未恢复，请按需重新绑定",
+      "tables": "（引用表：{{list}}）"
     },
     "mapList": {
       "title": "已导入的坐标图",
@@ -1638,12 +1644,20 @@
         "targetUnknown": "目标状态 {{state}} 不存在"
       },
       "skip": {
-        "unknown": "目标状态 {{state}} 不存在",
-        "already": "设备已是 {{state}}",
-        "notAllowed": "状态迁移表不允许 {{from}} → {{to}}"
+        "unknown_state": "目标状态不存在",
+        "already_in_state": "设备已处于目标状态",
+        "transition_not_allowed": "状态迁移表不允许这次切换"
       },
       "stateSkipped": "设备状态未切换：{{why}}。报警已记录。",
-      "stateUnchanged": "设备状态未切换。报警已记录。"
+      "stateUnchanged": "设备状态未切换。报警已记录。",
+      "col": {
+        "stateChanged": "切换设备状态",
+        "skipReason": "未切换原因"
+      },
+      "changed": {
+        "yes": "已切换",
+        "no": "未切换"
+      }
     },
     "toolLife": {
       "warn": "接近寿命上限",
@@ -1655,6 +1669,15 @@
       "status": "工具 {{tool}} 当前状态为 {{status}}，不能进站",
       "logged": "已记入检查记录和批次履历",
       "unknownStatus": "状态未知"
+    },
+    "alarmCode": {
+      "migration": {
+        "col": "迁移",
+        "pending": "迁移待补配",
+        "none": "无需补配",
+        "all": "全部迁移状态",
+        "hint": "0029 迁移时联动被改为不联动，请补配“切换设备状态”"
+      }
     }
   },
   "notify": {

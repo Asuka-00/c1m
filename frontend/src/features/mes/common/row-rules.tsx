@@ -85,7 +85,7 @@ export const CELLS: Record<
   tool: { usage_count: (r) => <ToolLife row={r} /> },
   // D58：E10 履历的触发方式与事件来源、报警记录的来源（缺失显示 —）
   e10_history: {
-    trigger: (r) => enumCell('e10_trigger', r.trigger),
+    trigger: (r) => enumCell('e10_history_trigger', r.trigger),
     source: (r) => enumCell('e10_source', r.source),
   },
   alarm_log: { source: (r) => enumCell('alarm_source', r.source) },

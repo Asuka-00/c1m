@@ -7,7 +7,12 @@ import {
   validateRequired,
 } from '@/features/mes/common/required'
 import { undoErrorLines } from '@/features/mes/execution/transform-undo'
-import { alarmStateNote, skipReasonText } from './alarm-state'
+import {
+  alarmStateNote,
+  alarmStateOf,
+  SKIP_REASON_CODES,
+  skipReasonText,
+} from './alarm-state'
 
 beforeEach(async () => {
   await i18n.changeLanguage('zh-CN')
@@ -94,19 +99,20 @@ describe('D59 报警码联动 none / set_state + target_state', () => {
   })
 })
 
-describe('state_changed=false + state_skip_reason', () => {
-  it('三种后端原因三语翻译，未知原样', async () => {
+describe('state_skip_reason 错误码（baf7b55）', () => {
+  it('三个码三语翻译，未知码原样，不再按英文句式解析', async () => {
     for (const lng of ['zh-CN', 'en', 'ja']) {
       await i18n.changeLanguage(lng)
-      expect(skipReasonText('already DOWN')).toBe(
-        t('mes.alarm.skip.already', { state: 'DOWN' })
-      )
-      expect(skipReasonText('DOWN -> PRD not allowed')).toBe(
-        t('mes.alarm.skip.notAllowed', { from: 'DOWN', to: 'PRD' })
-      )
-      expect(skipReasonText('unknown E10 state X')).toContain('X')
+      for (const c of SKIP_REASON_CODES) {
+        expect(i18n.exists(`mes.alarm.skip.${c}`)).toBe(true)
+        expect(skipReasonText(c)).toBe(t(`mes.alarm.skip.${c}`))
+        expect(skipReasonText(c)).not.toBe(c)
+      }
     }
-    expect(skipReasonText('weird')).toBe('weird')
+    expect(skipReasonText('weird_code')).toBe('weird_code')
+    expect(skipReasonText('already DOWN')).toBe('already DOWN')
+    expect(skipReasonText(null)).toBe('')
+    expect(i18n.exists('mes.alarm.skip.notAllowed')).toBe(false)
   })
 
   it('仅 state_changed=false 时有说明', () => {
@@ -115,12 +121,30 @@ describe('state_changed=false + state_skip_reason', () => {
     expect(
       alarmStateNote({
         state_changed: false,
-        state_skip_reason: 'already DOWN',
+        state_skip_reason: 'already_in_state',
       })
-    ).toBe('设备状态未切换：设备已是 DOWN。报警已记录。')
+    ).toBe('设备状态未切换：设备已处于目标状态。报警已记录。')
     expect(alarmStateNote({ state_changed: false })).toBe(
       t('mes.alarm.stateUnchanged')
     )
+  })
+
+  it('履历行：顶层字段优先，退回 e10_change', () => {
+    expect(
+      alarmStateOf({ state_changed: false, state_skip_reason: 'unknown_state' })
+    ).toEqual({ state_changed: false, state_skip_reason: 'unknown_state' })
+    expect(
+      alarmStateOf({
+        e10_change: {
+          state_changed: false,
+          state_skip_reason: 'transition_not_allowed',
+        },
+      })
+    ).toEqual({
+      state_changed: false,
+      state_skip_reason: 'transition_not_allowed',
+    })
+    expect(alarmStateOf({}).state_changed).toBeUndefined()
   })
 })
 

@@ -113,7 +113,8 @@
         "target_state": "目标状态",
         "require_qual_on_clear": "清除后需 Qual",
         "disposition": "处置说明",
-        "is_active": "启用"
+        "is_active": "启用",
+        "migration_note": "迁移说明"
       },
       "alarm_log": {
         "equipment": "设备",
@@ -1161,7 +1162,9 @@
       },
       "e10_trigger": {
         "track_in": "上机",
-        "track_out": "下机（无其他加工批次）",
+        "track_out": "下机（无其他加工批次）"
+      },
+      "e10_history_trigger": {
         "manual": "人工",
         "equipment": "设备事件",
         "system": "系统"
@@ -1726,7 +1729,8 @@
     "mes-equipment_qual": "Qual 任务",
     "mes-substrate_map": "坐标图",
     "mes-bin_set": "bin 定义集",
-    "mes-map-import": "坐标图导入"
+    "mes-map-import": "坐标图导入",
+    "mes-customer": "客户"
   },
   "permName": {
     "users__read": "查看平台用户",

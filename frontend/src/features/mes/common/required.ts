@@ -83,14 +83,24 @@ export function validateRequired(e: MesEntity, v: V, skip: Set<string>) {
 /** 定点数字段的最大小数位（D60：numeric(18,6)，超过 6 位后端 422 too_many_decimals）。 */
 export const MAX_DECIMALS = 6
 
-/** 提前校验小数位：float 字段超过 scale（默认 6）位小数时给出提示。 */
+/**
+ * 字段的最大小数位（D60）：优先元数据 `decimal_places`；为 null 表示普通浮点、不限位数。
+ * 旧后端不带 `decimal_places` 时退回 `scale`（也没有时不限）。
+ */
+export function decimalLimit(f: MesField): number | null {
+  if (f.decimal_places !== undefined) return f.decimal_places
+  return f.scale ?? null
+}
+
+/** 提前校验小数位：先去掉末尾 0 再数位数（1.1000000 算 1 位），超过 decimal_places 时提示。 */
 export function validateDecimals(e: MesEntity, v: V, skip: Set<string>) {
   const errs: Record<string, string> = {}
   for (const f of e.fields) {
     if (f.type !== 'float' || skip.has(f.column) || f.system) continue
     const raw = v[f.column]
     if (raw == null || raw === '') continue
-    const n = f.scale ?? MAX_DECIMALS
+    const n = decimalLimit(f)
+    if (n == null) continue
     const d = parseDecimal(String(raw))
     if (d && d.decimals > n) errs[f.name] = t('mes.err.tooManyDecimals', { n })
   }
@@ -128,6 +138,8 @@ export const MES_ERROR_CODES = [
   'idempotency_key_mismatch',
   'idempotency_key_reused',
   'too_many_decimals',
+  'read_only_field',
+  'unknown_field',
 ] as const
 type MesErrorCode = (typeof MES_ERROR_CODES)[number]
 const isCode = (x: unknown): x is MesErrorCode =>
@@ -227,6 +239,7 @@ export function mesErrorMessage(err: unknown, e: MesEntity | undefined) {
       ? (err.response.data as { detail?: unknown })?.detail
       : null
   if (!Array.isArray(d)) return errorMessage(err)
+  const isQuery = (x: { loc?: unknown[] }) => x.loc?.[0] === 'query'
   const parse = (x: { loc?: string[]; msg?: string }) => {
     const msg = String(x.msg ?? '')
     const name = x.loc?.[1] ?? msg.split(':')[0]
@@ -236,11 +249,27 @@ export function mesErrorMessage(err: unknown, e: MesEntity | undefined) {
   // 全部是业务错误码时直接给出本地化提示（不加“校验失败”前缀）
   const tooMany = (x: { type?: string; code?: string }) =>
     x.code === 'too_many_decimals' || x.type === 'too_many_decimals'
+  // 通用字段级 422 码（OQ-20 read_only_field、unknown_field）→ 三语文案
+  const FIELD_CODES: Record<string, string> = {
+    read_only_field: 'mes.err.readOnlyField',
+    unknown_field: 'mes.err.unknownField',
+  }
+  const fieldCode = (x: { type?: string; code?: string }) =>
+    FIELD_CODES[x.code ?? ''] ?? FIELD_CODES[x.type ?? '']
   const codes = d.map((x) => {
     const { name, rest } = parse(x)
+    const fk = fieldCode(x)
+    if (fk) {
+      // 查询参数（loc[0]='query'）不映射到表单字段，前缀参数名
+      const f = isQuery(x) ? undefined : e?.fields.find((y) => y.name === name)
+      const msg = isQuery(x) ? `${name}: ${t(fk)}` : t(fk)
+      return e && f ? `${fieldLabel(e, name)}: ${msg}` : msg
+    }
     if (tooMany(x)) {
       const f = e?.fields.find((y) => y.name === name)
-      const msg = t('mes.err.tooManyDecimals', { n: f?.scale ?? MAX_DECIMALS })
+      const msg = t('mes.err.tooManyDecimals', {
+        n: (f && decimalLimit(f)) ?? MAX_DECIMALS,
+      })
       return e && f ? `${fieldLabel(e, name)}: ${msg}` : msg
     }
     return fieldCodeMessage(name, rest)
@@ -250,9 +279,10 @@ export function mesErrorMessage(err: unknown, e: MesEntity | undefined) {
   const msgs = d.map((x: { loc?: string[]; msg?: string }, i) => {
     const { name, rest } = parse(x)
     if (codes[i]) return codes[i]
-    const label = e.fields.some((f) => f.name === name)
-      ? fieldLabel(e, name)
-      : entityLabel(name)
+    const label =
+      !isQuery(x) && e.fields.some((f) => f.name === name)
+        ? fieldLabel(e, name)
+        : entityLabel(name)
     const m = /^required when (\w+) = (.+)$/.exec(rest)
     if (rest === 'required') return `${label}: ${t('mes.err.required')}`
     if (m) {

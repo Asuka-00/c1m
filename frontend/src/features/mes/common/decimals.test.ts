@@ -2,7 +2,7 @@ import { AxiosError, AxiosHeaders } from 'axios'
 import i18n, { t } from '@/i18n'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { MesEntity } from '@/lib/api/mes/common'
-import { mesErrorMessage, validateDecimals } from './required'
+import { decimalLimit, mesErrorMessage, validateDecimals } from './required'
 
 function axErr(status: number, detail: unknown) {
   const e = new AxiosError('Request failed')
@@ -19,7 +19,15 @@ function axErr(status: number, detail: unknown) {
 const toolE = {
   code: 'tool',
   fields: [
-    { name: 'max_usage', column: 'max_usage', type: 'float' },
+    {
+      name: 'max_usage',
+      column: 'max_usage',
+      type: 'float',
+      scale: 6,
+      decimal_places: 6,
+    },
+    { name: 'lsl', column: 'lsl', type: 'float', decimal_places: null },
+    { name: 'rate', column: 'rate', type: 'float', decimal_places: 3 },
     { name: 'warn_pct', column: 'warn_pct', type: 'int' },
   ],
 } as unknown as MesEntity
@@ -71,5 +79,29 @@ describe('D60 定点数最多 6 位小数', () => {
       t('mes.err.tooManyDecimals', { n: 6 })
     )
     expect(mesErrorMessage(arr, toolE)).not.toMatch(/decimal places/)
+  })
+})
+
+describe('D60 decimal_places（0dd2b4b）', () => {
+  it('普通浮点 decimal_places=null 不限位数', () => {
+    expect(
+      validateDecimals(toolE, { lsl: '0.000000012345' }, new Set())
+    ).toEqual({})
+  })
+  it('按 decimal_places 限位，先去掉末尾 0 再数', () => {
+    expect(validateDecimals(toolE, { rate: '1.2340000' }, new Set())).toEqual(
+      {}
+    )
+    expect(validateDecimals(toolE, { rate: '1.2345' }, new Set())).toEqual({
+      rate: '最多 3 位小数',
+    })
+  })
+  it('decimalLimit：decimal_places 优先，旧元数据退回 scale', () => {
+    const f = (x: object) =>
+      ({ name: 'x', column: 'x', type: 'float', ...x }) as never
+    expect(decimalLimit(f({ decimal_places: 4, scale: 6 }))).toBe(4)
+    expect(decimalLimit(f({ decimal_places: null, scale: 6 }))).toBeNull()
+    expect(decimalLimit(f({ scale: 2 }))).toBe(2)
+    expect(decimalLimit(f({}))).toBeNull()
   })
 })

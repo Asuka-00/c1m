@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import i18n, { t } from '@/i18n'
 import { toast } from 'sonner'
 import {
+  blockedOverridable,
   blockedResults,
   execApi,
   type CheckResult,
@@ -55,6 +56,7 @@ export function useStageRun(cx: ExecContext, body: () => StageBody) {
   const stage = cx.next_stage
   const [results, setResults] = useState<CheckResult[] | null>(null)
   const [blocked, setBlocked] = useState(false)
+  const [overridable, setOverridable] = useState<boolean | null>(null)
   const run = useMutation({
     mutationFn: (o: { override?: string }) =>
       execApi.stage(
@@ -105,6 +107,7 @@ export function useStageRun(cx: ExecContext, body: () => StageBody) {
       const res = blockedResults(e)
       if (res) {
         setResults(withToolUsage(res, cx))
+        setOverridable(blockedOverridable(e))
         setBlocked(true)
         toast.error(t('mes.exec.blocked'))
         return
@@ -119,11 +122,12 @@ export function useStageRun(cx: ExecContext, body: () => StageBody) {
       execApi.preview(String(lot.id), stage as ExecStage, body()),
     onSuccess: (r) => {
       setResults(withToolUsage(r.results, cx))
+      setOverridable(typeof r.overridable === 'boolean' ? r.overridable : null)
       setBlocked(false)
     },
     onError: (e) => toast.error(mesErrorMessage(e, lotE)),
   })
-  return { run, preview, results, blocked }
+  return { run, preview, results, blocked, overridable }
 }
 
 export type StageRun = ReturnType<typeof useStageRun>

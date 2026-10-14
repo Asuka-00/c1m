@@ -56,6 +56,37 @@ export function undoneText(u: UndoneInfo): string {
     .join(' · ')
 }
 
+/**
+ * B6 行级原因码（6d0fbe1，D58 补充登记）：前四个是子批状态类（同时命中只报最前一个），
+ * `parent_status` 是母批，`referenced` 带 `tables[]`。
+ */
+export const UNDO_LOT_REASONS = [
+  'lot_status',
+  'on_hold',
+  'has_transactions',
+  'has_descendants',
+  'parent_status',
+  'referenced',
+] as const
+
+export interface UndoBlockedLot {
+  lot_id?: string
+  lot_code?: string
+  reason?: string
+  tables?: string[]
+}
+
+/** 一行子批 / 母批的撤销阻断说明：已登记码三语，未知码显示原码；referenced 附上引用的表。 */
+export function undoLotLine(l: UndoBlockedLot): string {
+  const code = l.reason ?? ''
+  let reason = (UNDO_LOT_REASONS as readonly string[]).includes(code)
+    ? t(`mes.tundo.why.${code}`)
+    : code || t('mes.tundo.why.other')
+  if (code === 'referenced' && l.tables?.length)
+    reason += t('mes.tundo.tables', { list: l.tables.join(', ') })
+  return t('mes.tundo.blocked', { lot: l.lot_code ?? l.lot_id ?? '', reason })
+}
+
 /** 409 transform_undo_blocked → 逐批原因；其他错误 → 通用文案。 */
 export function undoErrorLines(e: unknown): string[] {
   if (e instanceof AxiosError && e.response?.status === 409) {
@@ -63,7 +94,7 @@ export function undoErrorLines(e: unknown): string[] {
       | Record<string, unknown>
       | undefined
     if (d && d.code === 'transform_undo_blocked') {
-      const lots = (d.lots as { lot_code?: string; reason?: string }[]) ?? []
+      const lots = (d.lots as UndoBlockedLot[]) ?? []
       // 顶层 reason（后端新版）：already_undone / lots_blocked；不看英文 message
       const reason = d.reason
       if (reason === 'already_undone') return [t('mes.tundo.already')]
@@ -74,14 +105,7 @@ export function undoErrorLines(e: unknown): string[] {
         // lots_blocked 却没列子批、或未知 reason：通用“不能撤销”
         return [t('mes.tundo.blockedRef')]
       }
-      return lots.map((l) =>
-        t('mes.tundo.blocked', {
-          lot: l.lot_code ?? '',
-          reason: t(`mes.tundo.why.${l.reason ?? 'other'}`, {
-            defaultValue: l.reason ?? '',
-          }),
-        })
-      )
+      return lots.map(undoLotLine)
     }
   }
   if (e instanceof AxiosError && e.response?.status === 404)

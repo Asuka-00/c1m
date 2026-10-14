@@ -113,7 +113,8 @@
         "target_state": "遷移先状態",
         "require_qual_on_clear": "解除後 Qual 必要",
         "disposition": "処置",
-        "is_active": "有効"
+        "is_active": "有効",
+        "migration_note": "移行メモ"
       },
       "alarm_log": {
         "equipment": "設備",
@@ -1161,7 +1162,9 @@
       },
       "e10_trigger": {
         "track_in": "トラックイン",
-        "track_out": "トラックアウト（他の処理ロットなし）",
+        "track_out": "トラックアウト（他の処理ロットなし）"
+      },
+      "e10_history_trigger": {
         "manual": "手動",
         "equipment": "設備イベント",
         "system": "システム"
@@ -1726,7 +1729,8 @@
     "mes-equipment_qual": "Qual タスク",
     "mes-substrate_map": "座標マップ",
     "mes-bin_set": "ビン定義セット",
-    "mes-map-import": "座標マップ取込"
+    "mes-map-import": "座標マップ取込",
+    "mes-customer": "顧客"
   },
   "permName": {
     "users__read": "プラットフォームユーザー閲覧",

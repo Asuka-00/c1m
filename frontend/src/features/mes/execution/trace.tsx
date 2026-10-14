@@ -29,6 +29,7 @@ import { CustomerBadges, OwnershipLabel } from '@/features/mes/common/customer'
 import { enumLabel } from '@/features/mes/common/labels'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { Pick } from './exec-parts'
+import { genealogyRows } from './trace-rows'
 
 /** 单位转换位置映射的列（F4：从子批查回母晶圆和 die 坐标）。 */
 const ORIGIN_COLS = [
@@ -137,7 +138,7 @@ function TraceTable({
     <Card className='gap-3'>
       <CardHeader>
         <CardTitle className='text-base'>
-          {title} ({rows.length})
+          {title} ({genealogyRows(rows).length})
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -178,7 +179,7 @@ function TraceTable({
                         : ''
                     }
                   >
-                    {c === 'code' && r.id ? (
+                    {c === 'code' && r.id && r.undone !== true ? (
                       <Link
                         to='/$'
                         params={{ _splat: 'mes/lot-history' }}

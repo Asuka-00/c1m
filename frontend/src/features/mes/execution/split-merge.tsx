@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
+  blockedOverridable,
   blockedResults,
   execApi,
   type CheckResult,
@@ -237,12 +238,14 @@ function useSm<T>(
 ): {
   results: CheckResult[] | null
   blocked: boolean
+  overridable: boolean | null
   busy: boolean
   run: (body: SmBody) => void
 } {
   const { entity } = useMesEntity('lot')
   const [results, setResults] = useState<CheckResult[] | null>(null)
   const [blocked, setBlocked] = useState(false)
+  const [overridable, setOverridable] = useState<boolean | null>(null)
   const m = useMutation({
     mutationFn: fn,
     onSuccess: (r, body) => {
@@ -255,12 +258,19 @@ function useSm<T>(
       const b = blockedResults(e)
       if (b) {
         setResults(b)
+        setOverridable(blockedOverridable(e))
         setBlocked(true)
         toast.error(t('mes.exec.blocked'))
       } else toast.error(mesErrorMessage(e, entity))
     },
   })
-  return { results, blocked, busy: m.isPending, run: (b) => m.mutate(b) }
+  return {
+    results,
+    blocked,
+    overridable,
+    busy: m.isPending,
+    run: (b) => m.mutate(b),
+  }
 }
 
 function SplitDialog({
@@ -443,6 +453,7 @@ function SplitDialog({
         <CheckPanel
           results={sm.results}
           blocked={sm.blocked}
+          overridable={sm.overridable}
           canOverride={can(MES_PERM.execOverride)}
           busy={sm.busy}
           onOverride={(reason) =>
@@ -590,6 +601,7 @@ function MergeDialog({
         <CheckPanel
           results={sm.results}
           blocked={sm.blocked}
+          overridable={sm.overridable}
           canOverride={can(MES_PERM.execOverride)}
           busy={sm.busy}
           onOverride={(reason) =>

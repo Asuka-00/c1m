@@ -1,190 +1,36 @@
 /**
- * 后端菜单 key 清单（只读整理自后端 be/lot-state-machine 的
- * backend/app/platform/menus/layout.py，463d599：GROUPS / ITEMS / TAB_TITLES / PLATFORM_*）。
+ * 后端菜单 key 清单：直接读取后端提交的 `backend/app/platform/menus/menu_keys.json`
+ * （be/p2 46e3da6 起入库，后端测试保证与代码一致；本文件夹的 menu-keys.json 是它的拷贝）。
+ * 后端增删菜单时重新拷贝 JSON，下面三组 key 自动派生：
+ * - BACKEND_MENU_KEYS：workspace 空间的分组 / 菜单 / 页签
+ * - PLATFORM_MENU_KEYS：platform 空间
+ * - TAB_ONLY_MENU_KEYS：kind=tab（只作 tabs / tree 页签，没有独立路由；跳父页面并带 tab）
  * /menus/me 只返回英文标题，界面文字全靠前端语言包 menu.<key>，因此每个 key 都必须有三语翻译。
- * 后端增删菜单时同步更新此清单。
- *
- * FE-03（P2-F2）：计划改为由后端 `scripts/export_mes_i18n.py` 一并导出菜单 key 清单、测试直接读取。
- * 截至后端 be/p2 该脚本只导出 MES 实体 / 枚举翻译，没有菜单 key（P2-B8 未做），本清单暂保留手工维护。
  */
-export const BACKEND_MENU_KEYS = [
-  'g-workspace',
-  'g-execution',
-  'g-wip',
-  'g-planning',
-  'g-warehouse',
-  'g-equipment',
-  'g-quality',
-  'g-process',
-  'g-product',
-  'g-factory',
-  'g-master',
-  'g-system',
-  'dashboard',
-  'notifications',
-  'settings',
-  'mes-lot-console',
-  'mes-lot_hold',
-  'mes-qtime-monitor',
-  'mes-batch-ops',
-  'mes-carrier-ops',
-  'mes-shift-handover',
-  'mes-label-print',
-  'mes-future_hold',
-  'mes-check_log',
-  'mes-wip-dashboard',
-  'mes-oee-report',
-  'mes-yield-report',
-  'mes-lot-history',
-  'mes-lot_recipe_run',
-  'mes-lot',
-  'mes-wafer',
-  'mes-lot-start',
-  'mes-wo-board',
-  'mes-work_order',
-  'mes-receipt',
-  'mes-material_lot',
-  'mes-warehouse-master',
-  'mes-eqp-board',
-  'mes-pm_plan',
-  'mes-downtime',
-  'mes-e10_history',
-  'mes-alarm_log',
-  'mes-tool',
-  'mes-equipment-master',
-  'mes-e10-model',
-  'mes-alarm_code',
-  'mes-dc_result',
-  'mes-dc-config',
-  'mes-defect_code',
-  'mes-route-master',
-  'mes-recipe-param',
-  'mes-change_order',
-  'mes-qtime_rule',
-  'mes-check-config',
-  'mes-lot-rules',
-  'mes-product-master',
-  'mes-material-master',
-  'mes-carrier-master',
-  'mes-reticle',
-  'mes-fixture',
-  'mes-factory-model',
-  'mes-calendar',
-  'mes-operator_qual',
-  'mes-reason_code',
-  'mes-code_rule',
-  'mes-uom',
-  'mes-dict_type',
-  'mes-attr_def',
-  'user-permissions',
-  'notify-subscriptions',
-  'config',
-  'mes-audit_log',
-  'members',
-  'mes-area',
-  'mes-carrier',
-  'mes-carrier_type',
-  'mes-check_binding',
-  'mes-check_plan',
-  'mes-check_rule',
-  'mes-dc_plan',
-  'mes-e10_auto_rule',
-  'mes-e10_state',
-  'mes-equipment',
-  'mes-equipment_capability',
-  'mes-equipment_group',
-  'mes-equipment_type',
-  'mes-equipment_material_mount',
-  'mes-equipment_qual',
-  'mes-substrate_map',
-  'mes-map-import',
-  'mes-bin_set',
-  'mes-lot-trace',
-  'mes-lot_priority',
-  'mes-lot_type',
-  'mes-material',
-  'mes-material_type',
-  'mes-measurement_item',
-  'mes-operation',
-  'mes-param_spec',
-  'mes-product',
-  'mes-product_family',
-  'mes-product_route',
-  'mes-recipe',
-  'mes-route',
-  'mes-sampling_rule',
-  'mes-shift',
-  'mes-site',
-  'mes-split_merge_rule',
-  'mes-storage_location',
-  'mes-tech_node',
-  'mes-trace',
-  'mes-warehouse',
-  'mes-work_calendar',
-  'mes-workcenter',
-  'user-roles',
-] as const
+import data from './menu-keys.json'
 
-/** 菜单方案 A 新增、后端 layout.py 尚未落地的 key（待与后端对齐）。 */
-export const PENDING_MENU_KEYS = ['g-exception'] as const
+export interface MenuKeyItem {
+  key: string
+  space: 'workspace' | 'platform'
+  kind: 'group' | 'item' | 'tab'
+  parent: string | null
+  path: string | null
+  component: string | null
+  permission: string | null
+  i18n_key: string
+  titles: Record<string, string>
+}
 
-export const PLATFORM_MENU_KEYS = [
-  'p-g-tenants',
-  'p-g-rbac',
-  'p-g-settings',
-  'p-g-ops',
-  'p-tenants',
-  'p-users',
-  'p-roles',
-  'p-permissions',
-  'p-config',
-  'p-channels',
-  'p-audit',
-  'p-login-log',
-  'p-ops-log',
-] as const
+export const MENU_KEY_ITEMS = data.items as MenuKeyItem[]
 
-/**
- * 只作为 tabs / tree 页签存在、没有独立路由的 key（整理自后端 10e6736 layout.py 的 TAB_TITLES）。
- * 前端跳转不能拼成 mes/<x>，要跳父页面并带 tab，否则 404。
- */
-export const TAB_ONLY_MENU_KEYS = [
-  'mes-check_rule',
-  'mes-check_plan',
-  'mes-check_binding',
-  'mes-product',
-  'mes-product_family',
-  'mes-tech_node',
-  'mes-material',
-  'mes-material_type',
-  'mes-carrier',
-  'mes-carrier_type',
-  'mes-equipment',
-  'mes-equipment_type',
-  'mes-equipment_group',
-  'mes-equipment_capability',
-  'mes-e10_state',
-  'mes-e10_auto_rule',
-  'mes-lot_type',
-  'mes-lot_priority',
-  'mes-split_merge_rule',
-  'mes-site',
-  'mes-area',
-  'mes-workcenter',
-  'mes-work_calendar',
-  'mes-shift',
-  'mes-route',
-  'mes-operation',
-  'mes-product_route',
-  'mes-recipe',
-  'mes-param_spec',
-  'mes-dc_plan',
-  'mes-measurement_item',
-  'mes-sampling_rule',
-  'mes-lot-trace',
-  'mes-trace',
-  'mes-warehouse',
-  'mes-storage_location',
-  'members',
-  'user-roles',
-] as const
+const keys = (f: (i: MenuKeyItem) => boolean) =>
+  MENU_KEY_ITEMS.filter(f).map((i) => i.key)
+
+export const BACKEND_MENU_KEYS = keys((i) => i.space === 'workspace')
+
+export const PLATFORM_MENU_KEYS = keys((i) => i.space === 'platform')
+
+export const TAB_ONLY_MENU_KEYS = keys((i) => i.kind === 'tab')
+
+/** 前端已用、后端 JSON 尚未落地的 key（手写，待与后端对齐）。 */
+export const PENDING_MENU_KEYS: readonly string[] = ['g-exception']
