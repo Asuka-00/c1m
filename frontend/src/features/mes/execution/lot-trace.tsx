@@ -27,7 +27,12 @@ import {
 } from 'lucide-react'
 import { useTenantKey } from '@/lib/api/hooks'
 import { mesApi, type MesRow } from '@/lib/api/mes/common'
-import { execApi, type WaferCell } from '@/lib/api/mes/execution'
+import {
+  execApi,
+  type DecimalValue,
+  type WaferCell,
+} from '@/lib/api/mes/execution'
+import { decimalText } from '@/lib/decimal'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -97,19 +102,21 @@ function Details({ d }: { d: Record<string, unknown> }) {
   if (d.scrap) facts.push(t('mes.trace.scrap', { n: d.scrap }))
   for (const c of (d.consumed as {
     material_lot: string
-    qty: number
-    left: number
+    qty: DecimalValue
+    left: DecimalValue
   }[]) ?? [])
-    facts.push(`${c.material_lot} −${c.qty} (${c.left})`)
+    facts.push(
+      `${c.material_lot} −${decimalText(c.qty)} (${decimalText(c.left)})`
+    )
   for (const x of (d.tools as {
     tool: string
-    usage: number
-    max: number | null
+    usage: DecimalValue
+    max: DecimalValue | null
     status: string
   }[]) ?? [])
     if (typeof x === 'object')
       facts.push(
-        `${x.tool} ${x.usage}/${x.max ?? '∞'} ${enumLabel('tool_status', x.status)}`
+        `${x.tool} ${decimalText(x.usage)}/${x.max == null ? '∞' : decimalText(x.max)} ${enumLabel('tool_status', x.status)}`
       )
   const e10 = d.e10 as Record<string, string> | null
   if (e10?.to) facts.push(`E10 ${e10.equipment}: ${e10.from} → ${e10.to}`)

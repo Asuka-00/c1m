@@ -7,6 +7,7 @@ import type {
   ReticleActionInput,
   ReticleStatus,
 } from '@/lib/api/mes/reticle'
+import { compareDecimal } from '@/lib/decimal'
 import { MES_PERM } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
 
@@ -205,7 +206,8 @@ export function reticleErrorMessage(err: unknown, action?: ReticleAction) {
 
 /** 寿命进度（0–1，无上限为 null）。 */
 export function lifeRatio(r: Pick<Reticle, 'shot_count' | 'max_shots'>) {
-  if (r.max_shots == null || Number(r.max_shots) <= 0) return null
+  // 判断用十进制比较；比例只用于进度条显示
+  if (r.max_shots == null || compareDecimal(r.max_shots, 0) !== 1) return null
   return Number(r.shot_count) / Number(r.max_shots)
 }
 

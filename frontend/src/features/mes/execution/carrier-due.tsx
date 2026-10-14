@@ -1,6 +1,7 @@
 /** 载具清洗 / 使用状态徽标。 */
 import { t } from '@/i18n'
 import type { CarrierRow } from '@/lib/api/mes/execution'
+import { compareDecimal, decimalText } from '@/lib/decimal'
 import { Badge } from '@/components/ui/badge'
 
 const VARIANT = {
@@ -21,8 +22,10 @@ export function CarrierDue({ row }: { row: CarrierRow }) {
         {t(`mes.carrier.due.${row.due_state}`)}
       </Badge>
       <span className='text-xs text-muted-foreground tabular-nums'>
-        {row.use_count}
-        {row.max_uses ? ` / ${row.max_uses}` : ''}
+        {decimalText(row.use_count)}
+        {row.max_uses != null && compareDecimal(row.max_uses, 0) === 1
+          ? ` / ${decimalText(row.max_uses)}`
+          : ''}
       </span>
     </span>
   )

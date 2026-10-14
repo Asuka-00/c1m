@@ -252,8 +252,9 @@ export interface CarrierRow {
   lot_status?: string | null
   wafers: number
   capacity: number | null
-  use_count: number
-  max_uses: number | null
+  /** D76：后端可能改为定点字符串，两种都兼容（显示用 decimalText） */
+  use_count: DecimalValue
+  max_uses: DecimalValue | null
   last_cleaned_at: string | null
   clean_due_at: string | null
   due_state: 'ok' | 'warn' | 'overdue'
@@ -420,7 +421,7 @@ export interface ExecContext {
       usage: DecimalValue
       max: DecimalValue | null
       expiry: string | null
-      warn_pct: number
+      warn_pct: DecimalValue
       /** 有效预警比例（23c502d：工具 → 类型 → warn_pct/100，定点字符串；旧后端没有） */
       warn_ratio?: string | null
     })[]
@@ -428,11 +429,12 @@ export interface ExecContext {
   materials?: {
     material_id: string
     material: string
-    need: number
+    /** D76：定点字符串或数字 */
+    need: DecimalValue
     basis: string
     uom: string | null
     options: (Opt & {
-      qty: number
+      qty: DecimalValue
       expiry: string | null
       location: string | null
     })[]

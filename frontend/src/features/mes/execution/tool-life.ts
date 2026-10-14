@@ -6,29 +6,38 @@
  */
 import { t } from '@/i18n'
 import type { CheckResult, ExecContext } from '@/lib/api/mes/execution'
-import { decimalGreater, decimalText } from '@/lib/decimal'
+import {
+  compareDecimal,
+  decimalGreater,
+  decimalText,
+  mulDecimal,
+} from '@/lib/decimal'
 import { enumLabel } from '@/features/mes/common/labels'
 
 export type ToolLifeLevel = 'ok' | 'warn' | 'over'
 
 const has = (v: unknown) => v != null && v !== ''
 
-/** 比例文本 → 数字；不在 (0, 1] 内为 null。 */
-const ratioOf = (v: unknown) => {
+/** 比例 → 十进制文本；不在 (0, 1] 内为 null（D76：不经过浮点）。 */
+const ratioOf = (v: unknown): string | null => {
   if (!has(v)) return null
-  const r = Number(decimalText(v as string))
-  return r > 0 && r <= 1 ? r : null
+  const r = decimalText(v as string)
+  if (compareDecimal(r, 0) !== 1 || compareDecimal(r, 1) === 1) return null
+  return r
 }
 
 /**
  * 预警比例：后端有效值 effective_warn_ratio（23c502d，工具 → 类型 → warn_pct/100）→
  * 工具 warn_ratio → warn_pct / 100 → 0.9。
  */
-export function warnRatio(row: Record<string, unknown>): number {
+export function warnRatio(row: Record<string, unknown>): string {
   const r = ratioOf(row.effective_warn_ratio) ?? ratioOf(row.warn_ratio)
   if (r != null) return r
-  const p = Number(row.warn_pct)
-  return has(row.warn_pct) && p > 0 ? p / 100 : 0.9
+  // warn_pct 可能是数字或定点字符串：精确 ÷100
+  const p = has(row.warn_pct)
+    ? mulDecimal(row.warn_pct as string, '0.01')
+    : null
+  return p != null && compareDecimal(p, 0) === 1 ? p : '0.9'
 }
 
 /** 寿命上限：effective_max_usage（含工具类型的上限）→ max_usage；没有为 null。 */
@@ -43,14 +52,17 @@ export function maxUsage(row: Record<string, unknown>): string | null {
 export function toolLifeLevel(
   used: unknown,
   max: unknown,
-  ratio: number
+  ratio: number | string
 ): ToolLifeLevel | null {
   const u = decimalText(used as string) || '0'
   const m = decimalText(max as string)
   if (!m || m === '0' || m.startsWith('-')) return null
   if (u.startsWith('-')) return 'ok'
   if (!decimalGreater(m, u)) return 'over'
-  return Number(u) >= Number(m) * ratio ? 'warn' : 'ok'
+  // 预警线 = 上限 × 比例，精确计算（D76：不用浮点相乘）
+  const line = mulDecimal(m, ratio)
+  if (line == null) return 'ok'
+  return compareDecimal(u, line) >= 0 ? 'warn' : 'ok'
 }
 
 const NUM = String.raw`([\d.eE+-]+)`

@@ -94,6 +94,21 @@ export function addDecimal(a: DecIn, b: DecIn): string | null {
   return parseDecimal(`${neg ? '-' : ''}${raw}`)!.text
 }
 
+/** 精确乘法（不经过浮点，D76）；任一不是数字时返回 null。 */
+export function mulDecimal(a: DecIn, b: DecIn): string | null {
+  const x = toScaled(a)
+  const y = toScaled(b)
+  if (!x || !y) return null
+  const s = x[1] + y[1]
+  const p = x[0] * y[0]
+  const neg = p < 0n
+  const digits = (neg ? -p : p).toString().padStart(s + 1, '0')
+  const raw = s
+    ? `${digits.slice(0, digits.length - s)}.${digits.slice(digits.length - s)}`
+    : digits
+  return parseDecimal(`${neg ? '-' : ''}${raw}`)!.text
+}
+
 /** 是否为可解析的十进制值（字符串或有限数字）。 */
 export const isDecimal = (v: unknown): v is number | string =>
   (typeof v === 'number' && Number.isFinite(v)) ||
