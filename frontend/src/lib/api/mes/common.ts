@@ -113,8 +113,12 @@ const base = (code: string) => `/mes/${seg(code)}`
 
 /** 通用 MES 主数据客户端（/mes/<entity>）。 */
 /** 通用 CRUD 里写接口必须带 Idempotency-Key 的实体（授予、PATCH 变更 / 停用 / 延期 / 恢复、删除）。 */
-// D87 补充一：光罩主数据新建 / 编辑 / 删除也必带 key
-export const KEYED_ENTITIES: readonly string[] = ['operator_qual', 'reticle']
+// D87 补充一：光罩主数据新建 / 编辑 / 删除也必带 key；D87 补充二：报警代码同口径（后端 B8 强制）
+export const KEYED_ENTITIES: readonly string[] = [
+  'operator_qual',
+  'reticle',
+  'alarm_code',
+]
 const keyHeader = (key?: string) =>
   key ? { headers: { 'Idempotency-Key': key } } : undefined
 
