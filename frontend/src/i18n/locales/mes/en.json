@@ -110,8 +110,7 @@
         "text_ja": "Text (JA)",
         "category": "Category",
         "action": "Action",
-        "target_e10_state": "Target E10 state",
-        "hold_reason": "Reason code",
+        "target_state": "Target state",
         "require_qual_on_clear": "Qual after clear",
         "disposition": "Disposition",
         "is_active": "Active"
@@ -982,7 +981,7 @@
     },
     "help": {
       "alarm_code": {
-        "hold_reason": "Reason for the state change; blank: system reason equipment_alarm"
+        "target_state": "E10 state code (e.g. UDT); required when the action is “Set equipment state”"
       },
       "code_rule": {
         "pattern": "Tokens: {YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}"
@@ -1066,9 +1065,7 @@
       },
       "alarm_action": {
         "none": "None",
-        "hold_lot": "None (alarms never hold lots)",
-        "hold_equipment": "Equipment state",
-        "hold_both": "Equipment state"
+        "set_state": "Set equipment state"
       },
       "alarm_status": {
         "active": "Active",

@@ -501,7 +501,8 @@
         "hold_not_found": "ホールド記録が存在しないか削除されています。一覧を更新してください",
         "too_many_decimals": "小数は最大 6 桁です"
       },
-      "tooManyDecimals": "小数は最大 {{n}} 桁です"
+      "tooManyDecimals": "小数は最大 {{n}} 桁です",
+      "onlyWhen": "{{cond}}が「{{value}}」のときのみ入力できます"
     },
     "autoHint": "空欄の場合は自動採番",
     "currentStep": "現在",
@@ -1599,7 +1600,8 @@
         "on_hold": "子ロットがホールド中です",
         "has_transactions": "子ロットに後続作業があります",
         "has_descendants": "子ロットが再分割されています",
-        "parent_status": "親ロットの状態が変わっています"
+        "parent_status": "親ロットの状態が変わっています",
+        "referenced": "子ロットが他のレコードから参照されています"
       },
       "already": "この変換は取り消し済みです",
       "info": "取消日時 {{at}} · 取消者 {{by}} · 取消理由 {{reason}}",
@@ -1629,7 +1631,19 @@
       "clear": "アラーム解除",
       "clearDesc": "解除しても装置状態は自動で戻りません。",
       "cleared": "アラームを解除しました",
-      "already": "解除済みのため変更はありません"
+      "already": "解除済みのため変更はありません",
+      "err": {
+        "targetRequired": "連動が「設備状態変更」のときは遷移先状態が必須です",
+        "targetOnly": "連動が「連動なし」のときは遷移先状態を入力できません",
+        "targetUnknown": "遷移先状態 {{state}} は存在しません"
+      },
+      "skip": {
+        "unknown": "遷移先状態 {{state}} は存在しません",
+        "already": "設備はすでに {{state}} です",
+        "notAllowed": "状態遷移表で {{from}} → {{to}} は許可されていません"
+      },
+      "stateSkipped": "設備状態は変更されませんでした：{{why}}。アラームは記録済みです。",
+      "stateUnchanged": "設備状態は変更されませんでした。アラームは記録済みです。"
     },
     "toolLife": {
       "warn": "寿命上限間近",
