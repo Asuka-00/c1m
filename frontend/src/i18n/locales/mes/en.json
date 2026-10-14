@@ -564,7 +564,7 @@
         "per_basis": "Per",
         "scrap_rate": "Scrap rate",
         "consume_mode": "Consume mode",
-        "route_step": "Route step",
+        "operation": "Operation",
         "remark": "Remark"
       },
       "bom_line_substitute": {
@@ -946,7 +946,8 @@
         "over_start_limit_pct": "Started wafers may exceed the plan by at most this percentage"
       },
       "bom_line": {
-        "scrap_rate": "Fraction, e.g. 0.02 = 2%"
+        "scrap_rate": "Fraction, e.g. 0.02 = 2%",
+        "operation": "Optional: compared at every step of this operation"
       },
       "route_step": {
         "branch_condition": "e.g. lot_type == 'ENG'",

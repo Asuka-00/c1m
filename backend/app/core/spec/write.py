@@ -302,6 +302,10 @@ def new_version(
     conn(session).execute(sa.insert(table(e)).values(**vals))
     _copy_children(session, tenant_id, e, rid, nid, user)
     new = get_row(session, e, tenant_id, nid)
+    # 出新版本后的钩子（如产品新版本复制生效 BOM）：fn(session, tid, e, new, old)，
+    # 操作人放在 new["_user"]
+    for fn in VALIDATORS.get(f"{e.code}:new_version", []):
+        fn(session, tenant_id, e, {**new, "_user": user}, old)
     audit(
         session,
         tenant_id,

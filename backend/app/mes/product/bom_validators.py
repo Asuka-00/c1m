@@ -10,7 +10,7 @@ from sqlmodel import Session
 
 from app.core.spec.base import conn
 from app.core.spec.engine import TABLES, Entity
-from app.core.spec.errors import MesError
+from app.core.spec.errors import MesError, http_422
 from app.core.spec.validate import validator
 from app.mes.common.validators import Row, _get
 
@@ -38,6 +38,18 @@ def next_version(s: Session, tid: uuid.UUID, product_id: Any) -> int:
         .scalar()
     )
     return int(cur or 0) + 1
+
+
+@validator("bom:payload")
+def _bom_payload(
+    _s: Session, _t: uuid.UUID, _e: Entity, data: Row, _old: Row | None
+) -> None:
+    """生效时间 / 确认人只能由 activate 决定，载荷里给了就明确拒绝。"""
+    bad = [k for k in ("effective_at", "confirmed_by", "confirmed_at") if k in data]
+    if bad:
+        raise http_422(
+            [(k, f"{k}: set by POST /mes/bom/{{id}}/activate only") for k in bad]
+        )
 
 
 @validator("bom")
@@ -129,6 +141,31 @@ def _bom_sub(s: Session, tid: uuid.UUID, _e: Entity, row: Row, old: Row | None) 
         errs.append(("priority", "priority: must be > 0"))
     if errs:
         raise MesError(errs)
+    # 唯一键冲突：409 并写明冲突字段（否则只有通用的“同键记录已存在”）
+    t = TABLES["bom_line_substitute"]
+    for f in ("priority", "material_id"):
+        q = sa.select(t.c.id).where(
+            t.c.tenant_id == tid,
+            t.c.bom_line_id == row.get("bom_line_id"),
+            t.c[f] == row.get(f),
+        )
+        if old is not None:
+            q = q.where(t.c.id != old["id"])
+        hit = conn(s).execute(q).first()
+        if hit:
+            v = row.get(f)
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "duplicate",
+                    "message": f"bom_line_substitute: {f.removesuffix('_id')} {v} "
+                    "already used on this BOM line",
+                    "field": f.removesuffix("_id"),
+                    "bom_line_id": str(row.get("bom_line_id")),
+                    f.removesuffix("_id"): str(v) if f == "material_id" else v,
+                    "existing_id": str(hit[0]),
+                },
+            )
 
 
 @validator("bom_line_substitute:delete")

@@ -564,7 +564,7 @@
         "per_basis": "每",
         "scrap_rate": "损耗率",
         "consume_mode": "扣料方式",
-        "route_step": "流程步骤",
+        "operation": "工序",
         "remark": "备注"
       },
       "bom_line_substitute": {
@@ -946,7 +946,8 @@
         "over_start_limit_pct": "投产片数最多可超出计划片数的百分比"
       },
       "bom_line": {
-        "scrap_rate": "小数，如 0.02 表示 2%"
+        "scrap_rate": "小数，如 0.02 表示 2%",
+        "operation": "可选：该工序的所有工步出站时比对"
       },
       "route_step": {
         "branch_condition": "例如 lot_type == 'ENG'",

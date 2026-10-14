@@ -106,6 +106,12 @@ def test_bom_versions_lifecycle(client: TestClient, db: Session) -> None:
     # status / version 是系统字段，载荷里的值被忽略
     v2 = m.post("bom", {"product_id": p["id"], "status": "active", "version": 9})
     assert (v2["version"], v2["status"]) == (2, "draft")
+    # 生效时间只能由 activate 决定：载荷里给了就 422
+    err = m.post(
+        "bom", {"product_id": p["id"], "effective_at": "2026-10-14T00:00:00Z"}, 422
+    )
+    assert err["detail"][0]["loc"][-1] == "effective_at" or "effective_at" in str(err)
+    m.patch("bom", v2["id"], {"effective_at": "2026-10-14T00:00:00Z"}, 422)
     # 无明细不能生效
     assert "at least one line" in b.act(v1, "activate", 422)["detail"][0]["msg"]
     ln = b.line(v1, 10)
@@ -113,7 +119,18 @@ def test_bom_versions_lifecycle(client: TestClient, db: Session) -> None:
         "bom_line_substitute",
         {"bom_line_id": ln["id"], "material_id": b.mats[1]["id"], "priority": 1},
     )
-    a1 = b.act(v1, "activate")
+    # 客户端传的确认人 / 确认时间被忽略，一律用当前操作人和当前时间
+    r = m.c.post(
+        f"{BOM}/{v1['id']}/activate",
+        headers=m.h,
+        json={"confirmed_by": "mallory", "confirmed_at": "2000-01-01T00:00:00Z"},
+    )
+    assert r.status_code == 200, r.text
+    a1 = r.json()
+    assert a1["confirmed_by"] != "mallory"
+    assert not a1["confirmed_at"].startswith("2000")
+    me = m.c.get(f"{API[:-4]}/users/me", headers=m.h).json()
+    assert a1["confirmed_by"] in (me.get("username"), me.get("email"))
     assert a1["status"] == "active" and a1["confirmed_by"] and a1["confirmed_at"]
     assert a1["effective_at"]
     # 生效后只读：主表、明细、替代料都不能改 / 删 / 加
@@ -231,13 +248,25 @@ def test_bom_line_rules(client: TestClient, db: Session) -> None:
         "bom_line_substitute",
         {"bom_line_id": ln["id"], "material_id": b.mats[1]["id"], "priority": 1},
     )
-    m.post(
+    dup = m.post(
         "bom_line_substitute",
         {"bom_line_id": ln["id"], "material_id": b.mats[2]["id"], "priority": 1},
         409,
-    )
+    )["detail"]
+    assert (dup["code"], dup["field"], dup["priority"]) == ("duplicate", "priority", 1)
+    assert dup["bom_line_id"] == ln["id"]
+    dup = m.post(
+        "bom_line_substitute",
+        {"bom_line_id": ln["id"], "material_id": b.mats[1]["id"], "priority": 2},
+        409,
+    )["detail"]
+    assert dup["field"] == "material" and dup["material"] == b.mats[1]["id"]
     # 改产品不允许
     m.patch("bom", v["id"], {"product_id": semi["id"]}, 422)
+    # 可选工序（bom.md §11：引用工序而不是流程步骤）
+    op = m.post("operation", {"code": "OP-DA", "name": "die attach"})
+    ol = b.line(v, 30, uom_id=b.g, operation_id=op["id"])
+    assert ol["operation_id"] == op["id"] and ol["operation_label"].startswith("OP-DA")
 
 
 def test_bom_tree_depth_and_cycles(client: TestClient, db: Session) -> None:
@@ -358,8 +387,15 @@ def test_lot_start_locks_bom(client: TestClient, db: Session) -> None:
         f"{API}/work-order/{f.wo['id']}/start", {"lots": [{"qty": 2}]}, status=422
     )
     assert "no active BOM" in str(r)
+    # warn：放行开批，warnings 带 no_active_bom（D1）
+    f.m.patch("check_rule", rule["id"], {"severity": "warn"})
+    out = f.post(f"{API}/work-order/{f.wo['id']}/start", {"lots": [{"qty": 2}]})
+    assert out["data"][0]["bom_id"] is None
+    assert [w["code"] for w in out["warnings"]] == ["no_active_bom"]
+    # off：不检查
     f.m.patch("check_rule", rule["id"], {"severity": "off"})
-    f.start(2)
+    out = f.post(f"{API}/work-order/{f.wo['id']}/start", {"lots": [{"qty": 2}]})
+    assert out["data"][0]["bom_id"] is None
 
 
 def test_split_inherits_and_merge_checks_bom(client: TestClient, db: Session) -> None:
@@ -393,7 +429,7 @@ def test_split_inherits_and_merge_checks_bom(client: TestClient, db: Session) ->
     assert any("different BOM version" in p for p in probs[l2["code"]])
 
 
-def test_migration_0012_up_down() -> None:
+def test_migration_0012_0013_up_down() -> None:
     """0012（可重复执行）：升级建三张表、lot.bom_id 和部分唯一索引；降级全部删除，可再升级。"""
     import os
     import subprocess
@@ -427,6 +463,9 @@ def test_migration_0012_up_down() -> None:
             i = inspect(c)
             tabs = {t for t in i.get_table_names() if t.startswith("mes_bom")}
             col = any(x["name"] == "bom_id" for x in i.get_columns("mes_lot"))
+            if tabs:  # 0013：明细引用工序
+                lc = {x["name"] for x in i.get_columns("mes_bom_line")}
+                assert "operation_id" in lc and "route_step_id" not in lc
             idx = bool(
                 tabs
                 and any(
@@ -455,3 +494,36 @@ def test_migration_0012_up_down() -> None:
         with server.connect() as c:
             c.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
         server.dispose()
+
+
+def test_product_new_version_copies_active_bom(client: TestClient, db: Session) -> None:
+    """产品出新版本：当前生效 BOM 复制成新版本下的草稿（含明细、替代料）；没有生效就不复制。"""
+    m = Mes(client, db)
+    b = B(m)
+    p1 = b.product("FG")
+    op = m.post("operation", {"code": "OP1", "name": "op"})
+    v1 = b.bom(p1)
+    ln = b.line(v1, 10, qty="2.5", uom_id=b.g, operation_id=op["id"])
+    m.post(
+        "bom_line_substitute",
+        {"bom_line_id": ln["id"], "material_id": b.mats[1]["id"], "priority": 1},
+    )
+    b.act(v1, "activate")
+    b.bom(p1)  # 另一个草稿不参与
+    p2 = m.action("product", p1["id"], "new-version")
+    assert p2["version"] == 2
+    boms = m.list("bom", product=p2["id"])["data"]
+    assert len(boms) == 1
+    nb = boms[0]
+    assert (nb["version"], nb["status"], nb["copied_from_id"]) == (1, "draft", v1["id"])
+    t = b.tree(bom_id=nb["id"])
+    (line,) = t["lines"]
+    assert line["qty"] == 2.5 and line["operation_id"] == op["id"]
+    assert [x["material_id"] for x in line["substitutes"]] == [b.mats[1]["id"]]
+    # 旧产品版本的 BOM 不变
+    assert b.get(v1)["status"] == "active"
+    # 没有生效 BOM：不复制
+    q1 = b.product("NOBOM")
+    b.bom(q1)
+    q2 = m.action("product", q1["id"], "new-version")
+    assert m.list("bom", product=q2["id"])["count"] == 0

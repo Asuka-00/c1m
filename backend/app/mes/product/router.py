@@ -38,7 +38,11 @@ def bom_tree(
 
 @router.post("/{bom_id}/activate")
 def bom_activate(session: SessionDep, ctx: CurrentTenant, bom_id: uuid.UUID) -> Any:
-    """Draft → active; the previous active version becomes superseded."""
+    """Draft → active; the previous active version becomes superseded.
+
+    Any request body (e.g. confirmed_by / confirmed_at) is ignored: the confirmer is
+    always the current user and the time is now.
+    """
     _need(ctx, "mes.bom:activate")
     row = svc.activate(session, ctx.id, bom_id, ctx.user)
     return serialize(session, ctx.id, ENTITIES["bom"], [row])[0]

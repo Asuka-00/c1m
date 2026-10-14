@@ -564,7 +564,7 @@
         "per_basis": "当たり",
         "scrap_rate": "ロス率",
         "consume_mode": "消費方式",
-        "route_step": "ルートステップ",
+        "operation": "工程",
         "remark": "備考"
       },
       "bom_line_substitute": {
@@ -946,7 +946,8 @@
         "over_start_limit_pct": "投入枚数が計画を超えてよい割合"
       },
       "bom_line": {
-        "scrap_rate": "小数（例：0.02 = 2%）"
+        "scrap_rate": "小数（例：0.02 = 2%）",
+        "operation": "任意：この工程の全ステップで比較"
       },
       "route_step": {
         "branch_condition": "例：lot_type == 'ENG'",

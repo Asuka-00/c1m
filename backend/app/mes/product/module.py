@@ -13,6 +13,7 @@ register(
             "app.mes.product.validators",
             "app.mes.product.bom_specs",
             "app.mes.product.bom_validators",
+            "app.mes.product.bom",
         ),
         routers=("app.mes.product.router:router",),
     )

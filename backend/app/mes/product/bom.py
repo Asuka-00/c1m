@@ -17,9 +17,10 @@ from sqlmodel import Session
 from app.core.models import actor_name
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
-from app.core.spec.engine import ENTITIES, TABLES
+from app.core.spec.engine import ENTITIES, TABLES, Entity
 from app.core.spec.errors import http_422
 from app.core.spec.serialize import serialize
+from app.core.spec.validate import validator
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins
 from app.mes.product.bom_specs import MAX_BOM_DEPTH
@@ -260,14 +261,15 @@ def void(s: Session, tid: uuid.UUID, bom_id: uuid.UUID, user: Any) -> Row:
 _SKIP = {"id", "tenant_id", "created_at", "updated_at", "created_by", "updated_by"}
 
 
-def copy(s: Session, tid: uuid.UUID, bom_id: uuid.UUID, user: Any) -> Row:
-    """复制为同产品的下一个草稿版本（含明细与替代料）。"""
-    src = _bom(s, tid, bom_id)
+def _clone(
+    s: Session, tid: uuid.UUID, src: Row, product_id: Any, user: Any
+) -> uuid.UUID:
+    """把 ``src`` 复制为 ``product_id`` 的下一个草稿版本（含明细与替代料），返回新 id。"""
     t = TABLES["bom"]
-    # 同产品加锁，避免并发复制拿到同一版本号
+    # 目标产品加锁，避免并发复制拿到同一版本号
     conn(s).execute(
         sa.select(t.c.id)
-        .where(t.c.tenant_id == tid, t.c.product_id == src["product_id"])
+        .where(t.c.tenant_id == tid, t.c.product_id == product_id)
         .with_for_update()
     ).all()
     nid = _ins(
@@ -275,14 +277,14 @@ def copy(s: Session, tid: uuid.UUID, bom_id: uuid.UUID, user: Any) -> Row:
         tid,
         "bom",
         user,
-        product_id=src["product_id"],
-        version=next_version(s, tid, src["product_id"]),
+        product_id=product_id,
+        version=next_version(s, tid, product_id),
         status="draft",
         copied_from_id=src["id"],
         description=src["description"],
         attrs=src["attrs"],
     )
-    for ln in _lines(s, tid, bom_id):
+    for ln in _lines(s, tid, src["id"]):
         lid = _ins(
             s,
             tid,
@@ -304,7 +306,13 @@ def copy(s: Session, tid: uuid.UUID, bom_id: uuid.UUID, user: Any) -> Row:
                 },
                 bom_line_id=lid,
             )
-    new = _bom(s, tid, nid)
+    return nid
+
+
+def copy(s: Session, tid: uuid.UUID, bom_id: uuid.UUID, user: Any) -> Row:
+    """复制为同产品的下一个草稿版本（含明细与替代料）。"""
+    src = _bom(s, tid, bom_id)
+    new = _bom(s, tid, _clone(s, tid, src, src["product_id"], user))
     audit(
         s,
         tid,
@@ -316,6 +324,32 @@ def copy(s: Session, tid: uuid.UUID, bom_id: uuid.UUID, user: Any) -> Row:
     )
     s.commit()
     return new
+
+
+@validator("product:new_version")
+def _product_new_version(
+    s: Session, tid: uuid.UUID, _e: Entity, new: Row, old: Row | None
+) -> None:
+    """产品出新版本：把旧版本当前生效的 BOM 复制成新版本下的草稿（bom.md §11）。"""
+    src = old and active_bom(s, tid, old["id"])
+    if not src or not old:
+        return
+    actor = new.get("_user")
+    nb = _bom(s, tid, _clone(s, tid, src, new["id"], actor))
+    audit(
+        s,
+        tid,
+        ENTITIES["bom"],
+        "copy",
+        nb,
+        actor,
+        {
+            "copied_from": (
+                None,
+                f"{old.get('code')} v{old.get('version')} BOM v{src['version']}",
+            )
+        },
+    )
 
 
 # ---------------- tree ----------------
@@ -365,20 +399,24 @@ def tree(s: Session, tid: uuid.UUID, product_id: Any = None, bom_id: Any = None)
 
 
 # ---------------- lots ----------------
-def required(s: Session, tid: uuid.UUID) -> bool:
-    """开关：没有生效 BOM 时禁止开批（默认关闭：无规则或严重度 off）。"""
+def required(s: Session, tid: uuid.UUID) -> str:
+    """开关档位（D1）：``off`` 不检查 / ``warn`` 放行并提示 / ``block`` 拒绝开批。
+
+    取 ``bom_required`` 检查规则的第一条有效规则的严重度；没有规则视为 ``off``。
+    """
     for r in find(
         s, tid, "check_rule", order="code", check_type=REQUIRE_CHECK, is_active=True
     ):
-        return bool(r["severity"] != "off")
-    return False
+        return "block" if r["severity"] == "block" else str(r["severity"] or "off")
+    return "off"
 
 
 def lock_for_start(s: Session, tid: uuid.UUID, product_id: Any) -> Row | None:
     """开批时取当前生效版本（加共享锁，防止开批过程中被替代）。
 
     Raises:
-        HTTPException: 开关打开且产品没有生效 BOM（422）。
+        HTTPException: 开关为 block 且产品没有生效 BOM（422）；warn / off 放行，由调用方
+            返回 ``no_active_bom`` 提示。
     """
     t = TABLES["bom"]
     r = (
@@ -395,7 +433,7 @@ def lock_for_start(s: Session, tid: uuid.UUID, product_id: Any) -> Row | None:
         .mappings()
         .first()
     )
-    if r is None and required(s, tid):
+    if r is None and required(s, tid) == "block":
         raise http_422(
             [("bom", f"bom: {_pcode(s, tid, product_id)} has no active BOM")]
         )
