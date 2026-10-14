@@ -867,7 +867,8 @@
         "lot": "批次",
         "wafer": "晶圆",
         "equipment": "设备",
-        "material_lot": "物料批"
+        "material_lot": "物料批",
+        "customer_lot": "客户批号"
       },
       "c": {
         "code": "批次",
@@ -885,7 +886,10 @@
         "material_lot": "物料批",
         "product": "产品",
         "consumed": "消耗",
-        "downstream": "下游产出"
+        "downstream": "下游产出",
+        "customer_lot_no": "客户批号",
+        "ownership": "物料归属",
+        "lot_status": "状态"
       }
     },
     "holdrel": {
@@ -1407,6 +1411,13 @@
       "collapse": "收起半成品 {{name}}",
       "maintain": "到该产品维护",
       "subOf": "替代：{{list}}"
+    },
+    "cust": {
+      "title": "客户来料",
+      "ownership": "物料归属",
+      "customer": "客户",
+      "lotNo": "客户批号",
+      "errCustomer": "第 {{n}} 批：客户来料须选择客户"
     }
   },
   "notify": {

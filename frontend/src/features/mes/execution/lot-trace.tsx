@@ -39,6 +39,7 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Page } from '@/components/crud'
+import { CustomerBadges } from '@/features/mes/common/customer'
 import { enumLabel, reasonLabel } from '@/features/mes/common/labels'
 import { RefSelect } from '@/features/mes/common/ref-select'
 import { ResultBadge } from './exec-parts'
@@ -385,6 +386,13 @@ export default function LotTracePage() {
             {!!lot.data.on_hold && (
               <Badge variant='destructive'>{t('mes.exec.onHold')}</Badge>
             )}
+            <CustomerBadges
+              info={{
+                ownership: lot.data.ownership as string | null,
+                customer_label: lot.data.customer_label as string | null,
+                customer_lot_no: lot.data.customer_lot_no as string | null,
+              }}
+            />
           </>
         )}
       </div>

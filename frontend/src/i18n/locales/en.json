@@ -867,7 +867,8 @@
         "lot": "Lot",
         "wafer": "Wafer",
         "equipment": "Equipment",
-        "material_lot": "Material lot"
+        "material_lot": "Material lot",
+        "customer_lot": "Customer lot no."
       },
       "c": {
         "code": "Lot",
@@ -885,7 +886,10 @@
         "material_lot": "Material lot",
         "product": "Product",
         "consumed": "Consumed",
-        "downstream": "Downstream"
+        "downstream": "Downstream",
+        "customer_lot_no": "Customer lot no.",
+        "ownership": "Ownership",
+        "lot_status": "Status"
       }
     },
     "holdrel": {
@@ -1407,6 +1411,13 @@
       "collapse": "Collapse semi-finished product {{name}}",
       "maintain": "Maintain in that product",
       "subOf": "Substitutes: {{list}}"
+    },
+    "cust": {
+      "title": "Customer material",
+      "ownership": "Ownership",
+      "customer": "Customer",
+      "lotNo": "Customer lot no.",
+      "errCustomer": "Lot {{n}}: select a customer for customer-owned material"
     }
   },
   "notify": {

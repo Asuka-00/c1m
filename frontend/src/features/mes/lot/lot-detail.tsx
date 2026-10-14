@@ -35,6 +35,10 @@ export function LotDetail({ row }: { row: MesRow }) {
     'started_at',
     'started_by',
     'source_ref',
+    // F6 客户来料
+    'customer_lot_no',
+    'ownership',
+    'customer',
   ]
   return (
     <div className='space-y-3 pt-2' data-testid='lot-detail'>

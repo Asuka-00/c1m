@@ -1,11 +1,17 @@
-/** 追溯查询页面：按批次 / 晶圆 / 设备 / 物料批做正向与反向追溯。 */
+/** 追溯查询页面：按批次 / 晶圆 / 设备 / 物料批 / 客户批号做正向与反向追溯。 */
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { fmtDateTime, t } from '@/i18n'
 import { Search } from 'lucide-react'
 import { useTenantKey } from '@/lib/api/hooks'
-import { execApi, type TraceKind, type TraceRow } from '@/lib/api/mes/execution'
+import {
+  type CustomerLotTrace,
+  execApi,
+  type TraceKind,
+  type TraceResult,
+  type TraceRow,
+} from '@/lib/api/mes/execution'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -18,14 +24,36 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Page } from '@/components/crud'
+import { CustomerBadges } from '@/features/mes/common/customer'
+import { ownershipText } from '@/features/mes/common/customer-fields'
 import { enumLabel } from '@/features/mes/common/labels'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { Pick } from './exec-parts'
 
-const KINDS: TraceKind[] = ['lot', 'wafer', 'equipment', 'material_lot']
+const KINDS: TraceKind[] = [
+  'lot',
+  'wafer',
+  'equipment',
+  'material_lot',
+  'customer_lot',
+]
+
+/** 批次表的列（含客户批号与归属，F6）。 */
+const LOT_COLS = [
+  'code',
+  'customer_lot_no',
+  'ownership',
+  'relation',
+  'qty',
+  'via',
+  'level',
+  'at',
+]
 
 /** 单元格显示：时间格式化、数组（消耗 / 下游）压缩成文本。 */
-function cell(col: string, v: unknown): React.ReactNode {
+function cell(col: string, v: unknown, row: TraceRow): React.ReactNode {
+  if (col === 'ownership')
+    return row.code || row.lot_no ? ownershipText(row as never) : '—'
   if (v === null || v === undefined || v === '') return '—'
   if (col === 'at') return fmtDateTime(String(v))
   if (col === 'relation') return enumLabel('genealogy_relation', String(v))
@@ -98,7 +126,7 @@ function TraceTable({
                         {String(r.code)}
                       </Link>
                     ) : (
-                      cell(c, r[c])
+                      cell(c, r[c], r)
                     )}
                   </TableCell>
                 ))}
@@ -169,42 +197,15 @@ export default function TracePage() {
         </p>
       )}
       {d?.backward && (
-        <div className='grid gap-4'>
-          <h3 className='font-semibold'>
-            {t('mes.traceq.backward')} · {d.target.code}
-          </h3>
-          <TraceTable
-            title={t('mes.traceq.srcLots')}
-            rows={d.backward.lots}
-            cols={['code', 'relation', 'qty', 'via', 'level', 'at']}
-          />
-          <TraceTable
-            title={t('mes.traceq.steps')}
-            rows={d.backward.steps}
-            cols={[
-              'lot',
-              'step_seq',
-              'operation',
-              'equipment',
-              'recipe',
-              'user',
-              'at',
-            ]}
-          />
-          <TraceTable
-            title={t('mes.traceq.materials')}
-            rows={d.backward.materials}
-            cols={['lot', 'step_seq', 'material_lot', 'qty', 'at']}
-          />
-          <h3 className='font-semibold'>{t('mes.traceq.forward')}</h3>
-          <TraceTable
-            title={t('mes.traceq.outLots')}
-            rows={d.forward?.lots ?? []}
-            cols={['code', 'relation', 'qty', 'via', 'level', 'at']}
-          />
-        </div>
+        <LotTraceBlock
+          title={d.target.code ?? ''}
+          info={d.target}
+          backward={d.backward}
+          forward={d.forward}
+        />
       )}
-      {d?.lots && (
+      {d?.kind === 'customer_lot' && <CustomerLotResult d={d} />}
+      {d?.lots && d.kind !== 'customer_lot' && (
         <TraceTable
           title={`${t('mes.traceq.lots')} · ${d.target.code}`}
           rows={d.lots.map((r) => ({ ...r, downstream: r.forward }))}
@@ -216,5 +217,87 @@ export default function TracePage() {
         />
       )}
     </Page>
+  )
+}
+
+/** 一个批次的反向 / 正向追溯（批次 / 晶圆查询，以及客户批号查到的每个批次）。 */
+function LotTraceBlock({
+  title,
+  info,
+  backward,
+  forward,
+}: {
+  title: string
+  info: TraceResult['target']
+  backward: NonNullable<TraceResult['backward']>
+  forward?: TraceResult['forward']
+}) {
+  return (
+    <div className='grid gap-4'>
+      <h3 className='flex flex-wrap items-center gap-2 font-semibold'>
+        {t('mes.traceq.backward')} · {title}
+        <CustomerBadges info={info} />
+      </h3>
+      <TraceTable
+        title={t('mes.traceq.srcLots')}
+        rows={backward.lots}
+        cols={LOT_COLS}
+      />
+      <TraceTable
+        title={t('mes.traceq.steps')}
+        rows={backward.steps}
+        cols={[
+          'lot',
+          'step_seq',
+          'operation',
+          'equipment',
+          'recipe',
+          'user',
+          'at',
+        ]}
+      />
+      <TraceTable
+        title={t('mes.traceq.materials')}
+        rows={backward.materials}
+        cols={['lot', 'step_seq', 'material_lot', 'qty', 'at']}
+      />
+      <h3 className='font-semibold'>{t('mes.traceq.forward')}</h3>
+      <TraceTable
+        title={t('mes.traceq.outLots')}
+        rows={forward?.lots ?? []}
+        cols={LOT_COLS}
+      />
+    </div>
+  )
+}
+
+/** 按客户批号查询（F6-03）：先列出匹配的批次，再逐批显示追溯。 */
+function CustomerLotResult({ d }: { d: TraceResult }) {
+  const hits = (d.lots ?? []) as unknown as CustomerLotTrace[]
+  return (
+    <div className='grid gap-6' data-testid='customer-lot-result'>
+      <TraceTable
+        title={`${t('mes.traceq.lots')} · ${d.target.customer_lot_no ?? ''}`}
+        rows={hits.map((h) => ({
+          ...h,
+          id: h.lot_id,
+          code: h.lot_no,
+          lot_status: enumLabel('lot_status', h.lot_status),
+        }))}
+        cols={['code', 'customer_lot_no', 'ownership', 'lot_status']}
+      />
+      {hits.map(
+        (h) =>
+          h.backward && (
+            <LotTraceBlock
+              key={h.lot_id}
+              title={h.lot_no}
+              info={h}
+              backward={h.backward}
+              forward={h.forward}
+            />
+          )
+      )}
+    </div>
   )
 }

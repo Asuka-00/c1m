@@ -89,7 +89,8 @@
       "storage_location": "库位",
       "receipt": "完工入库单",
       "receipt_line": "入库明细",
-      "audit_log": "审计日志"
+      "audit_log": "审计日志",
+      "customer": "客户"
     },
     "field": {
       "dict_type": {
@@ -439,7 +440,10 @@
         "source_ref": "来源晶圆 / 物料批次",
         "started_at": "投产时间",
         "started_by": "投产人",
-        "description": "描述"
+        "description": "描述",
+        "customer_lot_no": "客户批号",
+        "ownership": "物料归属",
+        "customer": "客户"
       },
       "wafer": {
         "code": "晶圆号",
@@ -749,7 +753,9 @@
         "expiry_date": "有效期",
         "location": "库位",
         "ml_status": "状态",
-        "description": "描述"
+        "description": "描述",
+        "ownership": "物料归属",
+        "customer": "客户"
       },
       "measurement_item": {
         "code": "编码",
@@ -869,6 +875,11 @@
         "record_code": "记录",
         "changes": "变更内容",
         "username": "用户"
+      },
+      "customer": {
+        "code": "客户编码",
+        "name": "客户名称",
+        "short_name": "简称"
       }
     },
     "help": {
@@ -1402,6 +1413,10 @@
         "open": "待登记",
         "passed": "通过",
         "failed": "不通过"
+      },
+      "ownership": {
+        "own": "自有",
+        "customer": "客户来料"
       }
     }
   },

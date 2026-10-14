@@ -89,7 +89,8 @@
       "storage_location": "Storage location",
       "receipt": "Finished-goods receipt",
       "receipt_line": "Receipt line",
-      "audit_log": "Audit log"
+      "audit_log": "Audit log",
+      "customer": "Customer"
     },
     "field": {
       "dict_type": {
@@ -439,7 +440,10 @@
         "source_ref": "Source wafer / material batch",
         "started_at": "Started at",
         "started_by": "Started by",
-        "description": "Description"
+        "description": "Description",
+        "customer_lot_no": "Customer lot no.",
+        "ownership": "Ownership",
+        "customer": "Customer"
       },
       "wafer": {
         "code": "Wafer ID",
@@ -749,7 +753,9 @@
         "expiry_date": "Expiry",
         "location": "Location",
         "ml_status": "Status",
-        "description": "Description"
+        "description": "Description",
+        "ownership": "Ownership",
+        "customer": "Customer"
       },
       "measurement_item": {
         "code": "Code",
@@ -869,6 +875,11 @@
         "record_code": "Record",
         "changes": "Changes",
         "username": "User"
+      },
+      "customer": {
+        "code": "Customer code",
+        "name": "Customer name",
+        "short_name": "Short name"
       }
     },
     "help": {
@@ -1402,6 +1413,10 @@
         "open": "Open",
         "passed": "Passed",
         "failed": "Failed"
+      },
+      "ownership": {
+        "own": "Own",
+        "customer": "Customer-owned"
       }
     }
   },

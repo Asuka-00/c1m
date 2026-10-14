@@ -867,7 +867,8 @@
         "lot": "ロット",
         "wafer": "ウェーハ",
         "equipment": "設備",
-        "material_lot": "資材ロット"
+        "material_lot": "資材ロット",
+        "customer_lot": "顧客ロット番号"
       },
       "c": {
         "code": "ロット",
@@ -885,7 +886,10 @@
         "material_lot": "資材ロット",
         "product": "製品",
         "consumed": "消費",
-        "downstream": "下流産出"
+        "downstream": "下流産出",
+        "customer_lot_no": "顧客ロット番号",
+        "ownership": "所有区分",
+        "lot_status": "状態"
       }
     },
     "holdrel": {
@@ -1407,6 +1411,13 @@
       "collapse": "半製品 {{name}} を折りたたむ",
       "maintain": "その製品で編集",
       "subOf": "代替：{{list}}"
+    },
+    "cust": {
+      "title": "顧客支給",
+      "ownership": "所有区分",
+      "customer": "顧客",
+      "lotNo": "顧客ロット番号",
+      "errCustomer": "ロット {{n}}：顧客支給の場合は顧客を選択してください"
     }
   },
   "notify": {

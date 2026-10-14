@@ -30,6 +30,10 @@ export interface StartLotIn {
   carrier_id?: string | null
   slots?: number[]
   source_ref?: string | null
+  /** B7 客户来料（D40 严格载荷只接受这三个客户字段） */
+  ownership?: 'own' | 'customer'
+  customer_id?: string
+  customer_lot_no?: string | null
 }
 
 /** 交期状态。 */

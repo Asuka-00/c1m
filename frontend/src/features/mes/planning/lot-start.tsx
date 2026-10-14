@@ -25,6 +25,14 @@ import { Label } from '@/components/ui/label'
 import { Page } from '@/components/crud'
 import { IconButton } from '@/components/icon-button'
 import { cellValue } from '@/features/mes/common/cells'
+import { CustomerFields } from '@/features/mes/common/customer'
+import {
+  customerBody,
+  type CustomerDraft,
+  customerErrors,
+  emptyCustomer,
+  ownershipText,
+} from '@/features/mes/common/customer-fields'
 import { RefSelect } from '@/features/mes/common/ref-select'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
@@ -36,7 +44,7 @@ type LotDraft = {
   carrier_label: string | null
   slots: string
   source_ref: string
-}
+} & CustomerDraft
 
 /** 工单选择列表最多显示条数（其余通过关键字缩小范围）。 */
 const WO_SHOW = 20
@@ -142,6 +150,7 @@ export default function LotStartPage() {
           carrier_label: null,
           slots: range(x.qty),
           source_ref: '',
+          ...emptyCustomer(),
         }))
       )
     },
@@ -160,6 +169,7 @@ export default function LotStartPage() {
           carrier_id: l.carrier_id,
           slots: parseSlots(l.slots) ?? undefined,
           source_ref: l.source_ref || null,
+          ...customerBody(l),
         }))
       ),
     onSuccess: (r) => {
@@ -186,6 +196,7 @@ export default function LotStartPage() {
     })
     const cs = lots.map((l) => l.carrier_id).filter(Boolean)
     if (new Set(cs).size !== cs.length) out.push(t('mes.start.errCarrierTwice'))
+    out.push(...customerErrors(lots))
     return out
   }, [plan, lots, total])
   const set = (i: number, patch: Partial<LotDraft>) =>
@@ -372,6 +383,9 @@ export default function LotStartPage() {
                           <th className='p-2 text-start'>
                             {t('mes.field.lot.source_ref')}
                           </th>
+                          <th className='p-2 text-start'>
+                            {t('mes.cust.title')}
+                          </th>
                           <th />
                         </tr>
                       </thead>
@@ -430,6 +444,12 @@ export default function LotStartPage() {
                                 }
                               />
                             </td>
+                            <td className='p-2' data-testid={`lot-cust-${i}`}>
+                              <CustomerFields
+                                value={l}
+                                onChange={(patch) => set(i, patch)}
+                              />
+                            </td>
                             <td className='p-2'>
                               <IconButton
                                 label={t('common.delete')}
@@ -459,6 +479,7 @@ export default function LotStartPage() {
                             carrier_label: null,
                             slots: '1',
                             source_ref: '',
+                            ...emptyCustomer(),
                           },
                         ])
                       }
@@ -544,6 +565,10 @@ export default function LotStartPage() {
                       <th className='p-2 text-start'>
                         {t('mes.start.wafers')}
                       </th>
+                      <th className='p-2 text-start'>
+                        {t('mes.cust.ownership')}
+                      </th>
+                      <th className='p-2 text-start'>{t('mes.cust.lotNo')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -585,6 +610,15 @@ export default function LotStartPage() {
                               : sl.length
                                 ? `${no}.${String(sl[0]).padStart(2, '0')} … ${no}.${String(sl[sl.length - 1]).padStart(2, '0')}`
                                 : '—'}
+                          </td>
+                          <td className='p-2'>
+                            {ownershipText({
+                              ownership: lot.ownership,
+                              customer_label: lot.customer_label,
+                            })}
+                          </td>
+                          <td className='p-2 font-mono'>
+                            {String(lot.customer_lot_no || '—')}
                           </td>
                         </tr>
                       )

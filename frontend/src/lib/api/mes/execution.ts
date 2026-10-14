@@ -141,16 +141,41 @@ export interface HoldRow {
   qtime_to_step_name?: string | null
 }
 /** 追溯对象类型。 */
-export type TraceKind = 'lot' | 'wafer' | 'equipment' | 'material_lot'
+export type TraceKind =
+  | 'lot'
+  | 'wafer'
+  | 'equipment'
+  | 'material_lot'
+  | 'customer_lot'
 /** 追溯行（各列按场景出现）。 */
 export type TraceRow = Record<string, unknown>
 /** 追溯结果。 */
 export interface TraceResult {
   kind: TraceKind
-  target: { id: string; code: string; lot?: string; lot_id?: string }
+  /** 批次 / 晶圆带客户信息（B7）；客户批号查询时只有 `customer_lot_no` */
+  target: {
+    id?: string
+    code?: string
+    lot?: string
+    lot_id?: string
+    customer_lot_no?: string | null
+    ownership?: string | null
+    customer?: string | null
+  }
   backward?: { lots: TraceRow[]; steps: TraceRow[]; materials: TraceRow[] }
   forward?: { lots: TraceRow[] }
   lots?: TraceRow[]
+}
+/** 按客户批号追溯：每个匹配批次带客户信息和各自的正反向追溯（kind=customer_lot）。 */
+export interface CustomerLotTrace {
+  lot_id: string
+  lot_no: string
+  lot_status: string
+  customer_lot_no: string | null
+  ownership: string | null
+  customer: string | null
+  backward?: { lots: TraceRow[]; steps: TraceRow[]; materials: TraceRow[] }
+  forward?: { lots: TraceRow[] }
 }
 /** Q-Time 监控行。 */
 export interface QtimeRow {

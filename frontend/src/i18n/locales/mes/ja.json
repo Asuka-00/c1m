@@ -89,7 +89,8 @@
       "storage_location": "ロケーション",
       "receipt": "完成品入庫伝票",
       "receipt_line": "入庫明細",
-      "audit_log": "監査ログ"
+      "audit_log": "監査ログ",
+      "customer": "顧客"
     },
     "field": {
       "dict_type": {
@@ -439,7 +440,10 @@
         "source_ref": "元ウェーハ・資材ロット",
         "started_at": "投入日時",
         "started_by": "投入者",
-        "description": "説明"
+        "description": "説明",
+        "customer_lot_no": "顧客ロット番号",
+        "ownership": "所有区分",
+        "customer": "顧客"
       },
       "wafer": {
         "code": "ウェーハ ID",
@@ -749,7 +753,9 @@
         "expiry_date": "有効期限",
         "location": "ロケーション",
         "ml_status": "状態",
-        "description": "説明"
+        "description": "説明",
+        "ownership": "所有区分",
+        "customer": "顧客"
       },
       "measurement_item": {
         "code": "コード",
@@ -869,6 +875,11 @@
         "record_code": "レコード",
         "changes": "変更内容",
         "username": "ユーザー"
+      },
+      "customer": {
+        "code": "顧客コード",
+        "name": "顧客名",
+        "short_name": "略称"
       }
     },
     "help": {
@@ -1402,6 +1413,10 @@
         "open": "未登録",
         "passed": "合格",
         "failed": "不合格"
+      },
+      "ownership": {
+        "own": "自社",
+        "customer": "顧客支給"
       }
     }
   },
