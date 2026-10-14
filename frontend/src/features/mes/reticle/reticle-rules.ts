@@ -12,6 +12,11 @@ import { compareDecimal } from '@/lib/decimal'
 import { siteWallToIso } from '@/lib/site-tz'
 import { MES_PERM } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
+import {
+  toolLifeLevel,
+  warnRatio,
+  type ToolLifeLevel,
+} from '@/features/mes/execution/tool-life'
 
 /** reason / comment / note 上限。 */
 export const TEXT_MAX = 300
@@ -316,3 +321,22 @@ export function actionLabel(a: string) {
   const k = a.replace(/_/g, '-')
   return t(`mes.reticle.action.${k}`, { defaultValue: a })
 }
+
+/**
+ * 寿命等级（P3-F3，黄/红同 FE-F8-2 与后端 life_state，D54-5）：
+ * 已用 >= 上限 → over（红，进站 409 不可放行）；上限 × warn_ratio（缺省 0.9）<= 已用 → warn（黄）。
+ * 后端给了 life_state 以后端为准；没有上限为 null。全程定点字符串比较（D76）。
+ */
+export function reticleLifeLevel(
+  r: Pick<Reticle, 'shot_count' | 'max_shots' | 'warn_ratio' | 'life_state'>
+): ToolLifeLevel | null {
+  if (r.max_shots == null || r.max_shots === '') return null
+  if (r.life_state === 'reached') return 'over'
+  if (r.life_state === 'warning') return 'warn'
+  if (r.life_state === 'ok') return 'ok'
+  return toolLifeLevel(r.shot_count, r.max_shots, reticleWarnRatio(r))
+}
+
+/** 预警比例：warn_ratio（0 < r <= 1）否则 0.9（后端 DEFAULT_WARN）。 */
+export const reticleWarnRatio = (r: Pick<Reticle, 'warn_ratio'>) =>
+  warnRatio({ warn_ratio: r.warn_ratio })

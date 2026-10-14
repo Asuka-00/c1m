@@ -27,11 +27,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Page } from '@/components/crud'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { ReticleActionDialog } from './action-dialog'
+import { ReticleLifeBar } from './life-bar'
+import { ReticleMasterDialog } from './master-dialog'
 import {
   actionEnabled,
   actionLabel,
   disabledHint,
-  lifeRatio,
   reticleErrorMessage,
   visibleActions,
 } from './reticle-rules'
@@ -122,7 +123,7 @@ export function ReticleDetail({ reticle }: { reticle: Reticle }) {
     queryKey: ['mes', 'reticle', 'history', reticle.id],
     queryFn: () => reticleApi.history(reticle.id),
   })
-  const ratio = lifeRatio(reticle)
+  const [edit, setEdit] = useState(false)
   const acts = visibleActions(can)
   const qc = useQueryClient()
   const del = useMutation({
@@ -156,12 +157,7 @@ export function ReticleDetail({ reticle }: { reticle: Reticle }) {
           ],
           [
             t('mes.reticle.field.shots'),
-            <span
-              key='s'
-              className={cn(ratio != null && ratio >= 1 && 'text-destructive')}
-            >
-              {decimalText(reticle.shot_count)} / {numDash(reticle.max_shots)}
-            </span>,
+            <ReticleLifeBar key='s' reticle={reticle} />,
           ],
           [t('mes.reticle.field.mount_count'), reticle.mount_count],
           [t('mes.reticle.field.life_reset_count'), reticle.life_reset_count],
@@ -189,13 +185,24 @@ export function ReticleDetail({ reticle }: { reticle: Reticle }) {
               size='sm'
               variant={a === 'scrap' ? 'destructive' : 'outline'}
               disabled={!actionEnabled(reticle, a)}
-              title={hint}
+              title={hint || t(`mes.reticle.actionDesc.${a}`)}
               onClick={() => setAction(a)}
               data-testid={`reticle-act-${a}`}
             >
               {t(`mes.reticle.action.${a}`)}
             </Button>
           ))}
+          {can(MES_PERM.reticleWrite) && (
+            <Button
+              size='sm'
+              variant='outline'
+              title={t('mes.reticle.master.editTip')}
+              onClick={() => setEdit(true)}
+              data-testid='reticle-edit'
+            >
+              {t('mes.reticle.master.edit')}
+            </Button>
+          )}
           {/* 删除走通用 CRUD 的 write 权限（不是 override） */}
           {can(MES_PERM.reticleWrite) && (
             <Button
@@ -210,6 +217,7 @@ export function ReticleDetail({ reticle }: { reticle: Reticle }) {
                 )
                   del.mutate()
               }}
+              title={t('mes.reticle.deleteTip')}
               data-testid='reticle-delete'
             >
               {t('mes.reticle.delete')}
@@ -341,6 +349,11 @@ export function ReticleDetail({ reticle }: { reticle: Reticle }) {
         action={action}
         onClose={() => setAction(null)}
       />
+      <ReticleMasterDialog
+        reticle={reticle}
+        open={edit}
+        onClose={() => setEdit(false)}
+      />
     </div>
   )
 }
@@ -360,6 +373,8 @@ export default function ReticlePage() {
       (!q || r.code.toLowerCase().includes(q.toLowerCase()))
   )
   const cur = list.data?.find((r) => r.id === sel)
+  const can = useMesCan()
+  const [creating, setCreating] = useState(false)
   return (
     <Page
       title={t('mes.reticle.title')}
@@ -381,6 +396,7 @@ export default function ReticlePage() {
           onChange={(e) => setStatus(e.target.value)}
           aria-label={t('mes.reticle.field.status')}
           data-testid='reticle-status-filter'
+          title={t('mes.reticle.statusFilterTip')}
         >
           <option value=''>{t('mes.reticle.allStatus')}</option>
           {RETICLE_STATUSES.map((s) => (
@@ -390,12 +406,30 @@ export default function ReticlePage() {
           ))}
         </select>
       </div>
+      {can(MES_PERM.reticleWrite) && (
+        <Button
+          size='sm'
+          className='self-start'
+          title={t('mes.reticle.master.createTip')}
+          onClick={() => setCreating(true)}
+          data-testid='reticle-create'
+        >
+          {t('mes.reticle.master.create')}
+        </Button>
+      )}
+      <ReticleMasterDialog
+        reticle={null}
+        open={creating}
+        onClose={() => setCreating(false)}
+      />
       <Table data-testid='reticle-list'>
         <TableHeader>
           <TableRow>
             {['code', 'status', 'layer', 'shots', 'equipment', 'location'].map(
               (c) => (
-                <TableHead key={c}>{t(`mes.reticle.col.${c}`)}</TableHead>
+                <TableHead key={c} title={t(`mes.reticle.colTip.${c}`)}>
+                  {t(`mes.reticle.col.${c}`)}
+                </TableHead>
               )
             )}
           </TableRow>
@@ -414,7 +448,7 @@ export default function ReticlePage() {
               </TableCell>
               <TableCell>{dash(r.layer)}</TableCell>
               <TableCell>
-                {decimalText(r.shot_count)} / {numDash(r.max_shots)}
+                <ReticleLifeBar reticle={r} />
               </TableCell>
               <TableCell>{dash(r.equipment_label)}</TableCell>
               <TableCell>{dash(r.storage_location)}</TableCell>

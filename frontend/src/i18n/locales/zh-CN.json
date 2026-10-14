@@ -1928,6 +1928,60 @@
         "mounted_at": "上机时间",
         "unmounted_at": "下机时间",
         "inspected_at": "检查时间"
+      },
+      "life": {
+        "ok": "正常",
+        "warn": "接近上限",
+        "over": "已达上限",
+        "tip": "已用 {{used}} / 上限 {{max}}；预警线 {{line}}（上限的 {{pct}}%）",
+        "okTip": "低于预警线，可正常进站",
+        "warnTip": "已进入预警区间（黄）：进站放行但会记录警告，请安排更换或复位",
+        "overTip": "已达寿命上限（红）：进站被拦截且不可放行，需寿命复位或报废",
+        "noLimitTip": "未设置寿命上限，不做寿命预警"
+      },
+      "master": {
+        "create": "新建光罩",
+        "edit": "编辑主数据",
+        "createTip": "新建光罩主数据；状态和计数由动作维护",
+        "editTip": "修改光罩主数据（编码不可改）；状态、计数、挂载请用动作按钮",
+        "createTitle": "新建光罩",
+        "editTitle": "编辑光罩 {{code}}",
+        "desc": "状态、shot 数、挂载信息只读，由挂载 / 卸载等动作维护。",
+        "errRequired": "必填",
+        "errMaxShots": "请输入正整数",
+        "errWarnRatio": "请输入 0 到 1 之间的小数（最多 4 位，如 0.9）",
+        "field": {
+          "code": "编码",
+          "name": "名称",
+          "revision": "版本",
+          "grade": "等级",
+          "layer": "层次",
+          "max_shots": "寿命上限（shot）",
+          "warn_ratio": "预警比例",
+          "count_basis": "计数来源",
+          "storage_location": "库位"
+        },
+        "tip": {
+          "code": "光罩唯一编码，建立后不可修改",
+          "name": "显示名称",
+          "revision": "光罩版本号",
+          "grade": "光罩等级（如 binary、PSM）",
+          "layer": "适用工艺层次",
+          "max_shots": "累计 shot 数达到此值即拦截进站；留空表示不限",
+          "warn_ratio": "达到 上限 × 比例 时显示黄色预警；留空按 0.9",
+          "count_basis": "出站自动累加或由 EAP 上报",
+          "storage_location": "未挂载时的存放库位"
+        }
+      },
+      "deleteTip": "删除光罩；已有履历时不能删除，请改为报废",
+      "statusFilterTip": "按光罩状态筛选",
+      "colTip": {
+        "code": "光罩编码",
+        "status": "当前状态",
+        "layer": "适用层次",
+        "shots": "已用 shot 数 / 寿命上限；黄色为预警，红色为已达上限",
+        "equipment": "当前挂载的机台",
+        "location": "存放库位"
       }
     },
     "marking": {

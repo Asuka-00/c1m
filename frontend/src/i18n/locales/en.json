@@ -1928,6 +1928,60 @@
         "mounted_at": "mount time",
         "unmounted_at": "unmount time",
         "inspected_at": "inspection time"
+      },
+      "life": {
+        "ok": "OK",
+        "warn": "Near limit",
+        "over": "Limit reached",
+        "tip": "Used {{used}} / limit {{max}}; warning line {{line}} ({{pct}}% of limit)",
+        "okTip": "Below the warning line; track-in allowed",
+        "warnTip": "In the warning zone (yellow): track-in passes with a warning; plan a replacement or life reset",
+        "overTip": "Life limit reached (red): track-in is blocked and cannot be overridden; reset life or scrap",
+        "noLimitTip": "No life limit set; no life warning"
+      },
+      "master": {
+        "create": "New reticle",
+        "edit": "Edit master data",
+        "createTip": "Create reticle master data; status and counts are maintained by actions",
+        "editTip": "Edit reticle master data (code is fixed); use the action buttons for status, counts and mounting",
+        "createTitle": "New reticle",
+        "editTitle": "Edit reticle {{code}}",
+        "desc": "Status, shot count and mount info are read-only and maintained by mount / unmount and other actions.",
+        "errRequired": "Required",
+        "errMaxShots": "Enter a positive integer",
+        "errWarnRatio": "Enter a decimal between 0 and 1 (up to 4 places, e.g. 0.9)",
+        "field": {
+          "code": "Code",
+          "name": "Name",
+          "revision": "Revision",
+          "grade": "Grade",
+          "layer": "Layer",
+          "max_shots": "Life limit (shots)",
+          "warn_ratio": "Warning ratio",
+          "count_basis": "Count source",
+          "storage_location": "Storage location"
+        },
+        "tip": {
+          "code": "Unique reticle code; cannot be changed after creation",
+          "name": "Display name",
+          "revision": "Reticle revision",
+          "grade": "Reticle grade (e.g. binary, PSM)",
+          "layer": "Process layer it applies to",
+          "max_shots": "Track-in is blocked once the shot count reaches this value; leave empty for no limit",
+          "warn_ratio": "Yellow warning at limit × ratio; empty means 0.9",
+          "count_basis": "Accumulated at track-out or reported by EAP",
+          "storage_location": "Where it is stored when not mounted"
+        }
+      },
+      "deleteTip": "Delete the reticle; not allowed once it has history, scrap it instead",
+      "statusFilterTip": "Filter by reticle status",
+      "colTip": {
+        "code": "Reticle code",
+        "status": "Current status",
+        "layer": "Applicable layer",
+        "shots": "Shots used / life limit; yellow = warning, red = limit reached",
+        "equipment": "Equipment it is mounted on",
+        "location": "Storage location"
       }
     },
     "marking": {

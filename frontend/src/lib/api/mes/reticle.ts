@@ -262,7 +262,25 @@ interface Api {
   ) => Promise<ReticleActionOut>
   /** 删除（D72：有履历 → 409 referenced；履历表外键 RESTRICT）。 */
   remove: (id: string) => Promise<void>
+  /** 主数据新建 / 修改（P3-F3，通用 CRUD /mes/reticle；状态与计数只读，走动作接口）。 */
+  save: (id: string | null, body: ReticleMasterInput) => Promise<Reticle>
 }
+
+/** 主数据可写字段（P3-F3）。数值按 D76 发定点字符串。 */
+export const RETICLE_MASTER_FIELDS = [
+  'code',
+  'name',
+  'revision',
+  'grade',
+  'layer',
+  'max_shots',
+  'warn_ratio',
+  'count_basis',
+  'storage_location',
+] as const
+export type ReticleMasterInput = Partial<
+  Pick<Reticle, (typeof RETICLE_MASTER_FIELDS)[number]>
+>
 
 /**
  * 动作响应（B4 335db8a）：多数动作 `{data: 光罩}`；usage / inspection 为
@@ -333,6 +351,11 @@ export const httpReticleApi: Api = {
       )
       .then((r) => r.data),
   remove: (id) => http.delete(`/mes/reticle/${id}`).then(() => undefined),
+  save: (id, body) =>
+    (id
+      ? http.patch<Reticle>(`/mes/reticle/${id}`, body)
+      : http.post<Reticle>('/mes/reticle', body)
+    ).then((r) => r.data),
 }
 
 /* ---------------- mock ---------------- */
@@ -1054,6 +1077,36 @@ export const mockReticleApi: Api = {
   },
   act: (id, action, input, key) => later(() => mockAct(id, action, input, key)),
   remove: (id) => later(() => mockRemove(id)),
+  save: (id, body) => later(() => mockSave(id, body)),
+}
+
+function mockSave(id: string | null, body: ReticleMasterInput): Reticle {
+  if (!id) {
+    if (!body.code?.trim())
+      throw apiError(422, [
+        { loc: ['body', 'code'], type: 'missing', msg: 'code: field required' },
+      ])
+    if (store.r.some((x) => x.code === body.code))
+      throw apiError(409, { code: 'duplicate', message: 'code already exists' })
+    const r = base({
+      id: `r-${store.r.length + 1}-${Date.now()}`,
+      code: body.code,
+      ...body,
+      shot_count: '0',
+      storage_location: body.storage_location ?? null,
+    })
+    store.r.push(r)
+    store.hist[r.id] = {
+      status_log: [],
+      usage: [],
+      mounts: [],
+      inspections: [],
+    }
+    return r
+  }
+  const x = find(id)
+  Object.assign(x, body)
+  return x
 }
 
 /** 是否使用 mock（后端 B4 就绪后设 VITE_RETICLE_MOCK=0）。 */
