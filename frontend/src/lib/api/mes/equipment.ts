@@ -48,6 +48,10 @@ export interface BoardRow extends E10Unit {
   pm_due: boolean
   pm_warn: boolean
   down: boolean
+  /** PM 后 Qual 状态（B6）：`ready` / `wait_qual`，与 E10 状态无关（D33） */
+  qual_state: string
+  /** 打开的 Qual 任务 id（待 Qual 时有值） */
+  qual_task_id: string | null
 }
 
 /** 设备接口客户端。 */

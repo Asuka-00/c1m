@@ -662,7 +662,10 @@
       "chambers": "チャンバー",
       "futureHold": "予約ホールド工程に到着、ロットをホールド：{{reason}}",
       "qtimeHandled": "Q-Time 超過を処置しました",
-      "qtimeStageSkipped": "今回の {{stage}} は実行されていません。ロット状態を確認してください"
+      "qtimeStageSkipped": "今回の {{stage}} は実行されていません。ロット状態を確認してください",
+      "checkMsg": {
+        "eqp_wait_qual": "設備 {{equipment}} は PM 後の Qual 待ちです。Qual 合格まで着工できません（強制解除不可）"
+      }
     },
     "trace": {
       "hint": "ロットとユニットの全操作履歴。",
@@ -821,7 +824,32 @@
       "workcenter": "ワークセンター",
       "chambers": "チャンバー",
       "chamberCount": "チャンバー {{n}}",
-      "chambersOf": "{{code}} のチャンバー"
+      "chambersOf": "{{code}} のチャンバー",
+      "qual": {
+        "col": "Qual",
+        "all": "すべての Qual 状態",
+        "wait": "Qual 待ち",
+        "waitSub": "Qual 待ち：{{unit}}",
+        "ready": "解除済み",
+        "record": "Qual 登録",
+        "desc": "合格で生産可能に戻り、不合格なら再テストを作成します。",
+        "descSub": "サブユニット {{unit}}：合格で解除、不合格なら再テストを作成。",
+        "requestedAt": "作成日時",
+        "pass": "合格",
+        "fail": "不合格",
+        "passed": "Qual を合格として登録しました",
+        "failed": "Qual 不合格、再テストタスクを作成しました",
+        "noPermission": "Qual を登録する権限がありません",
+        "noTask": "未登録の Qual タスクがありません。更新してください",
+        "err": {
+          "forbidden": "権限がありません",
+          "notFound": "Qual タスクが見つかりません。ボードを更新してください",
+          "closed": "この Qual タスクは登録済みです。ボードを更新してください",
+          "closedAs": "この Qual タスクは登録済みです（{{status}}）。ボードを更新してください",
+          "conflict": "競合が発生しました。更新して再試行してください",
+          "invalid": "入力内容が正しくありません"
+        }
+      }
     },
     "traceq": {
       "hint": "ロット・ウェーハ・設備・資材ロットで上流・下流を追跡します。",

@@ -662,7 +662,10 @@
       "chambers": "腔体",
       "futureHold": "到达预约 Hold 工步，批次已 Hold：{{reason}}",
       "qtimeHandled": "Q-Time 超时已处置",
-      "qtimeStageSkipped": "本次 {{stage}} 未执行，请刷新后查看批次状态"
+      "qtimeStageSkipped": "本次 {{stage}} 未执行，请刷新后查看批次状态",
+      "checkMsg": {
+        "eqp_wait_qual": "设备 {{equipment}} PM 后待 Qual，登记 Qual 通过前不能开工（不可强制放行）"
+      }
     },
     "trace": {
       "hint": "查看批次及其单元的全部操作记录。",
@@ -821,7 +824,32 @@
       "workcenter": "工作中心",
       "chambers": "腔体",
       "chamberCount": "{{n}} 个腔体",
-      "chambersOf": "{{code}} 腔体"
+      "chambersOf": "{{code}} 腔体",
+      "qual": {
+        "col": "Qual",
+        "all": "全部 Qual 状态",
+        "wait": "待 Qual",
+        "waitSub": "待 Qual：{{unit}}",
+        "ready": "已放行",
+        "record": "登记 Qual",
+        "desc": "通过后机台恢复可生产；不通过会生成复测任务。",
+        "descSub": "子单元 {{unit}}：通过后恢复可生产；不通过会生成复测任务。",
+        "requestedAt": "生成时间",
+        "pass": "通过",
+        "fail": "不通过",
+        "passed": "Qual 已登记通过",
+        "failed": "Qual 不通过，已生成复测任务",
+        "noPermission": "没有登记 Qual 的权限",
+        "noTask": "没有待登记的 Qual 任务，请刷新",
+        "err": {
+          "forbidden": "没有权限",
+          "notFound": "Qual 任务不存在，请刷新看板",
+          "closed": "该 Qual 任务已登记，请刷新看板",
+          "closedAs": "该 Qual 任务已登记（{{status}}），请刷新看板",
+          "conflict": "操作冲突，请刷新后重试",
+          "invalid": "提交内容不正确"
+        }
+      }
     },
     "traceq": {
       "hint": "按批次、晶圆、设备或物料批追溯上下游。",

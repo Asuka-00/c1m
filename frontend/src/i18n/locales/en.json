@@ -662,7 +662,10 @@
       "chambers": "Chambers",
       "futureHold": "Future hold at this step, lot held: {{reason}}",
       "qtimeHandled": "Q-Time exceeded and handled",
-      "qtimeStageSkipped": "{{stage}} was not performed; check the lot status"
+      "qtimeStageSkipped": "{{stage}} was not performed; check the lot status",
+      "checkMsg": {
+        "eqp_wait_qual": "Equipment {{equipment}} is waiting for Qual after PM; it cannot start production until Qual passes (cannot be overridden)"
+      }
     },
     "trace": {
       "hint": "All operations on the lot and its units.",
@@ -821,7 +824,32 @@
       "workcenter": "Work center",
       "chambers": "Chambers",
       "chamberCount": "{{n}} chambers",
-      "chambersOf": "{{code}} chambers"
+      "chambersOf": "{{code}} chambers",
+      "qual": {
+        "col": "Qual",
+        "all": "All Qual states",
+        "wait": "Waiting Qual",
+        "waitSub": "Waiting Qual: {{unit}}",
+        "ready": "Released",
+        "record": "Record Qual",
+        "desc": "Pass releases the equipment; fail creates a retest task.",
+        "descSub": "Sub-unit {{unit}}: pass releases it; fail creates a retest task.",
+        "requestedAt": "Requested at",
+        "pass": "Pass",
+        "fail": "Fail",
+        "passed": "Qual recorded as passed",
+        "failed": "Qual failed; a retest task was created",
+        "noPermission": "You do not have permission to record Qual",
+        "noTask": "No open Qual task; please refresh",
+        "err": {
+          "forbidden": "You do not have permission",
+          "notFound": "Qual task not found; please refresh the board",
+          "closed": "This Qual task has already been recorded; please refresh the board",
+          "closedAs": "This Qual task has already been recorded ({{status}}); please refresh the board",
+          "conflict": "Conflict; please refresh and try again",
+          "invalid": "The submitted data is invalid"
+        }
+      }
     },
     "traceq": {
       "hint": "Trace upstream and downstream by lot, wafer, equipment or material lot.",

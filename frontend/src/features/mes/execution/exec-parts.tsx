@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { enumLabel } from '@/features/mes/common/labels'
+import { checkMessage } from './check-message'
 
 const NONE = '__none'
 
@@ -213,7 +214,7 @@ export function CheckPanel({
                 )}
               </div>
               <div className='break-words text-muted-foreground'>
-                {r.message}
+                {checkMessage(r)}
               </div>
             </div>
           </li>

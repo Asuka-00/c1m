@@ -30,6 +30,8 @@ export const MES_PERM = {
   equipmentE10: 'mes.equipment:e10',
   /** 设备 PM */
   equipmentPm: 'mes.equipment:pm',
+  /** 登记 PM 后 Qual 结果（B6 / F5） */
+  equipmentQual: 'mes.equipment:qual',
   /** 机台上料 / 卸料（P1 / B3） */
   equipmentMount: 'mes.equipment:mount',
   /** 坐标图导入（P1 / B4） */

@@ -23,6 +23,8 @@ export interface CheckResult {
   applicable: boolean
   message: string
   overridable: boolean
+  /** 附加数据（如 eqp_wait_qual 的 `{equipment, task_id}`） */
+  data?: Record<string, unknown> | null
 }
 /** 简单选项（id + 标签）。 */
 export interface Opt {
