@@ -496,7 +496,6 @@
         "lot_busy": "批次正被其他操作占用，请稍后重试",
         "batch_blocked": "批量作业被检查规则阻断，请查看各批次的检查结果",
         "idempotency_in_progress": "相同的请求正在处理中，请稍后刷新查看结果",
-        "idempotency_key_mismatch": "重复提交的内容与首次请求不一致，请刷新后重新操作",
         "idempotency_key_reused": "该请求标识已用于其他操作，请刷新后重试",
         "merge_source_invalid": "合批来源批次有重复，或包含了目标批次",
         "rework_route_missing": "当前工步未配置返工路线，无法返工",
