@@ -140,7 +140,6 @@ export const MES_ERROR_CODES = [
   'hold_not_found',
   'qtime_action_invalid',
   'idempotency_in_progress',
-  'idempotency_key_mismatch',
   'idempotency_key_reused',
   'too_many_decimals',
   'read_only_field',
