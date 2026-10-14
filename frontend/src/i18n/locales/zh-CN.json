@@ -1450,6 +1450,83 @@
       "transformTo": "转换为：{{list}}",
       "transformFrom": "来源：{{list}}",
       "dieQty": "die 数 {{n}}"
+    },
+    "trf": {
+      "title": "单位转换",
+      "desc": "先预览确认良品数和分配，再提交。转换后不能撤销。",
+      "type": "转换类型",
+      "types": {
+        "dicing": "切割",
+        "die_attach": "装片",
+        "singulation": "分离"
+      },
+      "kinds": {
+        "die": "颗（die）",
+        "strip": "条（strip）",
+        "package": "封装体",
+        "unit": "单元"
+      },
+      "wafers": "输入晶圆",
+      "wafer": "晶圆",
+      "source": "良品来源",
+      "good": "良品数",
+      "fail": "不良数",
+      "excluded": "排除数",
+      "total": "总数",
+      "allocated": "已分配",
+      "src": {
+        "map": "坐标图 v{{v}}（只读）",
+        "noMap": "无坐标图：人工录入",
+        "unknown": "以预览为准",
+        "mapShort": "坐标图 v{{v}}",
+        "manual": "人工录入",
+        "gross": "产品 gross die"
+      },
+      "grossHint": "空=gross die",
+      "output": "输出 {{n}}",
+      "product": "子批产品",
+      "route": "子批流程",
+      "kind": "追踪单位",
+      "stripQty": "条数",
+      "allocOf": "输出 {{n}} 从 {{wafer}} 分配的颗数",
+      "allGood": "全部良品",
+      "addOutput": "添加输出",
+      "preview": "预览",
+      "commit": "确认转换",
+      "previewTitle": "预览结果",
+      "stale": "输入已修改，请重新预览后再提交。",
+      "outLine": "输出 {{n}}：{{kind}} {{qty}}（{{dies}} 颗）",
+      "children": "已生成子批：",
+      "done": "转换完成，子批：{{list}}",
+      "warn": {
+        "gross": "{{wafer}}：没有坐标图，已按产品 gross die 计良品数"
+      },
+      "e": {
+        "noWafer": "本批没有可转换的晶圆",
+        "int": "{{wafer}}：数量必须是非负整数",
+        "reason": "人工录入良品数时必须选择原因码",
+        "product": "输出 {{n}}：请选择产品",
+        "route": "输出 {{n}}：请选择流程",
+        "strip": "输出 {{n}}：转换为条时必须填条数",
+        "alloc": "输出 {{n}}：分配颗数必须是非负整数",
+        "noDie": "输出 {{n}}：至少分配 1 颗",
+        "balance": "{{wafer}}：已分配 {{allocated}}，良品 {{good}}，数量不守恒"
+      },
+      "be": {
+        "manualWithMap": "已有坐标图，不能人工录入良品数",
+        "noGross": "没有坐标图且产品未设 gross die，请人工录入良品数并填原因",
+        "reason": "人工录入良品数必须填原因码",
+        "reasonNotFound": "原因码不存在",
+        "noWafer": "没有可转换的晶圆",
+        "strip": "转换为条时必须填条数",
+        "noDie": "每个输出至少分配 1 颗",
+        "product": "产品不存在",
+        "route": "流程不存在",
+        "notInput": "不是本次输入的晶圆",
+        "extra": "请求包含不允许的字段",
+        "mapQty": "数量不守恒：子批 {{children}} + 排除 {{excluded}} ≠ 坐标图总数 {{total}}",
+        "trfQty": "{{wafer}}：已分配 {{allocated}} ≠ 良品数 {{good}}"
+      }
     }
   },
   "notify": {

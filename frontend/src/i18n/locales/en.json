@@ -1450,6 +1450,83 @@
       "transformTo": "Converted to: {{list}}",
       "transformFrom": "From: {{list}}",
       "dieQty": "{{n}} dies"
+    },
+    "trf": {
+      "title": "Unit transform",
+      "desc": "Preview good qty and allocation, then submit. A transform can't be undone.",
+      "type": "Transform type",
+      "types": {
+        "dicing": "Dicing",
+        "die_attach": "Die attach",
+        "singulation": "Singulation"
+      },
+      "kinds": {
+        "die": "Die",
+        "strip": "Strip",
+        "package": "Package",
+        "unit": "Unit"
+      },
+      "wafers": "Input wafers",
+      "wafer": "Wafer",
+      "source": "Good qty source",
+      "good": "Good",
+      "fail": "Fail",
+      "excluded": "Excluded",
+      "total": "Total",
+      "allocated": "Allocated",
+      "src": {
+        "map": "Map v{{v}} (read-only)",
+        "noMap": "No map: enter manually",
+        "unknown": "Determined by preview",
+        "mapShort": "Map v{{v}}",
+        "manual": "Manual",
+        "gross": "Product gross die"
+      },
+      "grossHint": "blank = gross die",
+      "output": "Output {{n}}",
+      "product": "Child product",
+      "route": "Child route",
+      "kind": "Track unit",
+      "stripQty": "Strip count",
+      "allocOf": "Dies from {{wafer}} to output {{n}}",
+      "allGood": "All good",
+      "addOutput": "Add output",
+      "preview": "Preview",
+      "commit": "Transform",
+      "previewTitle": "Preview",
+      "stale": "Inputs changed; preview again before submitting.",
+      "outLine": "Output {{n}}: {{kind}} {{qty}} ({{dies}} dies)",
+      "children": "Child lots created:",
+      "done": "Transform done, child lots: {{list}}",
+      "warn": {
+        "gross": "{{wafer}}: no substrate map; good qty uses product gross die"
+      },
+      "e": {
+        "noWafer": "This lot has no wafers to transform",
+        "int": "{{wafer}}: quantities must be non-negative integers",
+        "reason": "A reason code is required for manual good qty",
+        "product": "Output {{n}}: select a product",
+        "route": "Output {{n}}: select a route",
+        "strip": "Output {{n}}: strip count is required",
+        "alloc": "Output {{n}}: allocated dies must be non-negative integers",
+        "noDie": "Output {{n}}: allocate at least 1 die",
+        "balance": "{{wafer}}: allocated {{allocated}}, good {{good}}; quantities don't balance"
+      },
+      "be": {
+        "manualWithMap": "Has a substrate map; manual good qty not allowed",
+        "noGross": "No substrate map and the product has no gross die; enter good qty with a reason",
+        "reason": "A reason code is required for manual good qty",
+        "reasonNotFound": "Reason code not found",
+        "noWafer": "No wafers to transform",
+        "strip": "Strip count is required",
+        "noDie": "Each output needs at least 1 die",
+        "product": "Product not found",
+        "route": "Route not found",
+        "notInput": "Not an input wafer",
+        "extra": "The request contains fields that are not allowed",
+        "mapQty": "Quantities don't balance: children {{children}} + excluded {{excluded}} ≠ map total {{total}}",
+        "trfQty": "{{wafer}}: allocated {{allocated}} ≠ good {{good}}"
+      }
     }
   },
   "notify": {

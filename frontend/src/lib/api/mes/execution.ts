@@ -528,6 +528,55 @@ export interface WaferMap {
   units: WaferCell[]
 }
 
+/** 单位转换类型（B5 / F8）。 */
+export type TransformType = 'dicing' | 'die_attach' | 'singulation'
+export type TrackUnitKind = 'die' | 'strip' | 'package' | 'unit'
+/** 单位转换请求（严格载荷，未知字段 422）。 */
+export interface TransformBody {
+  transform_type: TransformType
+  input_lot_ids: string[]
+  outputs: {
+    product_id: string
+    route_id: string
+    track_unit_kind: TrackUnitKind
+    qty?: number
+    sources: { wafer_id: string; qty: number }[]
+  }[]
+  manual_good?: { wafer_id: string; good_qty: number; fail_qty?: number }[]
+  reason_id?: string
+  comment?: string
+}
+/** 转换预览：逐片晶圆良品数与分配、输出数量、提示（不写库）。 */
+export interface TransformPreview {
+  inputs: {
+    lot: string
+    wafer: string
+    wafer_id: string
+    good_source: 'map' | 'manual' | 'gross_die'
+    total_qty: number
+    good_qty: number
+    fail_qty: number
+    excluded_qty: number
+    allocated_qty: number
+    substrate_map_id: string | null
+    map_version: number | null
+  }[]
+  outputs: {
+    product_id: string
+    route_id: string
+    track_unit_kind: TrackUnitKind
+    qty: number
+    die_qty: number
+  }[]
+  warnings: { code: string; message?: string; wafer?: string }[]
+}
+/** 转换 / 按 bin 拆批提交结果。 */
+export interface TransformResult {
+  transform: MesRow
+  children: MesRow[]
+  warnings: { code: string; message?: string; wafer?: string }[]
+}
+
 export const execApi = {
   /** 良率统计与报废帕累托。 */
   yieldReport: (p: {
@@ -658,6 +707,14 @@ export const execApi = {
         failed: { id: string; error: string }[]
       }>('/mes/exec/holds/release-batch', body)
       .then((r) => r.data),
+  /** 单位转换预览（mes.exec:transform；不写库）。 */
+  transformPreview: (body: TransformBody) =>
+    http
+      .post<TransformPreview>('/mes/exec/transform/preview', body)
+      .then((r) => r.data),
+  /** 单位转换提交：母批 → converted，生成子批。 */
+  transform: (body: TransformBody) =>
+    http.post<TransformResult>('/mes/exec/transform', body).then((r) => r.data),
   /** 批次 BOM 用量（计划 / 实际 / 超量；需 mes.exec:read，不存在 404）。 */
   bomUsage: (lotId: string) =>
     http.get<BomUsage>(`/mes/exec/lots/${lotId}/bom-usage`).then((r) => r.data),

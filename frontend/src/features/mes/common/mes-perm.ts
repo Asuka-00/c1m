@@ -18,6 +18,8 @@ export const MES_PERM = {
   execSplit: 'mes.exec:split',
   /** 合批 */
   execMerge: 'mes.exec:merge',
+  /** 单位转换 / 按 bin 拆批（P1 / F8、F7） */
+  execTransform: 'mes.exec:transform',
   /** 跳站 */
   execJump: 'mes.exec:jump',
   /** 在制报废 / 补数 / 优先级 */

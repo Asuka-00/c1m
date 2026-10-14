@@ -1450,6 +1450,83 @@
       "transformTo": "変換先：{{list}}",
       "transformFrom": "変換元：{{list}}",
       "dieQty": "ダイ数 {{n}}"
+    },
+    "trf": {
+      "title": "単位変換",
+      "desc": "良品数と割当をプレビューしてから実行します。変換は取り消せません。",
+      "type": "変換種別",
+      "types": {
+        "dicing": "ダイシング",
+        "die_attach": "ダイボンド",
+        "singulation": "個片化"
+      },
+      "kinds": {
+        "die": "ダイ",
+        "strip": "ストリップ",
+        "package": "パッケージ",
+        "unit": "ユニット"
+      },
+      "wafers": "投入ウェーハ",
+      "wafer": "ウェーハ",
+      "source": "良品数の出所",
+      "good": "良品数",
+      "fail": "不良数",
+      "excluded": "除外数",
+      "total": "総数",
+      "allocated": "割当済",
+      "src": {
+        "map": "マップ v{{v}}（読み取り専用）",
+        "noMap": "マップなし：手入力",
+        "unknown": "プレビューで確定",
+        "mapShort": "マップ v{{v}}",
+        "manual": "手入力",
+        "gross": "製品 gross die"
+      },
+      "grossHint": "空欄=gross die",
+      "output": "出力 {{n}}",
+      "product": "子ロット製品",
+      "route": "子ロットルート",
+      "kind": "追跡単位",
+      "stripQty": "ストリップ数",
+      "allocOf": "出力 {{n}} への {{wafer}} からの割当ダイ数",
+      "allGood": "全良品",
+      "addOutput": "出力を追加",
+      "preview": "プレビュー",
+      "commit": "変換を実行",
+      "previewTitle": "プレビュー結果",
+      "stale": "入力が変更されました。再度プレビューしてから実行してください。",
+      "outLine": "出力 {{n}}：{{kind}} {{qty}}（{{dies}} ダイ）",
+      "children": "作成された子ロット：",
+      "done": "変換完了、子ロット：{{list}}",
+      "warn": {
+        "gross": "{{wafer}}：マップがないため製品の gross die を良品数としました"
+      },
+      "e": {
+        "noWafer": "このロットには変換できるウェーハがありません",
+        "int": "{{wafer}}：数量は 0 以上の整数で入力してください",
+        "reason": "良品数を手入力する場合は理由コードが必要です",
+        "product": "出力 {{n}}：製品を選択してください",
+        "route": "出力 {{n}}：ルートを選択してください",
+        "strip": "出力 {{n}}：ストリップ数は必須です",
+        "alloc": "出力 {{n}}：割当ダイ数は 0 以上の整数で入力してください",
+        "noDie": "出力 {{n}}：1 ダイ以上割り当ててください",
+        "balance": "{{wafer}}：割当 {{allocated}}、良品 {{good}}、数量が一致しません"
+      },
+      "be": {
+        "manualWithMap": "マップがあるため良品数は手入力できません",
+        "noGross": "マップがなく製品に gross die もありません。良品数と理由を入力してください",
+        "reason": "良品数を手入力する場合は理由コードが必要です",
+        "reasonNotFound": "理由コードが存在しません",
+        "noWafer": "変換できるウェーハがありません",
+        "strip": "ストリップ数は必須です",
+        "noDie": "各出力に 1 ダイ以上必要です",
+        "product": "製品が存在しません",
+        "route": "ルートが存在しません",
+        "notInput": "今回の投入ウェーハではありません",
+        "extra": "許可されていない項目が含まれています",
+        "mapQty": "数量不一致：子ロット {{children}} + 除外 {{excluded}} ≠ マップ総数 {{total}}",
+        "trfQty": "{{wafer}}：割当 {{allocated}} ≠ 良品数 {{good}}"
+      }
     }
   },
   "notify": {
