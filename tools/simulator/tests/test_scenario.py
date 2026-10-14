@@ -152,3 +152,19 @@ def test_b8_draft_reuses_alarm_and_track_in_steps():
     assert any(a.get("level") == "type" and a.get("value") is None and a["expect"]["status"] == 422 for a in sets)
     assert any(a.get("level") == "equipment" and a.get("value") is None and a["expect"]["status"] == 200 for a in sets)
     assert "expect_effective_track_in_action" in kinds
+    # B8 补充：ctx.alarms[] 带 sub_unit_id；多腔体整机拦截后清除放行；已清除不再拦；覆盖层 null 继承类型层
+    assert sc.run_id == "alarm-tia-03"
+    blocks = [s.args["expect"] for s in tis if s.args["expect"].get("status") == 409 and "body" in s.args["expect"]]
+    assert all(
+        v.get("sub_unit_id", "missing") != "missing" for b in blocks for k, v in b["body"].items() if ".alarms." in k
+    )
+    mc = [s for s in tis if s.args["eq"] == "EAP-MC01"]
+    assert [t.args["expect"]["status"] for t in mc] == [409, 200]
+    assert any(s.kind == "alarm_set" and s.args.get("sub_unit") == "EAP-MC01-CH1" for s in sc.steps)
+    assert any(s.kind == "expect_alarm" and s.args.get("alarm_status") == "cleared" for s in sc.steps)
+    assert any(
+        s.kind == "expect_effective_track_in_action"
+        and s.args.get("source_level") == "type"
+        and s.args["eq"] == "EAP-DA01"
+        for s in sc.steps
+    )
