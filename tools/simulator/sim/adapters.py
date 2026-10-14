@@ -124,6 +124,7 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "reticle_release": ["reticle_release"],
     "reticle_restore": ["reticle_restore"],
     "reticle_scrap": ["reticle_scrap"],
+    "reticle_replay": [],  # 重发 save_as 记下的草稿请求：同路径、同请求体、同 Idempotency-Key（或同 external_event_id）
     "reuse": [],
     "precondition": [],
 }

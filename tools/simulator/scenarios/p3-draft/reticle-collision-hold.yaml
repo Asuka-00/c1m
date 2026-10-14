@@ -24,8 +24,8 @@ steps:
       lot: FX0001
       reticle: R-SIM-02
       expect: {status: 409, code: check_blocked, body: {detail.reason: not_mounted, detail.overridable: false}}
-  # D57/D67：同 Idempotency-Key 同内容重放 → 原状态码 200、原记录，不带 duplicate 字段，不重复写事故
-  - replay: {eq: EAP-LT01, seq: 2, expect: {status: 200, absent: [duplicate], body: {data.id: $inc1}}}
+  # D57/D67（G-3）：带同一个 Idempotency-Key、同一请求体再 POST 一次 /incident → 原状态码 200、原记录，不带 duplicate 字段，不重复写事故
+  - reticle_replay: {of: inc1, expect: {status: 200, absent: [duplicate], body: {data.id: $inc1}}}
   # D30 + D65 补充 4：带 source → 422 unknown_field；hold_reason 只读（OQ-20 决定 D60 补充）
   - reticle_incident: {eq: EAP-LT01, reticle: R-SIM-02, kind: collision, extra: {source: eap},
                        expect: {status: 422, code: unknown_field, loc: [body, source]}}

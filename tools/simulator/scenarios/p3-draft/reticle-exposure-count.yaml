@@ -19,13 +19,13 @@ steps:
   - track_out: {eq: EAP-LT01, lot: FX0001}
   - expect_reticle_history: {reticle: R-SIM-01, latest: {kind: track_out, estimated: true, counted: true, delta: "125"}}
   # EAP 实际值 130：改写最早一条未修正估算记录（estimated=false），shot_count += 5，不新增记录
-  - reticle_usage: {eq: EAP-LT01, reticle: R-SIM-01, lot: FX0001, shots: "130",
+  - reticle_usage: {eq: EAP-LT01, reticle: R-SIM-01, lot: FX0001, shots: "130", save_as: ev1,
                     expect: {status: 200, body: {result.data.estimated: false, result.data.delta: "130", duplicate: false}}}
   - expect_reticle: {reticle: R-SIM-01, fields: {shot_count: "130"}}
-  # D57（B11）：同 (source, external_event_id) 同内容重放 → 原状态码 200，信封 duplicate=true，不重复加差额
-  - replay: {eq: EAP-LT01, seq: 3, expect: {status: 200, body: {duplicate: true}}}
+  # D57（B11）：同 (source, external_event_id) 同内容再发一次 /mes/eap/events → 原状态码 200，信封 duplicate=true，不重复加差额
+  - reticle_replay: {of: ev1, expect: {status: 200, body: {duplicate: true}}}
   - expect_reticle: {reticle: R-SIM-01, fields: {shot_count: "130"}}
-  - reuse: {eq: EAP-LT01, seq: 3, change: {shots: "140"}}
+  - reticle_replay: {of: ev1, change: {shots: "140"}, expect: {status: 422, code: idempotency_key_reused}}
   # 没有可修正的估算记录 → 另记一条 kind=report、source=eap
   - reticle_usage: {eq: EAP-LT01, reticle: R-SIM-01, lot: FX0002, shots: "10",
                     expect: {status: 200, body: {result.data.kind: report, result.data.estimated: false}}}
@@ -41,8 +41,9 @@ steps:
   - expect_reticle: {reticle: R-SIM-01, fields: {shot_count: "140"}}
   - reticle_adjust: {reticle: R-SIM-01, delta: "-5", reason: RC-ADJ, note: sim, save_as: adj1,
                      expect: {status: 200, absent: [duplicate], body: {data.kind: adjust, data.source: manual, data.count_after: "135"}}}
-  # D57（D68 补充）：同 Idempotency-Key 同内容重放 → 原状态码返回原记录，不带 duplicate，不重复扣
-  - replay: {eq: EAP-LT01, seq: 6, expect: {status: 200, absent: [duplicate], body: {data.id: $adj1}}}
+  # D57（D68 补充，G-3）：带同一个 Idempotency-Key、同一请求体再 POST 一次 /mes/reticle/{id}/usage
+  # → 原状态码返回原记录，不带 duplicate，不重复扣
+  - reticle_replay: {of: adj1, expect: {status: 200, absent: [duplicate], body: {data.id: $adj1}}}
   - expect_reticle: {reticle: R-SIM-01, fields: {shot_count: "135"}}
   # +75 → 210 ≥ max_shots=200：kind=report，转 pending_maintenance，发 reticle.life_reached
   - reticle_adjust: {reticle: R-SIM-01, delta: "75", expect: {status: 200, body: {data.kind: report, data.count_after: "210"}}}

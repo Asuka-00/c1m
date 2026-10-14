@@ -109,6 +109,8 @@ def parse(data: dict, path: str | None = None) -> Scenario:
                 raise ScenarioError(f"第 {i} 步 expect_body_422（{args['endpoint']}）需要 lot")
         elif k == "expect_body_422" and not args.get("to"):
             raise ScenarioError(f"第 {i} 步 expect_body_422 需要 to（填设备当前状态，避免后端不拦时改状态）")
+        if k == "reticle_replay" and not args.get("of"):
+            raise ScenarioError(f"第 {i} 步 reticle_replay 需要 of（前面草稿步骤的 save_as 名）")
         if k == "expect_query_422" and not args.get("path"):
             raise ScenarioError(f"第 {i} 步 expect_query_422 需要 path")
         if k == "expect_alarm_list" and not args.get("eq"):
@@ -118,6 +120,10 @@ def parse(data: dict, path: str | None = None) -> Scenario:
         if k == "expect_alarm" and not args.get("alarm"):
             raise ScenarioError(f"第 {i} 步 expect_alarm 缺少 alarm")
         steps.append(Step(k, args, i))
+    saved = {st.args.get("save_as") for st in steps if st.args.get("save_as")}
+    for st in steps:
+        if st.kind == "reticle_replay" and st.args["of"] not in saved:
+            raise ScenarioError(f"第 {st.index} 步 reticle_replay 引用的 {st.args['of']} 没有 save_as")
     return Scenario(
         run_id=run_id,
         name=str(data.get("name") or run_id),

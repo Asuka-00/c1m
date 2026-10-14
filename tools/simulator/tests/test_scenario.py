@@ -108,3 +108,22 @@ def test_p3_draft_steps_not_runnable_even_if_paths_exist():
     c.paths |= {"/mes/reticle/{reticle_id}/incident"}
     rep = Runner(c).run(sc)
     assert rep["status"] == FAILED and "草稿步骤" in rep["reason"]
+
+
+def test_reticle_replay_requires_saved_step():
+    import pytest
+
+    from sim.scenario import ScenarioError, parse
+
+    ok = {
+        "run_id": "r",
+        "steps": [
+            {"reticle_adjust": {"reticle": "R1", "delta": "-5", "reason": "RC", "save_as": "a1"}},
+            {"reticle_replay": {"of": "a1"}},
+        ],
+    }
+    assert parse(ok).steps[1].kind == "reticle_replay"
+    with pytest.raises(ScenarioError):
+        parse({"run_id": "r", "steps": [{"reticle_replay": {"of": "nope"}}]})
+    with pytest.raises(ScenarioError):
+        parse({"run_id": "r", "steps": [{"reticle_replay": {}}]})
