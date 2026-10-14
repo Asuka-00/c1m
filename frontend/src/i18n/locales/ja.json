@@ -710,6 +710,8 @@
       "splitFrom": "分割元",
       "mergedInto": "統合先",
       "mergedFrom": "統合元",
+      "transformTo": "変換先",
+      "transformFrom": "変換元",
       "splitQtyHint": "子ロットごとの数量を入力（残りは親ロット）。",
       "splitUnitHint": "ウェーハ・ユニットを子ロットに割り当てます（未割当は親に残ります）。",
       "childCount": "子ロット数",

@@ -38,6 +38,8 @@ export interface TrfWafer {
     excluded_qty: number
     map_version: number
   } | null
+  /** 产品 gross die（没有坐标图且不人工录入时的良品数；未知为 undefined） */
+  gross?: number
 }
 
 export interface TrfOutput {
@@ -92,12 +94,13 @@ export function intOf(s: string | undefined): number | null {
 export const isManual = (w: TrfWafer, d: TrfDraft) =>
   w.map === null && intOf(d.manual[w.id]?.good) !== null
 
-/** 晶圆良品数：坐标图 → 图良品数；人工 → 录入值；其他（gross die / 未知）→ null。 */
+/** 晶圆良品数：坐标图 → 图良品数；人工 → 录入值；留空 → 产品 gross die；未知 → null。 */
 export function goodOf(w: TrfWafer, d: TrfDraft): number | null {
   if (w.map) return w.map.good_qty
   if (w.map === null) {
     const g = intOf(d.manual[w.id]?.good)
-    return g !== null && !Number.isNaN(g) ? g : null
+    if (g === null) return w.gross ?? null
+    return Number.isNaN(g) ? null : g
   }
   return null
 }
@@ -146,7 +149,9 @@ export function draftErrors(wafers: TrfWafer[], d: TrfDraft): string[] {
       out.push(t('mes.trf.e.strip', { n }))
     if (Object.values(o.alloc).some((v) => Number.isNaN(intOf(v))))
       out.push(t('mes.trf.e.alloc', { n }))
-    if (wafers.reduce((s, w) => s + allocOf(o, w, d), 0) < 1)
+    // 良品数未知（如留空且查不到 gross die）时不拦，交给后端预览判定。
+    const known = wafers.every((w) => goodOf(w, d) !== null)
+    if (known && wafers.reduce((s, w) => s + allocOf(o, w, d), 0) < 1)
       out.push(t('mes.trf.e.noDie', { n }))
   })
   for (const b of balance(wafers, d))

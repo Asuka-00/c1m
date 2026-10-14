@@ -3,6 +3,7 @@ import i18n, { t } from '@/i18n'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
 import { userEvent } from 'vitest/browser'
+import { mesApi } from '@/lib/api/mes/common'
 import { execApi, type TransformPreview } from '@/lib/api/mes/execution'
 import { mapApi, type SubstrateMapDetail } from '@/lib/api/mes/map'
 import { MES_PERM } from '@/features/mes/common/mes-perm'
@@ -88,6 +89,20 @@ describe('F8 单位转换：纯函数', () => {
     const g = transformBody('L1', WAFERS, draft())
     expect(g.manual_good).toBeUndefined()
     expect(g.outputs[0].sources).toEqual([{ wafer_id: 'U1', qty: 30 }])
+  })
+
+  it('FE-F8-1 无坐标图留空：不拦“至少分配 1 颗”，有 gross die 时默认全分', () => {
+    const only: TrfWafer[] = [{ id: 'U2', code: 'FX1074-W1', map: null }]
+    // gross die 未知：本地不拦，交给后端预览判定
+    expect(draftErrors(only, draft())).toEqual([])
+    const g: TrfWafer[] = [{ ...only[0], gross: 25 }]
+    expect(draftErrors(g, draft())).toEqual([])
+    const b = transformBody('L1', g, draft())
+    expect(b.manual_good).toBeUndefined()
+    expect(b.outputs[0].sources).toEqual([{ wafer_id: 'U2', qty: 25 }])
+    // 多输出都留空时 gross die 已知，仍提示未分配
+    const two = draft({ outputs: [out, out] })
+    expect(draftErrors(g, two)).toContain(t('mes.trf.e.noDie', { n: 1 }))
   })
 
   it('人工良品不带原因码、分配不守恒、条数缺失都在本地拦下', () => {
@@ -264,6 +279,50 @@ describe('F8 单位转换对话框', () => {
     await s.getByTestId('trf-commit').click()
     await expect.element(s.getByTestId('trf-done')).toHaveTextContent('LOT1-T1')
     expect(cm).toHaveBeenCalledTimes(1)
+  })
+
+  it('无坐标图留空按产品 gross die 分配可预览；提交后先显示子批，关闭时才刷新', async () => {
+    vi.spyOn(mesApi, 'get').mockResolvedValue({ id: 'P0', gross_die: 25 })
+    const pv = vi.spyOn(execApi, 'transformPreview').mockResolvedValue(PREVIEW)
+    vi.spyOn(execApi, 'transform').mockResolvedValue({
+      transform: { id: 'T1' },
+      children: [{ id: 'C1', code: 'LOT1-T1', qty: 55 }],
+      warnings: [],
+    })
+    mockMaps()
+    const qc = makeQc(Object.values(MES_PERM))
+    const inv = vi.spyOn(qc, 'invalidateQueries')
+    const onOpenChange = vi.fn()
+    const cx = waferCtx()
+    ;(cx.lot as Record<string, unknown>).product_id = 'P0'
+    const s = await render(
+      <Providers qc={qc}>
+        <TransformDialog
+          cx={cx}
+          open
+          onOpenChange={onOpenChange}
+          initial={{ outputs: [out] }}
+        />
+      </Providers>
+    )
+    await expect.poll(() => btn('trf-preview')?.disabled).toBe(false)
+    await s.getByTestId('trf-preview').click()
+    await expect.element(s.getByTestId('trf-preview-result')).toBeVisible()
+    expect(pv.mock.lastCall![0].manual_good).toBeUndefined()
+    expect(pv.mock.lastCall![0].outputs[0].sources).toEqual([
+      { wafer_id: 'U1', qty: 30 },
+      { wafer_id: 'U2', qty: 25 },
+    ])
+    await s.getByTestId('trf-commit').click()
+    await expect.element(s.getByTestId('trf-done')).toHaveTextContent('LOT1-T1')
+    expect(inv).not.toHaveBeenCalled()
+    expect(onOpenChange).not.toHaveBeenCalled()
+    await s
+      .getByRole('button', { name: t('common.close') })
+      .first()
+      .click()
+    expect(inv).toHaveBeenCalledWith({ queryKey: ['mes'] })
+    expect(onOpenChange).toHaveBeenCalledWith(false)
   })
 
   it('预览 422 守恒错误在对话框内显示，不能提交', async () => {

@@ -710,6 +710,8 @@
       "splitFrom": "split from",
       "mergedInto": "merged into",
       "mergedFrom": "merged from",
+      "transformTo": "Converted to",
+      "transformFrom": "Converted from",
       "splitQtyHint": "Enter the quantity for each child lot; the parent keeps the rest.",
       "splitUnitHint": "Assign wafers / units to child lots; the rest stay in the parent.",
       "childCount": "Child lots",
