@@ -1188,8 +1188,6 @@
         "unmount_reason": "取外し理由",
         "shots_at_mount": "装着時ショット",
         "shots_at_unmount": "取外し時ショット",
-        "event_type": "イベント",
-        "mount_log": "装着記録",
         "comment": "コメント",
         "source": "ソース",
         "external_event_id": "外部イベント ID",
@@ -2030,16 +2028,6 @@
         "hold": "ホールド",
         "repair": "修理",
         "scrap": "廃棄"
-      },
-      "reticle_source": {
-        "manual": "手動",
-        "eap": "EAP",
-        "simulator": "シミュレータ",
-        "system": "システム"
-      },
-      "reticle_mount_event": {
-        "mount": "装着",
-        "unmount": "取外し"
       },
       "reticle_unmount_reason": {
         "manual": "手動",

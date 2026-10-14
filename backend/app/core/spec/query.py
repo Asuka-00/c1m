@@ -1,5 +1,6 @@
 """通用租户范围查询：列表 / 筛选 / 搜索 / 排序、单行、全部行、树。"""
 
+import re
 import uuid
 from datetime import date, datetime, timedelta
 from typing import Any
@@ -14,6 +15,8 @@ from app.core.spec.engine import (
 )
 from app.core.spec.errors import err_422, query_422
 from app.core.spec.serialize import coerce, serialize
+
+_DATE_RE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 
 
 # ---------------- queries ----------------
@@ -113,6 +116,8 @@ def _range(
       → 422 ``timezone_required``（D77 补充一）。
     - 同一字段 ``_from`` 晚于 ``_to`` → 422 ``value_error``，``ctx.reason=range_inverted``
       （由 :func:`apply_filters` 在两端都解析后判断）。
+    - date 取值必须严格为 ``YYYY-MM-DD``，带时间等其它格式 → 422 ``value_error``，
+      ``ctx.reason=pattern``，loc ``["query", 字段名]``（D77 补充二）。
 
     其它名称忽略。
     """
@@ -123,9 +128,17 @@ def _range(
     col = base if f is None else f.column
     if kind not in ("date", "datetime") or col not in t.c:
         return stmt
+    if kind == "date" and not _DATE_RE.fullmatch(raw):
+        raise err_422(
+            ["query", name],
+            f"{name}: expected YYYY-MM-DD",
+            "value_error",
+            {"reason": "pattern"},
+            input=raw,
+        )
     try:
         v: Any = (
-            date.fromisoformat(raw[:10])
+            date.fromisoformat(raw)
             if kind == "date"
             else datetime.fromisoformat(raw.replace("Z", "+00:00"))
         )

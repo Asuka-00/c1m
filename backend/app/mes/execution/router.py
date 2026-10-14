@@ -310,7 +310,10 @@ def _window(
     start_d = date_from or end_d - timedelta(days=days - 1)
     if start_d > end_d:
         raise err_422(
-            ["query", "date_from"], "date_from after date_to", "date_range_invalid"
+            ["query", "date_from"],
+            "date_from after date_to",
+            "value_error",
+            {"reason": "range_inverted"},
         )
     if (end_d - start_d).days > 366:
         raise err_422(

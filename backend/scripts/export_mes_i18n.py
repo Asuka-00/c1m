@@ -9,16 +9,37 @@ files are stale (also enforced by tests/mes/test_i18n_bundle.py).
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 from app.mes.common.meta import LANGS, i18n_bundle
 from app.platform.rbac.labels import labels_bundle
 
 OUT = Path(__file__).resolve().parents[2] / "frontend/src/i18n/locales/mes"
 
+# 以前端仓库为准的键（D80 新增；后端仓库内的副本不写入，避免与前端仓库冲突）
+FRONTEND_OWNED: tuple[tuple[str, ...], ...] = (
+    ("mes", "enum", "reticle_source"),
+    ("mes", "enum", "reticle_mount_event"),
+    ("mes", "field", "reticle_mount_log", "event_type"),
+    ("mes", "field", "reticle_mount_log", "mount_log"),
+)
+
+
+def _drop(bundle: dict[str, Any], path: tuple[str, ...]) -> None:
+    node: Any = bundle
+    for k in path[:-1]:
+        node = node.get(k) if isinstance(node, dict) else None
+        if node is None:
+            return
+    if isinstance(node, dict):
+        node.pop(path[-1], None)
+
 
 def render(lang: str) -> str:
     """MES 标签 + 内置权限 / 角色显示名称（permName.* / roleName.*）。"""
     bundle = {**i18n_bundle(lang), **labels_bundle(lang)}
+    for path in FRONTEND_OWNED:
+        _drop(bundle, path)
     return json.dumps(bundle, ensure_ascii=False, indent=2) + "\n"
 
 

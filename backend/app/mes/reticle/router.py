@@ -18,7 +18,8 @@ from decimal import Decimal
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Header, Query
-from pydantic import Field, field_validator
+from fastapi.routing import APIRoute
+from pydantic import BaseModel, Field, field_validator
 from pydantic_core import PydanticCustomError
 from sqlmodel import Session
 
@@ -137,7 +138,25 @@ def _write(
     )
 
 
-Key = Annotated[str | None, Header(alias=idem.HEADER)]
+# 运行时可空：缺 key 的 422 由 perm_key_body 在权限之后给出（D81 顺序）；
+# openapi 里由文件末尾的 _require_key_in_openapi 标为 required。
+Key = Annotated[str | None, Header(alias=idem.HEADER, include_in_schema=False)]
+
+KEY_PARAM: dict[str, Any] = {
+    "name": idem.HEADER,
+    "in": "header",
+    "required": True,
+    "schema": {"type": "string", "minLength": 1, "title": idem.HEADER},
+    "description": "D57 / D80: required; same key + same body replays the first response.",
+}
+
+
+class UnmountOut(BaseModel):
+    """unmount 响应：上机行（已回填下机信息）+ 下机事件行；duplicate 仅带外部事件号时出现。"""
+
+    data: dict[str, Any]
+    unmount_event: dict[str, Any] | None
+    duplicate: bool | None = None
 
 
 def _dump(b: Any) -> dict[str, Any] | None:
@@ -304,7 +323,9 @@ def mount(
     )
 
 
-@router.post("/{rid}/unmount")
+@router.post(
+    "/{rid}/unmount", response_model=UnmountOut, response_model_exclude_unset=True
+)
 def unmount(
     session: SessionDep,
     ctx: CurrentTenant,
@@ -391,6 +412,24 @@ def inspection(
     )
 
 
+WRITE_PATHS = (
+    "hold", "release", "restore", "life-reset", "scrap", "mount", "unmount",
+    "usage", "incident", "inspection",
+    *(a.replace("_", "-") for a in svc.FLOW),
+)  # fmt: skip
+
+
+def _require_key_in_openapi() -> None:
+    """14 个写接口在 openapi 中声明必填 Idempotency-Key 头（include_router 前执行）。"""
+    for r in router.routes:
+        if (
+            isinstance(r, APIRoute)
+            and "POST" in (r.methods or set())
+            and r.path.rsplit("/", 1)[-1] in WRITE_PATHS
+        ):
+            r.openapi_extra = {"parameters": [KEY_PARAM]}
+
+
 @router.get("/{rid}/history")
 def history(
     session: SessionDep,
@@ -402,3 +441,6 @@ def history(
     """Merged history (mounts, usage, inspections, incidents, status), newest first."""
     need(ctx, READ)
     return svc.history(session, ctx.id, rid, (page - 1) * page_size, page_size)
+
+
+_require_key_in_openapi()

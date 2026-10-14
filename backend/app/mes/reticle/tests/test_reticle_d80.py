@@ -484,9 +484,11 @@ def test_incident_before_mounted_at_rolls_back(
         {"kind": "drop", "occurred_at": _z(m_at - timedelta(seconds=1))},
         {KEY: "i"},
     )
-    assert (
-        res.status_code == 409 and res.json()["detail"]["code"] == "time_out_of_order"
-    )
+    assert res.status_code == 409, res.text
+    d = res.json()["detail"]
+    assert d["code"] == "time_out_of_order" and d["field"] == "occurred_at"
+    assert "earlier than mounted_at" in d["message"]  # 专门分支，而非“最近事件”
+    assert d["latest_event_at"] == _z(m_at)
     assert r.st() == ("in_use", None)
     assert _count(r, "mes_reticle_incident") == 0
     assert _count(r, "mes_reticle_status_log") == n_log
@@ -497,3 +499,118 @@ def test_incident_before_mounted_at_rolls_back(
         )
     ] == ["mount"]
     assert "reticle.unmounted" not in r.events()
+
+
+def test_unmount_not_mounted_beats_time_out_of_order(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """未挂载的光罩下机：先 409 invalid_transition，不做 time_out_of_order 判断。"""
+    _clock(monkeypatch)
+    r = R(client, db)
+    m_at = T0 - timedelta(hours=1)
+    res = _post(
+        r, "mount", {"equipment_id": r.eq["id"], "mounted_at": _z(m_at)}, {KEY: "m"}
+    )
+    assert res.status_code == 200, res.text
+    res = _post(r, "unmount", {"unmounted_at": _z(m_at)}, {KEY: "u1"})
+    assert res.status_code == 200, res.text
+    # 已卸下且时间早于最近下机：仍是 invalid_transition
+    for i, at in enumerate((m_at - timedelta(minutes=5), m_at, T0)):
+        res = _post(r, "unmount", {"unmounted_at": _z(at)}, {KEY: f"x{i}"})
+        assert res.status_code == 409, res.text
+        assert res.json()["detail"]["code"] == "invalid_transition"
+    res = _post(r, "unmount", {}, {KEY: "x-none"})
+    assert res.status_code == 409
+    assert res.json()["detail"]["code"] == "invalid_transition"
+
+
+def test_migration_0035_down_up_keeps_unmount_rows(
+    client: TestClient, db: Session
+) -> None:
+    """QA P3-1：4 条 mount + 2 条 unmount，0035 降级再升级后行数、类型、关联都不变。"""
+    import os
+    import subprocess
+    from pathlib import Path
+
+    r = R(client, db)
+    for i in range(2):
+        r.act("mount", {"equipment_id": r.eq["id"]})
+        r.act("unmount", {"comment": f"u{i}"})
+    r.act("mount", {"equipment_id": r.eq["id"]})
+    rt2 = r.m.post("reticle", {"code": "RT2", "name": "rt2"})
+    res = client.post(
+        f"{API}/reticle/{rt2['id']}/mount",
+        headers={**r.m.h, KEY: uuid.uuid4().hex},
+        json={"equipment_id": r.eq2["id"]},
+    )
+    assert res.status_code == 200, res.text
+    ids = (r.id, rt2["id"])
+    q = text(
+        "SELECT id, event_type, mount_log_id, unmounted_at, source "
+        "FROM mes_reticle_mount_log WHERE reticle_id IN (:a, :b) ORDER BY id"
+    )
+
+    def rows() -> list[Any]:
+        with admin_engine.connect() as c:
+            return [tuple(x) for x in c.execute(q, {"a": ids[0], "b": ids[1]}).all()]
+
+    before = rows()
+    assert sorted(x[1] for x in before) == ["mount"] * 4 + ["unmount"] * 2
+    backend = Path(__file__).resolve().parents[4]
+
+    def alembic(*args: str) -> None:
+        p = subprocess.run(
+            ["alembic", *args],
+            cwd=backend,
+            env=dict(os.environ),
+            capture_output=True,
+            text=True,
+        )
+        assert p.returncode == 0, p.stderr[-2000:]
+
+    alembic("downgrade", "0032_d72_reticle_restrict")
+    try:
+        with admin_engine.connect() as c:
+            n = c.execute(
+                text(
+                    "SELECT count(*) FROM mes_reticle_mount_log "
+                    "WHERE reticle_id IN (:a, :b)"
+                ),
+                {"a": ids[0], "b": ids[1]},
+            ).scalar()
+            # 下机时间保留在上机行
+            closed = c.execute(
+                text(
+                    "SELECT count(*) FROM mes_reticle_mount_log "
+                    "WHERE reticle_id IN (:a, :b) AND unmounted_at IS NOT NULL"
+                ),
+                {"a": ids[0], "b": ids[1]},
+            ).scalar()
+        assert (n, closed) == (4, 2)
+    finally:
+        alembic("upgrade", "head")
+    assert rows() == before
+    with admin_engine.connect() as c:
+        assert (
+            c.execute(
+                text("SELECT to_regclass('alembic_stash.d80_unmount_rows')")
+            ).scalar()
+            is None
+        )
+
+
+def test_openapi_key_required_and_unmount_schema(client: TestClient) -> None:
+    """openapi：14 个写接口 Idempotency-Key 头 required；unmount 响应声明结构。"""
+    spec = client.get(f"{API.split('/mes')[0]}/openapi.json").json()
+    paths = spec["paths"]
+    for name in CASES:
+        op = paths[f"{API}/reticle/{{rid}}/{name}"]["post"]
+        keys = [p for p in op.get("parameters", []) if p["name"] == "Idempotency-Key"]
+        assert len(keys) == 1, name
+        assert keys[0]["in"] == "header" and keys[0]["required"] is True, name
+    assert len(CASES) == 14
+    ok = paths[f"{API}/reticle/{{rid}}/unmount"]["post"]["responses"]["200"]
+    ref = ok["content"]["application/json"]["schema"]["$ref"].rsplit("/", 1)[-1]
+    sch = spec["components"]["schemas"][ref]
+    assert {"data", "unmount_event", "duplicate"} <= set(sch["properties"])
+    assert set(sch["required"]) == {"data", "unmount_event"}

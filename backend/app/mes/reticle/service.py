@@ -503,6 +503,9 @@ def unmount(
                 "unmount_event": ser(s, tid, "reticle_mount_log", [row])[0],
                 "duplicate": True,
             }
+    # 未挂载（含曾下机过）：先 invalid_transition，再做 time_out_of_order
+    if open_mount(s, tid, rt["id"]) is None:
+        raise conflict("invalid_transition", f"reticle {rt['code']} is not mounted", rt)
     check_order(s, tid, rt, body.get("unmounted_at"), "unmounted_at")
     at = event_time(body.get("unmounted_at"), "unmounted_at")
     m = _close_mount(s, tid, rt, user, "manual", at, source, ext)
@@ -919,10 +922,11 @@ def incident(s: Session, tid: uuid.UUID, rid: Any, body: Row, user: Any) -> Row:
     ]
     if errs:
         raise http_422(errs)
-    check_order(s, tid, rt, body.get("occurred_at"), "occurred_at", usage=True)
     at = event_time(body.get("occurred_at"), "occurred_at")
     cur = open_mount(s, tid, rt["id"])
-    if cur and at < cur["mounted_at"]:
+    # 先判“早于本次上机”：上机本身就是最新事件之一，若先跑 check_order 这条分支永远走不到，
+    # 返回的会是笼统的“早于最近事件”。未传 occurred_at（取服务器时间）不会早于上机。
+    if body.get("occurred_at") and cur and at < cur["mounted_at"]:
         # D82 补充：顺带下机的时间早于本次上机 → 整体 409，什么都不写（事务不提交）
         raise conflict(
             "time_out_of_order",
@@ -934,6 +938,7 @@ def incident(s: Session, tid: uuid.UUID, rid: Any, body: Row, user: Any) -> Row:
             .isoformat()
             .replace("+00:00", "Z"),
         )
+    check_order(s, tid, rt, body.get("occurred_at"), "occurred_at", usage=True)
     iid = _ins(
         s,
         tid,

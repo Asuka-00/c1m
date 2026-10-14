@@ -5,6 +5,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from app.core.config import settings
 from app.testing.mes import API, Mes
 
 
@@ -287,3 +288,51 @@ def test_import_error_loc_points_to_cell(client: TestClient, db: Session) -> Non
     i = header.index("operation")
     assert e0["row"] == 2 and e0["loc"] == ["file", 2, "operation"], err
     assert e0["cell"] == f"{chr(65 + i)}2", err
+
+
+def test_date_filter_strict_pattern_d77_supp2(client: TestClient, db: Session) -> None:
+    """D77 补充二：date 筛选只收严格 YYYY-MM-DD，带时间 → value_error/pattern。"""
+    m = Mes(client, db)
+    for raw in (
+        "2026-03-10T00:00:00+08:00",
+        "2026-03-10T00:00:00",
+        "2026-03-10 00:00",
+        "2026-3-10",
+        "20260310",
+    ):
+        r = client.get(
+            m.url("equipment_capability"),
+            headers=m.h,
+            params={"qualified_until_to": raw},
+        )
+        assert r.status_code == 422, raw
+        d = r.json()["detail"][0]
+        assert d["type"] == "value_error", raw
+        assert d["ctx"] == {"reason": "pattern"}
+        assert d["loc"] == ["query", "qualified_until_to"]
+    r = client.get(
+        m.url("equipment_capability"),
+        headers=m.h,
+        params={"qualified_until_from": "2026-03-10"},
+    )
+    assert r.status_code == 200
+
+
+def test_report_window_range_inverted_d77_supp2(
+    client: TestClient, db: Session
+) -> None:
+    """D77 补充二：output/oee/yield/oee-trend 报表 from>to → range_inverted。"""
+    m = Mes(client, db)
+    for path in ("output", "oee", "yield", "oee-trend"):
+        r = client.get(
+            f"{settings.API_V1_STR}/mes/exec/reports/{path}",
+            headers=m.h,
+            params={"date_from": "2026-03-11", "date_to": "2026-03-10"},
+        )
+        assert r.status_code == 422, (path, r.text)
+        d = r.json()["detail"][0]
+        assert (d["type"], d["loc"], d["ctx"]) == (
+            "value_error",
+            ["query", "date_from"],
+            {"reason": "range_inverted"},
+        ), path
