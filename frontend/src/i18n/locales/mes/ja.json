@@ -8,6 +8,7 @@
       "check": "チェック",
       "org": "組織",
       "lot": "ロット・ウェーハ規則",
+      "map": "座標マップ・ビン",
       "wo": "作業指示",
       "process": "プロセス",
       "product": "製品・資材",
@@ -60,6 +61,11 @@
       "lot_recipe_run": "レシピ実行記録",
       "lot_genealogy": "ロット系譜",
       "material_consumption": "資材使用記録",
+      "bin_set": "ビン定義セット",
+      "bin_definition": "ビン定義",
+      "map_import": "マップインポート",
+      "substrate_map": "座標マップ",
+      "map_cell": "マップセル",
       "work_order": "作業指示",
       "bom": "部品表（BOM）",
       "bom_line": "BOM 明細",
@@ -574,6 +580,50 @@
         "external_event_id": "外部イベント ID",
         "username": "ユーザー",
         "at": "日時"
+      },
+      "bin_set": {
+        "code": "定義セット",
+        "version": "版",
+        "map_import": "インポート",
+        "description": "説明"
+      },
+      "bin_definition": {
+        "bin_set": "定義セット",
+        "bin_code": "ビンコード",
+        "bin_type": "ビン種別",
+        "description": "説明"
+      },
+      "map_import": {
+        "import_kind": "種別",
+        "source": "ソース",
+        "external_event_id": "外部イベント ID",
+        "file_name": "ファイル",
+        "row_count": "行数",
+        "imported_by": "インポート者",
+        "imported_at": "インポート日時"
+      },
+      "substrate_map": {
+        "code": "基板 ID",
+        "substrate_type": "基板種別",
+        "map_version": "版",
+        "rows": "行数",
+        "cols": "列数",
+        "origin_location": "原点",
+        "x_axis": "X 軸方向",
+        "y_axis": "Y 軸方向",
+        "bin_set": "定義セット",
+        "map_import": "インポート",
+        "total_qty": "総数",
+        "good_qty": "良品数",
+        "excluded_qty": "除外数",
+        "bin_counts": "ビン別数量",
+        "description": "説明"
+      },
+      "map_cell": {
+        "substrate_map": "座標マップ",
+        "row": "行",
+        "col": "列",
+        "bin_code": "ビンコード"
       },
       "work_order": {
         "code": "作業指示番号",
@@ -1305,6 +1355,34 @@
         "rework": "リワーク",
         "scrap": "スクラップ"
       },
+      "bin_type": {
+        "good": "良品",
+        "fail": "不良",
+        "edge": "エッジ",
+        "unusable": "使用不可"
+      },
+      "map_import_kind": {
+        "map": "座標マップ",
+        "bin_set": "ビン定義セット"
+      },
+      "substrate_type": {
+        "wafer": "ウェーハ",
+        "strip": "ストリップ"
+      },
+      "origin_location": {
+        "UL": "左上",
+        "UR": "右上",
+        "LL": "左下",
+        "LR": "右下"
+      },
+      "x_axis": {
+        "right": "右",
+        "left": "左"
+      },
+      "y_axis": {
+        "down": "下",
+        "up": "上"
+      },
       "bom_status": {
         "draft": "下書き",
         "active": "有効",
@@ -1602,6 +1680,8 @@
     "mes-dc_result": "測定データ",
     "mes-dc-config": "データ収集設定",
     "mes-defect_code": "欠陥コード",
+    "mes-substrate_map": "座標マップ",
+    "mes-bin_set": "ビン定義セット",
     "mes-route-master": "ルート設定",
     "mes-recipe-param": "レシピ・パラメータ",
     "mes-change_order": "設計変更（ECN）",
@@ -1710,6 +1790,8 @@
     "mes_org__write": "組織·編集",
     "mes_lot__read": "ロット・ウェーハ規則·閲覧",
     "mes_lot__write": "ロット・ウェーハ規則·編集",
+    "mes_map__read": "座標マップ・ビン·閲覧",
+    "mes_map__write": "座標マップ・ビン·編集",
     "mes_wo__read": "作業指示·閲覧",
     "mes_wo__write": "作業指示·編集",
     "mes_process__read": "プロセス·閲覧",
@@ -1732,6 +1814,7 @@
     "mes_exec__merge": "生産実行·ロット統合",
     "mes_exec__jump": "生産実行·工程ジャンプ",
     "mes_exec__adjust": "生産実行·廃棄 / 追加",
+    "mes_map__import": "座標マップ・ビン·マップ・ビン定義インポート",
     "mes_wo__release": "作業指示·発行 / クローズ",
     "mes_lot__start": "ロット・ウェーハ規則·投入",
     "mes_bom__activate": "部品表（BOM）·有効化 / 無効化",
@@ -1776,6 +1859,8 @@
     "mes_org__write": "許可：組織·編集",
     "mes_lot__read": "許可：ロット・ウェーハ規則·閲覧",
     "mes_lot__write": "許可：ロット・ウェーハ規則·編集",
+    "mes_map__read": "許可：座標マップ・ビン·閲覧",
+    "mes_map__write": "許可：座標マップ・ビン·編集",
     "mes_wo__read": "許可：作業指示·閲覧",
     "mes_wo__write": "許可：作業指示·編集",
     "mes_process__read": "許可：プロセス·閲覧",
@@ -1798,6 +1883,7 @@
     "mes_exec__merge": "許可：生産実行·ロット統合",
     "mes_exec__jump": "許可：生産実行·工程ジャンプ",
     "mes_exec__adjust": "許可：生産実行·廃棄 / 追加",
+    "mes_map__import": "許可：座標マップ・ビン·マップ・ビン定義インポート",
     "mes_wo__release": "許可：作業指示·発行 / クローズ",
     "mes_lot__start": "許可：ロット・ウェーハ規則·投入",
     "mes_bom__activate": "許可：部品表（BOM）·有効化 / 無効化",

@@ -8,6 +8,7 @@
       "check": "卡控",
       "org": "组织",
       "lot": "批次与晶圆规则",
+      "map": "坐标图与 bin",
       "wo": "工单",
       "process": "工艺",
       "product": "产品与物料",
@@ -60,6 +61,11 @@
       "lot_recipe_run": "配方执行记录",
       "lot_genealogy": "批次谱系",
       "material_consumption": "用料记录",
+      "bin_set": "bin 定义集",
+      "bin_definition": "bin 定义",
+      "map_import": "坐标图导入记录",
+      "substrate_map": "坐标图",
+      "map_cell": "坐标格",
       "work_order": "工单",
       "bom": "物料清单（BOM）",
       "bom_line": "BOM 明细",
@@ -574,6 +580,50 @@
         "external_event_id": "外部事件号",
         "username": "用户",
         "at": "时间"
+      },
+      "bin_set": {
+        "code": "定义集",
+        "version": "版本",
+        "map_import": "导入记录",
+        "description": "描述"
+      },
+      "bin_definition": {
+        "bin_set": "定义集",
+        "bin_code": "bin 码",
+        "bin_type": "bin 类型",
+        "description": "说明"
+      },
+      "map_import": {
+        "import_kind": "类型",
+        "source": "来源",
+        "external_event_id": "外部事件号",
+        "file_name": "文件",
+        "row_count": "行数",
+        "imported_by": "导入人",
+        "imported_at": "导入时间"
+      },
+      "substrate_map": {
+        "code": "基板编号",
+        "substrate_type": "基板类型",
+        "map_version": "版本",
+        "rows": "行数",
+        "cols": "列数",
+        "origin_location": "坐标原点",
+        "x_axis": "X 轴方向",
+        "y_axis": "Y 轴方向",
+        "bin_set": "定义集",
+        "map_import": "导入记录",
+        "total_qty": "坐标总数",
+        "good_qty": "良品数",
+        "excluded_qty": "排除数",
+        "bin_counts": "各 bin 数量",
+        "description": "描述"
+      },
+      "map_cell": {
+        "substrate_map": "坐标图",
+        "row": "行",
+        "col": "列",
+        "bin_code": "bin 码"
       },
       "work_order": {
         "code": "工单号",
@@ -1305,6 +1355,34 @@
         "rework": "返工",
         "scrap": "报废"
       },
+      "bin_type": {
+        "good": "良品",
+        "fail": "不良",
+        "edge": "边缘",
+        "unusable": "不可用"
+      },
+      "map_import_kind": {
+        "map": "坐标图",
+        "bin_set": "bin 定义集"
+      },
+      "substrate_type": {
+        "wafer": "晶圆",
+        "strip": "条"
+      },
+      "origin_location": {
+        "UL": "左上",
+        "UR": "右上",
+        "LL": "左下",
+        "LR": "右下"
+      },
+      "x_axis": {
+        "right": "向右",
+        "left": "向左"
+      },
+      "y_axis": {
+        "down": "向下",
+        "up": "向上"
+      },
       "bom_status": {
         "draft": "草稿",
         "active": "生效",
@@ -1602,6 +1680,8 @@
     "mes-dc_result": "量测数据",
     "mes-dc-config": "数据收集配置",
     "mes-defect_code": "缺陷代码",
+    "mes-substrate_map": "坐标图",
+    "mes-bin_set": "bin 定义集",
     "mes-route-master": "工艺流程配置",
     "mes-recipe-param": "配方与参数",
     "mes-change_order": "工程变更（ECN）",
@@ -1710,6 +1790,8 @@
     "mes_org__write": "组织·编辑",
     "mes_lot__read": "批次与晶圆规则·查看",
     "mes_lot__write": "批次与晶圆规则·编辑",
+    "mes_map__read": "坐标图与 bin·查看",
+    "mes_map__write": "坐标图与 bin·编辑",
     "mes_wo__read": "工单·查看",
     "mes_wo__write": "工单·编辑",
     "mes_process__read": "工艺·查看",
@@ -1732,6 +1814,7 @@
     "mes_exec__merge": "生产执行·合批",
     "mes_exec__jump": "生产执行·跳站",
     "mes_exec__adjust": "生产执行·报废 / 补数",
+    "mes_map__import": "坐标图与 bin·导入坐标图 / bin 定义",
     "mes_wo__release": "工单·下达 / 关闭",
     "mes_lot__start": "批次与晶圆规则·投产",
     "mes_bom__activate": "物料清单（BOM）·生效 / 作废",
@@ -1776,6 +1859,8 @@
     "mes_org__write": "允许：组织·编辑",
     "mes_lot__read": "允许：批次与晶圆规则·查看",
     "mes_lot__write": "允许：批次与晶圆规则·编辑",
+    "mes_map__read": "允许：坐标图与 bin·查看",
+    "mes_map__write": "允许：坐标图与 bin·编辑",
     "mes_wo__read": "允许：工单·查看",
     "mes_wo__write": "允许：工单·编辑",
     "mes_process__read": "允许：工艺·查看",
@@ -1798,6 +1883,7 @@
     "mes_exec__merge": "允许：生产执行·合批",
     "mes_exec__jump": "允许：生产执行·跳站",
     "mes_exec__adjust": "允许：生产执行·报废 / 补数",
+    "mes_map__import": "允许：坐标图与 bin·导入坐标图 / bin 定义",
     "mes_wo__release": "允许：工单·下达 / 关闭",
     "mes_lot__start": "允许：批次与晶圆规则·投产",
     "mes_bom__activate": "允许：物料清单（BOM）·生效 / 作废",

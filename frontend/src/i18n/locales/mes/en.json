@@ -8,6 +8,7 @@
       "check": "Checks",
       "org": "Organization",
       "lot": "Lot & wafer rules",
+      "map": "Substrate map & bin",
       "wo": "Work orders",
       "process": "Process",
       "product": "Product & material",
@@ -60,6 +61,11 @@
       "lot_recipe_run": "Recipe run",
       "lot_genealogy": "Lot genealogy",
       "material_consumption": "Material consumption",
+      "bin_set": "Bin definition set",
+      "bin_definition": "Bin definition",
+      "map_import": "Map import",
+      "substrate_map": "Substrate map",
+      "map_cell": "Map cell",
       "work_order": "Work order",
       "bom": "BOM",
       "bom_line": "BOM line",
@@ -574,6 +580,50 @@
         "external_event_id": "External event ID",
         "username": "User",
         "at": "Time"
+      },
+      "bin_set": {
+        "code": "Bin set",
+        "version": "Version",
+        "map_import": "Import",
+        "description": "Description"
+      },
+      "bin_definition": {
+        "bin_set": "Bin set",
+        "bin_code": "Bin code",
+        "bin_type": "Bin type",
+        "description": "Description"
+      },
+      "map_import": {
+        "import_kind": "Kind",
+        "source": "Source",
+        "external_event_id": "External event ID",
+        "file_name": "File",
+        "row_count": "Rows",
+        "imported_by": "Imported by",
+        "imported_at": "Imported at"
+      },
+      "substrate_map": {
+        "code": "Substrate ID",
+        "substrate_type": "Substrate type",
+        "map_version": "Version",
+        "rows": "Rows",
+        "cols": "Columns",
+        "origin_location": "Origin",
+        "x_axis": "X axis",
+        "y_axis": "Y axis",
+        "bin_set": "Bin set",
+        "map_import": "Import",
+        "total_qty": "Total",
+        "good_qty": "Good",
+        "excluded_qty": "Excluded",
+        "bin_counts": "Bin counts",
+        "description": "Description"
+      },
+      "map_cell": {
+        "substrate_map": "Map",
+        "row": "Row",
+        "col": "Column",
+        "bin_code": "Bin code"
       },
       "work_order": {
         "code": "WO no.",
@@ -1305,6 +1355,34 @@
         "rework": "Rework",
         "scrap": "Scrap"
       },
+      "bin_type": {
+        "good": "Good",
+        "fail": "Fail",
+        "edge": "Edge",
+        "unusable": "Unusable"
+      },
+      "map_import_kind": {
+        "map": "Substrate map",
+        "bin_set": "Bin definition set"
+      },
+      "substrate_type": {
+        "wafer": "Wafer",
+        "strip": "Strip"
+      },
+      "origin_location": {
+        "UL": "Upper left",
+        "UR": "Upper right",
+        "LL": "Lower left",
+        "LR": "Lower right"
+      },
+      "x_axis": {
+        "right": "Right",
+        "left": "Left"
+      },
+      "y_axis": {
+        "down": "Down",
+        "up": "Up"
+      },
       "bom_status": {
         "draft": "Draft",
         "active": "Active",
@@ -1602,6 +1680,8 @@
     "mes-dc_result": "Metrology / DC Data",
     "mes-dc-config": "DC Configuration",
     "mes-defect_code": "Defect Code",
+    "mes-substrate_map": "Substrate Map",
+    "mes-bin_set": "Bin Definition Set",
     "mes-route-master": "Route Configuration",
     "mes-recipe-param": "Recipe & Parameters",
     "mes-change_order": "ECN",
@@ -1710,6 +1790,8 @@
     "mes_org__write": "Organization·Edit",
     "mes_lot__read": "Lot & wafer rules·View",
     "mes_lot__write": "Lot & wafer rules·Edit",
+    "mes_map__read": "Substrate map & bin·View",
+    "mes_map__write": "Substrate map & bin·Edit",
     "mes_wo__read": "Work orders·View",
     "mes_wo__write": "Work orders·Edit",
     "mes_process__read": "Process·View",
@@ -1732,6 +1814,7 @@
     "mes_exec__merge": "Execution·Merge lots",
     "mes_exec__jump": "Execution·Jump step",
     "mes_exec__adjust": "Execution·Scrap / bonus",
+    "mes_map__import": "Substrate map & bin·Import maps / bin sets",
     "mes_wo__release": "Work orders·Release / close",
     "mes_lot__start": "Lot & wafer rules·Start lots",
     "mes_bom__activate": "BOM·Activate / void",
@@ -1776,6 +1859,8 @@
     "mes_org__write": "Allows: Organization·Edit",
     "mes_lot__read": "Allows: Lot & wafer rules·View",
     "mes_lot__write": "Allows: Lot & wafer rules·Edit",
+    "mes_map__read": "Allows: Substrate map & bin·View",
+    "mes_map__write": "Allows: Substrate map & bin·Edit",
     "mes_wo__read": "Allows: Work orders·View",
     "mes_wo__write": "Allows: Work orders·Edit",
     "mes_process__read": "Allows: Process·View",
@@ -1798,6 +1883,7 @@
     "mes_exec__merge": "Allows: Execution·Merge lots",
     "mes_exec__jump": "Allows: Execution·Jump step",
     "mes_exec__adjust": "Allows: Execution·Scrap / bonus",
+    "mes_map__import": "Allows: Substrate map & bin·Import maps / bin sets",
     "mes_wo__release": "Allows: Work orders·Release / close",
     "mes_lot__start": "Allows: Lot & wafer rules·Start lots",
     "mes_bom__activate": "Allows: BOM·Activate / void",

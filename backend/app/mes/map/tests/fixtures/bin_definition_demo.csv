@@ -1,0 +1,8 @@
+# format=cim-bin-csv v1
+# bin_definition_set=BINSET-DEMO
+# version=1
+bin_code,bin_type,description
+1,good,Pass
+2,fail,Fail-Open
+3,fail,Fail-Short
+E,edge,Edge/unusable
