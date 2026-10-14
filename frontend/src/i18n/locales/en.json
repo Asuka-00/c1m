@@ -1224,7 +1224,8 @@
       "portOccupied": "Port {{port}} already holds material lot {{lot}}. Unmount it first.",
       "portBusy": "The port is in use. Refresh and try again.",
       "overlap": "The mount time overlaps an earlier record on this port",
-      "alreadyUnmounted": "This lot was already unmounted. Refreshed."
+      "alreadyUnmounted": "This lot was already unmounted. Refreshed.",
+      "duplicate": "Already recorded"
     }
   },
   "notify": {

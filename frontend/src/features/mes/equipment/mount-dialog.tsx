@@ -110,8 +110,10 @@ export function MountDialog({
         external_event_id: eventId,
         comment: comment.trim() || undefined,
       }),
-    onSuccess: () => {
-      toast.success(t('mes.mount.mounted'))
+    onSuccess: (res) => {
+      toast.success(
+        t(res?.duplicate ? 'mes.mount.duplicate' : 'mes.mount.mounted')
+      )
       setLot('')
       setComment('')
       setEventId(newEventId())
