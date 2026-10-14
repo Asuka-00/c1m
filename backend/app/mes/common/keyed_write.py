@@ -1,4 +1,6 @@
-"""通用 CRUD 的“受控写”实体（D74 / D81）：写接口必须带 Idempotency-Key，可放行附加字段。
+"""通用 CRUD 的“受控写”实体（D74 / D81 / D88-2）：写接口必须带 Idempotency-Key，可放行附加字段。
+
+D88-2 清单：``reticle``、``alarm_code``（B8 登记）、``operator_qual``。
 
 由业务模块登记（如 ``operator_qual``），通用路由按此执行 D81 顺序：
 403 → 缺 key 422 → 请求体 422（含附加字段）→ 幂等重放 → 404 → ``after_404``（如 422

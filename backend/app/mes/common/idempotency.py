@@ -8,6 +8,12 @@
 - 超过 24 小时的存档视为不存在（复用时覆盖）。
 
 请求体哈希 = sha256(按键排序的紧凑 JSON)，路径参数并入请求体一起算。
+回放成功时响应头带 ``Idempotent-Replayed: true``（D86 补充二），首次执行不带。
+
+D88-2：通用 CRUD（``/mes/{entity}``）中以下实体的新建 / 编辑 / 删除**必须**带
+Idempotency-Key（缺失 422 missing，D81 顺序），登记在 :data:`keyed_write.KEYED`：
+``reticle``（D87）、``alarm_code``（D84 Q6，随 B8 落地）、``operator_qual``（D74）。
+其它实体的通用 CRUD 不要求 key。
 """
 
 import hashlib

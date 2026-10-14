@@ -18,7 +18,7 @@ import sqlalchemy as sa
 from fastapi import HTTPException
 from sqlmodel import Session
 
-from app.core.models import actor_name
+from app.core.models import actor_name, iso_utc
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, TABLES, Entity
@@ -234,7 +234,7 @@ def _j(v: Any) -> Any:
     if isinstance(v, uuid.UUID):
         return str(v)
     if isinstance(v, datetime):
-        return v.isoformat().replace("+00:00", "Z")
+        return iso_utc(v)  # D88 补充一：统一 UTC ``Z``
     if isinstance(v, date):
         return v.isoformat()
     return v
@@ -503,11 +503,62 @@ def expired_scan(s: Session, tid: uuid.UUID, today: date | None = None) -> int:
     return n
 
 
+# ---------------- Excel 导入（D88-3：只允许新建授予） ----------------
+def _imp_date(v: Any) -> Any:
+    if v in (None, ""):
+        return None
+    if isinstance(v, datetime):
+        return v.date()
+    if isinstance(v, date):
+        return v
+    try:
+        return date.fromisoformat(str(v).strip()[:10])
+    except ValueError:
+        return v  # 交给通用校验报格式错误
+
+
+def _imp_bool(v: Any) -> Any:
+    if isinstance(v, bool) or v is None:
+        return v
+    t = str(v).strip().lower()
+    if t in ("true", "1", "yes", "y"):
+        return True
+    if t in ("false", "0", "no", "n"):
+        return False
+    return v
+
+
+def import_guard(old: Row, payload: Row) -> None:
+    """导入命中已有资质且会改动 is_active / expires_on → 整行拒绝（value_error use_api）。"""
+    bad = []
+    if "expires_on" in payload and _imp_date(payload["expires_on"]) != old.get(
+        "expires_on"
+    ):
+        bad.append("expires_on")
+    if "is_active" in payload and payload["is_active"] not in (None, ""):
+        if _imp_bool(payload["is_active"]) != old.get("is_active"):
+            bad.append("is_active")
+    if bad:
+        raise http_422(
+            [
+                (
+                    bad[0],
+                    f"{', '.join(bad)}: deactivate / renew via the API "
+                    "(reason, comment and approver required)",
+                    "value_error",
+                    {"reason": "use_api", "fields": bad},
+                )
+            ]
+        )
+
+
 # ---------------- 通用 CRUD 受控写登记（D81：必带 Idempotency-Key） ----------------
 def _register() -> None:
+    from app.core.spec.excel import IMPORT_GUARDS
     from app.mes.common.keyed_write import KEYED, META_HOOKS, KeyedWrite
 
     META_HOOKS[ENT] = lambda s, tid: {"warn_days": warn_days(s, tid)}
+    IMPORT_GUARDS[ENT] = import_guard
 
     KEYED[ENT] = KeyedWrite(
         extras=check_extras,

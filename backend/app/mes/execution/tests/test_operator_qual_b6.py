@@ -85,6 +85,7 @@ def test_log_events_and_history(client: TestClient, db: Session) -> None:
     acts = [r["action"] for r in rows]
     assert acts[0] == "reactivated" and acts[1] == "deactivated"
     assert acts[2:] == ["changed", "renewed", "granted"]
+    assert all(r["at"].endswith("Z") for r in rows), [r["at"] for r in rows]
     ren = next(r for r in rows if r["action"] == "renewed")
     assert ren["approved_by"] == ex["approved_by"] and ren["comment"] == "renew 90d"
     assert ren["reason_id"] == ex["reason_id"] and ren["username"] == user
@@ -293,3 +294,40 @@ def test_app_user_dml_on_log_table(db: Session) -> None:
             {"p": p},
         ).scalar()
         assert ok, p
+
+
+def test_excel_import_only_grants(client: TestClient, db: Session) -> None:
+    """D88-3：导入只允许新建授予；改已有资质 is_active / expires_on 整行拒绝 use_api。"""
+    f = Line(client, db)
+    op_id = f.steps[10]["operation_id"]
+    op = next(o for o in f.m.list("operation", limit=200)["data"] if o["id"] == op_id)
+    exp = str(_today(f) + timedelta(days=10))
+    q = f.m.post(
+        "operator_qual", {"username": "imp_a", "operation_id": op_id, "expires_on": exp}
+    )
+    hdr = ["username", "operation", "expires_on", "is_active", "certified_on"]
+    later = str(_today(f) + timedelta(days=99))
+
+    def imp(*rows: list[Any], status: int = 200) -> Any:
+        return f.m.import_rows("operator_qual", [hdr, *rows], status=status)
+
+    for row, field in (
+        (["imp_a", op["code"], later, None, None], "expires_on"),
+        (["imp_a", op["code"], exp, "false", None], "is_active"),
+    ):
+        r = imp(["imp_new1", op["code"], exp, None, None], row, status=422)
+        (e,) = r["detail"]["errors"]
+        assert e["row"] == 3 and e["type"] == "value_error", e
+        assert e["ctx"]["reason"] == "use_api" and field in e["ctx"]["fields"]
+    # 整个导入回滚：新行未建，已有行未改
+    assert f.m.list("operator_qual", username="imp_new1")["count"] == 0
+    cur = f.m.list("operator_qual", id=q["id"])["data"][0]
+    assert cur["expires_on"] == exp and cur["is_active"] is True
+    # 新建授予 + 不改 is_active / expires_on 的已有行可导入
+    res = imp(
+        ["imp_new2", op["code"], exp, None, None],
+        ["imp_a", op["code"], exp, "true", str(_today(f))],
+    )
+    assert res == {"created": 1, "updated": 1}
+    acts = [r["action"] for r in _hist(f, q["id"])]
+    assert "renewed" not in acts and "deactivated" not in acts
