@@ -150,9 +150,12 @@ describe('B6 资质履历 mock', () => {
       status: 422,
       detail: [{ ctx: { reason: 'holder_approval' } }],
     })
+    // 40e4342：已停用再停用无变更 → 200 原样返回、不写履历（mock 原先回 409，已对齐）
+    const n0 = (await hist.history('q1')).rows.length
     expect(
-      await fail(api.update('q1', { is_active: false, ...R }, k()))
-    ).toMatchObject({ status: 409, detail: { code: 'invalid_transition' } })
+      await api.update('q1', { is_active: false, ...R }, k())
+    ).toMatchObject({ is_active: false })
+    expect((await hist.history('q1')).rows).toHaveLength(n0)
     expect(
       await fail(
         api.update(

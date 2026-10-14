@@ -33,7 +33,8 @@ export type QualLogAction = (typeof QUAL_LOG_ACTIONS)[number]
 /** 履历行（mes_operator_qual_log）。 */
 export interface QualLogRow {
   id: string
-  qual_id: string
+  /** 后端履历行不返回 qual_id（mock 内部用） */
+  qual_id?: string
   action: QualLogAction
   /** 变更前的字段快照（granted 为 null） */
   before: Record<string, unknown> | null
@@ -142,6 +143,9 @@ let mockUser = 'admin'
 let mockPerms: string[] | null = null
 let mockNow: () => Date = () => new Date()
 let mockWarnDays: unknown = QUAL_WARN_DAYS
+/** mock 的 operator_qual 原因码 / 租户用户；null = 不校验（默认） */
+let mockReasons: string[] | null = null
+let mockUsers: string[] | null = null
 const idem = new Map<string, { sig: string; out: unknown }>()
 
 const READ = 'mes.exec:read'
@@ -159,6 +163,8 @@ export function resetQualHistoryMock() {
   mockPerms = null
   mockNow = () => new Date()
   mockWarnDays = QUAL_WARN_DAYS
+  mockReasons = null
+  mockUsers = null
   for (const x of store.q)
     store.log.push({
       id: `l${++store.n}`,
@@ -175,6 +181,13 @@ export function resetQualHistoryMock() {
 }
 export const setQualMockUser = (u: string) => {
   mockUser = u
+}
+/** 测试用：启用 invalid_reason / user_not_found 校验。 */
+export const setQualMockReasons = (v: string[] | null) => {
+  mockReasons = v
+}
+export const setQualMockUsers = (v: string[] | null) => {
+  mockUsers = v
 }
 export const setQualMockPerms = (p: string[] | null) => {
   mockPerms = p
@@ -237,58 +250,131 @@ const findQ = (id: string) => {
 }
 const blank = (v: unknown) => v == null || String(v).trim() === ''
 
-/** 写入意图（仅由请求体判断，供请求体 422 使用，先于 404）。 */
+/** 写入意图（仅由请求体判断，供请求体 422 使用，先于 404）。
+ *  D88：请求体里只要带了 expires_on（含 null = 改为永久、含缩短）就按延期处理，必须有批准人。 */
 export type QualIntent = 'deactivate' | 'renew' | 'other'
+const hasExpires = (body: object) =>
+  'expires_on' in body &&
+  (body as { expires_on?: unknown }).expires_on !== undefined
 export function qualIntent(body: Partial<QualInput> & QualReason): QualIntent {
   if (body.is_active === false) return 'deactivate'
-  if (body.expires_on != null && body.expires_on !== '') return 'renew'
+  if (hasExpires(body)) return 'renew'
   return 'other'
 }
 
-/** 请求体 422（Q6-2）：停用 / 延期必填 reason_id、comment，延期另需 approved_by；comment ≤300。 */
-export function qualBodyCheck(body: Partial<QualInput> & QualReason) {
-  // D85 补充二：同时停用和改到期日 → 422 value_error conflicting_fields（请求体阶段，先于 404）
-  if (
-    body.is_active === false &&
-    body.expires_on != null &&
-    body.expires_on !== ''
-  )
+type ErrItem = {
+  loc: string[]
+  type: string
+  code: string
+  msg: string
+  ctx?: Record<string, unknown>
+}
+const item = (
+  loc: string,
+  type: string,
+  msg: string,
+  ctx?: Record<string, unknown>
+): ErrItem => ({ loc: ['body', loc], type, code: type, msg, ctx })
+const same = (a: unknown, b: unknown) =>
+  typeof a === 'string' &&
+  typeof b === 'string' &&
+  a.trim().toLowerCase() === b.trim().toLowerCase()
+
+/**
+ * 请求体 422（B6 40e4342 check_extras 同序）：
+ * 1. PATCH 停用 + expires_on → conflicting_fields；
+ * 2. PATCH 停用缺 reason_id / comment，带 expires_on 缺 reason_id / comment / approved_by → missing（一次全报）；
+ * 3. value_error 一次全报：comment > 300（max_length）、reason_id 不是启用的 operator_qual 原因（invalid_reason）、
+ *    approved_by 不是本租户用户（user_not_found）；
+ * 4. approved_by = 发请求的人（不分大小写）→ self_approval。POST 授予不要求附加字段。
+ */
+export function qualBodyCheck(
+  body: Partial<QualInput> & QualReason,
+  method: 'POST' | 'PATCH' = 'PATCH'
+) {
+  if (method === 'PATCH' && body.is_active === false && hasExpires(body))
     throw valueErr(
       'is_active',
-      'is_active=false cannot be combined with expires_on',
+      'deactivate and renew cannot be combined in one request',
       {
         reason: 'conflicting_fields',
         fields: ['is_active', 'expires_on'],
       }
     )
-  const intent = qualIntent(body)
-  if (intent !== 'other') {
-    if (blank(body.reason_id)) throw missing('reason_id')
-    if (blank(body.comment)) throw missing('comment')
-    if (intent === 'renew' && blank(body.approved_by))
-      throw missing('approved_by')
+  if (method === 'PATCH') {
+    const need: (keyof QualReason)[] = []
+    if (body.is_active === false) need.push('reason_id', 'comment')
+    if (hasExpires(body)) need.push('reason_id', 'comment', 'approved_by')
+    const miss = [...new Set(need)].filter((k) => blank(body[k]))
+    if (miss.length)
+      throw apiError(
+        422,
+        miss.map((k) => item(k, 'missing', 'Field required'))
+      )
   }
-  // D85：approved_by 等于发请求的用户 → 422 self_approval（请求体阶段，先于 404）
-  if (!blank(body.approved_by) && body.approved_by === mockUser)
-    throw valueErr('approved_by', 'approver cannot be the requester', {
-      reason: 'self_approval',
-    })
+  const errs: ErrItem[] = []
   if (
-    typeof body.comment === 'string' &&
-    [...body.comment].length > QUAL_COMMENT_MAX
+    body.comment != null &&
+    (typeof body.comment !== 'string' ||
+      [...body.comment].length > QUAL_COMMENT_MAX)
   )
-    throw valueErr('comment', 'comment: at most 300 characters', {
-      reason: 'max_length',
-      max_length: QUAL_COMMENT_MAX,
-    })
+    errs.push(
+      item(
+        'comment',
+        'value_error',
+        `comment: string of at most ${QUAL_COMMENT_MAX} characters`,
+        { reason: 'max_length', max_length: QUAL_COMMENT_MAX }
+      )
+    )
   if (
-    typeof body.approved_by === 'string' &&
-    [...body.approved_by].length > QUAL_APPROVED_BY_MAX
+    body.reason_id != null &&
+    mockReasons &&
+    !mockReasons.includes(String(body.reason_id))
   )
-    throw valueErr('approved_by', 'approved_by: at most 64 characters', {
-      reason: 'max_length',
-      max_length: QUAL_APPROVED_BY_MAX,
-    })
+    errs.push(
+      item(
+        'reason_id',
+        'value_error',
+        'reason_id: must be an active reason code of type operator_qual',
+        { reason: 'invalid_reason' }
+      )
+    )
+  const ab = body.approved_by
+  if (
+    ab != null &&
+    (typeof ab !== 'string' ||
+      [...ab].length > QUAL_APPROVED_BY_MAX ||
+      (mockUsers && !mockUsers.some((u) => same(u, ab))))
+  )
+    errs.push(
+      item(
+        'approved_by',
+        'value_error',
+        'approved_by: not a user of this tenant',
+        {
+          reason: 'user_not_found',
+        }
+      )
+    )
+  if (errs.length) throw apiError(422, errs)
+  if (!blank(ab) && same(ab, mockUser))
+    throw valueErr(
+      'approved_by',
+      'approved_by must not be the requesting user',
+      {
+        reason: 'self_approval',
+      }
+    )
+}
+
+/** 404 之后、409 之前（D85）：批准人不能是持有人；POST 时 row 为请求体。 */
+function holderCheck(body: QualReason, holder: string) {
+  if (!blank(body.approved_by) && same(body.approved_by, holder))
+    throw valueErr(
+      'approved_by',
+      'approved_by must not be the qualification holder',
+      { reason: 'holder_approval' }
+    )
 }
 
 function withKey<T>(key: string, sig: string, f: () => T, pre: () => void): T {
@@ -351,6 +437,7 @@ function record(
 }
 
 function mockGrant(input: QualInput & QualReason): OperatorQual {
+  holderCheck(input, input.username)
   const x: OperatorQual = {
     id: `q${store.q.length + 1}-${++store.n}`,
     username: input.username,
@@ -375,21 +462,9 @@ function mockUpdate(
   body: Partial<QualInput> & QualReason
 ): OperatorQual {
   const x = findQ(id)
-  const intent = qualIntent(body)
-  // D85：approved_by 等于被授予资质的人 → 422 holder_approval（需查记录，404 之后、409 之前）
-  if (!blank(body.approved_by) && body.approved_by === x.username)
-    throw valueErr(
-      'approved_by',
-      'approver cannot be the qualification holder',
-      {
-        reason: 'holder_approval',
-      }
-    )
-  if (intent === 'deactivate' && !x.is_active)
-    throw apiError(409, {
-      code: 'invalid_transition',
-      message: 'qualification is already inactive',
-    })
+  // D85：批准人 = 持有人 → 422 holder_approval（404 之后、409 之前）
+  holderCheck(body, x.username)
+  // 40e4342：已停用再停用、无实际变更 → 200 原样返回，不写履历（classify 为 None）
   const patch: Partial<OperatorQual> = {}
   for (const k of SNAP_KEYS)
     if (k in body && body[k] !== undefined)
@@ -414,9 +489,11 @@ function mockUpdate(
   else if (changed.includes('is_active') && !prev.is_active && x.is_active)
     record(x, 'reactivated', before, after, r)
   else if (
+    // 40e4342 classify/_later：原来有到期日且新到期日更晚（或改为永久）才算 renewed；
+    // 缩短、或原来永久改为有期限都记 changed（D88：同样要批准人）
     changed.includes('expires_on') &&
-    (prev.expires_on == null ||
-      (x.expires_on != null && x.expires_on > prev.expires_on))
+    prev.expires_on != null &&
+    (x.expires_on == null || x.expires_on > prev.expires_on)
   )
     record(x, 'renewed', before, after, r, mockUser, {
       expires_on_before: prev.expires_on,
@@ -470,17 +547,27 @@ function mockHistory(
         type: 'value_error',
         code: 'value_error',
         msg: 'offset: >= 0',
-        ctx: { min: 0 },
+        ctx: { min: 0, max: 10 ** 9 },
       },
     ])
-  findQ(qualId)
+  // 40e4342：履历 404 为对象 {code:'not_found'}
+  if (!store.q.some((y) => y.id === qualId))
+    throw apiError(404, {
+      code: 'not_found',
+      message: 'operator qualification not found',
+    })
   const rows = store.log
     .filter((l) => l.qual_id === qualId)
     .map((l, i) => ({ l, i }))
     // at 倒序；同一时刻后写的在前
     .sort((a, b) => b.l.at.localeCompare(a.l.at) || b.i - a.i)
     .map(({ l }) => l)
-  return { rows: rows.slice(offset, offset + limit) }
+  // 后端行不带 qual_id
+  return {
+    rows: rows
+      .slice(offset, offset + limit)
+      .map(({ qual_id: _q, ...rest }) => rest),
+  }
 }
 
 /** 每日过期扫描（Q6-1）：到期次日（站点时区）写 expired 履历并发事件，按 (qual_id, expires_on) 去重；is_active 不变。 */
@@ -570,8 +657,7 @@ export const mockQualWriteApi: QualWriteApi = {
         key,
         sigOf('grant', input),
         () => mockGrant(input),
-        () =>
-          qualBodyCheck({ ...input, is_active: undefined, expires_on: null })
+        () => qualBodyCheck(input, 'POST')
       )
     }),
   update: (id, body, key) =>
