@@ -63,3 +63,49 @@ export const eqpApi = {
     body: { equipment_id: string; result: 'ok' | 'ng'; comment?: string }
   ) => http.post(`/mes/eqp/pm/${planId}/complete`, body).then((r) => r.data),
 }
+
+/** 机台上料记录（后端 B3：`/mes/eqp/{eq_id}/mount` 等）。时间为带 Z 的 UTC。 */
+export interface MountRow {
+  id: string
+  equipment_id: string
+  port_code: string
+  material_lot_id: string
+  material_lot_code: string | null
+  mounted_at: string
+  unmounted_at: string | null
+  source: string
+  mounted_by: string | null
+  comment: string | null
+}
+
+/** 人工上料请求：只含可写字段，不传 `source`（人工接口固定为 manual）。 */
+export interface MountIn {
+  port_code: string
+  material_lot_code: string
+  external_event_id: string
+  comment?: string
+}
+
+/** 上料接口客户端。 */
+export const mountApi = {
+  /** 某时间点机台各上料口装着的料。 */
+  at: (eqId: string, at: string) =>
+    http
+      .get<{
+        data: MountRow[]
+      }>('/mes/eqp/mount/at', { params: { eq_id: eqId, at } })
+      .then((r) => r.data.data),
+  /** 人工上料；重复事件号返回 `duplicate=true`，按成功处理。 */
+  mount: (eqId: string, body: MountIn) =>
+    http
+      .post<{
+        data: MountRow
+        duplicate: boolean
+      }>(`/mes/eqp/${eqId}/mount`, body)
+      .then((r) => r.data),
+  /** 卸料（卸下时间默认现在，不带请求体）。 */
+  unmount: (mountId: string) =>
+    http
+      .post<{ data: MountRow }>(`/mes/eqp/mount/${mountId}/unmount`)
+      .then((r) => r.data.data),
+}

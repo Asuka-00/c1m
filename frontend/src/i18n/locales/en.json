@@ -1209,6 +1209,22 @@
       "file": "Source file",
       "importedAt": "Imported at",
       "empty": "No maps imported yet"
+    },
+    "mount": {
+      "title": "Mount",
+      "desc": "Each load port holds one material lot at a time. Unmount the current lot before loading another.",
+      "current": "Currently mounted",
+      "empty": "No material mounted on any port",
+      "port": "Load port",
+      "lot": "Material lot",
+      "submit": "Mount",
+      "mounted": "Mounted",
+      "unmount": "Unmount",
+      "unmounted": "Unmounted",
+      "portOccupied": "Port {{port}} already holds material lot {{lot}}. Unmount it first.",
+      "portBusy": "The port is in use. Refresh and try again.",
+      "overlap": "The mount time overlaps an earlier record on this port",
+      "alreadyUnmounted": "This lot was already unmounted. Refreshed."
     }
   },
   "notify": {

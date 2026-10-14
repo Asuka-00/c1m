@@ -1209,6 +1209,22 @@
       "file": "来源文件",
       "importedAt": "导入时间",
       "empty": "还没有导入过坐标图"
+    },
+    "mount": {
+      "title": "上料",
+      "desc": "上料口同时只能装一批物料，换料前先卸下当前的料。",
+      "current": "当前在装",
+      "empty": "各上料口都没有在装的料",
+      "port": "上料口",
+      "lot": "物料批号",
+      "submit": "上料",
+      "mounted": "已上料",
+      "unmount": "卸料",
+      "unmounted": "已卸料",
+      "portOccupied": "上料口 {{port}} 已经装着物料批 {{lot}}，请先卸料",
+      "portBusy": "上料口正被占用，请刷新后重试",
+      "overlap": "上料时间和这个上料口之前的记录重叠",
+      "alreadyUnmounted": "这批料已经卸下了，已刷新"
     }
   },
   "notify": {

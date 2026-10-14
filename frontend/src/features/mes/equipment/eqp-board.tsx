@@ -35,6 +35,7 @@ import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { Pick } from '@/features/mes/execution/exec-parts'
 import { ChamberStates } from './chamber-states'
+import { MountDialog } from './mount-dialog'
 
 /** 去重选项。 */
 const opts = (vs: (string | null | undefined)[]) =>
@@ -47,7 +48,10 @@ export default function EqpBoard() {
   const tk = useTenantKey()
   const can = useMesCan()
   const [dlg, setDlg] = useState<
-    { kind: 'e10'; row: E10Unit } | { kind: 'pm'; row: BoardRow } | null
+    | { kind: 'e10'; row: E10Unit }
+    | { kind: 'pm'; row: BoardRow }
+    | { kind: 'mount'; row: BoardRow }
+    | null
   >(null)
   const [open, setOpen] = useState<string[]>([])
   const q = useQuery({
@@ -305,6 +309,14 @@ export default function EqpBoard() {
                 >
                   {t('mes.eqp.pmDone')}
                 </Button>
+                <Button
+                  size='sm'
+                  variant='outline'
+                  onClick={() => setDlg({ kind: 'mount', row: r })}
+                  data-testid={`mount-${r.code}`}
+                >
+                  {t('mes.mount.title')}
+                </Button>
               </span>
             ),
           },
@@ -327,6 +339,9 @@ export default function EqpBoard() {
       )}
       {dlg?.kind === 'e10' && (
         <E10Dialog row={dlg.row} onClose={() => setDlg(null)} />
+      )}
+      {dlg?.kind === 'mount' && (
+        <MountDialog eq={dlg.row} onClose={() => setDlg(null)} />
       )}
       {dlg?.kind === 'pm' && (
         <PmDialog row={dlg.row} onClose={() => setDlg(null)} />
