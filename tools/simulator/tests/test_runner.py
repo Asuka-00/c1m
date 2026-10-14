@@ -167,9 +167,20 @@ def test_bundled_alarm_udt_block_d58_passes_with_b9_b11():
     assert c.e10 == "SBY"
     unreg = [r for r in c.alarm_rows.values() if r["unregistered"]]
     assert len(unreg) == 1 and unreg[0]["lots"] == [{"lot_id": "l-fx2"}]  # 仍写 mes_alarm_lot
-    posts = [x for x in c.calls if x[0] == "POST"]
+    posts = [x for x in c.calls if x[0] == "POST" and not x[1].startswith("/mes/alarm_code")]
     assert all("source" not in (x[2] or {}) for x in posts)  # D30
     assert all(x[3] and x[3].get("Idempotency-Key") for x in posts)
+    # D59 种子：联动只有 none / set_state + target_state
+    assert {k: (v["action"], v["target_state"]) for k, v in c.alarm_codes.items()} == {
+        "1001": ("set_state", "UDT"),
+        "1002": ("set_state", "PRD"),
+        "1003": ("none", None),
+    }
+    # D58 补充：报警切 UDT 的履历 trigger=equipment；手工切回 SBY 是 trigger=manual
+    assert [(h["to_state_id"], h["trigger"], h["source"]) for h in c.e10_hist] == [
+        ("s-sby", "manual", "manual"),
+        ("s-udt", "equipment", "manual"),
+    ]
 
 
 def test_expect_e10_same_as_detects_change():
@@ -234,9 +245,12 @@ def test_bundled_tool_life_warn_then_hard_block():
     c = FakeClient(paths=BASE_PATHS | B10)
     rep = Runner(c).run(load(SCN / "tool-life-block.yaml"))
     assert rep["status"] == PASSED, rep
-    assert c.usage == 1000  # 等于上限即硬拦（>=）
+    assert c.usage == 0 and c.tool_status == "available" and c.expiry is None  # 场景结束已恢复
     ins = [x for x in c.calls if x[1].endswith("/track_in")]
-    assert len(ins) == 2 and all(x[2]["tool_ids"] == ["t-sim"] for x in ins)
+    # 预警放行 1 次 + P2-D3 三种不可用（到上限 / 过期 / retired）各被拦 1 次
+    assert len(ins) == 4 and all(x[2]["tool_ids"] == ["t-sim"] for x in ins)
+    st = [x["status"] for x in rep["steps"] if x["kind"] == "track_in"]
+    assert st == [200, 409, 409, 409]
     assert c.calls[0][0] == "GET"
     reset = [x for x in c.calls if x[1] == "/mes/eqp/tools/t-sim/reset"]
     assert reset and reset[0][2]["reason_id"] == "r-rw" and "external_event_id" not in reset[0][2]
@@ -509,3 +523,165 @@ def test_alarm_udt_block_fails_if_backend_holds_on_alarm():
     c._dispatch = holding
     rep = Runner(c).run(load(SCN / "alarm-udt-block.yaml"))
     assert rep["status"] == FAILED and "Hold" in rep["reason"]
+
+
+def _alarm_steps(extra, **kw):
+    c = FakeClient(paths=ALL, **kw)
+    c.alarm_codes["1001"].update(action="set_state", target_state="UDT")
+    return c, Runner(c).run(parse({"run_id": "a", "steps": extra}))
+
+
+def test_alarm_set_state_records_trigger_equipment_and_no_hold():
+    c, rep = _alarm_steps(
+        [
+            {
+                "alarm_set": {
+                    "eq": "EAP-DA01",
+                    "alid": "1001",
+                    "lots": ["FX0002"],
+                    "save_as": "a",
+                    "expect": {"body": {"state_changed": True}},
+                }
+            },
+            {"expect_alarm": {"alarm": "$a", "source": {"manual": "manual", "b11": "simulator"}}},
+            {"expect_e10_history": {"eq": "EAP-DA01", "last": {"to": "UDT", "trigger": "equipment"}}},
+            {"expect_hold": {"lot": "FX0002", "present": False}},
+        ]
+    )
+    assert rep["status"] == PASSED, rep
+    assert c.e10 == "UDT"
+
+
+def test_b11_alarm_source_is_simulator():
+    c = FakeClient(paths=ALL)
+    c.alarm_codes["1001"].update(action="set_state", target_state="UDT")
+    steps = [
+        {"alarm_set": {"eq": "EAP-DA01", "alid": "1001", "save_as": "a"}},
+        {"expect_alarm": {"alarm": "$a", "source": {"manual": "manual", "b11": "simulator"}}},
+        {"expect_e10_history": {"eq": "EAP-DA01", "last": {"trigger": "equipment", "source": "simulator"}}},
+    ]
+    rep = Runner(c, mode="b11").run(parse({"run_id": "a", "steps": steps}))
+    assert rep["status"] == PASSED, rep
+
+
+def test_expect_e10_history_fails_on_wrong_trigger():
+    _, rep = _alarm_steps(
+        [
+            {"state": {"eq": "EAP-DA01", "to": "PRD"}},
+            {"expect_e10_history": {"eq": "EAP-DA01", "last": {"trigger": "equipment"}}},
+        ]
+    )
+    assert rep["status"] == FAILED and "trigger" in rep["reason"]
+
+
+def test_alarm_state_skip_returns_200_with_reason():
+    c, rep = _alarm_steps(
+        [
+            {"seed_alarm_code": {"eq": "EAP-DA01", "alid": "1002", "action": "set_state", "target_state": "PRD"}},
+            {"alarm_set": {"eq": "EAP-DA01", "alid": "1001"}},
+            {
+                "alarm_set": {
+                    "eq": "EAP-DA01",
+                    "alid": "1002",
+                    "expect": {
+                        "status": 200,
+                        "body": {"state_changed": False, "state_skip_reason": "UDT -> PRD not allowed"},
+                    },
+                }
+            },
+            {"expect_e10": {"eq": "EAP-DA01", "state": "UDT"}},
+        ]
+    )
+    assert rep["status"] == PASSED, rep
+
+
+def test_manual_alarm_reuse_changed_body_422():
+    c, rep = _alarm_steps(
+        [
+            {"alarm_set": {"eq": "EAP-DA01", "alid": "1001"}},
+            {"reuse": {"eq": "EAP-DA01", "seq": 1, "change": {"alid": "1003"}}},
+            {"reuse": {"eq": "EAP-DA01", "seq": 1, "change": {"set_at": "2026-01-01T00:00:00.000Z"}}},
+        ]
+    )
+    assert rep["status"] == PASSED, rep
+    assert len(c.alarm_rows) == 1  # 没写入
+
+
+def test_seed_alarm_code_d59_validation():
+    c, rep = _alarm_steps(
+        [
+            {"seed_alarm_code": {"eq": "EAP-DA01", "alid": "7", "action": "set_state", "expect": {"status": 422}}},
+            {
+                "seed_alarm_code": {
+                    "eq": "EAP-DA01",
+                    "alid": "7",
+                    "action": "none",
+                    "target_state": "UDT",
+                    "expect": {"status": 422},
+                }
+            },
+            {"seed_alarm_code": {"eq": "EAP-DA01", "alid": "7", "action": "set_state", "target_state": "UDT"}},
+        ]
+    )
+    assert rep["status"] == PASSED, rep
+    assert c.alarm_codes["7"]["target_state"] == "UDT"
+    import pytest
+
+    from sim.scenario import ScenarioError
+
+    with pytest.raises(ScenarioError):
+        parse({"run_id": "x", "steps": [{"seed_alarm_code": {"eq": "EQ1", "alid": "1", "action": "hold_lot"}}]})
+
+
+def test_tool_life_block_all_items_agree():
+    """517b0a0 P2-D3：一旦有一条 tool_life 不是 block 或写着 tools available，断言要失败。"""
+    c = FakeClient(paths=ALL)
+    c.usage = 1000.0
+    orig = c._dispatch
+
+    def legacy(method, path, body, params):
+        r = orig(method, path, body, params)
+        if r.status == 409 and path.endswith("/track_in"):
+            res = r.body["detail"]["results"]
+            res[1] = dict(res[1], result="pass", message="tools available")
+        return r
+
+    c._dispatch = legacy
+    exp = {
+        "status": 409,
+        "check": {"check_type": "tool_life", "result": "block", "all": True, "not_message": "tools available"},
+    }
+    rep = Runner(c).run(
+        parse(
+            {
+                "run_id": "t",
+                "steps": [{"track_in": {"eq": "EAP-DA01", "lot": "FX0003", "tools": ["T-SIM-01"], "expect": exp}}],
+            }
+        )
+    )
+    assert rep["status"] == FAILED and "tools available" in rep["reason"]
+
+
+def test_tool_set_expired_and_unavailable_block():
+    c = FakeClient(paths=ALL)
+    exp = {
+        "status": 409,
+        "code": "check_blocked",
+        "check": {"check_type": "tool_life", "result": "block", "all": True, "min_count": 2},
+    }
+    rep = Runner(c).run(
+        parse(
+            {
+                "run_id": "t",
+                "steps": [
+                    {"tool_set": {"tool": "T-SIM-01", "fields": {"expiry_date": -1}}},
+                    {"track_in": {"eq": "EAP-DA01", "lot": "FX0003", "tools": ["T-SIM-01"], "expect": exp}},
+                    {"tool_set": {"tool": "T-SIM-01", "fields": {"expiry_date": None, "tool_status": "retired"}}},
+                    {"track_in": {"eq": "EAP-DA01", "lot": "FX0003", "tools": ["T-SIM-01"], "expect": exp}},
+                    {"tool_set": {"tool": "T-SIM-01", "fields": {"tool_status": "available"}}},
+                    {"track_in": {"eq": "EAP-DA01", "lot": "FX0003", "tools": ["T-SIM-01"]}},
+                ],
+            }
+        )
+    )
+    assert rep["status"] == PASSED, rep

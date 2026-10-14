@@ -66,10 +66,16 @@ def check_expect(resp: Resp, expect: dict | None, default_status: int = 200) -> 
             got = [r.get("check_type") or r.get("code") for r in resp.check_results]
             errs.append(f"检查项里没有 {want_type!r}（实际 {got}）")
         else:
+            if "min_count" in chk and len(hits) < int(chk["min_count"]):
+                errs.append(f"检查项 {want_type} 只有 {len(hits)} 条，期望至少 {chk['min_count']} 条")
+            bad = chk.get("not_message")
+            if bad and any(bad in str(h.get("message") or "") for h in hits):
+                errs.append(f"检查项 {want_type} 的 message 不应含 {bad!r}（实际 {[h.get('message') for h in hits]}）")
+            pick = all if chk.get("all") else any  # all: 每一条命中的检查项都要满足（P2-D3：规则和内置一致）
             for k, v in chk.items():
-                if k == "check_type":
+                if k in ("check_type", "all", "not_message", "min_count"):
                     continue
-                if not any(h.get(k) == v for h in hits):
+                if not pick(h.get(k) == v for h in hits):
                     errs.append(f"检查项 {want_type} 的 {k} != {v!r}（实际 {[h.get(k) for h in hits]}）")
     return errs
 
@@ -208,6 +214,12 @@ class Runner:
             return self._expect_e10(a, entry, saved)
         if k == "expect_alarm":
             return self._expect_alarm(a, entry, saved)
+        if k == "seed_alarm_code":
+            return self._seed_alarm_code(a, entry)
+        if k == "expect_e10_history":
+            return self._expect_e10_history(a, entry)
+        if k == "tool_set":
+            return self._tool_set(a, entry)
         if k in ("tool_reset", "tool_unmount", "tool_replace"):
             return self._tool_action(sc, st, entry)
         if k == "expect_tool_log":
@@ -392,9 +404,9 @@ class Runner:
         if r.status != 200:
             raise StepFailed(f"查报警 {aid} HTTP {r.status}")
         d = _data(r) if isinstance(_data(r), dict) else {}
-        for f in ("unregistered", "alarm_status", "alid"):
-            if f in a and d.get(f) != a[f]:
-                raise StepFailed(f"报警 {aid} 的 {f}={d.get(f)!r}，期望 {a[f]!r}")
+        for f in ("unregistered", "alarm_status", "alid", "source", "action"):
+            if f in a and d.get(f) != self.by_mode(a[f]):
+                raise StepFailed(f"报警 {aid} 的 {f}={d.get(f)!r}，期望 {self.by_mode(a[f])!r}")
         if a.get("lots"):
             linked = d.get("lots") or d.get("lot_ids") or []
             keys = set()
@@ -406,6 +418,70 @@ class Runner:
             for lot in a["lots"]:
                 if lot not in keys and self.rid("lot", lot) not in keys:
                     raise StepFailed(f"报警 {aid} 没有关联在制批 {lot}（mes_alarm_lot）")
+
+    def by_mode(self, v: Any) -> Any:
+        """期望值可以按模式给：``{manual: manual, b11: simulator}``（D30 手工接口记 manual，B11 记事件来源）。"""
+        if isinstance(v, dict) and set(v) and set(v) <= set(MODES):
+            return v.get(self.mode)
+        return v
+
+    def _seed_alarm_code(self, a: dict, entry: dict) -> None:
+        """D59 报警码种子：按 (设备, ALID) upsert 单台覆盖的报警码，联动只有 none / set_state + target_state。
+        设备类型取自设备行（alarm_code.equipment_type 必填）。也用来测 D59 的 422 反例（expect 给 422）。"""
+        eq = self.row("equipment", a["eq"])
+        body: dict[str, Any] = {
+            "alid": str(a["alid"]),
+            "equipment_id": eq.get("id") or self.rid("equipment", a["eq"]),
+            "equipment_type_id": eq.get("equipment_type_id"),
+            "action": a["action"],
+            "target_state": a.get("target_state"),
+        }
+        for f in ("severity", "text_zh", "text_en"):
+            if a.get(f):
+                body[f] = a[f]
+        r = self.c.get(self._ad("crud").replace("{entity}", "alarm_code"), q=body["alid"], page_size=100)
+        rows = (r.body or {}).get("data", []) if isinstance(r.body, dict) else []
+        hit = [x for x in rows if x.get("alid") == body["alid"] and x.get("equipment_id") == body["equipment_id"]]
+        if hit:
+            call = Call("PATCH", fill(self._ad("crud_item"), entity="alarm_code", rid=hit[0]["id"]), body)
+        else:
+            call = Call("POST", self._ad("crud").replace("{entity}", "alarm_code"), body)
+        self._send(entry, call, a.get("expect"))
+
+    def _expect_e10_history(self, a: dict, entry: dict) -> None:
+        """D58 补充：E10 履历最新一条的 trigger（manual/equipment/system）、source（事件来源）和目标状态。"""
+        eq_id = self.rid("equipment", a["eq"])
+        r = self.c.get(
+            self._ad("crud").replace("{entity}", "e10_history"),
+            equipment_id=eq_id,
+            sort_by="at",
+            sort_order="desc",
+            page_size=int(a.get("n", 1)),
+        )
+        rows = (r.body or {}).get("data", []) if isinstance(r.body, dict) else []
+        entry.update(status=r.status, rows=len(rows))
+        if r.status != 200 or not rows:
+            raise StepFailed(f"{a['eq']} 查不到 E10 履历（HTTP {r.status}）")
+        last = rows[0]
+        entry["last"] = {k: last.get(k) for k in ("trigger", "source", "to_state_id", "comment")}
+        for f, v in (a.get("last") or {}).items():
+            want = self.by_mode(v)
+            if f == "to":
+                got, want = last.get("to_state_id"), self.rid("e10_state", want)
+            else:
+                got = last.get(f)
+            if got != want:
+                raise StepFailed(f"{a['eq']} 最新 E10 履历 {f}={got!r}，期望 {want!r}")
+
+    def _tool_set(self, a: dict, entry: dict) -> None:
+        """改工具字段（测试准备）：P2-D3 用来造过期（expiry_date 相对天数如 -1）和不可用（tool_status）。"""
+        fields: dict[str, Any] = {}
+        for f, v in a["fields"].items():
+            if f == "expiry_date" and isinstance(v, int):
+                v = (datetime.now(timezone.utc).date() + timedelta(days=v)).isoformat()
+            fields[f] = v
+        call = Call("PATCH", fill(self._ad("crud_item"), entity="tool", rid=self.rid("tool", a["tool"])), fields)
+        self._send(entry, call, a.get("expect"))
 
     def _precondition(self, a: dict) -> None:
         if a.get("eq"):

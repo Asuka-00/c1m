@@ -3,10 +3,12 @@
 #   - 计数上报 POST /mes/eqp/tools/{tool_id}/usage，返回 {data, tool: {usage_count, life_state, ...}, duplicate, life_reached}
 #   - 预警区间 max_usage × warn_ratio（默认 0.9）<= 用量 < max_usage：Track In 照常 200（规则只给 warn，不拦）
 #   - 用量 >= max_usage：Track In 返回 409 check_blocked，检查项 tool_life，overridable=false（只在 track_in 判断，move_in 不判断）
+#   - 517b0a0 P2-D3：用满 / 过期 / 不可用时，工步绑定的 tool_life 规则也判 block（和内置硬拦截同一 message），
+#     不再出现 "tools available"；断言所有 tool_life 项都是 block（all）、至少 2 条（内置 + 规则，min_count）。
 # 前提：T-SIM-01 的 max_usage=1000、warn_ratio 默认 0.9、count_basis=reported（Track Out 不自动计数）；
-#       FX0001、FX0003 是 waiting 的批，工步要求 T-SIM-01 的工具类型；reason_code 里有 REWORK。
+#       FX0001、FX0003 是 waiting 的批，工步要求 T-SIM-01 的工具类型且绑定了 tool_life 规则；reason_code 里有 REWORK。
 name: tool-life-block
-run_id: tool-life-04
+run_id: tool-life-05
 target: http://127.0.0.1:8013
 equipment: [{code: EAP-DA01, type: DIEBOND}]
 steps:
@@ -33,5 +35,28 @@ steps:
       expect:
         status: 409
         code: check_blocked
-        check: {check_type: tool_life, overridable: false, result: block}
+        check: {check_type: tool_life, overridable: false, result: block, all: true, min_count: 2, not_message: tools available}
   - expect_tool_log: {tool: T-SIM-01, last: {kind: report, delta: "100", count_after: "1000"}}
+  # P2-D3 过期：计数清零、状态恢复可用，有效期设成昨天 -> 同样两条 block
+  - tool_reset: {tool: T-SIM-01, reason: REWORK, expect: {body: {tool.usage_count: "0"}}}
+  - tool_set: {tool: T-SIM-01, fields: {tool_status: available, expiry_date: -1}}
+  - track_in:
+      eq: EAP-DA01
+      lot: FX0003
+      tools: [T-SIM-01]
+      expect:
+        status: 409
+        code: check_blocked
+        check: {check_type: tool_life, overridable: false, result: block, all: true, min_count: 2, not_message: tools available}
+  # P2-D3 不可用：去掉有效期，状态改成 retired -> 两条 block
+  - tool_set: {tool: T-SIM-01, fields: {expiry_date: null, tool_status: retired}}
+  - track_in:
+      eq: EAP-DA01
+      lot: FX0003
+      tools: [T-SIM-01]
+      expect:
+        status: 409
+        code: check_blocked
+        check: {check_type: tool_life, overridable: false, result: block, all: true, min_count: 2, not_message: tools available}
+  # 恢复：可用 + 无有效期 + 计数 0（FX0003 仍停在 move_in 后，未进站）
+  - tool_set: {tool: T-SIM-01, fields: {tool_status: available}}

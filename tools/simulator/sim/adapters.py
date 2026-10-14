@@ -49,6 +49,9 @@ def default_adapters() -> dict[str, Adapter]:
         "mount": Adapter("上料", ["/mes/eqp/{eq_id}/mount"]),
         "unmount": Adapter("卸料", ["/mes/eqp/mount/{mount_id}/unmount"]),
         "holds": Adapter("Hold 查询", ["/mes/exec/holds"]),
+        # 通用 CRUD：报警码种子（D59）、E10 履历（D58 trigger）、工具字段（P2-D3 过期/不可用）
+        "crud": Adapter("通用列表/新增", ["/mes/{entity}"]),
+        "crud_item": Adapter("通用修改", ["/mes/{entity}/{rid}"]),
         # B9（0a74f8a）：/mes/eqp 下的报警接口。B9 没有按 ALID 清除的接口，清除只能按报警 id。
         "alarm_set": Adapter("报警上报", ["/mes/eqp/{eq_id}/alarms"], card="B9"),
         "alarm_clear": Adapter("报警清除", ["/mes/eqp/alarms/{alarm_id}/clear"], card="B9"),
@@ -89,6 +92,9 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "expect_tool_log": ["tool_usage_log"],
     "expect_alarm": ["alarm_get"],
     "expect_e10": [],
+    "seed_alarm_code": ["crud", "crud_item"],
+    "expect_e10_history": ["crud"],
+    "tool_set": ["crud_item"],
     "replay": [],
     "reuse": [],
     "precondition": [],

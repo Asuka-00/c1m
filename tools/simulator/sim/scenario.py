@@ -21,6 +21,8 @@ EQ_STEPS = {
     "tool_usage",
     "tool_mount",
     "expect_e10",
+    "seed_alarm_code",
+    "expect_e10_history",
 }
 
 
@@ -96,6 +98,11 @@ def parse(data: dict, path: str | None = None) -> Scenario:
             raise ScenarioError(f"第 {i} 步 {k} 缺少 reason（life_end/broken/pm/swap/other）")
         if k == "tool_replace" and not args.get("new_tool"):
             raise ScenarioError(f"第 {i} 步 tool_replace 缺少 new_tool")
+        if k == "seed_alarm_code":
+            if not args.get("alid") or args.get("action") not in ("none", "set_state"):
+                raise ScenarioError(f"第 {i} 步 seed_alarm_code 需要 alid，action 只能是 none/set_state（D59）")
+        if k == "tool_set" and not isinstance(args.get("fields"), dict):
+            raise ScenarioError(f"第 {i} 步 tool_set 需要 fields 映射")
         if k == "expect_alarm" and not args.get("alarm"):
             raise ScenarioError(f"第 {i} 步 expect_alarm 缺少 alarm")
         steps.append(Step(k, args, i))

@@ -16,6 +16,8 @@ BASE_PATHS = {
     "/mes/eqp/{eq_id}/mount",
     "/mes/eqp/mount/{mount_id}/unmount",
     "/mes/exec/holds",
+    "/mes/{entity}",
+    "/mes/{entity}/{rid}",
 }
 # 与后端 B9 0a74f8a / B10 d27b700 的路由一致
 B9 = {
@@ -35,6 +37,9 @@ B10 = {
 B11 = {"/mes/eap/events", "/mes/eqp/alarms/clear"}
 REUSED = {"detail": {"code": "idempotency_key_reused", "message": "Idempotency-Key was already used"}}
 REGISTERED_ALIDS = {"1001"}
+# E10 迁移表（假后端）：UDT 只能回 SBY
+TRANSITIONS = {"SBY": {"PRD", "UDT"}, "PRD": {"SBY", "UDT"}, "UDT": {"SBY"}}
+STATE_IDS = {"PRD": "s-prd", "SBY": "s-sby", "UDT": "s-udt"}
 
 IDS = {
     ("equipment", "EQ1"): "e-1",
@@ -77,6 +82,14 @@ class FakeClient(Client):
         self.events = {}  # (source, ext) -> (哈希, 台账行, result)   B11
         self.e10_writes = 0
         self.service = True  # 当前账号是否有 eap_service
+        # D59 报警码：alid -> {action: none|set_state, target_state}；默认 1001 不联动（兼容旧用例）
+        self.alarm_codes = {
+            a: {"id": f"ac-{a}", "alid": a, "action": "none", "target_state": None} for a in REGISTERED_ALIDS
+        }
+        self.e10_hist = []  # 新的在前：{trigger, source, to_state_id}
+        self.tool_status = "available"
+        self.expiry = None  # ISO 日期
+        self._src = "manual"
 
     def openapi_paths(self):
         return self.paths
@@ -115,6 +128,13 @@ class FakeClient(Client):
         if extra:
             return Resp(422, {"detail": [{"loc": ["body", "payload", sorted(extra)[0]], "type": "extra_forbidden"}]})
         pl = dict(pl, external_event_id=body["external_event_id"])
+        self._src = body["source"]
+        try:
+            return self._b11_inner(typ, pl, eq, k, h)
+        finally:
+            self._src = "manual"
+
+    def _b11_inner(self, typ, pl, eq, k, h):
         if typ == "state":
             pl.pop("external_event_id")
             r = self._dispatch("POST", f"/mes/eqp/{eq}/e10", pl, {})
@@ -131,13 +151,81 @@ class FakeClient(Client):
         self.events[k] = (h, row, r.body)
         return Resp(200, {"data": row, "duplicate": False, "result": r.body})
 
+    def _hist(self, to, trigger):
+        self.e10_hist.insert(
+            0,
+            {
+                "id": f"h-{len(self.e10_hist) + 1}",
+                "to_state_id": STATE_IDS[to],
+                "trigger": trigger,
+                "source": self._src,
+            },
+        )
+
+    def _alarm_state(self, code):
+        """D58/D59：报警码 set_state → 切 E10（trigger=equipment）；不允许时 200 + state_changed=false。"""
+        if not code or code["action"] != "set_state":
+            return {"state_changed": False, "state_skip_reason": None}
+        ts = code["target_state"]
+        if ts == self.e10:
+            return {"state_changed": False, "state_skip_reason": f"already {ts}"}
+        if ts not in TRANSITIONS.get(self.e10, set()):
+            return {"state_changed": False, "state_skip_reason": f"{self.e10} -> {ts} not allowed"}
+        self.e10 = ts
+        self._hist(ts, "equipment")
+        return {"state_changed": True, "state_skip_reason": None}
+
+    def _crud(self, method, path, body, params):
+        parts = path.split("/")  # ['', 'mes', entity, rid?]
+        ent = parts[2]
+        if ent == "e10_history" and method == "GET":
+            return Resp(200, {"data": self.e10_hist[: int(params.get("page_size", 20))], "count": len(self.e10_hist)})
+        if ent == "alarm_code":
+            if method == "GET":
+                rows = [dict(c, equipment_id="e-da01") for c in self.alarm_codes.values()]
+                return Resp(200, {"data": [r for r in rows if r["alid"] == params.get("q")]})
+            act, ts = body.get("action") or "none", (body.get("target_state") or "").strip()
+            if act == "set_state" and (not ts or ts not in STATE_IDS):
+                return Resp(422, {"detail": [{"loc": ["body", "target_state"], "type": "value_error"}]})
+            if act == "none" and ts:
+                return Resp(422, {"detail": [{"loc": ["body", "target_state"], "type": "value_error"}]})
+            row = {"id": f"ac-{body['alid']}", "alid": body["alid"], "action": act, "target_state": ts or None}
+            self.alarm_codes[body["alid"]] = row
+            return Resp(200, {"data": row})
+        if ent == "tool" and method == "PATCH":
+            if "tool_status" in body:
+                self.tool_status = body["tool_status"]
+            if "expiry_date" in body:
+                self.expiry = body["expiry_date"]
+            return Resp(200, {"data": {"id": parts[3], "tool_status": self.tool_status, "expiry_date": self.expiry}})
+        return None
+
+    def _tool_block(self):
+        if self.tool_status not in ("available", "in_use"):
+            return f"tool T-SIM-01 is {self.tool_status}"
+        if self.usage >= self.max_usage:
+            return f"tool T-SIM-01 reached its life ({self.usage:g}/{self.max_usage:g})"
+        if self.expiry and self.expiry < datetime.now(timezone.utc).date().isoformat():
+            return f"tool T-SIM-01 expired on {self.expiry}"
+        return None
+
     def _dispatch(self, method, path, json_body, params):
+        if (
+            path.split("/")[2:3]
+            and path.split("/")[2] in ("alarm_code", "e10_history", "tool")
+            and path.count("/") <= 3
+        ):
+            r = self._crud(method, path, json_body or {}, params)
+            if r is not None:
+                return r
         if method == "GET" and path.count("/") == 2:  # /mes/{entity}
             ent = path.split("/")[2]
             rid = IDS.get((ent, params.get("code")))
             return Resp(200, {"data": [{"id": rid, "code": params["code"]}] if rid else []})
         if method == "GET" and path.startswith("/mes/equipment/"):
-            return Resp(200, {"data": {"qual_state": self.qual}})
+            return Resp(
+                200, {"data": {"id": path.split("/")[-1], "qual_state": self.qual, "equipment_type_id": "et-1"}}
+            )
         if method == "GET" and path.startswith("/mes/lot/"):
             return Resp(200, {"data": {"lot_status": "waiting"}})
         if path == "/mes/eqp/board":
@@ -163,15 +251,17 @@ class FakeClient(Client):
             return Resp(200, {"data": [{"lot_code": params.get("q") or "L1"}] * self.holds})
         if path.endswith("/e10"):
             to = {"s-prd": "PRD", "s-sby": "SBY"}.get(json_body.get("to_state_id"), "UDT")
-            if to == self.e10:  # 迁移表不允许原地迁移
+            if to not in TRANSITIONS[self.e10]:  # 迁移表（含不允许原地迁移）
                 return Resp(422, {"detail": [{"loc": ["body", "to_state_id"], "type": "value_error"}]})
             self.e10_writes += 1
             frm, self.e10 = self.e10, to
+            self._hist(to, "manual" if self._src == "manual" else "equipment")
             return Resp(200, {"data": {"id": f"log-{self.e10_writes}"}, "from": frm, "to": to})
         if path.endswith("/move_in") or path.endswith("/track_in"):
             # B10：tool_life 只在 track_in 判断，用量 >= 上限硬拦（overridable=false）；预警区间不拦
-            if path.endswith("/track_in") and json_body.get("tool_ids") and self.usage >= self.max_usage:
-                res = [{"check_type": "tool_life", "overridable": False, "result": "block"}]
+            blk = self._tool_block() if path.endswith("/track_in") and json_body.get("tool_ids") else None
+            if blk:  # 517b0a0 P2-D3：内置硬拦截 + 绑定规则，两条都 block、同一 message
+                res = [{"check_type": "tool_life", "overridable": False, "result": "block", "message": blk}] * 2
                 return Resp(409, {"detail": {"code": "check_blocked", "results": res}})
             if path.endswith("/track_in") and self.e10 not in ("SBY", "PRD"):  # e10_available
                 res = [{"check_type": "e10_available", "result": "fail"}]
@@ -191,22 +281,44 @@ class FakeClient(Client):
                 return Resp(422, {"detail": d})
             ext = json_body["external_event_id"]
             alid = json_body["alid"]
+            if ext in self.alarms:  # D57：同事件号内容不同 → 422
+                old = self.alarm_rows[self.alarms[ext]]
+                if (
+                    old["alid"] != alid
+                    or old["_set_at"] != json_body["set_at"]
+                    or not {x["lot_id"] for x in old["lots"]} >= set(json_body.get("lot_ids", []))
+                ):
+                    return Resp(422, REUSED)
             act = [r for r in self.alarm_rows.values() if r["alid"] == alid and r["alarm_status"] == "active"]
             if ext in self.alarms or act:
                 aid = self.alarms.get(ext) or act[0]["id"]
-                return Resp(200, {"data": self.alarm_rows[aid], "duplicate": True})
+                return Resp(
+                    200,
+                    {
+                        "data": self.alarm_rows[aid],
+                        "duplicate": True,
+                        "state_changed": False,
+                        "state_skip_reason": None,
+                    },
+                )
             aid = self.alarms[ext] = f"a-{len(self.alarms) + 1}"
-            unreg = alid not in REGISTERED_ALIDS
+            code = self.alarm_codes.get(alid)
+            unreg = code is None
             self.alarm_rows[aid] = {
                 "id": aid,
                 "alid": alid,
                 "alarm_status": "active",
                 "unregistered": unreg,
                 "clear_event_id": None,
+                "source": self._src,
+                "action": code and code["action"],
+                "_set_at": json_body["set_at"],
                 "lots": [{"lot_id": x} for x in json_body.get("lot_ids", [])],
             }
-            # D58：报警只记录、关联批次，不 Hold、不改 E10
-            return Resp(200, {"data": self.alarm_rows[aid], "duplicate": False})
+            # D58：报警只记录、关联批次，不 Hold；只有报警码 set_state 才切 E10
+            st = self._alarm_state(code)
+            self.alarm_rows[aid]["e10_change"] = st
+            return Resp(200, {"data": self.alarm_rows[aid], "duplicate": False, **st})
         if path.endswith("/clear"):
             row = self.alarm_rows.get(path.split("/")[-2])
             if not row:

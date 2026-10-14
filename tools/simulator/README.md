@@ -53,9 +53,12 @@ steps:
 | `expect_hold {lot,source?,present?,count?}` | `GET /mes/exec/holds` | |
 | `replay {eq,seq|from_seq,to_seq,expect:idempotent}` | 原样重发 | 要求同状态码、同记录 id；`expect` 也可写成断言映射，如 `{body: {duplicate: true}}` |
 | `reuse {eq,seq,change,expect?}` | 同一个幂等键换内容重发（D57） | manual 用原 `Idempotency-Key`/`external_event_id`，b11 用原事件号，把 `change` 改进请求体（b11 改进 `payload`；`to` 是 E10 状态编码简写）。默认期望 422 `idempotency_key_reused`；有没有写入用后面的 `expect_*` 步骤验证 |
+| `seed_alarm_code {eq,alid,action,target_state?}` | `GET/POST/PATCH /mes/alarm_code` | D59 报警码种子（按设备 + ALID upsert 单台覆盖）。`action` 只有 `none`/`set_state`，`set_state` 必填 `target_state`（E10 状态编码）；给 `expect: {status: 422}` 测 D59 反例 |
+| `expect_e10_history {eq,last:{to?,trigger?,source?}}` | `GET /mes/e10_history` | 最新一条 E10 履历（D58 补充 `trigger`=manual/equipment/system，`source`=事件来源） |
+| `tool_set {tool,fields}` | `PATCH /mes/tool/{id}` | 测试准备：`expiry_date` 可写相对天数（`-1` = 昨天）、`tool_status`（P2-D3 过期 / 不可用） |
 | `precondition {eq?,qual_state?,e10?,lot?,lot_status?}` | 只读 | 不满足 -> skipped |
 
-`expect` 默认 `{status: 200}`；`code` 取自 `detail.code`；`data` 按字段比较响应 `data`；`body` 按点号路径比较整个响应体（如 B9 清除的 `{cleared: false}`、B10 的 `{"tool.life_state": warning}`）；`check` 在 `detail.results` 里按 `check_type` 找检查项并比较其余字段。
+`expect` 默认 `{status: 200}`；`code` 取自 `detail.code`；`data` 按字段比较响应 `data`；`body` 按点号路径比较整个响应体（如 B9 清除的 `{cleared: false}`、B10 的 `{"tool.life_state": warning}`）；`check` 在 `detail.results` 里按 `check_type` 找检查项并比较其余字段（默认任一条满足；`all: true` 要求每条都满足，`min_count` 最少条数，`not_message` 任何一条 message 都不能包含该文本）。期望值可以按模式写成 `{manual: manual, b11: simulator}`（`expect_alarm`、`expect_e10_history`）。
 
 ## 关键规则
 - `external_event_id = sim:{run_id}:{设备}:{序号}`，序号按设备从 1 递增，同一场景重放 ID 完全相同；写请求同时带 `Idempotency-Key`。
