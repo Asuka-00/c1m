@@ -20,22 +20,27 @@ class MesError(Exception):
         self.errors = errors
 
 
-def http_422(errors: Sequence[tuple[Any, str]]) -> HTTPException:
+def _item(f: Any, m: str, code: str | None = None) -> dict[str, Any]:
+    d: dict[str, Any] = {
+        "loc": ["body", *f] if isinstance(f, tuple | list) else ["body", f],
+        "msg": m,
+        "type": code or "value_error",
+    }
+    if code:
+        d["code"] = code
+    return d
+
+
+def http_422(errors: Sequence[tuple[Any, ...]]) -> HTTPException:
     """把字段错误列表转换为 422 HTTPException（``detail`` 为字段错误数组）。
 
     字段可以是字符串（``loc = ["body", f]``），也可以是与 Pydantic 一致的路径元组
     （如 ``("lots", 0, "customer_id")`` → ``loc = ["body", "lots", 0, "customer_id"]``）。
+    可带第三项错误码 ``(字段, 消息, code)``：该项 ``type`` 与 ``code`` 都为错误码。
     """
     return HTTPException(
         status_code=422,
-        detail=[
-            {
-                "loc": ["body", *f] if isinstance(f, tuple | list) else ["body", f],
-                "msg": m,
-                "type": "value_error",
-            }
-            for f, m in errors
-        ],
+        detail=[_item(*e) for e in errors],
     )
 
 

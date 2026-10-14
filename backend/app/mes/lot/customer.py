@@ -63,6 +63,7 @@ def customer_info(s: Session, tid: uuid.UUID, lot: Row | None) -> Row:
             "ownership": None,
             "customer_id": None,
             "customer": None,
+            "customer_name": None,
         }
     c = lot.get("customer_id") and one(s, tid, "customer", lot["customer_id"])
     return {
@@ -70,20 +71,21 @@ def customer_info(s: Session, tid: uuid.UUID, lot: Row | None) -> Row:
         "ownership": lot.get("ownership") or "own",
         "customer_id": lot.get("customer_id") and str(lot["customer_id"]),
         "customer": c and c["code"],
+        "customer_name": c and c["name"],  # O-F6-1
     }
 
 
 def customer_start_errors(
     s: Session, tid: uuid.UUID, i: int, x: Row
-) -> list[tuple[Any, str]]:
+) -> list[tuple[Any, ...]]:
     """开批时第 ``i`` 个批次（从 0 开始，与 Pydantic 的 loc 一致）的客户字段校验错误。
 
     同时把字段规整进 ``x``：客户批号只去首尾空格，其余原样保存（D37）。
 
-    规则：ownership 为 customer 时必须指定存在的客户；ownership 为 own 时不能带客户
+    规则：ownership 为 customer 时必须指定存在的客户和客户批号（D52）；ownership 为 own 时不能带客户
     或客户批号。
     """
-    errs: list[tuple[Any, str]] = []
+    errs: list[tuple[Any, ...]] = []
     own = x.get("ownership") or "own"
     x["ownership"] = own
     x["customer_lot_no"] = (x.get("customer_lot_no") or "").strip() or None
@@ -98,6 +100,14 @@ def customer_start_errors(
             )
         elif not one(s, tid, "customer", cid):
             errs.append((("lots", i, "customer_id"), f"lots.{i}: customer not found"))
+        if not x["customer_lot_no"]:  # D52：客供批必须有客户批号（去空格后）
+            errs.append(
+                (
+                    ("lots", i, "customer_lot_no"),
+                    f"lots.{i}: customer lot no. required for customer-owned material",
+                    "customer_lot_required",
+                )
+            )
     else:
         if cid:
             errs.append(

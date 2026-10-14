@@ -146,8 +146,11 @@ def test_merge_customer_lot_mismatch(client: TestClient, db: Session) -> None:
     kw = {"ownership": "customer", "customer_id": c1["id"]}
     (a,) = _start(f, customer_lot_no="CL-A", **kw)["data"]
     (b,) = _start(f, customer_lot_no="CL-B", **kw)["data"]
-    (n,) = _start(f, **kw)["data"]
-    (n2,) = _start(f, **kw)["data"]
+    # D52 起开批必须带客户批号；历史空值（不回填）用 SQL 模拟
+    (n,) = _start(f, customer_lot_no="CL-N", **kw)["data"]
+    (n2,) = _start(f, customer_lot_no="CL-N2", **kw)["data"]
+    for x in (n, n2):
+        f.sql("UPDATE mes_lot SET customer_lot_no = NULL WHERE id = :i", i=x["id"])
     for x in (a, b, n, n2):
         f.stage(x, "move_in", equipment_id=f.eq["id"])
     d = merge(f, a, [b], 422)["detail"]
@@ -269,7 +272,8 @@ def test_start_error_loc_zero_based(client: TestClient, db: Session) -> None:
         ["body", "lots", 0, "carrier_id"]
     ]
     assert locs([{"qty": 1}, {"qty": 1, "ownership": "customer"}]) == [
-        ["body", "lots", 1, "customer_id"]
+        ["body", "lots", 1, "customer_id"],
+        ["body", "lots", 1, "customer_lot_no"],
     ]
 
 
@@ -290,3 +294,64 @@ def test_customer_lot_db_upper_eszett(client: TestClient, db: Session) -> None:
     for x in (a, b):
         f.stage(x, "move_in", equipment_id=f.eq["id"])
     merge(f, a, [b])
+
+
+def test_customer_lot_required_d52(client: TestClient, db: Session) -> None:
+    """D52：客供批开批必须有客户批号（去空格后为空 → 422 customer_lot_required，
+    loc 带批次序号）；自有批不受影响。"""
+    f = _line(client, db)
+    c1 = f.m.post("customer", {"code": "C1", "name": "Cust 1"})
+    kw = {"ownership": "customer", "customer_id": c1["id"]}
+    url = f"{API}/work-order/{f.wo['id']}/start"
+    for bad in (None, "", "   "):
+        lot = {"qty": 1, **kw} | ({} if bad is None else {"customer_lot_no": bad})
+        d = f.post(url, {"lots": [{"qty": 1}, lot]}, 422)["detail"]
+        assert d == [
+            {
+                "loc": ["body", "lots", 1, "customer_lot_no"],
+                "msg": "lots.1: customer lot no. required for customer-owned material",
+                "type": "customer_lot_required",
+                "code": "customer_lot_required",
+            }
+        ]
+    # 整批不开：上面第 0 个自有批也没有写入
+    (ok,) = _start(f, customer_lot_no="  CL-9 ", **kw)["data"]
+    assert ok["customer_lot_no"] == "CL-9"
+    (own,) = _start(f)["data"]
+    assert own["ownership"] == "own" and own["customer_lot_no"] is None
+
+
+def test_trace_customer_name_of6_1(client: TestClient, db: Session) -> None:
+    """O-F6-1：追溯（customer_lot 结果、上下游批次行、目标）与互查带 customer_name。"""
+    f = _line(client, db)
+    c1 = f.m.post("customer", {"code": "C1", "name": "Cust 1"})
+    (a,) = _start(
+        f, customer_lot_no="CL-T", ownership="customer", customer_id=c1["id"]
+    )["data"]
+    (b,) = f.start(4)
+    f.stage(a, "move_in", equipment_id=f.eq["id"])
+    (ch,) = split(f, a, [{"unit_ids": uid(f, a, 0, 1)}])["children"]
+
+    def tr(kind: str, code: str) -> Any:
+        r = client.get(
+            f"{EXEC}/trace", headers=f.m.h, params={"kind": kind, "code": code}
+        )
+        assert r.status_code == 200, r.text
+        return r.json()
+
+    t = tr("customer_lot", "cl-t")
+    assert {(x["lot_no"], x["customer"], x["customer_name"]) for x in t["lots"]} == {
+        (a["code"], "C1", "Cust 1"),
+        (ch["code"], "C1", "Cust 1"),
+    }
+    t = tr("lot", a["code"])
+    assert (t["target"]["customer"], t["target"]["customer_name"]) == ("C1", "Cust 1")
+    assert [x["customer_name"] for x in t["forward"]["lots"]] == ["Cust 1"]
+    up = tr("lot", ch["code"])["backward"]["lots"][0]
+    assert (up["customer"], up["customer_name"]) == ("C1", "Cust 1")
+    t = tr("lot", b["code"])
+    assert t["target"]["customer"] is None and t["target"]["customer_name"] is None
+    got = client.get(
+        f"{EXEC}/customer-lots", headers=f.m.h, params={"customer_lot_no": "CL-T"}
+    ).json()["data"]
+    assert {x["customer_name"] for x in got} == {"Cust 1"}
