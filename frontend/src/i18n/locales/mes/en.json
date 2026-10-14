@@ -111,7 +111,7 @@
         "category": "Category",
         "action": "Action",
         "target_e10_state": "Target E10 state",
-        "hold_reason": "Hold reason",
+        "hold_reason": "Reason code",
         "require_qual_on_clear": "Qual after clear",
         "disposition": "Disposition",
         "is_active": "Active"
@@ -132,7 +132,7 @@
         "cleared_by": "Cleared by",
         "clear_source": "Clear source",
         "clear_event_id": "Clear event ID",
-        "hold_ids": "Holds",
+        "hold_ids": "Linked holds (legacy)",
         "e10_change": "E10 change",
         "raw": "Raw report",
         "comment": "Comment",
@@ -259,6 +259,7 @@
         "from_state": "From state",
         "to_state": "To state",
         "source": "Source",
+        "trigger": "Trigger",
         "reason": "Reason code",
         "comment": "Comment",
         "username": "User",
@@ -981,7 +982,7 @@
     },
     "help": {
       "alarm_code": {
-        "hold_reason": "Blank: system reason equipment_alarm"
+        "hold_reason": "Reason for the state change; blank: system reason equipment_alarm"
       },
       "code_rule": {
         "pattern": "Tokens: {YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}"
@@ -1065,9 +1066,9 @@
       },
       "alarm_action": {
         "none": "None",
-        "hold_lot": "Hold lots",
+        "hold_lot": "None (alarms never hold lots)",
         "hold_equipment": "Equipment state",
-        "hold_both": "Both"
+        "hold_both": "Equipment state"
       },
       "alarm_status": {
         "active": "Active",
@@ -1157,7 +1158,16 @@
       "e10_source": {
         "manual": "Manual",
         "auto": "Automatic",
-        "equipment": "Equipment"
+        "equipment": "Equipment",
+        "eap": "EAP",
+        "simulator": "Simulator"
+      },
+      "e10_trigger": {
+        "track_in": "Track in",
+        "track_out": "Track out (no other running lots)",
+        "manual": "Manual",
+        "equipment": "Equipment event",
+        "system": "System"
       },
       "pm_result": {
         "ok": "OK",
@@ -1239,10 +1249,6 @@
         "pending_maintenance": "Pending maintenance",
         "expired": "Expired",
         "retired": "Retired"
-      },
-      "e10_trigger": {
-        "track_in": "Track in",
-        "track_out": "Track out (no other running lots)"
       },
       "hold_type": {
         "manual": "Manual",

@@ -21,7 +21,7 @@ import { IconButton } from '@/components/icon-button'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
 
-/** 报警中且有 `mes.alarm:write` 时显示清除按钮；清除不恢复 Hold / 设备状态。 */
+/** 报警中且有 `mes.alarm:write` 时显示清除按钮；清除不恢复设备状态（D58：报警不 Hold 批次）。 */
 export function AlarmClearButton({ row }: { row: MesRow }) {
   const can = useMesCan()
   const [open, setOpen] = useState(false)

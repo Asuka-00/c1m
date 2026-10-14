@@ -1625,7 +1625,7 @@
     },
     "alarm": {
       "clear": "Clear alarm",
-      "clearDesc": "Holds and equipment state are not restored automatically.",
+      "clearDesc": "Equipment state is not restored automatically.",
       "cleared": "Alarm cleared",
       "already": "Alarm was already cleared; nothing changed"
     },

@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { ToolLife } from '@/features/mes/execution/exec-actions'
 import { WoProgress } from '@/features/mes/planning/wo-actions'
 import { DowntimeEnd, DueCell, HeldAt } from './due-cells'
+import { enumLabel } from './labels'
 import { RefLink } from './ref-link'
 
 /** 实体专用单元格渲染器：实体 -> 字段 -> 单元格。 */
@@ -82,6 +83,12 @@ export const CELLS: Record<
     end_at: (r) => <DowntimeEnd row={r} />,
   },
   tool: { usage_count: (r) => <ToolLife row={r} /> },
+  // D58：E10 履历的触发方式与事件来源、报警记录的来源（缺失显示 —）
+  e10_history: {
+    trigger: (r) => enumCell('e10_trigger', r.trigger),
+    source: (r) => enumCell('e10_source', r.source),
+  },
+  alarm_log: { source: (r) => enumCell('alarm_source', r.source) },
   // 量测数据：超规值以红色高亮
   dc_result: {
     value: (r) => (
@@ -121,3 +128,10 @@ export const ROW_RULES: Record<
 
 /** 已完结的工单状态（不再计算逾期）。 */
 const WO_DONE = ['completed', 'closed', 'cancelled']
+
+/** 枚举单元格：三语标签；空值显示「—」。 */
+function enumCell(en: string, v: unknown) {
+  if (v == null || v === '')
+    return <span className='text-muted-foreground'>—</span>
+  return <Badge variant='outline'>{enumLabel(en, String(v))}</Badge>
+}

@@ -111,7 +111,7 @@
         "category": "分类",
         "action": "联动",
         "target_e10_state": "目标 E10 状态",
-        "hold_reason": "Hold 原因",
+        "hold_reason": "原因代码",
         "require_qual_on_clear": "清除后需 Qual",
         "disposition": "处置说明",
         "is_active": "启用"
@@ -132,7 +132,7 @@
         "cleared_by": "清除人",
         "clear_source": "清除来源",
         "clear_event_id": "清除事件号",
-        "hold_ids": "联动 Hold",
+        "hold_ids": "关联 Hold（历史数据）",
         "e10_change": "E10 联动",
         "raw": "原始上报",
         "comment": "备注",
@@ -259,6 +259,7 @@
         "from_state": "源状态",
         "to_state": "目标状态",
         "source": "来源",
+        "trigger": "触发方式",
         "reason": "原因代码",
         "comment": "备注",
         "username": "用户",
@@ -981,7 +982,7 @@
     },
     "help": {
       "alarm_code": {
-        "hold_reason": "留空使用系统原因码 equipment_alarm"
+        "hold_reason": "设备状态切换的原因；留空使用系统原因码 equipment_alarm"
       },
       "code_rule": {
         "pattern": "占位符：{YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}"
@@ -1065,9 +1066,9 @@
       },
       "alarm_action": {
         "none": "不联动",
-        "hold_lot": "Hold 批次",
+        "hold_lot": "不联动（报警不 Hold 批次）",
         "hold_equipment": "切换设备状态",
-        "hold_both": "两者"
+        "hold_both": "切换设备状态"
       },
       "alarm_status": {
         "active": "报警中",
@@ -1157,7 +1158,16 @@
       "e10_source": {
         "manual": "手动",
         "auto": "自动",
-        "equipment": "设备"
+        "equipment": "设备",
+        "eap": "EAP",
+        "simulator": "模拟器"
+      },
+      "e10_trigger": {
+        "track_in": "上机",
+        "track_out": "下机（无其他加工批次）",
+        "manual": "人工",
+        "equipment": "设备事件",
+        "system": "系统"
       },
       "pm_result": {
         "ok": "合格",
@@ -1239,10 +1249,6 @@
         "pending_maintenance": "待保养",
         "expired": "已过期",
         "retired": "已报废"
-      },
-      "e10_trigger": {
-        "track_in": "上机",
-        "track_out": "下机（无其他加工批次）"
       },
       "hold_type": {
         "manual": "手动",

@@ -66,7 +66,7 @@ export const eqpApi = {
     planId: string,
     body: { equipment_id: string; result: 'ok' | 'ng'; comment?: string }
   ) => http.post(`/mes/eqp/pm/${planId}/complete`, body).then((r) => r.data),
-  /** 清除报警（B9）：不自动恢复 Hold 与 E10；已清除时 `cleared=false`（D55）。 */
+  /** 清除报警（B9）：不自动恢复 E10 状态；已清除时 `cleared=false`（D55）。 */
   alarmClear: (id: string, body: { comment?: string }) =>
     http
       .post<{
