@@ -245,7 +245,7 @@ const valueErr = (loc: string, msg: string, ctx?: Record<string, unknown>) =>
   ])
 const findQ = (id: string) => {
   const x = store.q.find((y) => y.id === id)
-  if (!x) throw apiError(404, 'not found')
+  if (!x) throw apiError(404, 'Record not found') // D88 补充一：通用 404 detail 为字符串
   return x
 }
 const blank = (v: unknown) => v == null || String(v).trim() === ''
