@@ -13,7 +13,62 @@ import uuid
 from datetime import date, timedelta
 from typing import Any
 
-from sim.client import Client, Resp
+from sim.client import API, Client, Resp
+
+
+def xlsx_bytes(rows: list[list[Any]]) -> bytes:
+    """最小 .xlsx（标准库 zipfile，inlineStr），只给导入用例造文件。"""
+    import io
+    import zipfile
+    from xml.sax.saxutils import escape
+
+    def col(i: int) -> str:
+        out = ""
+        i += 1
+        while i:
+            i, r = divmod(i - 1, 26)
+            out = chr(65 + r) + out
+        return out
+    xml_rows = []
+    for ri, row in enumerate(rows, 1):
+        cells = "".join(
+            f'<c r="{col(ci)}{ri}" t="inlineStr"><is><t>{escape(str(v))}</t></is></c>'
+            for ci, v in enumerate(row) if v not in (None, "")
+        )
+        xml_rows.append(f'<row r="{ri}">{cells}</row>')
+    sheet = ('<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+             f'<sheetData>{"".join(xml_rows)}</sheetData></worksheet>')
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("[Content_Types].xml", '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>')
+        z.writestr("_rels/.rels", '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>')
+        z.writestr("xl/workbook.xml", '<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets></workbook>')
+        z.writestr("xl/_rels/workbook.xml.rels", '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>')
+        z.writestr("xl/worksheets/sheet1.xml", sheet)
+    return buf.getvalue()
+
+
+def upload(c: Client, path: str, data: bytes) -> Resp:
+    """multipart 上传 file=x.xlsx（POST /mes/{entity}/import）。"""
+    import json as _j
+    import urllib.error
+    import urllib.request
+
+    bd = uuid.uuid4().hex
+    body = (f"--{bd}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"x.xlsx\"\r\n"
+            "Content-Type: application/octet-stream\r\n\r\n").encode() + data + f"\r\n--{bd}--\r\n".encode()
+    h = c._h({"Content-Type": f"multipart/form-data; boundary={bd}"})
+    req = urllib.request.Request(c.base + API + path, data=body, method="POST", headers=h)
+    try:
+        with urllib.request.urlopen(req, timeout=c.timeout) as r:
+            st, raw, hd = r.status, r.read(), {k.lower(): v for k, v in r.headers.items()}
+    except urllib.error.HTTPError as e:
+        st, raw, hd = e.code, e.read(), {k.lower(): v for k, v in e.headers.items()}
+    try:
+        b = _j.loads(raw) if raw else None
+    except ValueError:
+        b = raw.decode(errors="replace")[:500]
+    return Resp(st, b, 0, hd)
 
 Q = "/mes/operator-qual"
 
@@ -395,7 +450,40 @@ class Opq:
                 for k in ("comment", "reason_id", "approved_by"):
                     assert k in x
         self.step("履历总览：倒序、三列齐全", lambda e: overview(e, False))
-        self.step("履历 at 为 UTC 带 Z（D88-3）", lambda e: overview(e, True), xfail="D88-3 小提交未落地")
+        self.step("履历 at 为 UTC 带 Z（D88 补充一，589fbbc）", lambda e: overview(e, True))
+
+        def ev_z(e):
+            r = c.get("/mes/audit_log", entity_type="operator_qual", record_id=q, page_size=100)
+            rows = [x for x in self.rows(r) if str(x.get("action", "")).startswith("operator_qual.")]
+            assert rows, "无事件"
+            bad = [x.get("created_at") for x in rows if not str(x.get("created_at", "")).endswith("Z")]
+            e["sample"] = rows[0].get("created_at")
+            assert not bad, f"事件时间不带 Z：{bad[:3]}"
+        self.step("事件时间 UTC 带 Z", ev_z)
+
+        def imp_use_api(e):
+            et_row = c.get(f"/mes/equipment_type/{et}").body
+            et_code = (et_row.get("data", et_row) or {}).get("code")
+            hdr = ["username", "operation", "equipment_type", "expires_on", "is_active"]
+            before = c.get(qp).body
+            before = before.get("data", before)
+            new_user = f"imp-{self.run[-6:]}"
+            rows = [hdr, [new_user, "OP-MK", et_code, d(10), None], [me, "OP-MK", et_code, d(99), None]]
+            r = upload(c, "/mes/operator_qual/import", xlsx_bytes(rows))
+            e.update(req="POST /mes/operator_qual/import（xlsx 2 行：新授予 + 改已有 expires_on）", status=r.status,
+                     resp=json.dumps(r.body, ensure_ascii=False)[:500])
+            assert r.status == 422, f"HTTP {r.status}"
+            errs = ((r.body or {}).get("detail") or {}).get("errors") or []
+            assert len(errs) == 1, f"errors={errs}"
+            x = errs[0]
+            assert x.get("row") == 3 and x.get("type") == "value_error", x
+            assert (x.get("ctx") or {}).get("reason") == "use_api" and "expires_on" in (x.get("ctx") or {}).get("fields", []), x
+            after = c.get(qp).body
+            after = after.get("data", after)
+            assert after.get("expires_on") == before.get("expires_on"), "已有资质被改"
+            n = self.rows(c.get("/mes/operator_qual", username=new_user, page_size=5))
+            assert not [z for z in n if z.get("username") == new_user], "整表应回滚，新行不应建"
+        self.step("Excel 导入改已有资质 expires_on → 422 use_api，整表回滚（D88-3）", imp_use_api)
 
         def expiring(e):
             r = c.get("/mes/exec/operator-qual/expiring", days=0)

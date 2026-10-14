@@ -498,7 +498,7 @@ def test_reticle_report_draft_e2():
     from sim.scenario import ScenarioError, load, parse
 
     sc = load("scenarios/p3-draft/reticle-report.yaml")
-    assert not sc.draft and sc.run_id == "ret-report-12" and "reticle_report" in P3_DRAFT_STEPS
+    assert not sc.draft and sc.run_id == "ret-report-13" and "reticle_report" in P3_DRAFT_STEPS
     # EAP 光罩上报未开（D67）：依赖 reticle_report 结果的断言都带 needs，记未实现而不是失败
     rep_saves = {s.args.get("save_as") for s in sc.steps if s.kind == "reticle_report"}
     assert all(s.args.get("save_as") for s in sc.steps if s.kind == "reticle_report")
