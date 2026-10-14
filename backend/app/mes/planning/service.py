@@ -31,6 +31,7 @@ from app.mes.common import coderule
 from app.mes.lot import service as lot_svc
 from app.mes.planning.board import wo_due_notify as wo_due_notify
 from app.mes.process import service as process_svc
+from app.mes.product import service as bom_svc
 
 Row = dict[str, Any]
 WO, LOT, WAFER = (ENTITIES[c] for c in ("work_order", "lot", "wafer"))
@@ -488,6 +489,8 @@ def start(
     if not step:
         raise http_422([("route", "route: has no operation steps")])
     prod = _one(s, tid, "product", wo["product_id"]) or {}
+    # D28：锁定当时生效的 BOM 版本（没有则为空；开关打开时拒绝）
+    bom = bom_svc.lock_for_start(s, tid, wo["product_id"])
     lot_nos = coderule.generate(s, tid, lr, len(lots), commit=False)
     at, c, out = now(), conn(s), []
     tag = {"_demo": True} if demo else {}
@@ -525,6 +528,7 @@ def start(
                 source_ref=x.get("source_ref") or None,
                 started_at=at,
                 started_by=actor_name(user),
+                bom_id=bom and bom["id"],
                 attrs=dict(tag),
                 **sysv,
             )
@@ -550,7 +554,16 @@ def start(
             {"work_order": (None, wo["code"]), "qty": (None, lot["qty"])},
         )
         lot_svc.history(
-            s, tid, lot, "start", user, step=step, details={"work_order": wo["code"]}
+            s,
+            tid,
+            lot,
+            "start",
+            user,
+            step=step,
+            details={
+                "work_order": wo["code"],
+                "bom_version": bom and bom["version"],
+            },
         )
         out.append(lot)
     _set(

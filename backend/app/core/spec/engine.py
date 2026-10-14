@@ -68,6 +68,8 @@ class F:
     ref: str | None = None  # 目标实体编码
     cascade: bool = False  # 引用：随被引用行一起删除（子表行）
     max_length: int = 100
+    # float：设置后存为定点小数 Numeric(18, scale)，输入四舍五入到 scale 位
+    scale: int | None = None
     search: bool = False  # 参与 ?q= 关键字搜索
     list: bool = True  # 显示为表格列
     default: Any = None
@@ -211,7 +213,7 @@ def _sa_type(f: F) -> Any:
         case "int":
             return sa.Integer()
         case "float":
-            return sa.Float()
+            return sa.Numeric(18, f.scale) if f.scale is not None else sa.Float()
         case "bool":
             return sa.Boolean()
         case "date":

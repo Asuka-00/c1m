@@ -38,6 +38,7 @@ def field_meta(e: Entity) -> list[dict[str, Any]]:
                 "search": f.search,
                 "default": f.default,
                 "max_length": f.max_length if f.type == "str" else None,
+                "scale": f.scale,
                 "help": bool(f.help),
                 "depends": f.depends,
                 "ref_filter": f.ref_filter,

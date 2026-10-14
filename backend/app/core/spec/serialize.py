@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import date, datetime, time
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 
 import sqlalchemy as sa
@@ -23,6 +24,8 @@ def to_json(v: Any) -> Any:
         return str(v)
     if isinstance(v, datetime | date | time):
         return v.isoformat()
+    if isinstance(v, Decimal):
+        return float(v)
     return v
 
 
@@ -47,7 +50,18 @@ def coerce(f: F, v: Any) -> Any:
         case "float":
             if isinstance(v, bool):
                 raise ValueError("must be a number")
-            return float(v)
+            if f.scale is None:
+                return float(v)
+            try:
+                d = Decimal(str(v).strip())
+            except InvalidOperation as ex:
+                raise ValueError("must be a number") from ex
+            if not d.is_finite():
+                raise ValueError("must be a number")
+            q = d.quantize(Decimal(1).scaleb(-f.scale), rounding=ROUND_HALF_UP)
+            if abs(q) >= Decimal(10) ** (18 - f.scale):
+                raise ValueError("out of range")
+            return q
         case "bool":
             if isinstance(v, bool):
                 return v

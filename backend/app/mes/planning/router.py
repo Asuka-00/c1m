@@ -94,7 +94,17 @@ def wo_start(
     lots = svc.start(
         session, ctx.id, rid, [x.model_dump() for x in body.lots], ctx.user
     )
-    return {"data": serialize(session, ctx.id, svc.LOT, lots)}
+    warnings = (
+        [
+            {
+                "code": "no_active_bom",
+                "message": "product has no active BOM; lots locked no BOM version",
+            }
+        ]
+        if any(x.get("bom_id") is None for x in lots)
+        else []
+    )
+    return {"data": serialize(session, ctx.id, svc.LOT, lots), "warnings": warnings}
 
 
 @router.post("/{rid}/undo-start")

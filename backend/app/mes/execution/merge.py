@@ -29,6 +29,7 @@ from app.mes.execution.sm_rules import (
 from app.mes.execution.stage_common import _brief, _ov
 from app.mes.execution.stages import LOT
 from app.mes.lot.service import check_transition, history, lock_lots, lot_error, units
+from app.mes.product import service as bom_svc
 
 Row = dict[str, Any]
 
@@ -62,6 +63,8 @@ def merge_problems(
             p.append(f"{c}: different {label}")
     if (src.get("route_stack") or []) != (target.get("route_stack") or []):
         p.append(f"{c}: different sub-route / rework frame")
+    if src.get("bom_id") != target.get("bom_id"):  # D28：空与非空也算不同
+        p.append(f"{c}: different BOM version")
     if (
         rule
         and rule.get("merge_same_wo", True)
@@ -182,6 +185,23 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
                 action="merge_source",
                 lot_status=src["lot_status"],
                 target_status=target["lot_status"],
+            )
+    # D28：BOM 版本必须一致（两个都为空可以合），硬性拒绝，不可强制放行
+    for src in sorted(srcs, key=lambda x: x["id"]):
+        if src.get("bom_id") != target.get("bom_id"):
+            tv = bom_svc.version_label(s, tid, target.get("bom_id"))
+            sv = bom_svc.version_label(s, tid, src.get("bom_id"))
+            raise lot_error(
+                "bom_mismatch",
+                f"BOM version differs: target {target['code']} {tv}, "
+                f"source {src['code']} {sv}",
+                src,
+                action="merge_source",
+                target_lot_code=target["code"],
+                target_bom_id=target.get("bom_id") and str(target["bom_id"]),
+                target_bom_version=tv,
+                source_bom_id=src.get("bom_id") and str(src["bom_id"]),
+                source_bom_version=sv,
             )
     rule = rule_for(s, tid, target)
     errs: list[str] = []

@@ -11,6 +11,7 @@
       "wo": "工单",
       "process": "工艺",
       "product": "产品与物料",
+      "bom": "物料清单（BOM）",
       "quality": "质量",
       "wh": "仓储"
     },
@@ -56,6 +57,9 @@
       "lot_recipe_run": "配方执行记录",
       "lot_genealogy": "批次谱系",
       "work_order": "工单",
+      "bom": "物料清单（BOM）",
+      "bom_line": "BOM 明细",
+      "bom_line_substitute": "替代料",
       "operation": "工序",
       "route": "工艺流程",
       "route_step": "流程步骤",
@@ -439,6 +443,7 @@
         "source_ref": "来源晶圆 / 物料批次",
         "started_at": "投产时间",
         "started_by": "投产人",
+        "bom": "BOM 版本",
         "description": "描述"
       },
       "wafer": {
@@ -537,6 +542,36 @@
         "released_at": "下达时间",
         "released_by": "下达人",
         "description": "描述"
+      },
+      "bom": {
+        "product": "产品",
+        "version": "版本",
+        "status": "状态",
+        "effective_at": "生效时间",
+        "confirmed_by": "确认人",
+        "confirmed_at": "确认时间",
+        "copied_from": "复制自",
+        "description": "描述"
+      },
+      "bom_line": {
+        "bom": "BOM",
+        "line_no": "行号",
+        "component_type": "组件类型",
+        "material": "物料",
+        "component_product": "半成品",
+        "qty": "用量",
+        "uom": "单位",
+        "per_basis": "每",
+        "scrap_rate": "损耗率",
+        "consume_mode": "扣料方式",
+        "route_step": "流程步骤",
+        "remark": "备注"
+      },
+      "bom_line_substitute": {
+        "bom_line": "BOM 明细",
+        "material": "物料",
+        "priority": "优先级",
+        "remark": "备注"
       },
       "operation": {
         "code": "编码",
@@ -903,9 +938,15 @@
         "warn_minutes": "已用时间达到该值即预警（留空不预警）",
         "reason": "选填；处置为 hold 时留空使用系统原因码 qtime_expired"
       },
+      "lot": {
+        "bom": "开批时锁定（D28），为空表示当时没有生效的 BOM"
+      },
       "work_order": {
         "priority": "留空则使用批次类型的默认优先级",
         "over_start_limit_pct": "投产片数最多可超出计划片数的百分比"
+      },
+      "bom_line": {
+        "scrap_rate": "小数，如 0.02 表示 2%"
       },
       "route_step": {
         "branch_condition": "例如 lot_type == 'ENG'",
@@ -1046,6 +1087,7 @@
         "qual_expiry_notice": "资质到期提醒",
         "future_hold": "预约 Hold",
         "wo_due": "工单交期提醒",
+        "bom_required": "开批须有生效 BOM",
         "carrier_clean": "载具清洗周期",
         "carrier_usage": "载具使用次数",
         "chamber_required": "已选腔体",
@@ -1173,6 +1215,28 @@
         "die": "晶粒",
         "package": "封装体",
         "unit": "单元"
+      },
+      "bom_status": {
+        "draft": "草稿",
+        "active": "生效",
+        "superseded": "已替代",
+        "void": "作废"
+      },
+      "bom_component_type": {
+        "material": "物料",
+        "product": "半成品"
+      },
+      "bom_per_basis": {
+        "wafer": "晶圆",
+        "strip": "条",
+        "die": "晶粒",
+        "package": "封装体",
+        "unit": "单元",
+        "lot": "批"
+      },
+      "bom_consume_mode": {
+        "issue": "出站扣料",
+        "mounted": "机台上料"
       },
       "operation_type": {
         "process": "加工",
@@ -1560,6 +1624,8 @@
     "mes_process__write": "工艺·编辑",
     "mes_product__read": "产品与物料·查看",
     "mes_product__write": "产品与物料·编辑",
+    "mes_bom__read": "物料清单（BOM）·查看",
+    "mes_bom__write": "物料清单（BOM）·编辑",
     "mes_quality__read": "质量·查看",
     "mes_quality__write": "质量·编辑",
     "mes_wh__read": "仓储·查看",
@@ -1574,6 +1640,7 @@
     "mes_exec__adjust": "生产执行·报废 / 补数",
     "mes_wo__release": "工单·下达 / 关闭",
     "mes_lot__start": "批次与晶圆规则·投产",
+    "mes_bom__activate": "物料清单（BOM）·生效 / 作废",
     "mes_wh__confirm": "仓储·确认入库",
     "notify__config": "配置通知订阅"
   },
@@ -1621,6 +1688,8 @@
     "mes_process__write": "允许：工艺·编辑",
     "mes_product__read": "允许：产品与物料·查看",
     "mes_product__write": "允许：产品与物料·编辑",
+    "mes_bom__read": "允许：物料清单（BOM）·查看",
+    "mes_bom__write": "允许：物料清单（BOM）·编辑",
     "mes_quality__read": "允许：质量·查看",
     "mes_quality__write": "允许：质量·编辑",
     "mes_wh__read": "允许：仓储·查看",
@@ -1635,6 +1704,7 @@
     "mes_exec__adjust": "允许：生产执行·报废 / 补数",
     "mes_wo__release": "允许：工单·下达 / 关闭",
     "mes_lot__start": "允许：批次与晶圆规则·投产",
+    "mes_bom__activate": "允许：物料清单（BOM）·生效 / 作废",
     "mes_wh__confirm": "允许：仓储·确认入库",
     "notify__config": "允许：配置通知订阅"
   },

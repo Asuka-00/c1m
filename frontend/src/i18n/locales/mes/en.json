@@ -11,6 +11,7 @@
       "wo": "Work orders",
       "process": "Process",
       "product": "Product & material",
+      "bom": "BOM",
       "quality": "Quality",
       "wh": "Warehouse"
     },
@@ -56,6 +57,9 @@
       "lot_recipe_run": "Recipe run",
       "lot_genealogy": "Lot genealogy",
       "work_order": "Work order",
+      "bom": "BOM",
+      "bom_line": "BOM line",
+      "bom_line_substitute": "Substitute material",
       "operation": "Operation / step",
       "route": "Route / flow",
       "route_step": "Route step",
@@ -439,6 +443,7 @@
         "source_ref": "Source wafer / material batch",
         "started_at": "Started at",
         "started_by": "Started by",
+        "bom": "BOM version",
         "description": "Description"
       },
       "wafer": {
@@ -537,6 +542,36 @@
         "released_at": "Released at",
         "released_by": "Released by",
         "description": "Description"
+      },
+      "bom": {
+        "product": "Product",
+        "version": "Version",
+        "status": "Status",
+        "effective_at": "Effective at",
+        "confirmed_by": "Confirmed by",
+        "confirmed_at": "Confirmed at",
+        "copied_from": "Copied from",
+        "description": "Description"
+      },
+      "bom_line": {
+        "bom": "BOM",
+        "line_no": "Line no.",
+        "component_type": "Component type",
+        "material": "Material",
+        "component_product": "Semi-finished product",
+        "qty": "Qty",
+        "uom": "UOM",
+        "per_basis": "Per",
+        "scrap_rate": "Scrap rate",
+        "consume_mode": "Consume mode",
+        "route_step": "Route step",
+        "remark": "Remark"
+      },
+      "bom_line_substitute": {
+        "bom_line": "BOM line",
+        "material": "Material",
+        "priority": "Priority",
+        "remark": "Remark"
       },
       "operation": {
         "code": "Code",
@@ -903,9 +938,15 @@
         "warn_minutes": "Pre-expiry warning when elapsed ≥ this (blank: none)",
         "reason": "Optional; for hold, blank uses system reason qtime_expired"
       },
+      "lot": {
+        "bom": "Locked at lot start (D28); blank = no active BOM then"
+      },
       "work_order": {
         "priority": "Blank: the lot type's default priority",
         "over_start_limit_pct": "Started wafers may exceed the plan by at most this percentage"
+      },
+      "bom_line": {
+        "scrap_rate": "Fraction, e.g. 0.02 = 2%"
       },
       "route_step": {
         "branch_condition": "e.g. lot_type == 'ENG'",
@@ -1046,6 +1087,7 @@
         "qual_expiry_notice": "Qualification expiry notice",
         "future_hold": "Future hold at step",
         "wo_due": "Work order due notice",
+        "bom_required": "Active BOM required at lot start",
         "carrier_clean": "Carrier cleaning due",
         "carrier_usage": "Carrier usage limit",
         "chamber_required": "Chamber selected",
@@ -1173,6 +1215,28 @@
         "die": "Die",
         "package": "Package",
         "unit": "Unit"
+      },
+      "bom_status": {
+        "draft": "Draft",
+        "active": "Active",
+        "superseded": "Superseded",
+        "void": "Void"
+      },
+      "bom_component_type": {
+        "material": "Material",
+        "product": "Semi-finished product"
+      },
+      "bom_per_basis": {
+        "wafer": "Wafer",
+        "strip": "Strip",
+        "die": "Die",
+        "package": "Package",
+        "unit": "Unit",
+        "lot": "Lot"
+      },
+      "bom_consume_mode": {
+        "issue": "Issue at track-out",
+        "mounted": "Mounted on equipment"
       },
       "operation_type": {
         "process": "Process",
@@ -1560,6 +1624,8 @@
     "mes_process__write": "Process·Edit",
     "mes_product__read": "Product & material·View",
     "mes_product__write": "Product & material·Edit",
+    "mes_bom__read": "BOM·View",
+    "mes_bom__write": "BOM·Edit",
     "mes_quality__read": "Quality·View",
     "mes_quality__write": "Quality·Edit",
     "mes_wh__read": "Warehouse·View",
@@ -1574,6 +1640,7 @@
     "mes_exec__adjust": "Execution·Scrap / bonus",
     "mes_wo__release": "Work orders·Release / close",
     "mes_lot__start": "Lot & wafer rules·Start lots",
+    "mes_bom__activate": "BOM·Activate / void",
     "mes_wh__confirm": "Warehouse·Confirm receipts",
     "notify__config": "Configure subscriptions"
   },
@@ -1621,6 +1688,8 @@
     "mes_process__write": "Allows: Process·Edit",
     "mes_product__read": "Allows: Product & material·View",
     "mes_product__write": "Allows: Product & material·Edit",
+    "mes_bom__read": "Allows: BOM·View",
+    "mes_bom__write": "Allows: BOM·Edit",
     "mes_quality__read": "Allows: Quality·View",
     "mes_quality__write": "Allows: Quality·Edit",
     "mes_wh__read": "Allows: Warehouse·View",
@@ -1635,6 +1704,7 @@
     "mes_exec__adjust": "Allows: Execution·Scrap / bonus",
     "mes_wo__release": "Allows: Work orders·Release / close",
     "mes_lot__start": "Allows: Lot & wafer rules·Start lots",
+    "mes_bom__activate": "Allows: BOM·Activate / void",
     "mes_wh__confirm": "Allows: Warehouse·Confirm receipts",
     "notify__config": "Allows: Configure subscriptions"
   },

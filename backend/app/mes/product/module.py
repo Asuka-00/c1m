@@ -8,6 +8,12 @@ register(
         name="mes.product",
         perm_modules=PERM_MODULES,
         permissions=PERMISSIONS,
-        specs=("app.mes.product.specs", "app.mes.product.validators"),
+        specs=(
+            "app.mes.product.specs",
+            "app.mes.product.validators",
+            "app.mes.product.bom_specs",
+            "app.mes.product.bom_validators",
+        ),
+        routers=("app.mes.product.router:router",),
     )
 )

@@ -11,6 +11,7 @@
       "wo": "作業指示",
       "process": "プロセス",
       "product": "製品・資材",
+      "bom": "部品表（BOM）",
       "quality": "品質",
       "wh": "倉庫"
     },
@@ -56,6 +57,9 @@
       "lot_recipe_run": "レシピ実行記録",
       "lot_genealogy": "ロット系譜",
       "work_order": "作業指示",
+      "bom": "部品表（BOM）",
+      "bom_line": "BOM 明細",
+      "bom_line_substitute": "代替資材",
       "operation": "工程",
       "route": "ルート / フロー",
       "route_step": "ルートステップ",
@@ -439,6 +443,7 @@
         "source_ref": "元ウェーハ・資材ロット",
         "started_at": "投入日時",
         "started_by": "投入者",
+        "bom": "BOM 版",
         "description": "説明"
       },
       "wafer": {
@@ -537,6 +542,36 @@
         "released_at": "リリース日時",
         "released_by": "リリース者",
         "description": "説明"
+      },
+      "bom": {
+        "product": "製品",
+        "version": "バージョン",
+        "status": "状態",
+        "effective_at": "有効日時",
+        "confirmed_by": "確認者",
+        "confirmed_at": "確認日時",
+        "copied_from": "コピー元",
+        "description": "説明"
+      },
+      "bom_line": {
+        "bom": "BOM",
+        "line_no": "行番号",
+        "component_type": "構成品種別",
+        "material": "資材",
+        "component_product": "半製品",
+        "qty": "使用量",
+        "uom": "単位",
+        "per_basis": "当たり",
+        "scrap_rate": "ロス率",
+        "consume_mode": "消費方式",
+        "route_step": "ルートステップ",
+        "remark": "備考"
+      },
+      "bom_line_substitute": {
+        "bom_line": "BOM 明細",
+        "material": "資材",
+        "priority": "優先度",
+        "remark": "備考"
       },
       "operation": {
         "code": "コード",
@@ -903,9 +938,15 @@
         "warn_minutes": "経過がこの値以上で事前警告（空欄：なし）",
         "reason": "任意。hold で空欄の場合はシステム理由 qtime_expired（Q-Time 超過）を使用"
       },
+      "lot": {
+        "bom": "投入時に固定（D28）、空欄は当時有効な BOM なし"
+      },
       "work_order": {
         "priority": "空欄：ロットタイプの既定優先度",
         "over_start_limit_pct": "投入枚数が計画を超えてよい割合"
+      },
+      "bom_line": {
+        "scrap_rate": "小数（例：0.02 = 2%）"
       },
       "route_step": {
         "branch_condition": "例：lot_type == 'ENG'",
@@ -1046,6 +1087,7 @@
         "qual_expiry_notice": "資格期限通知",
         "future_hold": "予約ホールド",
         "wo_due": "作業指示納期通知",
+        "bom_required": "投入時に有効 BOM 必須",
         "carrier_clean": "キャリア洗浄周期",
         "carrier_usage": "キャリア使用回数",
         "chamber_required": "チャンバー選択済",
@@ -1173,6 +1215,28 @@
         "die": "ダイ",
         "package": "パッケージ",
         "unit": "ユニット"
+      },
+      "bom_status": {
+        "draft": "下書き",
+        "active": "有効",
+        "superseded": "置換済",
+        "void": "無効"
+      },
+      "bom_component_type": {
+        "material": "資材",
+        "product": "半製品"
+      },
+      "bom_per_basis": {
+        "wafer": "ウェーハ",
+        "strip": "ストリップ",
+        "die": "ダイ",
+        "package": "パッケージ",
+        "unit": "ユニット",
+        "lot": "ロット"
+      },
+      "bom_consume_mode": {
+        "issue": "トラックアウト時払出",
+        "mounted": "装置装着"
       },
       "operation_type": {
         "process": "加工",
@@ -1560,6 +1624,8 @@
     "mes_process__write": "プロセス·編集",
     "mes_product__read": "製品・資材·閲覧",
     "mes_product__write": "製品・資材·編集",
+    "mes_bom__read": "部品表（BOM）·閲覧",
+    "mes_bom__write": "部品表（BOM）·編集",
     "mes_quality__read": "品質·閲覧",
     "mes_quality__write": "品質·編集",
     "mes_wh__read": "倉庫·閲覧",
@@ -1574,6 +1640,7 @@
     "mes_exec__adjust": "生産実行·廃棄 / 追加",
     "mes_wo__release": "作業指示·発行 / クローズ",
     "mes_lot__start": "ロット・ウェーハ規則·投入",
+    "mes_bom__activate": "部品表（BOM）·有効化 / 無効化",
     "mes_wh__confirm": "倉庫·入庫確認",
     "notify__config": "通知購読設定"
   },
@@ -1621,6 +1688,8 @@
     "mes_process__write": "許可：プロセス·編集",
     "mes_product__read": "許可：製品・資材·閲覧",
     "mes_product__write": "許可：製品・資材·編集",
+    "mes_bom__read": "許可：部品表（BOM）·閲覧",
+    "mes_bom__write": "許可：部品表（BOM）·編集",
     "mes_quality__read": "許可：品質·閲覧",
     "mes_quality__write": "許可：品質·編集",
     "mes_wh__read": "許可：倉庫·閲覧",
@@ -1635,6 +1704,7 @@
     "mes_exec__adjust": "許可：生産実行·廃棄 / 追加",
     "mes_wo__release": "許可：作業指示·発行 / クローズ",
     "mes_lot__start": "許可：ロット・ウェーハ規則·投入",
+    "mes_bom__activate": "許可：部品表（BOM）·有効化 / 無効化",
     "mes_wh__confirm": "許可：倉庫·入庫確認",
     "notify__config": "許可：通知購読設定"
   },

@@ -445,6 +445,12 @@ def _wo_due(_ctx: Ctx, _p: Row) -> Outcome:
     return "na", "scheduled notice", {}
 
 
+@check_type("bom_required")
+def _bom_required(_ctx: Ctx, _p: Row) -> Outcome:
+    """开批须有生效 BOM（D28）：开批时由 ``bom.required`` 读取，默认关闭；作业时不检查。"""
+    return "na", "checked at lot start", {}
+
+
 @check_type("future_hold")
 def _future_hold(ctx: Ctx, _p: Row) -> Outcome:
     """预约 Hold：Move In 时触发当前工步的预约 Hold（关闭后不触发）。"""

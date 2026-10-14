@@ -43,6 +43,10 @@ CHECK_TYPES = [
     ),
     ("future_hold", "Future hold at step|预约 Hold|予約ホールド"),
     ("wo_due", "Work order due notice|工单交期提醒|作業指示納期通知"),
+    (
+        "bom_required",
+        "Active BOM required at lot start|开批须有生效 BOM|投入時に有効 BOM 必須",
+    ),
     ("carrier_clean", "Carrier cleaning due|载具清洗周期|キャリア洗浄周期"),
     ("carrier_usage", "Carrier usage limit|载具使用次数|キャリア使用回数"),
     ("chamber_required", "Chamber selected|已选腔体|チャンバー選択済"),

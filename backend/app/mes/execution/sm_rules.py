@@ -21,6 +21,7 @@ from app.mes.execution.stages import LOT
 Row = dict[str, Any]
 SPLIT_STATES = ("waiting", "moved_in")  # == RULES["split"].from_（见 lot.state）
 COPY = (
+    "bom_id",  # 子批沿用母批锁定的 BOM 版本（D28）
     "work_order_id",
     "product_id",
     "route_id",
