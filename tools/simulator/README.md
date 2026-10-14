@@ -135,3 +135,11 @@ B9（`0a74f8a`）、B10（`d27b700`/`23c502d`）、B11（`8294b63`）已对齐�
 - `incident` 返回 201（重放也是 201）；`mount` 响应 `data` 是挂载记录；请求体 `slot` → `slot_code`、`reason`（调整）→ `reason_id`。
 - D71：先 `invalid_transition` 后 `still_mounted`（335db8a 顺序相反，等下个提交）；超 6 位小数 422 `value_error`、`ctx.max_places=6`（335db8a ctx 尚无 max_places）。
 - **D70 补充（两层一致性）**：单台覆盖行必须先有对应的类型行；草稿先建类型行再建单台行。反例：缺类型行 422 `value_error` `ctx.reason=type_row_missing`；设备无设备类型 422 `value_error` `ctx.reason=equipment_type_missing`（测试设备 EAP-NT01）；删除仍被引用的类型行 409 `referenced`（草稿步骤 `delete_alarm_code`，适配器 `alarm_code_delete`，B8 落地后核对）。
+
+### P3 执行器（`sim/p3.py`，marking-report / reticle-report）
+- 光罩 14 个手工写接口、`reticle_report`（`/mes/eap/events` event_type=reticle_*）、`reticle_replay`、`expect_reticle*`；打标 create/print/inspect/void/config/report/replay、`lot_scrap`、`expect_marking*`。写操作带 `Idempotency-Key = {run_id}:{idem}`，`no_idem: true` 不带。
+- 取值：`$now±N[smh]`、`$名.字段`、`$ext.名`、`$cfg.*`、`$issued[.批次]`、`$marking.批次|名`、`$print_seq_N[.字段]`、`$reason/$eq/$lot.编码`；匹配器 `$nonempty`、`$utc_z`。断言另支持 `ctx`、`absent_ctx`、`overridable`、`errors`（逐条）、`absent`、`detail_object`。
+- 接口不存在（openapi 没有、404 `Not Found`、405、B11 不认 event_type、无服务账号时 eap/events 403）或依赖 P3-B2 数据 → 该步「未实现」，不算失败；P3 适配器缺失不再让整个场景 skipped。路径按形状匹配（`{rid}` 与 `{reticle_id}` 视为同一条）。
+- `as: <角色>` 用 `SIM_AS_<角色>_TOKEN` / `_USER` + `_PASSWORD`，没配记 skip。
+- 种子：`SIM_SEED_DB=app_it_eap python -m sim seed-p3 --target http://127.0.0.1:8013`（只认 8013 / app_it_eap，按编码先查后建）。
+- 场景仍是草稿（顶层 draft），`sim run` 照旧跳过。

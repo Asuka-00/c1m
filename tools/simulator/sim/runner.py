@@ -11,6 +11,7 @@ from typing import Any
 from sim.adapters import B11_STEPS, MODES, STEP_ADAPTERS, Adapter, Call, default_adapters, fill
 from sim.client import Client, Resp
 from sim.ids import SeqCounter, event_id
+from sim.p3 import P3_EXEC_STEPS, P3Exec, Unimplemented, check_p3_expect
 from sim.safety import redact
 from sim.scenario import Scenario, Step
 
@@ -225,6 +226,25 @@ class Runner:
         self._paths = paths
         self.stop_on_fail = stop_on_fail
         self._ids: dict[tuple[str, str], str] = {}
+        self.p3: P3Exec | None = None
+        self._roles: dict[str, Client | None] = {}
+
+    def role_client(self, role: str) -> Client | None:
+        """``as: <角色>`` 权限断言用的账号：SIM_AS_<角色>_TOKEN 或 SIM_AS_<角色>_USER/_PASSWORD（运行时注入）。"""
+        if role not in self._roles:
+            import os
+
+            pre = f"SIM_AS_{role.upper()}_"
+            tok, user, pw = (os.environ.get(pre + x) for x in ("TOKEN", "USER", "PASSWORD"))
+            cli = None
+            if tok or (user and pw):
+                cli = Client(self.c.base, tenant=self.c.tenant, timeout=self.c.timeout)
+                if tok:
+                    cli.token = tok
+                else:
+                    cli.login(user, pw)
+            self._roles[role] = cli
+        return self._roles[role]
 
     # ---- 能力探测 ----
     @property
@@ -235,7 +255,11 @@ class Runner:
 
     def missing(self, sc: Scenario) -> list[str]:
         out = []
+        p3_only = {a for st in sc.steps if st.kind in P3_EXEC_STEPS for a in STEP_ADAPTERS.get(st.kind, [])}
+        other = {a for st in sc.steps if st.kind not in P3_EXEC_STEPS for a in STEP_ADAPTERS.get(st.kind, [])}
         for name in sc.required_adapters(self.mode):
+            if name in p3_only - other:  # P3 步骤逐步报「未实现」，不让整个场景 skipped
+                continue
             ad = self.adapters[name]
             if not ad.resolve(self.paths):
                 out.append(ad.skip_reason())
@@ -276,6 +300,7 @@ class Runner:
         if miss:
             rep.update(status=SKIPPED, reason="；".join(miss))
             return rep
+        self.p3 = P3Exec(self, sc.run_id)
         seq = SeqCounter()
         sent: dict[tuple[str, int], tuple[Call, Resp]] = {}
         saved: dict[str, Any] = {}
@@ -293,6 +318,9 @@ class Runner:
                 if st.args.get("xfail") and self.xfail:  # 预期失败的步骤通过了：后端已修，可去掉 xfail
                     entry["xpass"] = True
                     rep.setdefault("xpass", []).append(st.index)
+            except Unimplemented as e:  # 后端接口不存在：记「未实现」，不算失败
+                entry.update(ok=None, unimplemented=True, message=f"未实现：{e}")
+                rep.setdefault("unimplemented", []).append(st.index)
             except Skip as e:
                 entry.update(ok=None, message=str(e))
                 rep.update(status=SKIPPED, reason=f"第 {st.index} 步前置条件不满足：{e}")
@@ -317,6 +345,10 @@ class Runner:
         return self.svc if (self.svc is not None and self.is_b11(call)) else self.c
 
     def _send(self, entry: dict, call: Call, expect: dict | None) -> Resp:
+        if self.p3 is not None and expect:  # P3 取值（$marking.批次 等）在发请求前解析，取不到就不发
+            expect = self.p3.resolve(expect)
+            if (expect.get("ctx") or {}).get("check") == "marking_inspection" and self.p3.b2_missing():
+                raise Unimplemented("出站打标检查依赖 P3-B2（后端还没有 /mes/marking），不发出站请求")
         if self.svc is not None and self.is_b11(call):
             entry["account"] = "eap_service"
         r = self.cli(call).request(
@@ -335,7 +367,8 @@ class Runner:
         )
         if call.idem:
             entry["idempotency_key"] = call.idem
-        errs = check_expect(self.view(call, r), expect) + (shape_422(r) if self.strict_422 else [])
+        v = self.view(call, r)
+        errs = check_expect(v, expect) + check_p3_expect(v, expect) + (shape_422(r) if self.strict_422 else [])
         if nonlist_422(r):
             entry["warn_422"] = nonlist_422(r)
         if errs:
@@ -372,8 +405,11 @@ class Runner:
             return self._tool_set(a, entry)
         if k == "expect_eap_read":
             return self._expect_eap_read(a, entry)
+        if k in P3_EXEC_STEPS:
+            entry["step"] = st.index
+            return self.p3.step(k, a, entry) if self.p3 else None
         if k in P3_DRAFT_STEPS:
-            raise StepFailed(f"{k} 是 P3 草稿步骤，P3-B4 接口落地前未实现")
+            raise Unimplemented(f"{k} 是 P3 草稿步骤，还没有执行器")
         if k == "expect_eap_envelope_extra":
             return self._expect_eap_envelope_extra(dict(a, run_id=sc.run_id), entry)
         if k == "expect_body_422":

@@ -100,7 +100,8 @@ def test_p3_draft_scenarios_parse_and_skip_without_backend():
         )
 
 
-def test_p3_draft_steps_not_runnable_even_if_paths_exist():
+def test_p3_steps_execute_when_paths_exist():
+    """P3 执行器（eap/p3-sim）：接口在时真正发请求；编码查不到算失败，不再报「草稿步骤」。"""
     from fake import FakeClient
 
     from sim.runner import FAILED, Runner
@@ -115,7 +116,7 @@ def test_p3_draft_steps_not_runnable_even_if_paths_exist():
     c = FakeClient(paths=None)
     c.paths |= {"/mes/reticle/{reticle_id}/incident"}
     rep = Runner(c).run(sc)
-    assert rep["status"] == FAILED and "草稿步骤" in rep["reason"]
+    assert rep["status"] == FAILED and "找不到 reticle 编码 R1" in rep["reason"]
 
 
 def test_reticle_replay_requires_saved_step():

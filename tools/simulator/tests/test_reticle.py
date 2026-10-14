@@ -51,3 +51,28 @@ def test_scenario_d82_backfill_cases():
     assert mnt["$now+299s"] == 200 and mnt["$now+300s"] in (200, 409)
     nx = [s.args["expect"]["status"] for s in bt if s.args["reticle"] == "R-NOT-EXIST"]
     assert nx == [422, 422, 404, 422]  # body 阶段先于 404
+
+
+def test_d82_cont2_floor_excludes_usage_for_mount_but_not_incident():
+    from sim.reticle import time_floor
+
+    st, um, us = NOW - timedelta(hours=3), NOW - timedelta(hours=2), NOW - timedelta(minutes=10)
+    assert time_floor("mount", [st], [um], [us]) == um  # usage 不计
+    assert time_floor("unmount", [st], [], [us]) == st
+    assert time_floor("incident", [st], [um], [us]) == us  # incident 计入最近 usage
+    assert time_floor("mount") is None
+
+
+def test_d82_cont2_incident_rules():
+    from sim.reticle import check_incident, incident_unmount_time
+
+    mounted = NOW - timedelta(hours=2)
+    usage = NOW - timedelta(hours=1)
+    assert check_incident(NOW - timedelta(minutes=90), usage, mounted) == TOO  # 早于最近 usage
+    assert check_incident(NOW - timedelta(hours=3), None, mounted) == TOO  # 早于当前 mounted_at -> 整体 409
+    assert check_incident(mounted, None, mounted) is None  # 相等合法
+    occ = NOW - timedelta(minutes=30)
+    assert incident_unmount_time(occ, NOW) == occ and incident_unmount_time(None, NOW) == NOW
+
+
+TOO = {"status": 409, "code": "time_out_of_order"}

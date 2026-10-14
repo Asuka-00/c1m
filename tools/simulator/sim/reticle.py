@@ -7,6 +7,12 @@
   422 ``value_error`` ctx.reason=future_time（正好 5:00 放行）
 - 业务阶段（404 之后）：早于该光罩最近一次下机/事件时间 → 409 ``time_out_of_order``；
   ``unmounted_at`` 早于对应那次 ``mounted_at`` 也是 409，相等合法
+
+D82 续二（03:19）：
+- 时间先后基准 = 状态履历与历次下机时间中最晚者，usage / 检查记录不计（mount / unmount）；
+- incident 的基准额外计入最近一次 usage：occurred_at 早于最近 usage → 409 ``time_out_of_order``；
+- incident 顺带下机：带 occurred_at 用它作下机时间，否则服务器当前时间；
+  occurred_at 早于当前这次 mounted_at → 整体 409（不入库、不 Hold、不下机、不发事件）。
 """
 
 from __future__ import annotations
@@ -62,3 +68,26 @@ def check_time_order(value: datetime, floor: datetime | None) -> dict[str, Any] 
     if floor is not None and value < floor:
         return TIME_OUT_OF_ORDER
     return None
+
+
+def time_floor(
+    kind: str,
+    status_times: list[datetime] = (),  # type: ignore[assignment]
+    unmount_times: list[datetime] = (),  # type: ignore[assignment]
+    usage_times: list[datetime] = (),  # type: ignore[assignment]
+) -> datetime | None:
+    """D82 续二：先后基准。mount/unmount = max(状态履历, 历次下机)；incident 另加最近一次 usage。检查记录永不计入。"""
+    pool = [*status_times, *unmount_times]
+    if kind == "incident":
+        pool += list(usage_times)
+    return max(pool, default=None)
+
+
+def check_incident(occurred: datetime, floor: datetime | None, mounted_at: datetime | None) -> dict[str, Any] | None:
+    """incident 业务阶段：早于基准（含最近 usage）或早于当前这次 mounted_at → 整体 409；相等合法。"""
+    return check_time_order(occurred, floor) or check_time_order(occurred, mounted_at)
+
+
+def incident_unmount_time(occurred: datetime | None, now: datetime) -> datetime:
+    """incident 顺带下机的下机时间：带了 occurred_at 用它，否则服务器当前时间。"""
+    return occurred if occurred is not None else now

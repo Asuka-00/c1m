@@ -12,9 +12,11 @@
 #   - D82 第 4 点 + 续：补录时间 mounted_at / occurred_at / unmounted_at（sim/reticle.py 本地预校验）：
 #     晚于当前 > 5 分钟 422 value_error ctx.reason=future_time（卡 4:59/5:00/5:01，5:00 放行）；无时区 422 timezone_required（body 阶段，先于 404）；
 #     早于该光罩最近一次下机/事件 409 time_out_of_order（404 之后）；unmounted_at 早于对应 mounted_at 409，相等合法
+#   - D82 续二（03:19）：mount/unmount 先后基准 = 状态履历与历次下机最晚者（usage/检查不计）；incident 另计最近 usage；
+#     incident 顺带下机用 occurred_at（无则当前时间）；occurred_at < 当前 mounted_at → 整体 409，不 Hold、不下机、不写事件
 #   - D80 G5：mounted / unmounted / life_reached 带 source、external_event_id（手工为 null）；G6：source ∈ manual/eap/simulator/system
 name: reticle-report
-run_id: ret-report-06
+run_id: ret-report-07
 draft: "等 B11 光罩 event_type（D67 P3 不开）与 D80 落地（下机事件行、10 个写接口 Idempotency-Key 必填、source CHECK）及 D82 补录时间边界"
 target: http://127.0.0.1:8013
 equipment: [{code: EAP-LT01, type: LITHO}]
@@ -149,3 +151,30 @@ steps:
                        expect: {status: 422, type: value_error, ctx: {reason: future_time}}}   # 先于 404
   - reticle_incident: {idem: ret-rep-bt16, eq: EAP-LT01, reticle: R-SIM-08, kind: collision, occurred_at: "$now+300s", expect: {status: 200}}
   - expect_reticle: {reticle: R-SIM-08, fields: {status_code: on_hold}}   # 登记异常 → on_hold，挂着则同事务卸载
+  # ---- D82 续二（03:19）：先后基准
+  # 1. mount/unmount 基准 = 状态履历与历次下机最晚者，usage / 检查不计：上机后补一次 usage（当前时间），下机时间早于 usage 仍合法
+  - reticle_mount: {idem: ret-rep-c1, eq: EAP-LT01, reticle: R-SIM-10, slot: S1, mounted_at: "$now-3h", expect: {status: 200}}
+  - reticle_adjust: {idem: ret-rep-c2, reticle: R-SIM-10, delta: "10", expect: {status: 200}}
+  - reticle_inspection: {idem: ret-rep-c3, reticle: R-SIM-10, kind: particle, result: pass, expect: {status: 409}}   # in_use 不能检查；即使能录也不计入基准
+  - reticle_unmount: {idem: ret-rep-c4, reticle: R-SIM-10, unmounted_at: "$now-2h", expect: {status: 200}}   # 早于 usage，合法
+  # 2. incident occurred_at 早于最近一次 usage → 409（R-SIM-10 最近 usage 为当前时间）
+  - reticle_incident: {idem: ret-rep-c5, eq: EAP-LT01, reticle: R-SIM-10, kind: collision, occurred_at: "$now-1h",
+                       expect: {status: 409, code: time_out_of_order}}
+  - expect_reticle: {reticle: R-SIM-10, fields: {status_code: available}}
+  # 4. occurred_at 早于当前这次 mounted_at → 整体 409：不 Hold、不下机、不写事件
+  - reticle_mount: {idem: ret-rep-c6, eq: EAP-LT01, reticle: R-SIM-11, slot: S2, mounted_at: "$now-2h", save_as: m11, expect: {status: 200}}
+  - reticle_incident: {idem: ret-rep-c7, eq: EAP-LT01, reticle: R-SIM-11, kind: collision, occurred_at: "$now-3h",
+                       expect: {status: 409, code: time_out_of_order}}
+  - expect_reticle: {reticle: R-SIM-11, fields: {status_code: in_use, hold_reason: null}}
+  - expect_reticle_history: {reticle: R-SIM-11, count_of: {incident: 0}, latest_of: mount, fields: {mounted_at: $m11.mounted_at, unmounted_at: null}}
+  - expect_reticle_events: {reticle: R-SIM-11, count: {reticle.incident_recorded: 0, reticle.held: 0, reticle.unmounted: 0}}
+  # 3. 登记异常顺带下机：带 occurred_at 时下机时间 = occurred_at（回查上机行）
+  - reticle_incident: {idem: ret-rep-c8, eq: EAP-LT01, reticle: R-SIM-11, kind: collision, occurred_at: "$now-1h", save_as: inc11,
+                       expect: {status: 201}}
+  - expect_reticle_history: {reticle: R-SIM-11, latest_of: mount, fields: {mounted_at: $m11.mounted_at, unmounted_at: $inc11.occurred_at}}
+  - expect_reticle: {reticle: R-SIM-11, fields: {status_code: on_hold, hold_reason: incident}}
+  - expect_reticle_events: {reticle: R-SIM-11, count: {reticle.incident_recorded: 1, reticle.unmounted: 1}}
+  # 不带 occurred_at：下机时间为服务器当前时间（只断言 UTC Z 且不为空）
+  - reticle_mount: {idem: ret-rep-c9, eq: EAP-LT01, reticle: R-SIM-12, slot: S3, expect: {status: 200}}
+  - reticle_incident: {idem: ret-rep-c10, eq: EAP-LT01, reticle: R-SIM-12, kind: drop, expect: {status: 201}}
+  - expect_reticle_history: {reticle: R-SIM-12, latest_of: mount, fields: {unmounted_at: $utc_z}}

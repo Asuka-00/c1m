@@ -26,6 +26,12 @@ class Call:
     idem: str | None = None
 
 
+def _norm(path: str) -> str:
+    import re
+
+    return re.sub(r"\{[^}]+\}", "{}", path)
+
+
 @dataclass
 class Adapter:
     name: str
@@ -34,7 +40,9 @@ class Adapter:
     path: str | None = field(default=None)
 
     def resolve(self, paths: set[str]) -> str | None:
-        self.path = next((p for p in self.candidates if p in paths), None)
+        """按路径形状匹配：路径参数名不同（后端 ``{rid}``、我们 ``{reticle_id}``）也算同一条接口；返回我们的模板。"""
+        norm = {_norm(p) for p in paths}
+        self.path = next((p for p in self.candidates if p in paths or _norm(p) in norm), None)
         return self.path
 
     def skip_reason(self) -> str:
@@ -74,9 +82,9 @@ def default_adapters() -> dict[str, Adapter]:
         # P3-B4（光罩，未实现）：E1 草案 v0.6 的接口，草稿场景用；路径在后端落地后以 openapi 为准
         "reticle_mount": Adapter("光罩挂载", ["/mes/reticle/{reticle_id}/mount"], card="P3-B4"),
         "reticle_incident": Adapter("光罩事故录入", ["/mes/reticle/{reticle_id}/incident"], card="P3-B4"),
-        "reticle_get": Adapter("光罩详情", ["/mes/reticle/{reticle_id}"], card="P3-B4"),
+        "reticle_get": Adapter("光罩详情", ["/mes/reticle/{reticle_id}", "/mes/{entity}/{rid}"], card="P3-B4"),
         # 335db8a：领域事件记在 audit_log（D71），GET /mes/audit_log?entity_type=reticle&record_id=…
-        "reticle_events": Adapter("光罩领域事件（audit_log）", ["/mes/audit_log"], card="P3-B4"),
+        "reticle_events": Adapter("光罩领域事件（audit_log）", ["/mes/audit_log", "/mes/{entity}"], card="P3-B4"),
         "reticle_history": Adapter("光罩履历", ["/mes/reticle/{reticle_id}/history"], card="P3-B4"),
         # E1 v0.7 §3.2 / §5（D67）：动作接口与人工调整计数
         "reticle_usage_manual": Adapter("光罩计数人工调整", ["/mes/reticle/{reticle_id}/usage"], card="P3-B4"),
@@ -123,7 +131,7 @@ def default_adapters() -> dict[str, Adapter]:
         "marking_inspections": Adapter(
             "检验履历 mes_marking_inspection", ["/mes/marking/{marking_id}/inspections"], card="P3-B2"
         ),
-        "marking_events": Adapter("打标领域事件（audit_log）", ["/mes/audit_log"], card="P3-B2"),
+        "marking_events": Adapter("打标领域事件（audit_log）", ["/mes/audit_log", "/mes/{entity}"], card="P3-B2"),
         # D78 补充二 3：作废（必填 reason_id + comment，reason_type=marking_void，不可恢复）
         "marking_void": Adapter("打标记录作废", ["/mes/marking/{marking_id}/void"], card="P3-B2"),
         # D78 补充三 6：trace_code 生效配置（trace_code_max_length / trace_code_pattern），权限 mes.marking:exec

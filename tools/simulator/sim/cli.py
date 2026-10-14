@@ -123,6 +123,20 @@ def cmd_run(args) -> int:
     return 1 if any(r["status"] == FAILED for r in reports) else 0
 
 
+def cmd_seed_p3(args) -> int:
+    from sim.seed_p3 import Seeder, guard
+
+    try:
+        target = check_target(resolve_target(args.target, None) or "")
+    except UnsafeTarget as e:
+        print(f"拒绝：{e}", file=sys.stderr)
+        return 2
+    guard(target)
+    for line in Seeder(_client(target)).run():
+        print(line)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="sim", description="CIM 设备模拟器（模式 A）")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -134,6 +148,9 @@ def main(argv: list[str] | None = None) -> int:
     v = sub.add_parser("validate", help="只校验场景格式，不连后端")
     v.add_argument("scenarios", nargs="+")
     v.set_defaults(fn=cmd_validate)
+    sd = sub.add_parser("seed-p3", help="P3 场景种子数据（只对 app_it_eap / 8013，需 SIM_SEED_DB=app_it_eap）")
+    sd.add_argument("--target", help="必须是 http://127.0.0.1:8013")
+    sd.set_defaults(fn=cmd_seed_p3)
     for x in (r, v):
         x.add_argument("--target", help="覆盖场景 target（也可用 SIM_TARGET）；端口须在 SIM_ALLOWED_PORTS 里")
         x.add_argument(
