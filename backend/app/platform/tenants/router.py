@@ -102,6 +102,11 @@ def _sole_tenant_ids(session: SessionDep, user_ids: list[uuid.UUID]) -> set[uuid
     return {uid for uid, n in rows if n == 1 and uid not in supers}
 
 
+def _is_sole(session: SessionDep, user_id: uuid.UUID) -> bool:
+    """单个成员的 sole_tenant（按实际成员关系计算，D3）。"""
+    return user_id in _sole_tenant_ids(session, [user_id])
+
+
 @router.get("/me", response_model=MyTenantsPublic)
 def my_tenants(session: SessionDep, current_user: CurrentUser) -> Any:
     """Tenants the caller belongs to, with roles and effective tenant permissions."""
@@ -268,7 +273,7 @@ def add_tenant_member(
         raise HTTPException(status_code=400, detail=str(e))
     session.commit()
     session.refresh(member)
-    return _member_public(member)
+    return _member_public(member, _is_sole(session, member.user_id))
 
 
 @router.post("/{tenant_id}/members/new", response_model=MemberPublic)
@@ -358,7 +363,7 @@ def change_member_roles(
         raise HTTPException(status_code=400, detail=str(e))
     session.commit()
     session.refresh(m)
-    return _member_public(m)
+    return _member_public(m, _is_sole(session, m.user_id))
 
 
 @router.delete("/{tenant_id}/members/{user_id}", response_model=Message)
@@ -578,7 +583,7 @@ def platform_assign_owner(
     record_platform_audit(session, user, "tenant.owner", "user", target.id, tenant_id)
     session.commit()
     session.refresh(m)
-    return _member_public(m)
+    return _member_public(m, _is_sole(session, m.user_id))
 
 
 @platform_router.get("/users/{user_id}/tenants", response_model=list[UserTenantRoles])

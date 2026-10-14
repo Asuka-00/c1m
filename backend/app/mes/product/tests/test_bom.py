@@ -103,8 +103,10 @@ def test_bom_versions_lifecycle(client: TestClient, db: Session) -> None:
     p = b.product("FG")
     v1 = b.bom(p)
     assert (v1["version"], v1["status"], v1["effective_at"]) == (1, "draft", None)
-    # status / version 是系统字段，载荷里的值被忽略
-    v2 = m.post("bom", {"product_id": p["id"], "status": "active", "version": 9})
+    # status / version 是系统字段：P1 严格载荷，传了就 422（bom.md §12）
+    err = m.post("bom", {"product_id": p["id"], "status": "active", "version": 9}, 422)
+    assert {d["loc"][-1] for d in err["detail"]} == {"status", "version"}
+    v2 = m.post("bom", {"product_id": p["id"]})
     assert (v2["version"], v2["status"]) == (2, "draft")
     # 生效时间只能由 activate 决定：载荷里给了就 422
     err = m.post(

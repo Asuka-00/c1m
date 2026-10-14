@@ -287,3 +287,34 @@ def test_tenant_crud(
         == 200
     )
     assert db.get(Tenant, uuid.UUID(tid)) is None
+
+
+def test_member_roles_response_sole_tenant(client: TestClient, db: Session) -> None:
+    """D3：PUT members/{uid}/roles（及加成员）响应里的 sole_tenant 按实际成员关系返回。"""
+    owner, ho, t = _user(client, db)
+    other, _, _ = _user(client, db)  # 自己还有个人租户 → 不是 sole
+    email = random_email()
+    lone = crud.create_user(
+        session=db,
+        user_create=UserCreate(
+            email=email, username=username_for(email), password=random_lower_string()
+        ),
+    )
+    for u, sole in ((lone, True), (other, False)):
+        r = client.post(
+            f"{API}/tenants/{t}/members",
+            headers=ho,
+            json={"username": u.username, "roles": ["member"]},
+        )
+        assert r.status_code == 200 and r.json()["sole_tenant"] is sole
+        r = client.put(
+            f"{API}/tenants/{t}/members/{u.id}/roles",
+            headers=ho,
+            json={"roles": ["admin"]},
+        )
+        assert r.status_code == 200, r.text
+        assert r.json()["roles"] == ["admin"] and r.json()["sole_tenant"] is sole
+        listed = client.get(f"{API}/tenants/{t}/members", headers=ho).json()["data"]
+        assert (
+            next(x for x in listed if x["user_id"] == str(u.id))["sole_tenant"] is sole
+        )

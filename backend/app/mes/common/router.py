@@ -271,7 +271,11 @@ def mes_new_version(
 ) -> Any:
     """Copy a version (incl. child rows such as route steps) as a new draft."""
     e = require_entity(ctx, entity, "write")
-    return _one(session, ctx, e, new_version(session, ctx.id, e, rid, ctx.user))
+    hook: dict[str, Any] = {"can": ctx.can, "warnings": []}
+    out = _one(session, ctx, e, new_version(session, ctx.id, e, rid, ctx.user, hook))
+    if e.code == "product":  # 自动复制 BOM 的结果提示（bom_copy_skipped，bom.md §12）
+        out["warnings"] = hook["warnings"]
+    return out
 
 
 __all__ = ["router", "ENTITIES", "Query"]

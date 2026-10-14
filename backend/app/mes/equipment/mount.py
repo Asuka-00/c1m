@@ -9,7 +9,7 @@
 """
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import sqlalchemy as sa
@@ -22,7 +22,7 @@ from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, TABLES
 from app.core.spec.errors import http_422
-from app.core.spec.serialize import serialize
+from app.core.spec.serialize import iso_utc, serialize
 from app.mes.common.query import find, one
 
 Row = dict[str, Any]
@@ -166,6 +166,7 @@ def mount(
             raise http_422([("mounted_at", "mounted_at: invalid datetime")]) from ex
     if at.tzinfo is None:
         raise http_422([("mounted_at", "mounted_at: timezone required")])
+    at = at.astimezone(UTC)  # 统一按 UTC 处理与比较（bom.md §12）
     if at > cur_t + CLOCK_SKEW:
         raise http_422([("mounted_at", "mounted_at: cannot be in the future")])
     ml = _material_lot(s, tid, body, at)
@@ -188,7 +189,7 @@ def mount(
                     "current_mount_id": str(prev["id"]),
                     "current_material_lot_id": str(prev["material_lot_id"]),
                     "current_material_lot_code": pml and pml["code"],
-                    "current_mounted_at": prev["mounted_at"].isoformat(),
+                    "current_mounted_at": iso_utc(prev["mounted_at"]),
                 },
             )
         if at < prev["mounted_at"]:
@@ -318,7 +319,7 @@ def unmount(
             status_code=409,
             detail={
                 "code": "already_unmounted",
-                "message": f"already unmounted at {row['unmounted_at'].isoformat()}",
+                "message": f"already unmounted at {iso_utc(row['unmounted_at'])}",
                 "mount_id": str(row["id"]),
             },
         )
@@ -331,6 +332,7 @@ def unmount(
             raise http_422([("unmounted_at", "unmounted_at: invalid datetime")]) from ex
     if at.tzinfo is None:
         raise http_422([("unmounted_at", "unmounted_at: timezone required")])
+    at = at.astimezone(UTC)
     if at < row["mounted_at"] or at > cur_t + CLOCK_SKEW:
         raise http_422(
             [("unmounted_at", "unmounted_at: must be between mounted_at and now")]

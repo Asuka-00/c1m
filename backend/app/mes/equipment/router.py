@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.deps import SessionDep
 from app.mes.common.query import one
@@ -74,6 +74,9 @@ def pm_done(
 
 
 class MountIn(BaseModel):
+    # P1 严格载荷（bom.md §12）：未知字段 / source（人工接口固定为 manual）一律 422
+    model_config = ConfigDict(extra="forbid")
+
     port_code: str = Field(min_length=1, max_length=64)
     material_lot_id: uuid.UUID | None = None
     material_lot_code: str | None = Field(default=None, max_length=64)
@@ -83,6 +86,8 @@ class MountIn(BaseModel):
 
 
 class UnmountIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     unmounted_at: datetime | None = None
 
 

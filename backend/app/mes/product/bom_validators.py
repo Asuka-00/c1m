@@ -12,7 +12,7 @@ from app.core.spec.base import conn
 from app.core.spec.engine import TABLES, Entity
 from app.core.spec.errors import MesError, http_422
 from app.core.spec.validate import validator
-from app.mes.common.validators import Row, _get
+from app.mes.common.validators import Row, _get, reject_unwritable
 
 
 def _locked(bom: Row | None) -> None:
@@ -50,6 +50,15 @@ def _bom_payload(
         raise http_422(
             [(k, f"{k}: set by POST /mes/bom/{{id}}/activate only") for k in bad]
         )
+    reject_unwritable(_e, data)
+
+
+@validator("bom_line:payload", "bom_line_substitute:payload")
+def _strict_payload(
+    _s: Session, _t: uuid.UUID, e: Entity, data: Row, _old: Row | None
+) -> None:
+    """明细 / 替代料：未知字段（如旧的 route_step_id）与系统字段返回 422。"""
+    reject_unwritable(e, data)
 
 
 @validator("bom")

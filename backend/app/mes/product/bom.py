@@ -334,6 +334,18 @@ def _product_new_version(
     src = old and active_bom(s, tid, old["id"])
     if not src or not old:
         return
+    hook = new.get("_ctx") or {}
+    can = hook.get("can")
+    if can is not None and not can("mes.bom:write"):  # 无 BOM 写权限：不复制，提示
+        hook.setdefault("warnings", []).append(
+            {
+                "code": "bom_copy_skipped",
+                "message": f"active BOM v{src['version']} not copied: "
+                "mes.bom:write required",
+                "bom_id": str(src["id"]),
+            }
+        )
+        return
     actor = new.get("_user")
     nb = _bom(s, tid, _clone(s, tid, src, new["id"], actor))
     audit(

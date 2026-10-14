@@ -282,9 +282,18 @@ def _copy_children(
 
 
 def new_version(
-    session: Session, tenant_id: uuid.UUID, e: Entity, rid: uuid.UUID, user: Any
+    session: Session,
+    tenant_id: uuid.UUID,
+    e: Entity,
+    rid: uuid.UUID,
+    user: Any,
+    hook_ctx: Row | None = None,
 ) -> Row:
-    """复制某版本（含子表行）为下一个 draft 版本。"""
+    """复制某版本（含子表行）为下一个 draft 版本。
+
+    ``hook_ctx`` 原样交给 ``<entity>:new_version`` 钩子（放在 ``new["_ctx"]``），
+    钩子可读其中的 ``can``（权限判断）并向 ``warnings`` 列表追加提示。
+    """
     if not e.versioned:
         raise HTTPException(status_code=404, detail="Entity is not versioned")
     old = get_row(session, e, tenant_id, rid)
@@ -305,7 +314,7 @@ def new_version(
     # 出新版本后的钩子（如产品新版本复制生效 BOM）：fn(session, tid, e, new, old)，
     # 操作人放在 new["_user"]
     for fn in VALIDATORS.get(f"{e.code}:new_version", []):
-        fn(session, tenant_id, e, {**new, "_user": user}, old)
+        fn(session, tenant_id, e, {**new, "_user": user, "_ctx": hook_ctx or {}}, old)
     audit(
         session,
         tenant_id,

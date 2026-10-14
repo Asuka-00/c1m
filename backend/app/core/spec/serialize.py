@@ -1,7 +1,7 @@
 """规格行的（反）序列化：值转换、引用标签、JSON 输出。"""
 
 import uuid
-from datetime import date, datetime, time
+from datetime import UTC, date, datetime, time
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 
@@ -18,11 +18,23 @@ from app.core.spec.engine import (
 
 
 # ---------------- (de)serialization ----------------
+def iso_utc(v: datetime) -> str:
+    """带时区的时间统一输出为 ISO 8601 UTC（``Z`` 结尾）；无时区的原样输出。"""
+    if v.tzinfo is None:
+        return v.isoformat()
+    return v.astimezone(UTC).isoformat().replace("+00:00", "Z")
+
+
 def to_json(v: Any) -> Any:
-    """把数据库值转换为 JSON 可序列化值（UUID / 日期 / Decimal）。"""
+    """把数据库值转换为 JSON 可序列化值（UUID / 日期 / Decimal）。
+
+    带时区的 datetime 一律输出 UTC（``Z``，bom.md §12 / D2），与数据库会话时区无关。
+    """
     if isinstance(v, uuid.UUID):
         return str(v)
-    if isinstance(v, datetime | date | time):
+    if isinstance(v, datetime):
+        return iso_utc(v)
+    if isinstance(v, date | time):
         return v.isoformat()
     if isinstance(v, Decimal):
         return float(v)

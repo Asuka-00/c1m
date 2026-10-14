@@ -5,7 +5,7 @@ source=eap 必填事件号、物料批存在且未过期、卸料、按时间点
 """
 
 import uuid
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta, timezone
 from typing import Any
 
 from fastapi.testclient import TestClient
@@ -309,3 +309,67 @@ def test_migration_0014_and_metadata_indexes() -> None:
         with server.connect() as c:
             c.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
         server.dispose()
+
+
+def test_manual_mount_strict_payload(client: TestClient, db: Session) -> None:
+    """人工上料接口：传 source（任何值）或未知字段 → 422（bom.md §12）。"""
+    f = F(client, db)
+    for v in ("manual", "eap"):
+        r = f.mount(f.lots[0], status=422, source=v)
+        assert any(d["loc"][-1] == "source" for d in r["detail"])
+    f.mount(f.lots[0], status=422, foo=1)
+    d = f.mount(f.lots[0])["data"]
+    r = f.unmount(d["id"], 422, unmounted_by="x")
+    assert any(d["loc"][-1] == "unmounted_by" for d in r["detail"])
+    assert f.m.list("equipment_material_mount")["count"] == 1
+
+
+def test_manual_external_event_id_dedupe(client: TestClient, db: Session) -> None:
+    """D30：人工同一事件号重复提交只记一次（duplicate=true）；与 EAP 同号互不干扰。"""
+    f = F(client, db)
+    r1 = f.mount(f.lots[0], "P1", external_event_id="EV-9")
+    r2 = f.mount(f.lots[1], "P2", external_event_id="EV-9")
+    assert r1["duplicate"] is False and r2["duplicate"] is True
+    assert r2["data"]["id"] == r1["data"]["id"]
+    rows = f.m.list("equipment_material_mount")["data"]
+    assert len(rows) == 1 and rows[0]["port_code"] == "P1"
+    # EAP 用同一事件号：独立记录；之后各自重复都只返回自己那条
+    e1 = f.eap(f.lots[2], "P3", "EV-9")
+    assert e1["duplicate"] is False and e1["data"]["source"] == "eap"
+    assert f.eap(f.lots[3], "P4", "EV-9")["data"]["id"] == e1["data"]["id"]
+    assert (
+        f.mount(f.lots[3], "P5", external_event_id="EV-9")["data"]["id"]
+        == (r1["data"]["id"])
+    )
+    rows = f.m.list("equipment_material_mount")["data"]
+    assert sorted((x["source"], x["port_code"]) for x in rows) == [
+        ("eap", "P3"),
+        ("manual", "P1"),
+    ]
+
+
+def test_mount_times_are_utc_z(client: TestClient, db: Session) -> None:
+    """D2：输入带任意时区，存 timestamptz；响应统一 UTC（Z）。EAP 换批时旧批卸下
+    时间与新批装上时间同为 Z 且相等。"""
+    tz8 = timezone(timedelta(hours=8))
+    t1 = (datetime.now(UTC) - timedelta(hours=1)).replace(microsecond=0)
+    f = F(client, db)
+    r = f.mount(f.lots[0], "P9", mounted_at=t1.astimezone(tz8).isoformat())
+    assert r["data"]["mounted_at"] == t1.isoformat().replace("+00:00", "Z")
+    e1 = f.eap(f.lots[1], "P1", "EV-A", t1)
+    t2 = (t1 + timedelta(minutes=5)).astimezone(tz8)
+    e2 = f.eap(f.lots[2], "P1", "EV-B", t2)
+    old, new = e2["unmounted"]["unmounted_at"], e2["data"]["mounted_at"]
+    assert old == new and new.endswith("Z") and e1["data"]["mounted_at"].endswith("Z")
+    rows = f.m.list("equipment_material_mount")["data"]
+    assert all(x["mounted_at"].endswith("Z") for x in rows)
+    u = f.unmount(r["data"]["id"], unmounted_at=datetime.now(tz8).isoformat())
+    assert u["data"]["unmounted_at"].endswith("Z")
+    # BOM 生效时间同样输出 Z
+    from app.mes.product.tests.test_bom import B
+
+    b = B(f.m)
+    v = b.bom(b.product("FGZ"))
+    b.line(v, 10)
+    a = b.act(v, "activate")
+    assert a["effective_at"].endswith("Z") and a["confirmed_at"].endswith("Z")
