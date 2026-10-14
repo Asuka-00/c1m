@@ -6,6 +6,7 @@ from datetime import date, timedelta
 from sqlmodel import Session
 
 from app.mes.common.query import find, one
+from app.mes.common.sitedate import site_today
 from app.mes.common.switch import switch
 from app.mes.execution.events import QUAL_EXPIRED, QUAL_EXPIRING
 from app.platform.notification.service import notify
@@ -19,7 +20,7 @@ def qual_notify(s: Session, tid: uuid.UUID, today: date | None = None) -> int:
     sw = switch(s, tid, "qual_expiry_notice")
     if sw is None:
         return 0
-    today = today or date.today()
+    today = today or site_today(s, tid)
     edge = today + timedelta(days=int(sw.get("warn_days", 14)))
     n = 0
     for q in find(s, tid, "operator_qual", is_active=True):

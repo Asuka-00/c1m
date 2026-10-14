@@ -12,6 +12,7 @@ from app.core.spec.engine import ENTITIES
 from app.core.spec.errors import http_422
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
+from app.mes.common.sitedate import site_today
 from app.mes.equipment.service import e10_apply, num, tool_count, tool_delta
 from app.mes.execution import bom_usage
 from app.mes.execution.checks import service as ck
@@ -232,7 +233,7 @@ def track_out(
         st = t["tool_status"]
         if st == "in_use":
             st = "available"
-        if t["expiry_date"] and t["expiry_date"] < at.date():
+        if t["expiry_date"] and t["expiry_date"] < site_today(s, tid, at):
             st = "expired"
         if st != t["tool_status"]:
             _upd(s, tid, "tool", t["id"], user, tool_status=st)

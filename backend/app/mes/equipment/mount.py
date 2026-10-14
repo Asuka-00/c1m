@@ -24,6 +24,7 @@ from app.core.spec.engine import ENTITIES, TABLES
 from app.core.spec.errors import http_422
 from app.core.spec.serialize import serialize
 from app.mes.common.query import find, one
+from app.mes.common.sitedate import site_today
 
 Row = dict[str, Any]
 ENT = "equipment_material_mount"
@@ -84,7 +85,7 @@ def _material_lot(s: Session, tid: uuid.UUID, body: Row, at: datetime) -> Row:
     if not ml:
         raise http_422([("material_lot", "material_lot: not found")])
     if ml["ml_status"] == "expired" or (
-        ml["expiry_date"] and ml["expiry_date"] < at.date()
+        ml["expiry_date"] and ml["expiry_date"] < site_today(s, tid, at)
     ):
         raise http_422(
             [

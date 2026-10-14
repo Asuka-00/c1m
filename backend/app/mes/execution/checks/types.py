@@ -1,7 +1,7 @@
 """内置检查类型：设备、配方、光罩、物料、工具、载具、Q-Time、Hold、工单、DC、抽样。"""
 
 import uuid
-from datetime import date, timedelta
+from datetime import timedelta
 from typing import Any
 
 from app.core.models import iso_utc
@@ -525,7 +525,7 @@ def _operator_qualified(ctx: Ctx, _p: Row) -> Outcome:
         return "na", "no operation", {}
     user = ctx.operator or ""
     et = (ctx.equipment or {}).get("equipment_type_id")
-    today = ctx.at.date() if ctx.at else date.today()
+    today = ctx.today
     data = {"user": user, "operation": ctx.op["code"]}
     for q in find(
         ctx.s,
