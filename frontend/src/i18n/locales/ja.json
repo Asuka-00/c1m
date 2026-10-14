@@ -1461,7 +1461,8 @@
       "types": {
         "dicing": "ダイシング",
         "die_attach": "ダイボンド",
-        "singulation": "個片化"
+        "singulation": "個片化",
+        "bin_split": "ビン別分割"
       },
       "kinds": {
         "die": "ダイ",
@@ -1574,6 +1575,25 @@
       "hm": "{{h}} 時間 {{m}} 分",
       "m": "{{m}} 分",
       "s": "{{s}} 秒"
+    },
+    "tundo": {
+      "title": "変換を取り消す",
+      "desc": "子ロットを削除し、親ロットを元に戻します。子ロットに作業済みなら取り消せません。",
+      "willRemove": "削除する子ロット：{{list}}",
+      "confirm": "取り消す",
+      "done": "変換を取り消しました。削除した子ロット：{{list}}",
+      "undone": "取消済み",
+      "removed": "{{type}}を取消、削除した子ロット：{{list}}",
+      "notFound": "変換記録が存在しないか、取消済みです",
+      "blocked": "{{lot}}：{{reason}}",
+      "blockedRef": "子ロットが他の記録から参照されているため取り消せません",
+      "why": {
+        "lot_status": "子ロットが待機状態ではありません",
+        "on_hold": "子ロットがホールド中です",
+        "has_transactions": "子ロットに後続作業があります",
+        "has_descendants": "子ロットが再分割されています",
+        "parent_status": "親ロットの状態が変わっています"
+      }
     }
   },
   "notify": {

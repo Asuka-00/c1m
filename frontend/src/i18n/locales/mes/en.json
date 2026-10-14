@@ -1151,7 +1151,8 @@
         "priority": "Priority change",
         "transform": "Unit transform",
         "bom_over_consumption": "BOM over-consumption",
-        "qtime_warned": "Q-Time warning"
+        "qtime_warned": "Q-Time warning",
+        "transform_undo": "Transform undone"
       },
       "genealogy_relation": {
         "split": "Split",

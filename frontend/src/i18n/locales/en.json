@@ -1461,7 +1461,8 @@
       "types": {
         "dicing": "Dicing",
         "die_attach": "Die attach",
-        "singulation": "Singulation"
+        "singulation": "Singulation",
+        "bin_split": "Bin split"
       },
       "kinds": {
         "die": "Die",
@@ -1574,6 +1575,25 @@
       "hm": "{{h}} h {{m}} min",
       "m": "{{m}} min",
       "s": "{{s}} s"
+    },
+    "tundo": {
+      "title": "Undo transform",
+      "desc": "Deletes the child lots and restores the parents; not allowed once a child is worked on.",
+      "willRemove": "Child lots to delete: {{list}}",
+      "confirm": "Undo",
+      "done": "Transform undone; deleted child lots: {{list}}",
+      "undone": "Undone",
+      "removed": "{{type}} undone; deleted child lots: {{list}}",
+      "notFound": "The transform does not exist or was already undone",
+      "blocked": "{{lot}}: {{reason}}",
+      "blockedRef": "Child lots are referenced by other records; can't undo",
+      "why": {
+        "lot_status": "child lot is no longer waiting",
+        "on_hold": "child lot is on hold",
+        "has_transactions": "child lot has later transactions",
+        "has_descendants": "child lot has been split further",
+        "parent_status": "parent lot status has changed"
+      }
     }
   },
   "notify": {

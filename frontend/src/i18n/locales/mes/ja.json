@@ -1151,7 +1151,8 @@
         "priority": "優先度変更",
         "transform": "単位変換",
         "bom_over_consumption": "BOM 使用量超過",
-        "qtime_warned": "Q-Time 警告"
+        "qtime_warned": "Q-Time 警告",
+        "transform_undo": "単位変換取消"
       },
       "genealogy_relation": {
         "split": "分割",

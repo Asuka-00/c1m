@@ -608,6 +608,20 @@ export interface BinSplitPreview {
   }[]
   warnings: { code: string; message?: string; wafer?: string }[]
 }
+/** 撤销转换结果（P2 / 86ca4a1）：恢复后的母批与被删除的子批编码。 */
+export interface TransformUndoResult {
+  transform_id: string
+  transform_type: string
+  parents: MesRow[]
+  removed_children: string[]
+}
+/** 撤销被拒（409 transform_undo_blocked）时每个批次的原因。 */
+export type UndoBlockReason =
+  | 'lot_status'
+  | 'on_hold'
+  | 'has_transactions'
+  | 'has_descendants'
+  | 'parent_status'
 /** 转换 / 按 bin 拆批提交结果。 */
 export interface TransformResult {
   transform: MesRow
@@ -753,6 +767,17 @@ export const execApi = {
   /** 单位转换提交：母批 → converted，生成子批。 */
   transform: (body: TransformBody) =>
     http.post<TransformResult>('/mes/exec/transform', body).then((r) => r.data),
+  /** 撤销单位转换 / 按 bin 拆批（mes.exec:transform；子批未动过才可撤销，否则 409）。 */
+  transformUndo: (
+    transformId: string,
+    body: { reason_id?: string; comment?: string }
+  ) =>
+    http
+      .post<TransformUndoResult>(
+        `/mes/exec/transform/${transformId}/undo`,
+        body
+      )
+      .then((r) => r.data),
   /** 按 bin 拆批预览（mes.exec:transform；不写库）。 */
   binSplitPreview: (body: BinSplitBody) =>
     http

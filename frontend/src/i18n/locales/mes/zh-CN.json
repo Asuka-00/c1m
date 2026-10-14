@@ -1151,7 +1151,8 @@
         "priority": "优先级变更",
         "transform": "单位转换",
         "bom_over_consumption": "BOM 超量用料",
-        "qtime_warned": "Q-Time 预警"
+        "qtime_warned": "Q-Time 预警",
+        "transform_undo": "撤销单位转换"
       },
       "genealogy_relation": {
         "split": "分批",

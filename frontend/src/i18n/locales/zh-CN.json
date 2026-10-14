@@ -1461,7 +1461,8 @@
       "types": {
         "dicing": "切割",
         "die_attach": "装片",
-        "singulation": "分离"
+        "singulation": "分离",
+        "bin_split": "按 bin 拆批"
       },
       "kinds": {
         "die": "颗（die）",
@@ -1574,6 +1575,25 @@
       "hm": "{{h}} 小时 {{m}} 分",
       "m": "{{m}} 分",
       "s": "{{s}} 秒"
+    },
+    "tundo": {
+      "title": "撤销转换",
+      "desc": "删除转换生成的子批，母批恢复到转换前状态。子批已动过时不能撤销。",
+      "willRemove": "将删除子批：{{list}}",
+      "confirm": "确认撤销",
+      "done": "已撤销转换，删除子批：{{list}}",
+      "undone": "已撤销",
+      "removed": "撤销{{type}}，删除子批：{{list}}",
+      "notFound": "转换记录不存在或已撤销",
+      "blocked": "{{lot}}：{{reason}}",
+      "blockedRef": "子批已被其他记录引用，不能撤销",
+      "why": {
+        "lot_status": "子批已不在等待状态",
+        "on_hold": "子批处于 Hold",
+        "has_transactions": "子批已有后续作业",
+        "has_descendants": "子批已再分出下游批次",
+        "parent_status": "母批状态已变化"
+      }
     }
   },
   "notify": {
