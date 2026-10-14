@@ -236,12 +236,12 @@ export function reticleErrorMessage(err: unknown, action?: ReticleAction) {
     if (Array.isArray(d)) {
       // D80：缺 Idempotency-Key / 同 key 换请求体
       const items = d as { loc?: unknown[]; type?: string; code?: string }[]
-      // D82：补录时间超前（mock value_error+future_time；后端 59fb7c5 为 time_in_future）
+      // D82：补录时间超前 422 value_error + ctx.reason=future_time
       if (
         items.some(
           (x) =>
-            (x as { ctx?: { reason?: unknown } })?.ctx?.reason ===
-              'future_time' || (x?.type ?? x?.code) === 'time_in_future'
+            (x?.type ?? x?.code) === 'value_error' &&
+            (x as { ctx?: { reason?: unknown } })?.ctx?.reason === 'future_time'
         )
       )
         return t('mes.reticle.err.futureTime')

@@ -153,7 +153,7 @@ describe('D82 补录时间', () => {
       reticleErrorMessage(
         mk(422, [{ type: 'time_in_future', loc: ['body', 'x'] }])
       )
-    ).toBe(t('mes.reticle.err.futureTime'))
+    ).not.toBe(t('mes.reticle.err.futureTime')) // 旧码不再识别
     expect(
       reticleErrorMessage(
         mk(422, [{ type: 'timezone_required', loc: ['body', 'x'] }])
@@ -162,5 +162,94 @@ describe('D82 补录时间', () => {
     expect(
       reticleErrorMessage(mk(409, { code: 'time_out_of_order' }), 'mount')
     ).toBe(t('mes.reticle.code.time_out_of_order'))
+  })
+})
+
+describe('登记异常顺带下机（后端口径）', () => {
+  it('带 occurred_at：用它作为下机时间', async () => {
+    // r2 于 2026-10-14T01:00:00Z 上机
+    const r = await act('r2', 'incident', {
+      kind: 'drop',
+      occurred_at: '2026-10-15T09:30:00+08:00',
+    })
+    expect(r.reticle).toMatchObject({
+      status_code: 'on_hold',
+      equipment_id: null,
+    })
+    const m = (await mockReticleApi.history('r2')).mounts.find(
+      (x) => x.mounted_at === '2026-10-14T01:00:00Z'
+    )
+    expect(m).toMatchObject({ unmounted_at: '2026-10-15T01:30:00Z' })
+  })
+  it('不带 occurred_at：下机时间为当前时间', async () => {
+    await act('r2', 'incident', { kind: 'other' })
+    const m = (await mockReticleApi.history('r2')).mounts.find(
+      (x) => x.mounted_at === '2026-10-14T01:00:00Z'
+    )
+    expect(m).toMatchObject({ unmounted_at: '2026-10-15T02:00:00Z' })
+  })
+  it('occurred_at 早于当前上机 → 409，整笔不入库也不下机', async () => {
+    const before = await mockReticleApi.get('r2')
+    const hb = await mockReticleApi.history('r2')
+    expect(
+      await fail(
+        act('r2', 'incident', {
+          kind: 'drop',
+          occurred_at: '2026-10-14T00:59:00Z',
+        })
+      )
+    ).toMatchObject({ status: 409, detail: { code: 'time_out_of_order' } })
+    expect(await mockReticleApi.get('r2')).toEqual(before)
+    expect(await mockReticleApi.history('r2')).toEqual(hb)
+  })
+})
+
+describe('incident 早于最近一次 usage（D82 补充）', () => {
+  it('409 time_out_of_order，整笔回滚；mount / unmount 不比 usage', async () => {
+    // r2：上机 10-14T01:00Z，usage 10-14T03:00Z
+    const before = await mockReticleApi.get('r2')
+    const hb = await mockReticleApi.history('r2')
+    expect(
+      await fail(
+        act('r2', 'incident', {
+          kind: 'drop',
+          occurred_at: '2026-10-14T02:00:00Z',
+        })
+      )
+    ).toMatchObject({ status: 409, detail: { code: 'time_out_of_order' } })
+    expect(await mockReticleApi.get('r2')).toEqual(before)
+    expect(await mockReticleApi.history('r2')).toEqual(hb)
+    // 正好等于 usage 时间合法
+    await act('r2', 'incident', {
+      kind: 'drop',
+      occurred_at: '2026-10-14T03:00:00Z',
+    })
+    // unmount 早于 usage 但晚于上机：合法
+    resetReticleMock()
+    setReticleMockNow(() => new Date(NOW))
+    const u = await act('r2', 'unmount', {
+      unmounted_at: '2026-10-14T02:00:00Z',
+    })
+    expect(u.data).toMatchObject({ unmounted_at: '2026-10-14T02:00:00Z' })
+  })
+})
+
+describe('D80：mount / unmount / incident 必填 key，重放返回原响应', () => {
+  it('缺 key 422；同 key 重放原响应且不重复写', async () => {
+    for (const [id, a, body] of [
+      ['r1', 'mount', { equipment_id: 'e9' }],
+      ['r2', 'unmount', {}],
+      ['r6', 'incident', { kind: 'drop' }],
+    ] as const) {
+      expect(await fail(mockReticleApi.act(id, a, { ...body }))).toMatchObject({
+        status: 422,
+        detail: [{ type: 'missing', loc: ['header', 'Idempotency-Key'] }],
+      })
+      const k = `rk-${a}`
+      const first = await mockReticleApi.act(id, a, { ...body }, k)
+      expect(await mockReticleApi.act(id, a, { ...body }, k)).toEqual(first)
+    }
+    const h = await mockReticleApi.history('r1')
+    expect(h.mounts.filter((m) => m.unmounted_at == null)).toHaveLength(1)
   })
 })

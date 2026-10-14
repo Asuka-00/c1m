@@ -517,8 +517,7 @@
         "enum": "Invalid value; allowed: {{expected}}",
         "step_ids_mismatch": "The step list does not match the current route; refresh and try again.",
         "not_text_filter": "{{field}} is not a filterable text field",
-        "range_inverted": "The start cannot be later than the end",
-        "time_in_future": "The backfill time cannot be more than 5 minutes in the future"
+        "range_inverted": "The start cannot be later than the end"
       },
       "tooManyDecimals": "At most {{n}} decimal places",
       "onlyWhen": "Only allowed when {{cond}} is “{{value}}”",

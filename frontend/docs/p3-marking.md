@@ -110,5 +110,7 @@
 
 - 对话框加可选「补录时间」（datetime-local，站点墙上时间）；不填不传，填了用 `siteWallToIso`（site_tz，非法时 Asia/Taipei）转带偏移 ISO，提交为 `mounted_at` / `unmounted_at` / `occurred_at`（be/p3 59fb7c5 MountIn / UnmountIn / IncidentIn）。
 - 前端：比当前晚超过 5 分钟拦住（正好 5:00 放行）。
-- mock（D81 顺序 422 → 404 → 409）：无偏移 422 `timezone_required`；超前 >5 分钟 422 `value_error` ctx.reason=`future_time`；早于最近一次下机 / 事件 409 `time_out_of_order`；下机早于对应上机 409（相等合法）。文案三语；后端现有 `time_in_future` 码也识别。
+- mock（D81 顺序 422 → 404 → 409）：无偏移 422 `timezone_required`；超前 >5 分钟 422 `value_error` ctx.reason=`future_time`；早于最近一次下机 / 事件 409 `time_out_of_order`；下机早于对应上机 409（相等合法）。文案三语；只按 `value_error` + `ctx.reason=future_time` 识别（旧码 `time_in_future` 已移除）。mount / unmount / incident 必填 Idempotency-Key，对话框经 `useOperationKey` 带 key、重试沿用。
 - ct-move 404 按 `operation_not_found` / `product_not_found` 分开提示。
+- 登记异常顺带下机：带 occurred_at 用它作下机时间，否则当前时间；occurred_at 早于当前上机 mounted_at → 409 time_out_of_order，整笔不入库、不下机。
+- incident 的 occurred_at 早于最近一次 usage → 409 time_out_of_order，整笔回滚（不 Hold、不下机、不写事件）；mount / unmount 不比 usage。

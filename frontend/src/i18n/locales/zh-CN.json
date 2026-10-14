@@ -517,8 +517,7 @@
         "enum": "取值无效，可选：{{expected}}",
         "step_ids_mismatch": "工步列表与当前流程的工步不一致，请刷新后重试。",
         "not_text_filter": "{{field}} 不是可筛选的文本字段",
-        "range_inverted": "开始时间不能晚于结束时间",
-        "time_in_future": "补录时间不能晚于当前时间 5 分钟以上"
+        "range_inverted": "开始时间不能晚于结束时间"
       },
       "tooManyDecimals": "最多 {{n}} 位小数",
       "onlyWhen": "仅当{{cond}}为「{{value}}」时才能填写",

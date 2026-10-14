@@ -709,7 +709,14 @@ function mockAct(
     : now()
   if (given) {
     const ms = Date.parse(given)
-    if (action === 'unmount') {
+    // D82：只对 incident，早于最近一次 usage 409（mount / unmount 不算 usage），整笔回滚
+    if (
+      action === 'incident' &&
+      h.usage.some((u) => Date.parse(u.occurred_at) > ms)
+    )
+      throw conflict('time_out_of_order')
+    // 下机 / 登记异常顺带下机：早于当前这次上机 409，整笔不入库、不下机
+    if (action === 'unmount' || action === 'incident') {
       const om = openMount(id)
       if (om && ms < Date.parse(om.mounted_at))
         throw conflict('time_out_of_order')
