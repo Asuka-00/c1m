@@ -1,7 +1,8 @@
 /** 单位转换 / 按 bin 拆批共用：本批晶圆及其最新坐标图（404 = 没有坐标图）。 */
 import { useMemo } from 'react'
 import { AxiosError } from 'axios'
-import { useQueries } from '@tanstack/react-query'
+import { useQueries, useQuery } from '@tanstack/react-query'
+import { mesApi } from '@/lib/api/mes/common'
 import type { ExecContext } from '@/lib/api/mes/execution'
 import { mapApi } from '@/lib/api/mes/map'
 import type { TrfWafer } from './transform-plan'
@@ -32,8 +33,23 @@ export function useWaferMaps(cx: ExecContext, open: boolean): TrfWafer[] {
       retry: false,
     })),
   })
+  // 没有坐标图且不人工录入时，后端按产品 gross die 计良品数；前端据此默认分配。
+  const productId = cx.lot.product_id ? String(cx.lot.product_id) : ''
+  const prod = useQuery({
+    queryKey: ['mes', 'product', productId],
+    queryFn: () => mesApi.get('product', productId),
+    enabled: open && !!productId && maps.some((q) => q.data === null),
+    retry: false,
+  })
+  const gd = Number(prod.data?.gross_die)
+  const gross = gd > 0 && Number.isInteger(gd) ? gd : undefined
   return units.map((u, i) => {
     const q = maps[i]
-    return { id: u.id, code: u.code, map: q?.isSuccess ? q.data : undefined }
+    return {
+      id: u.id,
+      code: u.code,
+      map: q?.isSuccess ? q.data : undefined,
+      gross,
+    }
   })
 }

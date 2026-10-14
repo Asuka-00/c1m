@@ -90,6 +90,20 @@ describe('F8 单位转换：纯函数', () => {
     expect(g.outputs[0].sources).toEqual([{ wafer_id: 'U1', qty: 30 }])
   })
 
+  it('FE-F8-1 无坐标图留空：不拦“至少分配 1 颗”，有 gross die 时默认全分', () => {
+    const only: TrfWafer[] = [{ id: 'U2', code: 'FX1074-W1', map: null }]
+    // gross die 未知：本地不拦，交给后端预览判定
+    expect(draftErrors(only, draft())).toEqual([])
+    const g: TrfWafer[] = [{ ...only[0], gross: 25 }]
+    expect(draftErrors(g, draft())).toEqual([])
+    const b = transformBody('L1', g, draft())
+    expect(b.manual_good).toBeUndefined()
+    expect(b.outputs[0].sources).toEqual([{ wafer_id: 'U2', qty: 25 }])
+    // 多输出都留空时 gross die 已知，仍提示未分配
+    const two = draft({ outputs: [out, out] })
+    expect(draftErrors(g, two)).toContain(t('mes.trf.e.noDie', { n: 1 }))
+  })
+
   it('人工良品不带原因码、分配不守恒、条数缺失都在本地拦下', () => {
     const d = draft({
       manual: { U2: { good: '20', fail: '' } },
