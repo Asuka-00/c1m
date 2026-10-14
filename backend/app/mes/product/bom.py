@@ -24,7 +24,7 @@ from app.core.spec.validate import validator
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins
 from app.mes.product.bom_specs import MAX_BOM_DEPTH
-from app.mes.product.bom_validators import next_version
+from app.mes.product.bom_validators import _locked, next_version
 
 Row = dict[str, Any]
 # 检查规则类型：开批必须有生效 BOM（无规则或严重度 off 时关闭）
@@ -152,6 +152,92 @@ def check_structure(s: Session, tid: uuid.UUID, bom: Row) -> None:
             )
 
 
+def _conflict(code: str, msg: str, details: list[Row]) -> HTTPException:
+    return HTTPException(
+        status_code=409, detail={"code": code, "message": msg, "details": details}
+    )
+
+
+def _pref(s: Session, tid: uuid.UUID, pid: Any, bom: Row | None = None) -> Row:
+    p = one(s, tid, "product", pid)
+    out: Row = {"product_id": str(pid), "product": p and p["code"]}
+    out["product_version"] = p and p["version"]
+    if bom:
+        out["bom_id"], out["bom_version"] = str(bom["id"]), bom["version"]
+    return out
+
+
+def check_activate(s: Session, tid: uuid.UUID, bom: Row) -> None:
+    """D47：生效时的两级结构校验（409 ``bom_cycle`` / ``bom_depth_exceeded``）。
+
+    1. 本版本引用的半成品，其生效 BOM 里不能有半成品行，也不能引用回本产品；
+    2. 本版本有半成品行时，其他产品的生效 BOM 不能引用本产品（否则引用方成三级）。
+    """
+    own = bom["product_id"]
+    kids = [
+        ln["component_product_id"]
+        for ln in _lines(s, tid, bom["id"])
+        if ln["component_type"] == "product" and ln["component_product_id"]
+    ]
+    me = _pref(s, tid, own, bom)
+    for k in kids:
+        if k == own:
+            raise _conflict("bom_cycle", "bom: references its own product", [me])
+        act = active_bom(s, tid, k)
+        if not act:
+            continue
+        sub = [
+            ln["component_product_id"]
+            for ln in _lines(s, tid, act["id"])
+            if ln["component_type"] == "product"
+        ]
+        if own in sub:
+            raise _conflict(
+                "bom_cycle",
+                "bom: circular reference",
+                [me, _pref(s, tid, k, act)],
+            )
+        if sub:
+            raise _conflict(
+                "bom_depth_exceeded",
+                "bom: a referenced semi-finished product has semi-finished lines "
+                "(P1 allows two levels only)",
+                [me, _pref(s, tid, k, act)],
+            )
+    if not kids:
+        return
+    b, ln = TABLES["bom"], TABLES["bom_line"]
+    users = (
+        conn(s)
+        .execute(
+            sa.select(b)
+            .join(ln, ln.c.bom_id == b.c.id)
+            .where(
+                b.c.tenant_id == tid,
+                b.c.status == "active",
+                b.c.product_id != own,
+                ln.c.component_product_id == own,
+            )
+        )
+        .mappings()
+        .all()
+    )
+    if users:
+        code = (
+            "bom_cycle"
+            if any(u["product_id"] in kids for u in users)
+            else "bom_depth_exceeded"
+        )
+        raise _conflict(
+            code,
+            "bom: this product is used as a semi-finished component by active BOMs; "
+            "adding semi-finished lines would exceed two levels"
+            if code == "bom_depth_exceeded"
+            else "bom: circular reference",
+            [me, *(_pref(s, tid, u["product_id"], dict(u)) for u in users)],
+        )
+
+
 # ---------------- lifecycle ----------------
 def activate(s: Session, tid: uuid.UUID, bom_id: uuid.UUID, user: Any) -> Row:
     """草稿 → 生效：记确认人 / 时间，旧 active 版本改为 superseded。
@@ -175,6 +261,7 @@ def activate(s: Session, tid: uuid.UUID, bom_id: uuid.UUID, user: Any) -> Row:
         )
     if not _lines(s, tid, bom_id):
         raise http_422([("bom_line", "bom_line: a BOM needs at least one line")])
+    check_activate(s, tid, bom)
     check_structure(s, tid, bom)
     at = now()
     old = active_bom(s, tid, bom["product_id"])
@@ -456,3 +543,137 @@ def version_label(s: Session, tid: uuid.UUID, bom_id: Any) -> str:
     """报错用：``v3`` 或 ``none``。"""
     b = one(s, tid, "bom", bom_id) if bom_id else None
     return f"v{b['version']}" if b else "none"
+
+
+# ---------------- replace lines (PUT /mes/bom/{id}/lines) ----------------
+def _ref_cols(e: Entity) -> dict[str, str]:
+    """通用校验报错用字段名（``material``），整单接口统一成列名（``material_id``）。"""
+    return {f.name: f.column for f in e.all_fields}
+
+
+def _relocate(ex: HTTPException, prefix: tuple[Any, ...], e: Entity) -> HTTPException:
+    """把单行校验的 422 / 409 定位到整单请求体里的位置。"""
+    cols = _ref_cols(e)
+    if ex.status_code == 422 and isinstance(ex.detail, list):
+        out = []
+        for d in ex.detail:
+            loc = list(d.get("loc") or ["body"])
+            rest = loc[1:] if loc[:1] == ["body"] else loc
+            if rest and isinstance(rest[0], str):
+                rest[0] = cols.get(rest[0], rest[0])
+            out.append({**d, "loc": ["body", *prefix, *rest]})
+        return HTTPException(status_code=422, detail=out)
+    if ex.status_code == 409 and isinstance(ex.detail, dict):
+        return HTTPException(
+            status_code=409, detail={**ex.detail, "loc": ["body", *prefix]}
+        )
+    return ex
+
+
+def _dup_errors(lines: list[Row]) -> list[tuple[Any, str]]:
+    """请求体内重复：行号、同一行的替代料物料 / 优先级。"""
+    errs: list[tuple[Any, str]] = []
+    seen: set[Any] = set()
+    for k, ln in enumerate(lines):
+        n = ln.get("line_no")
+        if n in seen:
+            errs.append((("lines", k, "line_no"), f"line_no: {n} used twice"))
+        seen.add(n)
+        for f in ("material_id", "priority"):
+            vals: set[Any] = set()
+            for j, sub in enumerate(ln.get("substitutes") or []):
+                v = sub.get(f)
+                if v is not None and v in vals:
+                    errs.append(
+                        (
+                            ("lines", k, "substitutes", j, f),
+                            f"{f.removesuffix('_id')}: used twice on this line",
+                        )
+                    )
+                vals.add(v)
+    return errs
+
+
+def replace_lines(
+    s: Session, tid: uuid.UUID, bom_id: uuid.UUID, lines: list[Row], user: Any
+) -> Row:
+    """整单替换草稿 BOM 的明细与替代料（一个事务，失败时什么都不改）。
+
+    每行沿用通用 /mes/bom-line、/mes/bom-line-substitute 的校验（含结构校验）。
+
+    Raises:
+        HTTPException: 不存在（404）；非草稿（409）；校验失败（422，loc 指向
+            ``["body","lines",k,...]``）。
+    """
+    from app.core.spec.write import create_row  # 避免循环导入
+
+    try:
+        bom = _bom(s, tid, bom_id, lock=True)
+        _locked(bom)
+        if errs := _dup_errors(lines):
+            raise http_422(errs)
+        old_lines = _lines(s, tid, bom_id)
+        el, es = ENTITIES["bom_line"], ENTITIES["bom_line_substitute"]
+        for ln in old_lines:
+            for sub in find(s, tid, "bom_line_substitute", bom_line_id=ln["id"]):
+                audit(s, tid, es, "delete", sub, user)
+            audit(s, tid, el, "delete", ln, user)
+        if old_lines:
+            conn(s).execute(
+                sa.delete(TABLES["bom_line"]).where(
+                    TABLES["bom_line"].c.tenant_id == tid,
+                    TABLES["bom_line"].c.bom_id == bom_id,
+                )
+            )  # 替代料随明细级联删除
+        for k, ln in enumerate(lines):
+            subs = ln.get("substitutes") or []
+            data = {x: v for x, v in ln.items() if x != "substitutes"}
+            try:
+                row = create_row(
+                    s, tid, el, {**data, "bom_id": bom_id}, user, commit=False
+                )
+            except HTTPException as ex:
+                raise _relocate(ex, ("lines", k), el) from ex
+            for j, sub in enumerate(subs):
+                try:
+                    create_row(
+                        s,
+                        tid,
+                        es,
+                        {**sub, "bom_line_id": row["id"]},
+                        user,
+                        commit=False,
+                    )
+                except HTTPException as ex:
+                    raise _relocate(ex, ("lines", k, "substitutes", j), es) from ex
+        audit(
+            s,
+            tid,
+            ENTITIES["bom"],
+            "replace_lines",
+            bom,
+            user,
+            {"lines": (len(old_lines), len(lines))},
+        )
+        s.commit()
+    except BaseException:
+        s.rollback()
+        raise
+    return with_lines(s, tid, bom_id)
+
+
+def with_lines(s: Session, tid: uuid.UUID, bom_id: Any) -> Row:
+    """BOM（序列化）+ ``lines``，每行带 ``substitutes``（按优先级）。"""
+    bom = _bom(s, tid, bom_id)
+    out = serialize(s, tid, ENTITIES["bom"], [bom])[0]
+    lines = _lines(s, tid, bom_id)
+    js = serialize(s, tid, ENTITIES["bom_line"], lines)
+    for ln, j in zip(lines, js, strict=True):
+        j["substitutes"] = serialize(
+            s,
+            tid,
+            ENTITIES["bom_line_substitute"],
+            find(s, tid, "bom_line_substitute", order="priority", bom_line_id=ln["id"]),
+        )
+    out["lines"] = js
+    return out

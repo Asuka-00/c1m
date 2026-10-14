@@ -5,10 +5,10 @@
 """
 
 import uuid
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.deps import SessionDep
 from app.core.spec.engine import ENTITIES
@@ -91,3 +91,54 @@ def bom_copy(
     _need(ctx, "mes.bom:write")
     row = svc.copy(session, ctx.id, bom_id, ctx.user)
     return serialize(session, ctx.id, ENTITIES["bom"], [row])[0]
+
+
+class SubstituteIn(BaseModel):
+    """替代料（不带 bom_line_id，归属由所在行决定）。"""
+
+    model_config = ConfigDict(extra="forbid")
+    material_id: uuid.UUID | None = None
+    priority: int | None = None
+    remark: str | None = None
+
+
+class LineIn(BaseModel):
+    """明细行（不带 bom_id）；字段与 /mes/bom-line 一致，必填等规则由通用校验给出。"""
+
+    model_config = ConfigDict(extra="forbid")
+    line_no: int | None = None
+    component_type: Literal["material", "product"] | None = None
+    material_id: uuid.UUID | None = None
+    component_product_id: uuid.UUID | None = None
+    qty: float | None = None
+    uom_id: uuid.UUID | None = None
+    per_basis: str | None = None
+    scrap_rate: float | None = None
+    consume_mode: str | None = None
+    operation_id: uuid.UUID | None = None
+    remark: str | None = None
+    substitutes: list[SubstituteIn] = Field(default_factory=list)
+
+
+class LinesIn(BaseModel):
+    """整单替换草稿明细（含替代料）。"""
+
+    model_config = ConfigDict(extra="forbid")
+    lines: list[LineIn]
+
+
+@router.put("/{bom_id}/lines")
+def bom_replace_lines(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    bom_id: uuid.UUID,
+    body: Annotated[LinesIn, Depends(perm_body("mes.bom:write", LinesIn))],
+) -> Any:
+    """整单替换草稿的明细与替代料（一个事务）：先查权限再校验请求体（D34）。
+
+    非草稿 409；任一行失败整单不生效（422，loc ``["body","lines",k,...]``）。
+    返回 BOM 及其 ``lines``（每行带 ``substitutes``）。
+    """
+    _need(ctx, "mes.bom:write")
+    lines = [ln.model_dump(mode="json", exclude_unset=True) for ln in body.lines]
+    return svc.replace_lines(session, ctx.id, bom_id, lines, ctx.user)

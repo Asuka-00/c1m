@@ -12,7 +12,68 @@ from app.core.spec.base import conn
 from app.core.spec.engine import TABLES, Entity
 from app.core.spec.errors import MesError, http_422
 from app.core.spec.validate import validator
+from app.mes.common.query import find
 from app.mes.common.validators import Row, _get, reject_unwritable
+
+
+class StructureError(HTTPException):
+    """两级 BOM 结构错误（bom.md §7.1）：422，``type`` / ``code`` 为错误码。"""
+
+    def __init__(self, code: str, msg: str, loc: tuple[Any, ...]) -> None:
+        """以错误码、消息和 loc（不含 body 前缀）构造。"""
+        super().__init__(
+            status_code=422,
+            detail=[{"loc": ["body", *loc], "msg": msg, "type": code, "code": code}],
+        )
+
+
+def _product_kids(s: Session, tid: uuid.UUID, product_id: Any) -> list[Any]:
+    """产品当前生效 BOM 里的半成品组件 id。"""
+    act = find(s, tid, "bom", product_id=product_id, status="active")
+    if not act:
+        return []
+    return [
+        ln["component_product_id"]
+        for ln in find(s, tid, "bom_line", bom_id=act[0]["id"])
+        if ln["component_type"] == "product" and ln["component_product_id"]
+    ]
+
+
+def structure_error(
+    s: Session, tid: uuid.UUID, bom: Row | None, comp: Any
+) -> tuple[str, str] | None:
+    """半成品行的结构校验，返回 ``(code, msg)`` 或 None。
+
+    - ``bom_cycle``：引用 BOM 自己的产品，或沿各产品的生效 BOM 展开能回到本产品。
+    - ``bom_depth_exceeded``：被引用半成品的生效 BOM 里还有半成品行（会成三级）。
+    """
+    if not bom or comp is None:
+        return None
+    own = bom["product_id"]
+    if comp == own:
+        return ("bom_cycle", "component_product: a BOM cannot use its own product")
+    seen: set[Any] = set()
+    todo = [comp]
+    while todo and len(seen) < 1000:
+        cur = todo.pop()
+        if cur in seen:
+            continue
+        seen.add(cur)
+        for k in _product_kids(s, tid, cur):
+            if k == own:
+                return (
+                    "bom_cycle",
+                    "component_product: circular reference (its active BOM "
+                    "expands back to this product)",
+                )
+            todo.append(k)
+    if _product_kids(s, tid, comp):
+        return (
+            "bom_depth_exceeded",
+            "component_product: its active BOM already contains semi-finished "
+            "lines (P1 allows two levels only)",
+        )
+    return None
 
 
 def _locked(bom: Row | None) -> None:
@@ -99,13 +160,9 @@ def _bom_line(
         row["component_product_id"] = None
     else:
         row["material_id"] = None
-        if bom and row.get("component_product_id") == bom["product_id"]:
-            errs.append(
-                (
-                    "component_product",
-                    "component_product: a BOM cannot use its own product",
-                )
-            )
+        hit = structure_error(s, tid, bom, row.get("component_product_id"))
+        if hit:
+            raise StructureError(hit[0], hit[1], ("component_product_id",))
     qty = row.get("qty")
     if qty is not None and qty <= 0:
         errs.append(("qty", "qty: must be > 0"))

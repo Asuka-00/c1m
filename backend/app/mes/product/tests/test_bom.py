@@ -301,23 +301,55 @@ def test_bom_tree_depth_and_cycles(client: TestClient, db: Session) -> None:
     b.act(rb, "activate")
     sb2 = b.act(sb, "copy")
     b.line(sb2, 20, component_type="product", component_product_id=raw["id"])
-    err = b.act(sb2, "activate", 422)
-    assert "3 levels" in err["detail"][0]["msg"]
-    # 循环：RAW 的新版本引用 FG → FG → SEMI → … 先被深度或循环拦下
+    err = b.act(sb2, "activate", 409)["detail"]
+    assert err["code"] == "bom_depth_exceeded"
+    assert {d["product"] for d in err["details"]} == {"SEMI", "FG"}
+    # RAW 的新版本引用 FG（FG 生效 BOM 有半成品行）→ 逐行接口直接 422
     rb2 = b.act(rb, "copy")
-    b.line(rb2, 20, component_type="product", component_product_id=fg["id"])
-    err = b.act(rb2, "activate", 422)
-    assert "circular" in err["detail"][0]["msg"] or "levels" in err["detail"][0]["msg"]
-    # 直接两点循环：A ↔ B
+    err = b.line(rb2, 20, 422, component_type="product", component_product_id=fg["id"])
+    assert err["detail"][0]["type"] == "bom_depth_exceeded"
+    # 两个草稿互相引用（写入时对方都还没生效）：先生效 A，再生效 C → 409 bom_cycle
     a, c = b.product("A"), b.product("C")
     ab = b.bom(a)
     b.line(ab, 10, component_type="product", component_product_id=c["id"])
-    b.act(ab, "activate")
     cb = b.bom(c)
     b.line(cb, 10, component_type="product", component_product_id=a["id"])
-    err = b.act(cb, "activate", 422)
-    assert "circular" in err["detail"][0]["msg"]
+    b.act(ab, "activate")
+    err = b.act(cb, "activate", 409)["detail"]
+    assert err["code"] == "bom_cycle"
+    assert {d["product"] for d in err["details"]} == {"A", "C"}
     assert b.get(cb)["status"] == "draft"
+
+
+def test_bom_activate_d47(client: TestClient, db: Session) -> None:
+    """D47：A 生效引用 B；B 新草稿加半成品行 → 生效 409 bom_depth_exceeded，详情含 A。"""
+    m = Mes(client, db)
+    b = B(m)
+    a, bp, x = b.product("A"), b.product("B"), b.product("X")
+    xb = b.bom(x)
+    b.line(xb, 10)
+    b.act(xb, "activate")
+    bb = b.bom(bp)
+    b.line(bb, 10)
+    b.act(bb, "activate")
+    ab = b.bom(a)
+    b.line(ab, 10, component_type="product", component_product_id=bp["id"])
+    b.act(ab, "activate")
+    bb2 = b.act(bb, "copy")
+    b.line(bb2, 20, component_type="product", component_product_id=x["id"])
+    err = b.act(bb2, "activate", 409)["detail"]
+    assert err["code"] == "bom_depth_exceeded"
+    det = {d["product"]: d for d in err["details"]}
+    assert set(det) == {"A", "B"}
+    assert det["A"]["bom_id"] == ab["id"] and det["A"]["bom_version"] == 1
+    assert b.get(bb2)["status"] == "draft"
+    # 方向 1：被引用的半成品其生效 BOM 后来有了半成品行（A 作废后 B v2 生效）
+    b.act(ab, "void")
+    b.act(bb2, "activate")
+    a2 = b.act(ab, "copy")
+    err = b.act(a2, "activate", 409)["detail"]
+    assert err["code"] == "bom_depth_exceeded"
+    assert {d["product"] for d in err["details"]} == {"A", "B"}
 
 
 def test_bom_permissions(client: TestClient, db: Session) -> None:
@@ -531,3 +563,236 @@ def test_product_new_version_copies_active_bom(client: TestClient, db: Session) 
     b.bom(q1)
     q2 = m.action("product", q1["id"], "new-version")
     assert m.list("bom", product=q2["id"])["count"] == 0
+
+
+# ---------------- PUT /mes/bom/{id}/lines（整单替换，F3 v1.1 第 13 条） ----------------
+def _put(m: Mes, bom: Any, body: Any, status: int, h: Any = None) -> Any:
+    r = m.c.put(f"{BOM}/{bom['id']}/lines", headers=h or m.h, json=body)
+    assert r.status_code == status, r.text
+    return r.json()
+
+
+def _ml(b: B, n: int, mat: int = 0, **kw: Any) -> dict[str, Any]:
+    return {
+        "line_no": n,
+        "component_type": "material",
+        "material_id": b.mats[mat]["id"],
+        "qty": 1,
+        "uom_id": b.ea,
+        "consume_mode": "issue",
+        **kw,
+    }
+
+
+def _locs(err: Any) -> list[list[Any]]:
+    return [d["loc"] for d in err["detail"]]
+
+
+def test_bom_put_lines_replace(client: TestClient, db: Session) -> None:
+    """整单替换：明细 + 替代料一起写入；再 PUT 替换掉旧的；空列表清空。"""
+    m = Mes(client, db)
+    b = B(m)
+    fg, semi = b.product("FG"), b.product("SEMI")
+    sb = b.bom(semi)
+    b.line(sb, 10, material_id=b.mats[3]["id"])
+    b.act(sb, "activate")
+    v = b.bom(fg)
+    old = b.line(v, 10)
+    body = {
+        "lines": [
+            _ml(
+                b,
+                10,
+                0,
+                qty=2.5,
+                uom_id=b.g,
+                substitutes=[
+                    {"material_id": b.mats[1]["id"], "priority": 1},
+                    {"material_id": b.mats[2]["id"], "priority": 2, "remark": "x"},
+                ],
+            ),
+            {
+                "line_no": 20,
+                "component_type": "product",
+                "component_product_id": semi["id"],
+                "qty": 1,
+                "uom_id": b.ea,
+                "consume_mode": "issue",
+            },
+        ]
+    }
+    out = _put(m, v, body, 200)
+    assert out["id"] == v["id"] and out["status"] == "draft"
+    assert [ln["line_no"] for ln in out["lines"]] == [10, 20]
+    assert out["lines"][0]["id"] != old["id"]
+    assert out["lines"][0]["qty"] == 2.5
+    assert [s["priority"] for s in out["lines"][0]["substitutes"]] == [1, 2]
+    assert out["lines"][1]["material_id"] is None
+    assert out["lines"][1]["substitutes"] == []
+    assert m.c.get(f"{API}/bom-line/{old['id']}", headers=m.h).status_code == 404
+    # 再 PUT：旧明细与替代料都被替换
+    out2 = _put(
+        m,
+        v,
+        {
+            "lines": [
+                _ml(
+                    b,
+                    30,
+                    1,
+                    substitutes=[{"material_id": b.mats[0]["id"], "priority": 5}],
+                )
+            ]
+        },
+        200,
+    )
+    assert [ln["line_no"] for ln in out2["lines"]] == [30]
+    subs = m.c.get(f"{API}/bom-line-substitute", headers=m.h).json()
+    assert {s["priority"] for s in subs["data"]} == {5}
+    assert _put(m, v, {"lines": []}, 200)["lines"] == []
+
+
+def test_bom_put_lines_errors(client: TestClient, db: Session) -> None:
+    """D34 顺序（403 → 404 → 409 / 422）、422 路径、整单原子性。"""
+    m = Mes(client, db)
+    b = B(m)
+    fg = b.product("FG")
+    v = b.bom(fg)
+    b.line(v, 10)
+    hm = _member(client, db, m)
+    # 无权限：合法 / 非法请求体、不存在的 BOM 都 403，不带字段明细
+    for bad in ({"lines": []}, {"lines": [{"nope": 1}]}, {"x": 1}):
+        err = _put(m, v, bad, 403, h=hm)
+        assert err == {"detail": "Not enough permissions"}
+    _put(m, {"id": "00000000-0000-0000-0000-000000000000"}, {"lines": []}, 403, h=hm)
+    _put(m, {"id": "00000000-0000-0000-0000-000000000000"}, {"lines": []}, 404)
+    # 严格载荷：未知字段 / 类型错误按 Pydantic 定位
+    err = _put(m, v, {"lines": [_ml(b, 10, bom_id=v["id"])]}, 422)
+    assert _locs(err) == [["body", "lines", 0, "bom_id"]]
+    err = _put(
+        m,
+        v,
+        {"lines": [_ml(b, 10, substitutes=[{"material_id": "x", "priority": 1}])]},
+        422,
+    )
+    assert _locs(err) == [["body", "lines", 0, "substitutes", 0, "material_id"]]
+    assert _locs(_put(m, v, {}, 422)) == [["body", "lines"]]
+    # 业务校验：第二行 qty 非法 → 422 定位到 lines[1]，第一行也没写入
+    before = b.get(v)
+    err = _put(m, v, {"lines": [_ml(b, 10, 1), _ml(b, 20, qty=-1)]}, 422)
+    assert _locs(err) == [["body", "lines", 1, "qty"]]
+    lines = m.c.get(f"{API}/bom-line", headers=m.h, params={"bom_id": v["id"]}).json()
+    assert [(x["line_no"], x["material_id"]) for x in lines["data"]] == [
+        (10, b.mats[0]["id"])
+    ]
+    assert b.get(v)["updated_at"] == before["updated_at"]
+    # 必填缺失：通用字段名换成列名
+    err = _put(m, v, {"lines": [{"line_no": 10, "component_type": "material"}]}, 422)
+    assert ["body", "lines", 0, "material_id"] in _locs(err)
+    assert ["body", "lines", 0, "uom_id"] in _locs(err)
+    # 替代料：与主料相同 → lines[0].substitutes[1].material_id；同行重复优先级
+    err = _put(
+        m,
+        v,
+        {
+            "lines": [
+                _ml(
+                    b,
+                    10,
+                    substitutes=[
+                        {"material_id": b.mats[1]["id"], "priority": 1},
+                        {"material_id": b.mats[0]["id"], "priority": 2},
+                    ],
+                )
+            ]
+        },
+        422,
+    )
+    assert _locs(err) == [["body", "lines", 0, "substitutes", 1, "material_id"]]
+    err = _put(
+        m,
+        v,
+        {
+            "lines": [
+                _ml(b, 10),
+                _ml(
+                    b,
+                    10,
+                    substitutes=[
+                        {"material_id": b.mats[1]["id"], "priority": 1},
+                        {"material_id": b.mats[2]["id"], "priority": 1},
+                    ],
+                ),
+            ]
+        },
+        422,
+    )
+    assert _locs(err) == [
+        ["body", "lines", 1, "line_no"],
+        ["body", "lines", 1, "substitutes", 1, "priority"],
+    ]
+    # 非草稿 409（生效后、作废后）
+    b.act(v, "activate")
+    err = _put(m, v, {"lines": [_ml(b, 10)]}, 409)
+    assert "only draft" in err["detail"]
+    assert len(b.tree(bom_id=v["id"])["lines"]) == 1
+
+
+def test_bom_structure_rules(client: TestClient, db: Session) -> None:
+    """bom_cycle（自己 / 间接）与 bom_depth_exceeded：整单接口与逐行接口。"""
+    m = Mes(client, db)
+    b = B(m)
+    a, c, d, raw = b.product("A"), b.product("C"), b.product("D"), b.product("RAW")
+
+    def pl(p: Any, n: int = 10) -> dict[str, Any]:
+        return {
+            "line_no": n,
+            "component_type": "product",
+            "component_product_id": p["id"],
+            "qty": 1,
+            "uom_id": b.ea,
+            "consume_mode": "issue",
+        }
+
+    def code(err: Any) -> tuple[str, list[Any]]:
+        return err["detail"][0]["type"], err["detail"][0]["loc"]
+
+    rb = b.bom(raw)
+    b.line(rb, 10)
+    b.act(rb, "activate")
+    cb = b.bom(c)  # C 生效：C → A
+    b.line(cb, 10, component_type="product", component_product_id=a["id"])
+    b.act(cb, "activate")
+    ab = b.bom(a)
+    # 自己引用自己
+    err = _put(m, ab, {"lines": [_ml(b, 10), pl(a, 20)]}, 422)
+    assert code(err) == ("bom_cycle", ["body", "lines", 1, "component_product_id"])
+    err = b.line(ab, 10, 422, component_type="product", component_product_id=a["id"])
+    assert code(err) == ("bom_cycle", ["body", "component_product_id"])
+    # 间接：A → C，而 C 的生效 BOM 引用 A
+    err = _put(m, ab, {"lines": [pl(c)]}, 422)
+    assert code(err) == ("bom_cycle", ["body", "lines", 0, "component_product_id"])
+    err = b.line(ab, 10, 422, component_type="product", component_product_id=c["id"])
+    assert code(err) == ("bom_cycle", ["body", "component_product_id"])
+    # 三级：D → C，C 的生效 BOM 里已有半成品行
+    db_ = b.bom(d)
+    err = _put(m, db_, {"lines": [pl(c)]}, 422)
+    assert code(err) == (
+        "bom_depth_exceeded",
+        ["body", "lines", 0, "component_product_id"],
+    )
+    err = b.line(db_, 10, 422, component_type="product", component_product_id=c["id"])
+    assert code(err) == ("bom_depth_exceeded", ["body", "component_product_id"])
+    # 逐行修改同样校验
+    ln = b.line(db_, 10, component_type="product", component_product_id=raw["id"])
+    r = m.c.patch(
+        f"{API}/bom-line/{ln['id']}",
+        headers=m.h,
+        json={"component_product_id": c["id"]},
+    )
+    assert (
+        r.status_code == 422 and r.json()["detail"][0]["type"] == "bom_depth_exceeded"
+    )
+    # 合法：引用只有物料的半成品
+    out = _put(m, db_, {"lines": [pl(raw)]}, 200)
+    assert out["lines"][0]["component_product_id"] == raw["id"]
