@@ -114,6 +114,44 @@ describe('机台上料对话框（F2）', () => {
       .toBeDisabled()
   })
 
+  it('改上料口或物料批会换事件号；什么都不改直接重试沿用原事件号', async () => {
+    vi.spyOn(mountApi, 'at').mockResolvedValue([])
+    const mount = vi
+      .spyOn(mountApi, 'mount')
+      .mockRejectedValue(new AxiosError('timeout', 'ECONNABORTED'))
+    const screen = await setup([MES_PERM.equipmentMount])
+    const submit = screen.getByRole('button', {
+      name: t('mes.mount.submit'),
+      exact: true,
+    })
+    const ids = () => mount.mock.calls.map(([, body]) => body.external_event_id)
+    await screen.getByRole('combobox').click()
+    await screen.getByRole('option', { name: 'LP1' }).click()
+    await userEvent.fill(screen.getByLabelText(t('mes.mount.lot')), 'ML01')
+    await submit.click()
+    await vi.waitFor(() => expect(mount).toHaveBeenCalledTimes(1))
+    // 超时后原样重试：同一事件号
+    await submit.click()
+    await vi.waitFor(() => expect(mount).toHaveBeenCalledTimes(2))
+    expect(ids()[1]).toBe(ids()[0])
+    // 改物料批：新事件号
+    await userEvent.fill(screen.getByLabelText(t('mes.mount.lot')), 'ML05')
+    await submit.click()
+    await vi.waitFor(() => expect(mount).toHaveBeenCalledTimes(3))
+    expect(ids()[2]).not.toBe(ids()[1])
+    // 改上料口：再换新事件号
+    await screen.getByRole('combobox').click()
+    await screen.getByRole('option', { name: 'LP2' }).click()
+    await submit.click()
+    await vi.waitFor(() => expect(mount).toHaveBeenCalledTimes(4))
+    expect(ids()[3]).not.toBe(ids()[2])
+    expect(new Set(ids()).size).toBe(3)
+    expect(mount.mock.calls[3][1]).toMatchObject({
+      port_code: 'LP2',
+      material_lot_code: 'ML05',
+    })
+  })
+
   it('409 错误码翻译成提示', () => {
     expect(
       mountErrorMessage(

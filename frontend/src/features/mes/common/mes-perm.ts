@@ -34,6 +34,8 @@ export const MES_PERM = {
   equipmentMount: 'mes.equipment:mount',
   /** 坐标图导入（P1 / B4） */
   mapImport: 'mes.map:import',
+  /** 坐标图查询（P1 / B4） */
+  mapRead: 'mes.map:read',
 } as const
 
 export type MesPerm = (typeof MES_PERM)[keyof typeof MES_PERM] | (string & {})

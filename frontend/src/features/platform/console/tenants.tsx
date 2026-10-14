@@ -26,7 +26,12 @@ import { TenantMembersDialog } from './tenant-members-dialog'
 const PLANS = ['trial', 'standard', 'enterprise'] as const
 
 /** 到期日：YYYY-MM-DD（本地）<-> ISO；空表示永久。 */
-const toDay = (iso: string | null) => (iso ? iso.slice(0, 10) : '')
+const toDay = (iso: string | null) => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
 const fromDay = (d: string) =>
   d.trim() ? new Date(`${d.trim()}T23:59:59`).toISOString() : null
 const expired = (iso: string | null) => !!iso && new Date(iso) < new Date()

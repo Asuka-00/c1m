@@ -1520,7 +1520,11 @@
     "p-channels": "通知渠道",
     "p-audit": "跨租户审计日志",
     "p-login-log": "登录日志",
-    "p-ops-log": "平台操作日志"
+    "p-ops-log": "平台操作日志",
+    "mes-equipment_material_mount": "机台上料记录",
+    "mes-equipment_qual": "Qual 任务",
+    "mes-substrate_map": "坐标图",
+    "mes-bin_set": "bin 定义集"
   },
   "permName": {
     "users__read": "查看平台用户",

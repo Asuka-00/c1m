@@ -67,12 +67,17 @@ export const currentLanguage = (): Language =>
 /** Translate outside React components (toasts, schemas, helpers). */
 export const t = i18n.t.bind(i18n)
 
+/** 纯日期 YYYY-MM-DD 按本地日期解析（避免被当成 UTC 零点而错一天），其余照常。 */
+const toDate = (v: string | number | Date) =>
+  typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)
+    ? new Date(`${v}T00:00:00`)
+    : new Date(v)
 /** 按当前语言格式化日期，空值显示 '—'。 */
 export const fmtDate = (v: string | number | Date | null | undefined) =>
   v
     ? new Intl.DateTimeFormat(currentLanguage(), {
         dateStyle: 'medium',
-      }).format(new Date(v))
+      }).format(toDate(v))
     : ''
 /** 按当前语言格式化日期时间，空值显示 '—'。 */
 export const fmtDateTime = (v: string | number | Date | null | undefined) =>

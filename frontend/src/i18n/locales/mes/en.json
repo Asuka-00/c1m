@@ -1520,7 +1520,11 @@
     "p-channels": "Notification Channels",
     "p-audit": "Cross-tenant Audit Log",
     "p-login-log": "Login Log",
-    "p-ops-log": "Platform Operation Log"
+    "p-ops-log": "Platform Operation Log",
+    "mes-equipment_material_mount": "Equipment Material Mount",
+    "mes-equipment_qual": "Qual Task",
+    "mes-substrate_map": "Substrate Map",
+    "mes-bin_set": "Bin Definition Set"
   },
   "permName": {
     "users__read": "View platform users",
