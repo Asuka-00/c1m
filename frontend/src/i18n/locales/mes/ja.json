@@ -1150,7 +1150,8 @@
         "sort": "ウェーハソート",
         "priority": "優先度変更",
         "transform": "単位変換",
-        "bom_over_consumption": "BOM 使用量超過"
+        "bom_over_consumption": "BOM 使用量超過",
+        "qtime_warned": "Q-Time 警告"
       },
       "genealogy_relation": {
         "split": "分割",

@@ -54,7 +54,7 @@ export function TreePage({ node }: { node: MenuNode }) {
       queryFn: () => mesApi.list(c, { page_size: MAX_NODES }),
     })),
   })
-  if (!cur) return <ForbiddenError />
+  if (!cur) return <ForbiddenError inApp />
   const go = (s: Record<string, unknown>) =>
     navigate({ to: '.', search: s as never, replace: true })
   const rows = (i: number, parent?: string): MesRow[] =>

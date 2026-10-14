@@ -1568,6 +1568,12 @@
         "binQty": "{{wafer}}：bin 合计 {{actual}} ≠ 期望 {{expected}}（差额 {{diff}}）",
         "unassigned": "以下 bin 没有分到子批：{{list}}"
       }
+    },
+    "qtw": {
+      "text": "Q-Time 预警：规则 {{rule}} · 工步 {{step}} · 已超出预警 {{over}}",
+      "hm": "{{h}} 小时 {{m}} 分",
+      "m": "{{m}} 分",
+      "s": "{{s}} 秒"
     }
   },
   "notify": {

@@ -45,6 +45,7 @@ import { enumLabel, reasonLabel } from '@/features/mes/common/labels'
 import { RefSelect } from '@/features/mes/common/ref-select'
 import { ResultBadge } from './exec-parts'
 import { type OverLine, overLineText } from './over-consumption'
+import { qtimeWarnedText } from './qtime-warned'
 import { GenealogyList } from './split-merge'
 
 const ICON: Record<string, [LucideIcon, string]> = {
@@ -63,6 +64,7 @@ const ICON: Record<string, [LucideIcon, string]> = {
   complete: [CircleCheck, 'bg-emerald-600'],
   override: [ShieldAlert, 'bg-violet-600'],
   qtime: [Timer, 'bg-amber-600'],
+  qtime_warned: [Timer, 'bg-amber-400'],
   oos: [TriangleAlert, 'bg-amber-500'],
   split: [GitFork, 'bg-sky-600'],
   merge: [GitMerge, 'bg-violet-600'],
@@ -105,6 +107,9 @@ function Details({ d }: { d: Record<string, unknown> }) {
   if (d.condition) facts.push(t('mes.trace.condition', { c: d.condition }))
   if (d.route) facts.push(String(d.route))
   if (d.source) facts.push(t('mes.trace.source', { s: d.source }))
+  // Q-01：warn 超时履历（qtime_warned，带规则、工步、超时秒数）
+  if (d.overdue_seconds != null || d.over_seconds != null)
+    facts.push(qtimeWarnedText(d))
   if (d.rule && d.minutes)
     facts.push(`${d.rule}: ${d.minutes} > ${d.max} min → ${d.action}`)
   if (d.override_reason)

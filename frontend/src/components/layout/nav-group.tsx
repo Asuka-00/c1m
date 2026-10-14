@@ -34,10 +34,12 @@ import {
   type NavGroup as NavGroupProps,
 } from './types'
 
-/** 子菜单项允许换行：长名称（如「Future Hold（预约 Hold）」）不被截断，高度随内容增长。 */
+/**
+ * 菜单名单行完整显示（FE-02：不截断、不折行）：侧栏宽度按中英日最长菜单名定为 17.5rem，
+ * 由 `nav-width.test.tsx` 逐个菜单名回归；这里去掉按钮里 `[&>span:last-child]:truncate` 的省略号。
+ */
 const SUB_WRAP = 'h-auto min-h-7 py-1'
-/** 覆盖按钮里 `[&>span:last-child]:truncate` 的单行截断。 */
-const LABEL_WRAP = 'whitespace-normal! [overflow-wrap:anywhere]'
+const LABEL_WRAP = 'whitespace-nowrap overflow-visible! text-clip!'
 
 /** 分组 id（key 优先，回退到标题）。 */
 const groupId = (item: NavCollapsible) => item.key ?? item.title
@@ -117,7 +119,7 @@ function SidebarMenuLink({ item, href }: { item: NavLink; href: string }) {
       >
         <Link to={item.url} onClick={() => setOpenMobile(false)}>
           {item.icon && <item.icon />}
-          <span>{item.title}</span>
+          <span className={LABEL_WRAP}>{item.title}</span>
           {item.badge && <NavBadge>{item.badge}</NavBadge>}
         </Link>
       </SidebarMenuButton>
@@ -173,7 +175,7 @@ function SidebarMenuCollapsible({
             className='cursor-pointer'
           >
             {item.icon && <item.icon />}
-            <span>{item.title}</span>
+            <span className={LABEL_WRAP}>{item.title}</span>
             {item.badge && <NavBadge>{item.badge}</NavBadge>}
             <ChevronRight className='ms-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 rtl:rotate-180' />
           </Button>
@@ -197,11 +199,7 @@ function SidebarMenuCollapsible({
                     isActive={checkIsActive(href, subItem)}
                     className={SUB_WRAP}
                   >
-                    <Link
-                      to={subItem.url}
-                      title={subItem.title}
-                      onClick={() => setOpenMobile(false)}
-                    >
+                    <Link to={subItem.url} onClick={() => setOpenMobile(false)}>
                       {subItem.icon && <subItem.icon />}
                       <span className={LABEL_WRAP}>{subItem.title}</span>
                       {subItem.badge && <NavBadge>{subItem.badge}</NavBadge>}

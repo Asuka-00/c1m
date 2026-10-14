@@ -1150,7 +1150,8 @@
         "sort": "晶圆整理",
         "priority": "优先级变更",
         "transform": "单位转换",
-        "bom_over_consumption": "BOM 超量用料"
+        "bom_over_consumption": "BOM 超量用料",
+        "qtime_warned": "Q-Time 预警"
       },
       "genealogy_relation": {
         "split": "分批",

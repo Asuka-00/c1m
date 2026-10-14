@@ -1568,6 +1568,12 @@
         "binQty": "{{wafer}}：ビン合計 {{actual}} ≠ 期待値 {{expected}}（差分 {{diff}}）",
         "unassigned": "子ロットに割り当てられていないビン：{{list}}"
       }
+    },
+    "qtw": {
+      "text": "Q-Time 警告：ルール {{rule}} · 工程 {{step}} · 警告値を {{over}} 超過",
+      "hm": "{{h}} 時間 {{m}} 分",
+      "m": "{{m}} 分",
+      "s": "{{s}} 秒"
     }
   },
   "notify": {

@@ -1150,7 +1150,8 @@
         "sort": "Wafer sort",
         "priority": "Priority change",
         "transform": "Unit transform",
-        "bom_over_consumption": "BOM over-consumption"
+        "bom_over_consumption": "BOM over-consumption",
+        "qtime_warned": "Q-Time warning"
       },
       "genealogy_relation": {
         "split": "Split",

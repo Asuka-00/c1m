@@ -17,12 +17,12 @@ function flatten(nodes: MenuNode[]): MenuNode[] {
 export function DynamicPage({ path }: { path: string }) {
   const { data, isLoading, isError } = useMyMenus()
   // 平台控制台菜单仅超级用户可取（其他用户 403）
-  if (isError && isPlatformPath(path)) return <ForbiddenError />
+  if (isError && isPlatformPath(path)) return <ForbiddenError inApp />
   if (isLoading || !data) return <Spinner />
   const node = flatten(data.menus).find((n) => n.path === path)
   if (!node) {
     return data.forbidden_paths.includes(path) ? (
-      <ForbiddenError />
+      <ForbiddenError inApp />
     ) : (
       <NotFoundError />
     )

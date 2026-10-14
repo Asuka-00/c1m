@@ -1568,6 +1568,12 @@
         "binQty": "{{wafer}}: bins total {{actual}} ≠ expected {{expected}} (difference {{diff}})",
         "unassigned": "Bins not assigned to any child lot: {{list}}"
       }
+    },
+    "qtw": {
+      "text": "Q-Time warning: rule {{rule}} · step {{step}} · {{over}} past the warning limit",
+      "hm": "{{h}} h {{m}} min",
+      "m": "{{m}} min",
+      "s": "{{s}} s"
     }
   },
   "notify": {

@@ -1,7 +1,10 @@
+import { useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import i18n, { t } from '@/i18n'
 import '@/styles/index.css'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
+import { userEvent } from 'vitest/browser'
 import { Input } from '@/components/ui/input'
 import { RefSelect } from './ref-select'
 
@@ -35,11 +38,17 @@ async function setup(value: string | null, onChange = vi.fn()) {
   )
   const cell = s.getByTestId('cell-ref').element() as HTMLElement
   const trigger = cell.querySelector('[role=combobox]') as HTMLButtonElement
-  const clear = cell.querySelector(
-    'button.absolute'
-  ) as HTMLButtonElement | null
-  return { s, cell, trigger, clear, onChange }
+  // 按角色和可访问名称找清除按钮 ×（FE-02）
+  const clearBtn = s.getByTestId('cell-ref').getByRole('button', {
+    name: t('mes.clear'),
+  })
+  const clear = (clearBtn.query() as HTMLButtonElement | null) ?? null
+  return { s, cell, trigger, clear, clearBtn, onChange }
 }
+
+beforeEach(async () => {
+  await i18n.changeLanguage('zh-CN')
+})
 
 describe('RefSelect 宽度与清除按钮', () => {
   it('和同一网格里的数字框一样宽', async () => {
@@ -75,5 +84,43 @@ describe('RefSelect 宽度与清除按钮', () => {
     const { trigger, clear } = await setup(null)
     expect(clear).toBeNull()
     expect(trigger.querySelector('span')!.className).not.toContain('pe-6')
+  })
+
+  it('值清空后 × 消失，焦点回到触发框', async () => {
+    function Stateful() {
+      const [v, setV] = useState<string | null>('1')
+      return (
+        <div data-testid='cell-ref'>
+          <RefSelect
+            id='rs'
+            target='lot'
+            value={v}
+            label={v ? LONG : null}
+            onChange={(id) => setV(id)}
+          />
+        </div>
+      )
+    }
+    const s = await render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Stateful />
+      </QueryClientProvider>
+    )
+    const clearBtn = s.getByRole('button', { name: t('mes.clear') })
+    await expect.element(clearBtn).toBeVisible()
+    await clearBtn.click()
+    await expect.element(clearBtn).not.toBeInTheDocument()
+    await expect
+      .element(s.getByRole('combobox'))
+      .toHaveTextContent(t('common.select'))
+    expect(document.activeElement?.getAttribute('role')).toBe('combobox')
+  })
+
+  it('长值全文：键盘聚焦时显示提示，读屏可读到全文', async () => {
+    const { s, trigger } = await setup('1')
+    expect(trigger.textContent).toContain(LONG)
+    await userEvent.tab()
+    expect(document.activeElement).toBe(trigger)
+    await expect.element(s.getByRole('tooltip')).toHaveTextContent(LONG)
   })
 })

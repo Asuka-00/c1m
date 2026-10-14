@@ -15,8 +15,8 @@ const LONG = 'Future Hold（预约 Hold）'
 function Harness() {
   return (
     <SidebarProvider>
-      {/* 与侧栏展开宽度（16rem）相当，按钮内还要扣掉子菜单缩进 */}
-      <div style={{ width: 200 }}>
+      {/* 与侧栏展开宽度（17.5rem）相当，按钮内还要扣掉子菜单缩进 */}
+      <div style={{ width: 280 }}>
         <NavGroup
           title='MES'
           items={[
@@ -36,7 +36,7 @@ function Harness() {
 }
 
 describe('NavGroup 子菜单长名称', () => {
-  it('当前分组展开时，长名称换行显示完整、不截断，并带悬停全文', async () => {
+  it('当前分组展开时，长名称单行完整显示、不截断不折行（FE-02）', async () => {
     const rootRoute = createRootRoute({ component: Harness })
     const router = createRouter({
       routeTree: rootRoute,
@@ -46,12 +46,14 @@ describe('NavGroup 子菜单长名称', () => {
     const link = screen.getByRole('link', { name: LONG })
     await expect.element(link).toBeVisible()
     const el = link.element() as HTMLElement
-    expect(el.getAttribute('title')).toBe(LONG)
     const span = el.querySelector('span') as HTMLElement
-    // 没有被截断：内容宽度不超过可见宽度
+    // 没有被截断：内容宽度不超过可见宽度；只有一行
     expect(span.scrollWidth).toBeLessThanOrEqual(span.clientWidth + 1)
-    expect(getComputedStyle(span).whiteSpace).toBe('normal')
-    // 换成两行后按钮高度随内容增长，文字不溢出按钮
-    expect(el.scrollHeight).toBeLessThanOrEqual(el.clientHeight + 1)
+    expect(getComputedStyle(span).whiteSpace).toBe('nowrap')
+    const range = document.createRange()
+    range.selectNodeContents(span)
+    expect(range.getClientRects().length).toBe(1)
+    // 文字全部可见，不需要只靠悬停才能看到的 title
+    expect(el.getAttribute('title')).toBeNull()
   })
 })
