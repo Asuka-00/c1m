@@ -74,8 +74,19 @@ export function operatorQualMessage(
     const v = r.data?.[k]
     return typeof v === 'string' ? v : ''
   }
-  if (r.result !== 'pass')
+  if (r.result !== 'pass') {
+    // 40e4342：过期 → data.reason=expired，ctx / data 带 expires_on（YYYY-MM-DD 站点日期）
+    const ctx = (r as { ctx?: { expires_on?: unknown } }).ctx
+    const exp =
+      (typeof ctx?.expires_on === 'string' && ctx.expires_on) || s('expires_on')
+    if (r.data?.reason === 'expired' || exp)
+      return t('mes.qual.expiredBlock', {
+        user: s('user'),
+        op: s('operation'),
+        date: exp,
+      })
     return t('mes.qual.notQualified', { user: s('user'), op: s('operation') })
+  }
   const exp = s('expires')
   if (exp && daysUntil(exp, now, tz) <= warnDaysOf(r.data?.warn_days))
     return t('mes.qual.expiringSoon', { date: toSiteDate(exp, tz) })

@@ -1728,7 +1728,8 @@
       "expiresOn": "Expires on",
       "daysLeft": "Days left",
       "lastDay": "Expires today (still valid)",
-      "hint": "Qualifications expiring soon; still valid on the expiry date."
+      "hint": "Qualifications expiring soon; still valid on the expiry date.",
+      "expiredBlock": "{{user}}'s qualification for operation {{op}} expired on {{date}} and cannot track in. This cannot be overridden. Renew the qualification first."
     },
     "alarmCode": {
       "migration": {

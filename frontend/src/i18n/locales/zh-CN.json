@@ -1728,7 +1728,8 @@
       "expiresOn": "到期日",
       "daysLeft": "剩余天数",
       "lastDay": "今天到期（当天有效）",
-      "hint": "即将到期的人员资质，到期日当天仍有效。"
+      "hint": "即将到期的人员资质，到期日当天仍有效。",
+      "expiredBlock": "{{user}} 的工序 {{op}} 资质已于 {{date}} 到期，不能进站，且不可放行。请先办理延期。"
     },
     "alarmCode": {
       "migration": {

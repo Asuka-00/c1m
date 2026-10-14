@@ -613,11 +613,17 @@ export function mockTrackInQualCheck(
     null
   if (!pick) return null
   if (!pick.expires_on || pick.expires_on >= today) return null
-  const ctx = {
-    reason: 'expired',
-    qual_id: pick.id,
-    expires_on: pick.expires_on,
+  // 40e4342 registry：顶层 ctx 只有 {qual_id, expires_on}；data 另带 user / operation / reason / warn_days
+  const ctx = { qual_id: pick.id, expires_on: pick.expires_on }
+  const data = {
+    user: username,
+    operation: operationId,
     warn_days: qualMockWarnDays(),
+    reason: 'expired',
+    expires: pick.expires_on,
+    expires_on: pick.expires_on,
+    qual_id: pick.id,
+    ctx,
   }
   return apiError(409, {
     code: 'check_blocked',
@@ -632,6 +638,7 @@ export function mockTrackInQualCheck(
         applicable: true,
         message: 'operator qualification expired',
         ctx,
+        data,
       },
     ],
   })
