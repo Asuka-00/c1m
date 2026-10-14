@@ -177,6 +177,9 @@ P3_DRAFT_STEPS = {
     "marking_inspect",
     "marking_scrap",
     "expect_marking",
+    "expect_marking_prints",
+    "expect_marking_inspections",
+    "expect_marking_events",
     "marking_replay",
 }
 

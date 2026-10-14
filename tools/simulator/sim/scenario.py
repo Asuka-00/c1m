@@ -64,7 +64,15 @@ class Scenario:
 
 
 # P3-B2 打标草稿步骤：都要 lot（批次键；EAP 上报另需 eq）
-MARKING_LOT_STEPS = {"marking_report", "marking_manual", "marking_reprint", "marking_inspect", "expect_marking"}
+MARKING_LOT_STEPS = {
+    "marking_report",
+    "marking_manual",
+    "marking_reprint",
+    "marking_inspect",
+    "expect_marking",
+    "expect_marking_prints",
+    "expect_marking_inspections",
+}
 
 
 def parse(data: dict, path: str | None = None) -> Scenario:

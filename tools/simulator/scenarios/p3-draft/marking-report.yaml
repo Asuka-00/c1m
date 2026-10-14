@@ -1,52 +1,74 @@
-# 草稿（P3-E2 打标预审 eap/p3/docs/p3-e2-marking-prereview.md）：打标记录的上报与去重。P3-B2 接口还没有，整体 skipped。
-# 本期不做打标机通信（p3-tasks P3-B2「不做」）；marking_report 是以后 B11 event_type=marking 的形状，字段为【推测】。
-# 覆盖：
-#   1. 正常上报：EAP 回报系统已发的 trace_code → 记录 source=eap、external_event_id、equipment_id，marked_at 输出带 Z
-#   2. 重发去重：同 (tenant, source, external_event_id) 同内容 → 200 duplicate=true，不新增记录、reprint_count 不变
-#   3. 同事件号不同内容 → 422 idempotency_key_reused（D57），不写入
-#   4. 超位小数：数值字段 7 位小数 → 422 value_error ctx.max_places=6（D72）；6 位正常；数值按定点字符串输出（D76）
-#   5. 手工打标 / 重打走 Idempotency-Key（D57 + H-1）；重打沿用原号、reprint_count+1、必填原因（预审 H2，【推测】reason/comment）
-#   6. 已报废对象：重打 / 检验 / 上报 → 409 invalid_transition，不计数、不发 lot.marked / lot.marking_inspected（同 D72 口径，【推测】）
+# 草稿（P3-E2 打标，按 D78 定稿，eap/p3/docs/p3-e2-marking-prereview.md）。P3-B2 接口还没有，整体 skipped。
+# 表：mes_marking_record（主记录，reprint_count 只读派生）+ mes_marking_print（每次打印一行，seq 后端分配，
+#     (marking_id, seq) 唯一）+ mes_marking_inspection（检验）。print/inspection 各带 source/external_event_id。
+# 本期不做打标机通信；marking_report 是以后 B11 event_type=marking 的形状（kind=print|inspection，字段待 B2）。
+# 覆盖（D78）：
+#   - 手工打标/重打/检验必须带 Idempotency-Key：缺了 422 missing，loc=header（Q6）；重放不占 seq（补充）
+#   - EAP 上报：同事件号重发 duplicate=true、不占 seq；同号不同内容 422 idempotency_key_reused（D57）
+#   - trace_code 与系统发号不一致 409 trace_code_mismatch，ctx expected/actual，写 audit（Q3）
+#   - trace_code 超长（>32）或非法字符（[A-Z0-9-] 以外）→ 422（code 待定，暂按 value_error，Q7 / 预审 R1）
+#   - 重打（seq>1）缺 reason_id/comment 422 missing；reason_type=marking_reprint（Q1）
+#   - OCR 读回不一致：检验 fail，存 expected_code/read_code，发 label_marking_mismatch（Q3，事件名见预审 R2）
+#   - 检验不合格未处理就出站：409 check_blocked，ctx.check=marking_inspection，overridable=false（Q5）
+#   - 已报废对象打印/检验/上报：409 invalid_transition，不占 seq、不发事件
+# 打标记录没有 numeric 列（D78），不测超位小数。
 name: marking-report
-run_id: marking-01
-draft: "等 P3-B2 打标接口（/mes/marking、/mes/marking/{id}/inspect；B11 event_type=marking 本期不做）"
+run_id: marking-02
+draft: "等 P3-B2 打标接口（/mes/marking、/mes/marking/{id}/inspect，D78；B11 event_type=marking 本期不做）"
 target: http://127.0.0.1:8013
 equipment: [{code: EAP-MK01, type: MARKER}]
 steps:
   - precondition: {eq: EAP-MK01, e10: SBY}
-  # 5. 手工打标：系统发号（D61），save_as 供重放
+  # 手工首打：缺 Idempotency-Key → 422 missing（loc=header）
+  - marking_manual: {lot: MK0001, eq: EAP-MK01, no_idem: true,
+                     expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
   - marking_manual: {lot: MK0001, eq: EAP-MK01, idem: mk-man-1, save_as: man1,
                      expect: {status: 200, body: {data.source: manual, data.reprint_count: 0, data.trace_code: $nonempty}}}
-  - marking_replay: {of: man1, expect: {status: 200}}   # 同 Idempotency-Key 重放：原状态码、原记录
-  - expect_marking: {lot: MK0001, count: 1}
-  # 1. 正常上报（第二批，EAP 回报系统发的号）
-  - marking_report: {eq: EAP-MK01, lot: MK0002, seq: 1, payload: {trace_code: $issued}, save_as: rep1,
-                     expect: {status: 200, body: {duplicate: false, data.source: simulator}}}
-  - expect_marking: {lot: MK0002, count: 1, fields: {source: simulator, equipment: EAP-MK01, marked_at: $utc_z}}
-  # 2. 重发去重
-  - marking_replay: {of: rep1, expect: {status: 200, body: {duplicate: true}}}
-  - expect_marking: {lot: MK0002, count: 1, fields: {reprint_count: 0}}
-  # 3. 同事件号不同内容
-  - marking_report: {eq: EAP-MK01, lot: MK0002, seq: 1, payload: {trace_code: $issued, content: {line1: CHANGED}},
-                     expect: {status: 422, code: idempotency_key_reused}}
-  - expect_marking: {lot: MK0002, count: 1}
-  # 4. 超位小数（数值字段【推测】：qty；记录表若无 numeric 列则改测别的数值字段）
-  - marking_report: {eq: EAP-MK01, lot: MK0003, seq: 2, payload: {trace_code: $issued, qty: "1.1234567"},
-                     expect: {status: 422, type: value_error, loc: [body, payload, qty]}}
-  - marking_report: {eq: EAP-MK01, lot: MK0003, seq: 3, payload: {trace_code: $issued, qty: "1.123456"},
-                     expect: {status: 200, body: {data.qty: "1.123456"}}}
-  # 检验不合格 → 重打：沿用原号、reprint_count+1、必填原因
-  - marking_inspect: {lot: MK0001, result: fail, idem: mk-insp-1, expect: {status: 200}}
-  - marking_reprint: {lot: MK0001, eq: EAP-MK01, idem: mk-rep-1, expect: {status: 422, code: missing}}   # 缺原因
-  - marking_reprint: {lot: MK0001, eq: EAP-MK01, reason: REWORK, comment: "OCR 读不出", idem: mk-rep-2,
+  - marking_replay: {of: man1, expect: {status: 200}}          # 幂等重放：原状态码、原记录
+  - expect_marking_prints: {lot: MK0001, seqs: [1], last: {source: manual, printed_at: $utc_z}}   # 重放不占 seq
+  # 写只读字段 reprint_count → 422 unknown_field（D70 只读字段规则）
+  - marking_reprint: {lot: MK0001, eq: EAP-MK01, idem: mk-ro-1, extra: {reprint_count: 5},
+                      expect: {status: 422, code: unknown_field}}
+  # 重打缺原因 → 422 missing；带 reason_id+comment → seq=2
+  - marking_reprint: {lot: MK0001, eq: EAP-MK01, idem: mk-rep-1, expect: {status: 422, code: missing}}
+  - marking_reprint: {lot: MK0001, eq: EAP-MK01, reason: R-MKREPRINT, idem: mk-rep-2, expect: {status: 422, code: missing}}   # 只有 reason 没 comment
+  - marking_reprint: {lot: MK0001, eq: EAP-MK01, reason: R-MKREPRINT, comment: "OCR 读不出", idem: mk-rep-3,
                       expect: {status: 200, body: {data.reprint_count: 1}}}
-  - expect_marking: {lot: MK0001, fields: {reprint_count: 1, trace_code: $same_as_first}}
-  # 6. 已报废对象
-  - marking_inspect: {lot: MK0001, result: fail, idem: mk-insp-2, save_as: insp2, expect: {status: 200}}
-  - marking_scrap: {marking: MK0001, reason: SCRAP, expect: {status: 200}}
-  - marking_reprint: {lot: MK0001, eq: EAP-MK01, reason: REWORK, comment: "报废后", idem: mk-rep-3,
+  - expect_marking_prints: {lot: MK0001, seqs: [1, 2], last: {reason_code: R-MKREPRINT, comment: "OCR 读不出"}}
+  # EAP 上报（第二批）：系统已发的号
+  - marking_report: {eq: EAP-MK01, lot: MK0002, seq: 1, kind: print, payload: {trace_code: $issued}, save_as: rep1,
+                     expect: {status: 200, body: {duplicate: false}}}
+  - marking_replay: {of: rep1, expect: {status: 200, body: {duplicate: true}}}
+  - expect_marking_prints: {lot: MK0002, seqs: [1], last: {source: simulator, equipment: EAP-MK01}}   # duplicate 不占 seq
+  - marking_report: {eq: EAP-MK01, lot: MK0002, seq: 1, kind: print, payload: {trace_code: $issued, comment: changed},
+                     expect: {status: 422, code: idempotency_key_reused}}
+  # trace_code 与系统发号不一致 → 409 trace_code_mismatch + audit，不占 seq
+  - marking_report: {eq: EAP-MK01, lot: MK0002, seq: 2, kind: print, payload: {trace_code: OTHER-01},
+                     expect: {status: 409, code: trace_code_mismatch, ctx: {expected: $issued, actual: OTHER-01}}}
+  - expect_marking_events: {lot: MK0002, audit_has: trace_code_mismatch}
+  # trace_code 超长 / 非法字符 → 422（code 待定，暂按 value_error）
+  - marking_report: {eq: EAP-MK01, lot: MK0002, seq: 3, kind: print, payload: {trace_code: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA},
+                     expect: {status: 422, type: value_error, loc: [body, payload, trace_code]}}
+  - marking_report: {eq: EAP-MK01, lot: MK0002, seq: 4, kind: print, payload: {trace_code: "ab_1"},
+                     expect: {status: 422, type: value_error, loc: [body, payload, trace_code]}}
+  - expect_marking_prints: {lot: MK0002, seqs: [1]}
+  # 检验：手工缺 Idempotency-Key 422；EAP 上报 OCR 不一致 → fail + expected_code/read_code + label_marking_mismatch
+  - marking_inspect: {lot: MK0002, result: pass, no_idem: true, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
+  - marking_report: {eq: EAP-MK01, lot: MK0002, seq: 5, kind: inspection, payload: {read_code: MISREAD-9}, save_as: insp1,
+                     expect: {status: 200, body: {duplicate: false}}}
+  - marking_replay: {of: insp1, expect: {status: 200, body: {duplicate: true}}}
+  - expect_marking_inspections: {lot: MK0002, count: 1, last: {result: fail, read_code: MISREAD-9, expected_code: $issued, source: simulator}}
+  - expect_marking_events: {lot: MK0002, events: [label_marking_mismatch]}
+  # 不合格未处理就出站 → 409 check_blocked，ctx.check=marking_inspection，不可放行
+  - track_out: {eq: EAP-MK01, lot: MK0002,
+                expect: {status: 409, code: check_blocked, ctx: {check: marking_inspection}, overridable: false}}
+  # 已报废对象（报废接口为提议，预审 R3）：打印 / 检验 / 上报 → 409 invalid_transition，不占 seq、不发事件
+  - marking_scrap: {marking: MK0001, reason: R-SCRAP, idem: mk-scrap-1, expect: {status: 200}}
+  - marking_reprint: {lot: MK0001, eq: EAP-MK01, reason: R-MKREPRINT, comment: "报废后", idem: mk-rep-4,
                       expect: {status: 409, code: invalid_transition}}
-  - marking_inspect: {lot: MK0001, result: pass, idem: mk-insp-3, expect: {status: 409, code: invalid_transition}}
-  - marking_report: {eq: EAP-MK01, lot: MK0001, seq: 4, payload: {trace_code: $issued},
+  - marking_inspect: {lot: MK0001, result: pass, idem: mk-insp-9, expect: {status: 409, code: invalid_transition}}
+  - marking_report: {eq: EAP-MK01, lot: MK0001, seq: 6, kind: print, payload: {trace_code: $issued},
                      expect: {status: 409, code: invalid_transition}}
-  - expect_marking: {lot: MK0001, fields: {reprint_count: 1}, events_absent_after: insp2}
+  - expect_marking_prints: {lot: MK0001, seqs: [1, 2]}
+  - expect_marking_inspections: {lot: MK0001, count: 0}
+  - expect_marking_events: {lot: MK0001, absent_after_scrap: [lot.marked, lot.marking_inspected]}

@@ -92,11 +92,21 @@ def default_adapters() -> dict[str, Adapter]:
         "alarm_code_get": Adapter("报警码详情", ["/mes/alarm_code/{rid}"], card="P3-B8"),
         # D70 补充：删除仍被单台行引用的类型行 409 referenced（通用 CRUD DELETE），B8 落地后核对
         "alarm_code_delete": Adapter("报警码删除", ["/mes/alarm_code/{rid}"], card="P3-B8"),
-        # P3-B2（打标，未实现）：路径取自 p3-tasks P3-B2；报废接口卡里没写，为提议，B2 落地后以 openapi 为准
-        "marking_create": Adapter("打标 / 重打", ["/mes/marking"], card="P3-B2"),
-        "marking_inspect": Adapter("打标检验", ["/mes/marking/{marking_id}/inspect"], card="P3-B2"),
+        # P3-B2（打标，未实现，D78）：主记录 + mes_marking_print（每次打印一行，seq 后端分配）+ mes_marking_inspection。
+        # 路径取自 p3-tasks P3-B2；print/inspection 列表、报废为提议，B2 落地后以 openapi 为准
+        "marking_create": Adapter("打标 / 重打（新增 print 行）", ["/mes/marking"], card="P3-B2"),
+        "marking_inspect": Adapter(
+            "打标检验（新增 inspection 行）", ["/mes/marking/{marking_id}/inspect"], card="P3-B2"
+        ),
         "marking_preview": Adapter("打标预览", ["/mes/marking/preview"], card="P3-B2"),
         "marking_get": Adapter("打标记录", ["/mes/marking/{marking_id}"], card="P3-B2"),
+        "marking_prints": Adapter(
+            "打印履历 mes_marking_print（提议）", ["/mes/marking/{marking_id}/prints"], card="P3-B2"
+        ),
+        "marking_inspections": Adapter(
+            "检验履历 mes_marking_inspection（提议）", ["/mes/marking/{marking_id}/inspections"], card="P3-B2"
+        ),
+        "marking_events": Adapter("打标领域事件（audit_log）", ["/mes/audit_log"], card="P3-B2"),
         "marking_scrap": Adapter("打标报废（提议）", ["/mes/marking/{marking_id}/scrap"], card="P3-B2"),
     }
 
@@ -154,6 +164,9 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "marking_inspect": ["marking_inspect"],
     "marking_scrap": ["marking_scrap"],
     "expect_marking": ["marking_get"],
+    "expect_marking_prints": ["marking_prints"],
+    "expect_marking_inspections": ["marking_inspections"],
+    "expect_marking_events": ["marking_events"],
     "marking_replay": [],  # 同 reticle_replay：同路径、同请求体、同 Idempotency-Key / external_event_id
     "reuse": [],
     "precondition": [],

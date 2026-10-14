@@ -231,22 +231,26 @@ def test_b8_draft_type_row_rules():
     ]
 
 
-def test_marking_draft_covers_dedup_decimals_and_scrapped():
+def test_marking_draft_follows_d78():
     import pytest
 
     from sim.runner import P3_DRAFT_STEPS
     from sim.scenario import ScenarioError, load, parse
 
     sc = load("scenarios/p3-draft/marking-report.yaml")
-    assert sc.draft and "P3-B2" in sc.draft
-    kinds = [s.kind for s in sc.steps]
-    assert {k for k in kinds if k.startswith(("marking_", "expect_marking"))} <= P3_DRAFT_STEPS
-    codes = [(s.args.get("expect") or {}).get("code") for s in sc.steps]
-    assert "idempotency_key_reused" in codes and codes.count("invalid_transition") == 3 and "missing" in codes
-    dec = [s for s in sc.steps if (s.args.get("expect") or {}).get("type") == "value_error"]
-    assert dec and dec[0].args["payload"]["qty"] == "1.1234567"
-    reps = [s for s in sc.steps if s.kind == "marking_replay"]
-    assert any((s.args["expect"].get("body") or {}).get("duplicate") is True for s in reps)
+    assert sc.draft and "P3-B2" in sc.draft and "D78" in sc.draft
+    assert {s.kind for s in sc.steps if "marking" in s.kind} <= P3_DRAFT_STEPS
+    exp = [s.args.get("expect") or {} for s in sc.steps]
+    codes = [e.get("code") for e in exp]
+    assert codes.count("invalid_transition") == 3 and "trace_code_mismatch" in codes and "check_blocked" in codes
+    assert "idempotency_key_reused" in codes and codes.count("missing") >= 4
+    assert sum(1 for e in exp if e.get("loc") == ["header", "Idempotency-Key"]) == 2
+    assert sum(1 for e in exp if e.get("type") == "value_error") == 2  # trace_code 超长 / 非法字符
+    assert not any("qty" in (s.args.get("payload") or {}) for s in sc.steps)  # D78 无 numeric 列
+    seqs = [s.args["seqs"] for s in sc.steps if s.kind == "expect_marking_prints" and "seqs" in s.args]
+    assert all(q == list(range(1, len(q) + 1)) for q in seqs) and [1, 2] in seqs
+    tb = next(s for s in sc.steps if s.kind == "track_out")
+    assert tb.args["expect"]["ctx"]["check"] == "marking_inspection" and tb.args["expect"]["overridable"] is False
     with pytest.raises(ScenarioError):
         parse({"run_id": "m", "steps": [{"marking_inspect": {"result": "pass"}}]})  # 缺 lot
     with pytest.raises(ScenarioError):
