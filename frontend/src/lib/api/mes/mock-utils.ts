@@ -10,3 +10,11 @@ export function apiError(status: number, detail: unknown) {
     data: { detail },
   })
 }
+
+/** D86 补充二：mock 没有响应头，用「最近一次幂等写的响应头」最小表示。
+ *  回放成功响应时为 {'Idempotent-Replayed': 'true'}，首次执行为 {}；仅供测试断言，业务代码不得依赖。 */
+let lastHeaders: Record<string, string> = {}
+export const mockIdemHeaders = () => ({ ...lastHeaders })
+export const setMockReplayed = (replayed: boolean) => {
+  lastHeaders = replayed ? { 'Idempotent-Replayed': 'true' } : {}
+}

@@ -58,7 +58,20 @@ export function offsetDatetime(
 }
 
 type Kind = 'date' | 'datetime'
-const fieldOf = (key: string) => key.replace(/_(from|to)$/, '')
+/** QA P3-1：先按原 key 精确匹配字段（effective_from / effective_to 本身就是字段名），
+ *  匹配不到再剥 _from/_to 范围后缀。 */
+const fieldFor = (e: Pick<MesEntity, 'fields'>, key: string) => {
+  const hit = (n: string) =>
+    e.fields.find((x) => x.column === n || x.name === n)
+  return (
+    hit(key) ??
+    (/_(from|to)$/.test(key) ? hit(key.replace(/_(from|to)$/, '')) : undefined)
+  )
+}
+/** 是否按范围上界处理（_to 后缀且不是字段名本身）。 */
+const isRangeTo = (e: Pick<MesEntity, 'fields'>, key: string) =>
+  key.endsWith('_to') &&
+  !e.fields.some((x) => x.column === key || x.name === key)
 
 /** 通用列表查询：按实体字段类型归一 date / datetime 的等值和 _from/_to 参数。 */
 export function normalizeListQuery<T extends Record<string, unknown>>(
@@ -69,12 +82,11 @@ export function normalizeListQuery<T extends Record<string, unknown>>(
   const out: Record<string, unknown> = { ...query }
   for (const [k, v] of Object.entries(query)) {
     if (typeof v !== 'string' || !v) continue
-    const base = fieldOf(k)
-    const f = e.fields.find((x) => x.column === base || x.name === base)
+    const f = fieldFor(e, k)
     if (!f) continue
     if (f.type === 'date') out[k] = strictDate(v)
     else if (f.type === 'datetime')
-      out[k] = offsetDatetime(v, k.endsWith('_to') && YMD.test(v.trim()))
+      out[k] = offsetDatetime(v, isRangeTo(e, k) && YMD.test(v.trim()))
   }
   return out as T
 }
@@ -120,8 +132,7 @@ export function mockListQueryDateCheck(
 ) {
   const kinds: Record<string, Kind> = {}
   for (const k of Object.keys(query)) {
-    const base = fieldOf(k)
-    const f = e.fields.find((x) => x.column === base || x.name === base)
+    const f = fieldFor(e, k)
     if (f && (f.type === 'date' || f.type === 'datetime')) kinds[k] = f.type
   }
   return mockQueryDateCheck(query, kinds)

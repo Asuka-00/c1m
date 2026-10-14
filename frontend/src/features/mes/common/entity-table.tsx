@@ -39,6 +39,7 @@ import {
 } from '@/components/crud'
 import { IconButton } from '@/components/icon-button'
 import { useOperationKey } from '@/features/mes/common/idem-key'
+import { qualReasonMessage } from '@/features/mes/execution/qual-history-format'
 import { cellValue } from './cells'
 import { EntityForm } from './entity-form'
 import { EntityTree } from './entity-tree'
@@ -100,7 +101,12 @@ export function EntityTable({
     queryFn: () => mesApi.list(e.code, query),
   })
   const invalidate = () => qc.invalidateQueries({ queryKey: ['mes', e.code] })
-  const onErr = (err: unknown) => toast.error(mesErrorMessage(err, e))
+  // QA P2-1：资质的 self_approval / holder_approval / conflicting_fields 走资质三语文案
+  const onErr = (err: unknown) =>
+    toast.error(
+      (e.code === 'operator_qual' && qualReasonMessage(err)) ||
+        mesErrorMessage(err, e)
+    )
   // KEYED_ENTITIES：每次操作一个 Idempotency-Key，重试（内容不变）沿用，成功后换新
   const keyed = KEYED_ENTITIES.includes(e.code)
   const saveKey = useOperationKey()

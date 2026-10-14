@@ -26,6 +26,11 @@ export function qualChanges(r: Pick<QualLogRow, 'before' | 'after'>): string {
 
 /** 资质写入错误文案（D85：self_approval / holder_approval），其余走通用。 */
 export function qualErrorMessage(e: unknown): string {
+  return qualReasonMessage(e) ?? errorMessage(e)
+}
+
+/** 只识别资质专属 reason；不认识返回 null，交给调用方的通用文案（QA P2-1）。 */
+export function qualReasonMessage(e: unknown): string | null {
   if (e instanceof AxiosError) {
     const d = (e.response?.data as { detail?: unknown })?.detail
     if (Array.isArray(d)) {
@@ -42,5 +47,5 @@ export function qualErrorMessage(e: unknown): string {
         return t('mes.qualHistory.err.conflictingFields')
     }
   }
-  return errorMessage(e)
+  return null
 }

@@ -12,7 +12,7 @@ import {
 import { MES_PERM } from '@/features/mes/common/mes-perm'
 import { http } from '../client'
 import { BODY_KEYS, pickBody } from '../request-body'
-import { apiError } from './mock-utils'
+import { apiError, setMockReplayed } from './mock-utils'
 
 /** 光罩专用状态枚举 `reticle_status`（终态 scrapped）。 */
 export const RETICLE_STATUSES = [
@@ -699,6 +699,7 @@ function mockAct(
 ): ReticleActionOut {
   const body = actionBody(action, input) as ReticleActionInput
   const sig = `${id}|${action}|${bodySignature(action, input)}`
+  if (IDEMPOTENT.includes(action)) setMockReplayed(false)
   // D81：运行时 403 排在缺 key 422 之前
   if (mockPerms && !mockPerms.includes(actionPerm(action)))
     throw apiError(403, 'Not enough permissions')
@@ -721,7 +722,8 @@ function mockAct(
         code: 'idempotency_key_reused',
         message: 'Idempotency-Key reused with a different body',
       })
-    // 重放返回原响应（D57）
+    // 重放返回原响应（D57）；D86 补充二：带 Idempotent-Replayed，响应体不变
+    setMockReplayed(true)
     return structuredClone(hit.out)
   }
   const x = find(id)
@@ -979,6 +981,7 @@ function mockAct(
       username: 'me',
       at,
     })
+  // D86：只缓存 2xx（前面任何 4xx 都已抛出，不进缓存）
   if (IDEMPOTENT.includes(action) && key)
     idem.set(key, { sig, out: structuredClone(out) })
   return out

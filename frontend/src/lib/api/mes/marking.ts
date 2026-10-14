@@ -12,6 +12,7 @@
 import { siteDate } from '@/lib/site-tz'
 import { http } from '../client'
 import { pickBody } from '../request-body'
+import { setMockReplayed } from './mock-utils'
 import { apiError } from './reticle'
 
 /** 模板状态：draft → approved → retired。 */
@@ -996,6 +997,7 @@ function withIdem<T>(
   f: () => T,
   pre?: () => void
 ): T {
+  setMockReplayed(false)
   if (!key)
     throw apiError(422, [
       {
@@ -1014,6 +1016,7 @@ function withIdem<T>(
         code: 'idempotency_key_reused',
         message: 'Idempotency-Key reused with a different body',
       })
+    setMockReplayed(true) // D86 补充二
     return structuredClone(hit.out) as T
   }
   const out = f()

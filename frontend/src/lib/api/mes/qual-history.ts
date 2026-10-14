@@ -18,7 +18,7 @@ import {
   warnDaysOf,
 } from '@/features/mes/execution/operator-qual'
 import { http } from '../client'
-import { apiError } from './mock-utils'
+import { apiError, setMockReplayed } from './mock-utils'
 
 export const QUAL_LOG_ACTIONS = [
   'granted',
@@ -292,6 +292,7 @@ export function qualBodyCheck(body: Partial<QualInput> & QualReason) {
 }
 
 function withKey<T>(key: string, sig: string, f: () => T, pre: () => void): T {
+  setMockReplayed(false)
   if (!key) throw missing('Idempotency-Key', 'header')
   pre()
   const hit = idem.get(key)
@@ -301,9 +302,11 @@ function withKey<T>(key: string, sig: string, f: () => T, pre: () => void): T {
         code: 'idempotency_key_reused',
         message: 'Idempotency-Key reused with a different body',
       })
+    setMockReplayed(true) // D86 补充二：回放带 Idempotent-Replayed
     return structuredClone(hit.out) as T
   }
   const out = f()
+  // D86：只缓存 2xx；f() 抛出的 4xx 不进缓存，同 key 重发重新校验
   idem.set(key, { sig, out: structuredClone(out) })
   return out
 }
@@ -581,7 +584,7 @@ export const mockQualWriteApi: QualWriteApi = {
         () => qualBodyCheck(body)
       )
     }),
-  // D81：403 → 缺 key 422 → 重放 → 404 → 409 referenced
+  // D81：403 → 缺 key 422 → 404 → 409 referenced；D86：4xx 不缓存，同 key 重发重新校验，无回放
   remove: (id, key) =>
     later(() => {
       need(WRITE)

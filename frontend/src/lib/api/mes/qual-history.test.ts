@@ -226,7 +226,7 @@ describe('B6 资质履历 mock', () => {
     })
   })
 
-  it('QA P2-2 删除 D81：403 → 缺 key 422 → 重放 → 404 → 409 referenced', async () => {
+  it('QA P2-2 删除 D81：403 → 缺 key 422 → 404 → 409 referenced（D86：4xx 不缓存、无回放）', async () => {
     // @ts-expect-error key 必填
     void api.remove('q1').catch(() => {})
     const noKey = undefined as unknown as string
