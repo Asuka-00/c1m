@@ -21,20 +21,9 @@ from app.core.deps import SessionDep
 from app.core.schemas import StrictBody
 from app.mes.common import idempotency as idem
 from app.mes.common.guard import need, perm_body
+from app.mes.common.numeric import six
 from app.mes.reticle import service as svc
 from app.platform.auth.deps import CurrentTenant
-
-
-def six(v: Decimal) -> Decimal:
-    """numeric(18,6)：最多 6 位小数（``too_many_decimals``，D60），同工具接口。"""
-    if not v.is_finite():
-        raise ValueError("must be a finite number")
-    if v.as_tuple().exponent < -6:  # type: ignore[operator]
-        raise ValueError("too_many_decimals (max 6)")
-    if abs(v) >= Decimal(10) ** 12:
-        raise ValueError("out of range")
-    return v
-
 
 router = APIRouter(prefix="/mes/reticle", tags=["mes"])
 READ, WRITE, OVERRIDE = "mes.reticle:read", "mes.reticle:write", "mes.reticle:override"
@@ -272,11 +261,23 @@ def inspection(
     ctx: CurrentTenant,
     rid: uuid.UUID,
     body: Annotated[InspectionIn, Depends(perm_body(WRITE, InspectionIn))],
+    idempotency_key: Annotated[str | None, Header(alias=idem.HEADER)] = None,
 ) -> Any:
-    """Inspection result: pass inspecting -> available; fail -> on_hold(inspection_failed)."""
-    return _do(
+    """Inspection result: pass inspecting -> available; fail -> on_hold(inspection_failed).
+
+    D71 补充：支持 D57 Idempotency-Key（重放返回原状态码与原响应，无 duplicate 字段）。
+    """
+    data = body.model_dump()
+    return idem.run(
         session,
-        lambda: svc.inspection(session, ctx.id, rid, body.model_dump(), ctx.user),
+        ctx.id,
+        ctx.user,
+        "POST /mes/reticle/{rid}/inspection",
+        idempotency_key,
+        {"rid": rid, **data},
+        lambda: _do(
+            session, lambda: svc.inspection(session, ctx.id, rid, data, ctx.user)
+        ),
     )
 
 

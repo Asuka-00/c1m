@@ -1223,8 +1223,6 @@
         "disposition": "Disposition",
         "shots_at_inspection": "Shots",
         "comment": "Comment",
-        "source": "Source",
-        "external_event_id": "External event ID",
         "username": "User"
       },
       "reticle_status_log": {

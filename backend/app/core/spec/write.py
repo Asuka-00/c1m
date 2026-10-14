@@ -335,4 +335,6 @@ def _parse_version(v: Any) -> int:
             return v
         if isinstance(v, str) and v.strip().lstrip("+-").isdigit():
             return int(v)
-    raise err_422(["body", "version"], "Input should be a valid integer", "int_parsing")
+    raise err_422(
+        ["body", "version"], "Input should be a valid integer", "int_parsing", input=v
+    )

@@ -83,10 +83,10 @@ def test_column_types_and_indexes() -> None:
         "uq_mes_reticle_incident_event",
         "uq_mes_reticle_usage_event",
         "uq_mes_reticle_mount_event",
-        "uq_mes_reticle_inspection_event",
     ):
         assert "external_event_id IS NOT NULL" in idx[name], name
         assert "(tenant_id, source, external_event_id)" in idx[name], name
+    assert "uq_mes_reticle_inspection_event" not in idx  # D71 补充（0031）
     assert "unmounted_at IS NULL" in idx["uq_mes_reticle_mount_open"]
     assert "(tenant_id, code)" in idx["uq_mes_reticle_0"]
 

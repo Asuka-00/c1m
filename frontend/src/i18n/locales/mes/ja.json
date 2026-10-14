@@ -1223,8 +1223,6 @@
         "disposition": "処置",
         "shots_at_inspection": "ショット数",
         "comment": "コメント",
-        "source": "ソース",
-        "external_event_id": "外部イベント ID",
         "username": "ユーザー"
       },
       "reticle_status_log": {

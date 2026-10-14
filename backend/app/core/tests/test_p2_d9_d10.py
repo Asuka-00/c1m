@@ -37,6 +37,7 @@ def test_versioned_create_non_int_version_is_422(
         (item,) = r.json()["detail"]
         assert item["loc"] == ["body", "version"]
         assert item["code"] == item["type"] == "int_parsing"
+        assert item["input"] == bad  # D71 O-2
     ok = m.post("product", {"code": "PV-OK", "name": "p", "version": "3"})
     assert ok["version"] == 3
     assert (

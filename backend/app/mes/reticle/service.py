@@ -509,9 +509,9 @@ def flow(
     """clean-start / clean-complete / repair-complete / inspect-start，发 reticle.status_changed。"""
     rt = lock(s, tid, rid)
     allowed, to, insp = FLOW[action]
-    _need_unmounted(s, tid, rt, action)
     if rt["status_code"] not in allowed:
         raise _invalid(rt, action)
+    _need_unmounted(s, tid, rt, action)  # D71-3：先 invalid_transition 再 still_mounted
     extra: Row = {"inspection_required": True} if insp else {}
     tr = transition(
         s, tid, rt, user, to, action, comment=(body or {}).get("comment"), **extra
@@ -530,9 +530,9 @@ def flow(
 def restore(s: Session, tid: uuid.UUID, rid: Any, body: Row, user: Any) -> Row:
     """人工恢复 pending_maintenance → available（D66 Q14 / D67）；达上限 409 life_limit_reached。"""
     rt = lock(s, tid, rid)
-    _need_unmounted(s, tid, rt, "restore")
     if rt["status_code"] != "pending_maintenance":
         raise _invalid(rt, "restore")
+    _need_unmounted(s, tid, rt, "restore")
     if life_state(rt) == "reached":
         raise conflict(
             "life_limit_reached",
@@ -558,9 +558,9 @@ def restore(s: Session, tid: uuid.UUID, rid: Any, body: Row, user: Any) -> Row:
 def life_reset(s: Session, tid: uuid.UUID, rid: Any, body: Row, user: Any) -> Row:
     """寿命复位：shot_count 清零、life_reset_count+1、kind=reset 计数记录（reason → comment，reason_id 空，D69 补充）。"""
     rt = lock(s, tid, rid)
-    _need_unmounted(s, tid, rt, "life_reset")
     if rt["status_code"] != "pending_maintenance":
         raise _invalid(rt, "life-reset")
+    _need_unmounted(s, tid, rt, "life_reset")
     used = _dec(rt.get("shot_count"))
     n = (rt.get("life_reset_count") or 0) + 1
     uid = _ins(
@@ -842,7 +842,6 @@ def inspection(s: Session, tid: uuid.UUID, rid: Any, body: Row, user: Any) -> Ro
         disposition=body.get("disposition") or "none",
         shots_at_inspection=_dec(rt.get("shot_count")),
         comment=body.get("comment"),
-        source="manual",
         username=actor_name(user),
     )
     from app.core.models import iso_utc

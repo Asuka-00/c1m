@@ -189,7 +189,8 @@ def test_flow_actions_and_still_mounted(client: TestClient, db: Session) -> None
         ("restore", {"reason": "r"}),
         ("life-reset", {"reason": "r"}),
     ):
-        assert r.act(a, body, 409)["detail"]["code"] == "still_mounted", a
+        # D71-3：当前状态（in_use）本身不允许 → 先报 invalid_transition
+        assert r.act(a, body, 409)["detail"]["code"] == "invalid_transition", a
     changed = list(
         r.sql(
             "SELECT changes FROM mes_audit_log WHERE record_id = CAST(:r AS text) AND action = 'reticle.status_changed' ORDER BY created_at"
@@ -205,6 +206,10 @@ def test_restore_life_reset_at_limit(client: TestClient, db: Session) -> None:
     r.at_limit()
     assert "reticle.life_reached" in r.events()
     assert r.act("restore", {"reason": "r"}, 409)["detail"]["code"] == "still_mounted"
+    # D71-3：状态允许（pending_maintenance）但仍挂载 → still_mounted
+    for a, body in (("life-reset", {"reason": "r"}), ("repair-complete", None)):
+        assert r.act(a, body, 409)["detail"]["code"] == "still_mounted", a
+    assert r.act("clean-start", None, 409)["detail"]["code"] == "invalid_transition"
     r.act("unmount")
     assert r.st()[0] == "pending_maintenance"  # 非 in_use 卸载不改状态
     assert r.events()[-1] == "reticle.unmounted"
@@ -261,7 +266,9 @@ def test_usage_validation_and_idempotency(client: TestClient, db: Session) -> No
         ["body", "delta"],
         "value_error",
     )
-    assert err({"delta": "1.1234567"})[0] == ["body", "delta"]
+    d = r.act("usage", {"delta": "1.1234567"}, 422)["detail"][0]
+    assert d["loc"] == ["body", "delta"] and d["code"] == d["type"] == "value_error"
+    assert d["ctx"] == {"max_places": 6}  # D71-5
     assert err({"delta": "1", "reason_id": r.id}) == (
         ["body", "reason_id"],
         "ref_not_found",
@@ -402,3 +409,30 @@ def test_track_in_mounted_at_life_limit_blocked(
     )
     assert "reached its life limit" in _msgs(r)
     assert r["detail"]["overridable"] is False
+
+
+def test_inspection_idempotent_and_schema_d71(client: TestClient, db: Session) -> None:
+    """D71 补充：检查记录 D57 幂等；无 source/external_event_id；disposition 非空默认 none。"""
+    r = R(client, db)
+    r.act("inspect-start")
+    body = {"kind": "haze", "result": "pass"}
+    a = r.act("inspection", body, **{"Idempotency-Key": "q1"})
+    b = r.act("inspection", body, **{"Idempotency-Key": "q1"})
+    assert a == b and "duplicate" not in a
+    assert r.st()[0] == "available"
+    rows = r.sql("SELECT disposition FROM mes_reticle_inspection WHERE reticle_id = :r")
+    assert [x[0] for x in rows] == ["none"]
+    d = r.act("inspection", {**body, "source": "eap"}, 422)["detail"][0]
+    assert d["code"] == "unknown_field"
+    cols = {
+        x[0]: (x[1], x[2])
+        for x in r.sql(
+            "SELECT column_name, is_nullable, column_default FROM information_schema.columns"
+            " WHERE table_name = 'mes_reticle_inspection'"
+        )
+    }
+    assert "source" not in cols and "external_event_id" not in cols
+    assert cols["disposition"][0] == "NO" and "none" in (cols["disposition"][1] or "")
+    assert not r.sql(
+        "SELECT 1 FROM pg_indexes WHERE indexname = 'uq_mes_reticle_inspection_event'"
+    )

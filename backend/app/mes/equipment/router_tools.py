@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.deps import SessionDep
 from app.mes.common.guard import perm_body
+from app.mes.common.numeric import six
 from app.mes.equipment import tools as svc
 from app.platform.auth.deps import CurrentTenant
 from app.platform.tenants.service import TenantContext
@@ -29,17 +30,6 @@ Reason = Literal["life_end", "broken", "pm", "swap", "other"]
 def _need(ctx: TenantContext, p: str) -> None:
     if not ctx.can(p):
         raise HTTPException(status_code=403, detail="Not enough permissions")
-
-
-def six(v: Decimal) -> Decimal:
-    """numeric(18,6)：最多 6 位小数（``too_many_decimals``）。"""
-    if not v.is_finite():
-        raise ValueError("must be a finite number")
-    if v.as_tuple().exponent < -6:  # type: ignore[operator]
-        raise ValueError("too_many_decimals (max 6)")
-    if abs(v) >= Decimal(10) ** 12:
-        raise ValueError("out of range")
-    return v
 
 
 class UsageIn(BaseModel):

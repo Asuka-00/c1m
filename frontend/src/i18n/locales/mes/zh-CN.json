@@ -1223,8 +1223,6 @@
         "disposition": "处置",
         "shots_at_inspection": "shot 数",
         "comment": "备注",
-        "source": "来源",
-        "external_event_id": "外部事件号",
         "username": "用户"
       },
       "reticle_status_log": {

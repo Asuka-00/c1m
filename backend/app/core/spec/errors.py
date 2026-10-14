@@ -54,8 +54,16 @@ def query_422(errors: Sequence[tuple[Any, ...]]) -> HTTPException:
     )
 
 
+_NO_INPUT: Any = object()
+
+
 def err_422(
-    loc: Sequence[Any], msg: str, code: str, ctx: dict[str, Any] | None = None
+    loc: Sequence[Any],
+    msg: str,
+    code: str,
+    ctx: dict[str, Any] | None = None,
+    *,
+    input: Any = _NO_INPUT,
 ) -> HTTPException:
     """单项 422（D65 补充：detail 一律为列表）：``loc`` 原样给出，``type`` 与 ``code`` 为错误码。"""
     return HTTPException(
@@ -67,6 +75,7 @@ def err_422(
                 "type": code,
                 "code": code,
                 **({"ctx": ctx} if ctx else {}),
+                **({} if input is _NO_INPUT else {"input": input}),
             }
         ],
     )
