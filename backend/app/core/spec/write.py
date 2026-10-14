@@ -16,7 +16,7 @@ from app.core.spec.engine import (
     STATUSES,
     Entity,
 )
-from app.core.spec.errors import MesError, http_422, integrity
+from app.core.spec.errors import MesError, err_422, http_422, integrity
 from app.core.spec.query import get_row
 from app.core.spec.validate import VALIDATORS, check_editable, locking_parent, validate
 
@@ -63,7 +63,7 @@ def create_row(
     )
     if e.versioned:
         values["version"] = (
-            int(data["version"])
+            _parse_version(data["version"])
             if data.get("version")
             else _next_version(session, tenant_id, e, values.get("code"))
         )
@@ -326,3 +326,13 @@ def new_version(
     )
     session.commit()
     return new
+
+
+def _parse_version(v: Any) -> int:
+    """P2-D10：``version`` 必须是整数（或整数字符串），否则 422 ``int_parsing``。"""
+    if not isinstance(v, bool):
+        if isinstance(v, int):
+            return v
+        if isinstance(v, str) and v.strip().lstrip("+-").isdigit():
+            return int(v)
+    raise err_422(["body", "version"], "Input should be a valid integer", "int_parsing")

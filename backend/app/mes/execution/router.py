@@ -405,7 +405,7 @@ def report_oee_trend(
 def trace(
     session: SessionDep,
     ctx: CurrentTenant,
-    kind: Literal["lot", "wafer", "equipment", "material_lot", "customer_lot"],
+    kind: str,
     code: str,
 ) -> Any:
     """Traceability: backward (sources, equipment, materials) and forward (outputs)."""
