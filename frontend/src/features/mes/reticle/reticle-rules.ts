@@ -1,6 +1,6 @@
 /** 光罩动作规则：权限、可用状态、表单校验与 409 错误码三语提示（v0.8.2 §3.2）。 */
 import { AxiosError } from 'axios'
-import { t } from '@/i18n'
+import { fmtDateTime, t } from '@/i18n'
 import {
   tooFarInFuture,
   type Reticle,
@@ -229,6 +229,17 @@ export const RETICLE_CODES = [
 // 422 idempotency_key_reused（D57/D72）走通用 mesErrorMessage（mes.err.code.idempotency_key_reused）
 
 /** 错误提示：光罩 409 码 → 三语；其他交给通用 MES 处理。 */
+/** 409 time_out_of_order 的 latest_event_at（D82 补充三：409 上下文字段在 detail 顶层，不用 ctx）。 */
+export function latestEventAt(err: unknown): string | null {
+  if (!(err instanceof AxiosError)) return null
+  const d = (err.response?.data as { detail?: unknown })?.detail as
+    | { latest_event_at?: unknown }
+    | undefined
+  if (!d || typeof d !== 'object' || Array.isArray(d)) return null
+  const v = d.latest_event_at
+  return typeof v === 'string' && v ? v : null
+}
+
 export function reticleErrorMessage(err: unknown, action?: ReticleAction) {
   if (err instanceof AxiosError && err.response) {
     const d = (err.response.data as { detail?: unknown })?.detail
@@ -265,6 +276,12 @@ export function reticleErrorMessage(err: unknown, action?: ReticleAction) {
       d && typeof d === 'object' && !Array.isArray(d)
         ? (d as { code?: unknown }).code
         : undefined
+    // D82 补充三 / 386c4e0：time_out_of_order 的 latest_event_at 在 detail 顶层
+    if (code === 'time_out_of_order') {
+      const at = latestEventAt(err)
+      if (at)
+        return t('mes.reticle.err.timeOutOfOrderAt', { at: fmtDateTime(at) })
+    }
     // D57 对象格式 {code:'idempotency_key_reused', message}（D80 补充二）
     if (code === 'idempotency_key_reused') return t('mes.reticle.err.keyReused')
     if (

@@ -10,6 +10,7 @@ import {
   decimalText,
   parseDecimal,
 } from '@/lib/decimal'
+import { MES_PERM } from '@/features/mes/common/mes-perm'
 import { http } from '../client'
 import { BODY_KEYS, pickBody } from '../request-body'
 
@@ -525,11 +526,24 @@ function seed() {
 }
 
 let store = seed()
+/** mock 当前用户权限（null = 不校验，等同全权限）。 */
+let mockPerms: string[] | null = null
+/** 测试用：设置 mock 运行时权限（D81：403 排在缺 key 422 之前）。 */
+export const setReticleMockPerms = (p: string[] | null) => {
+  mockPerms = p
+}
+/** 动作所需权限（与 reticle-rules ACTIONS 一致）。 */
+const OVERRIDE_ACTIONS: ReticleAction[] = ['restore', 'life-reset', 'scrap']
+const actionPerm = (a: ReticleAction) =>
+  OVERRIDE_ACTIONS.includes(a)
+    ? MES_PERM.reticleOverride
+    : MES_PERM.reticleWrite
 const idem = new Map<string, { sig: string; out: ReticleActionOut }>()
 
 /** 测试用：重置 mock 数据。 */
 export function resetReticleMock() {
   mockNow = () => new Date()
+  mockPerms = null
   store = seed()
   idem.clear()
 }
@@ -692,6 +706,9 @@ function mockAct(
 ): ReticleActionOut {
   const body = actionBody(action, input) as ReticleActionInput
   const sig = `${id}|${action}|${bodySignature(action, input)}`
+  // D81：运行时 403 排在缺 key 422 之前
+  if (mockPerms && !mockPerms.includes(actionPerm(action)))
+    throw apiError(403, 'Not enough permissions')
   // D80：缺 key → 422 missing（loc header）
   if (IDEMPOTENT.includes(action) && !key)
     throw apiError(422, [
@@ -716,12 +733,22 @@ function mockAct(
   }
   const x = find(id)
   // D72：scrapped 终态拒绝 usage / 检查录入等全部动作 → 409 invalid_transition
-  const conflict = (code: string) =>
+  const conflict = (code: string, extra: object = {}) =>
     apiError(409, {
       code,
       message: code,
       status_code: x.status_code,
       hold_reason: x.hold_reason,
+      ...extra,
+    })
+  const iso = (ms: number) =>
+    new Date(ms).toISOString().replace(/\.\d{3}Z$/, 'Z')
+  // D82：time_out_of_order 带 latest_event_at（比较基准时间）
+  // 386c4e0 实测：顶层带 field（补录时间字段名）和 latest_event_at
+  const outOfOrder = (latestMs: number) =>
+    conflict('time_out_of_order', {
+      field: EVENT_FIELD[action],
+      latest_event_at: iso(latestMs),
     })
   // mount（service.mount）：已挂载 409 already_mounted；非 available 409 reticle_unavailable
   if (action === 'mount') {
@@ -746,17 +773,17 @@ function mockAct(
     : now()
   if (given) {
     const ms = Date.parse(given)
-    // D82：只对 incident，早于最近一次 usage 409（mount / unmount 不算 usage），整笔回滚
-    if (
-      action === 'incident' &&
-      h.usage.some((u) => Date.parse(u.occurred_at) > ms)
-    )
-      throw conflict('time_out_of_order')
     // 下机 / 登记异常顺带下机：早于当前这次上机 409，整笔不入库、不下机
     if (action === 'unmount' || action === 'incident') {
       const om = openMount(id)
+      // latest_event_at 为上机时间
       if (om && ms < Date.parse(om.mounted_at))
-        throw conflict('time_out_of_order')
+        throw outOfOrder(Date.parse(om.mounted_at))
+    }
+    // D82：只对 incident，早于最近一次 usage 409（mount / unmount 不算 usage），整笔回滚
+    if (action === 'incident') {
+      const lu = Math.max(...h.usage.map((u) => Date.parse(u.occurred_at)))
+      if (lu > ms) throw outOfOrder(lu)
     }
     const last = Math.max(
       ...h.status_log.map((s) => Date.parse(s.at)),
@@ -765,7 +792,7 @@ function mockAct(
         .map((m) => Date.parse(m.unmounted_at!)),
       -Infinity
     )
-    if (ms < last) throw conflict('time_out_of_order')
+    if (ms < last) throw outOfOrder(last)
   }
   const closeMount = (reason: string) => {
     const m = openMount(id)
