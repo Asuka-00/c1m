@@ -214,7 +214,8 @@ def enabled(ctx: Ctx, check: str) -> bool:
 
 # ---------------- evaluation ----------------
 # 规则产生的阻断也不可放行的检查类型（P2-D3）
-HARD_CHECKS = frozenset({"tool_life"})
+# D74：operator_qualified 不通过不可放行（同 D43）
+HARD_CHECKS = frozenset({"tool_life", "operator_qualified"})
 
 
 def overall_overridable(results: list[Row]) -> bool:
@@ -265,7 +266,9 @@ def result(
         overridable: 阻断时是否允许有权限者强制放行。
     """
     res = {"fail": severity, "warn": "warn", "pass": "pass", "na": "pass"}[outcome]
+    extra = {"ctx": jsonable(data["ctx"])} if data and "ctx" in data else {}
     return {
+        **extra,
         "check_type": check,
         "rule_id": rule and str(rule["id"]),
         "rule_code": rule and rule["code"],

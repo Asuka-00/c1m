@@ -157,6 +157,15 @@ def remove(session: Session) -> int:
     c = conn(session)
     total = 0
     pending = [e for e in ENTITIES.values() if e.code != "audit_log" and not e.internal]
+    # D74：资质履历由写入钩子追加（不带 _demo 标记），随演示资质一起删
+    q, lg = TABLES["operator_qual"], TABLES["operator_qual_log"]
+    qd = sa.cast(q.c.attrs, JSONB)["_demo"].astext == "true"
+    total += c.execute(
+        sa.delete(lg).where(
+            lg.c.tenant_id == tid,
+            lg.c.qual_id.in_(sa.select(q.c.id).where(q.c.tenant_id == tid, qd)),
+        )
+    ).rowcount
     for _ in range(len(pending) + 1):
         progress = False
         for e in reversed(pending):

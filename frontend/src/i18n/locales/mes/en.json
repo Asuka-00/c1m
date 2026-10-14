@@ -51,6 +51,7 @@
       "future_hold": "Future hold",
       "shift_log": "Shift handover",
       "operator_qual": "Operator qualification",
+      "operator_qual_log": "Operator qualification history",
       "idempotency_key": "Idempotency key",
       "site": "Factory / site",
       "area": "Area",
@@ -463,6 +464,17 @@
         "certified_on": "Certified on",
         "expires_on": "Expires on",
         "is_active": "Active"
+      },
+      "operator_qual_log": {
+        "qual": "Qualification",
+        "action": "Action",
+        "before": "Before",
+        "after": "After",
+        "reason": "Reason",
+        "comment": "Comment",
+        "approved_by": "Approved by",
+        "username": "User",
+        "at": "Time"
       },
       "idempotency_key": {
         "endpoint": "Endpoint",
@@ -1520,6 +1532,14 @@
         "manual": "Manual",
         "eap": "EAP"
       },
+      "operator_qual_log_action": {
+        "granted": "Granted",
+        "renewed": "Renewed",
+        "changed": "Changed",
+        "deactivated": "Deactivated",
+        "reactivated": "Reactivated",
+        "expired": "Expired"
+      },
       "exec_trigger": {
         "move_in": "Move in",
         "track_in": "Track in",
@@ -1988,7 +2008,8 @@
         "downtime": "Equipment downtime",
         "release": "Release",
         "jump": "Jump step",
-        "bonus": "Bonus (qty added)"
+        "bonus": "Bonus (qty added)",
+        "operator_qual": "Operator qualification"
       },
       "oos_action": {
         "warn": "Warn",

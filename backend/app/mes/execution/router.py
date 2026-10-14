@@ -35,6 +35,7 @@ from app.mes.common.sitedate import site_today
 from app.mes.execution import bin_split as bin_split_svc
 from app.mes.execution import ct_move as ct_move_svc
 from app.mes.execution import dispatch, shift_log, transform_undo
+from app.mes.execution import operator_qual as oq
 from app.mes.execution import service as sm
 from app.mes.execution import service as svc
 from app.mes.execution import transform as transform_svc
@@ -917,3 +918,54 @@ def bin_split_preview(
 def bin_split(session: SessionDep, ctx: CurrentTenant, body: BinSplitBody) -> Any:
     """Split whole lots into child lots by bin code (unit transform bin_split)."""
     return bin_split_svc.bin_split(session, ctx.id, body.model_dump(), ctx.user)
+
+
+# ---------------- P3-B6 人员资质（D74） ----------------
+def _int_q(name: str, raw: str | None, lo: int, hi: int) -> int | None:
+    """可选整数查询参数：非整数或越界 → 422 value_error（ctx 带 min / max）。"""
+    if raw is None or raw == "":
+        return None
+    v = raw.strip()
+    if not v.lstrip("-").isdigit() or not lo <= int(v) <= hi:
+        raise err_422(
+            ["query", name],
+            f"{name}: integer {lo}-{hi}",
+            "value_error",
+            {"min": lo, "max": hi},
+            input=raw,
+        )
+    return int(v)
+
+
+@router.get("/operator-qual/expiring")
+def operator_qual_expiring(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    days: str | None = Query(
+        None, json_schema_extra={"type": "integer", "minimum": 1, "maximum": 365}
+    ),
+) -> Any:
+    """Qualifications expiring within ``days`` (default: warn_days setting), active
+    and not permanent only; sorted by days_left, then username (D64/D74)."""
+    _need(ctx, "mes.exec:read")
+    return oq.expiring(session, ctx.id, _int_q("days", days, 1, 365))
+
+
+@router.get("/operator-qual/{qual_id}/history")
+def operator_qual_history(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    qual_id: uuid.UUID,
+    limit: str | None = Query(None, json_schema_extra={"type": "integer"}),
+    offset: str | None = Query(None, json_schema_extra={"type": "integer"}),
+) -> Any:
+    """Qualification change history, newest first (D74). 403 before 404."""
+    _need(ctx, "mes.exec:read")
+    lim = _int_q("limit", limit, 1, 200) or 50
+    off = _int_q("offset", offset, 0, 10**9) or 0
+    if not one(session, ctx.id, "operator_qual", qual_id):
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "not_found", "message": "operator qualification not found"},
+        )
+    return oq.history(session, ctx.id, qual_id, lim, off)

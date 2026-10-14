@@ -25,6 +25,7 @@ from app.mes.execution.checks import service as ck
 from app.mes.execution.context import build_ctx
 from app.mes.execution.events import QTIME_EXCEEDED, QTIME_WARN, notify_lot
 from app.mes.execution.hold import default_reason, hold_lot
+from app.mes.execution.operator_qual import expired_scan as qual_expired_scan
 from app.mes.execution.qual import qual_notify
 from app.mes.execution.stage_common import _relocate
 from app.mes.lot.service import history
@@ -339,6 +340,7 @@ def sweep_all_tenants(only: list[uuid.UUID] | None = None) -> Row:
                     n += wo_due_notify(s, tid)
                     n += apply_due(s, tid)
                     n += qual_notify(s, tid)
+                    n += qual_expired_scan(s, tid)  # D74：到期次日发 expired
                     s.commit()
                 except Exception:  # noqa: BLE001 - 单租户失败只记录日志
                     log.exception("qtime sweep failed for tenant %s", tid)

@@ -15,7 +15,7 @@ def test_every_entity_rejects_unknown_fields(client: TestClient, db: Session) ->
     for e in ENTITIES.values():
         url = f"{API}/{e.url}"
         for method, u in (("post", url), ("patch", f"{url}/{uuid.uuid4()}")):
-            r = getattr(client, method)(u, headers=m.h, json={"__bogus__": 1})
+            r = getattr(client, method)(u, headers=m.hk(e.code), json={"__bogus__": 1})
             if r.status_code == 404 and method == "post":
                 break  # 不对外开放通用接口的内部实体（如 code_rule_counter）
             d = r.json().get("detail") if r.status_code == 422 else None

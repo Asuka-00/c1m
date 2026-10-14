@@ -46,6 +46,7 @@ ENUMS.update(
             ("release", "Release|解冻|リリース"),
             ("jump", "Jump step|跳站|ステップジャンプ"),
             ("bonus", "Bonus (qty added)|补数|追加"),
+            ("operator_qual", "Operator qualification|人员资质|作業者資格"),
         ],
         "oos_action": [
             ("warn", "Warn|预警|警告"),

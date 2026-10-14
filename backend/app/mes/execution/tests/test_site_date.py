@@ -79,7 +79,9 @@ def test_operator_qualified_site_date(
     chk = CHECKS["operator_qualified"]
     with _session(str(f.m.tid)) as s:
         assert chk(_ctx(f, s, at, operator=user), {})[0] == "fail"  # 昨天过期：拦
-    f.m.patch("operator_qual", q["id"], {"expires_on": str(SITE_DAY)})
+    f.m.patch(
+        "operator_qual", q["id"], {"expires_on": str(SITE_DAY), **f.m.qual_extra()}
+    )
     with _session(str(f.m.tid)) as s:
         assert chk(_ctx(f, s, at, operator=user), {})[0] == "pass"  # 今天到期：放行
 

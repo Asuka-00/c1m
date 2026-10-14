@@ -1,5 +1,7 @@
 """通用列表筛选：?id= 指定记录、日期 / 时间范围（_from / _to）、时间字段默认降序。"""
 
+import uuid
+from datetime import UTC
 from typing import Any
 
 from fastapi.testclient import TestClient
@@ -491,3 +493,43 @@ def test_field_named_from_to_equality_validated(
         # 字段本身的区间筛选 <字段>_from 仍可用且同样校验
         assert get(**{f"{name}_from": "2026-10-01"}).status_code == 200
         assert get(**{f"{name}_to": "x"}).status_code == 422
+
+
+def test_undeclared_datetime_columns_equality(client: TestClient, db: Session) -> None:
+    """QA P2-1：created_at / updated_at 等未声明 datetime 列的等值筛选同样校验并真正筛选。"""
+    m = Mes(client, db)
+    for ent in ("alarm_log", "shift_log", "equipment"):
+        for col in ("created_at", "updated_at"):
+            r = client.get(m.url(ent), headers=m.h, params={col: "2026-10-01"})
+            assert r.status_code == 422, (ent, col, r.text)
+            d = r.json()["detail"][0]
+            assert (d["type"], d["loc"]) == ("timezone_required", ["query", col])
+            r = client.get(m.url(ent), headers=m.h, params={col: "2026/10/01"})
+            d = r.json()["detail"][0]
+            assert (d["type"], d["ctx"]) == ("value_error", {"reason": "pattern"})
+    eq = m.post("equipment", {"code": "EQ-CA-" + uuid.uuid4().hex[:5], "name": "e"})
+    rows = m.list("equipment", created_at=eq["created_at"])["data"]
+    assert [x["id"] for x in rows] == [eq["id"]]
+    assert m.list("equipment", created_at="2001-01-01T00:00:00Z")["data"] == []
+
+
+def test_datetime_equality_same_instant_any_offset(
+    client: TestClient, db: Session
+) -> None:
+    """D85：换算到 UTC 的同一时刻精确匹配（+08:00 与等价 Z 命中同一行）。"""
+    from datetime import datetime, timedelta, timezone
+
+    m = Mes(client, db)
+    eq = m.post("equipment", {"code": "EQ-TZ-" + uuid.uuid4().hex[:5], "name": "e"})
+    utc = datetime.fromisoformat(eq["created_at"].replace("Z", "+00:00"))
+    z = utc.astimezone(UTC).isoformat().replace("+00:00", "Z")
+    p8 = utc.astimezone(timezone(timedelta(hours=8))).isoformat()
+    for v in (z, p8):
+        assert [x["id"] for x in m.list("equipment", created_at=v)["data"]] == [
+            eq["id"]
+        ], v
+    assert utc.microsecond, "created_at should carry microseconds"
+    trunc = utc.replace(microsecond=0).isoformat()  # D85 补充四：不截断
+    assert m.list("equipment", created_at=trunc)["data"] == []
+    off = (utc + timedelta(microseconds=1)).isoformat()
+    assert m.list("equipment", created_at=off)["data"] == []

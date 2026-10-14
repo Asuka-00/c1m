@@ -568,6 +568,8 @@ def test_migration_0035_down_up_keeps_unmount_rows(
         )
         assert p.returncode == 0, p.stderr[-2000:]
 
+    # 共享 db 会话的读事务会持有 tenant 的锁，挡住降级时 DROP 带租户外键的表（0037）
+    db.commit()
     alembic("downgrade", "0032_d72_reticle_restrict")
     try:
         with admin_engine.connect() as c:

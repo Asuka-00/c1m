@@ -51,6 +51,7 @@
       "future_hold": "予約ホールド",
       "shift_log": "シフト引継ぎ",
       "operator_qual": "作業者資格",
+      "operator_qual_log": "作業者資格履歴",
       "idempotency_key": "冪等キー",
       "site": "工場",
       "area": "エリア",
@@ -463,6 +464,17 @@
         "certified_on": "認定日",
         "expires_on": "有効期限",
         "is_active": "有効"
+      },
+      "operator_qual_log": {
+        "qual": "資格",
+        "action": "操作",
+        "before": "変更前",
+        "after": "変更後",
+        "reason": "理由",
+        "comment": "コメント",
+        "approved_by": "承認者",
+        "username": "ユーザー",
+        "at": "日時"
       },
       "idempotency_key": {
         "endpoint": "エンドポイント",
@@ -1520,6 +1532,14 @@
         "manual": "手動",
         "eap": "EAP"
       },
+      "operator_qual_log_action": {
+        "granted": "付与",
+        "renewed": "延長",
+        "changed": "変更",
+        "deactivated": "停止",
+        "reactivated": "再開",
+        "expired": "期限切れ"
+      },
       "exec_trigger": {
         "move_in": "ムーブイン",
         "track_in": "トラックイン",
@@ -1988,7 +2008,8 @@
         "downtime": "設備停止",
         "release": "リリース",
         "jump": "ステップジャンプ",
-        "bonus": "追加"
+        "bonus": "追加",
+        "operator_qual": "作業者資格"
       },
       "oos_action": {
         "warn": "警告",

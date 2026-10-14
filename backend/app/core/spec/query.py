@@ -78,6 +78,12 @@ def apply_filters(
         if not f and name.endswith(("_from", "_to")):
             stmt = _range(e, stmt, name, raw, bounds)
             continue
+        if not f and name in t.c and isinstance(t.c[name].type, sa.DateTime):
+            # 未声明为字段的时间列（created_at / updated_at 等）：同 D85 校验并筛选
+            dt = parse_datetime(name, raw)
+            if dt is not None:
+                stmt = stmt.where(t.c[name] == dt)
+            continue
         if not f or f.type in ("json", "text"):
             continue
         if f.type == "ref" and raw == "null":

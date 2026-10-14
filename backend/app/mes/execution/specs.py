@@ -75,6 +75,19 @@ CHECK_TYPES = [
 ]
 ENUMS.update(
     {
+        # D74：资质履历动作
+        "operator_qual_log_action": [
+            ("granted", "Granted|授予|付与"),
+            ("renewed", "Renewed|延期|延長"),
+            ("changed", "Changed|变更|変更"),
+            ("deactivated", "Deactivated|停用|停止"),
+            ("reactivated", "Reactivated|启用|再開"),
+            ("expired", "Expired|过期|期限切れ"),
+        ]
+    }
+)
+ENUMS.update(
+    {
         "exec_trigger": TRIGGERS,
         "check_type": list(CHECK_TYPES),
         "check_severity": [
@@ -500,6 +513,42 @@ register(
         sort_default="expires_on",
         label_field="username",
         unique=[("username", "operation", "equipment_type")],
+    ),
+    # D74：资质变更履历（只追加；业务写入同一事务；旧数据不补）
+    Entity(
+        "operator_qual_log",
+        "exec",
+        "Operator qualification history|操作员资质履历|作業者資格履歴",
+        [
+            F(
+                "qual",
+                "ref",
+                "Qualification|资质|資格",
+                ref="operator_qual",
+                required=True,
+            ),
+            F(
+                "action",
+                "enum",
+                "Action|动作|操作",
+                enum="operator_qual_log_action",
+                required=True,
+            ),
+            F("before", "json", "Before|变更前|変更前", list=False),
+            F("after", "json", "After|变更后|変更後", list=False),
+            F("reason", "ref", "Reason|原因|理由", ref="reason_code"),
+            F("comment", "str", "Comment|备注|コメント", max_length=300),
+            F("approved_by", "str", "Approved by|批准人|承認者", max_length=64),
+            F("username", "str", "User|用户|ユーザー", max_length=255),
+            F("at", "datetime", "Time|时间|日時", required=True),
+        ],
+        phase=6,
+        has_code=False,
+        readonly=True,
+        menu=False,
+        sort_default="at",
+        label_field="action",
+        indexes=[("ix_mes_operator_qual_log_qual_at", ("qual", "at"))],
     ),
     # D57：Idempotency-Key 存档，作用域 (tenant, endpoint, key)，保留 24 小时；
     # 存规范化请求体哈希 + 首次成功响应（状态码 + 响应体）

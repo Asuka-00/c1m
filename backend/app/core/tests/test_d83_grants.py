@@ -53,9 +53,8 @@ def _apply(m: ModuleType, c: Any) -> None:
 def test_upgrade_head_already_granted() -> None:
     """conftest 只跑 upgrade head（不跑 setup_db_roles.py）：运行时角色已能读写。"""
     with admin_engine.connect() as c:
-        assert c.execute(text("SELECT version_num FROM alembic_version")).scalar() == (
-            "0036_d83_runtime_role_grants"
-        )
+        v = c.execute(text("SELECT version_num FROM alembic_version")).scalar()
+        assert v is not None and v >= "0036_d83_runtime_role_grants"
         assert _missing(c) == []
     with engine.connect() as c:
         c.execute(text('SELECT count(*) FROM "user"')).scalar()

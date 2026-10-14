@@ -520,32 +520,72 @@ def _handover_ack_other(_ctx: Ctx, _p: Row) -> Outcome:
 
 @check_type("operator_qualified")
 def _operator_qualified(ctx: Ctx, _p: Row) -> Outcome:
-    """操作员资质：操作人须持有本工序（及设备类型）的有效认证。"""
+    """操作员资质（D62/D74）：须持有本工序（及设备类型）的有效认证。
+
+    “工序+设备类型”优先于“只按工序”；``expires_on`` 当天有效（站点时区）；过期 / 停用
+    即 fail，且不可放行（``HARD_CHECKS``）。``data`` 带 ``expires``（匹配资质的有效期）、
+    ``expires_on``（同值；失败时为过期资质的有效期，无资质为 null）和 ``warn_days``。
+    """
+    from app.mes.execution.operator_qual import warn_days
+
     if not ctx.op:
         return "na", "no operation", {}
     user = ctx.operator or ""
     et = (ctx.equipment or {}).get("equipment_type_id")
     today = ctx.today
-    data = {"user": user, "operation": ctx.op["code"]}
-    for q in find(
-        ctx.s,
-        ctx.tid,
-        "operator_qual",
-        username=user,
-        operation_id=ctx.op["id"],
-        is_active=True,
-    ):
-        if q["equipment_type_id"] and q["equipment_type_id"] != et:
-            continue
-        if q["expires_on"] and q["expires_on"] < today:
-            continue
-        exp = q["expires_on"] and str(q["expires_on"])
+    data: Row = {
+        "user": user,
+        "operation": ctx.op["code"],
+        "warn_days": warn_days(ctx.s, ctx.tid),
+    }
+    qs = [
+        q
+        for q in find(
+            ctx.s,
+            ctx.tid,
+            "operator_qual",
+            username=user,
+            operation_id=ctx.op["id"],
+            is_active=True,
+        )
+        if not q["equipment_type_id"] or q["equipment_type_id"] == et
+    ]
+    # 设备类型精确匹配的排前面
+    qs.sort(key=lambda q: q["equipment_type_id"] is None)
+    valid = [q for q in qs if not q["expires_on"] or q["expires_on"] >= today]
+    if valid:
+        exp = valid[0]["expires_on"] and str(valid[0]["expires_on"])
         return (
             "pass",
             f"{user} qualified for {ctx.op['code']}",
-            {**data, "expires": exp},
+            {**data, "expires": exp, "expires_on": exp, "qual_id": str(valid[0]["id"])},
         )
-    return "fail", f"{user} not qualified for {ctx.op['code']}", data
+    if qs:
+        exp = str(qs[0]["expires_on"])
+        qid = str(qs[0]["id"])
+        return (
+            "fail",
+            f"{user}'s qualification for {ctx.op['code']} expired on {exp}",
+            {
+                **data,
+                "reason": "expired",
+                "expires": exp,
+                "expires_on": exp,
+                "qual_id": qid,
+                "ctx": {"qual_id": qid, "expires_on": exp},
+            },
+        )
+    return (
+        "fail",
+        f"{user} not qualified for {ctx.op['code']}",
+        {
+            **data,
+            "reason": "not_qualified",
+            "expires_on": None,
+            "qual_id": None,
+            "ctx": {"qual_id": None, "expires_on": None},
+        },
+    )
 
 
 @check_type("qual_expiry_notice")

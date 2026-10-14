@@ -51,6 +51,7 @@
       "future_hold": "预约 Hold",
       "shift_log": "交接班日志",
       "operator_qual": "操作员资质",
+      "operator_qual_log": "操作员资质履历",
       "idempotency_key": "幂等键",
       "site": "工厂",
       "area": "区域",
@@ -463,6 +464,17 @@
         "certified_on": "认证日期",
         "expires_on": "有效期至",
         "is_active": "启用"
+      },
+      "operator_qual_log": {
+        "qual": "资质",
+        "action": "动作",
+        "before": "变更前",
+        "after": "变更后",
+        "reason": "原因",
+        "comment": "备注",
+        "approved_by": "批准人",
+        "username": "用户",
+        "at": "时间"
       },
       "idempotency_key": {
         "endpoint": "接口",
@@ -1520,6 +1532,14 @@
         "manual": "人工",
         "eap": "EAP"
       },
+      "operator_qual_log_action": {
+        "granted": "授予",
+        "renewed": "延期",
+        "changed": "变更",
+        "deactivated": "停用",
+        "reactivated": "启用",
+        "expired": "过期"
+      },
       "exec_trigger": {
         "move_in": "进站",
         "track_in": "上机",
@@ -1988,7 +2008,8 @@
         "downtime": "设备停机",
         "release": "解冻",
         "jump": "跳站",
-        "bonus": "补数"
+        "bonus": "补数",
+        "operator_qual": "人员资质"
       },
       "oos_action": {
         "warn": "预警",

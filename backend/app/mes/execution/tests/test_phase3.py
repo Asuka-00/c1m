@@ -609,7 +609,11 @@ def test_operator_qualified_and_expiry_notice(client: TestClient, db: Session) -
         },
     )
     f.stage(a, "track_in", 409, equipment_id=f.eq["id"])  # 已过期
-    f.m.patch("operator_qual", q["id"], {"expires_on": str(today + timedelta(days=3))})
+    f.m.patch(
+        "operator_qual",
+        q["id"],
+        {"expires_on": str(today + timedelta(days=3)), **f.m.qual_extra()},
+    )
     f.stage(a, "track_in", equipment_id=f.eq["id"])
     sweep_all_tenants([_uuid.UUID(str(f.m.tid))])
     sweep_all_tenants([_uuid.UUID(str(f.m.tid))])
