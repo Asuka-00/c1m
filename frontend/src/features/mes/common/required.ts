@@ -1,7 +1,12 @@
 /** MES 表单必填规则与 422 错误消息翻译（与后端 required / required_when 一致）。 */
 import { AxiosError } from 'axios'
 import i18n, { t } from '@/i18n'
-import { codeItemText, errorMessage, queryItemText } from '@/lib/api/client'
+import {
+  codeItemText,
+  errorMessage,
+  isParamLoc,
+  queryItemText,
+} from '@/lib/api/client'
 import type { MesEntity, MesField } from '@/lib/api/mes/common'
 import { parseDecimal } from '@/lib/decimal'
 import { TERMINAL_STATUSES } from '@/features/mes/execution/lot-rules'
@@ -140,6 +145,7 @@ export const MES_ERROR_CODES = [
   'too_many_decimals',
   'read_only_field',
   'unknown_field',
+  'timezone_required',
 ] as const
 type MesErrorCode = (typeof MES_ERROR_CODES)[number]
 const isCode = (x: unknown): x is MesErrorCode =>
@@ -239,7 +245,7 @@ export function mesErrorMessage(err: unknown, e: MesEntity | undefined) {
       ? (err.response.data as { detail?: unknown })?.detail
       : null
   if (!Array.isArray(d)) return errorMessage(err)
-  const isQuery = (x: { loc?: unknown[] }) => x.loc?.[0] === 'query'
+  const isQuery = isParamLoc
   const parse = (x: { loc?: string[]; msg?: string }) => {
     const msg = String(x.msg ?? '')
     const name = x.loc?.[1] ?? msg.split(':')[0]

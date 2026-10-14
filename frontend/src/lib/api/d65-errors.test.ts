@@ -133,3 +133,51 @@ describe('mes.eap:read_master 三语', () => {
     ).toBe('EAP 主数据只读（服务账号）')
   })
 })
+
+describe('D65 补充 2', () => {
+  it('path 类 loc 与 query 一样不映射表单字段', () => {
+    const e = ax(422, [
+      {
+        loc: ['path', 'alid'],
+        msg: 'alid: invalid uuid',
+        type: 'value_error',
+        code: 'value_error',
+      },
+    ])
+    expect(mesErrorMessage(e, ent)).toBe('alid: invalid uuid')
+    expect(mesErrorMessage(e, ent)).not.toContain(':  ')
+  })
+
+  it('先 code 再 type', () => {
+    const e = ax(422, [
+      {
+        loc: ['body', 'set_at'],
+        msg: 'x',
+        type: 'value_error',
+        code: 'timezone_required',
+      },
+    ])
+    expect(errorMessage(e)).toBe(t('mes.err.code.timezone_required'))
+    const typeOnly = ax(422, [
+      { loc: ['body', 'set_at'], msg: 'x', type: 'timezone_required' },
+    ])
+    expect(errorMessage(typeOnly)).toBe(t('mes.err.code.timezone_required'))
+  })
+
+  it.each(['zh-CN', 'en', 'ja'])('%s timezone_required 文案', async (lng) => {
+    await i18n.changeLanguage(lng)
+    expect(i18n.exists('mes.err.code.timezone_required')).toBe(true)
+    const m = mesErrorMessage(
+      ax(422, [
+        {
+          loc: ['body', 'set_at'],
+          msg: 'set_at: timezone required',
+          type: 'timezone_required',
+          code: 'timezone_required',
+        },
+      ]),
+      ent
+    )
+    expect(m).toBe(t('mes.err.code.timezone_required'))
+  })
+})

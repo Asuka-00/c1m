@@ -505,7 +505,8 @@
         "hold_not_found": "ホールド記録が存在しないか削除されています。一覧を更新してください",
         "too_many_decimals": "小数は最大 6 桁です",
         "read_only_field": "この項目は読み取り専用です",
-        "unknown_field": "不明な項目が含まれています"
+        "unknown_field": "不明な項目が含まれています",
+        "timezone_required": "時刻にはタイムゾーンが必要です（例：2026-10-14T08:00:00+08:00）"
       },
       "tooManyDecimals": "小数は最大 {{n}} 桁です",
       "onlyWhen": "{{cond}}が「{{value}}」のときのみ入力できます",
