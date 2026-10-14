@@ -212,13 +212,27 @@ def enabled(ctx: Ctx, check: str) -> bool:
 
 
 # ---------------- evaluation ----------------
+def overall_overridable(results: list[Row]) -> bool:
+    """整体能否放行：任一阻断项 ``overridable=false`` 即整体不可放行（适用于全部检查类型）。
+
+    没有阻断项时为 ``False``（无需放行）。
+    """
+    blocks = [r for r in results if r["result"] == "block"]
+    return bool(blocks) and all(r["overridable"] for r in blocks)
+
+
 class CheckBlocked(HTTPException):
     """存在未被放行的阻断检查结果（409，detail.code = check_blocked）。"""
 
     def __init__(self, results: list[Row]) -> None:
-        """以检查结果列表构造 409 响应。"""
+        """以检查结果列表构造 409 响应（带整体 ``overridable``）。"""
         super().__init__(
-            status_code=409, detail={"code": "check_blocked", "results": results}
+            status_code=409,
+            detail={
+                "code": "check_blocked",
+                "overridable": overall_overridable(results),
+                "results": results,
+            },
         )
 
 

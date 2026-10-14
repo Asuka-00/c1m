@@ -26,6 +26,7 @@ from app.mes.execution import dispatch, shift_log, transform_undo
 from app.mes.execution import service as sm
 from app.mes.execution import service as svc
 from app.mes.execution import transform as transform_svc
+from app.mes.execution.checks.registry import overall_overridable
 from app.mes.lot.service import lookup_customer_lots
 from app.platform.auth.deps import CurrentTenant
 from app.platform.tenants.service import TenantContext
@@ -112,11 +113,8 @@ def lot_preview(
 ) -> Any:
     """Evaluate the bound checks for a stage without executing it (logged as preview)."""
     _need(ctx, "mes.exec:read")
-    return {
-        "results": svc.preview(
-            session, ctx.id, lot_id, stage, body.model_dump(), ctx.user
-        )
-    }
+    res = svc.preview(session, ctx.id, lot_id, stage, body.model_dump(), ctx.user)
+    return {"results": res, "overridable": overall_overridable(res)}
 
 
 @router.post("/lots/{lot_id}/hold")
