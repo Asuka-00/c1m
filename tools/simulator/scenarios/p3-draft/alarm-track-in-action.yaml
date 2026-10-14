@@ -7,7 +7,8 @@
 #   - block：409 的 ctx.alarms[]，每条 {alid, alarm_code, track_in_action}；block 排前、同档按发生时间；ctx.reason=alarm_severity
 #   - 改配置：PATCH /mes/alarm_code/{rid}；非法值 422 enum，ctx.expected=[off, warn, block]
 #   - 设备类型层传 null → 422；单台设备覆盖层传 null → 清空、改为继承
-#   - 只读 effective_track_in_action（覆盖层优先，否则类型层，否则 off）
+#   - 只读 effective_track_in_action（覆盖层优先，否则类型层，否则 off）；只读 effective_track_in_action_source：
+#     equipment（单台覆盖层有值）/ equipment_type（覆盖层为 null 继承类型层），D70 补充
 #   - eap_service 不能改 track_in_action（403）
 # B8 补充（decisions.md 末尾 D70 补充 1-4）：报警码表仍是「设备类型 + ALID」；迁移 0034 加 track_in_action，
 #   类型层非空默认 off，单台覆盖层 null = 继承类型层；只算未清除报警（mes_alarm_log.cleared_at IS NULL）；
@@ -42,7 +43,7 @@ steps:
   - set_track_in_action: {eq: EAP-DA01, alid: "2101", level: equipment, value: "off", expect: {status: 200}}
   - set_track_in_action: {eq: EAP-DA01, alid: "2102", level: equipment, value: warn, expect: {status: 200}}
   - set_track_in_action: {eq: EAP-DA01, alid: "2103", level: equipment, value: block, expect: {status: 200}}
-  - expect_effective_track_in_action: {eq: EAP-DA01, alid: "2103", value: block}
+  - expect_effective_track_in_action: {eq: EAP-DA01, alid: "2103", value: block, source: equipment}
   # 非法值 422 enum，ctx.expected
   - set_track_in_action: {eq: EAP-DA01, alid: "2104", level: equipment, value: bogus,
                           expect: {status: 422, code: enum, loc: [body, track_in_action], ctx: {expected: ["off", warn, block]}}}
@@ -51,7 +52,7 @@ steps:
                           expect: {status: 422, code: read_only_field, loc: [body, effective_track_in_action]}}
   # eap_service 不能改（D65 / D70 补充）
   - set_track_in_action: {eq: EAP-DA01, alid: "2103", level: equipment, value: "off", as: svc, expect: {status: 403}}
-  - expect_effective_track_in_action: {eq: EAP-DA01, alid: "2103", value: block}
+  - expect_effective_track_in_action: {eq: EAP-DA01, alid: "2103", value: block, source: equipment}
 
   # ① off + 未登记 ALID：都不参与 → 200，warnings[] 里没有 alarm_severity；不 Hold
   - alarm_set: {eq: EAP-DA01, alid: "2101"}
@@ -105,13 +106,13 @@ steps:
                           expect: {status: 422, loc: [body, track_in_action]}}
   - seed_alarm_code: {eq: EAP-DA01, alid: "2105", action: none}
   - set_track_in_action: {eq: EAP-DA01, alid: "2105", level: equipment, value: "off", expect: {status: 200}}
-  - expect_effective_track_in_action: {eq: EAP-DA01, alid: "2105", value: "off"}
+  - expect_effective_track_in_action: {eq: EAP-DA01, alid: "2105", value: "off", source: equipment}
   - alarm_set: {eq: EAP-DA01, alid: "2105"}
   - track_in: {eq: EAP-DA01, lot: FX0004, expect: {status: 200, absent_warning: alarm_severity}, save_as: ti4}
   - expect_hold: {lot: FX0004, present: false}
   # 单台覆盖层 null = 继承类型层（0034：覆盖行可空）
   - set_track_in_action: {eq: EAP-DA01, alid: "2105", level: equipment, value: null, expect: {status: 200, body: {data.track_in_action: null}}}
-  - expect_effective_track_in_action: {eq: EAP-DA01, alid: "2105", value: block}
+  - expect_effective_track_in_action: {eq: EAP-DA01, alid: "2105", value: block, source: equipment_type}
   # 继承类型层 block → 另一批 FX0005 进站被拦
   - track_in: {eq: EAP-DA01, lot: FX0005, expect: {status: 409, code: check_blocked, check: {check_type: alarm_severity, overridable: false}}}
   - expect_hold: {lot: FX0005, present: false}
@@ -120,7 +121,7 @@ steps:
   # ⑥ 多腔体（P3 整机拦截）：CH1 报 block 报警 → 整机进站 409，ctx.alarms[].sub_unit_id = CH1；清除后放行
   - seed_alarm_code: {eq: EAP-MC01, alid: "3101", action: none, level: type}
   - set_track_in_action: {eq: EAP-MC01, alid: "3101", level: type, value: block, expect: {status: 200}}
-  - expect_effective_track_in_action: {eq: EAP-MC01, alid: "3101", value: block}
+  - expect_effective_track_in_action: {eq: EAP-MC01, alid: "3101", value: block, source: equipment_type}
   - alarm_set: {eq: EAP-MC01, sub_unit_id: EAP-MC01-CH1, alid: "3101", save_as: mc1}
   - expect_hold: {lot: FX0006, present: false}
   - track_in:
