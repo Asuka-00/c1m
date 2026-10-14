@@ -169,7 +169,7 @@ def test_b8_draft_reuses_alarm_and_track_in_steps():
     assert any(a.get("level") == "equipment" and a.get("value") is None and a["expect"]["status"] == 200 for a in sets)
     assert "expect_effective_track_in_action" in kinds
     # B8 补充：ctx.alarms[] 带 sub_unit_id；多腔体整机拦截后清除放行；已清除不再拦；覆盖层 null 继承类型层
-    assert sc.run_id == "alarm-tia-05"
+    assert sc.run_id == "alarm-tia-06"
     # D82 补充四：check_blocked 用 results[]，alarm_severity 项 ctx.alarms[] 每条带 sub_unit_id
     blocks = [s.args["expect"] for s in tis if s.args["expect"].get("status") == 409 and "results" in s.args["expect"]]
     assert len(blocks) == 5 and all("body" not in b for b in blocks)
@@ -248,9 +248,10 @@ def test_b8_draft_type_row_rules():
     )
     dels = [s.args for s in st if s.kind == "delete_alarm_code"]
     # D84 Q5：referenced 顶层 ref_type / ref_count；Q6：删除缺 key 422 missing
-    assert [d["expect"]["status"] for d in dels] == [409, 422]
+    # D86：tia-d1 同 key 重发重新校验（409/404/200），已有 2xx 后换体才 reused；最后是缺 key
+    assert [d["expect"]["status"] for d in dels] == [409, 409, 404, 200, 200, 422, 422]
     assert dels[0]["expect"]["body"] == {"detail.ref_type": "$nonempty", "detail.ref_count": 1} and dels[0]["idem"]
-    assert dels[1]["no_idem"] and dels[1]["expect"]["code"] == "missing"
+    assert dels[-1]["no_idem"] and dels[-1]["expect"]["code"] == "missing"
 
 
 def test_marking_draft_follows_d78():
@@ -694,7 +695,7 @@ def test_b8_draft_d81_d82_refined():
     assert dup and any(a.get("idem") in dup and a["expect"].get("code") == "idempotency_key_reused" for a in sets)
     assert any(a["expect"]["status"] == 404 for a in sets)
     fut = [s.args for s in sc.steps if s.kind == "alarm_set" and "occurred_at" in s.args]
-    assert [a["occurred_at"] for a in fut] == ["$now+301s", "$now+300s"]
+    assert [a["occurred_at"] for a in fut] == ["$now+301s", "$now+3600s", "$now+300s"]
     assert fut[0]["expect"]["ctx"] == {"reason": "future_time"}
     assert "detail.ctx" not in text  # check_blocked 不再用 detail.ctx（D82 补充四）
     # D84 / D84 补充一：TODO 全部收掉，只剩 D84 未覆盖的 B8-Q10
@@ -761,12 +762,13 @@ def test_b8_draft_d84_contract():
         assert any(a.get("no_idem") and (a.get("expect") or {}).get("code") == "missing" for a in rows), k
     sets = [s.args for s in st if s.kind == "set_track_in_action"]
     nf = [a for a in sets if a["expect"]["status"] == 404]
-    assert len(nf) == 1 and nf[0]["expect"]["code"] == "not_found" and nf[0].get("rid")
+    # D86：404 不缓存，同 key 同体重发仍 404
+    assert len(nf) == 2 and all(a["expect"]["code"] == "not_found" and a.get("rid") for a in nf)
     assert all(a["expect"].get("detail_object") for a in sets if a["expect"].get("code") == "idempotency_key_reused")
     warn = [s.args["expect"] for s in st if s.kind == "track_in" and "warning" in s.args["expect"]]
     assert warn and all(set(w["warning"]) >= {"code"} and "check_type" not in w["warning"] for w in warn)
     fut = [s.args["expect"] for s in st if s.kind == "alarm_set" and "occurred_at" in s.args]
-    assert fut[0]["type"] == "value_error" and fut[1]["status"] == 200
+    assert fut[0]["type"] == "value_error" and fut[-1]["status"] == 200
 
 
 def test_operator_qual_draft_b6():
@@ -811,8 +813,14 @@ def test_operator_qual_d85_supp2():
     cf = next(a for a in ops if a["expect"].get("ctx", {}).get("reason") == "conflicting_fields")
     assert cf["qual"] == "$missing_uuid" and cf["body"]["is_active"] is False and "expires_on" in cf["body"]
     assert cf["expect"]["code"] == "value_error"
-    reps = [s.args for s in sc.steps if s.kind == "operator_qual_replay" and s.args["of"] == "del1"]
-    assert [r["expect"]["status"] for r in reps] == [409, 422]
+    # D86：4xx 不缓存 → 删除的同 key 重发重新校验，没有 reused、没有删除回放步骤
+    assert not [s for s in sc.steps if s.kind == "operator_qual_replay" and s.args["of"] == "del1"]
+    by_key = {}
+    for a in dels:
+        by_key.setdefault(a.get("idem"), []).append((a["qual"], a["expect"]["status"]))
+    assert by_key["opq-x1"] == [("$qexp.id", 409), ("$qexp.id", 409), ("$missing_uuid", 404)]
+    assert ("$qexp.id", 409) in by_key["opq-x0"]
+    assert not any(a["expect"].get("code") == "idempotency_key_reused" for a in dels)
     create = next(a for a in ops if a["action"] == "create" and a.get("idem"))
     assert "reason_id" not in create["body"] and "approved_by" not in create["body"]
     hist = [s.args for s in sc.steps if s.kind == "expect_operator_qual_history"]
@@ -841,3 +849,26 @@ def test_operator_qual_delete_rules():
     for a in bad:
         with pytest.raises(ScenarioError):
             parse({"run_id": "x", "steps": [{"operator_qual": a}]})
+
+
+def test_d86_no_cache_for_4xx():
+    """D86：4xx 不进幂等缓存；reused 只出现在同 key 已有 2xx 之后。opq-01 与 alarm-tia-06 都按此断言。"""
+    for f in ("scenarios/p3-draft/operator-qual.yaml", "scenarios/p3-draft/alarm-track-in-action.yaml"):
+        sc = load(f)
+        seen_ok: dict[str, bool] = {}
+        for st in sc.steps:
+            k = st.args.get("idem")
+            if not k:
+                continue
+            exp = st.args.get("expect") or {}
+            if exp.get("code") == "idempotency_key_reused":
+                assert seen_ok.get(k), f"{f} 第 {st.index} 步：{k} 之前没有 2xx，按 D86 不会 reused"
+            if 200 <= int(exp.get("status", 200)) < 300:
+                seen_ok[k] = True
+    sc = load("scenarios/p3-draft/alarm-track-in-action.yaml")
+    d1 = [s.args["expect"] for s in sc.steps if s.kind == "delete_alarm_code" and s.args.get("idem") == "tia-d1"]
+    assert [e["status"] for e in d1] == [409, 409, 404, 200, 200, 422]
+    assert all("detail.ref_type" in e["body"] for e in d1 if e["status"] == 409)
+    fut = [s.args for s in sc.steps if s.kind == "alarm_set" and "occurred_at" in s.args]
+    assert [f["occurred_at"] for f in fut] == ["$now+301s", "$now+3600s", "$now+300s"]
+    assert all(f["expect"]["ctx"]["reason"] == "future_time" for f in fut if f["expect"]["status"] == 422)

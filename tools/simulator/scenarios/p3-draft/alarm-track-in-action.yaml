@@ -23,6 +23,8 @@
 # 草稿步骤（B8 落地后核对）：set_track_in_action {eq, alid, level: type|equipment, value, as?}、
 #   expect_effective_track_in_action {eq, alid, value, source?}、delete_alarm_code {eq, alid, level: type|equipment}。
 # 报警码 action=none，不联动设备状态；设备全程 SBY。前提：EAP-DA01 SBY；EAP-NT01 没有设备类型（只用于 equipment_type_missing 反例）；FX0001～FX0006 waiting；EAP-MC01（两个腔体子单元）SBY；9999 未登记。
+# ---- 06:0x 按 D86：幂等缓存只存 2xx；4xx 不缓存、key 不占用，同 key 重发重新校验（不回放、不 reused）；reused 只在已存成功响应时换体
+#   D86 补充一：报警码 referenced 统一顶层 ref_type/ref_count（不用 tables[] / ctx）
 # ---- 05:0x 细化（对照 D81 / D82 / D82 补充三、四）；05:15 按 D84 / D84 补充一收掉全部待定项；05:20 B8-Q10 已定、timezone_required 按 D77 补充一
 #   - D81 校验顺序：401/403 → 缺 key 422 missing → body 422（enum / null）→ 重放（换体 422 reused）→ 404 → 409
 #   - D82：写接口一律带 Idempotency-Key（set_track_in_action 写 idem；测缺失写 no_idem）；时间超前 >5:00 422 future_time，5:00 放行
@@ -32,7 +34,7 @@
 #   - D82 补充四 + D84 Q1：进站 409 check_blocked 的 results[] 列出所有没通过的检查项，result 只取 block / warn，有 block 就拦；alarm_severity 项 ctx.alarms[]
 #     （每条 alid、alarm_code、track_in_action、sub_unit_id；block 排前、同档按发生时间）
 name: alarm-track-in-action
-run_id: alarm-tia-05
+run_id: alarm-tia-06
 draft: "等 P3-B8（D70 / D70 补充 track_in_action、effective_track_in_action、alarm_severity 进站检查）落地"
 target: http://127.0.0.1:8013
 equipment:
@@ -71,7 +73,20 @@ steps:
   # D82 补充三：单一原因 409，detail {code, message} + 顶层附加字段，不用 ctx。
   # D84 Q5：顶层附加 ref_type、ref_count（不用 ctx）；2101 类型行被 EAP-DA01 的 1 条单台行引用
   - delete_alarm_code: {idem: tia-d1, eq: EAP-DA01, alid: "2101", level: type,
-                        expect: {status: 409, code: referenced, body: {detail.ref_type: $nonempty, detail.ref_count: 1}}}
+                        expect: {status: 409, code: referenced, body: {detail.ref_type: $nonempty, detail.ref_count: 1}, absent: [tables, ctx]}}
+  # D86：409 不缓存 → 同 key 同体重发重新校验，仍 409 referenced（不是回放，也不是 reused）
+  - delete_alarm_code: {idem: tia-d1, eq: EAP-DA01, alid: "2101", level: type,
+                        expect: {status: 409, code: referenced, body: {detail.ref_type: $nonempty, detail.ref_count: 1},
+                                 absent_headers: [Idempotent-Replayed, Idempotency-Replayed], absent_fields: [replayed, duplicate]}}
+  # 同 key 换目标：rid 不存在 → 按重新校验 404 not_found（不是 reused）
+  - delete_alarm_code: {idem: tia-d1, eq: EAP-DA01, rid: 00000000-0000-0000-0000-000000000000, level: type,
+                        expect: {status: 404, code: not_found}}
+  # 同 key 换到未被引用的类型行（2107 无单台行）→ 重新校验后正常删除 200；之后同 key 同体 → 回放；换体 → reused
+  - seed_alarm_code: {idem: tia-c14, eq: EAP-DA01, alid: "2107", action: none, level: type}
+  - delete_alarm_code: {idem: tia-d1, eq: EAP-DA01, alid: "2107", level: type, expect: {status: 200}}
+  - delete_alarm_code: {idem: tia-d1, eq: EAP-DA01, alid: "2107", level: type, expect: {status: 200, absent: [duplicate]}}
+  - delete_alarm_code: {idem: tia-d1, eq: EAP-DA01, alid: "2101", level: type,
+                        expect: {status: 422, code: idempotency_key_reused, detail_object: true}}
   # D84 Q6：新建、修改、删除报警码都必须带 key → 缺 key 422 missing（修改的缺 key 见下方 set_track_in_action）
   - seed_alarm_code: {no_idem: true, eq: EAP-DA01, alid: "2106", action: none, level: type,
                       expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
@@ -85,6 +100,9 @@ steps:
   # 非法值 422 enum，ctx.expected
   - set_track_in_action: {idem: tia-s4, eq: EAP-DA01, alid: "2104", level: equipment, value: bogus,
                           expect: {status: 422, code: enum, loc: [body, track_in_action], ctx: {expected: ["off", warn, block]}}}
+  # D86：422 不缓存 → 同 key 改成合法值重发重新校验 → 200（不是 reused）
+  - set_track_in_action: {idem: tia-s4, eq: EAP-DA01, alid: "2104", level: equipment, value: "off", expect: {status: 200, absent: [duplicate]}}
+  - expect_effective_track_in_action: {eq: EAP-DA01, alid: "2104", value: "off", source: equipment}
   # 只读字段不能写
   - set_track_in_action: {idem: tia-s5, eq: EAP-DA01, alid: "2104", level: equipment, field: effective_track_in_action, value: block,
                           expect: {status: 422, code: read_only_field, loc: [body, effective_track_in_action]}}
@@ -107,6 +125,13 @@ steps:
   # D84 Q4：按 PATCH /mes/alarm_code/{rid} 定位；rid 不存在 → 404 not_found（404 在 body 422 之后、409 之前）
   - set_track_in_action: {idem: tia-s404, eq: EAP-DA01, rid: 00000000-0000-0000-0000-000000000000, level: equipment, value: block,
                           expect: {status: 404, code: not_found}}
+  # D86：404 不缓存 → 同 key 同体重发仍 404（不是回放标记），同 key 换到存在的行 → 重新校验 200
+  - set_track_in_action: {idem: tia-s404, eq: EAP-DA01, rid: 00000000-0000-0000-0000-000000000000, level: equipment, value: block,
+                          expect: {status: 404, code: not_found, absent_headers: [Idempotent-Replayed, Idempotency-Replayed]}}
+  - set_track_in_action: {idem: tia-s404, eq: EAP-DA01, alid: "2104", level: equipment, value: warn, expect: {status: 200}}
+  - set_track_in_action: {idem: tia-s404, eq: EAP-DA01, alid: "2104", level: equipment, value: "off",
+                          expect: {status: 422, code: idempotency_key_reused, detail_object: true}}   # 已存 2xx 后换体 → reused
+  - set_track_in_action: {idem: tia-s12, eq: EAP-DA01, alid: "2104", level: equipment, value: "off", expect: {status: 200}}   # 复原 off
 
   # ① off + 未登记 ALID：都不参与 → 200，warnings[] 里没有 alarm_severity；不 Hold
   - alarm_set: {eq: EAP-DA01, alid: "2101"}
@@ -212,7 +237,9 @@ steps:
                 expect: {status: 422, type: value_error, loc: [body, occurred_at], ctx: {reason: future_time}}}
   - track_in: {eq: EAP-DA01, lot: FX0003, expect: {status: 200, absent_warning: alarm_severity}}   # 422 的报警不入库 → 不拦
   - expect_hold: {lot: FX0003, present: false}
-  - alarm_set: {eq: EAP-DA01, alid: "2103", occurred_at: "$now+300s", save_as: blk5, expect: {status: 200}}
+  - alarm_set: {eq: EAP-DA01, alid: "2103", occurred_at: "$now+3600s",
+                expect: {status: 422, type: value_error, loc: [body, occurred_at], ctx: {reason: future_time}}}   # 远超前同样 422
+  - alarm_set: {eq: EAP-DA01, alid: "2103", occurred_at: "$now+300s", save_as: blk5, expect: {status: 200}}   # 正好 5:00 放行
   - track_in: {eq: EAP-DA01, lot: FX0003, expect: {status: 409, code: check_blocked, check: {check_type: alarm_severity, overridable: false}, results: [{check_type: alarm_severity, result: block, ctx: $nonempty}]}}
   - expect_hold: {lot: FX0003, present: false}
   - alarm_clear: {eq: EAP-DA01, alid: "2103", expect: {body: {cleared: true}}}

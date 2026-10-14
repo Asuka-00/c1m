@@ -4,6 +4,7 @@
 #     ctx: {qual_id, expires_on: YYYY-MM-DD}}（补充二-3）；overridable=false（D74）；过期不自动停用
 #   - 写接口（POST / PATCH / DELETE）都必须带 Idempotency-Key（D85 + 补充一）
 #   - D81 顺序：403 → 缺 key 422 missing → body 422 → 重放 → 404 → 409
+#   - D86：幂等缓存只存 2xx；4xx（409/422/404）不缓存、key 不占用，同 key 重发重新校验；reused 只出现在 key 已存过成功响应且请求体/目标变了
 #   - 授予不要求 reason_id / approved_by；可直接新建已过期资质当种子（补充二-5/6）
 #   - PATCH 同时带 is_active=false 和 expires_on → 422 value_error ctx.reason=conflicting_fields，请求体校验阶段（404 之前）（补充二-9）
 #   - 停用：缺 reason_id / comment → 422 missing；成功发 operator_qual.deactivated
@@ -12,7 +13,7 @@
 #   - 恢复只写履历 reactivated，不发事件
 #   - 履历 GET .../{qual_id}/history rows[] 带 comment、reason_id、approved_by（补充二-2），at 倒序，UTC 带 Z
 #   - 删除：资质只能停用不能删除（架构师定）。DELETE 走完 D81 校验（403 → 缺 key 422 → 重放 → 404）后总是 409 referenced，
-#     顶层 ref_type=operator_qual_log + ref_count（D84，不用 tables[]）。没有成功删除，重放只能验证“同 key 同体 → 同一个 409”
+#     顶层 ref_type=operator_qual_log + ref_count（D84，不用 tables[]）。没有成功删除；按 D86 同 key 重发只会重新校验（409 或 404），不会回放、不会 reused
 #   - 原因类别 operator_qual（D74）
 #   - 只读账号：不借 8011 的 fe-it-ro.cred；用本环境（8013 / app_it_eap）自建 eap_it_ro（角色 eap-it-ro，仅 mes.*:read），
 #     凭据 eap/env/creds-ro.json（chmod 600，不进 git），由 eap/env/mk-ro-account.py 经租户管理接口创建；无凭据则 403 步骤跳过
@@ -83,9 +84,13 @@ steps:
   - operator_qual: {action: delete, idem: opq-x0, qual: $missing_uuid, expect: {status: 404, code: not_found}}
   - operator_qual: {action: delete, idem: opq-x1, save_as: del1, qual: $qexp.id,
       expect: {status: 409, code: referenced, top: {ref_type: operator_qual_log, ref_count: {gte: 1}}, absent: [tables]}}
-  # 重放：没有成功的删除，只能验证同 key 同体 → 同一个 409；同 key 换目标 → 422 reused（重放在 404 之前）
-  - operator_qual_replay: {of: del1, expect: {status: 409, code: referenced, same_body: true}}
-  - operator_qual_replay: {of: del1, change: {qual: $missing_uuid}, expect: {status: 422, code: idempotency_key_reused, detail_object: true}}
+  # D86：4xx 不进幂等缓存、key 不算占用 → 同 key 重发重新跑全部校验，不是回放，也不会 reused
+  - operator_qual: {action: delete, idem: opq-x1, qual: $qexp.id,
+      expect: {status: 409, code: referenced, top: {ref_type: operator_qual_log, ref_count: {gte: 1}}, absent: [tables],
+               absent_headers: [Idempotent-Replayed, Idempotency-Replayed], absent_fields: [replayed, duplicate]}}   # 同 key 同体
+  - operator_qual: {action: delete, idem: opq-x1, qual: $missing_uuid, expect: {status: 404, code: not_found}}   # 同 key 换目标（不存在）
+  - operator_qual: {action: delete, idem: opq-x0, qual: $qexp.id,
+      expect: {status: 409, code: referenced, top: {ref_type: operator_qual_log, ref_count: {gte: 1}}, absent: [tables]}}   # 404 用过的 key 换到存在的资质
   - operator_qual: {action: get, qual: $qexp.id, expect: {status: 200, body: {is_active: true}}}   # 删除不改数据
   # ---- 履历总览：每次写都有一条（删除 409 不写），at UTC 带 Z，倒序，rows 带三列
   - expect_operator_qual_history: {qual: $qexp.id, actions: [reactivated, deactivated, changed, renewed, granted], at_utc_z: true,
