@@ -5,13 +5,14 @@
 """
 
 import uuid
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.deps import SessionDep
 from app.core.spec.serialize import serialize
+from app.mes.common.guard import perm_body
 from app.mes.planning import board
 from app.mes.planning import service as svc
 from app.platform.auth.deps import CurrentTenant
@@ -35,11 +36,14 @@ class PlanIn(BaseModel):
 
 
 class LotIn(BaseModel):
+    """开批的一个批次（D40 严格载荷：只接受下列字段，其余含旧的 carrier 一律 422）。"""
+
+    model_config = ConfigDict(extra="forbid")
+
     qty: int = Field(ge=1)
     carrier_id: uuid.UUID | None = None
     slots: list[int] | None = None
     source_ref: str | None = Field(default=None, max_length=100)
-    wafer_sources: list[str] | None = None
     # B7 客户来料
     customer_lot_no: str | None = Field(default=None, max_length=100)
     ownership: Literal["own", "customer"] | None = None
@@ -47,6 +51,8 @@ class LotIn(BaseModel):
 
 
 class StartIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     lots: list[LotIn] = Field(min_length=1, max_length=50)
 
 
@@ -92,9 +98,12 @@ def wo_start_plan(
 
 @router.post("/{rid}/start")
 def wo_start(
-    session: SessionDep, ctx: CurrentTenant, rid: uuid.UUID, body: StartIn
+    session: SessionDep,
+    ctx: CurrentTenant,
+    rid: uuid.UUID,
+    body: Annotated[StartIn, Depends(perm_body("mes.lot:start", StartIn))],
 ) -> Any:
-    _need(ctx, "mes.lot:start")
+    """Start lots (D34: permission before body; D40: strict payload)."""
     lots = svc.start(
         session, ctx.id, rid, [x.model_dump() for x in body.lots], ctx.user
     )

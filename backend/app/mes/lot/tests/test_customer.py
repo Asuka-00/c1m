@@ -222,6 +222,26 @@ def test_customer_lot_case_insensitive(client: TestClient, db: Session) -> None:
     assert f.lot(a)["customer_lot_no"] == "Ab-01x"
 
 
+def test_start_strict_payload_d40(client: TestClient, db: Session) -> None:
+    """D40：开批严格载荷——旧字段 carrier、未知字段（顶层 / 批次内）都 422，路径 0 基；
+    无权限先 403，不暴露字段明细。"""
+    from app.mes.product.tests.test_bom import _member
+
+    f = _line(client, db)
+    url = f"{API}/work-order/{f.wo['id']}/start"
+    d = f.post(url, {"lots": [{"qty": 1}, {"qty": 1, "carrier": "C1"}]}, 422)
+    assert [x["loc"] for x in d["detail"]] == [["body", "lots", 1, "carrier"]]
+    d = f.post(url, {"lots": [{"qty": 1, "foo": 1}], "bar": 2}, 422)["detail"]
+    assert sorted(map(tuple, (x["loc"] for x in d))) == [
+        ("body", "bar"),
+        ("body", "lots", 0, "foo"),
+    ]
+    assert all(x["type"] == "extra_forbidden" for x in d)
+    r = f.c.post(url, headers=_member(client, db, f.m), json={"lots": [{"x": 1}]})
+    assert r.status_code == 403 and "loc" not in r.text, r.text
+    assert f.m.list("lot")["count"] == 0
+
+
 def test_start_error_loc_zero_based(client: TestClient, db: Session) -> None:
     """D38：开批接口所有报错路径与 Pydantic 一致，从 0 开始的数组写法。"""
     f = _line(client, db)
