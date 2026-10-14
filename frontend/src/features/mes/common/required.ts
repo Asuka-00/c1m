@@ -85,7 +85,7 @@ export function validateRequired(e: MesEntity, v: V, skip: Set<string>) {
   return errs
 }
 
-/** 定点数字段的最大小数位（D60：numeric(18,6)，超过 6 位后端 422 too_many_decimals）。 */
+/** 定点数字段的缺省最大小数位（D60 / D72：numeric(18,6)，超过后端 422 value_error，ctx.max_places）。 */
 export const MAX_DECIMALS = 6
 
 /**
@@ -146,6 +146,8 @@ export const MES_ERROR_CODES = [
   'read_only_field',
   'unknown_field',
   'timezone_required',
+  // D72：有履历的记录不能删（目前只有光罩）；其他实体仍是 409 文本
+  'referenced',
 ] as const
 type MesErrorCode = (typeof MES_ERROR_CODES)[number]
 const isCode = (x: unknown): x is MesErrorCode =>
@@ -261,8 +263,16 @@ export function mesErrorMessage(err: unknown, e: MesEntity | undefined) {
     return { name, rest }
   }
   // 全部是业务错误码时直接给出本地化提示（不加“校验失败”前缀）
-  const tooMany = (x: { type?: string; code?: string }) =>
-    x.code === 'too_many_decimals' || x.type === 'too_many_decimals'
+  // D72：小数位超限为 422 value_error + ctx.max_places（旧码 too_many_decimals 兼容）
+  const tooMany = (x: {
+    type?: string
+    code?: string
+    ctx?: { max_places?: unknown }
+  }) =>
+    x.code === 'too_many_decimals' ||
+    x.type === 'too_many_decimals' ||
+    ((x.code === 'value_error' || x.type === 'value_error') &&
+      x.ctx?.max_places != null)
   // 通用字段级 422 码（OQ-20 read_only_field、unknown_field）→ 三语文案
   const FIELD_CODES: Record<string, string> = {
     read_only_field: 'mes.err.readOnlyField',
@@ -288,8 +298,11 @@ export function mesErrorMessage(err: unknown, e: MesEntity | undefined) {
     }
     if (tooMany(x)) {
       const f = e?.fields.find((y) => y.name === name)
+      const mp = Number(
+        (x as { ctx?: { max_places?: unknown } }).ctx?.max_places
+      )
       const msg = t('mes.err.tooManyDecimals', {
-        n: (f && decimalLimit(f)) ?? MAX_DECIMALS,
+        n: Number.isInteger(mp) ? mp : ((f && decimalLimit(f)) ?? MAX_DECIMALS),
       })
       return e && f ? `${fieldLabel(e, name)}: ${msg}` : msg
     }

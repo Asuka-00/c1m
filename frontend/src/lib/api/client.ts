@@ -118,6 +118,15 @@ export function codeItemText(x: {
   ctx?: Record<string, unknown>
 }): string | null {
   const ctx = ctxVars(x?.ctx)
+  // D72：小数位超限 422 value_error + ctx.max_places（旧码 too_many_decimals 兼容）
+  const places = Number(ctx.max_places)
+  if (
+    [x?.code, x?.type].some(
+      (c) => c === 'value_error' || c === 'too_many_decimals'
+    ) &&
+    Number.isInteger(places)
+  )
+    return t('mes.err.tooManyDecimals', { n: places })
   for (const c of [x?.code, x?.type]) {
     if (!c) continue
     // date_range_too_large：有 ctx.max_days 用带天数的文案，否则用不带天数的

@@ -503,6 +503,7 @@
         "qtime_action_invalid": "Q-Time 超时动作只能是警告、Hold 或返工",
         "hold_not_found": "Hold 记录不存在或已被删除，请刷新列表",
         "too_many_decimals": "最多 6 位小数",
+        "referenced": "该记录已有履历，不能删除",
         "read_only_field": "该字段只读，不能修改",
         "unknown_field": "包含未知字段",
         "timezone_required": "时间必须带时区（如 2026-10-14T08:00:00+08:00）",

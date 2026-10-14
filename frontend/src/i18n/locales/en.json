@@ -503,6 +503,7 @@
         "qtime_action_invalid": "The Q-Time action must be Warn, Hold or Rework",
         "hold_not_found": "The hold record does not exist or was deleted; refresh the list",
         "too_many_decimals": "At most 6 decimal places",
+        "referenced": "This record has history records and can't be deleted",
         "read_only_field": "This field is read-only",
         "unknown_field": "Contains an unknown field",
         "timezone_required": "The time must include a time zone (e.g. 2026-10-14T08:00:00+08:00)",
