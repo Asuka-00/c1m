@@ -449,6 +449,7 @@ class Runner:
         for f in ("severity", "text_zh", "text_en"):
             if a.get(f):
                 body[f] = a[f]
+        body.update(a.get("extra") or {})  # P2-D6 反例：带未知 / 只读字段（如 target_e10_state_id、migration_note）
         r = self.c.get(self._ad("crud").replace("{entity}", "alarm_code"), q=body["alid"], page_size=100)
         rows = (r.body or {}).get("data", []) if isinstance(r.body, dict) else []
         hit = [x for x in rows if x.get("alid") == body["alid"] and x.get("equipment_id") == body["equipment_id"]]
@@ -461,17 +462,23 @@ class Runner:
     def _expect_e10_history(self, a: dict, entry: dict) -> None:
         """D58 补充：E10 履历最新一条的 trigger（manual/equipment/system）、source（事件来源）和目标状态。"""
         eq_id = self.rid("equipment", a["eq"])
+        q = {k: self.by_mode(v) for k, v in (a.get("filter") or {}).items()}  # 如 ?trigger=equipment（f2d890c）
         r = self.c.get(
             self._ad("crud").replace("{entity}", "e10_history"),
             equipment_id=eq_id,
             sort_by="at",
             sort_order="desc",
-            page_size=int(a.get("n", 1)),
+            page_size=int(a.get("n", 1 if not q else 100)),
+            **q,
         )
         rows = (r.body or {}).get("data", []) if isinstance(r.body, dict) else []
         entry.update(status=r.status, rows=len(rows))
         if r.status != 200 or not rows:
             raise StepFailed(f"{a['eq']} 查不到 E10 履历（HTTP {r.status}）")
+        for f, v in q.items():  # 筛选结果每一条都要符合
+            bad = [x.get(f) for x in rows if x.get(f) != v]
+            if bad:
+                raise StepFailed(f"{a['eq']} E10 履历按 {f}={v} 筛选，结果里有 {bad}")
         last = rows[0]
         entry["last"] = {k: last.get(k) for k in ("trigger", "source", "to_state_id", "comment")}
         for f, v in (a.get("last") or {}).items():

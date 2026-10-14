@@ -10,7 +10,7 @@
 #   工步配了 e10_available（允许 SBY/PRD）；FX0002 waiting。1001/1002/1003 由本场景写种子，9999 未登记，9998 从未上报。
 # 跑完 FX0002 已进站，不能原样重跑（precondition 会让场景 skipped）。
 name: alarm-udt-block
-run_id: alarm-udt-02
+run_id: alarm-udt-03
 target: http://127.0.0.1:8013
 equipment: [{code: EAP-DA01, type: DIEBOND}]
 steps:
@@ -20,6 +20,10 @@ steps:
   - seed_alarm_code: {eq: EAP-DA01, alid: "1001", action: set_state, target_state: UDT}
   - seed_alarm_code: {eq: EAP-DA01, alid: "1002", action: set_state, target_state: PRD}
   - seed_alarm_code: {eq: EAP-DA01, alid: "1003", action: none}
+  - seed_alarm_code: {eq: EAP-DA01, alid: "1004", action: set_state, target_state: UDT}
+  # P2-D6 严格载荷：未知字段（已删除的 target_e10_state_id）422；OQ-20 migration_note 只读 422 read_only_field
+  - seed_alarm_code: {eq: EAP-DA01, alid: "1009", action: none, extra: {target_e10_state_id: null}, expect: {status: 422}}
+  - seed_alarm_code: {eq: EAP-DA01, alid: "1009", action: none, extra: {migration_note: x}, expect: {status: 422, code: read_only_field}}
   # D59 反例：set_state 不给 / 给不存在的 target_state、none 带 target_state -> 422
   - seed_alarm_code: {eq: EAP-DA01, alid: "1009", action: set_state, expect: {status: 422}}
   - seed_alarm_code: {eq: EAP-DA01, alid: "1009", action: set_state, target_state: NOPE, expect: {status: 422}}
@@ -35,49 +39,54 @@ steps:
   - replay: {eq: EAP-DA01, seq: 2, expect: {status: 200, body: {duplicate: true}}}   # b11 重放 result 原样是首次的
   # D57 / D58 补充：手工报警同一 external_event_id 换内容重发 -> 422 idempotency_key_reused，不写入
   - reuse: {eq: EAP-DA01, seq: 2, change: {alid: "1003"}}
-  - expect_alarm: {alarm: $alm1, alarm_status: active, alid: "1001", lots: [FX0002], source: {manual: manual, b11: simulator}}
+  - expect_alarm: {alarm: $alm1, alarm_status: active, alid: "1001", lots: [FX0002], source: {manual: manual, b11: simulator}, state_changed: true, state_skip_reason: null}
   - expect_hold: {lot: FX0002, present: false}
   - expect_e10: {eq: EAP-DA01, state: UDT}
   - expect_e10_history: {eq: EAP-DA01, last: {to: UDT, trigger: equipment, source: {manual: manual, b11: simulator}}}
+  # f2d890c：?trigger=equipment 筛选 200，结果全是 equipment
+  - expect_e10_history: {eq: EAP-DA01, filter: {trigger: equipment}, last: {to: UDT, trigger: equipment}}
   # D59：报警引起的切换不符合迁移表（UDT -> PRD）-> 200，报警照常记录，不切状态
   - alarm_set:                                                                                  # seq 3
       eq: EAP-DA01
       alid: "1002"
       save_as: alm2
-      expect: {status: 200, body: {duplicate: false, state_changed: false, state_skip_reason: $nonempty}}
+      expect: {status: 200, body: {duplicate: false, state_changed: false, state_skip_reason: transition_not_allowed}}
   - expect_alarm: {alarm: $alm2, alarm_status: active, unregistered: false}
-  # D59 补充（后端 D60 之后的单独提交）：state_skip_reason 改错误码、报警履历带 state_changed / state_skip_reason。
-  # 517b0a0 返回的还是英文原文，先 pending（跳过），后端提交出来后删掉 pending。
-  - expect_alarm: {alarm: $alm2, state_changed: false, state_skip_reason: transition_not_allowed, pending: 等后端 D59 补充提交（错误码化）}
+  # D59 补充（baf7b55）：state_skip_reason 是代码 unknown_state/already_in_state/transition_not_allowed，报警记录也带
+  - expect_alarm: {alarm: $alm2, state_changed: false, state_skip_reason: transition_not_allowed}
+  # 已经是目标状态：1004 也切 UDT -> already_in_state
+  - alarm_set: {eq: EAP-DA01, alid: "1004", save_as: alm4, expect: {body: {state_changed: false, state_skip_reason: already_in_state}}}   # seq 4
+  - expect_alarm: {alarm: $alm4, state_changed: false, state_skip_reason: already_in_state}
   - expect_e10: {eq: EAP-DA01, state: UDT}
   - expect_e10_history: {eq: EAP-DA01, last: {to: UDT, trigger: equipment}}                   # 没多写履历
   # 不联动的报警：不改状态
-  - alarm_set: {eq: EAP-DA01, alid: "1003", expect: {body: {state_changed: false, state_skip_reason: null}}}   # seq 4
+  - alarm_set: {eq: EAP-DA01, alid: "1003", expect: {body: {state_changed: false, state_skip_reason: null}}}   # seq 5
   - expect_hold: {lot: FX0002, present: false}
   # 进站被设备状态检查拦下
-  - track_in:                                                                                   # seq 5
+  - track_in:                                                                                   # seq 6
       eq: EAP-DA01
       lot: FX0002
       expect: {status: 409, code: check_blocked, check: {check_type: e10_available}}
   # OQ-5 ①：按设备 + ALID 清除 -> cleared=true；不自动恢复设备状态
-  - alarm_clear: {eq: EAP-DA01, alid: "1001", expect: {body: {cleared: true, data.alarm_status: cleared}}}   # seq 6
-  - replay: {eq: EAP-DA01, seq: 6, expect: idempotent}
+  - alarm_clear: {eq: EAP-DA01, alid: "1001", expect: {body: {cleared: true, data.alarm_status: cleared}}}   # seq 7
+  - replay: {eq: EAP-DA01, seq: 7, expect: idempotent}
   - expect_e10: {eq: EAP-DA01, state: UDT}
-  - alarm_clear: {eq: EAP-DA01, alid: "1002", expect: {body: {cleared: true}}}                  # seq 7
-  - alarm_clear: {eq: EAP-DA01, alid: "1003", expect: {body: {cleared: true}}}                  # seq 8
+  - alarm_clear: {eq: EAP-DA01, alid: "1002", expect: {body: {cleared: true}}}                  # seq 8
+  - alarm_clear: {eq: EAP-DA01, alid: "1003", expect: {body: {cleared: true}}}                  # seq 9
+  - alarm_clear: {eq: EAP-DA01, alid: "1004", expect: {body: {cleared: true}}}
   # OQ-5 ②：没有 active 报警 -> 200，cleared=false，data=null
-  - alarm_clear: {eq: EAP-DA01, alid: "1001", expect: {status: 200, body: {cleared: false, duplicate: false, data: null}}}   # seq 9
-  - alarm_clear: {eq: EAP-DA01, alid: "9998", expect: {status: 200, body: {cleared: false, data: null}}}   # seq 10
+  - alarm_clear: {eq: EAP-DA01, alid: "1001", expect: {status: 200, body: {cleared: false, duplicate: false, data: null}}}   # seq 10
+  - alarm_clear: {eq: EAP-DA01, alid: "9998", expect: {status: 200, body: {cleared: false, data: null}}}   # seq 11
   - expect_alarm: {alarm: $alm1, alarm_status: cleared}
   # 状态切回：manual 模式是人工切换（trigger=manual），b11 是设备事件（trigger=equipment, source=simulator）
-  - state: {eq: EAP-DA01, to: SBY}                                                             # seq 11
+  - state: {eq: EAP-DA01, to: SBY}                                                             # seq 12
   - expect_e10_history: {eq: EAP-DA01, last: {to: SBY, trigger: {manual: manual, b11: equipment}, source: {manual: manual, b11: simulator}}}
-  - track_in: {eq: EAP-DA01, lot: FX0002}                                                      # seq 12
+  - track_in: {eq: EAP-DA01, lot: FX0002}                                                      # seq 13
   # OQ-5 ③：未登记 ALID -> unregistered=true，照样写 mes_alarm_lot，不 Hold、不改 E10
   - expect_e10: {eq: EAP-DA01, save_as: e10_before}
-  - alarm_set: {eq: EAP-DA01, alid: "9999", lots: [FX0002], save_as: alm_unreg, expect: {body: {state_changed: false}}}   # seq 13
+  - alarm_set: {eq: EAP-DA01, alid: "9999", lots: [FX0002], save_as: alm_unreg, expect: {body: {state_changed: false}}}   # seq 14
   - expect_alarm: {alarm: $alm_unreg, unregistered: true, alarm_status: active, lots: [FX0002]}
-  - alarm_clear: {eq: EAP-DA01, alid: "9999", expect: {body: {cleared: true}}}                  # seq 14
+  - alarm_clear: {eq: EAP-DA01, alid: "9999", expect: {body: {cleared: true}}}                  # seq 15
   - expect_alarm: {alarm: $alm_unreg, unregistered: true, alarm_status: cleared}
   - expect_hold: {lot: FX0002, present: false}
   - expect_e10: {eq: EAP-DA01, same_as: $e10_before}

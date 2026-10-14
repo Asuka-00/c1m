@@ -5,7 +5,7 @@
 #   - 用量 >= max_usage：Track In 返回 409 check_blocked，检查项 tool_life，overridable=false（只在 track_in 判断，move_in 不判断）
 #   - 517b0a0 P2-D3：用满 / 过期 / 不可用时，工步绑定的 tool_life 规则也判 block（和内置硬拦截同一 message），
 #     不再出现 "tools available"；断言所有 tool_life 项 result 都是 block（all: [result]）、至少 2 条（内置 + 规则）。
-#     overridable=false 只要求至少一条（内置硬拦截）；规则项目前是 overridable=true（已报后端确认，不影响拦截）。
+#     f2d890c：规则项也 overridable=false，所以每条都要求 overridable=false（all: true）；c6b5907：409 顶层 overridable=false。
 # 前提：T-SIM-01 的 max_usage=1000、warn_ratio 默认 0.9、count_basis=reported（Track Out 不自动计数）；
 #       FX0001、FX0003 是 waiting 的批，工步要求 T-SIM-01 的工具类型且绑定了 tool_life 规则；reason_code 里有 REWORK。
 name: tool-life-block
@@ -36,7 +36,8 @@ steps:
       expect:
         status: 409
         code: check_blocked
-        check: {check_type: tool_life, overridable: false, result: block, all: [result], min_count: 2, not_message: tools available}
+        check: {check_type: tool_life, overridable: false, result: block, all: true, min_count: 2, not_message: tools available}
+        body: {detail.overridable: false}
   - expect_tool_log: {tool: T-SIM-01, last: {kind: report, delta: "100", count_after: "1000"}}
   # P2-D3 过期：计数清零、状态恢复可用，有效期设成昨天 -> 同样两条 block
   - tool_reset: {tool: T-SIM-01, reason: REWORK, expect: {body: {tool.usage_count: "0"}}}
@@ -48,7 +49,8 @@ steps:
       expect:
         status: 409
         code: check_blocked
-        check: {check_type: tool_life, overridable: false, result: block, all: [result], min_count: 2, not_message: tools available}
+        check: {check_type: tool_life, overridable: false, result: block, all: true, min_count: 2, not_message: tools available}
+        body: {detail.overridable: false}
   # P2-D3 不可用：去掉有效期，状态改成 retired -> 两条 block
   - tool_set: {tool: T-SIM-01, fields: {expiry_date: null, tool_status: retired}}
   - track_in:
@@ -58,6 +60,7 @@ steps:
       expect:
         status: 409
         code: check_blocked
-        check: {check_type: tool_life, overridable: false, result: block, all: [result], min_count: 2, not_message: tools available}
+        check: {check_type: tool_life, overridable: false, result: block, all: true, min_count: 2, not_message: tools available}
+        body: {detail.overridable: false}
   # 恢复：可用 + 无有效期 + 计数 0（FX0003 仍停在 move_in 后，未进站）
   - tool_set: {tool: T-SIM-01, fields: {tool_status: available}}

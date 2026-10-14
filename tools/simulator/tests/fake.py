@@ -167,10 +167,12 @@ class FakeClient(Client):
         if not code or code["action"] != "set_state":
             return {"state_changed": False, "state_skip_reason": None}
         ts = code["target_state"]
+        if ts not in STATE_IDS:  # baf7b55：跳过原因改成代码
+            return {"state_changed": False, "state_skip_reason": "unknown_state"}
         if ts == self.e10:
-            return {"state_changed": False, "state_skip_reason": f"already {ts}"}
+            return {"state_changed": False, "state_skip_reason": "already_in_state"}
         if ts not in TRANSITIONS.get(self.e10, set()):
-            return {"state_changed": False, "state_skip_reason": f"{self.e10} -> {ts} not allowed"}
+            return {"state_changed": False, "state_skip_reason": "transition_not_allowed"}
         self.e10 = ts
         self._hist(ts, "equipment")
         return {"state_changed": True, "state_skip_reason": None}
@@ -179,11 +181,31 @@ class FakeClient(Client):
         parts = path.split("/")  # ['', 'mes', entity, rid?]
         ent = parts[2]
         if ent == "e10_history" and method == "GET":
-            return Resp(200, {"data": self.e10_hist[: int(params.get("page_size", 20))], "count": len(self.e10_hist)})
+            rows = self.e10_hist
+            if params.get("trigger"):  # f2d890c：枚举 e10_history_trigger
+                if params["trigger"] not in ("manual", "equipment", "system"):
+                    return Resp(422, {"detail": [{"loc": ["query", "trigger"], "type": "value_error"}]})
+                rows = [h for h in rows if h["trigger"] == params["trigger"]]
+            return Resp(200, {"data": rows[: int(params.get("page_size", 20))], "count": len(rows)})
         if ent == "alarm_code":
             if method == "GET":
                 rows = [dict(c, equipment_id="e-da01") for c in self.alarm_codes.values()]
                 return Resp(200, {"data": [r for r in rows if r["alid"] == params.get("q")]})
+            if "migration_note" in body:  # OQ-20 只读
+                d = [{"loc": ["body", "migration_note"], "type": "read_only_field", "code": "read_only_field"}]
+                return Resp(422, {"detail": d})
+            known = {
+                "alid",
+                "equipment_id",
+                "equipment_type_id",
+                "action",
+                "target_state",
+                "severity",
+                "text_zh",
+                "text_en",
+            }
+            if set(body) - known:  # P2-D6 严格载荷
+                return Resp(422, {"detail": [{"loc": ["body", sorted(set(body) - known)[0]], "type": "value_error"}]})
             act, ts = body.get("action") or "none", (body.get("target_state") or "").strip()
             if act == "set_state" and (not ts or ts not in STATE_IDS):
                 return Resp(422, {"detail": [{"loc": ["body", "target_state"], "type": "value_error"}]})
@@ -261,8 +283,9 @@ class FakeClient(Client):
             # B10：tool_life 只在 track_in 判断，用量 >= 上限硬拦（overridable=false）；预警区间不拦
             blk = self._tool_block() if path.endswith("/track_in") and json_body.get("tool_ids") else None
             if blk:  # 517b0a0 P2-D3：内置硬拦截 + 绑定规则，两条都 block、同一 message
+                # f2d890c：规则项也 overridable=false；c6b5907：顶层 overridable=false
                 res = [{"check_type": "tool_life", "overridable": False, "result": "block", "message": blk}] * 2
-                return Resp(409, {"detail": {"code": "check_blocked", "results": res}})
+                return Resp(409, {"detail": {"code": "check_blocked", "results": res, "overridable": False}})
             if path.endswith("/track_in") and self.e10 not in ("SBY", "PRD"):  # e10_available
                 res = [{"check_type": "e10_available", "result": "fail"}]
                 return Resp(409, {"detail": {"code": "check_blocked", "results": res}})
@@ -317,7 +340,7 @@ class FakeClient(Client):
             }
             # D58：报警只记录、关联批次，不 Hold；只有报警码 set_state 才切 E10
             st = self._alarm_state(code)
-            self.alarm_rows[aid]["e10_change"] = st
+            self.alarm_rows[aid].update(e10_change=st, **st)  # baf7b55：履历也带 state_changed / state_skip_reason
             return Resp(200, {"data": self.alarm_rows[aid], "duplicate": False, **st})
         if path.endswith("/clear"):
             row = self.alarm_rows.get(path.split("/")[-2])

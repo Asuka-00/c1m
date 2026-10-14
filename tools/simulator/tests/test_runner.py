@@ -175,6 +175,7 @@ def test_bundled_alarm_udt_block_d58_passes_with_b9_b11():
         "1001": ("set_state", "UDT"),
         "1002": ("set_state", "PRD"),
         "1003": ("none", None),
+        "1004": ("set_state", "UDT"),
     }
     # D58 补充：报警切 UDT 的履历 trigger=equipment；手工切回 SBY 是 trigger=manual
     assert [(h["to_state_id"], h["trigger"], h["source"]) for h in c.e10_hist] == [
@@ -585,7 +586,7 @@ def test_alarm_state_skip_returns_200_with_reason():
                     "alid": "1002",
                     "expect": {
                         "status": 200,
-                        "body": {"state_changed": False, "state_skip_reason": "$nonempty"},
+                        "body": {"state_changed": False, "state_skip_reason": "transition_not_allowed"},
                     },
                 }
             },
@@ -718,9 +719,6 @@ def test_pending_step_is_skipped_not_failed_and_nonempty():
     assert rep["status"] == PASSED and rep["pending"] == [1]
 
 
-@__import__("pytest").mark.skip(
-    reason="等后端 D59 补充提交：state_skip_reason 改错误码，报警履历带 state_changed/state_skip_reason"
-)
 def test_d59_skip_reason_error_codes():
     cases = {"NOPE": "unknown_state", "UDT": "already_in_state", "PRD": "transition_not_allowed"}
     for target, code in cases.items():
@@ -740,3 +738,50 @@ def test_d59_skip_reason_error_codes():
         ]
         rep = Runner(c).run(parse({"run_id": "a", "steps": steps}))
         assert rep["status"] == PASSED, (target, rep)
+
+
+def test_e10_history_filter_trigger_and_alarm_code_strict():
+    c, rep = _alarm_steps(
+        [
+            {"alarm_set": {"eq": "EAP-DA01", "alid": "1001"}},
+            {"state": {"eq": "EAP-DA01", "to": "SBY"}},
+            {"expect_e10_history": {"eq": "EAP-DA01", "filter": {"trigger": "equipment"}, "last": {"to": "UDT"}}},
+            {
+                "seed_alarm_code": {
+                    "eq": "EAP-DA01",
+                    "alid": "8",
+                    "action": "none",
+                    "extra": {"target_e10_state_id": None},
+                    "expect": {"status": 422},
+                }
+            },
+            {
+                "seed_alarm_code": {
+                    "eq": "EAP-DA01",
+                    "alid": "8",
+                    "action": "none",
+                    "extra": {"migration_note": "x"},
+                    "expect": {"status": 422, "code": "read_only_field"},
+                }
+            },
+        ]
+    )
+    assert rep["status"] == PASSED, rep
+    q = [x[4] for x in c.calls if x[1] == "/mes/e10_history"][-1]
+    assert q["trigger"] == "equipment"
+
+
+def test_e10_history_filter_detects_wrong_rows():
+    c = FakeClient(paths=ALL)
+    orig = c._crud
+
+    def leaky(method, path, body, params):  # 后端忽略筛选
+        return orig(method, path, body, {k: v for k, v in params.items() if k != "trigger"})
+
+    c._crud = leaky
+    steps = [
+        {"state": {"eq": "EAP-DA01", "to": "PRD"}},
+        {"expect_e10_history": {"eq": "EAP-DA01", "filter": {"trigger": "equipment"}}},
+    ]
+    rep = Runner(c).run(parse({"run_id": "a", "steps": steps}))
+    assert rep["status"] == FAILED and "筛选" in rep["reason"]

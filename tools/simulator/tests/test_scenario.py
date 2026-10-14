@@ -49,10 +49,11 @@ def test_tool_life_expectation_follows_b10():
                 "check_type": "tool_life",
                 "overridable": False,
                 "result": "block",
-                "all": ["result"],
+                "all": True,
                 "min_count": 2,
                 "not_message": "tools available",
             },
+            "body": {"detail.overridable": False},
         }
     assert all("expect" not in s.args for s in sc.steps if s.kind == "move_in")
     assert "tool_life_exceeded" not in (ROOT / "tool-life-block.yaml").read_text().split("#")[0]
