@@ -1,0 +1,17 @@
+# 首批验收场景 2（设计 §6.1）：耗材寿命到期拦截。依赖 B10，接口不存在时整体 skipped。
+# D53-5：超上限返回 409 check_blocked，检查项 tool_life，overridable=false（不用已废止的 tool_life_exceeded）。
+name: tool-life-block
+run_id: tool-life-01
+target: http://127.0.0.1:8013
+equipment: [{code: EAP-DA01, type: DIEBOND}]
+steps:
+  - precondition: {lot: FX0001, lot_status: waiting}
+  - tool_usage: {eq: EAP-DA01, tool: T-SIM-01, delta: 1000}   # 使 usage_count >= max_usage
+  - move_in:
+      eq: EAP-DA01
+      lot: FX0001
+      tools: [T-SIM-01]
+      expect:
+        status: 409
+        code: check_blocked
+        check: {check_type: tool_life, overridable: false}

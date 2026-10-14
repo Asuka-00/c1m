@@ -1,0 +1,13 @@
+# 首批验收场景 1（设计 §6.1）：报警触发 Hold。依赖 B9，接口不存在时整体 skipped。
+name: alarm-hold
+run_id: alarm-hold-01
+target: http://127.0.0.1:8013
+equipment: [{code: EAP-DA01, type: DIEBOND}]
+steps:
+  - precondition: {lot: FX0002}
+  - alarm_set: {eq: EAP-DA01, alid: "1001", lots: [FX0002], save_as: alm1}
+  - expect_hold: {lot: FX0002, source: equipment, count: 1}
+  - replay: {eq: EAP-DA01, seq: 1, expect: idempotent}   # 同 external_event_id 不重复 Hold
+  - expect_hold: {lot: FX0002, source: equipment, count: 1}
+  - alarm_clear: {eq: EAP-DA01, alarm: $alm1}
+  - expect_hold: {lot: FX0002, source: equipment, count: 1}  # 清除后不自动解 Hold（E1）

@@ -1,0 +1,16 @@
+# 现在就能跑：待 Qual 设备开工被拦（D43：409 check_blocked，检查项 eqp_wait_qual，overridable=false）
+# 被拦的请求不改变批次状态，可反复执行。前置条件不满足时场景记为 skipped。
+name: wait-qual-block
+run_id: wait-qual-01
+target: http://127.0.0.1:8013
+equipment: [{code: EAP-DA02, type: DIEBOND}]
+steps:
+  - precondition: {eq: EAP-DA02, qual_state: wait_qual}
+  - precondition: {lot: FX0001, lot_status: waiting}
+  - move_in:
+      eq: EAP-DA02
+      lot: FX0001
+      expect:
+        status: 409
+        code: check_blocked
+        check: {check_type: eqp_wait_qual, overridable: false}

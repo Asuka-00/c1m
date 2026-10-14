@@ -1,0 +1,10 @@
+# 现在就能跑：用现有 POST /mes/eqp/{id}/e10 做设备状态循环 SBY -> PRD -> SBY
+name: e10-state-cycle
+run_id: e10-cycle-01
+target: http://127.0.0.1:8013
+description: 设备状态变化（模式 A 冒烟）。E10 接口不收 external_event_id，ID 写进 comment 和 Idempotency-Key。
+equipment: [{code: EAP-DA01, type: DIEBOND}]
+steps:
+  - precondition: {eq: EAP-DA01, e10: SBY}
+  - state: {eq: EAP-DA01, to: PRD}
+  - state: {eq: EAP-DA01, to: SBY}
