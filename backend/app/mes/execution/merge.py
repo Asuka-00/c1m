@@ -45,7 +45,7 @@ Row = dict[str, Any]
 
 # ---------------- merge ----------------
 def merge_problems(
-    target: Row, src: Row, rule: Row | None, src_rule: Row | None = None
+    s: Session, target: Row, src: Row, rule: Row | None, src_rule: Row | None = None
 ) -> list[str]:
     """检查源批次能否合入目标批次。
 
@@ -76,7 +76,9 @@ def merge_problems(
         p.append(f"{c}: different BOM version")
     if customer_mismatch(target, src):  # B7
         p.append(f"{c}: different customer / ownership")
-    if not same_customer_lot(src.get("customer_lot_no"), target.get("customer_lot_no")):
+    if not same_customer_lot(
+        s, src.get("customer_lot_no"), target.get("customer_lot_no")
+    ):
         p.append(f"{c}: different customer lot no.")  # D36
     if (
         rule
@@ -125,7 +127,7 @@ def merge_candidates(s: Session, tid: uuid.UUID, target: Row) -> list[Row]:
             "on_hold": r["on_hold"],
             "priority": _prio_json(_prio(s, tid, r["priority_id"])),
             "problems": merge_problems(
-                target, dict(r), rule, rule_for(s, tid, dict(r))
+                s, target, dict(r), rule, rule_for(s, tid, dict(r))
             ),
         }
         for r in rows
@@ -237,7 +239,7 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
     for src in sorted(srcs, key=lambda x: x["id"]):
         tl = target.get("customer_lot_no") or None
         sl = src.get("customer_lot_no") or None
-        if not same_customer_lot(tl, sl):  # D37：不区分大小写
+        if not same_customer_lot(s, tl, sl):  # D37：不区分大小写
             raise lot_error(
                 "customer_lot_mismatch",
                 f"customer lot no. differs: target {target['code']} {tl or '-'}, "
@@ -257,7 +259,7 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
     elif not rule["allow_merge"]:
         errs.append(f"rule {rule['code']}: merge not allowed")
     for src in srcs:
-        errs += merge_problems(target, src, rule, rule_for(s, tid, src))
+        errs += merge_problems(s, target, src, rule, rule_for(s, tid, src))
     qty_mode = (target["tracking_level"] or "wafer") == "quantity"
     total = target["qty"] + sum(x["qty"] for x in srcs)
     if target["carrier_id"] and not qty_mode:

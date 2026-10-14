@@ -117,7 +117,7 @@ def search(e: Entity, stmt: sa.Select[Any], q: str | None) -> sa.Select[Any]:
     return stmt.where(
         sa.or_(
             *(c.ilike(f"%{esc}%", escape="\\") for c in cols),
-            *(sa.func.upper(c) == q.strip().upper() for c in exact),
+            *(sa.func.upper(c) == sa.func.upper(sa.literal(q.strip())) for c in exact),
         )
     )
 

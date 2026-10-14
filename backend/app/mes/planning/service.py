@@ -430,11 +430,11 @@ def start(
             )
         )
     seen: set[Any] = set()
-    for i, x in enumerate(lots, 1):
+    for i, x in enumerate(lots):
         n = int(x.get("qty") or 0)
         if not 1 <= n <= (lt["max_wafers"] or 25):
             errs.append(
-                (f"lots.{i}.qty", f"lot {i}: qty must be 1..{lt['max_wafers']}")
+                (("lots", i, "qty"), f"lots.{i}: qty must be 1..{lt['max_wafers']}")
             )
         slots = x.get("slots") or list(range(1, n + 1))
         x["slots"] = slots
@@ -445,21 +445,21 @@ def start(
             car = _one(s, tid, "carrier", cid)
             ct = car and _one(s, tid, "carrier_type", car["carrier_type_id"])
             if not car or not ct:
-                errs.append((f"lots.{i}.carrier", f"lot {i}: carrier not found"))
+                errs.append((("lots", i, "carrier_id"), f"lots.{i}: carrier not found"))
                 continue
             width = ct["capacity"]
             if car["status_code"] != "available":
                 errs.append(
                     (
-                        f"lots.{i}.carrier",
-                        f"lot {i}: carrier {car['code']} is not available",
+                        ("lots", i, "carrier_id"),
+                        f"lots.{i}: carrier {car['code']} is not available",
                     )
                 )
             if cid in seen or _carrier_busy(s, tid, cid):
                 errs.append(
                     (
-                        f"lots.{i}.carrier",
-                        f"lot {i}: carrier {car['code']} is already in use",
+                        ("lots", i, "carrier_id"),
+                        f"lots.{i}: carrier {car['code']} is already in use",
                     )
                 )
             seen.add(cid)
@@ -472,14 +472,16 @@ def start(
         ):
             errs.append(
                 (
-                    f"lots.{i}.slots",
-                    f"lot {i}: {n} distinct slots within 1..{width} required",
+                    ("lots", i, "slots"),
+                    f"lots.{i}: {n} distinct slots within 1..{width} required",
                 )
             )
-        errs += lot_svc.customer_start_errors(s, tid, i - 1, x)
+        errs += lot_svc.customer_start_errors(s, tid, i, x)
         srcs = x.get("wafer_sources") or []
         if srcs and len(srcs) != n:
-            errs.append((f"lots.{i}.wafer_sources", f"lot {i}: one source per wafer"))
+            errs.append(
+                (("lots", i, "wafer_sources"), f"lots.{i}: one source per wafer")
+            )
     if errs:
         raise http_422(errs)
     step, site = first_step(s, tid, wo["route_id"])

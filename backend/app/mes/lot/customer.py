@@ -29,11 +29,22 @@ def inherit_customer(parent: Row) -> Row:
     }
 
 
-def same_customer_lot(a: Any, b: Any) -> bool:
-    """D37：客户批号比对不区分大小写（去首尾空格后转大写精确比较；都为空视为相同）。"""
-    na = (a or "").strip().upper() or None
-    nb = (b or "").strip().upper() or None
-    return na == nb
+def same_customer_lot(s: Session, a: Any, b: Any) -> bool:
+    """D37 / D-9350-1：客户批号比对不区分大小写，规则与查询一致——由数据库算 upper()。
+
+    去首尾空格后，两边都为空视为相同、一边为空视为不同；否则比较数据库的
+    ``upper(:a) = upper(:b)``（不用 Python 的 ``str.upper()``，避免 ß 等字符两边结果不同）。
+    """
+    na, nb = (a or "").strip(), (b or "").strip()
+    if not na or not nb:
+        return not na and not nb
+    return bool(
+        conn(s)
+        .execute(
+            sa.select(sa.func.upper(sa.literal(na)) == sa.func.upper(sa.literal(nb)))
+        )
+        .scalar()
+    )
 
 
 def customer_mismatch(a: Row, b: Row) -> bool:
@@ -117,7 +128,8 @@ def lookup_customer_lots(
     if customer_lot_no:
         # D37：不区分大小写的精确匹配（走 upper(customer_lot_no) 索引）
         q = q.where(
-            sa.func.upper(t.c.customer_lot_no) == customer_lot_no.strip().upper()
+            sa.func.upper(t.c.customer_lot_no)
+            == sa.func.upper(sa.literal(customer_lot_no.strip()))
         )
     if lot_no:
         q = q.where(t.c.code == lot_no.strip())

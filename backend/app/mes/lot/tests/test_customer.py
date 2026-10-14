@@ -220,3 +220,46 @@ def test_customer_lot_case_insensitive(client: TestClient, db: Session) -> None:
         f.stage(x, "move_in", equipment_id=f.eq["id"])
     merge(f, a, [b])  # 大小写不同视为同一客户批号
     assert f.lot(a)["customer_lot_no"] == "Ab-01x"
+
+
+def test_start_error_loc_zero_based(client: TestClient, db: Session) -> None:
+    """D38：开批接口所有报错路径与 Pydantic 一致，从 0 开始的数组写法。"""
+    f = _line(client, db)
+    url = f"{API}/work-order/{f.wo['id']}/start"
+
+    def locs(lots: list[Any]) -> list[Any]:
+        return [x["loc"] for x in f.post(url, {"lots": lots}, 422)["detail"]]
+
+    f.sql("UPDATE mes_lot_type SET max_wafers = 3 WHERE id = :i", i=f.lt["id"])
+    assert locs([{"qty": 1}, {"qty": 4}]) == [["body", "lots", 1, "qty"]]
+    assert locs([{"qty": 2, "slots": [1, 1]}]) == [["body", "lots", 0, "slots"]]
+    assert locs([{"qty": 1}, {"qty": 1, "wafer_sources": ["a", "b"]}]) == [
+        ["body", "lots", 1, "wafer_sources"]
+    ]
+    import uuid as _u
+
+    assert locs([{"qty": 1, "carrier_id": str(_u.uuid4())}]) == [
+        ["body", "lots", 0, "carrier_id"]
+    ]
+    assert locs([{"qty": 1}, {"qty": 1, "ownership": "customer"}]) == [
+        ["body", "lots", 1, "customer_id"]
+    ]
+
+
+def test_customer_lot_db_upper_eszett(client: TestClient, db: Session) -> None:
+    """D-9350-1：查询与合批比对都由数据库算 upper()，ß 等字符两边规则一致。"""
+    f = _line(client, db)
+    c1 = f.m.post("customer", {"code": "C1", "name": "Cust 1"})
+    kw = {"ownership": "customer", "customer_id": c1["id"]}
+    (a,) = _start(f, customer_lot_no="straße-01", **kw)["data"]
+    (b,) = _start(f, customer_lot_no="STRAßE-01", **kw)["data"]
+    url = f"{EXEC}/customer-lots"
+    # 大写取数据库的 upper（STRAßE-01）；Python 的 "STRASSE-01" 是另一个字符串，不保证查到
+    for v in ("straße-01", "STRAßE-01", "StRaßE-01"):
+        got = client.get(url, headers=f.m.h, params={"customer_lot_no": v}).json()
+        assert a["code"] in {x["lot_no"] for x in got["data"]}, v
+        lst = client.get(f"{API}/lot", headers=f.m.h, params={"q": v}).json()
+        assert a["code"] in {x["code"] for x in lst["data"]}, v
+    for x in (a, b):
+        f.stage(x, "move_in", equipment_id=f.eq["id"])
+    merge(f, a, [b])
