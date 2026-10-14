@@ -89,6 +89,9 @@ def test_p3_draft_scenarios_parse_and_skip_without_backend():
     assert len(files) == 5
     for f in files:
         sc = load(f)
+        if f.endswith("reticle-report.yaml"):  # ret-report-08 起不再是草稿（f9e9dda 联调）
+            assert not sc.draft
+            continue
         assert sc.draft
         c = FakeClient()
         rep = Runner(c).run(sc)
@@ -468,7 +471,11 @@ def test_reticle_report_draft_e2():
     from sim.scenario import ScenarioError, load, parse
 
     sc = load("scenarios/p3-draft/reticle-report.yaml")
-    assert sc.draft and "D80" in sc.draft and "reticle_report" in P3_DRAFT_STEPS
+    assert not sc.draft and sc.run_id == "ret-report-08" and "reticle_report" in P3_DRAFT_STEPS
+    # EAP 光罩上报未开（D67）：依赖 reticle_report 结果的断言都带 needs，记未实现而不是失败
+    rep_saves = {s.args.get("save_as") for s in sc.steps if s.kind == "reticle_report"}
+    assert all(s.args.get("save_as") for s in sc.steps if s.kind == "reticle_report")
+    assert {n for s in sc.steps for n in (s.args.get("needs") or [])} <= rep_saves
     st = sc.steps
     rep = [s for s in st if s.kind == "reticle_report"]
     assert {s.args["kind"] for s in rep} == {"mount", "unmount", "usage"}

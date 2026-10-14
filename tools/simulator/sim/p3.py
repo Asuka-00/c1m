@@ -403,6 +403,11 @@ class P3Exec:
     def step(self, kind: str, a: dict, entry: dict) -> None:
         a = dict(a)
         self.lot = a.get("lot") or self.lot
+        # needs: [save_as, ...]：依赖的步骤未实现（如 EAP 光罩 event_type D67 未开）时本步也记未实现，不算失败
+        need = a.pop("needs", None) or []
+        miss = [n for n in ([need] if isinstance(need, str) else need) if n in self.unimpl]
+        if miss:
+            raise Unimplemented(f"依赖未实现的步骤 {', '.join(miss)}")
         handler = getattr(self, "_" + kind, None)
         if handler is None:  # pragma: no cover
             raise Unimplemented(f"{kind} 没有执行器")
@@ -536,12 +541,18 @@ class P3Exec:
         self._fail_if(errs)
 
     def _events(self, entity_type: str, record_id: str) -> list[dict]:
-        r = self._get(self.path("reticle_events"), entity_type=entity_type, record_id=record_id, page_size=200)
+        # audit_log page_size 上限 100（超过 422 会被当成空列表，f9e9dda 联调发现）
+        r = self._get(self.path("reticle_events"), entity_type=entity_type, record_id=record_id, page_size=100)
+        if r.status != 200:
+            self._fail_if([f"GET 事件列表 HTTP {r.status}：{str(r.body)[:200]}"])
         rows = self._rows(r)
         out = []
         for x in rows:
             ch = x.get("changes") if isinstance(x.get("changes"), dict) else {}
-            out.append({**x, "event": x.get("action"), "payload": ch.get("payload", ch)})
+            pl = ch.get("payload", ch)
+            if isinstance(pl, list) and len(pl) == 2:  # audit changes 是 [旧, 新]，取新值
+                pl = pl[1]
+            out.append({**x, "event": x.get("action"), "payload": pl if isinstance(pl, dict) else {}})
         out.sort(key=lambda x: str(x.get("created_at") or x.get("at") or ""), reverse=True)
         return out
 

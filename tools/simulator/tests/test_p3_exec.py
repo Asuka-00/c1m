@@ -452,7 +452,8 @@ def test_p3_scenarios_stay_draft_and_all_steps_have_executor(name):
     from sim.p3 import P3_EXEC_STEPS
 
     sc = load(f"scenarios/p3-draft/{name}")
-    assert sc.draft  # 保持草稿跳过
+    # marking 仍是草稿；reticle-report 自 ret-report-08（be/p3 f9e9dda 联调）起去掉 draft
+    assert bool(sc.draft) == (name == "marking-report.yaml")
     kinds = {s.kind for s in sc.steps} - {"precondition", "track_out"}
     assert kinds <= P3_EXEC_STEPS, kinds - P3_EXEC_STEPS
 
@@ -477,3 +478,32 @@ def test_seed_is_idempotent_against_mock():
         log = Seeder(Client(m.url, tenant="t")).run()
     assert any(x.startswith("有  equipment EAP-LT01") for x in log)
     assert any(x.startswith("有  reticle R-SIM-03") for x in log)
+
+
+def test_needs_marks_dependent_step_unimplemented_and_events_unwrap():
+    """f9e9dda 联调：needs 依赖未实现步骤 → 未实现；audit changes.payload 为 [旧, 新] 时取新值；page_size<=100。"""
+    from sim.p3 import P3Exec, Unimplemented
+
+    ex = P3Exec.__new__(P3Exec)
+    ex.unimpl = {"m1"}
+    ex.lot = None
+    with pytest.raises(Unimplemented):
+        ex.step("expect_reticle", {"needs": ["m1"], "reticle": "R"}, {})
+    seen = {}
+
+    class _R:
+        status = 200
+        body = {
+            "data": [
+                {"action": "reticle.mounted", "changes": {"payload": [None, {"source": "manual"}]}, "created_at": "1"}
+            ]
+        }
+
+    def _get(path, **kw):
+        seen.update(kw)
+        return _R()
+
+    ex._get = _get
+    ex.path = lambda *a, **k: "/mes/audit_log"
+    rows = ex._events("reticle", "x")
+    assert seen["page_size"] == 100 and rows[0]["payload"] == {"source": "manual"}
