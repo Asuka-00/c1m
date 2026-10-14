@@ -147,3 +147,25 @@ describe('mock 预览 / 校验与 comment 上限', () => {
     ).toBe('t1')
   })
 })
+
+describe('预览 / 校验请求体 pickBody', () => {
+  it('HTTP 只发 template_id、lines', async () => {
+    const extra = { template_id: 't1', code: 'X', foo: 1 } as never
+    await api.templatePreview(extra)
+    expect(JSON.parse(last().data)).toEqual({ template_id: 't1' })
+    await api.templateValidate({ lines: ['x'], uses_bin: true } as never)
+    expect(JSON.parse(last().data)).toEqual({ lines: ['x'] })
+  })
+  it('mock 忽略多余字段，二选一按过滤后判断', async () => {
+    const p = await mockMarkingApi.templatePreview({
+      lines: ['{lot_id}'],
+      template_id: undefined,
+      code: 'X',
+    } as never)
+    expect(p.template_id).toBeNull()
+    const e = await mockMarkingApi
+      .templateValidate({ foo: 't1' } as never)
+      .catch((x) => x)
+    expect(e.response.status).toBe(422)
+  })
+})

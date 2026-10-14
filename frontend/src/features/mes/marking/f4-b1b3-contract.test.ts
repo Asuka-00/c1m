@@ -66,11 +66,21 @@ describe('B1 模板审批', () => {
       date_code_basis: 'marking' as const,
       uses_bin: false,
     }
+    // QA P3-1：类型里 key 必填，漏传在 tsc 阶段报错；这里模拟运行时缺头
+    // @ts-expect-error key 必填
+    api.createTemplate(input).catch(() => {})
+    // @ts-expect-error key 必填
+    api.updateTemplate(ok.id, { lines: ['x'] }).catch(() => {})
+    // @ts-expect-error key 必填
+    api.newVersion(ok.id).catch(() => {})
+    // @ts-expect-error key 必填
+    api.approve(ok.id).catch(() => {})
+    const noKey = undefined as unknown as string
     const calls = [
-      api.createTemplate(input),
-      api.updateTemplate(ok.id, { lines: ['x'] }),
-      api.newVersion(ok.id),
-      api.approve(ok.id),
+      api.createTemplate(input, noKey),
+      api.updateTemplate(ok.id, { lines: ['x'] }, noKey),
+      api.newVersion(ok.id, noKey),
+      api.approve(ok.id, noKey),
     ]
     for (const c of calls)
       expect(await detail(c)).toMatchObject({

@@ -427,6 +427,8 @@ export const MARKING_BODY = {
   print: ['equipment_id', 'reason_id', 'comment'],
   inspect: ['result', 'read_code', 'comment'],
   void: ['reason_id', 'comment'],
+  /** 模板预览 / 校验（只读）：只留 template_id、lines */
+  templateCheck: ['template_id', 'lines'],
 } as const
 
 export interface MarkingApi {
@@ -437,16 +439,16 @@ export interface MarkingApi {
   /** 模板写接口 key：Idempotency-Key（D81/D82，必填） */
   createTemplate: (
     input: TemplateInput,
-    key?: string
+    key: string
   ) => Promise<MarkingTemplate>
   updateTemplate: (
     id: string,
     input: Partial<TemplateInput>,
-    key?: string
+    key: string
   ) => Promise<MarkingTemplate>
   /** 复制最新版本为草稿（D79-1） */
-  newVersion: (id: string, key?: string) => Promise<MarkingTemplate>
-  approve: (id: string, key?: string) => Promise<MarkingTemplate>
+  newVersion: (id: string, key: string) => Promise<MarkingTemplate>
+  approve: (id: string, key: string) => Promise<MarkingTemplate>
   retire: (id: string) => Promise<MarkingTemplate>
   /** POST /mes/marking-template/preview（只读，不带 Idempotency-Key） */
   templatePreview: (input: TemplateCheckInput) => Promise<TemplatePreviewOut>
@@ -535,11 +537,17 @@ export const httpMarkingApi: MarkingApi = {
       .then((r) => r.data),
   templatePreview: (input) =>
     http
-      .post<TemplatePreviewOut>('/mes/marking-template/preview', input)
+      .post<TemplatePreviewOut>(
+        '/mes/marking-template/preview',
+        pickBody(input, MARKING_BODY.templateCheck)
+      )
       .then((r) => r.data),
   templateValidate: (input) =>
     http
-      .post<TemplateValidateOut>('/mes/marking-template/validate', input)
+      .post<TemplateValidateOut>(
+        '/mes/marking-template/validate',
+        pickBody(input, MARKING_BODY.templateCheck)
+      )
       .then((r) => r.data),
   preview: (lotId) =>
     http
@@ -1495,8 +1503,10 @@ export const mockMarkingApi: MarkingApi = {
       )
     ),
   retire: (id) => later(() => mockRetire(id)),
-  templatePreview: (input) => later(() => mockTplPreview(input)),
-  templateValidate: (input) => later(() => mockTplValidate(input)),
+  templatePreview: (input) =>
+    later(() => mockTplPreview(pickBody(input, MARKING_BODY.templateCheck))),
+  templateValidate: (input) =>
+    later(() => mockTplValidate(pickBody(input, MARKING_BODY.templateCheck))),
   preview: (lotId) => later(() => mockPreview(lotId)),
   records: (q) => later(() => mockRecords(q)),
   record: (id) => later(() => findRec(id)),
