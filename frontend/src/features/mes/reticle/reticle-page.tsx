@@ -192,7 +192,8 @@ export function ReticleDetail({ reticle }: { reticle: Reticle }) {
               {t(`mes.reticle.action.${a}`)}
             </Button>
           ))}
-          {can(MES_PERM.reticleOverride) && (
+          {/* 删除走通用 CRUD 的 write 权限（不是 override） */}
+          {can(MES_PERM.reticleWrite) && (
             <Button
               size='sm'
               variant='destructive'

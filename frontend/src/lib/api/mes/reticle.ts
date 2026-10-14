@@ -723,13 +723,25 @@ export function hasHistory(h: ReticleHistory) {
   )
 }
 
+/** 有记录的履历表名（409 referenced 的 tables）。 */
+export function referencedTables(h: ReticleHistory): string[] {
+  const t: string[] = []
+  if (h.status_log.length) t.push('mes_reticle_status_log')
+  if (h.usage.length) t.push('mes_reticle_usage')
+  if (h.mounts.length) t.push('mes_reticle_mount_log')
+  if (h.inspections.length) t.push('mes_reticle_inspection')
+  return t
+}
+
 function mockRemove(id: string) {
   find(id)
-  // D72：有履历的光罩不能删 → 409 referenced（履历表外键 RESTRICT）
-  if (hasHistory(store.hist[id]))
+  // D72：有履历的光罩不能删 → 409 {code:'referenced', message, tables}（履历表外键 RESTRICT）
+  const tables = referencedTables(store.hist[id])
+  if (tables.length)
     throw apiError(409, {
       code: 'referenced',
       message: 'reticle has history records',
+      tables,
     })
   store.r = store.r.filter((y) => y.id !== id)
   delete store.hist[id]

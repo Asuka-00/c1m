@@ -56,6 +56,15 @@ describe('光罩页面', () => {
     await expect
       .element(s.getByTestId('reticle-act-restore'))
       .not.toBeInTheDocument()
+    // 删除用通用 CRUD 的 write 权限
+    await expect.element(s.getByTestId('reticle-delete')).toBeVisible()
+  })
+  it('只有 read 时不显示删除', async () => {
+    const s = await render(wrap([MES_PERM.reticleRead]))
+    await s.getByTestId('reticle-row-RTC-V1-001').click()
+    await expect
+      .element(s.getByTestId('reticle-delete'))
+      .not.toBeInTheDocument()
   })
   it('仍挂载时 restore 给出 still_mounted 友好提示', async () => {
     const s = await render(

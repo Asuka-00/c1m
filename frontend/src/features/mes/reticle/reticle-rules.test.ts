@@ -9,6 +9,7 @@ import {
   actionReticle,
   apiError,
   hasHistory,
+  referencedTables,
   httpReticleApi,
   mockReticleApi,
   resetReticleMock,
@@ -429,8 +430,18 @@ describe('D72', () => {
   it('有履历删除 → 409 referenced 三语；无履历可删', async () => {
     const err = await mockReticleApi.remove('r6').catch((e: unknown) => e)
     expect(err).toMatchObject({
-      response: { status: 409, data: { detail: { code: 'referenced' } } },
+      response: {
+        status: 409,
+        data: {
+          detail: {
+            code: 'referenced',
+            message: expect.any(String),
+            tables: referencedTables(await mockReticleApi.history('r6')),
+          },
+        },
+      },
     })
+    expect(referencedTables(await mockReticleApi.history('r6'))).not.toEqual([])
     for (const l of ['zh-CN', 'en', 'ja']) {
       await i18n.changeLanguage(l)
       const m = reticleErrorMessage(err)
@@ -442,6 +453,13 @@ describe('D72', () => {
     expect(hasHistory(h)).toBe(false)
     await mockReticleApi.remove('r1')
     expect((await mockReticleApi.list()).some((x) => x.id === 'r1')).toBe(false)
+  })
+  it('referenced 的 tables 只列有记录的履历表', () => {
+    const e = { status_log: [], usage: [], mounts: [], inspections: [] }
+    expect(referencedTables(e)).toEqual([])
+    expect(
+      referencedTables({ ...e, usage: [{}], inspections: [{}] } as never)
+    ).toEqual(['mes_reticle_usage', 'mes_reticle_inspection'])
   })
   it('http 删除走 DELETE /mes/reticle/{id}', async () => {
     const spy = vi
