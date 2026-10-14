@@ -1,5 +1,6 @@
 /** MES 交接班日志接口。 */
 import { http } from '../client'
+import { BODY_KEYS, pickBody } from '../request-body'
 
 /** 交接班日志行。 */
 export interface ShiftLog {
@@ -34,7 +35,12 @@ export const shiftLogApi = {
       .get<{ data: ShiftLog[] }>('/mes/exec/shift-logs', { params: p })
       .then((r) => r.data.data),
   create: (body: ShiftLogIn) =>
-    http.post<ShiftLog>('/mes/exec/shift-logs', body).then((r) => r.data),
+    http
+      .post<ShiftLog>(
+        '/mes/exec/shift-logs',
+        pickBody(body, BODY_KEYS.shiftLog)
+      )
+      .then((r) => r.data),
   ack: (id: string, comment?: string) =>
     http
       .post<ShiftLog>(`/mes/exec/shift-logs/${id}/ack`, { comment })

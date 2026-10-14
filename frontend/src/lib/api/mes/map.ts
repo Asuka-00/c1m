@@ -10,6 +10,7 @@
  */
 import { AxiosError } from 'axios'
 import { http, isParamLoc, paramMessage, paramName } from '../client'
+import { BODY_KEYS, pickBody } from '../request-body'
 
 /** 坐标图请求体上限（后端 D39：超过 413 payload_too_large）。 */
 export const MAP_MAX_BYTES = 10 * 1024 * 1024
@@ -228,14 +229,30 @@ export const mapApi = {
     (await http.get('/mes/map/maps', { params })).data,
   /** 坐标图预览：成功 200 时 `ok` 表示能否导入，`errors` 逐行列出。 */
   preview: async (body: MapImportBody): Promise<MapPreview> =>
-    (await http.post('/mes/map/import/preview', body)).data,
+    (
+      await http.post(
+        '/mes/map/import/preview',
+        pickBody(body, BODY_KEYS.mapImport)
+      )
+    ).data,
   /** 坐标图导入：同一基板再导入生成新版本；有错 422 map_invalid，并发 409。 */
   commit: async (body: MapImportBody): Promise<MapImportResult> =>
-    (await http.post('/mes/map/import', body)).data,
+    (await http.post('/mes/map/import', pickBody(body, BODY_KEYS.mapImport)))
+      .data,
   binSetPreview: async (body: ImportBody): Promise<BinSetPreview> =>
-    (await http.post('/mes/map/bin-sets/import/preview', body)).data,
+    (
+      await http.post(
+        '/mes/map/bin-sets/import/preview',
+        pickBody(body, BODY_KEYS.binSetImport)
+      )
+    ).data,
   binSetCommit: async (body: ImportBody): Promise<BinSet> =>
-    (await http.post('/mes/map/bin-sets/import', body)).data,
+    (
+      await http.post(
+        '/mes/map/bin-sets/import',
+        pickBody(body, BODY_KEYS.binSetImport)
+      )
+    ).data,
   /** 按基板编号查坐标图，默认最新版本。 */
   bySubstrate: async (
     code: string,
