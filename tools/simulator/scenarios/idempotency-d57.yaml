@@ -2,9 +2,10 @@
 #   manual：键是 Idempotency-Key（E10 手工接口、B10 usage 的 external_event_id）
 #   b11：键是 (source, external_event_id)
 # 同键同内容重放：E10 返回首次响应（不再因 SBY->SBY 报 422）；usage 返回 duplicate=true。
-# 前提：EAP-DA01 当前 SBY；T-SIM-01 count_basis=reported；reason_code 里有 REWORK。场景结束时 E10 回到 SBY。
+# P2-D8：重复上报报警返回和首次相同的 state_changed / state_skip_reason（切换成功、跳过两种都测）。
+# 前提：EAP-DA01 当前 SBY，迁移表 SBY->UDT、UDT->SBY 允许，UDT->PRD 不允许；T-SIM-01 count_basis=reported；reason_code 里有 REWORK。场景结束时 E10 回到 SBY。
 name: idempotency-d57
-run_id: idem-d57-01
+run_id: idem-d57-02
 target: http://127.0.0.1:8013
 equipment: [{code: EAP-DA01, type: DIEBOND}]
 steps:
@@ -20,3 +21,16 @@ steps:
   - replay: {eq: EAP-DA01, seq: 2, expect: {status: 200, body: {duplicate: true, tool.usage_count: "10"}}}
   - expect_tool_log: {tool: T-SIM-01, last: {kind: report, delta: "10", count_after: "10"}}
   - state: {eq: EAP-DA01, to: SBY}                                  # seq 3，恢复
+  # P2-D8：报警重复上报
+  - seed_alarm_code: {eq: EAP-DA01, alid: "1101", action: set_state, target_state: UDT}
+  - seed_alarm_code: {eq: EAP-DA01, alid: "1102", action: set_state, target_state: PRD}
+  - alarm_set: {eq: EAP-DA01, alid: "1101", expect: {body: {state_changed: true, state_skip_reason: null}}}            # seq 4：切换成功
+  - replay: {eq: EAP-DA01, seq: 4, same_as_first: [state_changed, state_skip_reason], body: {duplicate: true, state_changed: true}}
+  - alarm_set: {eq: EAP-DA01, alid: "1101", expect: {body: {state_changed: true, state_skip_reason: null}}}   # seq 5：新事件号、同 ALID active（manual duplicate=true；b11 信封是新事件）
+  - expect_e10: {eq: EAP-DA01, state: UDT}
+  - alarm_set: {eq: EAP-DA01, alid: "1102", expect: {body: {state_changed: false, state_skip_reason: transition_not_allowed}}}   # seq 6：跳过
+  - replay: {eq: EAP-DA01, seq: 6, same_as_first: [state_changed, state_skip_reason], body: {duplicate: true, state_skip_reason: transition_not_allowed}}
+  - alarm_set: {eq: EAP-DA01, alid: "1102", expect: {body: {state_changed: false, state_skip_reason: transition_not_allowed}}}   # seq 7
+  - alarm_clear: {eq: EAP-DA01, alid: "1101", expect: {body: {cleared: true}}}                                          # seq 8
+  - alarm_clear: {eq: EAP-DA01, alid: "1102", expect: {body: {cleared: true}}}                                          # seq 9
+  - state: {eq: EAP-DA01, to: SBY}                                                                                     # seq 10，恢复

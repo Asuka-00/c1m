@@ -60,6 +60,35 @@ IDS = {
 }
 
 
+EAP_READ = {"equipment", "alarm_code", "e10_state"}  # D65 mes.eap:read_master
+
+
+class SvcView(Client):
+    """同一个假后端的另一个账号视图：只有 eap_service 角色（D65）。"""
+
+    def __init__(self, fake):
+        super().__init__("http://127.0.0.1:9", tenant="t", token="svc-token")
+        self.fake = fake
+
+    def openapi_paths(self):
+        return self.fake.paths
+
+    def request(self, method, path, json_body=None, params=None, headers=None, form=None):
+        f = self.fake
+        parts = path.split("/")
+        ok = (method == "POST" and path == "/mes/eap/events") or (
+            method == "GET" and len(parts) in (3, 4) and parts[2] in EAP_READ and parts[-1] != "export"
+        )
+        if not ok:
+            f.calls.append((method, path, json_body, headers, params, "svc"))
+            return Resp(403, {"detail": "Not enough permissions"})
+        saved, f.service = f.service, True
+        try:
+            return f.request(method, path, json_body, params, headers, form)
+        finally:
+            f.service = saved
+
+
 class FakeClient(Client):
     def __init__(self, paths=None, qual="ready"):
         super().__init__("http://127.0.0.1:9", tenant="t", token="secret-token")
@@ -190,6 +219,8 @@ class FakeClient(Client):
         if ent == "alarm_code":
             if method == "GET":
                 rows = [dict(c, equipment_id="e-da01") for c in self.alarm_codes.values()]
+                if params.get("q") is None:
+                    return Resp(200, {"data": rows, "count": len(rows)})
                 return Resp(200, {"data": [r for r in rows if r["alid"] == params.get("q")]})
             if "migration_note" in body:  # OQ-20 只读
                 d = [{"loc": ["body", "migration_note"], "type": "read_only_field", "code": "read_only_field"}]
@@ -205,7 +236,11 @@ class FakeClient(Client):
                 "text_en",
             }
             if set(body) - known:  # P2-D6 严格载荷
-                return Resp(422, {"detail": [{"loc": ["body", sorted(set(body) - known)[0]], "type": "value_error"}]})
+                k = sorted(set(body) - known)[0]  # D65：type/code unknown_field
+                d = [
+                    {"loc": ["body", k], "msg": f"{k}: unknown field", "type": "unknown_field", "code": "unknown_field"}
+                ]
+                return Resp(422, {"detail": d})
             act, ts = body.get("action") or "none", (body.get("target_state") or "").strip()
             if act == "set_state" and (not ts or ts not in STATE_IDS):
                 return Resp(422, {"detail": [{"loc": ["body", "target_state"], "type": "value_error"}]})
@@ -232,6 +267,29 @@ class FakeClient(Client):
         return None
 
     def _dispatch(self, method, path, json_body, params):
+        if method == "GET":  # D65：查询参数 422 的 loc 以 query 开头
+            if params.get("sort_by") not in (None, "at", "code", "alid", "set_at"):
+                return Resp(422, {"detail": [{"loc": ["query", "sort_by"], "msg": "sort_by", "type": "value_error"}]})
+            for k, v in params.items():
+                if v == "bogus":  # 非法枚举值
+                    return Resp(422, {"detail": [{"loc": ["query", k], "msg": k, "type": "value_error"}]})
+                if k.startswith("has_") and str(v).lower() not in ("true", "false", "1", "0"):
+                    return Resp(422, {"detail": [{"loc": ["query", k], "msg": k, "type": "value_error"}]})
+        if method == "GET" and path == "/mes/eqp/alarms":  # 报警履历列表，新的在前，顶层带联动结果
+            rows = [
+                {k: v for k, v in r.items() if not k.startswith("_")} for r in reversed(list(self.alarm_rows.values()))
+            ]
+            for r in rows:
+                r.setdefault("state_changed", False)
+                r.setdefault("state_skip_reason", None)
+            return Resp(200, {"data": rows, "count": len(rows)})
+        if method == "GET" and path.count("/") == 2 and not params.get("code"):
+            ent = path.split("/")[2]
+            if ent in EAP_READ and ent != "alarm_code":
+                rows = [{"id": i, "code": c} for (e, c), i in IDS.items() if e == ent]
+                return Resp(200, {"data": rows, "count": len(rows)})
+        if method == "GET" and path.count("/") == 3 and path.split("/")[2] in ("e10_state", "alarm_code"):
+            return Resp(200, {"data": {"id": path.split("/")[3]}})
         if (
             path.split("/")[2:3]
             and path.split("/")[2] in ("alarm_code", "e10_history", "tool")
@@ -320,8 +378,9 @@ class FakeClient(Client):
                     {
                         "data": self.alarm_rows[aid],
                         "duplicate": True,
-                        "state_changed": False,
-                        "state_skip_reason": None,
+                        # P2-D8：重复上报返回原记录的联动结果
+                        "state_changed": self.alarm_rows[aid].get("state_changed", False),
+                        "state_skip_reason": self.alarm_rows[aid].get("state_skip_reason"),
                     },
                 )
             aid = self.alarms[ext] = f"a-{len(self.alarms) + 1}"

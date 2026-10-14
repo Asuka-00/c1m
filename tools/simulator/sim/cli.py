@@ -39,6 +39,20 @@ def _client(target: str) -> Client:
     return c
 
 
+def _svc_client(target: str) -> Client | None:
+    """D65：只有 eap_service 角色的 EAP 服务账号（SIM_SVC_TOKEN 或 SIM_SVC_USER + SIM_SVC_PASSWORD）。
+    给了就用它发 B11 事件和测 mes.eap:read_master；主账号（SIM_USER）只做主数据查找和准备步骤。"""
+    tok, user, pw = env("SIM_SVC_TOKEN"), env("SIM_SVC_USER"), env("SIM_SVC_PASSWORD")
+    if not (tok or (user and pw)):
+        return None
+    c = Client(target, tenant=env("SIM_TENANT"))
+    if tok:
+        c.token = tok
+    else:
+        c.login(user, pw)
+    return c
+
+
 def resolve_target(cli: str | None, scenario_target: str | None) -> str | None:
     return cli or os.environ.get("SIM_TARGET") or scenario_target
 
@@ -81,7 +95,7 @@ def cmd_run(args) -> int:
         print(f"拒绝：{e}", file=sys.stderr)
         return 2
     print(f"目标 {target}  模式 {args.mode}")
-    runner = Runner(_client(target), mode=args.mode)
+    runner = Runner(_client(target), mode=args.mode, svc=_svc_client(target))
     reports = []
     for sc in scs:
         rep = runner.run(sc)

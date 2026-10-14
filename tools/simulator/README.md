@@ -55,6 +55,9 @@ steps:
 | `reuse {eq,seq,change,expect?}` | 同一个幂等键换内容重发（D57） | manual 用原 `Idempotency-Key`/`external_event_id`，b11 用原事件号，把 `change` 改进请求体（b11 改进 `payload`；`to` 是 E10 状态编码简写）。默认期望 422 `idempotency_key_reused`；有没有写入用后面的 `expect_*` 步骤验证 |
 | `seed_alarm_code {eq,alid,action,target_state?,extra?}` | `GET/POST/PATCH /mes/alarm_code` | D59 报警码种子（按设备 + ALID upsert 单台覆盖）。`action` 只有 `none`/`set_state`，`set_state` 必填 `target_state`（E10 状态编码）；给 `expect: {status: 422}` 测 D59 反例 |
 | `expect_e10_history {eq,filter?,last:{to?,trigger?,source?}}` | `GET /mes/e10_history` | `filter` 作为查询参数（如 `trigger: equipment`，后端 f2d890c 起可用），结果每条都要符合；最新一条 E10 履历（D58 补充 `trigger`=manual/equipment/system，`source`=事件来源） |
+| `expect_eap_read {entities?,denied?}` | 服务账号 `GET/POST/PATCH /mes/{entity}`、`/export` | D65 `mes.eap:read_master`：equipment / alarm_code / e10_state 列表、详情 200，新增 / 修改 / 导出 403；`denied` 里的实体读 403。不发 DELETE。没有 `SIM_SVC_*` 时跳过 |
+| `expect_query_422 {path,params,field?}` | 只读 GET | D65：422 的 detail 是列表，`loc` 以 `query` 开头（给了 `field` 时等于 `[query, field]`） |
+| `expect_alarm_list {eq,rows:{ALID:{...}}}` | `GET /mes/eqp/alarms` | D65：每行顶层带 `state_changed` / `state_skip_reason`，按 ALID 比较最新一行 |
 | `tool_set {tool,fields}` | `PATCH /mes/tool/{id}` | 测试准备：`expiry_date` 可写相对天数（`-1` = 昨天）、`tool_status`（P2-D3 过期 / 不可用） |
 | `precondition {eq?,qual_state?,e10?,lot?,lot_status?}` | 只读 | 不满足 -> skipped |
 
@@ -69,7 +72,8 @@ steps:
   - 重放：200 `duplicate=true`、`result` 同首次；同事件号换内容：422 `idempotency_key_reused`，不写入（D57）。
   - **服务账号**：B11 需要权限 `mes.eap:write`，只在租户角色 **`eap_service`** 里；owner、admin、平台超级用户调用都是 403。运行 b11 模式前，请在目标租户里给模拟器专用账号分配 `eap_service` 角色，用它的 `SIM_USER`/`SIM_PASSWORD`（运行时注入，不写文件、不打印）或 `SIM_TOKEN`。manual 模式不需要这个角色。
   - 后端没有这个入口时场景 skipped（依赖 B11）。
-  - 模拟器还要按编码查主数据、调手工接口（进站、工具、报警码种子），只有 `eap_service` 的账号会 403。联调时用同时有 `eap_service` 和 `admin` 的专用账号。
+  - D65：EAP 账号只能有 `eap_service`（不得挂 admin）。设 `SIM_SVC_USER`/`SIM_SVC_PASSWORD`（或 `SIM_SVC_TOKEN`）后，B11 事件和 `expect_eap_read` 用这个服务账号；按编码查主数据、进站、工具、报警码种子等测试准备仍用主账号 `SIM_USER`。
+- 422 解析同时接受字符串 detail 和列表 detail（`expect.message` 按 msg 子串匹配两种都行；`loc`/`type` 只认列表）。`replay` 可加 `same_as_first: [字段]`（P2-D8）和 `body`。
 - **D57 Idempotency-Key**：manual 模式下 E10（`/mes/eqp/{id}/e10`）和工序（`/mes/exec/lots/{id}/{stage}`）请求都带 `Idempotency-Key = external_event_id`；同键同内容重放返回首次响应（SBY→SBY 不再 422），同键换内容 422 `idempotency_key_reused`。
 - 可插拔适配层（`sim/adapters.py`）：每类事件列出候选路径，运行前读后端 `openapi.json`；需要的接口一个都不存在时，场景整体 skipped 并写明依赖的卡（B9/B10），不发任何写请求。B9（`0a74f8a`）、B10（`d27b700`）的路径已对齐。B10 的 reset/mount/unmount/replace 请求体严格、不收 `external_event_id`，模拟器标识放 comment 和 `Idempotency-Key`。
 

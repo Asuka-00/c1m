@@ -59,6 +59,7 @@ def default_adapters() -> dict[str, Adapter]:
         "alarm_clear_alid": Adapter("按 ALID 清除报警", ["/mes/eqp/alarms/clear"], card="B11"),
         # D55 OQ-3：查报警记录及关联在制批（mes_alarm_lot -> data.lots）
         "alarm_get": Adapter("报警记录查询", ["/mes/eqp/alarms/{alarm_id}"], card="B9"),
+        "alarm_list": Adapter("报警履历列表", ["/mes/eqp/alarms"], card="B9"),
         # D54：EAP 写入入口，仅 --mode b11 使用
         "eap_events": Adapter("EAP 事件入口", ["/mes/eap/events"], card="B11"),
         # B10（d27b700）：/mes/eqp/tools/{tool_id}/...
@@ -95,6 +96,9 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "seed_alarm_code": ["crud", "crud_item"],
     "expect_e10_history": ["crud"],
     "tool_set": ["crud_item"],
+    "expect_eap_read": ["crud", "crud_item"],
+    "expect_query_422": [],
+    "expect_alarm_list": ["alarm_list"],
     "replay": [],
     "reuse": [],
     "precondition": [],

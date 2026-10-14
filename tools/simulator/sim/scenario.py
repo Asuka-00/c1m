@@ -101,6 +101,10 @@ def parse(data: dict, path: str | None = None) -> Scenario:
         if k == "seed_alarm_code":
             if not args.get("alid") or args.get("action") not in ("none", "set_state"):
                 raise ScenarioError(f"第 {i} 步 seed_alarm_code 需要 alid，action 只能是 none/set_state（D59）")
+        if k == "expect_query_422" and not args.get("path"):
+            raise ScenarioError(f"第 {i} 步 expect_query_422 需要 path")
+        if k == "expect_alarm_list" and not args.get("eq"):
+            raise ScenarioError(f"第 {i} 步 expect_alarm_list 缺少 eq")
         if k == "tool_set" and not isinstance(args.get("fields"), dict):
             raise ScenarioError(f"第 {i} 步 tool_set 需要 fields 映射")
         if k == "expect_alarm" and not args.get("alarm"):

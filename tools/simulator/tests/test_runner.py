@@ -785,3 +785,126 @@ def test_e10_history_filter_detects_wrong_rows():
     ]
     rep = Runner(c).run(parse({"run_id": "a", "steps": steps}))
     assert rep["status"] == FAILED and "筛选" in rep["reason"]
+
+
+def test_eap_read_master_with_svc_account():
+    from fake import SvcView
+
+    c = FakeClient(paths=ALL)
+    rep = Runner(c, svc=SvcView(c)).run(parse({"run_id": "r", "steps": [{"expect_eap_read": {"denied": ["lot"]}}]}))
+    assert rep["status"] == PASSED, rep
+    acc = rep["steps"][0]["access"]
+    assert acc["equipment"] == {"list": 200, "detail": 200, "post": 403, "patch": 403, "export": 403}
+    assert acc["lot"] == {"list": 403}
+    assert not [x for x in c.calls if x[0] == "DELETE"]
+
+
+def test_eap_read_master_detects_write_allowed():
+    from fake import SvcView
+
+    c = FakeClient(paths=ALL)
+
+    class Leaky(SvcView):
+        def request(self, method, path, json_body=None, params=None, headers=None, form=None):
+            if method == "PATCH":
+                return Resp(200, {"data": {}})
+            return super().request(method, path, json_body, params, headers, form)
+
+    rep = Runner(c, svc=Leaky(c)).run(parse({"run_id": "r", "steps": [{"expect_eap_read": {}}]}))
+    assert rep["status"] == FAILED and "修改" in rep["reason"]
+
+
+def test_eap_read_master_skipped_without_svc():
+    c = FakeClient(paths=ALL)
+    rep = Runner(c).run(parse({"run_id": "r", "steps": [{"expect_eap_read": {}}]}))
+    assert rep["status"] == PASSED and rep["steps"][0]["ok"] is None
+
+
+def test_b11_events_use_svc_account():
+    from fake import SvcView
+
+    c = FakeClient(paths=ALL)
+    c.service = False  # 主账号没有 eap_service
+    rep = Runner(c, mode="b11", svc=SvcView(c)).run(
+        parse({"run_id": "r", "steps": [{"state": {"eq": "EAP-DA01", "to": "PRD"}}]})
+    )
+    assert rep["status"] == PASSED, rep
+    assert rep["steps"][0]["account"] == "eap_service"
+
+
+def test_query_422_requires_query_loc():
+    c = FakeClient(paths=ALL)
+    ok = {"expect_query_422": {"path": "/mes/equipment", "params": {"sort_by": "nope"}, "field": "sort_by"}}
+    assert Runner(c).run(parse({"run_id": "q", "steps": [ok]}))["status"] == PASSED
+    orig = c._dispatch
+
+    def old(method, path, body, params):
+        r = orig(method, path, body, params)
+        if r.status == 422:
+            return Resp(422, {"detail": "sort_by must be one of: code"})  # D65 前：字符串 detail
+        return r
+
+    c._dispatch = old
+    rep = Runner(c).run(parse({"run_id": "q", "steps": [ok]}))
+    assert rep["status"] == FAILED and "不是列表" in rep["reason"]
+
+
+def test_422_parsing_accepts_string_and_list_detail():
+    s = Resp(422, {"detail": "equipment: timezone required"})
+    li = Resp(
+        422, {"detail": [{"loc": ["body", "tz"], "msg": "equipment: timezone required", "type": "x", "code": "x"}]}
+    )
+    for r in (s, li):
+        assert check_expect(r, {"status": 422, "message": "timezone required"}) == []
+    assert s.code is None and li.code == "x"
+    assert check_expect(s, {"status": 422, "loc": ["body", "tz"]})  # 要 loc 时字符串 detail 不满足
+    assert check_expect(li, {"status": 422, "loc": ["body", "tz"], "code": "x"}) == []
+
+
+def test_unknown_field_loc_and_alarm_list_and_d8():
+    c, rep = _alarm_steps(
+        [
+            {
+                "seed_alarm_code": {
+                    "eq": "EAP-DA01",
+                    "alid": "8",
+                    "action": "none",
+                    "extra": {"foo": 1},
+                    "expect": {"status": 422, "code": "unknown_field", "type": "unknown_field", "loc": ["body", "foo"]},
+                }
+            },
+            {"alarm_set": {"eq": "EAP-DA01", "alid": "1001"}},
+            {"replay": {"eq": "EAP-DA01", "seq": 1, "same_as_first": ["state_changed", "state_skip_reason"]}},
+            {"alarm_set": {"eq": "EAP-DA01", "alid": "9999"}},
+            {
+                "expect_alarm_list": {
+                    "eq": "EAP-DA01",
+                    "rows": {
+                        "1001": {"state_changed": True, "state_skip_reason": None},
+                        "9999": {"state_changed": False, "state_skip_reason": None},
+                    },
+                }
+            },
+        ]
+    )
+    assert rep["status"] == PASSED, rep
+
+
+def test_replay_same_as_first_detects_d8_regression():
+    c = FakeClient(paths=ALL)
+    c.alarm_codes["1001"].update(action="set_state", target_state="UDT")
+    orig = c._dispatch
+
+    def old(method, path, body, params):  # P2-D8 前：重复上报一律 false/null
+        r = orig(method, path, body, params)
+        if isinstance(r.body, dict) and r.body.get("duplicate") is True:
+            r.body.update(state_changed=False, state_skip_reason=None)
+        return r
+
+    c._dispatch = old
+    steps = [
+        {"alarm_set": {"eq": "EAP-DA01", "alid": "1001"}},
+        {"replay": {"eq": "EAP-DA01", "seq": 1, "same_as_first": ["state_changed", "state_skip_reason"]}},
+    ]
+    rep = Runner(c).run(parse({"run_id": "a", "steps": steps}))
+    assert rep["status"] == FAILED and "state_changed" in rep["reason"]

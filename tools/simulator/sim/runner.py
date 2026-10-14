@@ -42,6 +42,20 @@ def check_expect(resp: Resp, expect: dict | None, default_status: int = 200) -> 
         errs.append(f"HTTP {resp.status} != 期望 {want}（code={resp.code}）")
     if "code" in expect and resp.code != expect["code"]:
         errs.append(f"code {resp.code!r} != 期望 {expect['code']!r}")
+    # D65：422 明细第一条的 loc / type，例如 unknown_field 的 [body, 字段]、查询参数的 [query, 参数]
+    # message：任一条明细的 msg 含该文本（字符串 / 列表 detail 都可用）
+    if "message" in expect and not any(expect["message"] in str(e.get("msg") or "") for e in resp.errors):
+        errs.append(f"错误信息里没有 {expect['message']!r}（实际 {[e.get('msg') for e in resp.errors]}）"[:300])
+    if "loc" in expect or "type" in expect:
+        first = resp.errors[0] if resp.errors else {}
+        if not resp.detail_is_list:
+            errs.append(
+                f"detail 不是列表：{resp.body.get('detail') if isinstance(resp.body, dict) else resp.body!r}"[:200]
+            )
+        if "loc" in expect and first.get("loc") != expect["loc"]:
+            errs.append(f"detail[0].loc {first.get('loc')!r} != 期望 {expect['loc']!r}")
+        if "type" in expect and first.get("type") != expect["type"]:
+            errs.append(f"detail[0].type {first.get('type')!r} != 期望 {expect['type']!r}")
     # data: 比较响应 data 里的字段，例如 D55 OQ-5 的 {cleared: false}
     want_data = expect.get("data") or {}
     if want_data:
@@ -94,11 +108,13 @@ class Runner:
         paths: set[str] | None = None,
         stop_on_fail: bool = True,
         mode: str = "manual",
+        svc: Client | None = None,
     ) -> None:
         if mode not in MODES:
             raise ValueError(f"mode 只能是 {MODES}")
         self.mode = mode
         self.c = client
+        self.svc = svc  # D65：只有 eap_service 的服务账号；None 时 B11 也用主账号
         self.adapters = adapters or default_adapters()
         self._paths = paths
         self.stop_on_fail = stop_on_fail
@@ -164,7 +180,7 @@ class Runner:
             t0 = time.monotonic()
             try:
                 self._step(sc, st, entry, seq, sent, saved)
-                entry["ok"] = True
+                entry.setdefault("ok", True)  # 步骤自己记了 ok=None（如没有服务账号）时保留
             except Skip as e:
                 entry.update(ok=None, message=str(e))
                 rep.update(status=SKIPPED, reason=f"第 {st.index} 步前置条件不满足：{e}")
@@ -180,8 +196,14 @@ class Runner:
         rep["finished_at"] = utcnow()
         return rep
 
+    def cli(self, call: Call) -> Client:
+        """B11 事件走服务账号（有的话），其余走主账号。"""
+        return self.svc if (self.svc is not None and self.is_b11(call)) else self.c
+
     def _send(self, entry: dict, call: Call, expect: dict | None) -> Resp:
-        r = self.c.request(
+        if self.svc is not None and self.is_b11(call):
+            entry["account"] = "eap_service"
+        r = self.cli(call).request(
             call.method,
             call.path,
             call.body,
@@ -230,6 +252,12 @@ class Runner:
             return self._expect_e10_history(a, entry)
         if k == "tool_set":
             return self._tool_set(a, entry)
+        if k == "expect_eap_read":
+            return self._expect_eap_read(a, entry)
+        if k == "expect_query_422":
+            return self._expect_query_422(a, entry)
+        if k == "expect_alarm_list":
+            return self._expect_alarm_list(a, entry)
         if k in ("tool_reset", "tool_unmount", "tool_replace"):
             return self._tool_action(sc, st, entry)
         if k == "expect_tool_log":
@@ -490,6 +518,82 @@ class Runner:
             if got != want:
                 raise StepFailed(f"{a['eq']} 最新 E10 履历 {f}={got!r}，期望 {want!r}")
 
+    def _expect_eap_read(self, a: dict, entry: dict) -> None:
+        """D65 mes.eap:read_master：服务账号能列表 / 详情 equipment、alarm_code、e10_state；
+        对它们新增、修改、导出 403；其他主数据（denied）读也 403。不发 DELETE（防止权限放错时真删数据）。"""
+        if self.svc is None:
+            entry.update(ok=None, message="没有 eap_service 账号（SIM_SVC_*），跳过")
+            return
+        base = self._ad("crud")
+        got: dict[str, Any] = {}
+        errs: list[str] = []
+        for ent in a.get("entities") or ("equipment", "alarm_code", "e10_state"):
+            path = base.replace("{entity}", ent)
+            r = self.svc.get(path, page_size=5)
+            rows = (r.body or {}).get("data", []) if isinstance(r.body, dict) else []
+            got[ent] = {"list": r.status}
+            if r.status != 200 or not rows:
+                errs.append(f"{ent} 列表 HTTP {r.status}，{len(rows)} 条（期望 200 且非空）")
+                continue
+            rid = rows[0]["id"]
+            item = fill(self._ad("crud_item"), entity=ent, rid=rid)
+            d = self.svc.get(item)
+            w1 = self.svc.request("POST", path, {})
+            w2 = self.svc.request("PATCH", item, {})
+            ex = self.svc.get(path + "/export")
+            got[ent].update(detail=d.status, post=w1.status, patch=w2.status, export=ex.status)
+            if d.status != 200:
+                errs.append(f"{ent} 详情 HTTP {d.status}（期望 200）")
+            for n, x in (("新增", w1), ("修改", w2), ("导出", ex)):
+                if x.status != 403:
+                    errs.append(f"{ent} {n} HTTP {x.status}（期望 403）")
+        for ent in a.get("denied") or ():
+            r = self.svc.get(base.replace("{entity}", ent), page_size=1)
+            got[ent] = {"list": r.status}
+            if r.status != 403:
+                errs.append(f"{ent} 不在 read_master 里，列表应 403，实际 {r.status}")
+        entry.update(account="eap_service", access=got)
+        if errs:
+            raise StepFailed("；".join(errs))
+
+    def _expect_query_422(self, a: dict, entry: dict) -> None:
+        """D65：查询参数校验错误 422，detail 是列表，loc 以 query 开头（给了 field 时等于 [query, field]）。"""
+        path = a["path"]
+        if "{entity}" in path:
+            path = path.replace("{entity}", a["entity"])
+        r = self.c.get(path, **{k: self.by_mode(v) for k, v in (a.get("params") or {}).items()})
+        entry.update(path=path, status=r.status, code=r.code)
+        det = r.body.get("detail") if isinstance(r.body, dict) else None
+        entry["detail"] = det if isinstance(det, list) else str(det)[:200]
+        if r.status != 422:
+            raise StepFailed(f"{path} {a.get('params')} HTTP {r.status}（期望 422）")
+        if not isinstance(det, list) or not det or not isinstance(det[0], dict):
+            raise StepFailed(f"{path} 422 的 detail 不是列表：{str(det)[:150]}")
+        loc = det[0].get("loc") or []
+        if not loc or loc[0] != "query":
+            raise StepFailed(f"{path} 422 的 loc={loc}，期望以 query 开头")
+        if a.get("field") and list(loc) != ["query", a["field"]]:
+            raise StepFailed(f"{path} 422 的 loc={loc}，期望 ['query', {a['field']!r}]")
+
+    def _expect_alarm_list(self, a: dict, entry: dict) -> None:
+        """D65：报警履历列表（GET /mes/eqp/alarms）每行顶层带 state_changed / state_skip_reason。
+        rows 按 ALID 给期望值，取该 ALID 最新一行比较；每一行都必须有这两个键。"""
+        r = self.c.get(self._ad("alarm_list"), equipment_id=self.rid("equipment", a["eq"]), page_size=100)
+        rows = (r.body or {}).get("data", []) if isinstance(r.body, dict) else []
+        entry.update(status=r.status, rows=len(rows))
+        if r.status != 200:
+            raise StepFailed(f"报警列表 HTTP {r.status}")
+        miss = [x.get("alid") for x in rows if "state_changed" not in x or "state_skip_reason" not in x]
+        if miss:
+            raise StepFailed(f"报警列表这些行没有顶层 state_changed/state_skip_reason：{miss}")
+        for alid, want in (a.get("rows") or {}).items():
+            hit = [x for x in rows if x.get("alid") == str(alid)]
+            if not hit:
+                raise StepFailed(f"报警列表里没有 ALID {alid}")
+            for f, v in want.items():
+                if hit[0].get(f) != v:
+                    raise StepFailed(f"报警列表 ALID {alid} 的 {f}={hit[0].get(f)!r}，期望 {v!r}")
+
     def _tool_set(self, a: dict, entry: dict) -> None:
         """改工具字段（测试准备）：P2-D3 用来造过期（expiry_date 相对天数如 -1）和不可用（tool_status）。"""
         fields: dict[str, Any] = {}
@@ -534,7 +638,7 @@ class Runner:
             if (eq, n) not in sent:
                 raise StepFailed(f"没有 {eq} 序号 {n} 的已发送事件可重放")
             call, first = sent[(eq, n)]
-            r = self.c.request(
+            r = self.cli(call).request(
                 call.method, call.path, call.body, headers={"Idempotency-Key": call.idem} if call.idem else None
             )
             key = call.idem or (call.body or {}).get("external_event_id")
@@ -549,6 +653,16 @@ class Runner:
                 rd = (r.body or {}).get("data") if isinstance(r.body, dict) else None
                 if isinstance(fd, dict) and isinstance(rd, dict) and fd.get("id") != rd.get("id"):
                     raise StepFailed(f"重放 {key} 生成了新记录（{rd.get('id')}）")
+                # P2-D8：重复上报返回和首次相同的字段（如 state_changed / state_skip_reason）
+                for f in a.get("same_as_first") or []:
+                    fv = first.body.get(f) if isinstance(first.body, dict) else None
+                    rv = r.body.get(f) if isinstance(r.body, dict) else None
+                    if fv != rv:
+                        raise StepFailed(f"重放 {key} 的 {f}={rv!r}，首次是 {fv!r}")
+                if a.get("body"):
+                    errs = check_expect(r, {"status": r.status, "body": a["body"]})
+                    if errs:
+                        raise StepFailed("；".join(errs))
             elif isinstance(mode, dict):
                 errs = check_expect(r, mode)
                 if errs:

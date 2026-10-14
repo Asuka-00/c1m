@@ -22,6 +22,7 @@ def test_required_adapters():
         "alarm_set",
         "alarm_get",
         "holds",
+        "alarm_list",
         "alarm_clear_alid",
         "e10",
     ]
@@ -32,6 +33,7 @@ def test_required_adapters():
         "eap_events",
         "alarm_get",
         "holds",
+        "alarm_list",
     ]
     assert "tool_usage" in load(ROOT / "tool-life-block.yaml").required_adapters()
 

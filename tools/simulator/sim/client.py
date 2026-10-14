@@ -37,6 +37,25 @@ class Resp:
         return None
 
     @property
+    def errors(self) -> list[dict]:
+        """422 明细统一成列表：后端正在把字符串 detail 改成 [{loc, msg, type, code}]，两种都接受。
+        字符串 detail -> [{"loc": None, "msg": 原文, "type": None, "code": None}]。"""
+        b = self.body if isinstance(self.body, dict) else {}
+        d = b.get("detail")
+        if isinstance(d, str):
+            return [{"loc": None, "msg": d, "type": None, "code": None}]
+        if isinstance(d, dict):
+            return [d]
+        if isinstance(d, list):
+            return [x if isinstance(x, dict) else {"loc": None, "msg": str(x), "type": None, "code": None} for x in d]
+        return []
+
+    @property
+    def detail_is_list(self) -> bool:
+        b = self.body if isinstance(self.body, dict) else {}
+        return isinstance(b.get("detail"), list)
+
+    @property
     def check_results(self) -> list[dict]:
         b = self.body if isinstance(self.body, dict) else {}
         d = b.get("detail") if isinstance(b.get("detail"), dict) else b
