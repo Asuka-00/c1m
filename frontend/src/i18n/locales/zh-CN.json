@@ -1225,7 +1225,7 @@
       "portBusy": "上料口正被占用，请刷新后重试",
       "overlap": "上料时间和这个上料口之前的记录重叠",
       "alreadyUnmounted": "这批料已经卸下了，已刷新",
-      "duplicate": "已记录（重复提交，未新增）"
+      "duplicate": "已记录（重复提交）：上料口 {{port}}，物料批 {{lot}}"
     }
   },
   "notify": {

@@ -112,7 +112,12 @@ export function MountDialog({
       }),
     onSuccess: (res) => {
       toast.success(
-        t(res?.duplicate ? 'mes.mount.duplicate' : 'mes.mount.mounted')
+        res?.duplicate
+          ? t('mes.mount.duplicate', {
+              port: res.data.port_code,
+              lot: res.data.material_lot_code ?? res.data.material_lot_id,
+            })
+          : t('mes.mount.mounted')
       )
       setLot('')
       setComment('')
@@ -167,7 +172,10 @@ export function MountDialog({
               required
               none={false}
               value={port}
-              onChange={setPort}
+              onChange={(v) => {
+                setPort(v)
+                setEventId(newEventId())
+              }}
               options={portOpts}
             />
           ) : (
@@ -180,7 +188,10 @@ export function MountDialog({
                 id='mount-port'
                 maxLength={64}
                 value={port}
-                onChange={(e) => setPort(e.target.value)}
+                onChange={(e) => {
+                  setPort(e.target.value)
+                  setEventId(newEventId())
+                }}
               />
             </div>
           )}
@@ -193,7 +204,10 @@ export function MountDialog({
               id='mount-lot'
               maxLength={64}
               value={lot}
-              onChange={(e) => setLot(e.target.value)}
+              onChange={(e) => {
+                setLot(e.target.value)
+                setEventId(newEventId())
+              }}
             />
           </div>
           <div className='grid gap-1'>
