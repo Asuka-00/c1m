@@ -418,7 +418,7 @@ def start(
             ]
         )
     lt, lr, wr = _rules(s, tid, wo)
-    errs: list[tuple[str, str]] = []
+    errs: list[tuple[Any, str]] = []
     if not lots:
         errs.append(("lots", "lots: at least one lot"))
     total = sum(int(x.get("qty") or 0) for x in lots)
@@ -476,7 +476,7 @@ def start(
                     f"lot {i}: {n} distinct slots within 1..{width} required",
                 )
             )
-        errs += lot_svc.customer_start_errors(s, tid, i, x)
+        errs += lot_svc.customer_start_errors(s, tid, i - 1, x)
         srcs = x.get("wafer_sources") or []
         if srcs and len(srcs) != n:
             errs.append((f"lots.{i}.wafer_sources", f"lot {i}: one source per wafer"))

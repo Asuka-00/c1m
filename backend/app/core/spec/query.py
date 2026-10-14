@@ -111,9 +111,15 @@ def search(e: Entity, stmt: sa.Select[Any], q: str | None) -> sa.Select[Any]:
     t = table(e)
     esc = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     cols = [t.c[f.column] for f in e.all_fields if f.search]
-    if not cols:
+    exact = [t.c[f.column] for f in e.all_fields if f.search_exact]
+    if not cols and not exact:
         return stmt
-    return stmt.where(sa.or_(*(c.ilike(f"%{esc}%", escape="\\") for c in cols)))
+    return stmt.where(
+        sa.or_(
+            *(c.ilike(f"%{esc}%", escape="\\") for c in cols),
+            *(sa.func.upper(c) == q.strip().upper() for c in exact),
+        )
+    )
 
 
 def list_rows(

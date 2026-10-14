@@ -34,6 +34,7 @@ from app.mes.lot.service import (
     history,
     lock_lots,
     lot_error,
+    same_customer_lot,
     units,
 )
 from app.mes.lot.service import customer_info as cust_info
@@ -75,6 +76,8 @@ def merge_problems(
         p.append(f"{c}: different BOM version")
     if customer_mismatch(target, src):  # B7
         p.append(f"{c}: different customer / ownership")
+    if not same_customer_lot(src.get("customer_lot_no"), target.get("customer_lot_no")):
+        p.append(f"{c}: different customer lot no.")  # D36
     if (
         rule
         and rule.get("merge_same_wo", True)
@@ -230,6 +233,21 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
                 source_customer_id=si["customer_id"],
                 source_ownership=si["ownership"],
             )
+    # D36：客户批号必须一致（两边都为空可以合；一边为空也算不同），硬性拒绝
+    for src in sorted(srcs, key=lambda x: x["id"]):
+        tl = target.get("customer_lot_no") or None
+        sl = src.get("customer_lot_no") or None
+        if not same_customer_lot(tl, sl):  # D37：不区分大小写
+            raise lot_error(
+                "customer_lot_mismatch",
+                f"customer lot no. differs: target {target['code']} {tl or '-'}, "
+                f"source {src['code']} {sl or '-'}",
+                src,
+                action="merge_source",
+                target_lot_code=target["code"],
+                target_customer_lot_no=tl,
+                source_customer_lot_no=sl,
+            )
     rule = rule_for(s, tid, target)
     errs: list[str] = []
     if target["lot_status"] not in SPLIT_STATES:
@@ -307,7 +325,6 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
                 "target": target["code"],
                 "qty": old_qty,
                 "units": ucodes,
-                "customer_lot_no": src.get("customer_lot_no"),
             },
         )
         audit(

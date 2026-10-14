@@ -23,7 +23,7 @@ CUSTOMER_FIELDS = [
         "str",
         "Customer lot no.|客户批号|顧客ロット番号",
         max_length=100,
-        search=True,
+        search_exact=True,  # D37：不区分大小写的精确匹配
     ),
     F(
         "ownership",
@@ -434,6 +434,7 @@ register(
         perm_module="lot",
         sort_default="created_at",
         children=["wafer"],
+        indexes=[("ix_mes_lot_customer_lot_no", ("upper:customer_lot_no",))],  # D36/D37
     ),
 )
 

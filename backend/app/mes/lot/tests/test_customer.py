@@ -32,7 +32,21 @@ def test_customer_lot_start_split_merge_lookup_trace(
         assert r.status_code == 422, (k, r.text)
     # 开批校验
     e = _start(f, 422, ownership="customer")["detail"]
-    assert any("customer_id" in str(x) for x in e)
+    assert e[0]["loc"] == ["body", "lots", 0, "customer_id"], (
+        e
+    )  # 与 Pydantic 一致，从 0 开始
+    r = f.post(
+        f"{API}/work-order/{f.wo['id']}/start",
+        {"lots": [{"qty": 1}, {"qty": 1, "ownership": "x"}]},
+        422,
+    )
+    assert r["detail"][0]["loc"][:3] == ["body", "lots", 1], r  # Pydantic 自带校验
+    e = f.post(
+        f"{API}/work-order/{f.wo['id']}/start",
+        {"lots": [{"qty": 1}, {"qty": 1, "customer_lot_no": "X"}]},
+        422,
+    )["detail"]
+    assert e[0]["loc"] == ["body", "lots", 1, "customer_lot_no"], e
     _start(f, 422, ownership="own", customer_id=c1["id"])
     _start(f, 422, customer_lot_no="CL-0")
     (a,) = _start(
@@ -123,3 +137,86 @@ def test_material_lot_customer_and_inherit_helper(
     parent = {"customer_lot_no": "X", "ownership": "customer", "customer_id": c1["id"]}
     assert inherit_customer(parent) == parent
     assert inherit_customer({})["ownership"] == "own"
+
+
+def test_merge_customer_lot_mismatch(client: TestClient, db: Session) -> None:
+    """D36：同客户但客户批号不同 / 一边为空 → 422 customer_lot_mismatch；都为空照常合。"""
+    f = _line(client, db)
+    c1 = f.m.post("customer", {"code": "C1", "name": "Cust 1"})
+    kw = {"ownership": "customer", "customer_id": c1["id"]}
+    (a,) = _start(f, customer_lot_no="CL-A", **kw)["data"]
+    (b,) = _start(f, customer_lot_no="CL-B", **kw)["data"]
+    (n,) = _start(f, **kw)["data"]
+    (n2,) = _start(f, **kw)["data"]
+    for x in (a, b, n, n2):
+        f.stage(x, "move_in", equipment_id=f.eq["id"])
+    d = merge(f, a, [b], 422)["detail"]
+    assert d["code"] == "customer_lot_mismatch", d
+    assert (d["target_customer_lot_no"], d["source_customer_lot_no"]) == (
+        "CL-A",
+        "CL-B",
+    )
+    d = merge(f, a, [n], 422)["detail"]
+    assert d["code"] == "customer_lot_mismatch" and d["source_customer_lot_no"] is None
+    d = merge(f, n, [a], 422)["detail"]
+    assert d["target_customer_lot_no"] is None and d["source_customer_lot_no"] == "CL-A"
+    # 不可强制放行
+    d = merge(f, a, [b], 422, override=True)["detail"]
+    assert d["code"] == "customer_lot_mismatch"
+    merge(f, n, [n2])  # 两边都为空
+    h = client.get(
+        f"{API}/lot-history", headers=f.m.h, params={"lot": n2["id"], "page_size": 50}
+    ).json()["data"]
+    mh = [x for x in h if x["action"] == "merge"]
+    assert mh and "customer_lot_no" not in (mh[0]["details"] or {})
+
+
+def test_migration_0020_customer_lot_index() -> None:
+    """0020 可重复执行、可降级；索引与表定义一致。"""
+    from app.mes.equipment.tests.test_qual import _migration_roundtrip
+
+    def check(i: Any) -> bool:
+        return any(
+            x["name"] == "ix_mes_lot_customer_lot_no"
+            and x["column_names"][0] == "tenant_id"
+            and "upper" in str(x.get("expressions", "")).lower()
+            for x in i.get_indexes("mes_lot")
+        )
+
+    _migration_roundtrip(
+        "0019_customer_material", "d36", check, ("ix_mes_lot_customer_lot_no",)
+    )
+
+
+def test_customer_lot_case_insensitive(client: TestClient, db: Session) -> None:
+    """D37：入库只去首尾空格、原样保存；互查 / ?q= / 追溯 / 合批比对不区分大小写（精确匹配）。"""
+    f = _line(client, db)
+    c1 = f.m.post("customer", {"code": "C1", "name": "Cust 1"})
+    kw = {"ownership": "customer", "customer_id": c1["id"]}
+    (a,) = _start(f, customer_lot_no="  Ab-01x ", **kw)["data"]
+    (b,) = _start(f, customer_lot_no="AB-01X", **kw)["data"]
+    assert a["customer_lot_no"] == "Ab-01x"  # 原样保存
+    url = f"{EXEC}/customer-lots"
+    got = client.get(url, headers=f.m.h, params={"customer_lot_no": "ab-01x"}).json()
+    assert {x["lot_no"] for x in got["data"]} == {a["code"], b["code"]}
+    # 精确匹配，不做模糊
+    assert (
+        client.get(url, headers=f.m.h, params={"customer_lot_no": "ab-01"}).json()[
+            "data"
+        ]
+        == []
+    )
+    lst = client.get(f"{API}/lot", headers=f.m.h, params={"q": "ab-01x"}).json()
+    assert {x["code"] for x in lst["data"]} == {a["code"], b["code"]}
+    lst = client.get(f"{API}/lot", headers=f.m.h, params={"q": "ab-0"}).json()
+    assert a["code"] not in {x["code"] for x in lst["data"]}
+    t = client.get(
+        f"{EXEC}/trace",
+        headers=f.m.h,
+        params={"kind": "customer_lot", "code": "aB-01X"},
+    ).json()
+    assert {x["lot_no"] for x in t["lots"]} == {a["code"], b["code"]}
+    for x in (a, b):
+        f.stage(x, "move_in", equipment_id=f.eq["id"])
+    merge(f, a, [b])  # 大小写不同视为同一客户批号
+    assert f.lot(a)["customer_lot_no"] == "Ab-01x"

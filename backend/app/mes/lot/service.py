@@ -15,6 +15,9 @@ from app.mes.lot.customer import (
 from app.mes.lot.customer import (
     lookup_customer_lots as lookup_customer_lots,
 )
+from app.mes.lot.customer import (
+    same_customer_lot as same_customer_lot,
+)
 from app.mes.lot.lots import (
     TERMINAL as TERMINAL,
 )

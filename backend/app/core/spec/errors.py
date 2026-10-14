@@ -1,5 +1,8 @@
 """规格服务错误及 HTTP 映射（422 字段错误、唯一约束冲突）。"""
 
+from collections.abc import Sequence
+from typing import Any
+
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 
@@ -17,12 +20,21 @@ class MesError(Exception):
         self.errors = errors
 
 
-def http_422(errors: list[tuple[str, str]]) -> HTTPException:
-    """把字段错误列表转换为 422 HTTPException（``detail`` 为字段错误数组）。"""
+def http_422(errors: Sequence[tuple[Any, str]]) -> HTTPException:
+    """把字段错误列表转换为 422 HTTPException（``detail`` 为字段错误数组）。
+
+    字段可以是字符串（``loc = ["body", f]``），也可以是与 Pydantic 一致的路径元组
+    （如 ``("lots", 0, "customer_id")`` → ``loc = ["body", "lots", 0, "customer_id"]``）。
+    """
     return HTTPException(
         status_code=422,
         detail=[
-            {"loc": ["body", f], "msg": m, "type": "value_error"} for f, m in errors
+            {
+                "loc": ["body", *f] if isinstance(f, tuple | list) else ["body", f],
+                "msg": m,
+                "type": "value_error",
+            }
+            for f, m in errors
         ],
     )
 

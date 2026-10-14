@@ -71,6 +71,8 @@ class F:
     # float：设置后存为定点小数 Numeric(18, scale)，输入四舍五入到 scale 位
     scale: int | None = None
     search: bool = False  # 参与 ?q= 关键字搜索
+    # 参与 ?q= 搜索，但不区分大小写的精确匹配（upper(col) = upper(q)），不做模糊查询
+    search_exact: bool = False
     list: bool = True  # 显示为表格列
     default: Any = None
     filter: bool | None = None  # 下拉筛选；默认 enum/bool/ref 字段
@@ -125,6 +127,9 @@ class Entity:
     unique: list[tuple[str, ...]] = field(default_factory=list)  # 业务唯一键
     # 部分唯一索引：(索引名, 字段名..., WHERE 条件 SQL)；tenant_id 自动作为首列
     partial_unique: list[tuple[str, tuple[str, ...], str]] = field(default_factory=list)
+    # 普通（非唯一）复合索引：(索引名, 字段)，自动以 tenant_id 打头；
+    # 字段写成 ``"upper:<字段>"`` 时建在 upper(列) 表达式上
+    indexes: list[tuple[str, tuple[str, ...]]] = field(default_factory=list)
     parent: str | None = None  # 作为该引用字段的子表（在详情抽屉中显示）
     children: list[str] = field(default_factory=list)  # 子实体编码
     readonly: bool = False  # 如审计日志
@@ -293,7 +298,15 @@ def build_table(e: Entity) -> sa.Table:
                 postgresql_where=sa.text(where),
             )
         )
-    return sa.Table(e.table_name, SQLModel.metadata, *cols)
+    tbl = sa.Table(e.table_name, SQLModel.metadata, *cols)
+    for name, key in e.indexes:
+        exprs: list[Any] = []
+        for k in key:
+            fn, _, fname = k.rpartition(":")
+            c = tbl.c[fld.column if (fld := e.field(fname)) else fname]
+            exprs.append(sa.func.upper(c) if fn == "upper" else c)
+        sa.Index(name, tbl.c.tenant_id, *exprs)
+    return tbl
 
 
 def register(*entities: Entity) -> None:

@@ -29,6 +29,13 @@ def inherit_customer(parent: Row) -> Row:
     }
 
 
+def same_customer_lot(a: Any, b: Any) -> bool:
+    """D37：客户批号比对不区分大小写（去首尾空格后转大写精确比较；都为空视为相同）。"""
+    na = (a or "").strip().upper() or None
+    nb = (b or "").strip().upper() or None
+    return na == nb
+
+
 def customer_mismatch(a: Row, b: Row) -> bool:
     """两个批次的客户 / 物料归属是否不同（空与非空也算不同）。"""
     return bool(
@@ -57,13 +64,15 @@ def customer_info(s: Session, tid: uuid.UUID, lot: Row | None) -> Row:
 
 def customer_start_errors(
     s: Session, tid: uuid.UUID, i: int, x: Row
-) -> list[tuple[str, str]]:
-    """开批时第 ``i`` 个批次客户字段的校验错误；同时把字段规整进 ``x``。
+) -> list[tuple[Any, str]]:
+    """开批时第 ``i`` 个批次（从 0 开始，与 Pydantic 的 loc 一致）的客户字段校验错误。
+
+    同时把字段规整进 ``x``：客户批号只去首尾空格，其余原样保存（D37）。
 
     规则：ownership 为 customer 时必须指定存在的客户；ownership 为 own 时不能带客户
     或客户批号。
     """
-    errs: list[tuple[str, str]] = []
+    errs: list[tuple[Any, str]] = []
     own = x.get("ownership") or "own"
     x["ownership"] = own
     x["customer_lot_no"] = (x.get("customer_lot_no") or "").strip() or None
@@ -72,25 +81,25 @@ def customer_start_errors(
         if not cid:
             errs.append(
                 (
-                    f"lots.{i}.customer_id",
-                    f"lot {i}: customer required for customer-owned material",
+                    ("lots", i, "customer_id"),
+                    f"lots.{i}: customer required for customer-owned material",
                 )
             )
         elif not one(s, tid, "customer", cid):
-            errs.append((f"lots.{i}.customer_id", f"lot {i}: customer not found"))
+            errs.append((("lots", i, "customer_id"), f"lots.{i}: customer not found"))
     else:
         if cid:
             errs.append(
                 (
-                    f"lots.{i}.customer_id",
-                    f"lot {i}: customer only for ownership=customer",
+                    ("lots", i, "customer_id"),
+                    f"lots.{i}: customer only for ownership=customer",
                 )
             )
         if x["customer_lot_no"]:
             errs.append(
                 (
-                    f"lots.{i}.customer_lot_no",
-                    f"lot {i}: customer lot no. only for ownership=customer",
+                    ("lots", i, "customer_lot_no"),
+                    f"lots.{i}: customer lot no. only for ownership=customer",
                 )
             )
     return errs
@@ -102,11 +111,14 @@ def lookup_customer_lots(
     customer_lot_no: str | None = None,
     lot_no: str | None = None,
 ) -> list[Row]:
-    """客户批号 ↔ 内部批号互查（精确匹配，含拆批子批 / 已合批的批次）。"""
+    """客户批号 ↔ 内部批号互查（客户批号不区分大小写的精确匹配，含拆批子批 / 已合批的批次）。"""
     t = TABLES["lot"]
     q = sa.select(t).where(t.c.tenant_id == tid)
     if customer_lot_no:
-        q = q.where(t.c.customer_lot_no == customer_lot_no.strip())
+        # D37：不区分大小写的精确匹配（走 upper(customer_lot_no) 索引）
+        q = q.where(
+            sa.func.upper(t.c.customer_lot_no) == customer_lot_no.strip().upper()
+        )
     if lot_no:
         q = q.where(t.c.code == lot_no.strip())
     rows = conn(s).execute(q.order_by(t.c.code).limit(500)).mappings().all()
