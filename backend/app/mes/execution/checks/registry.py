@@ -319,7 +319,9 @@ def run(ctx: Ctx) -> list[Row]:
                 plan=plan,
                 data=data,
                 # P2-D3：规则产生的 tool_life 与内置硬拦截一致，不可放行
-                overridable=rule["check_type"] not in HARD_CHECKS,
+                # D69 补充 / D54-5：光罩到寿命上限（data.overridable=false）同样不可放行
+                overridable=rule["check_type"] not in HARD_CHECKS
+                and (data or {}).get("overridable") is not False,
             )
         )
     return out

@@ -180,6 +180,12 @@ def _pm_due(ctx: Ctx, _p: Row) -> Outcome:
     return ("pass", f"{eq['code']} PM ok", {}) if st else ("na", "no PM plan", {})
 
 
+def _reticle_reached(rt: dict[str, Any]) -> bool:
+    from app.mes.reticle.service import life_state
+
+    return life_state(rt) == "reached"
+
+
 @check_type("reticle_available")
 def _reticle(ctx: Ctx, _p: Row) -> Outcome:
     allowed = {r["reticle_id"] for r in ctx.resources("reticle") if r["reticle_id"]}
@@ -191,6 +197,13 @@ def _reticle(ctx: Ctx, _p: Row) -> Outcome:
     if rt["id"] not in allowed:
         return "fail", f"reticle {rt['code']} is not allowed at this step", {}
     if rt["status_code"] != "available":
+        if rt["status_code"] == "pending_maintenance" and _reticle_reached(rt):
+            # D69 补充：到上限仍挂着的光罩进站按 life_reached 拦（不可放行，D54-5）
+            return (
+                "fail",
+                f"reticle {rt['code']} reached its life limit",
+                {"reason": "life_reached", "overridable": False},
+            )
         return "fail", f"reticle {rt['code']} is {rt['status_code']}", {}
     return "pass", f"reticle {rt['code']} available", {}
 

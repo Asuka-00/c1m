@@ -15,5 +15,6 @@ register(
             "app.mes.reticle.validators",
             "app.mes.reticle.events",
         ),
+        routers=("app.mes.reticle.router:router",),
     )
 )
