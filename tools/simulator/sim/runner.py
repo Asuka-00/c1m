@@ -232,6 +232,11 @@ P3_DRAFT_STEPS = {
     "expect_marking_inspections",
     "expect_marking_events",
     "marking_replay",
+    # P3-B6 人员资质履历（未实现，D74/D81/D85）
+    "operator_qual",
+    "operator_qual_replay",
+    "expect_operator_qual_history",
+    "expect_operator_qual_events",
 }
 
 

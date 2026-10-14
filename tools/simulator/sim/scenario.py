@@ -148,7 +148,7 @@ def parse(data: dict, path: str | None = None) -> Scenario:
                 raise ScenarioError(f"第 {i} 步 expect_body_422（{args['endpoint']}）需要 lot")
         elif k == "expect_body_422" and not args.get("to"):
             raise ScenarioError(f"第 {i} 步 expect_body_422 需要 to（填设备当前状态，避免后端不拦时改状态）")
-        if k in ("reticle_replay", "marking_replay") and not args.get("of"):
+        if k in ("reticle_replay", "marking_replay", "operator_qual_replay") and not args.get("of"):
             raise ScenarioError(f"第 {i} 步 {k} 需要 of（前面草稿步骤的 save_as 名）")
         if k == "reticle_report" and (
             not args.get("eq") or not args.get("reticle") or args.get("kind") not in ("mount", "unmount", "usage")
@@ -172,6 +172,16 @@ def parse(data: dict, path: str | None = None) -> Scenario:
                 raise ScenarioError(f"第 {i} 步 marking_template {act} 是只读 POST，不带 Idempotency-Key（D79 补充七）")
             if act not in ("create", "preview", "validate") and not args.get("template"):
                 raise ScenarioError(f"第 {i} 步 marking_template {act} 需要 template（$<save_as>.id）")
+        if k == "operator_qual":
+            act = args.get("action")
+            if act not in ("create", "patch", "delete", "get"):
+                raise ScenarioError(f"第 {i} 步 operator_qual 的 action 只能是 create/patch/delete/get")
+            if act != "get" and not args.get("idem") and not args.get("no_idem"):
+                raise ScenarioError(
+                    f"第 {i} 步 operator_qual {act} 缺少 idem（D85：资质写接口必须带 key；测缺失写 no_idem: true）"
+                )
+            if act != "create" and not args.get("qual"):
+                raise ScenarioError(f"第 {i} 步 operator_qual {act} 需要 qual（$<save_as>.id 或不存在的 id）")
         if k in MARKING_LOT_STEPS and not args.get("lot"):
             raise ScenarioError(f"第 {i} 步 {k} 缺少 lot")
         if k == "expect_query_422" and not args.get("path"):
@@ -194,7 +204,7 @@ def parse(data: dict, path: str | None = None) -> Scenario:
         steps.append(Step(k, args, i))
     saved = {st.args.get("save_as") for st in steps if st.args.get("save_as")}
     for st in steps:
-        if st.kind in ("reticle_replay", "marking_replay") and st.args["of"] not in saved:
+        if st.kind in ("reticle_replay", "marking_replay", "operator_qual_replay") and st.args["of"] not in saved:
             raise ScenarioError(f"第 {st.index} 步 {st.kind} 引用的 {st.args['of']} 没有 save_as")
     return Scenario(
         run_id=run_id,

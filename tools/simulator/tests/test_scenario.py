@@ -86,7 +86,7 @@ def test_p3_draft_scenarios_parse_and_skip_without_backend():
     from sim.scenario import load
 
     files = sorted(glob.glob("scenarios/p3-draft/*.yaml"))
-    assert len(files) == 5
+    assert len(files) == 6
     for f in files:
         sc = load(f)
         if f.endswith("reticle-report.yaml"):  # ret-report-08 起不再是草稿（f9e9dda 联调）
@@ -98,9 +98,14 @@ def test_p3_draft_scenarios_parse_and_skip_without_backend():
         assert rep["status"] == SKIPPED and rep["reason"].startswith("草稿场景"), rep
         assert c.calls == []  # 草稿不连后端
         need = sc.required_adapters()
-        assert {"reticle_mount", "reticle_incident", "alarm_track_in_action", "marking_create", "reticle_scrap"} & set(
-            need
-        )
+        assert {
+            "reticle_mount",
+            "reticle_incident",
+            "alarm_track_in_action",
+            "marking_create",
+            "reticle_scrap",
+            "operator_qual",
+        } & set(need)
 
 
 def test_p3_steps_execute_when_paths_exist():
@@ -492,7 +497,7 @@ def test_reticle_report_draft_e2():
     from sim.scenario import ScenarioError, load, parse
 
     sc = load("scenarios/p3-draft/reticle-report.yaml")
-    assert not sc.draft and sc.run_id == "ret-report-09" and "reticle_report" in P3_DRAFT_STEPS
+    assert not sc.draft and sc.run_id == "ret-report-10" and "reticle_report" in P3_DRAFT_STEPS
     # EAP 光罩上报未开（D67）：依赖 reticle_report 结果的断言都带 needs，记未实现而不是失败
     rep_saves = {s.args.get("save_as") for s in sc.steps if s.kind == "reticle_report"}
     assert all(s.args.get("save_as") for s in sc.steps if s.kind == "reticle_report")
@@ -762,3 +767,32 @@ def test_b8_draft_d84_contract():
     assert warn and all(set(w["warning"]) >= {"code"} and "check_type" not in w["warning"] for w in warn)
     fut = [s.args["expect"] for s in st if s.kind == "alarm_set" and "occurred_at" in s.args]
     assert fut[0]["type"] == "value_error" and fut[1]["status"] == 200
+
+
+def test_operator_qual_draft_b6():
+    """P3-B6 草稿：整体 skipped；写接口都带 key（D85）；两种自批、延期 / 停用缺字段、重放都覆盖。"""
+    sc = load("scenarios/p3-draft/operator-qual.yaml")
+    assert sc.draft and sc.run_id == "opq-01"
+    ops = [s.args for s in sc.steps if s.kind == "operator_qual"]
+    assert all(a.get("idem") or a.get("no_idem") for a in ops if a["action"] != "get")
+    missing_key = {a["action"] for a in ops if a.get("no_idem") and not a.get("as")}
+    assert missing_key == {"create", "patch", "delete"}
+    reasons = [a["expect"].get("ctx", {}).get("reason") for a in ops]
+    assert "self_approval" in reasons and "holder_approval" in reasons
+    sa = next(a for a in ops if a["expect"].get("ctx", {}).get("reason") == "self_approval")
+    assert sa["qual"] == "$missing_uuid"  # 排在 404 前
+    locs = {tuple(a["expect"]["loc"]) for a in ops if a["expect"].get("code") == "missing" and a["expect"].get("loc")}
+    assert {("body", "reason_id"), ("body", "comment"), ("body", "approved_by")} <= locs
+    hist = [s.args.get("latest", {}).get("action") for s in sc.steps if s.kind == "expect_operator_qual_history"]
+    assert {"granted", "renewed", "changed", "deactivated", "reactivated"} <= set(hist)
+    ti = next(s.args for s in sc.steps if s.kind == "track_in")
+    assert ti["expect"]["results"][0]["check_type"] == "operator_qualified"
+
+
+def test_operator_qual_requires_idem():
+    import pytest
+
+    from sim.scenario import ScenarioError, parse
+
+    with pytest.raises(ScenarioError):
+        parse({"run_id": "x", "steps": [{"operator_qual": {"action": "patch", "qual": "q"}}]})

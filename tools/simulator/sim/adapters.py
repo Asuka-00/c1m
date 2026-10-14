@@ -108,6 +108,9 @@ def default_adapters() -> dict[str, Adapter]:
         "alarm_track_in_action": Adapter("报警码进站动作配置", ["/mes/alarm_code/{rid}"], card="P3-B8"),
         "alarm_code_get": Adapter("报警码详情", ["/mes/alarm_code/{rid}"], card="P3-B8"),
         # D70 补充：删除仍被单台行引用的类型行 409 referenced（通用 CRUD DELETE），B8 落地后核对
+        # P3-B6（D74 + D85 + 补充一，未实现）：operator_qual 通用 CRUD 写接口必须带 key；履历 GET .../{qual_id}/history
+        "operator_qual": Adapter("人员资质写接口", ["/mes/exec/operator-qual"], card="P3-B6"),
+        "operator_qual_history": Adapter("人员资质履历", ["/mes/exec/operator-qual/{qual_id}/history"], card="P3-B6"),
         "alarm_code_delete": Adapter("报警码删除", ["/mes/alarm_code/{rid}"], card="P3-B8"),
         # P3-B2（打标，未实现，D78/D79）：主记录 + mes_marking_print（每次打印一行，seq 后端分配）
         #   + mes_marking_inspection。
@@ -220,6 +223,10 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "expect_marking_inspections": ["marking_inspections"],
     "expect_marking_events": ["marking_events"],
     "marking_replay": [],  # 同 reticle_replay：同路径、同请求体、同 Idempotency-Key / external_event_id
+    "operator_qual": ["operator_qual"],
+    "operator_qual_replay": [],
+    "expect_operator_qual_history": ["operator_qual_history"],
+    "expect_operator_qual_events": ["operator_qual_history"],
     "reuse": [],
     "precondition": [],
 }
