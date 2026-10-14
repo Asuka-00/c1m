@@ -97,6 +97,45 @@ def test_extra_columns_rejected(client: TestClient, db: Session) -> None:
     assert any(x["code"] == "extra_columns" for x in d["errors"])
 
 
+def _unquote(line: str, k: int) -> str:
+    v = line.split(",")
+    v[k] = '"' + v[k]  # 引号不配对
+    return ",".join(v)
+
+
+def test_unbalanced_quote_bad_csv(client: TestClient, db: Session) -> None:
+    """D-eab-1：引号不配对 → 行错误 bad_csv，而不是 bad_int / required。"""
+    f = _line(client, db)
+    lines = _fx("bin_definition_demo.csv").splitlines()
+    lines[5] = _unquote(lines[5], 1)
+    d = _post(f, "/bin-sets/import", {"content": "\n".join(lines)}, 422)["detail"]
+    assert d["code"] == "bin_set_invalid"
+    e = [x for x in d["errors"] if x["file_line"] == 6]
+    assert [x["code"] for x in e] == ["bad_csv"], d
+    assert e[0]["row_no"] == 2
+    _post(f, "/bin-sets/import", {"content": _fx("bin_definition_demo.csv")})
+    for k, bare in ((2, False), (1, True)):
+        lines = _fx("map_ok.csv").splitlines()
+        if bare:  # 裸引号：W1,3"x,...
+            v = lines[10].split(",")
+            v[k] = v[k] + '"x'
+            lines[10] = ",".join(v)
+        else:
+            lines[10] = _unquote(lines[10], k)
+        bad = "\n".join(lines)
+        pv = _post(f, "/import/preview", {"content": bad})
+        assert pv["ok"] is False
+        e = [x for x in pv["errors"] if x["file_line"] == 11]
+        assert [x["code"] for x in e] == ["bad_csv"], pv
+        assert e[0]["row_no"] == 3
+        assert not any(x["code"] in ("bad_int", "required") for x in pv["errors"])
+        d = _post(f, "/import", {"content": bad}, 422)["detail"]
+        assert d["code"] == "map_invalid"
+        assert any(x["code"] == "bad_csv" for x in d["errors"])
+    # 原样文件照常通过
+    assert _post(f, "/import/preview", {"content": _fx("map_ok.csv")})["ok"] is True
+
+
 def test_migration_0023_up_down() -> None:
     from app.mes.equipment.tests.test_qual import _migration_roundtrip
 

@@ -49,6 +49,13 @@ def err(
     }
 
 
+def _row(line: str) -> list[str]:
+    """严格解析一行 CSV；引号不配对（含裸引号导致的奇数个 ``"``）抛 ``csv.Error``（D-eab-1）。"""
+    if line.count('"') % 2:
+        raise csv.Error("unbalanced quote")
+    return next(csv.reader([line], strict=True))
+
+
 def parse(content: str, cols: tuple[str, ...]) -> Parsed:
     """拆出文件头、列名与数据行（只做结构检查）。"""
     p = Parsed()
@@ -68,7 +75,7 @@ def parse(content: str, cols: tuple[str, ...]) -> Parsed:
         )
         return p
     try:
-        head = [c.strip() for c in next(csv.reader([lines[i]]))]
+        head = [c.strip() for c in _row(lines[i])]
     except csv.Error as e:
         p.errors.append(err("bad_csv", f"column line: {e}", None, i + 1))
         return p
@@ -89,7 +96,7 @@ def parse(content: str, cols: tuple[str, ...]) -> Parsed:
             )
             break
         try:
-            vals = next(csv.reader([lines[j]]))
+            vals = _row(lines[j])
         except csv.Error as e:  # 字段超长、引号不配对等：逐行报错而不是 500
             p.errors.append(err("bad_csv", str(e), no, j + 1))
             continue
