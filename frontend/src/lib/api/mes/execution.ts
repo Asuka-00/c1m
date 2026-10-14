@@ -306,7 +306,7 @@ export interface ExecUnit {
 }
 /** 谱系关系（拆批 / 合批）。 */
 export interface GenealogyLink {
-  relation: 'split' | 'merge'
+  relation: 'split' | 'merge' | 'transform'
   parent_id: string
   parent: string
   child_id: string

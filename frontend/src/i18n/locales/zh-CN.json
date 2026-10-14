@@ -710,6 +710,8 @@
       "splitFrom": "分自母批",
       "mergedInto": "合入",
       "mergedFrom": "合并自",
+      "transformTo": "转换出子批",
+      "transformFrom": "转换自母批",
       "splitQtyHint": "输入每个子批的数量，其余留在母批。",
       "splitUnitHint": "将晶圆 / 单元分配到子批，未分配的留在母批。",
       "childCount": "子批数",

@@ -3,6 +3,7 @@ import i18n, { t } from '@/i18n'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
 import { userEvent } from 'vitest/browser'
+import { mesApi } from '@/lib/api/mes/common'
 import { execApi, type TransformPreview } from '@/lib/api/mes/execution'
 import { mapApi, type SubstrateMapDetail } from '@/lib/api/mes/map'
 import { MES_PERM } from '@/features/mes/common/mes-perm'
@@ -278,6 +279,50 @@ describe('F8 单位转换对话框', () => {
     await s.getByTestId('trf-commit').click()
     await expect.element(s.getByTestId('trf-done')).toHaveTextContent('LOT1-T1')
     expect(cm).toHaveBeenCalledTimes(1)
+  })
+
+  it('无坐标图留空按产品 gross die 分配可预览；提交后先显示子批，关闭时才刷新', async () => {
+    vi.spyOn(mesApi, 'get').mockResolvedValue({ id: 'P0', gross_die: 25 })
+    const pv = vi.spyOn(execApi, 'transformPreview').mockResolvedValue(PREVIEW)
+    vi.spyOn(execApi, 'transform').mockResolvedValue({
+      transform: { id: 'T1' },
+      children: [{ id: 'C1', code: 'LOT1-T1', qty: 55 }],
+      warnings: [],
+    })
+    mockMaps()
+    const qc = makeQc(Object.values(MES_PERM))
+    const inv = vi.spyOn(qc, 'invalidateQueries')
+    const onOpenChange = vi.fn()
+    const cx = waferCtx()
+    ;(cx.lot as Record<string, unknown>).product_id = 'P0'
+    const s = await render(
+      <Providers qc={qc}>
+        <TransformDialog
+          cx={cx}
+          open
+          onOpenChange={onOpenChange}
+          initial={{ outputs: [out] }}
+        />
+      </Providers>
+    )
+    await expect.poll(() => btn('trf-preview')?.disabled).toBe(false)
+    await s.getByTestId('trf-preview').click()
+    await expect.element(s.getByTestId('trf-preview-result')).toBeVisible()
+    expect(pv.mock.lastCall![0].manual_good).toBeUndefined()
+    expect(pv.mock.lastCall![0].outputs[0].sources).toEqual([
+      { wafer_id: 'U1', qty: 30 },
+      { wafer_id: 'U2', qty: 25 },
+    ])
+    await s.getByTestId('trf-commit').click()
+    await expect.element(s.getByTestId('trf-done')).toHaveTextContent('LOT1-T1')
+    expect(inv).not.toHaveBeenCalled()
+    expect(onOpenChange).not.toHaveBeenCalled()
+    await s
+      .getByRole('button', { name: t('common.close') })
+      .first()
+      .click()
+    expect(inv).toHaveBeenCalledWith({ queryKey: ['mes'] })
+    expect(onOpenChange).toHaveBeenCalledWith(false)
   })
 
   it('预览 422 守恒错误在对话框内显示，不能提交', async () => {

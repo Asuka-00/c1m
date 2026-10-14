@@ -74,21 +74,19 @@ export function GenealogyList({
         const other = isParent
           ? { id: g.child_id, code: g.child }
           : { id: g.parent_id, code: g.parent }
-        const key =
-          g.relation === 'split'
-            ? isParent
-              ? 'splitTo'
-              : 'splitFrom'
-            : isParent
-              ? 'mergedInto'
-              : 'mergedFrom'
-        const Icon = g.relation === 'split' ? GitFork : GitMerge
+        // 单位转换 / 按 bin 拆批的谱系 relation=transform，不能落到“合入”。
+        const key = {
+          split: isParent ? 'splitTo' : 'splitFrom',
+          transform: isParent ? 'transformTo' : 'transformFrom',
+          merge: isParent ? 'mergedInto' : 'mergedFrom',
+        }[g.relation]
+        const Icon = g.relation === 'merge' ? GitMerge : GitFork
         return (
           <li key={i} className='flex flex-wrap items-center gap-x-2'>
             <Icon
               className={cn(
                 'size-4',
-                g.relation === 'split' ? 'text-sky-600' : 'text-violet-600'
+                g.relation === 'merge' ? 'text-violet-600' : 'text-sky-600'
               )}
             />
             <span className='text-muted-foreground'>{t(`mes.sm.${key}`)}</span>

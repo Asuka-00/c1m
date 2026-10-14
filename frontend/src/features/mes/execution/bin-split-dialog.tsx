@@ -69,6 +69,12 @@ export function BinSplitDialog({
   } | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [done, setDone] = useState<TransformResult | null>(null)
+  // 操作台按数据更新时间重挂载，提交后立即刷新会把对话框连同结果一起关掉；
+  // 所以先展示生成的子批，关闭时再刷新。
+  const close = (v: boolean) => {
+    if (!v && done) qc.invalidateQueries({ queryKey: ['mes'] })
+    onOpenChange(v)
+  }
   const wafers = useWaferMaps(cx, open)
   const body = binSplitBody(String(cx.lot.id), wafers, d)
   const key = JSON.stringify(body)
@@ -106,7 +112,6 @@ export function BinSplitDialog({
         })
       )
       for (const w of r.warnings ?? []) toast.warning(trfWarningText(w))
-      qc.invalidateQueries({ queryKey: ['mes'] })
     },
     onError: (e) => {
       const m = binSplitErrorText(e)
@@ -116,7 +121,7 @@ export function BinSplitDialog({
   })
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={close}>
       <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-3xl'>
         <DialogHeader>
           <DialogTitle>
@@ -289,9 +294,7 @@ export function BinSplitDialog({
         )}
         <DialogFooter>
           {done ? (
-            <Button onClick={() => onOpenChange(false)}>
-              {t('common.close')}
-            </Button>
+            <Button onClick={() => close(false)}>{t('common.close')}</Button>
           ) : (
             <>
               <Button
