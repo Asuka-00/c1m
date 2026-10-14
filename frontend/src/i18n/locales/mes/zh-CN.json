@@ -1791,13 +1791,16 @@
     "mes_wh__confirm": "仓储·确认入库",
     "notify__config": "配置通知订阅",
     "mes_equipment__tool_mount": "设备·工具装卸 / 更换",
-    "mes_equipment__tool_count": "设备·工具计数上报 / 重置"
+    "mes_equipment__tool_count": "设备·工具计数上报 / 重置",
+    "mes_eap__write": "EAP 事件写入（服务账号）",
+    "mes_eap__read_master": "EAP 主数据只读（服务账号）"
   },
   "roleName": {
     "admin": "管理员",
     "user": "普通用户",
     "owner": "系统管理员",
-    "member": "普通用户"
+    "member": "普通用户",
+    "eap_service": "EAP 服务账号"
   },
   "permDesc": {
     "users__read": "允许：查看平台用户",
@@ -1856,13 +1859,16 @@
     "mes_wh__confirm": "允许：仓储·确认入库",
     "notify__config": "允许：配置通知订阅",
     "mes_equipment__tool_mount": "允许：设备·工具装卸 / 更换",
-    "mes_equipment__tool_count": "允许：设备·工具计数上报 / 重置"
+    "mes_equipment__tool_count": "允许：设备·工具计数上报 / 重置",
+    "mes_eap__write": "允许：EAP 事件写入（服务账号）",
+    "mes_eap__read_master": "允许：EAP 主数据只读（服务账号）"
   },
   "roleDesc": {
     "platform_admin": "拥有全部权限的平台管理员",
     "platform_user": "无平台权限的普通用户",
     "owner": "拥有全部权限的系统管理员",
     "admin": "管理用户、系统设置与全部业务数据",
-    "member": "只读访问业务数据"
+    "member": "只读访问业务数据",
+    "eap_service": "调用 /mes/eap/events 写设备事件；只读设备、报警码、E10 状态"
   }
 }

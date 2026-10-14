@@ -167,7 +167,11 @@
     "network": "Network error, the backend is unreachable.",
     "forbidden": "You don't have enough privileges.",
     "validation": "Invalid input.",
-    "generic": "The request failed; please contact your administrator."
+    "generic": "The request failed; please contact your administrator.",
+    "query": {
+      "sortBy": "Cannot sort by this column (allowed: {{list}})",
+      "notTextFilter": "{{field}} is not a filterable text field"
+    }
   },
   "backend": {
     "Incorrect email or password": "Incorrect email or password",
@@ -507,7 +511,7 @@
       "tooManyDecimals": "At most {{n}} decimal places",
       "onlyWhen": "Only allowed when {{cond}} is “{{value}}”",
       "readOnlyField": "this field is read-only and cannot be changed",
-      "unknownField": "unknown field, not accepted"
+      "unknownField": "this field is not accepted"
     },
     "autoHint": "Leave blank to generate automatically",
     "currentStep": "Current",

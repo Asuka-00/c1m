@@ -167,7 +167,11 @@
     "network": "网络错误，无法连接后端。",
     "forbidden": "权限不足。",
     "validation": "输入无效。",
-    "generic": "操作失败，请联系管理员。"
+    "generic": "操作失败，请联系管理员。",
+    "query": {
+      "sortBy": "不支持按该列排序（可选：{{list}}）",
+      "notTextFilter": "{{field}} 不是可筛选的文本字段"
+    }
   },
   "backend": {
     "Incorrect email or password": "邮箱或密码错误",

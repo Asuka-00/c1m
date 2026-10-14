@@ -38,12 +38,15 @@ export function alarmStateNote(r: AlarmStateResult | null | undefined) {
 
 /** 报警履历行的联动结果：优先顶层字段，旧数据退回 `e10_change` 里的同名字段。 */
 export function alarmStateOf(r: Record<string, unknown>): AlarmStateResult {
+  // 460df8f 起列表 / 详情顶层都有这两个字段：有顶层就整体用顶层（null 也不退回）
+  if ('state_changed' in r || 'state_skip_reason' in r)
+    return {
+      state_changed: r.state_changed as boolean | null,
+      state_skip_reason: (r.state_skip_reason as string | null) ?? null,
+    }
   const ch = (r.e10_change ?? {}) as AlarmStateResult
   return {
-    state_changed:
-      (r.state_changed as boolean | null | undefined) ?? ch.state_changed,
-    state_skip_reason:
-      (r.state_skip_reason as string | null | undefined) ??
-      ch.state_skip_reason,
+    state_changed: ch.state_changed,
+    state_skip_reason: ch.state_skip_reason,
   }
 }

@@ -1791,13 +1791,16 @@
     "mes_wh__confirm": "Warehouse·Confirm receipts",
     "notify__config": "Configure subscriptions",
     "mes_equipment__tool_mount": "Equipment·Mount / unmount tools",
-    "mes_equipment__tool_count": "Equipment·Report / reset tool usage"
+    "mes_equipment__tool_count": "Equipment·Report / reset tool usage",
+    "mes_eap__write": "EAP events (service account)",
+    "mes_eap__read_master": "EAP master data read (service account)"
   },
   "roleName": {
     "admin": "Administrator",
     "user": "User",
     "owner": "System admin",
-    "member": "Standard user"
+    "member": "Standard user",
+    "eap_service": "EAP service account"
   },
   "permDesc": {
     "users__read": "Allows: View platform users",
@@ -1856,13 +1859,16 @@
     "mes_wh__confirm": "Allows: Warehouse·Confirm receipts",
     "notify__config": "Allows: Configure subscriptions",
     "mes_equipment__tool_mount": "Allows: Equipment·Mount / unmount tools",
-    "mes_equipment__tool_count": "Allows: Equipment·Report / reset tool usage"
+    "mes_equipment__tool_count": "Allows: Equipment·Report / reset tool usage",
+    "mes_eap__write": "Allows: EAP events (service account)",
+    "mes_eap__read_master": "Allows: EAP master data read (service account)"
   },
   "roleDesc": {
     "platform_admin": "Platform administrator with all permissions",
     "platform_user": "Regular user without platform permissions",
     "owner": "System administrator with all permissions",
     "admin": "Manages users, settings and all business data",
-    "member": "Read-only access to business data"
+    "member": "Read-only access to business data",
+    "eap_service": "Posts equipment events via /mes/eap/events; reads equipment, alarm codes and E10 states"
   }
 }

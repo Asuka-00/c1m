@@ -1,7 +1,7 @@
 /** MES 表单必填规则与 422 错误消息翻译（与后端 required / required_when 一致）。 */
 import { AxiosError } from 'axios'
 import i18n, { t } from '@/i18n'
-import { errorMessage } from '@/lib/api/client'
+import { codeItemText, errorMessage, queryItemText } from '@/lib/api/client'
 import type { MesEntity, MesField } from '@/lib/api/mes/common'
 import { parseDecimal } from '@/lib/decimal'
 import { TERMINAL_STATUSES } from '@/features/mes/execution/lot-rules'
@@ -259,6 +259,13 @@ export function mesErrorMessage(err: unknown, e: MesEntity | undefined) {
     FIELD_CODES[x.code ?? ''] ?? FIELD_CODES[x.type ?? '']
   const codes = d.map((x) => {
     const { name, rest } = parse(x)
+    // D65：查询参数 422（sort_by、筛选值等）不映射表单字段
+    if (!fieldCode(x) && !tooMany(x)) {
+      // 固定码（如 date_range_too_large）按码取文案；查询参数不映射表单字段
+      const ct = codeItemText(x)
+      if (ct) return ct
+      if (isQuery(x)) return queryItemText(x)
+    }
     const fk = fieldCode(x)
     if (fk) {
       // 查询参数（loc[0]='query'）不映射到表单字段，前缀参数名
