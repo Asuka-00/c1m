@@ -182,6 +182,21 @@ def parse(data: dict, path: str | None = None) -> Scenario:
                 )
             if act != "create" and not args.get("qual"):
                 raise ScenarioError(f"第 {i} 步 operator_qual {act} 需要 qual（$<save_as>.id 或不存在的 id）")
+            exp = args.get("expect") or {}
+            if args.get("as") == "readonly" and args.get("skip_if_no_creds") != "readonly":
+                raise ScenarioError(
+                    f"第 {i} 步 operator_qual as: readonly 要写 skip_if_no_creds: readonly（凭据 env/creds-ro.json）"
+                )
+            if act == "delete" and exp.get("status") == 200:
+                raise ScenarioError(f"第 {i} 步 operator_qual delete 不会成功（资质只能停用，存在即 409 referenced）")
+            if (
+                act == "delete"
+                and exp.get("status") == 409
+                and (exp.get("code") != "referenced" or (exp.get("top") or {}).get("ref_type") != "operator_qual_log")
+            ):
+                raise ScenarioError(
+                    f"第 {i} 步 operator_qual delete 409 要断言 referenced + 顶层 ref_type=operator_qual_log（D84）"
+                )
         if k in MARKING_LOT_STEPS and not args.get("lot"):
             raise ScenarioError(f"第 {i} 步 {k} 缺少 lot")
         if k == "expect_query_422" and not args.get("path"):

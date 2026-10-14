@@ -796,3 +796,48 @@ def test_operator_qual_requires_idem():
 
     with pytest.raises(ScenarioError):
         parse({"run_id": "x", "steps": [{"operator_qual": {"action": "patch", "qual": "q"}}]})
+
+
+def test_operator_qual_d85_supp2():
+    """D85 补充二：删除恒 409 referenced（顶层 ref_type/ref_count）；conflicting_fields 在 404 前。"""
+    sc = load("scenarios/p3-draft/operator-qual.yaml")
+    ops = [s.args for s in sc.steps if s.kind == "operator_qual"]
+    dels = [a for a in ops if a["action"] == "delete"]
+    assert not any(a["expect"]["status"] == 200 for a in dels)
+    d409 = [a["expect"] for a in dels if a["expect"]["status"] == 409]
+    assert d409 and all(e["top"]["ref_type"] == "operator_qual_log" and "ref_count" in e["top"] for e in d409)
+    assert all("tables" in e["absent"] for e in d409)
+    assert any(a["expect"]["status"] == 404 and a["qual"] == "$missing_uuid" for a in dels)
+    cf = next(a for a in ops if a["expect"].get("ctx", {}).get("reason") == "conflicting_fields")
+    assert cf["qual"] == "$missing_uuid" and cf["body"]["is_active"] is False and "expires_on" in cf["body"]
+    assert cf["expect"]["code"] == "value_error"
+    reps = [s.args for s in sc.steps if s.kind == "operator_qual_replay" and s.args["of"] == "del1"]
+    assert [r["expect"]["status"] for r in reps] == [409, 422]
+    create = next(a for a in ops if a["action"] == "create" and a.get("idem"))
+    assert "reason_id" not in create["body"] and "approved_by" not in create["body"]
+    hist = [s.args for s in sc.steps if s.kind == "expect_operator_qual_history"]
+    renewed = next(h["latest"] for h in hist if h.get("latest", {}).get("action") == "renewed")
+    assert {"comment", "reason_id", "approved_by"} <= set(renewed)
+    assert set(hist[-1]["row_keys"]) == {"comment", "reason_id", "approved_by"}
+    ev = [s.args for s in sc.steps if s.kind == "expect_operator_qual_events"]
+    assert any(e["latest"]["event"] == "operator_qual.deactivated" for e in ev)
+    assert any("operator_qual.reactivated" in e.get("none", []) for e in ev)
+    ti = next(s.args for s in sc.steps if s.kind == "track_in")
+    assert set(ti["expect"]["results"][0]["ctx"]) == {"qual_id", "expires_on"}
+    ro = [a for a in ops if a.get("as") == "readonly"]
+    assert ro and all(a["skip_if_no_creds"] == "readonly" for a in ro)
+
+
+def test_operator_qual_delete_rules():
+    import pytest
+
+    from sim.scenario import ScenarioError, parse
+
+    bad = [
+        {"action": "delete", "idem": "k", "qual": "q", "expect": {"status": 200}},
+        {"action": "delete", "idem": "k", "qual": "q", "expect": {"status": 409, "code": "referenced"}},
+        {"action": "get", "qual": "q", "as": "readonly", "expect": {"status": 200}},
+    ]
+    for a in bad:
+        with pytest.raises(ScenarioError):
+            parse({"run_id": "x", "steps": [{"operator_qual": a}]})

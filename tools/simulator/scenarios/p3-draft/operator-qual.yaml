@@ -1,26 +1,25 @@
-# 草稿（P3-B6 人员资质履历；p3-tasks「B6 验收要点」05:09 + D74 + D81 + D85 + D85 补充一）。B6 未落地，整体 skipped，不连后端。
+# 草稿（P3-B6 人员资质履历；p3-tasks「B6 验收要点」05:09 + D74 + D81 + D85 + 补充一 + 补充二）。B6 未落地，整体 skipped，不连后端。
 # 契约要点：
-#   - 进站检查项名 operator_qualified（D85 更正）；过期 → 409 check_blocked，results[] 有 {check_type: operator_qualified, result: block, ctx: {qual 标识, expires_on}}；
-#     overridable=false（D74）；expires_on 当天有效、按站点时区；过期不自动停用（Q6-1 现定）
-#   - 写接口（POST 新建 / PATCH / DELETE）都必须带 Idempotency-Key（D85 + 补充一，D74 原文“CRUD 不要 key”作废）
-#   - D81 顺序：401/403 → 缺 key 422 missing → body 422 → 重放（同 key 同体原响应；同 key 异体 422 reused，对象格式）→ 404 → 409
-#   - PATCH is_active=false = 停用：缺 reason_id 或 comment → 422 missing
-#   - PATCH 带 expires_on = 延期：缺 reason_id / comment / approved_by 任一 → 422 missing；新日期更晚记 renewed、更早记 changed，发对应 operator_qual.* 事件
-#   - 自批：approved_by == 发请求的用户 → 422 value_error ctx.reason=self_approval，loc [body, approved_by]，排在 404 前；
-#           approved_by == 资质持有人 → 422 value_error ctx.reason=holder_approval，loc [body, approved_by]，排在 404 后、409 前
-#   - 恢复（is_active false→true）只写履历 reactivated，不发事件（D85）
-#   - 每次写都能在 GET /mes/exec/operator-qual/{qual_id}/history 看到（D74：rows[{id, action, before, after, reason, username, at}]，at 倒序，UTC 带 Z）
-# TODO（B6 落地后核对，未敢自造契约）：
-#   TODO-1 资源路径：通用 CRUD 是 /mes/exec/operator-qual 还是 /mes/operator_qual（D74 只写了 history 路径）
-#   TODO-2 履历 rows[] 是否新增 comment / reason_id / approved_by 字段（验收要点说表加三列；D74 返回形状仍是 reason）
-#   TODO-3 check_blocked ctx 里 qual 标识的键名（qual_id？）；expires_on 格式（YYYY-MM-DD）
-#   TODO-4 reason_id 引用哪张原因表 / 哪个 reason 类别；场景暂用 $reason.qual
-#   TODO-5 过期资质的种子：直接 POST 一条 expires_on 为昨天（站点时区）的资质是否被允许（还是 422 past date）
-#   TODO-6 新建（granted）是否也要 reason_id/comment/approved_by；场景暂只带业务字段
-#   TODO-7 只读账号（只有 mes.exec:read）凭据是否提供；没有则 403 步骤跳过（as: readonly）
-#   TODO-8 DELETE 有履历的资质 409 referenced 的顶层字段（D82 补充三：ref_type/ref_count 还是 tables[]，D74 写的 tables[]）
-#   TODO-9 停用时带 expires_on 同时出现，按停用还是延期判（D85 两条规则并存时的优先级）
-#   TODO-10 operator_qual.reactivated 不发事件，但 action 枚举里 deactivated 事件是否也在只停用时发（D74 有 deactivated 事件，按有处理）
+#   - 进站检查项名 operator_qualified；过期 → 409 check_blocked，results[] 有 {check_type: operator_qualified, result: block,
+#     ctx: {qual_id, expires_on: YYYY-MM-DD}}（补充二-3）；overridable=false（D74）；过期不自动停用
+#   - 写接口（POST / PATCH / DELETE）都必须带 Idempotency-Key（D85 + 补充一）
+#   - D81 顺序：403 → 缺 key 422 missing → body 422 → 重放 → 404 → 409
+#   - 授予不要求 reason_id / approved_by；可直接新建已过期资质当种子（补充二-5/6）
+#   - PATCH 同时带 is_active=false 和 expires_on → 422 value_error ctx.reason=conflicting_fields，请求体校验阶段（404 之前）（补充二-9）
+#   - 停用：缺 reason_id / comment → 422 missing；成功发 operator_qual.deactivated
+#   - 延期：缺 reason_id / comment / approved_by → 422 missing；更晚 renewed、更早 changed，发对应事件
+#   - 自批：self_approval 在 404 前；holder_approval 在 404 后、409 前（loc [body, approved_by]）
+#   - 恢复只写履历 reactivated，不发事件
+#   - 履历 GET .../{qual_id}/history rows[] 带 comment、reason_id、approved_by（补充二-2），at 倒序，UTC 带 Z
+#   - 删除：资质只能停用不能删除（架构师定）。DELETE 走完 D81 校验（403 → 缺 key 422 → 重放 → 404）后总是 409 referenced，
+#     顶层 ref_type=operator_qual_log + ref_count（D84，不用 tables[]）。没有成功删除，重放只能验证“同 key 同体 → 同一个 409”
+#   - 原因类别 operator_qual（D74）
+#   - 只读账号：不借 8011 的 fe-it-ro.cred；用本环境（8013 / app_it_eap）自建 eap_it_ro（角色 eap-it-ro，仅 mes.*:read），
+#     凭据 eap/env/creds-ro.json（chmod 600，不进 git），由 eap/env/mk-ro-account.py 经租户管理接口创建；无凭据则 403 步骤跳过
+# TODO（等 B6 提交核对）：
+#   TODO-1 资源路径：通用 CRUD 是 /mes/exec/operator-qual 还是 /mes/operator_qual（暂用前者）
+#   TODO-4 reason_id 用的原因表行：类别 operator_qual，具体行和种子待 B6；场景暂用 $reason.qual
+#   TODO-7 creds-ro.json 尚未建成（缺租户管理员凭据），建好前 as: readonly 步骤跳过
 name: operator-qual
 run_id: opq-01
 draft: "等 P3-B6（迁移 0037 mes_operator_qual_log、资质写接口带 key、履历接口、operator_qualified 进站检查）落地"
@@ -31,19 +30,23 @@ steps:
   - precondition: {eq: EAP-DA01, e10: SBY}
   - precondition: {lot: FX0001, lot_status: waiting}
   # ---- 授予：新建两条资质（op1 = 进站操作员；q-exp 昨天到期，q-ok 30 天后到期）
-  - operator_qual: {action: create, idem: opq-c1, save_as: qexp, body: {username: $user.op1, operation: $op.FX0001, equipment_type: DIEBOND, expires_on: $date.-1, is_active: true}, expect: {status: 201}}   # TODO-5
-  - expect_operator_qual_history: {qual: $qexp.id, latest: {action: granted}}
+  - operator_qual: {action: create, idem: opq-c1, save_as: qexp, body: {username: $user.op1, operation: $op.FX0001, equipment_type: DIEBOND, expires_on: $date.-1, is_active: true}, expect: {status: 201}}   # 授予不带 reason/approved_by；已过期种子
+  - expect_operator_qual_history: {qual: $qexp.id, latest: {action: granted, comment: null, reason_id: null, approved_by: null}}
   - expect_operator_qual_events: {qual: $qexp.id, latest: {event: operator_qual.granted}}
   # ---- 过期 → 进站 409 check_blocked（不自动停用）
   - track_in: {eq: EAP-DA01, lot: FX0001, as: op1, expect: {status: 409, code: check_blocked, check: {check_type: operator_qualified, overridable: false},
-      results: [{check_type: operator_qualified, result: block, ctx: {qual_id: $qexp.id, expires_on: $date.-1}}]}}   # TODO-3
+      results: [{check_type: operator_qualified, result: block, ctx: {qual_id: $qexp.id, expires_on: $date.-1}}]}}   # expires_on 为 YYYY-MM-DD
   - operator_qual: {action: get, qual: $qexp.id, expect: {status: 200, body: {is_active: true}}}
   # ---- key：新建 / PATCH / DELETE 缺 key 都 422 missing；只读账号 403 排在 422 前
   - operator_qual: {action: create, no_idem: true, body: {username: $user.op1, operation: $op.FX0001}, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
   - operator_qual: {action: patch, no_idem: true, qual: $qexp.id, body: {comment: x}, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
   - operator_qual: {action: delete, no_idem: true, qual: $qexp.id, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
-  - operator_qual: {action: patch, no_idem: true, as: readonly, skip_if_no_creds: readonly, qual: $qexp.id, body: {is_active: false}, expect: {status: 403}}   # TODO-7
+  - operator_qual: {action: patch, no_idem: true, as: readonly, skip_if_no_creds: readonly, qual: $qexp.id, body: {is_active: false}, expect: {status: 403}}   # 8013 自建只读账号
   - operator_qual: {action: delete, no_idem: true, as: readonly, skip_if_no_creds: readonly, qual: $qexp.id, expect: {status: 403}}
+  - operator_qual: {action: get, as: readonly, skip_if_no_creds: readonly, qual: $qexp.id, expect: {status: 200}}   # 只读能读
+  # ---- 冲突字段（补充二-9）：请求体校验阶段，404 之前 → 不存在的 id 也是 422
+  - operator_qual: {action: patch, idem: opq-cf1, qual: $missing_uuid, body: {is_active: false, expires_on: $date.+60, reason_id: $reason.qual, comment: x, approved_by: $user.lead},
+      expect: {status: 422, code: value_error, ctx: {reason: conflicting_fields}}}
   # ---- 自批（D85）：self_approval 在 404 前 → 用不存在的 id 也是 422；holder_approval 在 404 后
   - operator_qual: {action: patch, idem: opq-sa1, qual: $missing_uuid, body: {expires_on: $date.+60, reason_id: $reason.qual, comment: 延期, approved_by: $user.self},
       expect: {status: 422, code: value_error, loc: [body, approved_by], ctx: {reason: self_approval}}}
@@ -56,7 +59,7 @@ steps:
   - operator_qual: {action: patch, idem: opq-r3, qual: $qexp.id, body: {expires_on: $date.+60, reason_id: $reason.qual, comment: 延期}, expect: {status: 422, code: missing, loc: [body, approved_by]}}
   # 延后 → renewed + 事件；进站放行
   - operator_qual: {action: patch, idem: opq-r4, save_as: renew, qual: $qexp.id, body: {expires_on: $date.+60, reason_id: $reason.qual, comment: 复训通过, approved_by: $user.lead}, expect: {status: 200}}
-  - expect_operator_qual_history: {qual: $qexp.id, latest: {action: renewed}}
+  - expect_operator_qual_history: {qual: $qexp.id, latest: {action: renewed, comment: 复训通过, reason_id: $reason.qual, approved_by: $user.lead}}
   - expect_operator_qual_events: {qual: $qexp.id, latest: {event: operator_qual.renewed}}
   # ---- 重放：同 key 同体 → 原结果，履历不新增；同 key 换体 → 422 reused（对象格式）
   - operator_qual_replay: {of: renew, expect: {status: 200, same_body: true}}
@@ -64,19 +67,26 @@ steps:
   - operator_qual_replay: {of: renew, change: {comment: 改了}, expect: {status: 422, code: idempotency_key_reused, detail_object: true}}
   # 提前 → changed + 事件
   - operator_qual: {action: patch, idem: opq-r5, qual: $qexp.id, body: {expires_on: $date.+30, reason_id: $reason.qual, comment: 缩短, approved_by: $user.lead}, expect: {status: 200}}
-  - expect_operator_qual_history: {qual: $qexp.id, latest: {action: changed}}
+  - expect_operator_qual_history: {qual: $qexp.id, latest: {action: changed, comment: 缩短, reason_id: $reason.qual, approved_by: $user.lead}}
   - expect_operator_qual_events: {qual: $qexp.id, latest: {event: operator_qual.changed}}
   # ---- 停用：缺 reason_id / comment 422 missing；成功 → deactivated + 事件
   - operator_qual: {action: patch, idem: opq-d1, qual: $qexp.id, body: {is_active: false, comment: 离岗}, expect: {status: 422, code: missing, loc: [body, reason_id]}}
   - operator_qual: {action: patch, idem: opq-d2, qual: $qexp.id, body: {is_active: false, reason_id: $reason.qual}, expect: {status: 422, code: missing, loc: [body, comment]}}
-  - operator_qual: {action: patch, idem: opq-d3, qual: $qexp.id, body: {is_active: false, reason_id: $reason.qual, comment: 离岗}, expect: {status: 200}}
-  - expect_operator_qual_history: {qual: $qexp.id, latest: {action: deactivated}}
-  - expect_operator_qual_events: {qual: $qexp.id, latest: {event: operator_qual.deactivated}}   # TODO-10
+  - operator_qual: {action: patch, idem: opq-d3, save_as: deact, qual: $qexp.id, body: {is_active: false, reason_id: $reason.qual, comment: 离岗}, expect: {status: 200}}
+  - expect_operator_qual_history: {qual: $qexp.id, latest: {action: deactivated, comment: 离岗, reason_id: $reason.qual, approved_by: null}}
+  - expect_operator_qual_events: {qual: $qexp.id, latest: {event: operator_qual.deactivated}}   # 补充二-10
   # ---- 恢复：只写履历 reactivated，不发事件
   - operator_qual: {action: patch, idem: opq-a1, qual: $qexp.id, body: {is_active: true, reason_id: $reason.qual, comment: 返岗}, expect: {status: 200}}
-  - expect_operator_qual_history: {qual: $qexp.id, latest: {action: reactivated}}
+  - expect_operator_qual_history: {qual: $qexp.id, latest: {action: reactivated, comment: 返岗, reason_id: $reason.qual}}
   - expect_operator_qual_events: {qual: $qexp.id, latest: {event: operator_qual.changed}, none: [operator_qual.reactivated]}
-  # ---- 删除有履历的资质 → 409 referenced（单一原因，D82 补充三）
-  - operator_qual: {action: delete, idem: opq-x1, qual: $qexp.id, expect: {status: 409, code: referenced}}   # TODO-8
-  # ---- 履历总览：每次写都有一条，at UTC 带 Z，倒序
-  - expect_operator_qual_history: {qual: $qexp.id, actions: [reactivated, deactivated, changed, renewed, granted], at_utc_z: true}
+  # ---- 删除：只能停用不能删除。D81：缺 key 422 已在上面；不存在 → 404；存在 → 恒 409 referenced（顶层 ref_type/ref_count，无 tables[]）
+  - operator_qual: {action: delete, idem: opq-x0, qual: $missing_uuid, expect: {status: 404, code: not_found}}
+  - operator_qual: {action: delete, idem: opq-x1, save_as: del1, qual: $qexp.id,
+      expect: {status: 409, code: referenced, top: {ref_type: operator_qual_log, ref_count: {gte: 1}}, absent: [tables]}}
+  # 重放：没有成功的删除，只能验证同 key 同体 → 同一个 409；同 key 换目标 → 422 reused（重放在 404 之前）
+  - operator_qual_replay: {of: del1, expect: {status: 409, code: referenced, same_body: true}}
+  - operator_qual_replay: {of: del1, change: {qual: $missing_uuid}, expect: {status: 422, code: idempotency_key_reused, detail_object: true}}
+  - operator_qual: {action: get, qual: $qexp.id, expect: {status: 200, body: {is_active: true}}}   # 删除不改数据
+  # ---- 履历总览：每次写都有一条（删除 409 不写），at UTC 带 Z，倒序，rows 带三列
+  - expect_operator_qual_history: {qual: $qexp.id, actions: [reactivated, deactivated, changed, renewed, granted], at_utc_z: true,
+      row_keys: [comment, reason_id, approved_by]}
