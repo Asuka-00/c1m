@@ -182,7 +182,7 @@ export interface ReticleActionInput {
  * （补充二加入 _flow 动态路由的 clean-start / clean-complete / repair-complete / inspect-start）。
  * /mes/eqp 下的物料批上机、下机不在范围内。
  */
-export const D80_KEYED = [
+export const IDEMPOTENT = [
   'usage',
   'incident',
   'inspection',
@@ -197,9 +197,7 @@ export const D80_KEYED = [
   'clean-complete',
   'repair-complete',
   'inspect-start',
-] as const satisfies readonly ReticleAction[]
-/** 必须带 Idempotency-Key 的光罩动作（= 全部 14 个）。 */
-export const IDEMPOTENT: readonly ReticleAction[] = D80_KEYED
+] as const satisfies readonly ReticleAction[] as readonly ReticleAction[]
 
 /** 各动作请求体白名单。 */
 export const ACTION_BODY: Record<ReticleAction, readonly string[]> = {

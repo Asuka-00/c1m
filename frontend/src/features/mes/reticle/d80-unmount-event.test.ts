@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
-  D80_KEYED,
   groupHistory,
+  IDEMPOTENT,
   mockReticleApi,
   resetReticleMock,
   RETICLE_SOURCES,
@@ -21,7 +21,7 @@ afterEach(() => resetReticleMock())
 
 describe('D80 f9e9dda 对齐', () => {
   it('14 个写接口全部带 key；source 四值', () => {
-    expect(new Set(D80_KEYED).size).toBe(14)
+    expect(new Set(IDEMPOTENT).size).toBe(14)
     expect(RETICLE_SOURCES).toEqual(['manual', 'eap', 'simulator', 'system'])
   })
 

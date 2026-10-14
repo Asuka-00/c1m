@@ -12,7 +12,6 @@ import {
   httpReticleApi,
   mockReticleApi,
   resetReticleMock,
-  D80_KEYED,
   IDEMPOTENT,
   type ReticleAction,
   type ReticleActionInput,
@@ -502,8 +501,8 @@ describe('D80 + 补充二：/mes/reticle 14 个手工写接口必填 Idempotency
     'repair-complete': {},
     'inspect-start': {},
   }
-  it('清单为 14 个，全部在 IDEMPOTENT 里', () => {
-    expect([...D80_KEYED].sort()).toEqual(
+  it('IDEMPOTENT 清单为 14 个，与请求体白名单一致', () => {
+    expect([...IDEMPOTENT].sort()).toEqual(
       [
         'usage',
         'incident',
@@ -521,7 +520,7 @@ describe('D80 + 补充二：/mes/reticle 14 个手工写接口必填 Idempotency
         'inspect-start',
       ].sort()
     )
-    expect(D80_KEYED).toHaveLength(14)
+    expect(IDEMPOTENT).toHaveLength(14)
     expect([...IDEMPOTENT].sort()).toEqual(Object.keys(BODY).sort())
   })
   it('http：14 个动作都带 Idempotency-Key 头', async () => {
