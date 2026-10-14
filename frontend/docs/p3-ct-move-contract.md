@@ -3,7 +3,7 @@
 依据：decisions.md D73（P3-B5 契约定稿）及其补充（工艺专家答复 T5-1～T5-3），以及 D62、D63、D64。类型定义在 `src/lib/api/mes/ct-move.ts`。接口没上线（返回 404）时，页面用 `ctMoveMock` 示例数据，并显示“示例数据”标签。
 
 ## 已定稿
-- **接口：** `GET /api/v1/mes/exec/reports/ct-move`，权限 `mes.exec:read`，只读。无权限返回 403；`operation_id`/`product_id` 不存在或不属于本租户返回 404。旧接口 `/mes/report/move`、`/mes/report/cycle-time` 和权限 `mes.report:read` 作废，前端不得再用。组件 key 是 `mes-page:ct-move-report`，菜单 key 是 `mes-ct-move-report`。
+- **接口：** `GET /api/v1/mes/exec/reports/ct-move`，权限 `mes.exec:read`，只读。无权限返回 403；`operation_id`/`product_id` 不存在或不属于本租户返回 404。旧接口 `/mes/report/move`、`/mes/report/cycle-time` 和权限 `mes.report:read` 作废，前端不得再用。组件 key 是 `mes-page:ct-move-report`，菜单 key 是 `mes-ct-move-report`（已定：报表页沿用 `-report` 后缀，同 `mes-page:yield-report`、`mes-page:oee-report`，并与 D73 和现有代码一致）。后端随菜单键导出（D59 补充）一起加，落地前前端保留在 `PENDING_MENU_KEYS` 里。
 - **参数：** `date_from`、`date_to` 必填（`YYYY-MM-DD`，含两端），可选 `operation_id`、`product_id`（uuid）。日期格式错误或 `date_from > date_to` 统一返回 422 `value_error`，不另起错误码；未知参数后端忽略，不报 `unknown_field`。
 - **日期跨度：** 最多 92 天，超出时后端返回 422 `date_range_too_large`（`ctx.max_days=92`）。前端提交前先校验并给出三语提示，后端返回的这个错误码也做了三语本地化。
 - **时区：** 用站点时区，由后端分桶。前端不写死时区，页面显示响应里的 `timezone`（IANA 名）。规则同 D54 导出。`day` 是站点日期字符串，响应里的时间点（如有）仍是 UTC Z。
@@ -34,6 +34,4 @@
 ```
 
 ## 待定
-1. 后端菜单 key `mes-ct-move-report` 还没落地，后端会跟菜单键导出一起加；在此之前保留在 `PENDING_MENU_KEYS` 里。
-
-工艺口径 T5-1～T5-3 已由工艺专家答复定稿（见上文 Move、返工、Hold、在制各条）；以后如调整，只改计算口径，接口不变。
+无。工艺口径 T5-1～T5-3 已由工艺专家答复定稿（见上文 Move、返工、Hold、在制各条）；以后如调整，只改计算口径，接口不变。
