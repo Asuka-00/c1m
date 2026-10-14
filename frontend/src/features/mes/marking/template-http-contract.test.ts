@@ -123,4 +123,27 @@ describe('mock 预览 / 校验与 comment 上限', () => {
       'i2'
     )
   })
+  it('template_id / lines 二选一 422；传 lines 时 template_id 为 null；id 不存在 404', async () => {
+    const st = async (p: Promise<unknown>) =>
+      p.then(
+        () => 200,
+        (e) => e.response.status as number
+      )
+    for (const f of [
+      mockMarkingApi.templatePreview,
+      mockMarkingApi.templateValidate,
+    ]) {
+      expect(await st(f({}))).toBe(422)
+      expect(await st(f({ template_id: 't1', lines: ['x'] }))).toBe(422)
+      expect(await st(f({ template_id: 'nope' }))).toBe(404)
+      expect(await st(f({ template_id: 't1' }))).toBe(200)
+    }
+    const e = await mockMarkingApi.templatePreview({}).catch((x) => x)
+    expect(e.response.data.detail[0]).toMatchObject({ type: 'value_error' })
+    const p = await mockMarkingApi.templatePreview({ lines: ['{lot_id}'] })
+    expect(p.template_id).toBeNull()
+    expect(
+      (await mockMarkingApi.templatePreview({ template_id: 't1' })).template_id
+    ).toBe('t1')
+  })
 })

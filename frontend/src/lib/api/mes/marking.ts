@@ -1176,13 +1176,23 @@ function mockRetire(id: string) {
   return tpl
 }
 
-const checkLines = (input: TemplateCheckInput) =>
-  input.template_id ? findTpl(input.template_id).lines : (input.lines ?? [])
+/** template_id 与 lines 二选一：都传 / 都不传 422 value_error（请求体 422 先于 404）。 */
+const checkLines = (input: TemplateCheckInput) => {
+  const hasId = input.template_id != null
+  const hasLines = input.lines != null
+  if (hasId === hasLines)
+    throw err422(
+      'template_id',
+      'value_error',
+      'exactly one of template_id or lines is required',
+      { reason: 'exactly_one_of', fields: ['template_id', 'lines'] }
+    )
+  return hasId ? findTpl(input.template_id!).lines : input.lines!
+}
 
 /** 模板预览（只读）：用示例值渲染。 */
 function mockTplPreview(input: TemplateCheckInput): TemplatePreviewOut {
   return {
-    template_id: input.template_id ?? null,
     lines: renderLines(checkLines(input), {
       trace_code: '26420001',
       date_code: '2642',
@@ -1190,6 +1200,8 @@ function mockTplPreview(input: TemplateCheckInput): TemplatePreviewOut {
       product_code: 'PRODUCT',
       customer_code: 'CUSTOMER',
     }),
+    // 传 lines 时 template_id 为 null
+    template_id: input.template_id ?? null,
   }
 }
 
