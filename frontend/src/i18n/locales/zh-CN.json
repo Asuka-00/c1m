@@ -1169,6 +1169,46 @@
       "minutes": "{{m}} 分钟",
       "hours": "{{h}} 小时",
       "hoursMinutes": "{{h}} 小时 {{m}} 分钟"
+    },
+    "map": {
+      "title": "坐标图导入",
+      "description": "导入晶圆或框架的坐标图 CSV，先预览校验，确认后再写入。",
+      "chooseFile": "选择 CSV 文件",
+      "confirm": "确认导入",
+      "previewFailed": "预览失败",
+      "importFailed": "导入失败",
+      "imported": "已导入 {{n}} 片基板的坐标图",
+      "fileError": "文件不能导入",
+      "fileErrors": {
+        "missing_header": "文件头缺少坐标原点、轴向或 bin 定义集。",
+        "bad_column_header": "列名应为 substrate_id,row,col,bin_code。",
+        "unknown_bin_set": "找不到 bin 定义集 {{set}} 版本 {{version}}。",
+        "empty": "文件是空的。"
+      },
+      "previewTitle": "共 {{rows}} 行数据，{{errors}} 处问题",
+      "rowNo": "数据行",
+      "fileLine": "原始文件第 {{n}} 行",
+      "problem": "问题",
+      "errors": {
+        "bad_columns": "列数不对：{{value}}",
+        "bad_number": "行或列不是非负整数：{{value}}",
+        "duplicate_coord": "坐标重复：{{value}}",
+        "unknown_bin": "bin 码未定义：{{value}}"
+      },
+      "listTitle": "已导入的坐标图",
+      "substrate": "基板编号",
+      "version": "版本",
+      "size": "行×列",
+      "binType": {
+        "good": "良品",
+        "fail": "不良",
+        "edge": "边缘"
+      },
+      "binSet": "bin 定义集",
+      "origin": "原点 / 轴向",
+      "file": "来源文件",
+      "importedAt": "导入时间",
+      "empty": "还没有导入过坐标图"
     }
   },
   "notify": {

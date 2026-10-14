@@ -1169,6 +1169,46 @@
       "minutes": "{{m}} min",
       "hours": "{{h}} h",
       "hoursMinutes": "{{h}} h {{m}} min"
+    },
+    "map": {
+      "title": "Map Import",
+      "description": "Import wafer or strip map CSV files. Preview and validate first, then confirm to save.",
+      "chooseFile": "Choose CSV file",
+      "confirm": "Confirm import",
+      "previewFailed": "Preview failed",
+      "importFailed": "Import failed",
+      "imported": "Imported maps for {{n}} substrates",
+      "fileError": "File cannot be imported",
+      "fileErrors": {
+        "missing_header": "The file header is missing the origin, axis directions or bin definition set.",
+        "bad_column_header": "Columns must be substrate_id,row,col,bin_code.",
+        "unknown_bin_set": "Bin definition set {{set}} version {{version}} was not found.",
+        "empty": "The file is empty."
+      },
+      "previewTitle": "{{rows}} data rows, {{errors}} problems",
+      "rowNo": "Data row",
+      "fileLine": "File line {{n}}",
+      "problem": "Problem",
+      "errors": {
+        "bad_columns": "Wrong number of columns: {{value}}",
+        "bad_number": "Row or column is not a non-negative integer: {{value}}",
+        "duplicate_coord": "Duplicate coordinate: {{value}}",
+        "unknown_bin": "Undefined bin code: {{value}}"
+      },
+      "listTitle": "Imported maps",
+      "substrate": "Substrate ID",
+      "version": "Version",
+      "size": "Rows×Cols",
+      "binType": {
+        "good": "Good",
+        "fail": "Fail",
+        "edge": "Edge"
+      },
+      "binSet": "Bin set",
+      "origin": "Origin / axes",
+      "file": "Source file",
+      "importedAt": "Imported at",
+      "empty": "No maps imported yet"
     }
   },
   "notify": {

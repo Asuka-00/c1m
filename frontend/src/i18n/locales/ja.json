@@ -1169,6 +1169,46 @@
       "minutes": "{{m}} 分",
       "hours": "{{h}} 時間",
       "hoursMinutes": "{{h}} 時間 {{m}} 分"
+    },
+    "map": {
+      "title": "マップ取込",
+      "description": "マップ CSV をプレビューで検証してから取り込みます。",
+      "chooseFile": "CSV ファイルを選択",
+      "confirm": "取込を確定",
+      "previewFailed": "プレビューに失敗しました",
+      "importFailed": "取込に失敗しました",
+      "imported": "{{n}} 枚の基板のマップを取り込みました",
+      "fileError": "このファイルは取り込めません",
+      "fileErrors": {
+        "missing_header": "ファイルヘッダーに原点、軸方向、または bin 定義セットがありません。",
+        "bad_column_header": "列名は substrate_id,row,col,bin_code である必要があります。",
+        "unknown_bin_set": "bin 定義セット {{set}} バージョン {{version}} が見つかりません。",
+        "empty": "ファイルが空です。"
+      },
+      "previewTitle": "データ {{rows}} 行、問題 {{errors}} 件",
+      "rowNo": "データ行",
+      "fileLine": "元ファイル {{n}} 行目",
+      "problem": "問題",
+      "errors": {
+        "bad_columns": "列数が正しくありません：{{value}}",
+        "bad_number": "行または列が 0 以上の整数ではありません：{{value}}",
+        "duplicate_coord": "座標が重複しています：{{value}}",
+        "unknown_bin": "未定義の bin コード：{{value}}"
+      },
+      "listTitle": "取込済みのマップ",
+      "substrate": "基板 ID",
+      "version": "バージョン",
+      "size": "行×列",
+      "binType": {
+        "good": "良品",
+        "fail": "不良",
+        "edge": "エッジ"
+      },
+      "binSet": "bin 定義セット",
+      "origin": "原点 / 軸方向",
+      "file": "元ファイル",
+      "importedAt": "取込日時",
+      "empty": "まだマップを取り込んでいません"
     }
   },
   "notify": {

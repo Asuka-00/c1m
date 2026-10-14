@@ -30,6 +30,8 @@ export const MES_PERM = {
   equipmentE10: 'mes.equipment:e10',
   /** 设备 PM */
   equipmentPm: 'mes.equipment:pm',
+  /** 坐标图导入（P1 / B4） */
+  mapImport: 'mes.map:import',
 } as const
 
 export type MesPerm = (typeof MES_PERM)[keyof typeof MES_PERM] | (string & {})
