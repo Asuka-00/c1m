@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.deps import SessionDep
+from app.core.spec.errors import err_422
 from app.mes.common import idempotency as idem
 from app.mes.common.guard import perm_body
 from app.mes.common.query import one
@@ -142,7 +143,7 @@ def mount_at(
     """Material lots mounted on an equipment at a point in time (traceability)."""
     _need(ctx, "mes.equipment:read")
     if at.tzinfo is None:
-        raise HTTPException(status_code=422, detail="at: timezone required")
+        raise err_422(["query", "at"], "at: timezone required", "timezone_required")
     return {"data": mount_svc.mounted_at(session, ctx.id, eq_id, at, port_code)}
 
 

@@ -17,7 +17,7 @@ from app.core.deps import SessionDep
 from app.core.pagination import ListParamsDep
 from app.core.spec.base import get_entity
 from app.core.spec.engine import ENTITIES, EXTRA_PERMISSIONS, MODULES, Entity, perm
-from app.core.spec.errors import http_422
+from app.core.spec.errors import query_422
 from app.core.spec.excel import export_xlsx, import_xlsx
 from app.core.spec.query import distinct_values, get_row, list_rows, tree
 from app.core.spec.serialize import dec_str, serialize
@@ -167,7 +167,7 @@ def uom_convert(
     res = convert(session, ctx.id, from_uom, to_uom, value)
     errs = count_errors(session, ctx.id, to_uom, {"value": res["value"]})
     if errs:
-        raise http_422(errs)
+        raise query_422(errs)
     qty = res.pop("qty")
     return {**res, "value": dec_str(qty)}  # D50
 

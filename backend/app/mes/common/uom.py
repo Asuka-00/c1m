@@ -10,11 +10,11 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 import sqlalchemy as sa
-from fastapi import HTTPException
 from sqlmodel import Session
 
 from app.core.spec.base import conn
 from app.core.spec.engine import TABLES
+from app.core.spec.errors import err_422
 
 QTY_SCALE = 6
 Edge = tuple[Decimal, Decimal]  # 目标值 = 源值 * factor + offset
@@ -113,6 +113,9 @@ def convert(
                 }
             seen.add(nxt)
             q.append((nxt, nv, [*path, nxt]))
-    raise HTTPException(
-        status_code=422, detail="No conversion path between these units"
+    raise err_422(
+        ["query", "to_uom"],
+        "No conversion path between these units",
+        "no_conversion_path",
+        {"from_uom": str(src), "to_uom": str(dst)},
     )

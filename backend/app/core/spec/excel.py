@@ -25,6 +25,7 @@ from sqlmodel import Session
 
 from app.core.spec.base import conn, table
 from app.core.spec.engine import ENTITIES, Entity
+from app.core.spec.errors import err_422
 from app.core.spec.query import all_rows
 from app.core.spec.serialize import to_json
 from app.core.spec.validate import attr_defs
@@ -218,8 +219,11 @@ def import_xlsx(
     known = set(columns(session, tenant_id, e)) | {""}
     unknown = [h for h in header if h not in known]
     if unknown:
-        raise HTTPException(
-            status_code=422, detail=f"Unknown columns: {', '.join(unknown)}"
+        raise err_422(
+            ["body", "file"],
+            f"Unknown columns: {', '.join(unknown)}",
+            "unknown_columns",
+            {"columns": unknown},
         )
     errors: list[dict[str, Any]] = []
     created = updated = 0

@@ -54,6 +54,24 @@ def query_422(errors: Sequence[tuple[Any, ...]]) -> HTTPException:
     )
 
 
+def err_422(
+    loc: Sequence[Any], msg: str, code: str, ctx: dict[str, Any] | None = None
+) -> HTTPException:
+    """单项 422（D65 补充：detail 一律为列表）：``loc`` 原样给出，``type`` 与 ``code`` 为错误码。"""
+    return HTTPException(
+        status_code=422,
+        detail=[
+            {
+                "loc": list(loc),
+                "msg": msg,
+                "type": code,
+                "code": code,
+                **({"ctx": ctx} if ctx else {}),
+            }
+        ],
+    )
+
+
 def integrity(ex: IntegrityError) -> HTTPException:
     """把数据库完整性错误（唯一 / 外键 / 其他约束）转换为 409 HTTPException。"""
     msg = str(ex.orig)

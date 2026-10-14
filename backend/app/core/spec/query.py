@@ -12,7 +12,7 @@ from app.core.spec.base import Row, conn, table
 from app.core.spec.engine import (
     Entity,
 )
-from app.core.spec.errors import query_422
+from app.core.spec.errors import err_422, query_422
 from app.core.spec.serialize import coerce, serialize
 
 
@@ -223,7 +223,12 @@ def distinct_values(
     """
     f = e.field(name)
     if not f or f.type != "str" or not f.filterable:
-        raise query_422([("field", f"{name} is not a text filter")])
+        raise err_422(
+            ["path", "field"],
+            f"{name} is not a text filter",
+            "not_text_filter",
+            {"field": name},
+        )
     sub = base_select(e, tenant_id).subquery()
     stmt = sa.select(sub.c[f.column]).where(sub.c[f.column].is_not(None)).distinct()
     if q:

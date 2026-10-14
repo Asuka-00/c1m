@@ -22,7 +22,7 @@ from sqlmodel import Session
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, TABLES, Entity
-from app.core.spec.errors import MesError
+from app.core.spec.errors import MesError, err_422
 from app.core.spec.validate import validator
 from app.core.spec.write import set_status
 from app.mes.common.query import find, one
@@ -82,7 +82,12 @@ def apply(s: Session, tid: uuid.UUID, co: Row, user: Any) -> Row:
     kind = co["change_type"]
     new = one(s, tid, kind, co[f"{kind}_id"])
     if not new:
-        raise HTTPException(422, f"{kind} not found")
+        raise err_422(
+            ["body", f"{kind}_id"],
+            f"{kind} not found",
+            "ref_not_found",
+            {"entity": kind},
+        )
     olds = [
         r
         for r in find(s, tid, kind)

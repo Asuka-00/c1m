@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.core.deps import SessionDep
 from app.core.models import iso_utc
 from app.core.spec.engine import ENTITIES
-from app.core.spec.errors import http_422, query_422
+from app.core.spec.errors import err_422, http_422, query_422
 from app.core.spec.serialize import serialize
 from app.mes.common import idempotency as idem
 from app.mes.common.guard import perm_body
@@ -285,9 +285,16 @@ def _window(
     end_d = date_to or datetime.now(tz).date()
     start_d = date_from or end_d - timedelta(days=days - 1)
     if start_d > end_d:
-        raise HTTPException(status_code=422, detail="date_from after date_to")
+        raise err_422(
+            ["query", "date_from"], "date_from after date_to", "date_range_invalid"
+        )
     if (end_d - start_d).days > 366:
-        raise HTTPException(status_code=422, detail="range too long (max 366 days)")
+        raise err_422(
+            ["query", "date_to"],
+            "range too long (max 366 days)",
+            "date_range_too_large",
+            {"max_days": 366},
+        )
     return (
         datetime.combine(start_d, time.min, tz),
         datetime.combine(end_d + timedelta(days=1), time.min, tz),
@@ -373,7 +380,12 @@ def report_oee_trend(
     _need(ctx, "mes.exec:read")
     a, b = _window(date_from, date_to, 7)
     if (b - a).days > 92:
-        raise HTTPException(status_code=422, detail="range too long (max 92 days)")
+        raise err_422(
+            ["query", "date_to"],
+            "range too long (max 92 days)",
+            "date_range_too_large",
+            {"max_days": 92},
+        )
     return {"data": svc.oee_trend(session, ctx.id, a, b, workcenter)}
 
 

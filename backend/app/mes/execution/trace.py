@@ -9,6 +9,7 @@ from sqlmodel import Session
 
 from app.core.spec.base import conn
 from app.core.spec.engine import TABLES
+from app.core.spec.errors import err_422
 from app.mes.common.query import find, jsonable, one
 from app.mes.lot import service as lot_svc
 
@@ -243,7 +244,12 @@ def trace(s: Session, tid: uuid.UUID, kind: str, code: str) -> Row:
         物料批：``{target, lots}``（消耗了该物料批的批次及其下游产出）。
     """
     if kind not in KINDS:
-        raise HTTPException(status_code=422, detail=f"kind must be one of {KINDS}")
+        raise err_422(
+            ["query", "kind"],
+            f"kind must be one of {KINDS}",
+            "enum",
+            {"expected": list(KINDS)},
+        )
     if kind == "customer_lot":  # B7：按客户批号找到批次，各批次再做正反向追溯
         hits = lot_svc.lookup_customer_lots(s, tid, customer_lot_no=code)
         if not hits:

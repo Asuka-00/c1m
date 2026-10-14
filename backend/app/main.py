@@ -14,7 +14,7 @@ from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 
 from app import models as _models  # noqa: F401  (registers tables + MES specs first)
-from app.core import registry
+from app.core import errors_handler, registry
 from app.core.config import settings
 from app.core.models import iso_utc
 
@@ -74,6 +74,8 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     generate_unique_id_function=custom_generate_unique_id,
 )
+
+errors_handler.install(app)
 
 app.add_middleware(
     CORSMiddleware,
