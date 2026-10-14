@@ -94,6 +94,7 @@ TEMPLATE_ROUTE = {
     "new_version": ("POST", "marking_template_version"),
     "approve": ("POST", "marking_template_approve"),
     "preview": ("POST", "marking_template_preview"),
+    "get": ("GET", "marking_template_item"),
     "validate": ("POST", "marking_template_validate"),
 }
 
@@ -105,7 +106,7 @@ def template_call(a: dict, resolve: Any, path: Any, idem: Any) -> Call:
     method, adapter = TEMPLATE_ROUTE[a["action"]]
     # 附注二：预览 / 校验路径不带 {id}，template_id 或 lines 放请求体
     tid = resolve(a["template"]) if a.get("template") and a["action"] not in ("preview", "validate") else ""
-    body = resolve(a.get("body") or {})
+    body = None if a["action"] == "get" else resolve(a.get("body") or {})
     key = idem(a) if a["action"] in TEMPLATE_WRITE else None
     return Call(method, path(adapter, id=str(tid)), body, key)
 
@@ -167,6 +168,8 @@ def dig(obj: Any, path: str) -> Any:
     for part in str(path).split("."):
         if isinstance(cur, dict) and part in cur:
             cur = cur[part]
+        elif isinstance(cur, list) and part.isdigit() and int(part) < len(cur):  # 列表下标（data.versions.0.status）
+            cur = cur[int(part)]
         else:
             return None
     return cur
@@ -349,8 +352,8 @@ class P3Exec:
             return self._need(self.issued, rest or (self.lot or ""), v)
         if name == "marking":
             return self._need(self.marking, rest, v)
-        if name in ("reason", "eq", "lot"):
-            ent = {"reason": "reason_code", "eq": "equipment", "lot": "lot"}[name]
+        if name in ("reason", "eq", "lot", "product", "customer"):
+            ent = {"reason": "reason_code", "eq": "equipment", "lot": "lot"}.get(name, name)
             return self.id_of(ent, rest)
         m = re.fullmatch(r"print_seq_(\d+)", name)
         if m:

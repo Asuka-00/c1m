@@ -836,7 +836,7 @@ class Runner:
         if act == "delete" and r.status in (200, 204):
             # 保留已删光罩的 id：同 key 回放 / 换目标 reused 还要用（不再按编码查）
             self._deleted = getattr(self, "_deleted", {})
-            self._deleted[a["reticle"]] = self._ids.pop(("reticle", a["reticle"]), None) or self._deleted.get(a["reticle"])
+            self._deleted[a["reticle"]] = self._ids.pop(("reticle", a["reticle"]), None) or self._deleted.get(a["reticle"])  # noqa: E501
         rep = r.headers.get("idempotent-replayed")
         entry.update(method=method, path=path, status=r.status, code=r.code, idempotency_key=idem, replayed=rep)
         exp = a.get("expect") or {}

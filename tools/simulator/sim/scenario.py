@@ -88,7 +88,7 @@ MARKING_IDEM_STEPS = frozenset({"marking_create", "marking_print", "marking_insp
 
 # D79 补充七：模板写接口必须带 Idempotency-Key；只读的预览 / 校验 POST 不带
 TEMPLATE_WRITE = frozenset({"create", "update", "new_version", "approve"})
-TEMPLATE_READONLY = frozenset({"preview", "validate"})
+TEMPLATE_READONLY = frozenset({"preview", "validate", "get"})  # get：GET 详情（D89 补充一 验证 retired）
 TEMPLATE_ACTIONS = TEMPLATE_WRITE | TEMPLATE_READONLY
 
 MARKING_LOT_STEPS = {
