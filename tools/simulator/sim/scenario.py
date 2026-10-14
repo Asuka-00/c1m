@@ -199,6 +199,8 @@ def parse(data: dict, path: str | None = None) -> Scenario:
                 )
         if k in MARKING_LOT_STEPS and not args.get("lot"):
             raise ScenarioError(f"第 {i} 步 {k} 缺少 lot")
+        if k == "expect_datetime_eq_match" and not args.get("entity"):
+            raise ScenarioError(f"第 {i} 步 expect_datetime_eq_match 需要 entity")
         if k == "expect_query_422" and not args.get("path"):
             raise ScenarioError(f"第 {i} 步 expect_query_422 需要 path")
         if k == "expect_alarm_list" and not args.get("raw_time"):

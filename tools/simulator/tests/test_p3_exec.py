@@ -454,7 +454,12 @@ def test_p3_scenarios_stay_draft_and_all_steps_have_executor(name):
     sc = load(f"scenarios/p3-draft/{name}")
     # marking 仍是草稿；reticle-report 自 ret-report-08（be/p3 f9e9dda 联调）起去掉 draft
     assert bool(sc.draft) == (name == "marking-report.yaml")
-    kinds = {s.kind for s in sc.steps} - {"precondition", "track_out"}
+    kinds = {s.kind for s in sc.steps} - {
+        "precondition",
+        "track_out",
+        "expect_query_422",
+        "expect_datetime_eq_match",
+    }  # 通用步骤（1ef2eff 日期探测）
     assert kinds <= P3_EXEC_STEPS, kinds - P3_EXEC_STEPS
 
 

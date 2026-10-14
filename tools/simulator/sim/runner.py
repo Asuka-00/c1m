@@ -459,6 +459,8 @@ class Runner:
             return self._expect_body_422(a, entry)
         if k == "expect_query_422":
             return self._expect_query_422(a, entry)
+        if k == "expect_datetime_eq_match":
+            return self._expect_datetime_eq_match(a, entry)
         if k == "expect_alarm_list":
             return self._expect_alarm_list(a, entry)
         if k in ("tool_reset", "tool_unmount", "tool_replace"):
@@ -800,9 +802,41 @@ class Runner:
             raise StepFailed(f"{path} 422 的 code={code!r}，期望 {a['code']!r}")
         if a.get("code_is_type") and code != det[0].get("type"):
             raise StepFailed(f"{path} 422 的 code={code!r} 应等于 type={det[0].get('type')!r}")
+        if a.get("type") and det[0].get("type") != a["type"]:
+            raise StepFailed(f"{path} 422 的 type={det[0].get('type')!r}，期望 {a['type']!r}")
+        if a.get("reason") and (det[0].get("ctx") or {}).get("reason") != a["reason"]:
+            raise StepFailed(f"{path} 422 的 ctx={det[0].get('ctx')}，期望 reason={a['reason']!r}")
+        if a.get("no_ctx") and det[0].get("ctx"):
+            raise StepFailed(f"{path} 422 不应带 ctx（D77 补充一），实际 {det[0].get('ctx')}")
         errs = shape_422(r)
         if errs:
             raise StepFailed("；".join(errs))
+
+    def _expect_datetime_eq_match(self, a: dict, entry: dict) -> None:
+        """D85 补充四：datetime 等值筛选按 UTC 同一时刻、完整微秒精确匹配。
+        取列表第一条记录的完整值 → 改写成 +08:00 筛选应命中该行；去掉微秒后应查不到该行。"""
+        from datetime import datetime, timedelta, timezone
+
+        path, field = f"/mes/{a['entity']}", a.get("field", "created_at")
+        r = self.c.get(path, page_size=1)
+        rows = (r.body or {}).get("data", []) if isinstance(r.body, dict) else []
+        if r.status != 200 or not rows or not rows[0].get(field):
+            raise StepFailed(f"{path} 取不到带 {field} 的记录（HTTP {r.status}）")
+        rid, raw = rows[0]["id"], rows[0][field]
+        dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        local = dt.astimezone(timezone(timedelta(hours=8)))
+        same = local.isoformat(timespec="microseconds")
+        trunc = (local - timedelta(microseconds=local.microsecond or 1)).isoformat(timespec="microseconds")
+        hit = self.c.get(path, page_size=100, **{field: same})
+        miss = self.c.get(path, page_size=100, **{field: trunc})
+        ids = lambda x: [y.get("id") for y in ((x.body or {}).get("data", []) if isinstance(x.body, dict) else [])]  # noqa: E731
+        entry.update(path=path, field=field, value=raw, status=hit.status, hit=len(ids(hit)), miss_status=miss.status)
+        if hit.status != 200 or rid not in ids(hit):
+            raise StepFailed(f"{field}={same}（同一时刻 +08:00）HTTP {hit.status}，未命中该行")
+        if any(v.get(field) != raw for v in hit.body.get("data", [])):
+            raise StepFailed(f"{field}={same} 返回了 {field} 不同的行（没按等值筛选，共 {len(ids(hit))} 行）")
+        if miss.status != 200 or rid in ids(miss):
+            raise StepFailed(f"{field}={trunc}（去掉微秒）HTTP {miss.status}，仍命中该行（被截断匹配或没筛选）")
 
     def _expect_alarm_list(self, a: dict, entry: dict) -> None:
         """D65：报警履历列表（GET /mes/eqp/alarms）每行顶层带 state_changed / state_skip_reason。

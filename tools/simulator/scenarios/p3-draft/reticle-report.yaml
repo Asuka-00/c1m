@@ -17,7 +17,7 @@
 #     incident 顺带下机用 occurred_at（无则当前时间）；occurred_at < 当前 mounted_at → 整体 409，不 Hold、不下机、不写事件
 #   - D80 G5：mounted / unmounted / life_reached 带 source、external_event_id（手工为 null）；G6：source ∈ manual/eap/simulator/system
 name: reticle-report
-run_id: ret-report-10
+run_id: ret-report-11
 target: http://127.0.0.1:8013
 equipment: [{code: EAP-LT01, type: LITHO}]
 steps:
@@ -182,3 +182,68 @@ steps:
   - reticle_mount: {idem: ret-rep-c9, eq: EAP-LT01, reticle: R-SIM-12, slot: S3, expect: {status: 200}}
   - reticle_incident: {idem: ret-rep-c10, eq: EAP-LT01, reticle: R-SIM-12, kind: drop, expect: {status: 201}}
   - expect_reticle_history: {reticle: R-SIM-12, latest_of: mount, fields: {unmounted_at: $utc_z}}
+  # ---- 日期参数探测（D77 / 补充一 / D85 / 补充四；1ef2eff 起）。字段名取自 be 1ef2eff 的 mes/reticle/specs.py、mes/product/specs.py。
+  # 光罩相关实体只有 datetime 列，没有 date 列（date 的 pattern 步骤不适用）；/mes/reticle/{rid}/history 只有 page / page_size。
+  # datetime：只给日期 / 无时区 → timezone_required 无 ctx；不可解析 → value_error reason=pattern；loc [query, 字段]；格式先于 range_inverted；等值同样校验
+  - expect_query_422: {path: /mes/reticle, params: {mounted_at_from: "2026-10-15"}, field: mounted_at_from, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle, params: {mounted_at_to: "2026-10-15T01:00:00"}, field: mounted_at_to, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle, params: {mounted_at_from: not-a-time}, field: mounted_at_from, type: value_error, reason: pattern}
+  - expect_query_422: {path: /mes/reticle, params: {mounted_at_from: "2026-10-16", mounted_at_to: "2026-10-15T00:00:00Z"}, field: mounted_at_from, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle, params: {mounted_at_from: "2026-10-16T00:00:00Z", mounted_at_to: "2026-10-15T00:00:00Z"}, field: mounted_at_from, type: value_error, reason: range_inverted}
+  - expect_query_422: {path: /mes/reticle, params: {mounted_at: "2026-10-15"}, field: mounted_at, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle, params: {mounted_at: garbage}, field: mounted_at, type: value_error, reason: pattern}
+  - expect_query_422: {path: /mes/reticle_incident, params: {occurred_at_from: "2026-10-15"}, field: occurred_at_from, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle_incident, params: {occurred_at_to: "2026-10-15T01:00:00"}, field: occurred_at_to, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle_incident, params: {occurred_at_from: not-a-time}, field: occurred_at_from, type: value_error, reason: pattern}
+  - expect_query_422: {path: /mes/reticle_incident, params: {occurred_at_from: "2026-10-16", occurred_at_to: "2026-10-15T00:00:00Z"}, field: occurred_at_from, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle_incident, params: {occurred_at_from: "2026-10-16T00:00:00Z", occurred_at_to: "2026-10-15T00:00:00Z"}, field: occurred_at_from, type: value_error, reason: range_inverted}
+  - expect_query_422: {path: /mes/reticle_incident, params: {occurred_at: "2026-10-15"}, field: occurred_at, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle_incident, params: {occurred_at: garbage}, field: occurred_at, type: value_error, reason: pattern}
+  - expect_query_422: {path: /mes/reticle_mount_log, params: {mounted_at_from: "2026-10-15"}, field: mounted_at_from, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle_mount_log, params: {mounted_at_to: "2026-10-15T01:00:00"}, field: mounted_at_to, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle_mount_log, params: {mounted_at_from: not-a-time}, field: mounted_at_from, type: value_error, reason: pattern}
+  - expect_query_422: {path: /mes/reticle_mount_log, params: {mounted_at_from: "2026-10-16", mounted_at_to: "2026-10-15T00:00:00Z"}, field: mounted_at_from, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle_mount_log, params: {mounted_at_from: "2026-10-16T00:00:00Z", mounted_at_to: "2026-10-15T00:00:00Z"}, field: mounted_at_from, type: value_error, reason: range_inverted}
+  - expect_query_422: {path: /mes/reticle_mount_log, params: {mounted_at: "2026-10-15"}, field: mounted_at, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle_mount_log, params: {mounted_at: garbage}, field: mounted_at, type: value_error, reason: pattern}
+  - expect_query_422: {path: /mes/reticle_usage, params: {occurred_at_from: "2026-10-15"}, field: occurred_at_from, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle_usage, params: {occurred_at_to: "2026-10-15T01:00:00"}, field: occurred_at_to, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle_usage, params: {occurred_at_from: not-a-time}, field: occurred_at_from, type: value_error, reason: pattern}
+  - expect_query_422: {path: /mes/reticle_usage, params: {occurred_at_from: "2026-10-16", occurred_at_to: "2026-10-15T00:00:00Z"}, field: occurred_at_from, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle_usage, params: {occurred_at_from: "2026-10-16T00:00:00Z", occurred_at_to: "2026-10-15T00:00:00Z"}, field: occurred_at_from, type: value_error, reason: range_inverted}
+  - expect_query_422: {path: /mes/reticle_usage, params: {occurred_at: "2026-10-15"}, field: occurred_at, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle_usage, params: {occurred_at: garbage}, field: occurred_at, type: value_error, reason: pattern}
+  - expect_query_422: {path: /mes/reticle_inspection, params: {inspected_at_from: "2026-10-15"}, field: inspected_at_from, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle_inspection, params: {inspected_at_to: "2026-10-15T01:00:00"}, field: inspected_at_to, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle_inspection, params: {inspected_at_from: not-a-time}, field: inspected_at_from, type: value_error, reason: pattern}
+  - expect_query_422: {path: /mes/reticle_inspection, params: {inspected_at_from: "2026-10-16", inspected_at_to: "2026-10-15T00:00:00Z"}, field: inspected_at_from, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle_inspection, params: {inspected_at_from: "2026-10-16T00:00:00Z", inspected_at_to: "2026-10-15T00:00:00Z"}, field: inspected_at_from, type: value_error, reason: range_inverted}
+  - expect_query_422: {path: /mes/reticle_inspection, params: {inspected_at: "2026-10-15"}, field: inspected_at, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle_inspection, params: {inspected_at: garbage}, field: inspected_at, type: value_error, reason: pattern}
+  - expect_query_422: {path: /mes/reticle_status_log, params: {at_from: "2026-10-15"}, field: at_from, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle_status_log, params: {at_to: "2026-10-15T01:00:00"}, field: at_to, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle_status_log, params: {at_from: not-a-time}, field: at_from, type: value_error, reason: pattern}
+  - expect_query_422: {path: /mes/reticle_status_log, params: {at_from: "2026-10-16", at_to: "2026-10-15T00:00:00Z"}, field: at_from, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle_status_log, params: {at_from: "2026-10-16T00:00:00Z", at_to: "2026-10-15T00:00:00Z"}, field: at_from, type: value_error, reason: range_inverted}
+  - expect_query_422: {path: /mes/reticle_status_log, params: {at: "2026-10-15"}, field: at, type: timezone_required, no_ctx: true}
+  - expect_query_422: {path: /mes/reticle_status_log, params: {at: garbage}, field: at, type: value_error, reason: pattern}
+  # ---- created_at（QA P2-1，D85 补充四：所有 datetime 列都按 D77 校验，等值按 UTC 同一时刻、完整微秒精确匹配）
+  # 1ef2eff 未实现（created_at 等值被忽略 → 200 不筛选），标 xfail 等 B6 提交；--strict-xfail 下按失败记
+  - expect_query_422: {path: /mes/reticle, params: {created_at: garbage}, field: created_at, type: value_error, reason: pattern, xfail: "D85 补充四 created_at 等值未校验，等 B6 提交"}
+  - expect_query_422: {path: /mes/reticle, params: {created_at: "2026-10-15"}, field: created_at, type: timezone_required, no_ctx: true, xfail: "D85 补充四，等 B6 提交"}
+  - expect_datetime_eq_match: {entity: reticle, field: created_at, xfail: "D85 补充四 created_at 等值不筛选，等 B6 提交"}
+  - expect_query_422: {path: /mes/reticle_incident, params: {created_at: garbage}, field: created_at, type: value_error, reason: pattern, xfail: "D85 补充四 created_at 等值未校验，等 B6 提交"}
+  - expect_query_422: {path: /mes/reticle_incident, params: {created_at: "2026-10-15"}, field: created_at, type: timezone_required, no_ctx: true, xfail: "D85 补充四，等 B6 提交"}
+  - expect_datetime_eq_match: {entity: reticle_incident, field: created_at, xfail: "D85 补充四 created_at 等值不筛选，等 B6 提交"}
+  - expect_query_422: {path: /mes/reticle_mount_log, params: {created_at: garbage}, field: created_at, type: value_error, reason: pattern, xfail: "D85 补充四 created_at 等值未校验，等 B6 提交"}
+  - expect_query_422: {path: /mes/reticle_mount_log, params: {created_at: "2026-10-15"}, field: created_at, type: timezone_required, no_ctx: true, xfail: "D85 补充四，等 B6 提交"}
+  - expect_datetime_eq_match: {entity: reticle_mount_log, field: created_at, xfail: "D85 补充四 created_at 等值不筛选，等 B6 提交"}
+  - expect_query_422: {path: /mes/reticle_usage, params: {created_at: garbage}, field: created_at, type: value_error, reason: pattern, xfail: "D85 补充四 created_at 等值未校验，等 B6 提交"}
+  - expect_query_422: {path: /mes/reticle_usage, params: {created_at: "2026-10-15"}, field: created_at, type: timezone_required, no_ctx: true, xfail: "D85 补充四，等 B6 提交"}
+  - expect_datetime_eq_match: {entity: reticle_usage, field: created_at, xfail: "D85 补充四 created_at 等值不筛选，等 B6 提交"}
+  - expect_query_422: {path: /mes/reticle_inspection, params: {created_at: garbage}, field: created_at, type: value_error, reason: pattern, xfail: "D85 补充四 created_at 等值未校验，等 B6 提交"}
+  - expect_query_422: {path: /mes/reticle_inspection, params: {created_at: "2026-10-15"}, field: created_at, type: timezone_required, no_ctx: true, xfail: "D85 补充四，等 B6 提交"}
+  - expect_datetime_eq_match: {entity: reticle_inspection, field: created_at, xfail: "D85 补充四 created_at 等值不筛选，等 B6 提交"}
+  - expect_query_422: {path: /mes/reticle_status_log, params: {created_at: garbage}, field: created_at, type: value_error, reason: pattern, xfail: "D85 补充四 created_at 等值未校验，等 B6 提交"}
+  - expect_query_422: {path: /mes/reticle_status_log, params: {created_at: "2026-10-15"}, field: created_at, type: timezone_required, no_ctx: true, xfail: "D85 补充四，等 B6 提交"}
+  - expect_datetime_eq_match: {entity: reticle_status_log, field: created_at, xfail: "D85 补充四 created_at 等值不筛选，等 B6 提交"}
