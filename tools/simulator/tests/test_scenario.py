@@ -142,4 +142,13 @@ def test_b8_draft_reuses_alarm_and_track_in_steps():
     for t in tis:
         i = sc.steps.index(t)
         assert sc.steps[i + 1].kind == "expect_hold" and sc.steps[i + 1].args["present"] is False
-    assert {"off", "warn", "block"} <= {s.args.get("value") for s in sc.steps if s.kind == "set_track_in_action"}
+    sets = [s.args for s in sc.steps if s.kind == "set_track_in_action"]
+    assert {"off", "warn", "block"} <= {a.get("value") for a in sets}
+    # D70 补充：非法值 422 enum + ctx.expected；eap_service 403；类型层 null 422、覆盖层 null 清空
+    assert any(
+        a["expect"].get("code") == "enum" and a["expect"]["ctx"]["expected"] == ["off", "warn", "block"] for a in sets
+    )
+    assert any(a.get("as") == "svc" and a["expect"]["status"] == 403 for a in sets)
+    assert any(a.get("level") == "type" and a.get("value") is None and a["expect"]["status"] == 422 for a in sets)
+    assert any(a.get("level") == "equipment" and a.get("value") is None and a["expect"]["status"] == 200 for a in sets)
+    assert "expect_effective_track_in_action" in kinds

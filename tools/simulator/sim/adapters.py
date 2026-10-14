@@ -75,6 +75,8 @@ def default_adapters() -> dict[str, Adapter]:
         "reticle_mount": Adapter("光罩挂载", ["/mes/reticle/{reticle_id}/mount"], card="P3-B4"),
         "reticle_incident": Adapter("光罩事故录入", ["/mes/reticle/{reticle_id}/incident"], card="P3-B4"),
         "reticle_get": Adapter("光罩详情", ["/mes/reticle/{reticle_id}"], card="P3-B4"),
+        # 335db8a：领域事件记在 audit_log（D71），GET /mes/audit_log?entity_type=reticle&record_id=…
+        "reticle_events": Adapter("光罩领域事件（audit_log）", ["/mes/audit_log"], card="P3-B4"),
         "reticle_history": Adapter("光罩履历", ["/mes/reticle/{reticle_id}/history"], card="P3-B4"),
         # E1 v0.7 §3.2 / §5（D67）：动作接口与人工调整计数
         "reticle_usage_manual": Adapter("光罩计数人工调整", ["/mes/reticle/{reticle_id}/usage"], card="P3-B4"),
@@ -84,6 +86,8 @@ def default_adapters() -> dict[str, Adapter]:
         "reticle_scrap": Adapter("光罩报废", ["/mes/reticle/{reticle_id}/scrap"], card="P3-B4"),
         "reticle_unmount": Adapter("光罩卸载", ["/mes/reticle/{reticle_id}/unmount"], card="P3-B4"),
         # P3-B8（D70，未实现）：报警码 track_in_action 配置。路径为提议（通用 CRUD PATCH 或专用接口），B8 落地后核对
+        # D70 补充：改配置走通用 CRUD PATCH /mes/alarm_code/{rid}；非法值 422 enum（ctx.expected=[off,warn,block]）；
+        #   设备类型层传 null 422，单台设备覆盖层传 null = 清空改为继承；eap_service 不能改（403）
         "alarm_track_in_action": Adapter("报警码进站动作配置", ["/mes/alarm_code/{rid}"], card="P3-B8"),
         "alarm_code_get": Adapter("报警码详情", ["/mes/alarm_code/{rid}"], card="P3-B8"),
     }
@@ -123,6 +127,8 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "reticle_incident": ["reticle_incident"],
     "expect_reticle": ["reticle_get"],
     "expect_reticle_history": ["reticle_history"],
+    "expect_reticle_events": ["reticle_events"],
+    "expect_effective_track_in_action": ["alarm_code_get"],
     "reticle_adjust": ["reticle_usage_manual"],
     "reticle_hold": ["reticle_hold"],
     "reticle_release": ["reticle_release"],

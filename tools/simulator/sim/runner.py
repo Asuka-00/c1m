@@ -136,6 +136,8 @@ P3_DRAFT_STEPS = {
     "reticle_incident",
     "expect_reticle",
     "expect_reticle_history",
+    "expect_reticle_events",
+    "expect_effective_track_in_action",
     "reticle_adjust",
     "reticle_hold",
     "reticle_release",

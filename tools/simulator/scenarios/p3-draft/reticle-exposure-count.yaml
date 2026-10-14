@@ -13,7 +13,11 @@ target: http://127.0.0.1:8013
 equipment: [{code: EAP-LT01, type: LITHO}]
 steps:
   - precondition: {eq: EAP-LT01, e10: SBY}
-  - reticle_mount: {eq: EAP-LT01, reticle: R-SIM-01, slot: S1, expect: {status: 200, body: {data.status_code: in_use}}}
+  # 335db8a 核对：mount 响应 data 是挂载记录（不是光罩），状态另读；slot → 请求体 slot_code
+  - reticle_mount: {eq: EAP-LT01, reticle: R-SIM-01, slot: S1, expect: {status: 200, body: {data.slot_code: S1}}}
+  - expect_reticle: {reticle: R-SIM-01, fields: {status_code: in_use}}
+  # D71：先判 invalid_transition 再判 still_mounted → in_use 时 restore 409 invalid_transition（335db8a 仍回 still_mounted，等下个提交修）
+  - reticle_restore: {reticle: R-SIM-01, reason: sim restore, expect: {status: 409, code: invalid_transition}}
   - expect_reticle: {reticle: R-SIM-01, fields: {count_basis: eap, mount_count: 1, shot_count: "0"}}
   - track_in: {eq: EAP-LT01, lot: FX0001, reticle: R-SIM-01}
   # 出站前没有 EAP shot：按片折算 25 片 × shots_per_wafer 5 = 125，kind=track_out、estimated=true
@@ -37,6 +41,8 @@ steps:
   # 负数缺 reason_id → 422 missing [body, reason_id]；请求体带 kind → 422 unknown_field
   - reticle_adjust: {reticle: R-SIM-01, delta: "-5", expect: {status: 422, code: missing, loc: [body, reason_id]}}
   - reticle_adjust: {reticle: R-SIM-01, delta: "0", expect: {status: 422, code: value_error, loc: [body, delta]}}
+  # D71：超过 6 位小数 → 422 value_error，ctx.max_places=6（335db8a 的 ctx 还是 {error: {}}，等下个提交）
+  - reticle_adjust: {reticle: R-SIM-01, delta: "1.1234567", expect: {status: 422, code: value_error, loc: [body, delta], ctx: {max_places: 6}}}
   - reticle_adjust: {reticle: R-SIM-01, delta: "5", extra: {kind: report}, expect: {status: 422, code: unknown_field, loc: [body, kind]}}
   # 计数：130（修正后）+ 10（FX0002 report，count_basis=eap 累加）= 140
   - expect_reticle: {reticle: R-SIM-01, fields: {shot_count: "140"}}
@@ -49,7 +55,7 @@ steps:
   # +75 → 210 ≥ max_shots=200：kind=report，转 pending_maintenance，发 reticle.life_reached
   - reticle_adjust: {reticle: R-SIM-01, delta: "75", expect: {status: 200, body: {data.kind: report, data.count_after: "210"}}}
   - expect_reticle: {reticle: R-SIM-01, fields: {status_code: pending_maintenance, shot_count: "210"}}
-  - expect_reticle_history: {reticle: R-SIM-01, latest: {event: reticle.life_reached}}
+  - expect_reticle_events: {reticle: R-SIM-01, latest: {event: reticle.life_reached, payload.shot_count: "210", payload.max_shots: "200"}}
   # D69 补充：到上限仍挂着 → 状态 pending_maintenance，本机进站按已有阻断码 life_reached 拦（不可放行）
   - track_in:
       eq: EAP-LT01
@@ -61,7 +67,7 @@ steps:
   # 非 in_use 卸载：只关挂载记录、不改状态，照常发 reticle.unmounted
   - reticle_unmount: {reticle: R-SIM-01, expect: {status: 200}}
   - expect_reticle: {reticle: R-SIM-01, fields: {status_code: pending_maintenance, equipment_id: null, mounted_at: null}}
-  - expect_reticle_history: {reticle: R-SIM-01, latest: {event: reticle.unmounted}}
+  - expect_reticle_events: {reticle: R-SIM-01, latest: {event: reticle.unmounted, payload.unmount_reason: manual}}
   - reticle_restore: {reticle: R-SIM-01, reason: sim restore, expect: {status: 409, code: life_limit_reached}}
   # −10 → 200，仍 ≥ max_shots：不自动恢复；restore 仍 409 life_limit_reached
   - reticle_adjust: {reticle: R-SIM-01, delta: "-10", reason: RC-ADJ, expect: {status: 200, body: {data.kind: adjust, data.count_after: "200"}}}

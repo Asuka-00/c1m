@@ -125,3 +125,10 @@ B9（`0a74f8a`）、B10（`d27b700`/`23c502d`）、B11（`8294b63`）已对齐�
 - `scenarios/p3-draft/alarm-track-in-action.yaml`：off / warn / block 各一遍；warn+block 同时未清除取 block，清掉 block 变 warn；未登记 ALID 不拦；清除后立即放行；每次进站后 `expect_hold present=false`。复用 `seed_alarm_code`、`alarm_set`、`alarm_clear`、`track_in`、`expect_hold`。
 - 草稿步骤（**B8 落地后核对**）：`set_track_in_action {eq, alid, value}`（适配器 `alarm_track_in_action`，路径先按通用 CRUD `PATCH /mes/alarm_code/{rid}` 提议）、`expect_alarm_code {eq, alid, fields}`。
 - 待核对：warn 警告在 200 响应里的位置（场景里先写 `warning: {check_type, alid}` / `absent_warning`）、block 的 `results[]` 每项字段、工步检查项名（是否叫 `alarm_severity`）、一台机台多个报警时 details 是否列出全部 ALID。
+- **D70 补充（6f31ec7 之后）**：warn 读进站 200 的 `warnings[]`（`{code: alarm_severity, ctx.alarms[]}`）；block 读 409 的 `ctx.alarms[]`（`{alid, alarm_code, track_in_action}`，block 在前、同档按发生时间）、`ctx.reason=alarm_severity`；改配置 `PATCH /mes/alarm_code/{rid}`，非法值 422 `enum`（`ctx.expected=[off,warn,block]`）；类型层传 null 422，单台覆盖层传 null 清空改继承；只读 `effective_track_in_action` 用 `expect_effective_track_in_action` 断言；覆盖层优先用例 ALID 2105；`set_track_in_action as: svc` 断言 eap_service 403。
+
+### P3-B4 光罩草稿对照 335db8a（P3-E2）
+- 事件不在 `/mes/reticle/{id}/history` 里：后端按 D71 记在 audit_log（action=事件名，changes.payload），草稿改用 `expect_reticle_events`（适配器 `reticle_events` → `GET /mes/audit_log?entity_type=reticle&record_id=…`）。
+- 履历条目 `type` 取值 `mount`/`usage`/`inspection`/`incident`/`status`；卸载与挂载是同一行；状态行字段 `from_status`/`to_status`/`action`/`reason`/`username`/`at`（D71）。草稿用 `latest_of` + `fields`。
+- `incident` 返回 201（重放也是 201）；`mount` 响应 `data` 是挂载记录；请求体 `slot` → `slot_code`、`reason`（调整）→ `reason_id`。
+- D71：先 `invalid_transition` 后 `still_mounted`（335db8a 顺序相反，等下个提交）；超 6 位小数 422 `value_error`、`ctx.max_places=6`（335db8a ctx 尚无 max_places）。
