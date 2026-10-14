@@ -167,7 +167,60 @@ export async function fileBody(file: File): Promise<ImportBody> {
   return { content: await file.text(), file_name: file.name }
 }
 
+/** 坐标图列表项（P2-B5 / d5a9f62：`GET /mes/map/maps`，不含坐标格；时间为 UTC Z）。 */
+export interface MapListItem {
+  id: string
+  substrate_id: string
+  substrate_type: 'wafer' | 'strip' | string
+  map_version: number
+  is_latest: boolean
+  rows: number
+  cols: number
+  total_qty: number
+  good_qty: number | null
+  excluded_qty: number | null
+  bin_set_id: string
+  bin_set_code: string | null
+  bin_set_version: number | null
+  lot_id: string | null
+  lot_code: string | null
+  equipment_id: string | null
+  operation_id: string | null
+  map_import_id: string
+  file_name: string | null
+  source: string | null
+  imported_by: string | null
+  imported_at: string | null
+  created_at: string | null
+}
+
+/** 坐标图列表筛选（page_size ≤ 100；imported_from/to 为半开区间 [from, to)）。 */
+export interface MapListParams {
+  page?: number
+  page_size?: number
+  q?: string
+  sort_by?:
+    | 'imported_at'
+    | 'substrate_id'
+    | 'map_version'
+    | 'total_qty'
+    | 'good_qty'
+  sort_order?: 'asc' | 'desc'
+  substrate_id?: string
+  lot_id?: string
+  bin_set_id?: string
+  substrate_type?: 'wafer' | 'strip'
+  imported_from?: string
+  imported_to?: string
+  latest_only?: boolean
+}
+
 export const mapApi = {
+  /** 坐标图列表（mes.map:read）：同一基板多版本都列出，is_latest 标最新。 */
+  list: async (
+    params: MapListParams
+  ): Promise<{ data: MapListItem[]; count: number }> =>
+    (await http.get('/mes/map/maps', { params })).data,
   /** 坐标图预览：成功 200 时 `ok` 表示能否导入，`errors` 逐行列出。 */
   preview: async (body: MapImportBody): Promise<MapPreview> =>
     (await http.post('/mes/map/import/preview', body)).data,

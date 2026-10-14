@@ -1594,6 +1594,26 @@
         "has_descendants": "child lot has been split further",
         "parent_status": "parent lot status has changed"
       }
+    },
+    "mapList": {
+      "title": "Imported maps",
+      "q": "Substrate ID / file name",
+      "from": "Imported from",
+      "to": "Imported to",
+      "latestOnly": "Latest versions only",
+      "version": "Version",
+      "latest": "Latest",
+      "total": "Total",
+      "good": "Good",
+      "excluded": "Excluded",
+      "binSet": "Bin set",
+      "lot": "Lot",
+      "file": "File",
+      "importedBy": "Imported by",
+      "importedAt": "Imported at",
+      "count": "{{count}} maps · page {{page}}/{{pages}}",
+      "prev": "Previous",
+      "next": "Next"
     }
   },
   "notify": {

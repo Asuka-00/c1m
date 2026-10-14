@@ -1594,6 +1594,26 @@
         "has_descendants": "子批已再分出下游批次",
         "parent_status": "母批状态已变化"
       }
+    },
+    "mapList": {
+      "title": "已导入的坐标图",
+      "q": "基板编号 / 文件名",
+      "from": "导入日期从",
+      "to": "导入日期至",
+      "latestOnly": "只看最新版本",
+      "version": "版本",
+      "latest": "最新",
+      "total": "总数",
+      "good": "良品",
+      "excluded": "排除",
+      "binSet": "Bin 定义集",
+      "lot": "批次",
+      "file": "文件",
+      "importedBy": "导入人",
+      "importedAt": "导入时间",
+      "count": "共 {{count}} 条 · 第 {{page}}/{{pages}} 页",
+      "prev": "上一页",
+      "next": "下一页"
     }
   },
   "notify": {

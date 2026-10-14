@@ -33,6 +33,7 @@ import {
 import { Page } from '@/components/crud'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mapErrorMessage } from './map-errors'
+import { MapList } from './map-list'
 
 type Kind = 'map' | 'binSet'
 type Preview =
@@ -186,6 +187,7 @@ export default function MapImport() {
       )}
 
       <Lookup />
+      <MapList />
     </Page>
   )
 }

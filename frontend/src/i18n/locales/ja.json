@@ -1594,6 +1594,26 @@
         "has_descendants": "子ロットが再分割されています",
         "parent_status": "親ロットの状態が変わっています"
       }
+    },
+    "mapList": {
+      "title": "取り込み済みマップ",
+      "q": "基板 ID / ファイル名",
+      "from": "取込日（開始）",
+      "to": "取込日（終了）",
+      "latestOnly": "最新版のみ",
+      "version": "版",
+      "latest": "最新",
+      "total": "総数",
+      "good": "良品",
+      "excluded": "除外",
+      "binSet": "ビン定義セット",
+      "lot": "ロット",
+      "file": "ファイル",
+      "importedBy": "取込者",
+      "importedAt": "取込日時",
+      "count": "全 {{count}} 件 · {{page}}/{{pages}} ページ",
+      "prev": "前へ",
+      "next": "次へ"
     }
   },
   "notify": {
