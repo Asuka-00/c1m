@@ -1657,6 +1657,10 @@
       "trend": "CT and move trend",
       "byOperation": "By operation",
       "mock": "Sample data (API not available)"
+    },
+    "qual": {
+      "notQualified": "{{user}} has no valid qualification for operation {{op}}. Track-in is blocked until it is granted or renewed.",
+      "expiringSoon": "Qualification expires on {{date}}. Please renew it soon."
     }
   },
   "notify": {

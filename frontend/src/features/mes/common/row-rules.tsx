@@ -3,6 +3,10 @@ import { t } from '@/i18n'
 import type { MesRow } from '@/lib/api/mes/common'
 import { Badge } from '@/components/ui/badge'
 import { ToolLife } from '@/features/mes/execution/exec-actions'
+import {
+  qualState,
+  QUAL_WARN_DAYS,
+} from '@/features/mes/execution/operator-qual'
 import { WoProgress } from '@/features/mes/planning/wo-actions'
 import { DowntimeEnd, DueCell, HeldAt } from './due-cells'
 import { enumLabel } from './labels'
@@ -31,6 +35,18 @@ export const CELLS: Record<
       <DueCell
         date={r.expiry_date as string | null}
         warnDays={7}
+        overLabel={t('mes.due.expired')}
+        warnLabel={t('mes.due.expiring')}
+      />
+    ),
+  },
+  // 人员资质（P3 草案）：过期红色，30 天内到期黄色，停用不预警
+  operator_qual: {
+    expires_on: (r) => (
+      <DueCell
+        date={r.expires_on as string | null}
+        done={qualState(r) === 'inactive'}
+        warnDays={QUAL_WARN_DAYS}
         overLabel={t('mes.due.expired')}
         warnLabel={t('mes.due.expiring')}
       />

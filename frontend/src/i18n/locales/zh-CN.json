@@ -1657,6 +1657,10 @@
       "trend": "CT 与 Move 趋势",
       "byOperation": "按工序",
       "mock": "示例数据（接口未上线）"
+    },
+    "qual": {
+      "notQualified": "{{user}} 不具备工序 {{op}} 的有效资质，不能进站。请先取得或续期资质。",
+      "expiringSoon": "资质将于 {{date}} 到期，请尽快续期。"
     }
   },
   "notify": {

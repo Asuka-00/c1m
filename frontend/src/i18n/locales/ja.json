@@ -1657,6 +1657,10 @@
       "trend": "CT と Move の推移",
       "byOperation": "工程別",
       "mock": "サンプルデータ（API 未提供）"
+    },
+    "qual": {
+      "notQualified": "{{user}} は工程 {{op}} の有効な資格がないため、投入できません。資格を取得または更新してください。",
+      "expiringSoon": "資格は {{date}} に期限切れになります。早めに更新してください。"
     }
   },
   "notify": {
