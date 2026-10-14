@@ -909,7 +909,8 @@
         "wafer": "ウェーハ",
         "equipment": "設備",
         "material_lot": "資材ロット",
-        "customer_lot": "顧客ロット番号"
+        "customer_lot": "顧客ロット番号",
+        "trace_code": "トレースコード"
       },
       "c": {
         "code": "ロット",
@@ -938,11 +939,22 @@
         "parent_wafer": "親ウェーハ",
         "die_row": "ダイ行",
         "die_col": "ダイ列",
-        "transform_id": "変換記録"
+        "transform_id": "変換記録",
+        "trace_code": "トレースコード",
+        "content": "印字内容",
+        "template": "テンプレート",
+        "date_code": "日付コード",
+        "reprint_count": "再印字回数",
+        "latest_inspection_status": "検査",
+        "marked_at": "印字日時",
+        "wafer": "ウェハ",
+        "slot": "スロット"
       },
       "origins": "元ウェーハとダイ座標",
       "dies": "このウェーハのダイの行き先",
-      "outOrigins": "下流子ロットの位置"
+      "outOrigins": "下流子ロットの位置",
+      "marking": "マーキング記録",
+      "wafers": "ウェハ"
     },
     "holdrel": {
       "hint": "ホールド中のロットを確認・解除します。",
@@ -1890,6 +1902,128 @@
       "scrappedHint": "レチクルは廃棄済みのため、カウント・検査登録などの操作はできません",
       "delete": "削除",
       "deleteConfirm": "レチクル {{code}} を削除しますか？"
+    },
+    "marking": {
+      "tplTitle": "マーキングテンプレート",
+      "tplDesc": "製品・顧客ごとのテンプレート。承認後に有効",
+      "jobTitle": "マーキング作業",
+      "jobDesc": "プレビュー・印字・検査・再印字・無効化",
+      "mockHint": "デモデータ（バックエンド準備後に切替）",
+      "search": "コード・製品・顧客で検索",
+      "allStatus": "すべての状態",
+      "newTpl": "新規テンプレート",
+      "newVersion": "新バージョン",
+      "edit": "下書きを編集",
+      "approve": "承認",
+      "retire": "廃止",
+      "selfApprovalHint": "起案者は自分のテンプレートを承認できません",
+      "formHint": "プレースホルダーは下記参照",
+      "linesHint": "1 行ずつ。{model} {yyww} {trace} {bin} が使えます",
+      "compareWith": "比較対象",
+      "noOtherVersion": "他のバージョンはありません",
+      "noDiff": "差分はありません",
+      "diffField": "項目",
+      "lineN": "{{n}} 行目",
+      "preview": "プレビュー",
+      "print": "印字",
+      "inspect": "検査",
+      "reprint": "再印字",
+      "void": "無効化",
+      "firstPrint": "初回印字",
+      "voided": "無効",
+      "voidedHint": "無効化済み（{{by}}：{{comment}}）",
+      "scrappedHint": "ロットは廃棄済みです",
+      "traceAssignedHint": "トレースコードは印字時に採番",
+      "markedFrom": "印字日（開始）",
+      "markedTo": "印字日（終了）",
+      "printLog": "印字・検査履歴",
+      "readCode": "読取コード（OCR）",
+      "reasonId": "理由コード",
+      "comment": "コメント",
+      "ocrDiff": "不一致：期待 {{expected}}、読取 {{read}}",
+      "voidConfirm": "{{code}} の無効化は元に戻せません。もう一度押して確定",
+      "voidConfirmOk": "無効化を確定",
+      "ok": "OK",
+      "status": {
+        "draft": "下書き",
+        "approved": "承認済み",
+        "retired": "廃止"
+      },
+      "basis": {
+        "lot_start": "ロット開始日",
+        "marking": "印字日",
+        "assembly_done": "組立完了日"
+      },
+      "insp": {
+        "pending": "検査待ち",
+        "pass": "合格",
+        "fail": "不合格"
+      },
+      "source": {
+        "manual": "手動",
+        "eap": "設備報告",
+        "simulator": "シミュレーター"
+      },
+      "col": {
+        "code": "コード",
+        "product": "製品",
+        "customer": "顧客",
+        "version": "バージョン",
+        "status": "状態",
+        "lines": "印字内容",
+        "dateCodeBasis": "日付コード基準",
+        "usesBin": "bin を含む",
+        "createdBy": "起案者",
+        "createdAt": "起案日時",
+        "approvedBy": "承認者",
+        "approvedAt": "承認日時",
+        "lot": "ロット",
+        "template": "テンプレート",
+        "dateCode": "日付コード",
+        "qty": "数量",
+        "bin": "bin",
+        "equipment": "マーカー",
+        "traceCode": "トレースコード",
+        "reprints": "再印字回数",
+        "inspection": "検査",
+        "markedAt": "印字日時"
+      },
+      "actHint": {
+        "inspect": "読取コード不一致は不合格",
+        "reprint": "同じコードで再印字。理由必須",
+        "void": "無効化は取り消せません。理由必須"
+      },
+      "done": {
+        "approve": "承認しました",
+        "retire": "廃止しました",
+        "save": "保存しました",
+        "print": "印字しました（{{code}}）",
+        "inspect": "検査を登録しました",
+        "reprint": "再印字しました",
+        "void": "無効化しました"
+      },
+      "err": {
+        "reason_idRequired": "理由コードを入力してください",
+        "commentRequired": "コメントを入力してください",
+        "commentTooLong": "コメントは {{n}} 文字以内",
+        "maxPlaces": "小数は {{n}} 桁まで",
+        "trace_max_length": "トレースコードは {{n}} 文字以内",
+        "trace_pattern": "トレースコードは英大文字・数字・ハイフンのみ"
+      },
+      "code": {
+        "self_approval": "起案者は自分のテンプレートを承認できません",
+        "template_readonly": "承認済みは読取専用です。新バージョンを作成してください",
+        "draft_exists": "この製品・顧客には下書きがあります",
+        "invalid_transition": "現在の状態では実行できません（無効・廃棄済み）",
+        "marking_template_missing": "承認済みテンプレートがありません",
+        "already_marked": "打刻済みです。不合格時は再印字してください",
+        "trace_code_mismatch": "報告コード {{actual}} が採番 {{expected}} と不一致",
+        "check_blocked": "チェック不合格",
+        "inspect_blocked": "マーキング検査不合格のため搬出できません（強制不可）",
+        "idempotency_key_reused": "内容の異なる同一リクエストです。再読込してください",
+        "key_missing": "冪等キーがありません。再読込してください"
+      },
+      "checkBlocked": "マーキング検査不合格（{{trace}}）。処理前は搬出不可"
     }
   },
   "notify": {

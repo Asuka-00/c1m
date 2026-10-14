@@ -12,6 +12,13 @@ export function checkMessage(r: CheckResult): string {
       equipment: typeof eq === 'string' ? eq : '',
     })
   }
+  // D78 Q5：打标检验不合格未处理，不能出站，不可强制放行
+  if (r.check_type === 'marking_inspection' && r.result !== 'pass') {
+    const code = r.data?.trace_code
+    return t('mes.marking.checkBlocked', {
+      trace: typeof code === 'string' ? code : '—',
+    })
+  }
   if (r.check_type === 'tool_life' && r.result !== 'pass')
     return toolLifeMessage(r)
   const qual = operatorQualMessage(r)

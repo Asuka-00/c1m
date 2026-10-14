@@ -36,5 +36,8 @@ export const TAB_ONLY_MENU_KEYS = keys((i) => i.kind === 'tab')
 export const PENDING_MENU_KEYS: readonly string[] = [
   'g-exception',
   'mes-ct-move-report',
+  // P3-F4 打标（后端菜单未导出）
+  'mes-marking',
+  'mes-marking-template',
   'mes-qual-expiring',
 ]

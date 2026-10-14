@@ -1212,7 +1212,8 @@
         "rework_limit": "Rework count limit",
         "qty_adjust_limit": "Scrap / bonus qty limit",
         "eqp_wait_qual": "Equipment waiting Qual",
-        "bom_required": "Active BOM required"
+        "bom_required": "Active BOM required",
+        "marking_inspection": "Marking inspection passed"
       },
       "check_severity": {
         "block": "Block",
@@ -1732,7 +1733,9 @@
     "mes-map-import": "Map Import",
     "mes-ct-move-report": "CT / Move Report",
     "mes-qual-expiring": "Expiring qualifications",
-    "mes-customer": "Customer"
+    "mes-customer": "Customer",
+    "mes-marking-template": "Marking templates",
+    "mes-marking": "Marking"
   },
   "permName": {
     "users__read": "View platform users",

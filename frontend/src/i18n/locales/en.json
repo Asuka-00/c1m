@@ -909,7 +909,8 @@
         "wafer": "Wafer",
         "equipment": "Equipment",
         "material_lot": "Material lot",
-        "customer_lot": "Customer lot no."
+        "customer_lot": "Customer lot no.",
+        "trace_code": "Trace code"
       },
       "c": {
         "code": "Lot",
@@ -938,11 +939,22 @@
         "parent_wafer": "Parent wafer",
         "die_row": "Die row",
         "die_col": "Die col",
-        "transform_id": "Transform record"
+        "transform_id": "Transform record",
+        "trace_code": "Trace code",
+        "content": "Marking content",
+        "template": "Template",
+        "date_code": "Date code",
+        "reprint_count": "Reprints",
+        "latest_inspection_status": "Inspection",
+        "marked_at": "Marked at",
+        "wafer": "Wafer",
+        "slot": "Slot"
       },
       "origins": "Source wafers & die coordinates",
       "dies": "Where this wafer's dies went",
-      "outOrigins": "Downstream child positions"
+      "outOrigins": "Downstream child positions",
+      "marking": "Marking record",
+      "wafers": "Wafers"
     },
     "holdrel": {
       "hint": "View and release held lots.",
@@ -1890,6 +1902,128 @@
       "scrappedHint": "The reticle is scrapped; usage, inspection and other actions are not allowed",
       "delete": "Delete",
       "deleteConfirm": "Delete reticle {{code}}?"
+    },
+    "marking": {
+      "tplTitle": "Marking templates",
+      "tplDesc": "Marking templates per product and customer; effective after approval",
+      "jobTitle": "Marking",
+      "jobDesc": "Preview, print, inspect, reprint and void markings",
+      "mockHint": "Demo data until the backend is ready",
+      "search": "Search code, product or customer",
+      "allStatus": "All statuses",
+      "newTpl": "New template",
+      "newVersion": "New version",
+      "edit": "Edit draft",
+      "approve": "Approve",
+      "retire": "Retire",
+      "selfApprovalHint": "The drafter cannot approve their own template",
+      "formHint": "Placeholders are listed below",
+      "linesHint": "One line each; use {model} {yyww} {trace} {bin}",
+      "compareWith": "Compare with",
+      "noOtherVersion": "No other versions",
+      "noDiff": "No differences",
+      "diffField": "Field",
+      "lineN": "Line {{n}}",
+      "preview": "Preview",
+      "print": "Print",
+      "inspect": "Inspect",
+      "reprint": "Reprint",
+      "void": "Void",
+      "firstPrint": "First print",
+      "voided": "Voided",
+      "voidedHint": "Voided ({{by}}: {{comment}}); no further actions",
+      "scrappedHint": "Lot is scrapped; no further actions",
+      "traceAssignedHint": "The trace code is assigned when printing",
+      "markedFrom": "Marked from",
+      "markedTo": "Marked to",
+      "printLog": "Print and inspection history",
+      "readCode": "Read-back code (OCR)",
+      "reasonId": "Reason code",
+      "comment": "Comment",
+      "ocrDiff": "Mismatch: expected {{expected}}, read {{read}}",
+      "voidConfirm": "Voiding {{code}} cannot be undone; click again to confirm",
+      "voidConfirmOk": "Confirm void",
+      "ok": "OK",
+      "status": {
+        "draft": "Draft",
+        "approved": "Approved",
+        "retired": "Retired"
+      },
+      "basis": {
+        "lot_start": "Lot start date",
+        "marking": "Marking date",
+        "assembly_done": "Assembly completion date"
+      },
+      "insp": {
+        "pending": "Pending",
+        "pass": "Pass",
+        "fail": "Fail"
+      },
+      "source": {
+        "manual": "Manual",
+        "eap": "Equipment",
+        "simulator": "Simulator"
+      },
+      "col": {
+        "code": "Code",
+        "product": "Product",
+        "customer": "Customer",
+        "version": "Version",
+        "status": "Status",
+        "lines": "Marking lines",
+        "dateCodeBasis": "Date code basis",
+        "usesBin": "Includes bin",
+        "createdBy": "Drafted by",
+        "createdAt": "Drafted at",
+        "approvedBy": "Approved by",
+        "approvedAt": "Approved at",
+        "lot": "Lot",
+        "template": "Template",
+        "dateCode": "Date code",
+        "qty": "Qty",
+        "bin": "Bin",
+        "equipment": "Marker",
+        "traceCode": "Trace code",
+        "reprints": "Reprints",
+        "inspection": "Inspection",
+        "markedAt": "Marked at"
+      },
+      "actHint": {
+        "inspect": "A read-back mismatch is recorded as fail",
+        "reprint": "Keeps the trace code; a reason is required",
+        "void": "Voiding is permanent; a reason is required"
+      },
+      "done": {
+        "approve": "Approved",
+        "retire": "Retired",
+        "save": "Saved",
+        "print": "Printed, trace code {{code}}",
+        "inspect": "Inspection recorded",
+        "reprint": "Reprinted",
+        "void": "Voided"
+      },
+      "err": {
+        "reason_idRequired": "Reason code is required",
+        "commentRequired": "Comment is required",
+        "commentTooLong": "Comment must be at most {{n}} characters",
+        "maxPlaces": "At most {{n}} decimal places",
+        "trace_max_length": "Trace code must be at most {{n}} characters",
+        "trace_pattern": "Trace code may only contain A–Z, 0–9 and hyphens"
+      },
+      "code": {
+        "self_approval": "The drafter cannot approve their own template",
+        "template_readonly": "Approved versions are read-only; create a new version",
+        "draft_exists": "A draft already exists for this product and customer",
+        "invalid_transition": "Not allowed in the current state (voided or scrapped?)",
+        "marking_template_missing": "No approved marking template for this lot's product and customer",
+        "already_marked": "Lot already marked; reprint if inspection failed",
+        "trace_code_mismatch": "Reported trace code {{actual}} differs from issued {{expected}}",
+        "check_blocked": "Check failed",
+        "inspect_blocked": "Marking inspection failed and is unresolved; cannot track out or override",
+        "idempotency_key_reused": "This request was already sent with different content; refresh and retry",
+        "key_missing": "Request is missing its idempotency key; refresh and retry"
+      },
+      "checkBlocked": "Marking inspection failed ({{trace}}); resolve before track-out"
     }
   },
   "notify": {

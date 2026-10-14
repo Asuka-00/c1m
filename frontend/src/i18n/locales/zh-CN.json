@@ -909,7 +909,8 @@
         "wafer": "晶圆",
         "equipment": "设备",
         "material_lot": "物料批",
-        "customer_lot": "客户批号"
+        "customer_lot": "客户批号",
+        "trace_code": "追溯码"
       },
       "c": {
         "code": "批次",
@@ -938,11 +939,22 @@
         "parent_wafer": "母晶圆",
         "die_row": "die 行",
         "die_col": "die 列",
-        "transform_id": "转换记录"
+        "transform_id": "转换记录",
+        "trace_code": "追溯码",
+        "content": "打标内容",
+        "template": "模板",
+        "date_code": "日期码",
+        "reprint_count": "重打次数",
+        "latest_inspection_status": "检验",
+        "marked_at": "打标时间",
+        "wafer": "晶圆",
+        "slot": "槽位"
       },
       "origins": "来源晶圆与 die 坐标",
       "dies": "该晶圆的 die 去向",
-      "outOrigins": "下游子批位置"
+      "outOrigins": "下游子批位置",
+      "marking": "打标记录",
+      "wafers": "晶圆"
     },
     "holdrel": {
       "hint": "查看并释放 Hold 中的批次。",
@@ -1890,6 +1902,128 @@
       "scrappedHint": "光罩已报废，不能再计数、录入检查或执行其他动作",
       "delete": "删除",
       "deleteConfirm": "确定删除光罩 {{code}}？"
+    },
+    "marking": {
+      "tplTitle": "打标模板",
+      "tplDesc": "按产品和客户维护打标模板，审批后生效",
+      "jobTitle": "打标作业",
+      "jobDesc": "打标预览、打印、检验、重打与作废",
+      "mockHint": "演示数据，后端接口就绪后切换",
+      "search": "按编码、产品或客户搜索",
+      "allStatus": "全部状态",
+      "newTpl": "新建模板",
+      "newVersion": "新建版本",
+      "edit": "编辑草稿",
+      "approve": "审批",
+      "retire": "退役",
+      "selfApprovalHint": "起草人不能审批自己的模板",
+      "formHint": "占位符见下方说明",
+      "linesHint": "每行一段，可用 {model} {yyww} {trace} {bin}",
+      "compareWith": "对比版本",
+      "noOtherVersion": "没有其他版本",
+      "noDiff": "两个版本内容相同",
+      "diffField": "字段",
+      "lineN": "第 {{n}} 行",
+      "preview": "预览",
+      "print": "打印",
+      "inspect": "检验",
+      "reprint": "重打",
+      "void": "作废",
+      "firstPrint": "首打",
+      "voided": "已作废",
+      "voidedHint": "已作废（{{by}}：{{comment}}），不能再操作",
+      "scrappedHint": "批次已报废，不能再操作",
+      "traceAssignedHint": "追溯码在打印时由系统发号",
+      "markedFrom": "打标日期从",
+      "markedTo": "打标日期至",
+      "printLog": "打印与检验履历",
+      "readCode": "读回码（OCR）",
+      "reasonId": "原因码",
+      "comment": "备注",
+      "ocrDiff": "读回不一致：应为 {{expected}}，读到 {{read}}",
+      "voidConfirm": "作废 {{code}} 后不可恢复，再点一次确认",
+      "voidConfirmOk": "确认作废",
+      "ok": "确定",
+      "status": {
+        "draft": "草稿",
+        "approved": "已批准",
+        "retired": "已退役"
+      },
+      "basis": {
+        "lot_start": "开批日期",
+        "marking": "打标日期",
+        "assembly_done": "封装完成日期"
+      },
+      "insp": {
+        "pending": "待检验",
+        "pass": "合格",
+        "fail": "不合格"
+      },
+      "source": {
+        "manual": "手工",
+        "eap": "设备上报",
+        "simulator": "模拟器"
+      },
+      "col": {
+        "code": "编码",
+        "product": "产品",
+        "customer": "客户",
+        "version": "版本",
+        "status": "状态",
+        "lines": "打标内容",
+        "dateCodeBasis": "日期码取值",
+        "usesBin": "含 bin",
+        "createdBy": "起草人",
+        "createdAt": "起草时间",
+        "approvedBy": "审批人",
+        "approvedAt": "审批时间",
+        "lot": "批次",
+        "template": "模板",
+        "dateCode": "日期码",
+        "qty": "数量",
+        "bin": "bin",
+        "equipment": "打标机",
+        "traceCode": "追溯码",
+        "reprints": "重打次数",
+        "inspection": "检验",
+        "markedAt": "打标时间"
+      },
+      "actHint": {
+        "inspect": "读回码与系统号不一致时记为不合格",
+        "reprint": "沿用原追溯码，必须填写原因",
+        "void": "作废后不可恢复，必须填写原因"
+      },
+      "done": {
+        "approve": "已审批",
+        "retire": "已退役",
+        "save": "已保存",
+        "print": "已打印，追溯码 {{code}}",
+        "inspect": "已录入检验",
+        "reprint": "已重打",
+        "void": "已作废"
+      },
+      "err": {
+        "reason_idRequired": "请填写原因码",
+        "commentRequired": "请填写备注",
+        "commentTooLong": "备注不能超过 {{n}} 字",
+        "maxPlaces": "最多 {{n}} 位小数",
+        "trace_max_length": "追溯码不能超过 {{n}} 位",
+        "trace_pattern": "追溯码只能包含大写字母、数字和连字符"
+      },
+      "code": {
+        "self_approval": "起草人不能审批自己的模板",
+        "template_readonly": "已批准的版本只读，请新建版本",
+        "draft_exists": "该产品和客户已有草稿",
+        "invalid_transition": "当前状态不允许该操作（可能已作废或已报废）",
+        "marking_template_missing": "该批次的产品和客户没有已批准的打标模板",
+        "already_marked": "该批次已打标，不合格时请重打",
+        "trace_code_mismatch": "设备回报的追溯码 {{actual}} 与系统发号 {{expected}} 不一致",
+        "check_blocked": "检查未通过",
+        "inspect_blocked": "打标检验不合格且未处理，不能出站，不可强制放行",
+        "idempotency_key_reused": "请求已提交过且内容不同，请刷新后重试",
+        "key_missing": "请求缺少幂等键，请刷新页面后重试"
+      },
+      "checkBlocked": "打标检验不合格（{{trace}}），处理前不能出站"
     }
   },
   "notify": {

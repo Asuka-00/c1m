@@ -1212,7 +1212,8 @@
         "rework_limit": "返工次数上限",
         "qty_adjust_limit": "报废 / 补数数量上限",
         "eqp_wait_qual": "设备待 Qual",
-        "bom_required": "需有生效 BOM"
+        "bom_required": "需有生效 BOM",
+        "marking_inspection": "打标检验合格"
       },
       "check_severity": {
         "block": "拦截",
@@ -1732,7 +1733,9 @@
     "mes-map-import": "坐标图导入",
     "mes-ct-move-report": "CT / Move 报表",
     "mes-qual-expiring": "即将到期资质",
-    "mes-customer": "客户"
+    "mes-customer": "客户",
+    "mes-marking-template": "打标模板",
+    "mes-marking": "打标作业"
   },
   "permName": {
     "users__read": "查看平台用户",
