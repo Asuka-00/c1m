@@ -78,6 +78,17 @@ describe('D87 补充一 光罩主数据带 key', () => {
   })
 })
 
+describe('QA P3-1 http 删除带 key', () => {
+  it('httpReticleApi.remove → DELETE /mes/reticle/{id} 带 Idempotency-Key', async () => {
+    const del = vi.spyOn(http, 'delete').mockResolvedValue({ data: null })
+    await httpReticleApi.remove('r1', 'k-del')
+    expect(del).toHaveBeenCalledTimes(1)
+    expect(del).toHaveBeenCalledWith('/mes/reticle/r1', {
+      headers: { 'Idempotency-Key': 'k-del' },
+    })
+  })
+})
+
 describe('删除幂等（后端补充）', () => {
   it('删除成功后同 key 同请求重发：原样回放第一次的成功响应并带 Idempotent-Replayed，不报 404', async () => {
     const first = await mockReticleApi.remove('r7', 'DEL-1')
