@@ -498,8 +498,10 @@
         "rework_route_missing": "No rework route is configured for this step",
         "qtime_rule_in_use": "Q-Time rule {{qtime_rule_code}} is referenced by {{hold_count}} hold record(s) and cannot be deleted. Deactivate it instead.",
         "qtime_action_invalid": "The Q-Time action must be Warn, Hold or Rework",
-        "hold_not_found": "The hold record does not exist or was deleted; refresh the list"
-      }
+        "hold_not_found": "The hold record does not exist or was deleted; refresh the list",
+        "too_many_decimals": "At most 6 decimal places"
+      },
+      "tooManyDecimals": "At most {{n}} decimal places"
     },
     "autoHint": "Leave blank to generate automatically",
     "currentStep": "Current",

@@ -35,7 +35,12 @@ import { Textarea } from '@/components/ui/textarea'
 import { cellValue } from './cells'
 import { entityLabel, enumLabel, fieldHelp, fieldLabel } from './labels'
 import { RefSelect } from './ref-select'
-import { requiredBy, requiredHint, validateRequired } from './required'
+import {
+  requiredBy,
+  requiredHint,
+  validateDecimals,
+  validateRequired,
+} from './required'
 
 type V = Record<string, unknown>
 const NONE = '__none__'
@@ -169,7 +174,10 @@ function FormBody({
     setV((p) => ({ ...p, attrs: { ...(p.attrs as V), [k]: x } }))
   const submit = async (ev: React.FormEvent) => {
     ev.preventDefault()
-    const found = validateRequired(e, v, hidden)
+    const found = {
+      ...validateDecimals(e, v, hidden),
+      ...validateRequired(e, v, hidden),
+    }
     setErrs(found)
     if (Object.keys(found).length) return
     let body: V

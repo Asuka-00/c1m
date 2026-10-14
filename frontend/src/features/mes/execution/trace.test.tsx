@@ -248,4 +248,50 @@ describe('F6 追溯显示客户批号和归属', () => {
     const cell = s.getByTitle('1234abcd-0000-4000-8000-000000000001')
     await expect.element(cell).toHaveTextContent('1234abcd')
   })
+
+  it('D60：undone=true 的转换节点显示已撤销及撤销信息，缺失字段不显示', async () => {
+    const { s } = await show({
+      kind: 'lot',
+      target: { id: 'L1', code: 'LOT-U', ownership: 'own', customer: null },
+      backward: empty,
+      forward: {
+        lots: [
+          {
+            id: 'C1',
+            code: 'LOT-U-1',
+            relation: 'transform',
+            qty: 10,
+            via: 'LOT-U',
+            level: 1,
+            at: null,
+            transform_id: 'aaaabbbb-0000-4000-8000-000000000001',
+            undone: true,
+            undone_at: '2026-10-14T08:00:00Z',
+            undone_by: 'kai',
+            undo_reason: 'map 选错了',
+          },
+          {
+            id: 'C2',
+            code: 'LOT-U-2',
+            relation: 'transform',
+            qty: 5,
+            via: 'LOT-U',
+            level: 1,
+            at: null,
+            undone: true,
+          },
+        ],
+      },
+    } as never)
+    await s.getByLabelText(t('mes.traceq.code')).fill('LOT-U')
+    await userEvent.click(s.getByTestId('trace-search'))
+    await expect
+      .poll(
+        () => document.querySelectorAll('[data-testid=trace-undone]').length
+      )
+      .toBe(2)
+    const info = document.querySelectorAll('[data-testid=trace-undone-info]')
+    expect(info.length).toBe(1)
+    expect(info[0].textContent).toMatch(/· kai · map 选错了$/)
+  })
 })

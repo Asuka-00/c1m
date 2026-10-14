@@ -41,6 +41,8 @@ export interface MesField {
   search: boolean
   default: unknown
   max_length: number | null
+  /** 定点小数位数（numeric(18, scale)）；元数据不带时 float 按 6 位（D60） */
+  scale?: number | null
   help: boolean
   /** 引用选项按该同级引用字段过滤（如 route） */
   depends: string | null

@@ -12,6 +12,7 @@ import {
   type TraceResult,
   type TraceRow,
 } from '@/lib/api/mes/execution'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -68,7 +69,10 @@ function cell(col: string, v: unknown, row: TraceRow): React.ReactNode {
     return row.code || row.lot_no ? <OwnershipLabel info={row as never} /> : '—'
   if (v === null || v === undefined || v === '') return '—'
   if (col === 'at') return fmtDateTime(String(v))
-  if (col === 'relation') return enumLabel('genealogy_relation', String(v))
+  if (col === 'relation') {
+    const rel = enumLabel('genealogy_relation', String(v))
+    return row.undone === true ? <UndoneRelation rel={rel} row={row} /> : rel
+  }
   // D54：转换谱系带转换记录 id（撤销后记录仍保留），显示前 8 位，悬停看全文
   if (col === 'transform_id')
     return (
@@ -87,6 +91,36 @@ function cell(col: string, v: unknown, row: TraceRow): React.ReactNode {
           .join(', ')
       : '—'
   return String(v)
+}
+
+/**
+ * D60：已撤销的转换节点只做展示（标「已撤销」及撤销时间 / 人 / 原因，缺失的不显示），
+ * 不参与谱系关系。
+ */
+function UndoneRelation({ rel, row }: { rel: string; row: TraceRow }) {
+  const s = (x: unknown) => (x == null || x === '' ? null : String(x))
+  const at = s(row.undone_at)
+  const info = [
+    at && fmtDateTime(at),
+    s(row.undone_by),
+    s(row.undo_reason),
+  ].filter(Boolean)
+  return (
+    <span className='inline-flex flex-wrap items-center gap-1'>
+      <span className='text-muted-foreground line-through'>{rel}</span>
+      <Badge variant='secondary' data-testid='trace-undone'>
+        {t('mes.tundo.undone')}
+      </Badge>
+      {info.length > 0 && (
+        <span
+          className='text-xs text-muted-foreground'
+          data-testid='trace-undone-info'
+        >
+          {info.join(' · ')}
+        </span>
+      )}
+    </span>
+  )
 }
 
 /** 追溯结果表（lot / code 列可跳转到批次履历）。 */

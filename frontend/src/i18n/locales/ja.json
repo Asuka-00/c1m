@@ -498,8 +498,10 @@
         "rework_route_missing": "この工程にリワークルートが設定されていません",
         "qtime_rule_in_use": "Q-Time 規則 {{qtime_rule_code}} は {{hold_count}} 件のホールド記録から参照されているため削除できません。無効化してください",
         "qtime_action_invalid": "Q-Time の違反時処置は警告・ホールド・リワークのみ指定できます",
-        "hold_not_found": "ホールド記録が存在しないか削除されています。一覧を更新してください"
-      }
+        "hold_not_found": "ホールド記録が存在しないか削除されています。一覧を更新してください",
+        "too_many_decimals": "小数は最大 6 桁です"
+      },
+      "tooManyDecimals": "小数は最大 {{n}} 桁です"
     },
     "autoHint": "空欄の場合は自動採番",
     "currentStep": "現在",

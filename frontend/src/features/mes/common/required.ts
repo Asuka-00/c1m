@@ -3,6 +3,7 @@ import { AxiosError } from 'axios'
 import i18n, { t } from '@/i18n'
 import { errorMessage } from '@/lib/api/client'
 import type { MesEntity, MesField } from '@/lib/api/mes/common'
+import { parseDecimal } from '@/lib/decimal'
 import { TERMINAL_STATUSES } from '@/features/mes/execution/lot-rules'
 import { entityLabel, enumLabel, fieldLabel } from './labels'
 
@@ -55,6 +56,23 @@ export function validateRequired(e: MesEntity, v: V, skip: Set<string>) {
   return errs
 }
 
+/** 定点数字段的最大小数位（D60：numeric(18,6)，超过 6 位后端 422 too_many_decimals）。 */
+export const MAX_DECIMALS = 6
+
+/** 提前校验小数位：float 字段超过 scale（默认 6）位小数时给出提示。 */
+export function validateDecimals(e: MesEntity, v: V, skip: Set<string>) {
+  const errs: Record<string, string> = {}
+  for (const f of e.fields) {
+    if (f.type !== 'float' || skip.has(f.column) || f.system) continue
+    const raw = v[f.column]
+    if (raw == null || raw === '') continue
+    const n = f.scale ?? MAX_DECIMALS
+    const d = parseDecimal(String(raw))
+    if (d && d.decimals > n) errs[f.name] = t('mes.err.tooManyDecimals', { n })
+  }
+  return errs
+}
+
 /** 条件必填时显示在星号旁的提示。 */
 export const requiredHint = (e: MesEntity, f: MesField, v: V) => {
   const by = requiredBy(e, f, v)
@@ -85,6 +103,7 @@ export const MES_ERROR_CODES = [
   'idempotency_in_progress',
   'idempotency_key_mismatch',
   'idempotency_key_reused',
+  'too_many_decimals',
 ] as const
 type MesErrorCode = (typeof MES_ERROR_CODES)[number]
 const isCode = (x: unknown): x is MesErrorCode =>
@@ -182,8 +201,15 @@ export function mesErrorMessage(err: unknown, e: MesEntity | undefined) {
     return { name, rest }
   }
   // 全部是业务错误码时直接给出本地化提示（不加“校验失败”前缀）
+  const tooMany = (x: { type?: string; code?: string }) =>
+    x.code === 'too_many_decimals' || x.type === 'too_many_decimals'
   const codes = d.map((x) => {
     const { name, rest } = parse(x)
+    if (tooMany(x)) {
+      const f = e?.fields.find((y) => y.name === name)
+      const msg = t('mes.err.tooManyDecimals', { n: f?.scale ?? MAX_DECIMALS })
+      return e && f ? `${fieldLabel(e, name)}: ${msg}` : msg
+    }
     return fieldCodeMessage(name, rest)
   })
   if (codes.every(Boolean)) return [...new Set(codes)].join('；')
