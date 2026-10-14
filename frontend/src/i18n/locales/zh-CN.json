@@ -1877,6 +1877,8 @@
         "disposition": "处置建议"
       },
       "err": {
+        "keyMissing": "请求缺少幂等键（Idempotency-Key），请刷新页面后重试",
+        "keyReused": "该操作已用同一请求标识提交过不同内容，请关闭对话框后重新操作",
         "deltaNonZero": "增减量须为非零数字",
         "reasonIdRequired": "减少计数时必须填写原因代码",
         "tooLong": "不能超过 {{max}} 个字符",

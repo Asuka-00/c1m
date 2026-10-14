@@ -1877,6 +1877,8 @@
         "disposition": "Disposition"
       },
       "err": {
+        "keyMissing": "The request is missing its Idempotency-Key; refresh the page and try again",
+        "keyReused": "This operation key was already used with different content; close the dialog and start again",
         "deltaNonZero": "Delta must be a non-zero number",
         "reasonIdRequired": "A reason code is required to subtract shots",
         "tooLong": "Must be at most {{max}} characters",

@@ -13,7 +13,12 @@ import {
   httpReticleApi,
   mockReticleApi,
   resetReticleMock,
+  D80_KEYED,
+  IDEMPOTENT,
+  type ReticleAction,
+  type ReticleActionInput,
 } from '@/lib/api/mes/reticle'
+import { OperationKey } from '@/features/mes/common/idem-key'
 import { MES_PERM } from '@/features/mes/common/mes-perm'
 import {
   ACTION_LIST,
@@ -25,6 +30,11 @@ import {
   validateLocation,
   visibleActions,
 } from './reticle-rules'
+
+let seq = 0
+/** 测试里每次调用默认带一个新 key（D80）。 */
+const act = (...[id, a, input, key]: Parameters<typeof mockReticleApi.act>) =>
+  mockReticleApi.act(id, a, input, key ?? `t-${++seq}`)
 
 beforeEach(() => resetReticleMock())
 afterEach(() => {
@@ -68,7 +78,7 @@ describe('请求体白名单', () => {
       actionBody('usage', { delta: -1, reason_id: '', note: ' ' })
     ).toEqual({ delta: -1 })
   })
-  it('usage 带 Idempotency-Key，其他动作不带', async () => {
+  it('D80 动作带 Idempotency-Key，清洗等其他动作不带', async () => {
     const post = vi.spyOn(http, 'post').mockResolvedValue({ data: {} })
     await httpReticleApi.act('r1', 'usage', { delta: 5, reason: 'x' }, 'k1')
     expect(post).toHaveBeenCalledWith(
@@ -80,6 +90,12 @@ describe('请求体白名单', () => {
     expect(post).toHaveBeenLastCalledWith(
       '/mes/reticle/r1/life-reset',
       { reason: 'r' },
+      { headers: { 'Idempotency-Key': 'k2' } }
+    )
+    await httpReticleApi.act('r1', 'clean-start', { comment: 'c' }, 'k3')
+    expect(post).toHaveBeenLastCalledWith(
+      '/mes/reticle/r1/clean-start',
+      { comment: 'c' },
       undefined
     )
     void AxiosHeaders
@@ -232,13 +248,13 @@ describe('检查录入 D57（D71 补充）', () => {
     )
   })
   it('mock 同 key 重放不重复写检查记录；不传 disposition 默认 none', async () => {
-    const a = await mockReticleApi.act(
+    const a = await act(
       'r6',
       'inspection',
       { kind: 'particle', result: 'pass' },
       'ik'
     )
-    const b = await mockReticleApi.act(
+    const b = await act(
       'r6',
       'inspection',
       { kind: 'particle', result: 'pass' },
@@ -267,21 +283,28 @@ describe('幂等键绑定请求体（H-1）', () => {
       bodySignature('usage', { delta: 1, note: 'n' })
     )
   })
-  it('mock 同 key 不同内容 422 idempotency_key_reused，复用通用三语文案', async () => {
-    await mockReticleApi.act('r1', 'usage', { delta: 1 }, 'same')
+  it('mock 同 key 不同内容 422 idempotency_key_reused（D57/D80），三语文案', async () => {
+    await act('r1', 'usage', { delta: 1 }, 'same')
     const err = await mockReticleApi
       .act('r1', 'usage', { delta: 2 }, 'same')
       .catch((e: unknown) => e)
     expect(err).toMatchObject({
       response: {
         status: 422,
-        data: { detail: { code: 'idempotency_key_reused' } },
+        data: {
+          detail: [
+            {
+              loc: ['header', 'Idempotency-Key'],
+              type: 'idempotency_key_reused',
+            },
+          ],
+        },
       },
     })
     for (const l of ['zh-CN', 'en', 'ja']) {
       await i18n.changeLanguage(l)
       expect(reticleErrorMessage(err, 'usage')).toBe(
-        t('mes.err.code.idempotency_key_reused')
+        t('mes.reticle.err.keyReused')
       )
     }
   })
@@ -303,9 +326,7 @@ describe('mock', () => {
   it('仍挂载时返回 still_mounted；状态不对先 invalid_transition（D71）', async () => {
     // r3：pending_maintenance 且仍挂着
     for (const a of ['restore', 'life-reset', 'repair-complete'] as const)
-      await expect(
-        mockReticleApi.act('r3', a, { reason: 'x' })
-      ).rejects.toMatchObject({
+      await expect(act('r3', a, { reason: 'x' })).rejects.toMatchObject({
         response: {
           status: 409,
           data: {
@@ -317,15 +338,13 @@ describe('mock', () => {
         },
       })
     // r2 在用且挂着：inspect-start 状态不允许 → invalid_transition 优先
-    await expect(
-      mockReticleApi.act('r2', 'clean-complete', {})
-    ).rejects.toMatchObject({
+    await expect(act('r2', 'clean-complete', {})).rejects.toMatchObject({
       response: { data: { detail: { code: 'invalid_transition' } } },
     })
   })
   it('超 6 位小数 422 value_error + ctx.max_places', async () => {
     await expect(
-      mockReticleApi.act('r1', 'usage', { delta: '1.1234567' })
+      act('r1', 'usage', { delta: '1.1234567' })
     ).rejects.toMatchObject({
       response: {
         status: 422,
@@ -334,22 +353,18 @@ describe('mock', () => {
     })
   })
   it('非法迁移；restore 到上限 life_limit_reached；卸载后可 life-reset', async () => {
-    await expect(
-      mockReticleApi.act('r7', 'hold', { reason: 'x' })
-    ).rejects.toMatchObject({
+    await expect(act('r7', 'hold', { reason: 'x' })).rejects.toMatchObject({
       response: { data: { detail: { code: 'invalid_transition' } } },
     })
-    const u = await mockReticleApi.act('r3', 'unmount', {})
+    const u = await act('r3', 'unmount', {})
     expect(u.data).toMatchObject({ unmount_reason: 'manual' })
     expect((await mockReticleApi.get('r3')).status_code).toBe(
       'pending_maintenance'
     )
-    await expect(
-      mockReticleApi.act('r3', 'restore', { reason: 'x' })
-    ).rejects.toMatchObject({
+    await expect(act('r3', 'restore', { reason: 'x' })).rejects.toMatchObject({
       response: { data: { detail: { code: 'life_limit_reached' } } },
     })
-    const r = await mockReticleApi.act('r3', 'life-reset', { reason: 'pm' })
+    const r = await act('r3', 'life-reset', { reason: 'pm' })
     expect(r.data).toMatchObject({ status_code: 'available', shot_count: '0' })
     expect(r.usage).toMatchObject({
       kind: 'reset',
@@ -360,11 +375,11 @@ describe('mock', () => {
     expect(h.status_log[0]).toMatchObject({ action: 'life_reset' })
   })
   it('usage 同 key 重放不重复计数；在用 hold 记 available 并卸载', async () => {
-    await mockReticleApi.act('r1', 'usage', { delta: 10 }, 'k')
-    const r = await mockReticleApi.act('r1', 'usage', { delta: 10 }, 'k')
+    await act('r1', 'usage', { delta: 10 }, 'k')
+    const r = await act('r1', 'usage', { delta: 10 }, 'k')
     expect(r.reticle?.shot_count).toBe('1210')
     expect((await mockReticleApi.history('r1')).usage).toHaveLength(1)
-    const h = await mockReticleApi.act('r2', 'hold', { reason: 'x' })
+    const h = await act('r2', 'hold', { reason: 'x' })
     expect(h.data).toMatchObject({
       status_code: 'on_hold',
       hold_reason: 'manual',
@@ -380,7 +395,7 @@ describe('mock', () => {
     })
   })
   it('检查：inspecting pass → available；fail → on_hold(inspection_failed)', async () => {
-    const p = await mockReticleApi.act('r6', 'inspection', {
+    const p = await act('r6', 'inspection', {
       kind: 'particle',
       result: 'pass',
     })
@@ -388,8 +403,8 @@ describe('mock', () => {
       status_code: 'available',
       inspection_required: false,
     })
-    await mockReticleApi.act('r1', 'inspect-start', {})
-    const f = await mockReticleApi.act('r1', 'inspection', {
+    await act('r1', 'inspect-start', {})
+    const f = await act('r1', 'inspection', {
       kind: 'haze',
       result: 'fail',
     })
@@ -477,5 +492,103 @@ describe('D72', () => {
       .filter(([, c]) => c.includes('idempotency_key_' + 'mismatch'))
       .map(([f]) => f)
     expect(bad).toEqual([])
+  })
+})
+
+describe('D80：/mes/reticle 10 个手工写接口必填 Idempotency-Key', () => {
+  const BODY: Partial<Record<ReticleAction, ReticleActionInput>> = {
+    usage: { delta: 1 },
+    inspection: { kind: 'cd', result: 'pass', disposition: 'none' },
+    unmount: {},
+    hold: { reason: 'x' },
+    release: { comment: 'c' },
+    restore: { reason: 'x' },
+    'life-reset': { reason: 'x' },
+    scrap: { reason: 'x' },
+  }
+  it('清单为 10 个；前端有入口的 8 个全部在 IDEMPOTENT 里', () => {
+    expect([...D80_KEYED].sort()).toEqual(
+      [
+        'usage',
+        'incident',
+        'inspection',
+        'mount',
+        'unmount',
+        'hold',
+        'release',
+        'restore',
+        'life-reset',
+        'scrap',
+      ].sort()
+    )
+    expect([...IDEMPOTENT].sort()).toEqual(Object.keys(BODY).sort())
+  })
+  it('http：8 个动作都带 Idempotency-Key 头', async () => {
+    const post = vi.spyOn(http, 'post').mockResolvedValue({ data: {} })
+    for (const a of IDEMPOTENT) {
+      await httpReticleApi.act('r1', a, BODY[a]!, `key-${a}`)
+      expect(post).toHaveBeenLastCalledWith(
+        `/mes/reticle/r1/${a}`,
+        expect.anything(),
+        { headers: { 'Idempotency-Key': `key-${a}` } }
+      )
+    }
+    expect(post).toHaveBeenCalledTimes(IDEMPOTENT.length)
+  })
+  it('mock：缺 key 一律 422 missing（loc header），三语文案', async () => {
+    for (const a of IDEMPOTENT) {
+      const err = await mockReticleApi
+        .act('r1', a, BODY[a]!)
+        .catch((e: unknown) => e)
+      expect(err).toMatchObject({
+        response: {
+          status: 422,
+          data: {
+            detail: [{ type: 'missing', loc: ['header', 'Idempotency-Key'] }],
+          },
+        },
+      })
+    }
+    const err = await mockReticleApi
+      .act('r1', 'scrap', { reason: 'x' })
+      .catch((e: unknown) => e)
+    for (const l of ['zh-CN', 'en', 'ja']) {
+      await i18n.changeLanguage(l)
+      const m = reticleErrorMessage(err, 'scrap')
+      expect(m).toBe(t('mes.reticle.err.keyMissing'))
+      expect(m).not.toBe('mes.reticle.err.keyMissing')
+    }
+  })
+  it('mock：同 key 重放返回原响应，不重复写；换请求体 422 reused', async () => {
+    const a = await act('r1', 'hold', { reason: 'x' }, 'hk')
+    const b = await act('r1', 'hold', { reason: 'x' }, 'hk')
+    expect(b).toEqual(a)
+    expect(
+      (await mockReticleApi.history('r1')).status_log.filter(
+        (x) => x.action === 'hold'
+      )
+    ).toHaveLength(1)
+    await expect(
+      act('r1', 'hold', { reason: 'y' }, 'hk')
+    ).rejects.toMatchObject({
+      response: {
+        status: 422,
+        data: { detail: [{ type: 'idempotency_key_reused' }] },
+      },
+    })
+  })
+})
+
+describe('OperationKey：一次操作一个 key', () => {
+  it('重试沿用；请求体变或成功后换新 key', () => {
+    let n = 0
+    const k = new OperationKey(() => `k${++n}`)
+    const s1 = bodySignature('hold', { reason: 'a' })
+    const s2 = bodySignature('hold', { reason: 'b' })
+    expect(k.key(s1)).toBe('k1')
+    expect(k.key(s1)).toBe('k1')
+    expect(k.key(s2)).toBe('k2')
+    k.done()
+    expect(k.key(s2)).toBe('k3')
   })
 })

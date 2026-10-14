@@ -151,8 +151,37 @@ export interface ReticleActionInput {
   disposition?: string
 }
 
-/** 带 Idempotency-Key 的动作（D57；检查录入 D71 补充）。 */
-export const IDEMPOTENT: ReticleAction[] = ['usage', 'inspection']
+/**
+ * D80 + 补充一：/mes/reticle 下 10 个手工写接口一律必填 Idempotency-Key。
+ * mount、incident 前端暂无入口（上机走设备页 /mes/eqp，异常由 EAP 上报），这里只列出备查。
+ */
+export const D80_KEYED = [
+  'usage',
+  'incident',
+  'inspection',
+  'mount',
+  'unmount',
+  'hold',
+  'release',
+  'restore',
+  'life-reset',
+  'scrap',
+] as const
+/** 前端有入口、必须带 Idempotency-Key 的光罩动作（D80 清单里属于 ReticleAction 的 8 个）。 */
+export const IDEMPOTENT: ReticleAction[] = (
+  D80_KEYED as readonly string[]
+).filter((a): a is ReticleAction =>
+  [
+    'usage',
+    'hold',
+    'release',
+    'restore',
+    'scrap',
+    'life-reset',
+    'unmount',
+    'inspection',
+  ].includes(a)
+)
 
 /** 各动作请求体白名单。 */
 export const ACTION_BODY: Record<ReticleAction, readonly string[]> = {
@@ -517,14 +546,29 @@ function mockAct(
 ): ReticleActionOut {
   const body = actionBody(action, input) as ReticleActionInput
   const sig = `${id}|${action}|${bodySignature(action, input)}`
+  // D80：缺 key → 422 missing（loc header）
+  if (IDEMPOTENT.includes(action) && !key)
+    throw apiError(422, [
+      {
+        loc: ['header', 'Idempotency-Key'],
+        type: 'missing',
+        code: 'missing',
+        msg: 'Idempotency-Key: field required',
+      },
+    ])
   if (IDEMPOTENT.includes(action) && key && idem.has(key)) {
     const hit = idem.get(key)!
-    // D57/D72：同 key 不同内容 → 422 idempotency_key_reused
+    // D57/D80：同 key 不同内容 → 422 idempotency_key_reused
     if (hit.sig !== sig)
-      throw apiError(422, {
-        code: 'idempotency_key_reused',
-        message: 'Idempotency-Key reused with a different body',
-      })
+      throw apiError(422, [
+        {
+          loc: ['header', 'Idempotency-Key'],
+          type: 'idempotency_key_reused',
+          code: 'idempotency_key_reused',
+          msg: 'Idempotency-Key reused with a different body',
+        },
+      ])
+    // 重放返回原响应（D57）
     return structuredClone(hit.out)
   }
   const x = find(id)

@@ -1877,6 +1877,8 @@
         "disposition": "処置案"
       },
       "err": {
+        "keyMissing": "リクエストに冪等キー（Idempotency-Key）がありません。ページを更新して再試行してください",
+        "keyReused": "同じ操作キーで異なる内容が送信済みです。ダイアログを閉じてやり直してください",
         "deltaNonZero": "増減量は 0 以外の数値で入力してください",
         "reasonIdRequired": "カウントを減らす場合は理由コードが必要です",
         "tooLong": "{{max}} 文字以内で入力してください",

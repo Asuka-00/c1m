@@ -82,3 +82,9 @@
 - 格式：422 `type=value_error`，`ctx={reason:"pattern", pattern:"<config 原样正则>"}`，只用于 trace_code（read_code 不校验格式）。
 - 前端：mock 按当前 config（`setMarkingMockConfig`，`resetMarkingMock` 恢复默认）出 ctx；错误显示用 `ctx.max_length`（read_code 用读回码文案）；格式错误在正则不是默认 `^[A-Z0-9-]+$` 时显示原样正则（新文案 `trace_pattern_rule`，三语）。
 - D79 补充五（config 保存 422 `pattern_unsupported`）：前端目前没有保存 config 的页面，暂不处理。
+
+## D80 + 补充一（光罩手工写接口必填 Idempotency-Key）
+
+- 清单 10 个：`POST /mes/reticle/{rid}/` usage、incident、inspection、mount、unmount、hold、release、restore、life-reset、scrap（`D80_KEYED`）。前端有入口的 8 个（无 mount / incident）都经 `IDEMPOTENT` 带头。
+- 统一封装 `OperationKey` / `useOperationKey`（`features/mes/common/idem-key.ts`）：一次用户操作一个 key；请求体不变的重试沿用；请求体变或成功后换新 key。
+- mock：缺 key 422 `missing`（loc `["header","Idempotency-Key"]`）；同 key 同内容重放原响应；同 key 换请求体 422 `idempotency_key_reused`；文案 `mes.reticle.err.keyMissing` / `keyReused`（三语）。

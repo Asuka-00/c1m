@@ -184,6 +184,19 @@ export function reticleErrorMessage(err: unknown, action?: ReticleAction) {
     const d = (err.response.data as { detail?: unknown })?.detail
     // D71：超 6 位小数为 422 value_error，ctx 带 max_places
     if (Array.isArray(d)) {
+      // D80：缺 Idempotency-Key / 同 key 换请求体
+      const items = d as { loc?: unknown[]; type?: string; code?: string }[]
+      if (items.some((x) => (x?.type ?? x?.code) === 'idempotency_key_reused'))
+        return t('mes.reticle.err.keyReused')
+      if (
+        items.some(
+          (x) =>
+            (x?.type ?? x?.code) === 'missing' &&
+            x?.loc?.[0] === 'header' &&
+            x?.loc?.[1] === 'Idempotency-Key'
+        )
+      )
+        return t('mes.reticle.err.keyMissing')
       const mp = d.find(
         (x: { ctx?: { max_places?: unknown } }) => x?.ctx?.max_places != null
       ) as { ctx: { max_places: unknown } } | undefined
