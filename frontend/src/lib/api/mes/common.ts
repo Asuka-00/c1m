@@ -112,6 +112,11 @@ const seg = (code: string) => code.replace(/_/g, '-')
 const base = (code: string) => `/mes/${seg(code)}`
 
 /** 通用 MES 主数据客户端（/mes/<entity>）。 */
+/** 通用 CRUD 里写接口必须带 Idempotency-Key 的实体（授予、PATCH 变更 / 停用 / 延期 / 恢复、删除）。 */
+export const KEYED_ENTITIES: readonly string[] = ['operator_qual']
+const keyHeader = (key?: string) =>
+  key ? { headers: { 'Idempotency-Key': key } } : undefined
+
 export const mesApi = {
   meta: () => http.get<MesMeta>('/mes/_meta').then((r) => r.data),
   attrs: (code: string) =>
@@ -122,12 +127,20 @@ export const mesApi = {
     http.get<MesTreeNode[]>(`${base(code)}/tree`).then((r) => r.data),
   get: (code: string, id: string) =>
     http.get<MesRow>(`${base(code)}/${id}`).then((r) => r.data),
-  create: (code: string, body: Record<string, unknown>) =>
-    http.post<MesRow>(base(code), body).then((r) => r.data),
-  update: (code: string, id: string, body: Record<string, unknown>) =>
-    http.patch<MesRow>(`${base(code)}/${id}`, body).then((r) => r.data),
-  remove: (code: string, id: string) =>
-    http.delete(`${base(code)}/${id}`).then((r) => r.data),
+  // key：KEYED_ENTITIES 的写接口必带 Idempotency-Key（D81；operator_qual 见 B6 / QA P2-2）
+  create: (code: string, body: Record<string, unknown>, key?: string) =>
+    http.post<MesRow>(base(code), body, keyHeader(key)).then((r) => r.data),
+  update: (
+    code: string,
+    id: string,
+    body: Record<string, unknown>,
+    key?: string
+  ) =>
+    http
+      .patch<MesRow>(`${base(code)}/${id}`, body, keyHeader(key))
+      .then((r) => r.data),
+  remove: (code: string, id: string, key?: string) =>
+    http.delete(`${base(code)}/${id}`, keyHeader(key)).then((r) => r.data),
   setStatus: (code: string, id: string, status: string) =>
     http
       .post<MesRow>(`${base(code)}/${id}/status`, { status })

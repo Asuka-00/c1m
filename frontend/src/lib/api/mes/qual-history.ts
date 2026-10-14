@@ -541,7 +541,8 @@ export interface QualWriteApi {
     body: Partial<QualInput> & QualReason,
     key: string
   ) => Promise<OperatorQual>
-  remove: (id: string) => Promise<void>
+  /** QA P2-2：DELETE 也必须带 key */
+  remove: (id: string, key: string) => Promise<void>
 }
 
 export const mockQualWriteApi: QualWriteApi = {
@@ -566,10 +567,19 @@ export const mockQualWriteApi: QualWriteApi = {
         () => qualBodyCheck(body)
       )
     }),
-  remove: (id) =>
+  // D81：403 → 缺 key 422 → 重放 → 404 → 409 referenced
+  remove: (id, key) =>
     later(() => {
       need(WRITE)
-      mockRemove(id)
+      withKey(
+        key,
+        sigOf(`remove:${id}`, {}),
+        () => {
+          mockRemove(id)
+          return null
+        },
+        () => {}
+      )
     }),
 }
 

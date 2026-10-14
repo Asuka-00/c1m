@@ -13,7 +13,12 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTenantKey } from '@/lib/api/hooks'
-import { mesApi, type MesEntity, type MesRow } from '@/lib/api/mes/common'
+import {
+  KEYED_ENTITIES,
+  mesApi,
+  type MesEntity,
+  type MesRow,
+} from '@/lib/api/mes/common'
 import { normalizeListQuery } from '@/lib/api/query-dates'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -33,6 +38,7 @@ import {
   type ListParams,
 } from '@/components/crud'
 import { IconButton } from '@/components/icon-button'
+import { useOperationKey } from '@/features/mes/common/idem-key'
 import { cellValue } from './cells'
 import { EntityForm } from './entity-form'
 import { EntityTree } from './entity-tree'
@@ -95,12 +101,24 @@ export function EntityTable({
   })
   const invalidate = () => qc.invalidateQueries({ queryKey: ['mes', e.code] })
   const onErr = (err: unknown) => toast.error(mesErrorMessage(err, e))
+  // KEYED_ENTITIES：每次操作一个 Idempotency-Key，重试（内容不变）沿用，成功后换新
+  const keyed = KEYED_ENTITIES.includes(e.code)
+  const saveKey = useOperationKey()
+  const removeKey = useOperationKey()
   const save = useMutation({
-    mutationFn: (body: Record<string, unknown>) =>
-      s.editing
-        ? mesApi.update(e.code, s.editing.id, body)
-        : mesApi.create(e.code, body),
+    mutationFn: (body: Record<string, unknown>) => {
+      const id = s.editing?.id
+      const key = keyed
+        ? saveKey.key(
+            `${id ?? 'new'}:${JSON.stringify(body, Object.keys(body).sort())}`
+          )
+        : undefined
+      return id
+        ? mesApi.update(e.code, id, body, key)
+        : mesApi.create(e.code, body, key)
+    },
     onSuccess: () => {
+      saveKey.done()
       toast.success(t('mes.saved'))
       s.closeForm()
       invalidate()
@@ -108,8 +126,14 @@ export function EntityTable({
     onError: onErr,
   })
   const remove = useMutation({
-    mutationFn: (r: MesRow) => mesApi.remove(e.code, r.id),
+    mutationFn: (r: MesRow) =>
+      mesApi.remove(
+        e.code,
+        r.id,
+        keyed ? removeKey.key(`remove:${r.id}`) : undefined
+      ),
     onSuccess: () => {
+      removeKey.done()
       toast.success(t('mes.deleted'))
       s.closeDelete()
       invalidate()

@@ -226,8 +226,66 @@ describe('B6 资质履历 mock', () => {
     })
   })
 
+  it('QA P2-2 删除 D81：403 → 缺 key 422 → 重放 → 404 → 409 referenced', async () => {
+    // @ts-expect-error key 必填
+    void api.remove('q1').catch(() => {})
+    const noKey = undefined as unknown as string
+    setQualMockPerms(['mes.exec:read'])
+    expect(await fail(api.remove('nope', noKey))).toMatchObject({ status: 403 })
+    setQualMockPerms(null)
+    expect(await fail(api.remove('nope', noKey))).toMatchObject({
+      status: 422,
+      detail: [{ loc: ['header', 'Idempotency-Key'], type: 'missing' }],
+    })
+    expect(await fail(api.remove('nope', k()))).toMatchObject({ status: 404 })
+    const g = await api.grant(
+      {
+        username: 'op8',
+        operation_id: 'X',
+        equipment_type_id: null,
+        certified_on: null,
+        expires_on: null,
+        is_active: true,
+      },
+      k()
+    )
+    // granted 也写履历 → 409 referenced
+    expect(await fail(api.remove(g.id, 'rm1'))).toMatchObject({
+      status: 409,
+      detail: { code: 'referenced' },
+    })
+  })
+  it('授予 / PATCH（变更、停用、延期、恢复）缺 key 都 422 missing', async () => {
+    const noKey = undefined as unknown as string
+    const hdr = {
+      status: 422,
+      detail: [{ loc: ['header', 'Idempotency-Key'] }],
+    }
+    expect(
+      await fail(
+        api.grant(
+          {
+            username: 'a',
+            operation_id: 'X',
+            equipment_type_id: null,
+            certified_on: null,
+            expires_on: null,
+            is_active: true,
+          },
+          noKey
+        )
+      )
+    ).toMatchObject(hdr)
+    for (const b of [
+      { equipment_type_id: 'T' },
+      { is_active: false, ...R },
+      { expires_on: '2030-01-01', ...R, approved_by: 'lead' },
+      { is_active: true },
+    ])
+      expect(await fail(api.update('q1', b, noKey))).toMatchObject(hdr)
+  })
   it('有履历的资质删除 409 referenced', async () => {
-    expect(await fail(api.remove('q1'))).toMatchObject({
+    expect(await fail(api.remove('q1', k()))).toMatchObject({
       status: 409,
       detail: { code: 'referenced', tables: ['mes_operator_qual_log'] },
     })
