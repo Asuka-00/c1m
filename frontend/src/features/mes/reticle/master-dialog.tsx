@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useOperationKey } from '@/features/mes/common/idem-key'
 import { init, masterBody, masterErrors, type F, type V } from './master-form'
 import { reticleErrorMessage } from './reticle-rules'
 
@@ -49,9 +50,15 @@ function Body({
   const [tried, setTried] = useState(false)
   const qc = useQueryClient()
   const errs = masterErrors(v)
+  const opKey = useOperationKey()
   const m = useMutation({
-    mutationFn: () => reticleApi.save(r?.id ?? null, masterBody(v, r)),
+    mutationFn: () => {
+      const body = masterBody(v, r)
+      const sig = `${r?.id ?? 'new'}:${JSON.stringify(body)}`
+      return reticleApi.save(r?.id ?? null, body, opKey.key(sig))
+    },
     onSuccess: () => {
+      opKey.done()
       toast.success(t('mes.saved'))
       qc.invalidateQueries({ queryKey: ['mes', 'reticle'] })
       onClose()

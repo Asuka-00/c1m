@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Page } from '@/components/crud'
+import { useOperationKey } from '@/features/mes/common/idem-key'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { ReticleActionDialog } from './action-dialog'
 import { ReticleLifeBar } from './life-bar'
@@ -128,9 +129,12 @@ export function ReticleDetail({ reticle }: { reticle: Reticle }) {
   const [edit, setEdit] = useState(false)
   const acts = visibleActions(can)
   const qc = useQueryClient()
+  const delKey = useOperationKey()
   const del = useMutation({
-    mutationFn: () => reticleApi.remove(reticle.id),
+    mutationFn: () =>
+      reticleApi.remove(reticle.id, delKey.key(`remove:${reticle.id}`)),
     onSuccess: () => {
+      delKey.done()
       qc.invalidateQueries({ queryKey: ['mes', 'reticle'] })
     },
     // D72：有履历 → 409 referenced

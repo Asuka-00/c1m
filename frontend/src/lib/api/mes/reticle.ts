@@ -12,6 +12,7 @@ import {
 import { MES_PERM } from '@/features/mes/common/mes-perm'
 import { http } from '../client'
 import { BODY_KEYS, pickBody } from '../request-body'
+import { mesApi } from './common'
 import { apiError, setMockReplayed } from './mock-utils'
 
 /** 光罩专用状态枚举 `reticle_status`（终态 scrapped）。 */
@@ -259,9 +260,13 @@ interface Api {
     idempotencyKey?: string
   ) => Promise<ReticleActionOut>
   /** 删除（D72：有履历 → 409 referenced；履历表外键 RESTRICT）。 */
-  remove: (id: string) => Promise<void>
+  remove: (id: string, key: string) => Promise<void>
   /** 主数据新建 / 修改（P3-F3，通用 CRUD /mes/reticle；状态与计数只读，走动作接口）。 */
-  save: (id: string | null, body: ReticleMasterInput) => Promise<Reticle>
+  save: (
+    id: string | null,
+    body: ReticleMasterInput,
+    key: string
+  ) => Promise<Reticle>
 }
 
 /** 主数据可写字段（P3-F3）。数值按 D76 发定点字符串。 */
@@ -339,12 +344,12 @@ export const httpReticleApi: Api = {
           : undefined
       )
       .then((r) => r.data),
-  remove: (id) => http.delete(`/mes/reticle/${id}`).then(() => undefined),
-  save: (id, body) =>
+  // D87 补充一：通用 CRUD 走 KEYED_ENTITIES，新建 / 编辑 / 删除都带 Idempotency-Key
+  remove: (id, key) => mesApi.remove('reticle', id, key).then(() => undefined),
+  save: (id, body, key) =>
     (id
-      ? http.patch<Reticle>(`/mes/reticle/${id}`, body)
-      : http.post<Reticle>('/mes/reticle', body)
-    ).then((r) => r.data),
+      ? mesApi.update('reticle', id, body, key)
+      : mesApi.create('reticle', body, key)) as unknown as Promise<Reticle>,
 }
 
 /* ---------------- mock ---------------- */
@@ -551,6 +556,7 @@ const idem = new Map<string, { sig: string; out: ReticleActionOut }>()
 
 /** 测试用：重置 mock 数据。 */
 export function resetReticleMock() {
+  masterIdem.clear()
   mockNow = () => new Date()
   mockPerms = null
   store = seed()
@@ -1059,8 +1065,43 @@ export const mockReticleApi: Api = {
     })
   },
   act: (id, action, input, key) => later(() => mockAct(id, action, input, key)),
-  remove: (id) => later(() => mockRemove(id)),
-  save: (id, body) => later(() => mockSave(id, body)),
+  remove: (id, key) =>
+    later(() => masterKeyed(key, `remove|${id}`, () => mockRemove(id))),
+  save: (id, body, key) =>
+    later(() =>
+      masterKeyed(key, `save|${id}|${JSON.stringify(body)}`, () =>
+        mockSave(id, body)
+      )
+    ),
+}
+
+/** D87 补充一：主数据写接口缺 key → 422 missing（loc header，先于请求体 / 404）；
+ *  D86：只缓存 2xx，回放带 Idempotent-Replayed，同 key 换内容 → reused。 */
+const masterIdem = new Map<string, { sig: string; out: unknown }>()
+function masterKeyed<T>(key: string | undefined, sig: string, f: () => T): T {
+  setMockReplayed(false)
+  if (!key)
+    throw apiError(422, [
+      {
+        loc: ['header', 'Idempotency-Key'],
+        type: 'missing',
+        code: 'missing',
+        msg: 'Idempotency-Key: field required',
+      },
+    ])
+  const hit = masterIdem.get(key)
+  if (hit) {
+    if (hit.sig !== sig)
+      throw apiError(422, {
+        code: 'idempotency_key_reused',
+        message: 'Idempotency-Key reused with a different body',
+      })
+    setMockReplayed(true)
+    return structuredClone(hit.out) as T
+  }
+  const out = f()
+  masterIdem.set(key, { sig, out: structuredClone(out) })
+  return out
 }
 
 function mockSave(id: string | null, body: ReticleMasterInput): Reticle {

@@ -429,7 +429,9 @@ describe('D72', () => {
     expect(disabledHint({ status_code: 'available' })).toBeUndefined()
   })
   it('有履历删除 → 409 referenced 三语；无履历可删', async () => {
-    const err = await mockReticleApi.remove('r6').catch((e: unknown) => e)
+    const err = await mockReticleApi
+      .remove('r6', 'k-r6')
+      .catch((e: unknown) => e)
     expect(err).toMatchObject({
       response: {
         status: 409,
@@ -452,7 +454,7 @@ describe('D72', () => {
     await i18n.changeLanguage('zh-CN')
     const h = await mockReticleApi.history('r1')
     expect(hasHistory(h)).toBe(false)
-    await mockReticleApi.remove('r1')
+    await mockReticleApi.remove('r1', 'k-r1')
     expect((await mockReticleApi.list()).some((x) => x.id === 'r1')).toBe(false)
   })
   it('referenced 的 tables 只列有记录的履历表', () => {
@@ -462,12 +464,14 @@ describe('D72', () => {
       referencedTables({ ...e, usage: [{}], inspections: [{}] } as never)
     ).toEqual(['mes_reticle_usage', 'mes_reticle_inspection'])
   })
-  it('http 删除走 DELETE /mes/reticle/{id}', async () => {
+  it('http 删除走 DELETE /mes/reticle/{id}，带 Idempotency-Key（D87 补充一）', async () => {
     const spy = vi
       .spyOn(http, 'delete')
       .mockResolvedValue({ data: null, status: 204 })
-    await httpReticleApi.remove('r9')
-    expect(spy).toHaveBeenCalledWith('/mes/reticle/r9')
+    await httpReticleApi.remove('r9', 'k-r9')
+    expect(spy).toHaveBeenCalledWith('/mes/reticle/r9', {
+      headers: { 'Idempotency-Key': 'k-r9' },
+    })
   })
   it('源码与三语里没有 idempotency_key_mismatch', async () => {
     const files = import.meta.glob(
