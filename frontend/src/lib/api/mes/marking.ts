@@ -414,8 +414,35 @@ export interface TraceCodeResult {
   }[]
 }
 
+/**
+ * B1 开工清单未定项（设备集成 07:44 提出，等架构师答复）。mock 暂按下列取值，测试不断言这些部分。
+ * 后端定稿后只改这里。
+ */
+export const B1_PENDING = {
+  /** TODO(B1-1)：模板请求体除 lines 外的字段名（见 MARKING_BODY.template） */
+  templateBodyFields: [
+    'code',
+    'product_id',
+    'customer_id',
+    'date_code_basis',
+    'uses_bin',
+  ],
+  /** TODO(B1-2)：unknown_placeholder 的 loc */
+  unknownPlaceholderLoc: ['body', 'lines'],
+  /** TODO(B1-3)：版本号 / 状态字段名（MarkingTemplate.version / status） */
+  versionField: 'version',
+  statusField: 'status',
+  /** TODO(B1-4)：已有草稿时编辑模板——暂按「草稿可改，只有非草稿 409 template_readonly」 */
+  editWhenDraftExists: 'edit_draft' as 'edit_draft' | 'template_readonly',
+  /** TODO(B1-5)：重打 reason_id、comment 都缺时报一条还是两条（后端建议两条）；暂按一条（先 reason_id） */
+  reprintMissingAsOne: true,
+  /** TODO(B1-6)：打标 check_blocked 每项 result 的取值 */
+  checkBlockedResult: 'block',
+} as const
+
 /** 请求体白名单。 */
 export const MARKING_BODY = {
+  // TODO(B1-1)：除 lines 外的字段名未定，见 B1_PENDING.templateBodyFields
   template: [
     'code',
     'product_id',
@@ -796,7 +823,7 @@ export function mockTrackOutMarkingCheck(lotId: string) {
     results: [
       {
         check_type: INSPECT_BLOCK_CHECK,
-        result: 'block',
+        result: B1_PENDING.checkBlockedResult, // TODO(B1-6)
         overridable: false,
         message: `marking inspection ${reason}`,
         ctx,
@@ -940,6 +967,12 @@ const seed = (): Store => ({ t: tplSeed(), rec: [], seq: {}, n: 0 })
 let store = seed()
 const idem = new Map<string, { sig: string; out: unknown }>()
 let mockUser = 'admin'
+/** B1：模板归属租户（mock 内部，不出现在响应里）；跨租户一律 404 */
+const tplTenant = new Map<string, string>()
+const DEFAULT_TENANT = 'tenant-a'
+let mockTenant = DEFAULT_TENANT
+/** B1：mock 权限（null = 全有）；mes.marking_template:read / :write / :approve */
+let mockTplPerms: string[] | null = null
 let mockNow: () => Date = () => new Date()
 
 /** 测试用：重置 mock 数据。 */
@@ -950,11 +983,35 @@ export function resetMarkingMock() {
   idem.clear()
   mockUser = 'admin'
   mockNow = () => new Date()
+  mockTenant = DEFAULT_TENANT
+  mockTplPerms = null
+  tplTenant.clear()
 }
 /** mock 的当前用户（真实接口由会话决定；页面用 /auth/me 的 username 同步）。 */
 export const setMarkingMockUser = (u: string) => {
   mockUser = u
 }
+/** 测试用：切换当前租户（B1 跨租户 404）。 */
+export const setMarkingMockTenant = (t: string) => {
+  mockTenant = t
+}
+/** 测试用：模板权限（null = 全有）。 */
+export const setMarkingTplPerms = (p: string[] | null) => {
+  mockTplPerms = p
+}
+export const TPL_PERM = {
+  read: 'mes.marking_template:read',
+  write: 'mes.marking_template:write',
+  approve: 'mes.marking_template:approve',
+} as const
+/** D81：403 排最前（先于缺 key 422）。 */
+const needTpl = (perm: string) => {
+  if (mockTplPerms && !mockTplPerms.includes(perm))
+    throw apiError(403, 'Not enough permissions')
+}
+/** 当前租户可见的模板（种子数据属默认租户）。 */
+const tpls = () =>
+  store.t.filter((y) => (tplTenant.get(y.id) ?? DEFAULT_TENANT) === mockTenant)
 /** 测试用：固定 mock 时钟。 */
 export const setMarkingMockNow = (f: () => Date) => {
   mockNow = f
@@ -1025,7 +1082,7 @@ function withIdem<T>(
 }
 
 const findTpl = (id: string) => {
-  const x = store.t.find((y) => y.id === id)
+  const x = tpls().find((y) => y.id === id)
   if (!x) throw apiError(404, 'not found')
   return x
 }
@@ -1077,7 +1134,7 @@ function validateTemplate(input: Partial<TemplateInput>, create: boolean) {
       throw apiError(
         422,
         bad.map((name) => ({
-          loc: ['body', 'lines'],
+          loc: [...B1_PENDING.unknownPlaceholderLoc], // TODO(B1-2)
           type: 'value_error',
           code: 'value_error',
           msg: `lines: unknown placeholder {${name}}`,
@@ -1089,7 +1146,7 @@ function validateTemplate(input: Partial<TemplateInput>, create: boolean) {
 
 function mockCreate(input: TemplateInput): MarkingTemplate {
   validateTemplate(input, true)
-  const same = store.t.filter(
+  const same = tpls().filter(
     (y) =>
       y.product_id === input.product_id && y.customer_id === input.customer_id
   )
@@ -1110,13 +1167,14 @@ function mockCreate(input: TemplateInput): MarkingTemplate {
     approved_at: null,
   } as MarkingTemplate
   store.t.push(tpl)
+  tplTenant.set(tpl.id, mockTenant)
   return tpl
 }
 
 /** D79-1：复制同「产品+客户」的最新版本为草稿，版本号递增。 */
 function mockNewVersion(id: string): MarkingTemplate {
   const base = findTpl(id)
-  const same = store.t.filter(
+  const same = tpls().filter(
     (y) =>
       y.product_id === base.product_id && y.customer_id === base.customer_id
   )
@@ -1134,6 +1192,7 @@ function mockNewVersion(id: string): MarkingTemplate {
     approved_at: null,
   }
   store.t.push(tpl)
+  tplTenant.set(tpl.id, mockTenant)
   return tpl
 }
 
@@ -1162,7 +1221,7 @@ function mockApprove(id: string) {
     )
   if (tpl.status !== 'draft')
     throw err409('invalid_transition', 'only draft can be approved')
-  for (const y of store.t)
+  for (const y of tpls())
     if (
       y.status === 'approved' &&
       y.product_id === tpl.product_id &&
@@ -1291,11 +1350,22 @@ function mockPrint(id: string, input: PrintInput): MarkingRecord {
   const r = findRec(id)
   const seq = r.prints.length + 1
   if (seq > 1) {
-    const miss = reprintErrors(input)
-    if (miss.includes('reason_id'))
-      throw err422('reason_id', 'missing', 'reason_id: field required')
-    if (miss.includes('comment'))
-      throw err422('comment', 'missing', 'comment: field required')
+    const miss = reprintErrors(input).filter(
+      (m): m is 'reason_id' | 'comment' => m !== 'comment_too_long'
+    )
+    // TODO(B1-5)：都缺时一条还是两条未定（B1_PENDING.reprintMissingAsOne）
+    if (miss.length && B1_PENDING.reprintMissingAsOne)
+      throw err422(miss[0], 'missing', `${miss[0]}: field required`)
+    if (miss.length)
+      throw apiError(
+        422,
+        miss.map((f) => ({
+          loc: ['body', f],
+          type: 'missing',
+          code: 'missing',
+          msg: `${f}: field required`,
+        }))
+      )
   }
   if (isLocked(r) || lotOf(r)?.scrapped) throw scrappedErr()
   const at = mockNow().toISOString()
@@ -1468,39 +1538,50 @@ const sig = (op: string, body: object) => markingSignature(op, body)
 /** 前端 mock 实现（同形数据与错误码）。 */
 export const mockMarkingApi: MarkingApi = {
   templates: (q) =>
-    later(() => store.t.filter((x) => !q?.status || x.status === q.status)),
-  template: (id) => later(() => findTpl(id)),
+    later(() => {
+      needTpl(TPL_PERM.read)
+      return tpls().filter((x) => !q?.status || x.status === q.status)
+    }),
+  template: (id) =>
+    later(() => {
+      needTpl(TPL_PERM.read)
+      return findTpl(id)
+    }),
   // D81/D82：模板写接口 Idempotency-Key 必填；顺序 缺 key 422 → 请求体 422 → 重放 → 404 → 422 → 409
   createTemplate: (input, key) =>
-    later(() =>
-      withIdem(
+    later(() => {
+      needTpl(TPL_PERM.write)
+      return withIdem(
         key,
         markingSignature('tpl-create', input),
         () => mockCreate(input),
         () => validateTemplate(input, true)
       )
-    ),
+    }),
   updateTemplate: (id, input, key) =>
-    later(() =>
-      withIdem(
+    later(() => {
+      needTpl(TPL_PERM.write)
+      return withIdem(
         key,
         markingSignature(`tpl-update:${id}`, input),
         () => mockUpdate(id, input),
         () => validateTemplate(input, false)
       )
-    ),
+    }),
   newVersion: (id, key) =>
-    later(() =>
-      withIdem(key, markingSignature(`tpl-version:${id}`, {}), () =>
+    later(() => {
+      needTpl(TPL_PERM.write)
+      return withIdem(key, markingSignature(`tpl-version:${id}`, {}), () =>
         mockNewVersion(id)
       )
-    ),
+    }),
   approve: (id, key) =>
-    later(() =>
-      withIdem(key, markingSignature(`tpl-approve:${id}`, {}), () =>
+    later(() => {
+      needTpl(TPL_PERM.approve)
+      return withIdem(key, markingSignature(`tpl-approve:${id}`, {}), () =>
         mockApprove(id)
       )
-    ),
+    }),
   retire: (id) => later(() => mockRetire(id)),
   templatePreview: (input) =>
     later(() => mockTplPreview(pickBody(input, MARKING_BODY.templateCheck))),
