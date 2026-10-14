@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from sim.adapters import STEP_ADAPTERS, Adapter, Call, default_adapters, fill
+from sim.adapters import B11_STEPS, MODES, STEP_ADAPTERS, Adapter, Call, default_adapters, fill
 from sim.client import Client, Resp
 from sim.ids import SeqCounter, event_id
 from sim.safety import redact
@@ -23,8 +23,13 @@ class StepFailed(Exception):
     pass
 
 
-def utcnow() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+def utcnow(offset_s: float = 0) -> str:
+    t = datetime.now(timezone.utc) + timedelta(seconds=offset_s)
+    return t.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
+
+def _data(resp: Resp) -> Any:
+    return resp.body.get("data", resp.body) if isinstance(resp.body, dict) else resp.body
 
 
 def check_expect(resp: Resp, expect: dict | None, default_status: int = 200) -> list[str]:
@@ -36,6 +41,14 @@ def check_expect(resp: Resp, expect: dict | None, default_status: int = 200) -> 
         errs.append(f"HTTP {resp.status} != 期望 {want}（code={resp.code}）")
     if "code" in expect and resp.code != expect["code"]:
         errs.append(f"code {resp.code!r} != 期望 {expect['code']!r}")
+    # data: 比较响应 data 里的字段，例如 D55 OQ-5 的 {cleared: false}
+    want_data = expect.get("data") or {}
+    if want_data:
+        d = _data(resp)
+        d = d if isinstance(d, dict) else {}
+        for k, v in want_data.items():
+            if d.get(k) != v:
+                errs.append(f"data.{k} {d.get(k)!r} != 期望 {v!r}")
     chk = expect.get("check")
     if chk:
         want_type = chk.get("check_type")
@@ -59,7 +72,11 @@ class Runner:
         adapters: dict[str, Adapter] | None = None,
         paths: set[str] | None = None,
         stop_on_fail: bool = True,
+        mode: str = "manual",
     ) -> None:
+        if mode not in MODES:
+            raise ValueError(f"mode 只能是 {MODES}")
+        self.mode = mode
         self.c = client
         self.adapters = adapters or default_adapters()
         self._paths = paths
@@ -75,7 +92,7 @@ class Runner:
 
     def missing(self, sc: Scenario) -> list[str]:
         out = []
-        for name in sc.required_adapters():
+        for name in sc.required_adapters(self.mode):
             ad = self.adapters[name]
             if not ad.resolve(self.paths):
                 out.append(ad.skip_reason())
@@ -159,7 +176,10 @@ class Runner:
         return r
 
     def _ad(self, name: str) -> str:
-        p = self.adapters[name].path or self.adapters[name].resolve(self.paths)
+        ad = self.adapters[name]
+        p = ad.path or ad.resolve(self.paths)
+        if not p and self.mode == "b11":  # b11 模式下手工路径只用来拼 payload，不真正调用
+            p = ad.candidates[0]
         assert p, name
         return p
 
@@ -171,6 +191,10 @@ class Runner:
             return self._expect_hold(a, entry)
         if k == "replay":
             return self._replay(a, entry, sent)
+        if k == "expect_e10":
+            return self._expect_e10(a, entry, saved)
+        if k == "expect_alarm":
+            return self._expect_alarm(a, entry, saved)
         if k == "unmount":
             mid = saved.get(str(a.get("mount", "")).lstrip("$"))
             if not mid:
@@ -210,26 +234,94 @@ class Runner:
             }
             call = Call("POST", fill(self._ad("mount"), eq_id=eq_id), body, ext)
         elif k == "alarm_set":
-            body = {"alid": str(a["alid"]), "external_event_id": ext, "occurred_at": utcnow()}
+            # time_offset_s：事件时间相对现在的偏移，D55 OQ-2 用 >300 秒测 422 time_in_future
+            occurred = utcnow(float(a.get("time_offset_s", 0)))
+            body = {"alid": str(a["alid"]), "external_event_id": ext, "occurred_at": occurred}
             if a.get("lots"):
                 body["lot_ids"] = [self.rid("lot", x) for x in a["lots"]]
             call = Call("POST", fill(self._ad("alarm_set"), eq_id=eq_id), body, ext)
         elif k == "alarm_clear":
-            aid = saved.get(str(a.get("alarm", "")).lstrip("$"))
-            if not aid:
-                raise StepFailed(f"alarm_clear 找不到保存的报警 {a.get('alarm')}")
-            body = {"external_event_id": ext, "occurred_at": utcnow()}
-            call = Call("POST", fill(self._ad("alarm_clear"), alarm_id=aid), body, ext)
+            body = {"external_event_id": ext, "occurred_at": utcnow(float(a.get("time_offset_s", 0)))}
+            if a.get("alarm"):
+                aid = saved.get(str(a["alarm"]).lstrip("$"))
+                if not aid:
+                    raise StepFailed(f"alarm_clear 找不到保存的报警 {a.get('alarm')}")
+                call = Call("POST", fill(self._ad("alarm_clear"), alarm_id=aid), body, ext)
+            else:  # 按 ALID 清除（D55 OQ-5：没有 active 报警 -> 200 cleared=false）
+                body["alid"] = str(a["alid"])
+                call = Call("POST", fill(self._ad("alarm_clear_alid"), eq_id=eq_id), body, ext)
         elif k == "tool_usage":
             body = {"delta": str(a["delta"]), "equipment_id": eq_id, "external_event_id": ext}
             call = Call("POST", fill(self._ad("tool_usage"), tool_id=self.rid("tool", a["tool"])), body, ext)
         else:  # pragma: no cover - scenario.parse 已拦
             raise StepFailed(f"未知步骤 {k}")
+        if self.mode == "b11" and k in B11_STEPS:
+            call = self._to_b11(k, eq_id, ext, call)
         r = self._send(entry, call, a.get("expect"))
         sent[(eq, n)] = (call, r)
         if a.get("save_as") and isinstance(r.body, dict):
             d = r.body.get("data", r.body)
             saved[a["save_as"]] = d.get("id") if isinstance(d, dict) else None
+
+    def _to_b11(self, kind: str, eq_id: str, ext: str, manual: Call) -> Call:
+        """占位：把手工接口调用改写成 D54 的 EAP 入口事件。契约定稿前形状可能变。"""
+        payload = {k: v for k, v in (manual.body or {}).items() if k != "external_event_id"}
+        if kind == "alarm_clear" and "alid" not in payload:
+            payload["alarm_id"] = manual.path.rstrip("/").split("/")[-2]
+        body = {
+            "source": "simulator",  # D53-4 / D54
+            "external_event_id": ext,
+            "event_type": kind,
+            "equipment_id": eq_id,
+            "payload": payload,
+        }
+        return Call("POST", self._ad("eap_events"), body, ext)
+
+    def _e10_code(self, eq: str) -> str | None:
+        board = self.c.get("/mes/eqp/board").body or {}
+        rows = board.get("data", []) if isinstance(board, dict) else []
+        cur = next((x for x in rows if x.get("code") == eq), {}).get("state") or {}
+        return cur.get("code")
+
+    def _expect_e10(self, a: dict, entry: dict, saved: dict) -> None:
+        """state: 期望编码；save_as: 记下当前状态；same_as: $名，要求与记下的相同（报警不改 E10）。"""
+        got = self._e10_code(a["eq"])
+        entry["e10"] = got
+        if "state" in a and got != a["state"]:
+            raise StepFailed(f"{a['eq']} 当前 E10={got}，期望 {a['state']}")
+        if a.get("same_as"):
+            key = str(a["same_as"]).lstrip("$")
+            if key not in saved:
+                raise StepFailed(f"expect_e10 找不到保存的状态 {a['same_as']}")
+            if got != saved[key]:
+                raise StepFailed(f"{a['eq']} E10 从 {saved[key]} 变成了 {got}，期望不变")
+        if a.get("save_as"):
+            saved[a["save_as"]] = got
+
+    def _expect_alarm(self, a: dict, entry: dict, saved: dict) -> None:
+        """D55 OQ-3：报警记录（含 unregistered）和 mes_alarm_lot 关联的在制批。"""
+        aid = saved.get(str(a["alarm"]).lstrip("$"))
+        if not aid:
+            raise StepFailed(f"expect_alarm 找不到保存的报警 {a['alarm']}")
+        r = self.c.get(fill(self._ad("alarm_get"), alarm_id=aid))
+        entry.update(status=r.status, code=r.code)
+        if r.status != 200:
+            raise StepFailed(f"查报警 {aid} HTTP {r.status}")
+        d = _data(r) if isinstance(_data(r), dict) else {}
+        for f in ("unregistered", "state", "cleared"):
+            if f in a and d.get(f) != a[f]:
+                raise StepFailed(f"报警 {aid} 的 {f}={d.get(f)!r}，期望 {a[f]!r}")
+        if a.get("lots"):
+            linked = d.get("lots") or d.get("lot_ids") or []
+            keys = set()
+            for x in linked:
+                if isinstance(x, dict):
+                    keys.update(str(x.get(f)) for f in ("lot_id", "id", "lot_code", "code") if x.get(f))
+                else:
+                    keys.add(str(x))
+            for lot in a["lots"]:
+                if lot not in keys and self.rid("lot", lot) not in keys:
+                    raise StepFailed(f"报警 {aid} 没有关联在制批 {lot}（mes_alarm_lot）")
 
     def _precondition(self, a: dict) -> None:
         if a.get("eq"):
@@ -237,10 +329,9 @@ class Runner:
             if "qual_state" in a and (row.get("qual_state") or "ready") != a["qual_state"]:
                 raise Skip(f"{a['eq']} qual_state={row.get('qual_state')}，场景要求 {a['qual_state']}")
             if "e10" in a:
-                board = self.c.get("/mes/eqp/board").body or {}
-                cur = next((x for x in board.get("data", []) if x.get("code") == a["eq"]), {}).get("state") or {}
-                if cur.get("code") != a["e10"]:
-                    raise Skip(f"{a['eq']} 当前 E10={cur.get('code')}，场景要求从 {a['e10']} 开始")
+                cur = self._e10_code(a["eq"])
+                if cur != a["e10"]:
+                    raise Skip(f"{a['eq']} 当前 E10={cur}，场景要求从 {a['e10']} 开始")
         if a.get("lot"):
             row = self.row("lot", a["lot"])
             if "lot_status" in a and row.get("lot_status") != a["lot_status"]:

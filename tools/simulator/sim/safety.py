@@ -6,23 +6,47 @@ import os
 import re
 from urllib.parse import urlparse
 
-ALLOWED_HOSTS = {"127.0.0.1"}
-# 团队共享/他人占用的端口：模拟器一律拒绝（工作区规则）
-FORBIDDEN_PORTS = {8010, 8011, 8012, 5174, 5184}
+ALLOWED_HOSTS = {"127.0.0.1", "localhost"}
+PORTS_ENV = "SIM_ALLOWED_PORTS"
 
 
 class UnsafeTarget(ValueError):
     pass
 
 
-def check_target(url: str, allow_remote: bool = False) -> str:
-    u = urlparse(url)
+def allowed_ports(raw: str | None = None) -> set[int]:
+    """解析 SIM_ALLOWED_PORTS（逗号分隔）。空 = 一个端口都不允许（D54 白名单，默认全拒）。"""
+    raw = os.environ.get(PORTS_ENV, "") if raw is None else raw
+    out: set[int] = set()
+    for part in raw.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if not part.isdigit() or not 0 < int(part) < 65536:
+            raise UnsafeTarget(f"{PORTS_ENV} 里有无效端口：{part!r}")
+        out.add(int(part))
+    return out
+
+
+def check_target(url: str, ports: set[int] | None = None) -> str:
+    """只允许 127.0.0.1/localhost，且端口必须在 SIM_ALLOWED_PORTS 白名单里。"""
+    try:
+        u = urlparse(url)
+        port = u.port
+    except ValueError as e:
+        raise UnsafeTarget(f"目标地址无效：{url}（{e}）") from None
     if u.scheme not in ("http", "https") or not u.hostname:
         raise UnsafeTarget(f"目标地址无效：{url}")
-    if not allow_remote and u.hostname not in ALLOWED_HOSTS:
-        raise UnsafeTarget(f"默认只允许 127.0.0.1，拒绝 {u.hostname}（需要时加 --allow-remote）")
-    if u.port in FORBIDDEN_PORTS:
-        raise UnsafeTarget(f"端口 {u.port} 是共享/他人端口，模拟器拒绝连接")
+    if u.hostname not in ALLOWED_HOSTS:
+        raise UnsafeTarget(f"只允许 127.0.0.1/localhost，拒绝 {u.hostname}")
+    if port is None:
+        raise UnsafeTarget(f"目标地址必须显式写端口：{url}")
+    allow = allowed_ports() if ports is None else ports
+    if port not in allow:
+        shown = ",".join(map(str, sorted(allow))) or "空（默认全部拒绝）"
+        raise UnsafeTarget(
+            f"端口 {port} 不在白名单 {PORTS_ENV}={shown} 里；确认是自己的环境后设置，例如 {PORTS_ENV}={port}"
+        )
     return url.rstrip("/")
 
 

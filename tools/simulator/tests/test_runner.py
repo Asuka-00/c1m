@@ -1,4 +1,4 @@
-from fake import B9, B10, BASE_PATHS, FakeClient
+from fake import B9, B10, B11, BASE_PATHS, FakeClient
 
 from sim.client import Resp
 from sim.runner import FAILED, PASSED, SKIPPED, Runner, check_expect
@@ -140,3 +140,109 @@ def test_check_expect_messages():
     errs = check_expect(r, {"status": 409, "check": {"check_type": "tool_life", "overridable": False}})
     assert errs and "overridable" in errs[0]
     assert check_expect(r, {"check": {"check_type": "x"}})  # 200 != 409 与缺项
+
+
+# ---- D54 / D55 ----
+import yaml  # noqa: E402
+
+from sim.scenario import load  # noqa: E402
+
+SCN = __import__("pathlib").Path(__file__).resolve().parents[1] / "scenarios"
+
+
+def test_bundled_alarm_hold_skipped_without_b9():
+    c = FakeClient()
+    rep = Runner(c).run(load(SCN / "alarm-hold.yaml"))
+    assert rep["status"] == SKIPPED and "B9" in rep["reason"]
+    assert not [x for x in c.calls if x[0] == "POST"]
+
+
+def test_bundled_alarm_hold_d55_passes_with_b9():
+    c = FakeClient(paths=BASE_PATHS | B9)
+    rep = Runner(c).run(load(SCN / "alarm-hold.yaml"))
+    assert rep["status"] == PASSED, rep
+    assert c.holds == 1  # 未登记 ALID 不 Hold
+    unreg = [r for r in c.alarm_rows.values() if r["unregistered"]]
+    assert len(unreg) == 1 and unreg[0]["lots"] == [{"lot_id": "l-fx2"}]  # 仍写 mes_alarm_lot
+    posts = [x for x in c.calls if x[0] == "POST"]
+    assert all("source" not in (x[2] or {}) for x in posts)  # D30
+    assert all(x[3] and x[3].get("Idempotency-Key") for x in posts)
+
+
+def test_unregistered_alarm_changing_e10_fails():
+    c = FakeClient(paths=BASE_PATHS | B9)
+    data = {
+        "run_id": "u",
+        "steps": [
+            {"expect_e10": {"eq": "EQ1", "save_as": "b"}},
+            {"alarm_set": {"eq": "EQ1", "alid": "1001", "save_as": "x"}},  # 已登记 -> 改 E10
+            {"expect_e10": {"eq": "EQ1", "same_as": "$b"}},
+        ],
+    }
+    rep = Runner(c).run(parse(data))
+    assert rep["status"] == FAILED and "E10" in rep["reason"]
+
+
+def test_clear_without_active_alarm_expects_cleared_false():
+    c = FakeClient(paths=BASE_PATHS | B9)
+    ok = {"alarm_clear": {"eq": "EQ1", "alid": "1001", "expect": {"data": {"cleared": False}}}}
+    rep = Runner(c).run(parse({"run_id": "c", "steps": [ok]}))
+    assert rep["status"] == PASSED, rep
+    assert c.calls[-1][1] == "/mes/eqp/e-1/alarms/clear"
+    bad = {"alarm_clear": {"eq": "EQ1", "alid": "1001", "expect": {"data": {"cleared": True}}}}
+    rep = Runner(FakeClient(paths=BASE_PATHS | B9)).run(parse({"run_id": "c", "steps": [bad]}))
+    assert rep["status"] == FAILED and "data.cleared" in rep["reason"]
+
+
+def test_future_time_offset():
+    c = FakeClient(paths=BASE_PATHS | B9)
+    step = {"eq": "EQ1", "alid": "1001", "time_offset_s": 600, "expect": {"status": 422, "code": "time_in_future"}}
+    rep = Runner(c).run(parse({"run_id": "f", "steps": [{"alarm_set": step}]}))
+    assert rep["status"] == PASSED, rep
+    assert c.holds == 0
+
+
+def test_bundled_tool_life_warn_then_hard_block():
+    c = FakeClient(paths=BASE_PATHS | B10)
+    rep = Runner(c).run(load(SCN / "tool-life-block.yaml"))
+    assert rep["status"] == PASSED, rep
+    assert c.usage == 1000  # 等于上限即硬拦（>=）
+
+
+def test_tool_life_below_warn_not_blocked():
+    c = FakeClient(paths=BASE_PATHS | B10)
+    data = {
+        "run_id": "w",
+        "steps": [
+            {"tool_usage": {"eq": "EQ1", "tool": "T1", "delta": 899}},
+            {"move_in": {"eq": "EQ1", "lot": "L1", "tools": ["T1"]}},
+        ],
+    }
+    assert Runner(c).run(parse(data))["status"] == PASSED
+
+
+def test_b11_mode_disabled_by_default_and_placeholder():
+    data = {"run_id": "b", "steps": [{"state": {"eq": "EQ1", "to": "PRD"}}]}
+    assert Runner(FakeClient()).mode == "manual"
+    rep = Runner(FakeClient(), mode="b11").run(parse(data))
+    assert rep["status"] == SKIPPED and "B11" in rep["reason"]
+    c = FakeClient(paths=BASE_PATHS | B11)
+    rep = Runner(c, mode="b11").run(parse(data))
+    assert rep["status"] == PASSED, rep
+    m, path, body, headers, _ = [x for x in c.calls if x[0] == "POST"][0]
+    assert path == "/mes/eap/events"
+    assert body["source"] == "simulator" and body["external_event_id"] == "sim:b:EQ1:1"
+    assert body["event_type"] == "state" and body["payload"]["to_state_id"] == "s-prd"
+    assert headers == {"Idempotency-Key": "sim:b:EQ1:1"}
+
+
+def test_scenario_rejects_bad_new_steps():
+    import pytest
+
+    from sim.scenario import ScenarioError
+
+    with pytest.raises(ScenarioError):
+        parse({"run_id": "x", "steps": [{"alarm_clear": {"eq": "EQ1"}}]})
+    with pytest.raises(ScenarioError):
+        parse({"run_id": "x", "steps": [{"expect_alarm": {}}]})
+    assert yaml  # 保持导入使用

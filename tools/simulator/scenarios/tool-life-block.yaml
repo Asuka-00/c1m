@@ -1,12 +1,24 @@
-# 首批验收场景 2（设计 §6.1）：耗材寿命到期拦截。依赖 B10，接口不存在时整体 skipped。
-# D53-5：超上限返回 409 check_blocked，检查项 tool_life，overridable=false（不用已废止的 tool_life_exceeded）。
+# 首批验收场景 2（设计 §6.1）：耗材寿命预警与到期拦截。依赖 B10，接口不存在时整体 skipped。
+# D53-5 / D54 OQ-7：检查项 tool_life，返回 409 check_blocked。
+#   - 预警区间 max_usage × warn_ratio（默认 0.9）<= 用量 < max_usage：overridable=true（可人工放行）
+#   - 用量 >= max_usage：硬拦，overridable=false
+# 前提：T-SIM-01 的 max_usage=1000、warn_ratio 默认 0.9、起始用量 0。
 name: tool-life-block
-run_id: tool-life-01
+run_id: tool-life-02
 target: http://127.0.0.1:8013
 equipment: [{code: EAP-DA01, type: DIEBOND}]
 steps:
   - precondition: {lot: FX0001, lot_status: waiting}
-  - tool_usage: {eq: EAP-DA01, tool: T-SIM-01, delta: 1000}   # 使 usage_count >= max_usage
+  - tool_usage: {eq: EAP-DA01, tool: T-SIM-01, delta: 900}    # 900 = 1000 × 0.9，进入预警区间
+  - move_in:
+      eq: EAP-DA01
+      lot: FX0001
+      tools: [T-SIM-01]
+      expect:
+        status: 409
+        code: check_blocked
+        check: {check_type: tool_life, overridable: true}
+  - tool_usage: {eq: EAP-DA01, tool: T-SIM-01, delta: 100}    # 1000 = max_usage，>= 即硬拦
   - move_in:
       eq: EAP-DA01
       lot: FX0001

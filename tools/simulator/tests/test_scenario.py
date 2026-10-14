@@ -15,18 +15,22 @@ def test_bundled_scenarios_parse(f):
 
 
 def test_required_adapters():
-    assert load(ROOT / "alarm-hold.yaml").required_adapters() == ["alarm_set", "holds", "alarm_clear"]
+    assert load(ROOT / "alarm-hold.yaml").required_adapters() == [
+        "alarm_set",
+        "holds",
+        "alarm_clear",
+        "alarm_clear_alid",
+        "alarm_get",
+    ]
     assert "tool_usage" in load(ROOT / "tool-life-block.yaml").required_adapters()
 
 
 def test_tool_life_expectation_follows_d53():
     sc = load(ROOT / "tool-life-block.yaml")
-    exp = [s for s in sc.steps if s.kind == "move_in"][0].args["expect"]
-    assert exp == {
-        "status": 409,
-        "code": "check_blocked",
-        "check": {"check_type": "tool_life", "overridable": False},
-    }
+    warn, hard = [s.args["expect"] for s in sc.steps if s.kind == "move_in"]
+    base = {"status": 409, "code": "check_blocked"}
+    assert warn == {**base, "check": {"check_type": "tool_life", "overridable": True}}  # D54 预警区间
+    assert hard == {**base, "check": {"check_type": "tool_life", "overridable": False}}  # >= 上限硬拦
     assert "tool_life_exceeded" not in (ROOT / "tool-life-block.yaml").read_text().split("#")[0]
 
 

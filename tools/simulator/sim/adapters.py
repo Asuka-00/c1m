@@ -4,7 +4,11 @@
 后端没有这些接口时（例如 B9 报警、B10 耗材计数还没做），场景整体标记为 skipped，而不是失败。
 
 按 D30，手工接口不传 ``source``；模拟器标识放在 ``external_event_id``（支持的接口）、
-``Idempotency-Key`` 请求头和 comment 里。EAP 写入入口落地后改用 ``source=simulator``（D53-4）。
+``Idempotency-Key`` 请求头和 comment 里，数据在 MES 里记为 manual（D54）。
+
+D54 的 EAP 写入入口 ``POST /mes/eap/events``（P2-B11）落地后，可用 ``--mode b11`` 切过去：
+E10 状态、报警、清除、耗材计数都发到这个入口，带 ``source=simulator`` 和 ``external_event_id``。
+这是占位实现，默认关闭（mode=manual）；请求体形状等 B11 契约定稿后再对齐。
 """
 
 from __future__ import annotations
@@ -54,6 +58,20 @@ def default_adapters() -> dict[str, Adapter]:
             ["/mes/eqp/alarms/{alarm_id}/clear", "/mes/alarms/{alarm_id}/clear"],
             card="B9",
         ),
+        # D55 OQ-5：按 ALID 清除（可能没有 active 报警 -> 200 cleared=false）
+        "alarm_clear_alid": Adapter(
+            "按 ALID 清除报警",
+            ["/mes/eqp/{eq_id}/alarms/clear", "/mes/equipment/{eq_id}/alarms/clear"],
+            card="B9",
+        ),
+        # D55 OQ-3：查报警记录及关联在制批（mes_alarm_lot）
+        "alarm_get": Adapter(
+            "报警记录查询",
+            ["/mes/eqp/alarms/{alarm_id}", "/mes/alarms/{alarm_id}"],
+            card="B9",
+        ),
+        # D54：EAP 写入入口，仅 --mode b11 使用
+        "eap_events": Adapter("EAP 事件入口", ["/mes/eap/events"], card="B11"),
         "tool_usage": Adapter(
             "耗材计数",
             ["/mes/eqp/tools/{tool_id}/usage", "/mes/tools/{tool_id}/usage"],
@@ -74,9 +92,24 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "alarm_set": ["alarm_set"],
     "alarm_clear": ["alarm_clear"],
     "tool_usage": ["tool_usage"],
+    "expect_alarm": ["alarm_get"],
+    "expect_e10": [],
     "replay": [],
     "precondition": [],
 }
+
+
+# --mode b11 时这些步骤改走 eap_events（其余步骤不变）
+B11_STEPS = {"state", "alarm_set", "alarm_clear", "tool_usage"}
+MODES = ("manual", "b11")
+
+
+def step_adapters(kind: str, args: dict | None = None, mode: str = "manual") -> list[str]:
+    if mode == "b11" and kind in B11_STEPS:
+        return ["eap_events"]
+    if kind == "alarm_clear" and args and "alid" in args and "alarm" not in args:
+        return ["alarm_clear_alid"]
+    return STEP_ADAPTERS[kind]
 
 
 def fill(template: str, **kw: str) -> str:

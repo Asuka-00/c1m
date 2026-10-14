@@ -3,15 +3,22 @@
 凭据只从环境变量读：
 - ``SIM_TOKEN``：访问令牌；或者 ``SIM_USER`` + ``SIM_PASSWORD``（启动时登录换令牌，只放内存）。
 - ``SIM_TENANT``：租户 id（X-Tenant-ID）。
+
+目标与安全（D54）：
+- ``--target`` > 环境变量 ``SIM_TARGET`` > 场景里的 ``target``。
+- 只允许 127.0.0.1/localhost；端口必须列在 ``SIM_ALLOWED_PORTS``（逗号分隔）里，默认空 = 全部拒绝。
+- ``--mode b11``（或 ``SIM_MODE=b11``）：占位，改走 ``POST /mes/eap/events``，默认 manual。
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
+from sim.adapters import MODES
 from sim.client import Client
 from sim.runner import FAILED, PASSED, SKIPPED, Runner
 from sim.safety import UnsafeTarget, check_target, env
@@ -31,12 +38,26 @@ def _client(target: str) -> Client:
     return c
 
 
+def resolve_target(cli: str | None, scenario_target: str | None) -> str | None:
+    return cli or os.environ.get("SIM_TARGET") or scenario_target
+
+
 def cmd_validate(args) -> int:
+    """只校验格式，不连后端；给了 --target/SIM_TARGET 时顺带检查白名单。"""
     rc = 0
     for f in args.scenarios:
         try:
             sc = load(f)
-            print(f"OK   {f}  run_id={sc.run_id} steps={len(sc.steps)} needs={sc.required_adapters()}")
+            target = resolve_target(args.target, None)
+            note = ""
+            if target:
+                try:
+                    note = f" target={check_target(target)}"
+                except UnsafeTarget as e:
+                    note = f" target 被拒：{e}"
+                    rc = 2
+            needs = sc.required_adapters(args.mode)
+            print(f"OK   {f}  run_id={sc.run_id} steps={len(sc.steps)} needs={needs}{note}")
         except (ScenarioError, OSError) as e:
             print(f"BAD  {f}: {e}")
             rc = 2
@@ -49,16 +70,17 @@ def cmd_run(args) -> int:
     except (ScenarioError, OSError) as e:
         print(f"场景错误：{e}", file=sys.stderr)
         return 2
-    target = args.target or (scs[0].target if scs else None)
+    target = resolve_target(args.target, scs[0].target if scs else None)
     if not target:
-        print("没有 --target，场景里也没写 target", file=sys.stderr)
+        print("没有 --target / SIM_TARGET，场景里也没写 target", file=sys.stderr)
         return 2
     try:
-        target = check_target(target, args.allow_remote)
+        target = check_target(target)
     except UnsafeTarget as e:
         print(f"拒绝：{e}", file=sys.stderr)
         return 2
-    runner = Runner(_client(target))
+    print(f"目标 {target}  模式 {args.mode}")
+    runner = Runner(_client(target), mode=args.mode)
     reports = []
     for sc in scs:
         rep = runner.run(sc)
@@ -84,12 +106,18 @@ def main(argv: list[str] | None = None) -> int:
     sub = p.add_subparsers(dest="cmd", required=True)
     r = sub.add_parser("run", help="执行场景")
     r.add_argument("scenarios", nargs="+")
-    r.add_argument("--target", help="MES 地址，默认取场景 target；只允许 127.0.0.1")
-    r.add_argument("--allow-remote", action="store_true", help="允许非 127.0.0.1 目标（慎用）")
     r.add_argument("--report", help="JSON 报告输出路径（不含令牌）")
     r.set_defaults(fn=cmd_run)
     v = sub.add_parser("validate", help="只校验场景格式，不连后端")
     v.add_argument("scenarios", nargs="+")
     v.set_defaults(fn=cmd_validate)
+    for x in (r, v):
+        x.add_argument("--target", help="覆盖场景 target（也可用 SIM_TARGET）；端口须在 SIM_ALLOWED_PORTS 里")
+        x.add_argument(
+            "--mode",
+            choices=MODES,
+            default=os.environ.get("SIM_MODE") or "manual",
+            help="manual（默认，手工接口，不传 source）；b11 占位，走 POST /mes/eap/events",
+        )
     a = p.parse_args(argv)
     return a.fn(a)

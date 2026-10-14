@@ -8,7 +8,7 @@ from typing import Any
 
 import yaml
 
-from sim.adapters import STEP_ADAPTERS
+from sim.adapters import STEP_ADAPTERS, step_adapters
 
 EQ_STEPS = {
     "state",
@@ -19,6 +19,7 @@ EQ_STEPS = {
     "alarm_set",
     "alarm_clear",
     "tool_usage",
+    "expect_e10",
 }
 
 
@@ -47,10 +48,10 @@ class Scenario:
     description: str = ""
     path: str | None = None
 
-    def required_adapters(self) -> list[str]:
+    def required_adapters(self, mode: str = "manual") -> list[str]:
         seen: list[str] = []
         for s in self.steps:
-            for a in STEP_ADAPTERS[s.kind]:
+            for a in step_adapters(s.kind, s.args, mode):
                 if a not in seen:
                     seen.append(a)
         return seen
@@ -81,6 +82,10 @@ def parse(data: dict, path: str | None = None) -> Scenario:
             raise ScenarioError(f"第 {i} 步 {k} 的参数必须是映射")
         if k in EQ_STEPS and not args.get("eq"):
             raise ScenarioError(f"第 {i} 步 {k} 缺少 eq")
+        if k == "alarm_clear" and not (args.get("alarm") or args.get("alid") is not None):
+            raise ScenarioError(f"第 {i} 步 alarm_clear 需要 alarm: $名 或 alid")
+        if k == "expect_alarm" and not args.get("alarm"):
+            raise ScenarioError(f"第 {i} 步 expect_alarm 缺少 alarm")
         steps.append(Step(k, args, i))
     return Scenario(
         run_id=run_id,
