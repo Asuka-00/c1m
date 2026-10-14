@@ -1,8 +1,9 @@
 """计划演示数据（工单、开批）。"""
 
-from datetime import date, timedelta
+from datetime import timedelta
 
 from app.mes.common.demo import add
+from app.mes.common.sitedate import default_today
 
 # ---------------- work orders + lot start ----------------
 add(
@@ -17,7 +18,7 @@ add(
 add(
     "work_order",
     code="WO-DEMO-01",
-    due_date=date.today() + timedelta(days=5),
+    due_date=default_today() + timedelta(days=5),
     product=("product", "MCU-A100@1"),
     lot_type=("lot_type", "PROD"),
     planned_qty=50,
@@ -28,7 +29,7 @@ add(
 add(
     "work_order",
     code="WO-DEMO-02",
-    due_date=date.today() + timedelta(days=-2),
+    due_date=default_today() + timedelta(days=-2),
     product=("product", "MCU-B200@1"),
     lot_type=("lot_type", "PROD"),
     planned_qty=25,

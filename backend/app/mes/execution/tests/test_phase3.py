@@ -527,8 +527,9 @@ def test_hot_lot_priority_queue_and_limit(client: TestClient, db: Session) -> No
 
 # ---------------- 11: shift handover ----------------
 def test_shift_handover_ack_rule(client: TestClient, db: Session) -> None:
-    from datetime import date
+    import uuid
 
+    from app.mes.common.sitedate import site_today
     from app.mes.execution.tests.test_exec import Line
 
     f = Line(client, db)
@@ -545,13 +546,17 @@ def test_shift_handover_ack_rule(client: TestClient, db: Session) -> None:
     url = f"{EXEC}/shift-logs"
     f.post(
         url,
-        {"shift_date": str(date.today()), "shift_id": sh["id"], "summary": " "},
+        {
+            "shift_date": str(site_today(db, uuid.UUID(str(f.m.tid)))),
+            "shift_id": sh["id"],
+            "summary": " ",
+        },
         422,
     )
     log = f.post(
         url,
         {
-            "shift_date": str(date.today()),
+            "shift_date": str(site_today(db, uuid.UUID(str(f.m.tid)))),
             "shift_id": sh["id"],
             "summary": "ok",
             "open_items": "x",

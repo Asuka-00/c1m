@@ -1,7 +1,7 @@
 """执行演示数据（检查规则/方案、线边物料、工具、装配线）及演示作业。"""
 
 import uuid
-from datetime import date, timedelta
+from datetime import timedelta
 from typing import Any
 
 import sqlalchemy as sa
@@ -10,6 +10,7 @@ from sqlmodel import Session
 from app.core.spec.base import conn
 from app.core.spec.engine import TABLES
 from app.mes.common.demo import ACTIVATE, _resolve, _rows, add
+from app.mes.common.sitedate import default_today, site_today
 from app.mes.execution.checks.types import chambers_of
 
 # ---------------- execution: checks, E10, line-side material, tools ----------------
@@ -106,7 +107,7 @@ CHECK_PLANS = [
     ("CP-PRIO", "Priority change", ["CR-HOT"]),
     ("CP-TO", "Standard track-out", ["CR-SMP", "CR-DC", "CR-OOS", "CR-MAT"]),
 ]
-_TODAY = date.today()
+_TODAY = default_today()  # 模块级无租户：按默认站点时区
 for user, op, days in (
     ("admin", "DF-OX", 365),
     ("admin", "TF-DEP", 365),
@@ -268,7 +269,7 @@ add(
 add(
     "work_order",
     code="WO-DEMO-03",
-    due_date=date.today() + timedelta(days=2),
+    due_date=_TODAY + timedelta(days=2),
     product=("product", "PKG-A100@1"),
     lot_type=("lot_type", "ASSY"),
     planned_qty=2000,
@@ -405,7 +406,7 @@ def _run_exec(session: Session, tid: uuid.UUID, admin: Any) -> None:
 
 def _post_demo(session: Session, tid: uuid.UUID, admin: Any) -> None:
     """幂等补充演示数据：演示工单交期、预约 Hold 示例。"""
-    from datetime import date, timedelta
+    from datetime import timedelta
 
     from app.mes.common.rows import _ins
 
@@ -414,7 +415,7 @@ def _post_demo(session: Session, tid: uuid.UUID, admin: Any) -> None:
         conn(session).execute(
             sa.update(wt)
             .where(wt.c.tenant_id == tid, wt.c.code == wo, wt.c.due_date.is_(None))
-            .values(due_date=date.today() + timedelta(days=days))
+            .values(due_date=site_today(session, tid) + timedelta(days=days))
         )
     _hot_demo(session, tid, admin)
     _shift_demo(session, tid, admin)
@@ -510,7 +511,7 @@ def _hot_demo(session: Session, tid: uuid.UUID, admin: Any) -> None:
 
 def _shift_demo(session: Session, tid: uuid.UUID, admin: Any) -> None:
     """演示交接班日志：昨日夜班已接班、今日白班待接班（已有日志则跳过）。"""
-    from datetime import date, timedelta
+    from datetime import timedelta
 
     from app.core.spec.base import now
     from app.mes.common.rows import _ins
@@ -522,7 +523,7 @@ def _shift_demo(session: Session, tid: uuid.UUID, admin: Any) -> None:
         .scalar()
     ):
         return
-    today = date.today()
+    today = site_today(session, tid)
     for d, sh, summary, items, ack in (
         (
             today - timedelta(days=1),
