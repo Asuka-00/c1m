@@ -459,6 +459,8 @@ def test_p3_scenarios_stay_draft_and_all_steps_have_executor(name):
         "track_out",
         "expect_query_422",
         "expect_datetime_eq_match",
+        "reticle_crud",
+        "expect_reticle_life_state",
     }  # 通用步骤（1ef2eff 日期探测）
     assert kinds <= P3_EXEC_STEPS, kinds - P3_EXEC_STEPS
 

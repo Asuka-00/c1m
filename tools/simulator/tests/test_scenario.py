@@ -534,7 +534,7 @@ def test_reticle_report_draft_e2():
     # D80 补充一：10 个接口缺 key 422 missing
     from sim.scenario import RETICLE_IDEM_STEPS
 
-    miss = {s.kind for s in st if s.args.get("no_idem")}
+    miss = {s.kind for s in st if s.args.get("no_idem")} - {"reticle_crud"}  # D87 补充一另测
     assert miss == RETICLE_IDEM_STEPS and len(miss) == 14
     for s in st:
         if s.args.get("no_idem"):
@@ -889,3 +889,19 @@ def test_d86_supp2_replayed_header():
     sc = load("scenarios/p3-draft/alarm-track-in-action.yaml")
     d409 = [s.args["expect"] for s in sc.steps if s.kind == "delete_alarm_code" and s.args["expect"]["status"] == 409]
     assert d409 and all(e["body"]["detail.ref_type"] == "alarm_record" for e in d409)
+
+
+def test_reticle_crud_d87():
+    """D87 补充一：光罩 CRUD 带 key、每步唯一（回放除外）；缺 key / 回放头 / life_state 标 xfail。"""
+    sc = load("scenarios/p3-draft/reticle-report.yaml")
+    cr = [s.args for s in sc.steps if s.kind == "reticle_crud"]
+    assert {a["action"] for a in cr if a.get("no_idem")} == {"create", "patch", "delete"}
+    assert all(a["expect"]["code"] == "missing" and a.get("xfail") for a in cr if a.get("no_idem"))
+    rep = [a for a in cr if a["expect"].get("replayed") is True]
+    assert rep and all(a.get("xfail") for a in rep)
+    first = [a["idem"] for a in cr if a.get("idem") and a["expect"].get("replayed") is False]
+    assert len(first) == len(set(first)) and {a["idem"] for a in rep} <= set(first)
+    assert all(not a.get("xfail") for a in cr if a["expect"].get("replayed") is False)
+    ls = [s.args for s in sc.steps if s.kind == "expect_reticle_life_state"]
+    assert ls and all(a.get("xfail") for a in ls)
+    assert "inspection_pending:" not in open("scenarios/p3-draft/reticle-report.yaml", encoding="utf-8").read()

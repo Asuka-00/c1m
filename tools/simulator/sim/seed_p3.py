@@ -54,7 +54,9 @@ class Seeder:
         if row:
             self.log.append(f"有  {ent} {code}")
             return row
-        r = self.c.request("POST", f"/mes/{ent}", {"code": code, **body})
+        # D87 补充一：光罩主数据通用 CRUD 写入必须带 Idempotency-Key（每个对象唯一）
+        hdr = {"Idempotency-Key": f"seed-p3:{ent}:{code}"} if ent == "reticle" else None
+        r = self.c.request("POST", f"/mes/{ent}", {"code": code, **body}, headers=hdr)
         if r.status in (200, 201) and isinstance(r.body, dict):
             self.log.append(f"建  {ent} {code}")
             return r.body.get("data", r.body)

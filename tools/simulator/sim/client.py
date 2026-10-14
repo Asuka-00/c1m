@@ -18,6 +18,7 @@ class Resp:
     status: int
     body: Any
     elapsed_ms: int = 0
+    headers: dict = field(default_factory=dict)  # 小写键（D86 补充二 Idempotent-Replayed）
 
     @property
     def code(self) -> str | None:
@@ -108,15 +109,15 @@ class Client:
         t0 = time.monotonic()
         try:
             with urllib.request.urlopen(req, timeout=self.timeout) as r:
-                status, raw = r.status, r.read()
+                status, raw, hd = r.status, r.read(), {k.lower(): v for k, v in r.headers.items()}
         except urllib.error.HTTPError as e:
-            status, raw = e.code, e.read()
+            status, raw, hd = e.code, e.read(), {k.lower(): v for k, v in e.headers.items()}
         ms = int((time.monotonic() - t0) * 1000)
         try:
             body = json.loads(raw) if raw else None
         except ValueError:
             body = raw.decode(errors="replace")[:500]
-        resp = Resp(status, body, ms)
+        resp = Resp(status, body, ms, hd)
         LAST["resp"] = resp
         return resp
 

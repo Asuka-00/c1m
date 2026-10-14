@@ -247,3 +247,17 @@ steps:
   - expect_query_422: {path: /mes/reticle_status_log, params: {created_at: garbage}, field: created_at, type: value_error, reason: pattern, xfail: "D85 补充四 created_at 等值未校验，等 B6 提交"}
   - expect_query_422: {path: /mes/reticle_status_log, params: {created_at: "2026-10-15"}, field: created_at, type: timezone_required, no_ctx: true, xfail: "D85 补充四，等 B6 提交"}
   - expect_datetime_eq_match: {entity: reticle_status_log, field: created_at, xfail: "D85 补充四 created_at 等值不筛选，等 B6 提交"}
+  # ---- D87 补充一：光罩主数据通用 CRUD 新建 / 编辑 / 删除必须带 Idempotency-Key（每步唯一 key，回放除外）；种子 seed-p3 建光罩也带 key
+  # 带 key 的首次写在 1ef2eff 上照常通过；缺 key 422 missing、回放头 Idempotent-Replayed（D86 补充二）等后端小提交 → xfail
+  - reticle_crud: {action: create, idem: ret-crud-c1, code: R-SIM-CRUD1, body: {name: R-SIM-CRUD1, max_shots: 250}, expect: {status_in: [200, 201], replayed: false}}
+  - reticle_crud: {action: create, idem: ret-crud-c1, code: R-SIM-CRUD1, body: {name: R-SIM-CRUD1, max_shots: 250}, expect: {status_in: [200, 201], replayed: true}, xfail: "D87 补充一，等后端 B6 之后的小提交"}
+  - reticle_crud: {action: create, idem: ret-crud-c3, code: R-SIM-CRUD3, body: {name: R-SIM-CRUD3, max_shots: 250}, expect: {status_in: [200, 201], replayed: false}}
+  - reticle_crud: {action: patch, idem: ret-crud-p1, reticle: R-SIM-CRUD1, body: {name: R-SIM-CRUD1-改}, expect: {status: 200, replayed: false}}
+  - reticle_crud: {action: patch, idem: ret-crud-p1, reticle: R-SIM-CRUD1, body: {name: R-SIM-CRUD1-改}, expect: {status: 200, replayed: true}, xfail: "D87 补充一，等后端 B6 之后的小提交"}
+  # ---- D87：GET 详情和列表补 life_state，值与写操作（用量调整）返回的 brief 一致；不断言 inspection_pending
+  - expect_reticle_life_state: {reticle: R-SIM-CRUD3, idem: ret-life-1, delta: "1", xfail: "D87 life_state，等后端 B6 之后的小提交"}
+  # 缺 key（1ef2eff 上会照常写入：CRUD2 被新建；CRUD3 有用量记录 → 409 referenced。只影响本组自建的光罩。D81：缺 key 422 先于 409）
+  - reticle_crud: {action: create, no_idem: true, code: R-SIM-CRUD2, body: {name: R-SIM-CRUD2, max_shots: 250}, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}, xfail: "D87 补充一，等后端 B6 之后的小提交"}
+  - reticle_crud: {action: patch, no_idem: true, reticle: R-SIM-CRUD1, body: {name: R-SIM-CRUD1-改}, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}, xfail: "D87 补充一，等后端 B6 之后的小提交"}
+  - reticle_crud: {action: delete, no_idem: true, reticle: R-SIM-CRUD3, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}, xfail: "D87 补充一，等后端 B6 之后的小提交"}
+  - reticle_crud: {action: delete, idem: ret-crud-d1, reticle: R-SIM-CRUD1, expect: {status_in: [200, 204], replayed: false}}

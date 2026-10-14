@@ -177,6 +177,8 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "expect_eap_read": ["crud", "crud_item"],
     "expect_query_422": [],
     "expect_datetime_eq_match": [],
+    "reticle_crud": [],
+    "expect_reticle_life_state": [],
     "expect_body_422": ["e10"],  # move_in/track_in 时见 step_adapters
     "expect_eap_envelope_extra": ["eap_events"],
     "expect_alarm_list": ["alarm_list"],

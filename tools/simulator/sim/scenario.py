@@ -199,6 +199,16 @@ def parse(data: dict, path: str | None = None) -> Scenario:
                 )
         if k in MARKING_LOT_STEPS and not args.get("lot"):
             raise ScenarioError(f"第 {i} 步 {k} 缺少 lot")
+        if k == "reticle_crud":
+            act = args.get("action")
+            if act not in ("create", "patch", "delete"):
+                raise ScenarioError(f"第 {i} 步 reticle_crud 的 action 只能是 create/patch/delete")
+            if not args.get("idem") and not args.get("no_idem"):
+                raise ScenarioError(f"第 {i} 步 reticle_crud {act} 缺少 idem（D87 补充一；测缺失写 no_idem: true）")
+            if not args.get("code" if act == "create" else "reticle"):
+                raise ScenarioError(f"第 {i} 步 reticle_crud {act} 需要 {'code' if act == 'create' else 'reticle'}")
+        if k == "expect_reticle_life_state" and not (args.get("reticle") and args.get("idem")):
+            raise ScenarioError(f"第 {i} 步 expect_reticle_life_state 需要 reticle 和 idem")
         if k == "expect_datetime_eq_match" and not args.get("entity"):
             raise ScenarioError(f"第 {i} 步 expect_datetime_eq_match 需要 entity")
         if k == "expect_query_422" and not args.get("path"):

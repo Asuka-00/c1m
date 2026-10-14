@@ -461,6 +461,10 @@ class Runner:
             return self._expect_query_422(a, entry)
         if k == "expect_datetime_eq_match":
             return self._expect_datetime_eq_match(a, entry)
+        if k == "reticle_crud":
+            return self._reticle_crud(sc.run_id, a, entry)
+        if k == "expect_reticle_life_state":
+            return self._expect_reticle_life_state(sc.run_id, a, entry)
         if k == "expect_alarm_list":
             return self._expect_alarm_list(a, entry)
         if k in ("tool_reset", "tool_unmount", "tool_replace"):
@@ -809,6 +813,65 @@ class Runner:
         if a.get("no_ctx") and det[0].get("ctx"):
             raise StepFailed(f"{path} 422 不应带 ctx（D77 补充一），实际 {det[0].get('ctx')}")
         errs = shape_422(r)
+        if errs:
+            raise StepFailed("；".join(errs))
+
+    def _reticle_crud(self, run_id: str, a: dict, entry: dict) -> None:
+        """D87 补充一：光罩主数据通用 CRUD带 Idempotency-Key（{run_id}:{idem}），no_idem 测缺失。
+        expect：status（或 status_in）、code、replayed（true → 头 Idempotent-Replayed: true；false → 没有这个头）。"""
+        act = a["action"]
+        idem = None if a.get("no_idem") else f"{run_id}:{a['idem']}"
+        hdr = {"Idempotency-Key": idem} if idem else None
+        if act == "create":
+            path, method, body = "/mes/reticle", "POST", {"code": a["code"], **(a.get("body") or {})}
+        else:
+            path = f"/mes/reticle/{self.rid('reticle', a['reticle'])}"
+            method, body = ("PATCH", a.get("body") or {}) if act == "patch" else ("DELETE", None)
+        r = self.c.request(method, path, body, headers=hdr)
+        if act == "delete" and r.status in (200, 204):
+            self._ids.pop(("reticle", a["reticle"]), None)
+        rep = r.headers.get("idempotent-replayed")
+        entry.update(method=method, path=path, status=r.status, code=r.code, idempotency_key=idem, replayed=rep)
+        exp = a.get("expect") or {}
+        ok_st = exp.get("status_in") or [exp.get("status", 200)]
+        if r.status not in ok_st:
+            raise StepFailed(f"{method} {path} HTTP {r.status} 不在期望 {ok_st}（code={r.code}）")
+        if exp.get("code") and r.code != exp["code"]:
+            raise StepFailed(f"{method} {path} code={r.code!r}，期望 {exp['code']!r}")
+        if exp.get("loc"):
+            det = r.body.get("detail") if isinstance(r.body, dict) else None
+            loc = det[0].get("loc") if isinstance(det, list) and det and isinstance(det[0], dict) else None
+            if list(loc or []) != list(exp["loc"]):
+                raise StepFailed(f"{method} {path} 422 loc={loc}，期望 {exp['loc']}")
+        if exp.get("replayed") is True and rep != "true":
+            raise StepFailed(f"{method} {path} 回放应带 Idempotent-Replayed: true，实际 {rep!r}")
+        if exp.get("replayed") is False and rep is not None:
+            raise StepFailed(f"{method} {path} 首次执行不应带 Idempotent-Replayed，实际 {rep!r}")
+
+    def _expect_reticle_life_state(self, run_id: str, a: dict, entry: dict) -> None:
+        """D87：写操作返回的 brief.life_state 与 GET 详情、列表的 life_state 一致（不断言 inspection_pending）。
+        写操作用手工用量调整 POST /mes/reticle/{rid}/usage（带 key），取响应 reticle（brief）.life_state。"""
+        rid = self.rid("reticle", a["reticle"])
+        w = self.c.post(f"/mes/reticle/{rid}/usage", {"delta": str(a.get("delta", "1"))}, idem=f"{run_id}:{a['idem']}")
+        b = w.body if isinstance(w.body, dict) else {}
+        brief = (
+            b.get("reticle") if isinstance(b.get("reticle"), dict) else b.get("data")
+        )  # 用量调整：brief 在 reticle 键
+        if w.status != 200 or not isinstance(brief, dict) or "life_state" not in brief:
+            raise StepFailed(f"用量调整 HTTP {w.status}，拿不到 brief.life_state")
+        want = brief["life_state"]
+        d = self.c.get(f"/mes/reticle/{rid}")
+        row = (d.body or {}).get("data", d.body) if isinstance(d.body, dict) else {}
+        lst = self.c.get("/mes/reticle", code=a["reticle"], page_size=50)
+        lrow = next((x for x in (lst.body or {}).get("data", []) if x.get("id") == rid), {})
+        entry.update(
+            brief_life_state=want, get_life_state=row.get("life_state"), list_life_state=lrow.get("life_state")
+        )
+        errs = []
+        if "life_state" not in row or row["life_state"] != want:
+            errs.append(f"GET 详情 life_state={row.get('life_state', '<缺>')!r}，brief={want!r}")
+        if "life_state" not in lrow or lrow["life_state"] != want:
+            errs.append(f"列表 life_state={lrow.get('life_state', '<缺>')!r}，brief={want!r}")
         if errs:
             raise StepFailed("；".join(errs))
 
