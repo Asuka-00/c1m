@@ -52,3 +52,49 @@ export function decimalGreater(a: string, b: string): boolean {
   const n = Math.max(af.length, bf.length)
   return af.padEnd(n, '0') > bf.padEnd(n, '0')
 }
+
+type DecIn = number | string | null | undefined
+
+/** 转成 [整数 BigInt, 小数位]；不是数字返回 null。兼容 number（mock / 旧接口）。 */
+function toScaled(v: DecIn): [bigint, number] | null {
+  if (v == null || v === '') return null
+  const d = parseDecimal(String(v))
+  if (!d) return null
+  return [BigInt(d.text.replace('.', '')), d.decimals]
+}
+
+const pow10 = (n: number) => 10n ** BigInt(n)
+
+/**
+ * 按十进制比较两个值（D72：定点字符串，兼容 number）：a < b 为 -1，相等 0，a > b 为 1。
+ * 不是数字的值排在最后（两个都不是数字为 0）。
+ */
+export function compareDecimal(a: DecIn, b: DecIn): -1 | 0 | 1 {
+  const x = toScaled(a)
+  const y = toScaled(b)
+  if (!x || !y) return x ? -1 : y ? 1 : 0
+  const s = Math.max(x[1], y[1])
+  const p = x[0] * pow10(s - x[1])
+  const q = y[0] * pow10(s - y[1])
+  return p < q ? -1 : p > q ? 1 : 0
+}
+
+/** 精确加法（不经过浮点）；任一不是数字时返回 null。 */
+export function addDecimal(a: DecIn, b: DecIn): string | null {
+  const x = toScaled(a)
+  const y = toScaled(b)
+  if (!x || !y) return null
+  const s = Math.max(x[1], y[1])
+  const sum = x[0] * pow10(s - x[1]) + y[0] * pow10(s - y[1])
+  const neg = sum < 0n
+  const digits = (neg ? -sum : sum).toString().padStart(s + 1, '0')
+  const raw = s
+    ? `${digits.slice(0, digits.length - s)}.${digits.slice(digits.length - s)}`
+    : digits
+  return parseDecimal(`${neg ? '-' : ''}${raw}`)!.text
+}
+
+/** 是否为可解析的十进制值（字符串或有限数字）。 */
+export const isDecimal = (v: unknown): v is number | string =>
+  (typeof v === 'number' && Number.isFinite(v)) ||
+  (typeof v === 'string' && parseDecimal(v) != null)

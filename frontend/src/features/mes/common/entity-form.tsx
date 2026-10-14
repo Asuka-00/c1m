@@ -10,6 +10,7 @@ import {
   type MesField,
   type MesRow,
 } from '@/lib/api/mes/common'
+import { decimalText } from '@/lib/decimal'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -58,7 +59,9 @@ function initialValues(e: MesEntity, row: MesRow | null, preset: V): V {
           : JSON.stringify(raw, null, 2)
         : f.type === 'time' && typeof raw === 'string'
           ? raw.slice(0, 5)
-          : (raw ?? (f.type === 'bool' ? false : ''))
+          : f.type === 'float' && raw != null && raw !== ''
+            ? decimalText(raw as number | string)
+            : (raw ?? (f.type === 'bool' ? false : ''))
     if (f.type === 'ref')
       v[`${f.name}_label`] = row?.[`${f.name}_label`] ?? null
   }

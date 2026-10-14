@@ -10,6 +10,7 @@ import {
   type Reticle,
   type ReticleAction,
 } from '@/lib/api/mes/reticle'
+import { decimalText } from '@/lib/decimal'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -36,6 +37,9 @@ import {
 } from './reticle-rules'
 
 const dash = (v: unknown) => (v == null || v === '' ? '—' : String(v))
+/** 计数（定点字符串，兼容数字）；空为 —。 */
+const numDash = (v: number | string | null | undefined) =>
+  v == null || v === '' ? '—' : decimalText(v)
 const statusText = (s: string | null) =>
   s ? t(`mes.reticle.status.${s}`) : '—'
 const holdText = (s: string | null) =>
@@ -156,7 +160,7 @@ export function ReticleDetail({ reticle }: { reticle: Reticle }) {
               key='s'
               className={cn(ratio != null && ratio >= 1 && 'text-destructive')}
             >
-              {reticle.shot_count} / {dash(reticle.max_shots)}
+              {decimalText(reticle.shot_count)} / {numDash(reticle.max_shots)}
             </span>,
           ],
           [t('mes.reticle.field.mount_count'), reticle.mount_count],
@@ -274,8 +278,8 @@ export function ReticleDetail({ reticle }: { reticle: Reticle }) {
               t(`mes.reticle.usageKind.${x.kind}`),
               x.delta,
               x.counted
-                ? x.count_after
-                : `${x.count_after} (${t('mes.reticle.notCounted')})`,
+                ? decimalText(x.count_after)
+                : `${decimalText(x.count_after)} (${t('mes.reticle.notCounted')})`,
               dash(x.lot_label ?? x.lot_id),
               dash(x.reason_label ?? x.reason_id),
               dash(x.comment),
@@ -303,8 +307,8 @@ export function ReticleDetail({ reticle }: { reticle: Reticle }) {
                 ? fmtDateTime(x.unmounted_at)
                 : t('mes.reticle.mounted'),
               dash(x.unmount_reason),
-              x.shots_at_mount,
-              dash(x.shots_at_unmount),
+              decimalText(x.shots_at_mount),
+              numDash(x.shots_at_unmount),
             ])}
           />
         </TabsContent>
@@ -410,7 +414,7 @@ export default function ReticlePage() {
               </TableCell>
               <TableCell>{dash(r.layer)}</TableCell>
               <TableCell>
-                {r.shot_count} / {dash(r.max_shots)}
+                {decimalText(r.shot_count)} / {numDash(r.max_shots)}
               </TableCell>
               <TableCell>{dash(r.equipment_label)}</TableCell>
               <TableCell>{dash(r.storage_location)}</TableCell>

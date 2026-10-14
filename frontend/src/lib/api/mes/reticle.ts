@@ -4,6 +4,12 @@
  * 请求体一律经 BODY_KEYS 白名单挑选；usage 带 Idempotency-Key（D57）。
  */
 import { AxiosError, AxiosHeaders } from 'axios'
+import {
+  addDecimal,
+  compareDecimal,
+  decimalText,
+  parseDecimal,
+} from '@/lib/decimal'
 import { http } from '../client'
 import { BODY_KEYS, pickBody } from '../request-body'
 
@@ -499,7 +505,7 @@ function target(
   }
 }
 
-const num = (v: string | null) => (v == null ? null : Number(v))
+const num = (v: string | null) => (v == null || v === '' ? null : v)
 /** 状态履历 action 枚举（下划线）。 */
 const logAction = (a: ReticleAction) => a.replace('-', '_')
 
@@ -556,13 +562,13 @@ function mockAct(
   if (action === 'usage') {
     const raw = String(body.delta ?? '')
     const d = Number(raw)
-    if (/\.\d{7,}$/.test(raw))
+    if ((parseDecimal(raw)?.decimals ?? 0) > 6)
       throw apiError(422, [
         {
           loc: ['body', 'delta'],
           type: 'value_error',
           code: 'value_error',
-          msg: 'Value error, too_many_decimals (max 6)',
+          msg: 'delta: Value error, at most 6 decimal places',
           ctx: { max_places: 6 },
         },
       ])
@@ -574,16 +580,17 @@ function mockAct(
       throw apiError(422, [
         { loc: ['body', 'reason_id'], code: 'missing', msg: 'reason_id' },
       ])
-    const after = Number(x.shot_count) + d
-    if (after < 0)
+    // 计数按十进制字符串精确累加（D72，不经过浮点）
+    const after = addDecimal(x.shot_count, raw) ?? x.shot_count
+    if (compareDecimal(after, 0) < 0)
       throw apiError(422, [
         { loc: ['body', 'delta'], code: 'value_error', msg: 'delta' },
       ])
-    const before = Number(x.shot_count)
-    x.shot_count = String(after)
+    const before = x.shot_count
+    x.shot_count = after
     const row: ReticleUsage = {
       id: `u${Date.now()}`,
-      delta: String(d),
+      delta: decimalText(raw),
       count_after: x.shot_count,
       kind: d > 0 ? 'report' : 'adjust',
       reason_id: body.reason_id ?? null,
@@ -599,8 +606,8 @@ function mockAct(
     const max = num(x.max_shots)
     if (
       max != null &&
-      after >= max &&
-      before < max &&
+      compareDecimal(after, max) >= 0 &&
+      compareDecimal(before, max) < 0 &&
       (from === 'available' || from === 'in_use')
     )
       x.status_code = 'pending_maintenance'
@@ -612,7 +619,7 @@ function mockAct(
   } else {
     if (action === 'restore') {
       const max = num(x.max_shots)
-      if (max != null && Number(x.shot_count) >= max)
+      if (max != null && compareDecimal(x.shot_count, max) >= 0)
         throw conflict('life_limit_reached')
     }
     if (action === 'life-reset') {
@@ -725,11 +732,12 @@ export function hasHistory(h: ReticleHistory) {
 
 /** 有记录的履历表名（409 referenced 的 tables）。 */
 export function referencedTables(h: ReticleHistory): string[] {
+  // 顺序与后端 reticle/validators.HISTORY 一致（incident 在 mock 里没有单独履历）
   const t: string[] = []
-  if (h.status_log.length) t.push('mes_reticle_status_log')
-  if (h.usage.length) t.push('mes_reticle_usage')
   if (h.mounts.length) t.push('mes_reticle_mount_log')
+  if (h.usage.length) t.push('mes_reticle_usage')
   if (h.inspections.length) t.push('mes_reticle_inspection')
+  if (h.status_log.length) t.push('mes_reticle_status_log')
   return t
 }
 
@@ -740,7 +748,7 @@ function mockRemove(id: string) {
   if (tables.length)
     throw apiError(409, {
       code: 'referenced',
-      message: 'reticle has history records',
+      message: 'reticle has history; scrap it instead',
       tables,
     })
   store.r = store.r.filter((y) => y.id !== id)
