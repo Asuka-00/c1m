@@ -1,5 +1,7 @@
 """通用列表筛选：?id= 指定记录、日期 / 时间范围（_from / _to）、时间字段默认降序。"""
 
+from typing import Any
+
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
@@ -180,3 +182,108 @@ def test_range_boundaries_d77(client: TestClient, db: Session) -> None:
     assert cap(qualified_until_to="2026-03-09") == 0
     assert cap(qualified_until_from="2026-03-10", qualified_until_to="2026-03-10") == 1
     assert cap(qualified_until_from="2026-03-11") == 0
+
+
+def test_range_d77_supplement(client: TestClient, db: Session) -> None:
+    """D77 补充一：datetime 必须带偏移；from > to 统一 range_inverted；from == to 边界。"""
+    m = Mes(client, db)
+    eq = m.post("equipment", {"code": "EQ-S", "name": "eq"})
+    rc = m.post("reason_code", {"code": "DT", "name": "d", "reason_type": "downtime"})
+    m.post(
+        "downtime",
+        {
+            "equipment_id": eq["id"],
+            "start_at": "2026-03-10T00:00:00+08:00",
+            "reason_id": rc["id"],
+        },
+    )
+    op = m.post("operation", {"code": "OP-S", "name": "op"})
+    m.post(
+        "equipment_capability",
+        {
+            "equipment_id": eq["id"],
+            "operation_id": op["id"],
+            "qualified_until": "2026-03-10",
+        },
+    )
+
+    def get(ent: str, **kw: str) -> Any:
+        return client.get(m.url(ent), headers=m.h, params=kw)
+
+    # datetime：只给日期 / 无偏移 → timezone_required
+    for name in ("start_at_from", "start_at_to"):
+        for raw in ("2026-03-10", "2026-03-10T00:00:00"):
+            r = get("downtime", **{name: raw})
+            assert r.status_code == 422, (name, raw)
+            d = r.json()["detail"][0]
+            assert (d["type"], d["loc"]) == ("timezone_required", ["query", name])
+    r = get("audit_log", created_at_from="2026-03-10")
+    assert r.json()["detail"][0]["type"] == "timezone_required"
+    # date 字段只给日期照常
+    assert (
+        get("equipment_capability", qualified_until_to="2026-03-10").json()["count"]
+        == 1
+    )
+    # from > to：date 与 datetime 都是 value_error + range_inverted
+    for ent, kw in (
+        (
+            "downtime",
+            {
+                "start_at_from": "2026-03-10T00:00:01+08:00",
+                "start_at_to": "2026-03-10T00:00:00+08:00",
+            },
+        ),
+        (
+            "equipment_capability",
+            {"qualified_until_from": "2026-03-11", "qualified_until_to": "2026-03-10"},
+        ),
+    ):
+        r = get(ent, **kw)
+        assert r.status_code == 422, r.text
+        d = r.json()["detail"][0]
+        assert d["type"] == "value_error" and d["ctx"] == {"reason": "range_inverted"}
+        assert d["loc"] == ["query", next(iter(kw))]
+    # from == to：datetime 半开 → 200 空；date 闭区间 → 当天
+    same = "2026-03-10T00:00:00+08:00"
+    r = get("downtime", start_at_from=same, start_at_to=same)
+    assert r.status_code == 200 and r.json()["count"] == 0
+    r = get(
+        "equipment_capability",
+        qualified_until_from="2026-03-10",
+        qualified_until_to="2026-03-10",
+    )
+    assert r.status_code == 200 and r.json()["count"] == 1
+
+
+def test_date_field_from_offset_datetime_uses_site_tz(
+    client: TestClient, db: Session
+) -> None:
+    """D75：date 字段收到带时区的时间，先换算到站点时区（Asia/Taipei）再取日期。"""
+    m = Mes(client, db)
+    eq = m.post("equipment", {"code": "EQ-T", "name": "eq"})
+    op = m.post("operation", {"code": "OP-T", "name": "op"})
+    c = m.post(
+        "equipment_capability",
+        {
+            "equipment_id": eq["id"],
+            "operation_id": op["id"],
+            "qualified_until": "2026-03-09T20:00:00Z",  # 台北 03-10 04:00
+        },
+    )
+    assert c["qualified_until"] == "2026-03-10"
+
+
+def test_import_error_loc_points_to_cell(client: TestClient, db: Session) -> None:
+    """Excel 导入错误 loc 为 ["file", 行号, 列名]，并给 column / cell。"""
+    m = Mes(client, db)
+    m.post("equipment", {"code": "EQ-I", "name": "eq"})
+    rows = m.export("equipment_capability")
+    header = list(rows[0])
+    row: list[Any] = [None] * len(header)
+    row[header.index("equipment")] = "EQ-I"
+    row[header.index("operation")] = "NO-SUCH-OP"
+    err = m.import_rows("equipment_capability", [header, row], 422)
+    e0 = err["detail"]["errors"][0]
+    i = header.index("operation")
+    assert e0["row"] == 2 and e0["loc"] == ["file", 2, "operation"], err
+    assert e0["cell"] == f"{chr(65 + i)}2", err

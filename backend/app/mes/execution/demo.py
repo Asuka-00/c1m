@@ -9,8 +9,8 @@ from sqlmodel import Session
 
 from app.core.spec.base import conn
 from app.core.spec.engine import TABLES
-from app.mes.common.demo import ACTIVATE, _resolve, _rows, add
-from app.mes.common.sitedate import default_today, site_today
+from app.mes.common.demo import ACTIVATE, SiteDay, _resolve, _rows, add
+from app.mes.common.sitedate import site_today
 from app.mes.execution.checks.types import chambers_of
 
 # ---------------- execution: checks, E10, line-side material, tools ----------------
@@ -107,7 +107,6 @@ CHECK_PLANS = [
     ("CP-PRIO", "Priority change", ["CR-HOT"]),
     ("CP-TO", "Standard track-out", ["CR-SMP", "CR-DC", "CR-OOS", "CR-MAT"]),
 ]
-_TODAY = default_today()  # 模块级无租户：按默认站点时区
 for user, op, days in (
     ("admin", "DF-OX", 365),
     ("admin", "TF-DEP", 365),
@@ -118,8 +117,8 @@ for user, op, days in (
         "operator_qual",
         username=user,
         operation=("operation", op),
-        certified_on=_TODAY - timedelta(days=365),
-        expires_on=_TODAY + timedelta(days=days),
+        certified_on=SiteDay(-365),
+        expires_on=SiteDay(days),
     )
 for c, n, rules in CHECK_PLANS:
     add("check_plan", code=c, name=f"{n} (DEMO)")
@@ -269,7 +268,7 @@ add(
 add(
     "work_order",
     code="WO-DEMO-03",
-    due_date=_TODAY + timedelta(days=2),
+    due_date=SiteDay(2),
     product=("product", "PKG-A100@1"),
     lot_type=("lot_type", "ASSY"),
     planned_qty=2000,
@@ -406,8 +405,6 @@ def _run_exec(session: Session, tid: uuid.UUID, admin: Any) -> None:
 
 def _post_demo(session: Session, tid: uuid.UUID, admin: Any) -> None:
     """幂等补充演示数据：演示工单交期、预约 Hold 示例。"""
-    from datetime import timedelta
-
     from app.mes.common.rows import _ins
 
     wt = TABLES["work_order"]
@@ -511,8 +508,6 @@ def _hot_demo(session: Session, tid: uuid.UUID, admin: Any) -> None:
 
 def _shift_demo(session: Session, tid: uuid.UUID, admin: Any) -> None:
     """演示交接班日志：昨日夜班已接班、今日白班待接班（已有日志则跳过）。"""
-    from datetime import timedelta
-
     from app.core.spec.base import now
     from app.mes.common.rows import _ins
 

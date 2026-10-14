@@ -1,7 +1,7 @@
 """规格行的（反）序列化：值转换、引用标签、JSON 输出。"""
 
 import uuid
-from datetime import date, datetime, time
+from datetime import date, datetime, time, tzinfo
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 
@@ -61,8 +61,11 @@ class TooManyDecimals(ValueError):
         self.ctx = {"max_places": max_places}
 
 
-def coerce(f: F, v: Any) -> Any:
+def coerce(f: F, v: Any, tz: tzinfo | None = None) -> Any:
     """把原始 JSON / xlsx 值转换为字段对应的 Python 值。
+
+    ``tz``：站点时区。date 字段收到带时区的时间（datetime 或带偏移的字符串）时，
+    先换算到站点时区再取日期（D75）；不给 ``tz`` 或无时区时直接取日期部分。
 
     Raises:
         ValueError: 值不符合字段类型。
@@ -112,7 +115,14 @@ def coerce(f: F, v: Any) -> Any:
                 raise ValueError(f"must be one of: {', '.join(allowed)}")
             return str(v)
         case "date":
+            if isinstance(v, str) and len(v.strip()) > 10:
+                try:
+                    v = datetime.fromisoformat(v.strip().replace("Z", "+00:00"))
+                except ValueError:
+                    pass
             if isinstance(v, datetime):
+                if tz is not None and v.tzinfo is not None:
+                    return v.astimezone(tz).date()
                 return v.date()
             return v if isinstance(v, date) else date.fromisoformat(str(v)[:10])
         case "time":

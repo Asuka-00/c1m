@@ -2,11 +2,10 @@
 
 import uuid
 from datetime import UTC, date, datetime, time, timedelta
-from zoneinfo import ZoneInfo
 
 from sqlmodel import Session
 
-from app.core.spec.excel import DEFAULT_TZ, tenant_tz
+from app.core.spec.excel import tenant_tz
 
 
 def site_today(s: Session, tid: uuid.UUID, at: datetime | None = None) -> date:
@@ -25,8 +24,3 @@ def site_day_bounds(
     a = datetime.combine(day, time.min, tz)
     b = datetime.combine(day + timedelta(days=days), time.min, tz)
     return a.astimezone(UTC), b.astimezone(UTC)
-
-
-def default_today() -> date:
-    """默认站点时区（Asia/Taipei）下的今天：仅用于还没有租户 / 会话的模块级演示数据。"""
-    return datetime.now(ZoneInfo(DEFAULT_TZ)).date()

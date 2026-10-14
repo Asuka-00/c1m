@@ -71,12 +71,19 @@ def validate(
         fn(session, tenant_id, e, data, existing)
     errors: list[tuple[Any, ...]] = []
     values: Row = {}
+    site_tz: list[Any] = []
     for f in e.all_fields:
         key = f.column if f.column in data else f.name if f.name in data else None
         if key is None or f.system:
             continue
         try:
-            values[f.column] = coerce(f, data[key])
+            if f.type == "date" and not site_tz:
+                from app.core.spec.excel import tenant_tz
+
+                site_tz.append(tenant_tz(session, tenant_id))
+            values[f.column] = coerce(
+                f, data[key], site_tz[0] if f.type == "date" else None
+            )
         except (ValueError, TypeError) as ex:
             code = getattr(ex, "code", None)
             ctx = getattr(ex, "ctx", None)

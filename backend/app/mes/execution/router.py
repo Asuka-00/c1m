@@ -438,8 +438,11 @@ def _opt_ref(s: Session, tid: uuid.UUID, name: str, code: str, v: str | None) ->
         raise err_422(
             ["query", name], "must be a uuid", "value_error", input=v
         ) from None
-    if one(s, tid, code, rid) is None:
-        raise HTTPException(status_code=404, detail=f"{code} not found")
+    if one(s, tid, code, rid) is None:  # 不存在或跨租户
+        raise HTTPException(
+            status_code=404,
+            detail={"code": f"{code}_not_found", "message": f"{code} not found"},
+        )
     return rid
 
 
@@ -457,7 +460,12 @@ def report_ct_move(
     a = _req_date("date_from", date_from)
     b = _req_date("date_to", date_to)
     if a > b:
-        raise err_422(["query", "date_from"], "date_from after date_to", "value_error")
+        raise err_422(
+            ["query", "date_from"],
+            "date_from after date_to",
+            "value_error",
+            {"reason": "range_inverted"},
+        )
     if (b - a).days + 1 > ct_move_svc.MAX_DAYS:
         raise err_422(
             ["query", "date_to"],

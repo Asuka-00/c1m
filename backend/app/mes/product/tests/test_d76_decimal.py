@@ -100,6 +100,9 @@ def test_bom_line_scrap_rate_scale4_import(client: TestClient, db: Session) -> N
     e0 = err["detail"]["errors"][0]
     assert e0["row"] == 2 and e0["type"] == "value_error", err
     assert e0["ctx"] == {"max_places": 4}, err
+    # D77 补充一：loc 定位到行 / 列（不再是 body）
+    assert e0["loc"] == ["file", 2, "scrap_rate"], err
+    assert e0["column"] == "scrap_rate" and e0["cell"] == f"{chr(65 + i)}2", err
     row[i] = "0.1234"
     m.import_rows("bom_line", [header, row])
     assert m.list("bom_line")["data"][0]["scrap_rate"] == "0.1234"

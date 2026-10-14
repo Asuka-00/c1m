@@ -52,6 +52,7 @@ def apply_filters(
 ) -> sa.Select[Any]:
     """按字段等值 / 引用 id / 状态等条件过滤。"""
     t = table(e)
+    bounds: dict[str, dict[str, Any]] = {}
     for name, raw in filters.items():
         if name == "status" and e.versioned:
             stmt = stmt.where(t.c.status == raw)
@@ -74,7 +75,7 @@ def apply_filters(
                 continue
             raise query_422([(name, f"{name}: must be true or false")])
         if not f and name.endswith(("_from", "_to")):
-            stmt = _range(e, stmt, name, raw)
+            stmt = _range(e, stmt, name, raw, bounds)
             continue
         if not f or f.type in ("json", "text"):
             continue
@@ -86,14 +87,32 @@ def apply_filters(
         except ValueError as ex:
             raise query_422([(name, f"{name} {ex}")]) from ex
         stmt = stmt.where(t.c[f.column] == v)
+    for base, b in bounds.items():
+        if "from" in b and "to" in b and b["from"] > b["to"]:
+            raise err_422(
+                ["query", f"{base}_from"],
+                f"{base}_from is after {base}_to",
+                "value_error",
+                {"reason": "range_inverted"},
+            )
     return stmt
 
 
-def _range(e: Entity, stmt: sa.Select[Any], name: str, raw: str) -> sa.Select[Any]:
+def _range(
+    e: Entity,
+    stmt: sa.Select[Any],
+    name: str,
+    raw: str,
+    bounds: dict[str, dict[str, Any]] | None = None,
+) -> sa.Select[Any]:
     """时间 / 日期范围筛选（D77）。
 
     - datetime 字段（含 ``created_at``）：半开区间 ``[_from, _to)``，``_to`` 那一刻不含。
     - date 字段：闭区间 ``[_from, _to]``，实现为 ``< _to + 1 天``。
+    - datetime 取值必须带偏移（``Z`` 或 ``±hh:mm``），只给日期或无偏移
+      → 422 ``timezone_required``（D77 补充一）。
+    - 同一字段 ``_from`` 晚于 ``_to`` → 422 ``value_error``，``ctx.reason=range_inverted``
+      （由 :func:`apply_filters` 在两端都解析后判断）。
 
     其它名称忽略。
     """
@@ -112,6 +131,15 @@ def _range(e: Entity, stmt: sa.Select[Any], name: str, raw: str) -> sa.Select[An
         )
     except ValueError as ex:
         raise query_422([(name, f"{name}: invalid date")]) from ex
+    if kind == "datetime" and v.tzinfo is None:
+        raise err_422(
+            ["query", name],
+            f"{name}: timezone offset required (Z or +hh:mm)",
+            "timezone_required",
+            input=raw,
+        )
+    if bounds is not None:
+        bounds.setdefault(base, {})[bound] = v
     c = t.c[col]
     if bound == "from":
         return stmt.where(c >= v)

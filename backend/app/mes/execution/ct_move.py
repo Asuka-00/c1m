@@ -36,7 +36,20 @@ MAX_DAYS = 92
 _H = Decimal(3600)
 _Q2 = Decimal("0.01")
 # 在制时点还原：批次停在哪个工步，看时点之后第一条「在原工步上发生」的履历
-_STAY = ("move_in", "track_in", "track_out", "move_out", "hold", "release", "scrap")
+# （跳站履历记在原工步上，B5 复测 P2-1）
+_STAY = (
+    "move_in",
+    "track_in",
+    "track_out",
+    "move_out",
+    "hold",
+    "release",
+    "scrap",
+    "jump",
+)
+# 数量变动履历：qty 是变动量（报废减、补数加）。Hold 期间允许在制报废（adjust，
+# lot.state RULES["adjust"] hold=True），所以时点数量 = 最近一条 _QTY 的 qty ± 其后的变动（P3-2）
+_DELTA = {"scrap": -1, "bonus": 1}
 # 履历 qty 等于批次数量的动作（scrap / rework 的 qty 是报废 / 返工片数，不用）
 _QTY = (
     "start",
@@ -146,6 +159,42 @@ class _Anchors:
         return min(got) if got else None
 
 
+_EXIT_WINDOW = timedelta(seconds=2)
+
+
+def _rework_exits(
+    s: Session, tid: uuid.UUID, rows: list[Row], end: datetime
+) -> set[int]:
+    """带 rework 离开主路线的那次出站（D73 补充二），返回 ``id(row)`` 集合。
+
+    新数据看出站履历 ``details.rework``；旧数据退而看同批次紧随其后（2 秒内）的
+    返工路线进入履历（action ``rework`` 且无 ``unit_id``）。
+    """
+    out = {id(r) for r in rows if (r.get("details") or {}).get("rework")}
+    rest = [r for r in rows if id(r) not in out]
+    if not rest:
+        return out
+    h = TABLES["lot_history"]
+    entries: dict[Any, list[datetime]] = defaultdict(list)
+    for e in _rows(
+        s,
+        sa.select(h.c.lot_id, h.c.at).where(
+            h.c.tenant_id == tid,
+            h.c.lot_id.in_({r["lot_id"] for r in rest}),
+            h.c.action == "rework",
+            h.c.unit_id.is_(None),
+            h.c.at < end + _EXIT_WINDOW,
+        ),
+    ):
+        entries[e["lot_id"]].append(e["at"])
+    for r in rest:
+        if any(
+            timedelta(0) <= x - r["at"] <= _EXIT_WINDOW for x in entries[r["lot_id"]]
+        ):
+            out.add(id(r))
+    return out
+
+
 def _bucket() -> Row:
     return {
         "moves": 0,
@@ -202,21 +251,24 @@ def _wip(
     alive = [i for i, r in last.items() if r["to_status"] not in _TERMINAL]
     if not alive:
         return {}
-    qty = {
-        r["lot_id"]: int(r["qty"] or 0)
-        for r in _rows(
-            s,
-            sa.select(h.c.lot_id, h.c.qty)
-            .where(
-                h.c.tenant_id == tid,
-                h.c.lot_id.in_(alive),
-                h.c.at < end,
-                h.c.action.in_(_QTY),
-            )
-            .order_by(h.c.lot_id, h.c.at.desc(), h.c.id.desc())
-            .distinct(h.c.lot_id),
+    qty: dict[Any, int] = {}
+    for r in _rows(
+        s,
+        sa.select(h.c.lot_id, h.c.action, h.c.qty)
+        .where(
+            h.c.tenant_id == tid,
+            h.c.lot_id.in_(alive),
+            h.c.at < end,
+            h.c.action.in_((*_QTY, *_DELTA)),
         )
-    }
+        .order_by(h.c.lot_id, h.c.at, h.c.id),
+    ):
+        q = int(r["qty"] or 0)
+        if r["action"] in _DELTA:
+            if r["lot_id"] in qty:
+                qty[r["lot_id"]] += _DELTA[r["action"]] * q
+        else:
+            qty[r["lot_id"]] = q
     nxt = {
         r["lot_id"]: r["route_step_id"]
         for r in _rows(
@@ -295,6 +347,7 @@ def ct_move(
             h.c.at,
             h.c.qty,
             h.c.operation_id,
+            h.c.details,
             rt.c.route_type,
         )
         .select_from(
@@ -321,6 +374,7 @@ def ct_move(
     normal = [
         r for r in rows if r["action"] == "move_out" and r["route_type"] != "rework"
     ]
+    exits = _rework_exits(s, tid, normal, end)
     anchors.load({r["lot_id"] for r in normal})
     lh = TABLES["lot_hold"]
     holds: dict[Any, list[tuple[datetime, datetime | None]]] = defaultdict(list)
@@ -353,6 +407,8 @@ def ct_move(
         for b in bs:
             b["moves"] += 1
             b["move_qty"] += q
+        if id(r) in exits:  # D73 补充二：离开主路线去返工的出站不进 CT / Hold 样本
+            continue
         a = anchors.at(r["lot_id"], r["at"])
         if a is None:
             continue

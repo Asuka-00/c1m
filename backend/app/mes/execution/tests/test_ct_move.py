@@ -187,6 +187,20 @@ def test_rework_route_and_rework_qty(client: TestClient, db: Session) -> None:
     assert ops["OP5"]["rework_moves"] == 1 and ops["OP5"]["moves"] == 0
     assert ops["OP5"]["ct_avg_hours"] is None  # 返工出站不计 CT
     assert ops["OP2"]["rework_qty"] == 1 and ops["OP2"]["moves"] == 1
+    # D73 补充二：带 rework 离开主路线的出站计 move，但不进 CT / Hold 样本
+    assert ops["OP2"]["ct_avg_hours"] is None and ops["OP2"]["hold_hours"] is None
+    # 返工回到 20 后再出站：该工步 CT 以这次为准，从返工路线出站（回到工步）起算
+    f.run_step(c)
+    f.sql(
+        "UPDATE mes_lot_history SET at = :at WHERE lot_id = :l AND at > :t9",
+        at=t(10, 11),
+        l=c["id"],
+        t9=t(10, 9),
+    )
+    r = _get(f, date_from="2026-03-10", date_to="2026-03-10")
+    op2 = next(o for o in r["by_operation"] if o["operation"] == "OP2")
+    assert op2["moves"] == 2 and op2["ct_avg_hours"] == "2.00"
+    assert op2["hold_hours"] == "0.00"
     assert r["trend"][0]["rework_qty"] == 1
 
 
@@ -233,25 +247,38 @@ def test_validation_and_permission(client: TestClient, db: Session) -> None:
         e = err(date_from=bad, date_to="2026-03-01")
         assert (e["type"], e["loc"]) == ("value_error", ["query", "date_from"]), bad
     e = err(date_from="2026-03-02", date_to="2026-03-01")
-    assert e["type"] == "value_error"
+    assert e["type"] == "value_error" and e["ctx"] == {"reason": "range_inverted"}
+    r = _get(f, date_from="2026-03-01", date_to="2026-03-01")  # from == to：当天
+    assert [d["day"] for d in r["trend"]] == ["2026-03-01"]
     e = err(date_from="2026-01-01", date_to="2026-04-03")  # 93 天
     assert e["type"] == "date_range_too_large" and e["ctx"] == {"max_days": 92}
     r = _get(f, date_from="2026-01-01", date_to="2026-04-02")  # 正好 92 天
     assert len(r["trend"]) == 92
     rid = str(uuid.uuid4())
-    _get(f, 404, date_from="2026-03-01", date_to="2026-03-01", operation_id=rid)
-    _get(f, 404, date_from="2026-03-01", date_to="2026-03-01", product_id=rid)
+    d = _get(f, 404, date_from="2026-03-01", date_to="2026-03-01", operation_id=rid)
+    assert d["detail"]["code"] == "operation_not_found" and d["detail"]["message"]
+    d = _get(f, 404, date_from="2026-03-01", date_to="2026-03-01", product_id=rid)
+    assert d["detail"]["code"] == "product_not_found"
     e = err(date_from="2026-03-01", date_to="2026-03-01", operation_id="nope")
     assert (e["type"], e["loc"]) == ("value_error", ["query", "operation_id"])
     # 其他租户的工序：404
     g = Line(client, db)
-    _get(
+    d = _get(
         f,
         404,
         date_from="2026-03-01",
         date_to="2026-03-01",
         operation_id=g.ops[0]["id"],
     )
+    assert d["detail"]["code"] == "operation_not_found"
+    d = _get(
+        f,
+        404,
+        date_from="2026-03-01",
+        date_to="2026-03-01",
+        product_id=g.product["id"],
+    )
+    assert d["detail"]["code"] == "product_not_found"
     # 无 mes.exec:read：403（先于参数校验）
     hm = _member(client, db, f.m)
     from app.platform.tenants.service import TenantContext
@@ -306,3 +333,53 @@ def test_menu_key() -> None:
     assert it["component"] == "mes-page:ct-move-report"
     assert it["permission"] == "mes.exec:read" and it["parent"] == "g-wip"
     assert date(2026, 3, 10) == t(10, 0).date()
+
+
+def test_wip_jump_next_day_stays_on_origin(client: TestClient, db: Session) -> None:
+    """P2-1：date_to 当天停在 OP2，次日跳站到 40 并进站 → date_to 的在制仍算 OP2。"""
+    f = Line(client, db)
+    (a,) = f.start(2)
+    f.run_step(a)  # -> 20 (OP2)
+    jr = f.m.post("reason_code", {"code": "JMP", "name": "j", "reason_type": "jump"})
+    f.post(
+        f"{EXEC}/lots/{a['id']}/jump",
+        {"to_step_id": f.steps[40]["id"], "reason_id": jr["id"]},
+    )
+    f.stage(a, "move_in", equipment_id=f.eq["id"])
+    _set(f, a, t(10, 1), "start")
+    _step(f, a, 10, t(10, 3))
+    _set(f, a, t(11, 9), "jump")
+    _set(f, a, t(11, 9, 30), "move_in", 40)
+    r = _get(f, date_from="2026-03-10", date_to="2026-03-10")
+    w = {o["operation"]: o["wip_lots"] for o in r["by_operation"]}
+    assert w.get("OP2") == 1 and not w.get("OP3"), r["by_operation"]
+    r = _get(f, date_from="2026-03-11", date_to="2026-03-11")
+    w = {o["operation"]: o["wip_lots"] for o in r["by_operation"]}
+    assert w.get("OP3") == 1 and not w.get("OP2"), r["by_operation"]
+
+
+def test_on_hold_qty_after_scrap_during_hold(client: TestClient, db: Session) -> None:
+    """P3-2：adjust 允许 Hold 中的批次部分报废（RULES adjust hold=True），on_hold_qty 扣掉报废数。"""
+    f = Line(client, db, {"product": {"tracking_level": "quantity"}})
+    (a,) = f.start(10)
+    f.post(f"{EXEC}/lots/{a['id']}/hold", {"reason_id": f.reasons["hold"]["id"]})
+    f.post(
+        f"{EXEC}/lots/{a['id']}/adjust",
+        {
+            "kind": "scrap",
+            "qty": 3,
+            "reason_id": f.reasons["scrap"]["id"],
+            "override": True,
+            "override_reason": "test",
+        },
+    )
+    assert f.lot(a)["qty"] == 7 and f.lot(a)["on_hold"]
+    _set(f, a, t(10, 1), "start")
+    _set(f, a, t(10, 2), "hold")
+    _set(f, a, t(10, 3), "scrap")
+    f.sql(
+        "UPDATE mes_lot_hold SET held_at = :h WHERE lot_id = :l", h=t(10, 2), l=a["id"]
+    )
+    r = _get(f, date_from="2026-03-10", date_to="2026-03-10")
+    op1 = next(o for o in r["by_operation"] if o["operation"] == "OP1")
+    assert (op1["wip_lots"], op1["on_hold_lots"], op1["on_hold_qty"]) == (1, 1, 7)

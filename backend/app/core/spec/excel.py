@@ -21,6 +21,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import sqlalchemy as sa
 from fastapi import HTTPException
 from openpyxl import Workbook, load_workbook
+from openpyxl.utils import get_column_letter
 from sqlmodel import Session
 
 from app.core.spec.base import conn, table
@@ -183,6 +184,24 @@ def _resolve(session: Session, tenant_id: uuid.UUID, target: Entity, raw: str) -
     return c.execute(stmt.limit(1)).scalar()
 
 
+def _cell(e: Entity, header: list[str], n: int, key: Any) -> dict[str, Any]:
+    """导入错误定位到单元格：``loc=["file", 行号, 列名]``，另给 ``column`` 与 ``cell``（如 ``C5``）。
+
+    ``key`` 为字段名 / 列名（取自校验错误 loc 末项）；对不上表头时只给到行。
+    """
+    if not isinstance(key, str):
+        return {}
+    for i, h in enumerate(header):
+        f = e.field(h) if h else None
+        if h and (h == key or (f and key in (f.name, f.column))):
+            return {
+                "loc": ["file", n, h],
+                "column": h,
+                "cell": f"{get_column_letter(i + 1)}{n}",
+            }
+    return {}
+
+
 def import_xlsx(
     session: Session, tenant_id: uuid.UUID, e: Entity, data: bytes, user: Any
 ) -> dict[str, int]:
@@ -231,7 +250,13 @@ def import_xlsx(
     nested = session.begin_nested()
     for n, values in enumerate(it, start=2):
         if n > MAX_ROWS + 1:
-            errors.append({"row": n, "msg": f"too many rows (max {MAX_ROWS})"})
+            errors.append(
+                {
+                    "row": n,
+                    "msg": f"too many rows (max {MAX_ROWS})",
+                    "loc": ["file", n],
+                }
+            )
             break
         raw = dict(zip(header, values, strict=False))
         if all(v in (None, "") for v in raw.values()):
@@ -250,7 +275,9 @@ def import_xlsx(
                 if f and f.type == "ref" and v not in (None, ""):
                     rid = _resolve(session, tenant_id, ENTITIES[f.ref or ""], str(v))
                     if rid is None:
-                        raise ValueError(f"{k}: '{v}' not found")
+                        miss = ValueError(f"{k}: '{v}' not found")
+                        miss.field = k  # type: ignore[attr-defined]
+                        raise miss
                     payload[f.column] = rid
                 elif f and f.type == "json" and isinstance(v, str) and v.strip():
                     payload[k] = json.loads(v)
@@ -297,16 +324,19 @@ def import_xlsx(
                 if isinstance(d, list)
                 else str(d)
             )
-            err: dict[str, Any] = {"row": n, "msg": msg}
+            err: dict[str, Any] = {"row": n, "msg": msg, "loc": ["file", n]}
             first = d[0] if isinstance(d, list) and d else None
             if isinstance(first, dict) and first.get("type"):
-                # D76：导入错误同样带首条的 loc / type / ctx（如 value_error max_places）
-                err.update({k: first[k] for k in ("loc", "type", "ctx") if k in first})
+                # D76：导入错误同样带首条的 type / ctx（如 value_error max_places）
+                err.update({k: first[k] for k in ("type", "ctx") if k in first})
+                loc = first.get("loc") or []
+                err.update(_cell(e, header, n, loc[-1] if loc else None))
             errors.append(err)
         except (ValueError, TypeError) as ex:
-            err = {"row": n, "msg": str(ex)}
+            err = {"row": n, "msg": str(ex), "loc": ["file", n]}
             if isinstance(ex, TooManyDecimals):
                 err.update(type=ex.code, ctx=ex.ctx)
+            err.update(_cell(e, header, n, getattr(ex, "field", None)))
             errors.append(err)
     if errors:
         nested.rollback()
