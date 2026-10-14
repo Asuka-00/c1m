@@ -379,6 +379,8 @@ class Runner:
             body = {"alid": str(a["alid"]), "external_event_id": ext, "set_at": occurred}
             if a.get("lots"):
                 body["lot_ids"] = [self.rid("lot", x) for x in a["lots"]]
+            if a.get("sub_unit_id"):  # 可选：本机子单元（腔体）的设备编码 → id（B8 草稿，D70 补充 4；落地后核对请求体）
+                body["sub_unit_id"] = self.rid("equipment", a["sub_unit_id"])
             call = Call("POST", fill(self._ad("alarm_set"), eq_id=eq_id), body, ext)
         elif k == "alarm_clear":
             body = {"external_event_id": ext, "cleared_at": utcnow(float(a.get("time_offset_s", 0)))}

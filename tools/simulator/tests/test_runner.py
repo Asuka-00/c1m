@@ -1010,3 +1010,15 @@ def test_eap_envelope_extra_top_level_accepted():
     c2 = FakeClient(paths=BASE_PATHS | B11)
     rep = Runner(c2).run(parse(sc))  # 没有服务账号 -> 记 skip，不失败
     assert rep["status"] == PASSED and rep["steps"][0]["ok"] is None
+
+
+def test_alarm_set_optional_sub_unit_id_resolves_equipment_code():
+    c = FakeClient(paths=BASE_PATHS | B9)
+    Runner(c).run(
+        parse({"run_id": "su", "steps": [{"alarm_set": {"eq": "EQ1", "alid": "1001", "sub_unit_id": "EQ2"}}]})
+    )
+    body = [x for x in c.calls if x[0] == "POST"][0][2]
+    assert body["sub_unit_id"] == "e-2"
+    c2 = FakeClient(paths=BASE_PATHS | B9)
+    Runner(c2).run(parse({"run_id": "su0", "steps": [{"alarm_set": {"eq": "EQ1", "alid": "1001"}}]}))
+    assert "sub_unit_id" not in [x for x in c2.calls if x[0] == "POST"][0][2]

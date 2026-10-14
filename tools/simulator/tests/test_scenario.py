@@ -160,11 +160,17 @@ def test_b8_draft_reuses_alarm_and_track_in_steps():
     )
     mc = [s for s in tis if s.args["eq"] == "EAP-MC01"]
     assert [t.args["expect"]["status"] for t in mc] == [409, 200]
-    assert any(s.kind == "alarm_set" and s.args.get("sub_unit") == "EAP-MC01-CH1" for s in sc.steps)
+    assert any(s.kind == "alarm_set" and s.args.get("sub_unit_id") == "EAP-MC01-CH1" for s in sc.steps)
     assert any(s.kind == "expect_alarm" and s.args.get("alarm_status") == "cleared" for s in sc.steps)
     assert any(
-        s.kind == "expect_effective_track_in_action"
-        and s.args.get("source_level") == "type"
-        and s.args["eq"] == "EAP-DA01"
+        s.kind == "expect_effective_track_in_action" and s.args == {"eq": "EAP-DA01", "alid": "2105", "value": "block"}
         for s in sc.steps
     )
+
+
+def test_b8_draft_has_no_source_level_and_uses_sub_unit_id():
+    import pathlib
+
+    text = pathlib.Path("scenarios/p3-draft/alarm-track-in-action.yaml").read_text()
+    assert "source_level" not in text
+    assert "sub_unit:" not in text and "sub_unit_id: EAP-MC01-CH1" in text
