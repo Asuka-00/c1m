@@ -1062,7 +1062,7 @@
         "rework_limit": "リワーク回数上限",
         "qty_adjust_limit": "廃棄・追加数量上限",
         "eqp_wait_qual": "装置 Qual 待ち",
-        "bom_required": "有効 BOM あり"
+        "bom_required": "有効 BOM 必須"
       },
       "check_severity": {
         "block": "ブロック",

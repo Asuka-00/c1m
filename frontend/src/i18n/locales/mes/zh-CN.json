@@ -1062,7 +1062,7 @@
         "rework_limit": "返工次数上限",
         "qty_adjust_limit": "报废 / 补数数量上限",
         "eqp_wait_qual": "设备待 Qual",
-        "bom_required": "BOM 已生效"
+        "bom_required": "需有生效 BOM"
       },
       "check_severity": {
         "block": "拦截",
