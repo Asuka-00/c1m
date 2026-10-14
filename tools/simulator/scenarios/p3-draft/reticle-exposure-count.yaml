@@ -1,0 +1,31 @@
+# 草稿（P3-E1 v0.6 §5/§9）：光罩曝光计数上报。P3-B4 接口和 B11 event_type=reticle_usage 都还没有，整体 skipped。
+# 后端落地后：去掉 draft，按 openapi 校正路径/字段，再补 runner 步骤实现。
+# 覆盖：count_basis=eap 出站先估算（estimated=true）→ EAP 实际 shot 修正最早一条估算记录（差额可为负）
+#       → 同 external_event_id 同内容重放 200 duplicate=true 返回原记录、不重复计 → 不同内容 422 idempotency_key_reused（D57）
+#       → count_basis=track_out 时 EAP 计数 counted=false、200。
+name: reticle-exposure-count
+run_id: ret-count-01
+draft: "等 P3-B4 光罩接口与 B11 reticle_usage（E1 v0.6 §9：P3 不开放 EAP 计数）"
+target: http://127.0.0.1:8013
+equipment: [{code: EAP-LT01, type: LITHO}]
+steps:
+  - precondition: {eq: EAP-LT01, e10: SBY}
+  - reticle_mount: {eq: EAP-LT01, reticle: R-SIM-01, slot: S1, expect: {status: 200, body: {data.status_code: in_use}}}
+  - expect_reticle: {reticle: R-SIM-01, fields: {count_basis: eap, mount_count: "1", shot_count: "0"}}
+  - track_in: {eq: EAP-LT01, lot: FX0001, reticle: R-SIM-01}
+  # 出站前没有 EAP shot：按片折算 25 片 × shots_per_wafer 5 = 125，estimated=true
+  - track_out: {eq: EAP-LT01, lot: FX0001}
+  - expect_reticle_history: {reticle: R-SIM-01, latest: {kind: track_out, estimated: true, counted: true, delta: "125"}}
+  # EAP 实际值 130：改写最早一条未修正估算记录，shot_count += 5，不新增记录
+  - reticle_usage: {eq: EAP-LT01, reticle: R-SIM-01, lot: FX0001, shots: "130", save_as: u1,
+                    expect: {status: 200, body: {result.data.estimated: false, result.data.delta: "130", duplicate: false}}}
+  - expect_reticle: {reticle: R-SIM-01, fields: {shot_count: "130"}}
+  # D57：同 (source, external_event_id) 同内容重放 → 200 duplicate=true，返回原记录，不重复加差额
+  - replay: {eq: EAP-LT01, seq: 3, expect: {status: 200, body: {duplicate: true}}}
+  - expect_reticle: {reticle: R-SIM-01, fields: {shot_count: "130"}}
+  # 同事件号不同内容 → 422 idempotency_key_reused（对象格式 {code, message}，D65 补充 4 保留）
+  - reuse: {eq: EAP-LT01, seq: 3, change: {shots: "140"}}
+  - expect_reticle: {reticle: R-SIM-01, fields: {shot_count: "130"}}
+  # payload 未知字段 → 422 unknown_field（信封顶层多余字段例外，并进 payload）
+  - reticle_usage: {eq: EAP-LT01, reticle: R-SIM-01, lot: FX0001, shots: "1", extra: {bogus: 1},
+                    expect: {status: 422, code: unknown_field, loc: [body, payload, bogus]}}

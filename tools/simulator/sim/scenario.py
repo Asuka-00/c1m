@@ -52,6 +52,7 @@ class Scenario:
     equipment: list[dict] = field(default_factory=list)
     description: str = ""
     path: str | None = None
+    draft: str | None = None  # 草稿场景：后端接口未就绪（如 P3-B4），整体 skipped，不连后端
 
     def required_adapters(self, mode: str = "manual") -> list[str]:
         seen: list[str] = []
@@ -125,6 +126,7 @@ def parse(data: dict, path: str | None = None) -> Scenario:
         equipment=data.get("equipment") or [],
         description=str(data.get("description") or ""),
         path=path,
+        draft=str(data["draft"]) if data.get("draft") else None,
     )
 
 

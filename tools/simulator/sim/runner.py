@@ -130,6 +130,9 @@ def nonlist_422(resp: Resp) -> str | None:
     return None
 
 
+P3_DRAFT_STEPS = {"reticle_mount", "reticle_usage", "reticle_incident", "expect_reticle", "expect_reticle_history"}
+
+
 class Runner:
     def __init__(
         self,
@@ -198,6 +201,9 @@ class Runner:
             "reason": None,
             "steps": [],
         }
+        if sc.draft:  # 草稿：不探测 openapi、不连后端
+            rep.update(status=SKIPPED, reason=f"草稿场景：{sc.draft}")
+            return rep
         miss = self.missing(sc)
         if miss:
             rep.update(status=SKIPPED, reason="；".join(miss))
@@ -298,6 +304,8 @@ class Runner:
             return self._tool_set(a, entry)
         if k == "expect_eap_read":
             return self._expect_eap_read(a, entry)
+        if k in P3_DRAFT_STEPS:
+            raise StepFailed(f"{k} 是 P3 草稿步骤，P3-B4 接口落地前未实现")
         if k == "expect_eap_envelope_extra":
             return self._expect_eap_envelope_extra(dict(a, run_id=sc.run_id), entry)
         if k == "expect_body_422":

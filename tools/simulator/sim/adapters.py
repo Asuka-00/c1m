@@ -71,6 +71,11 @@ def default_adapters() -> dict[str, Adapter]:
         # GET 与上报同一路径模板
         "tool_usage_log": Adapter("耗材用量履历", ["/mes/eqp/tools/{tool_id}/usage"], card="B10"),
         "tool_mounts": Adapter("工具上下机履历", ["/mes/eqp/tools/{tool_id}/mounts"], card="B10"),
+        # P3-B4（光罩，未实现）：E1 草案 v0.6 的接口，草稿场景用；路径在后端落地后以 openapi 为准
+        "reticle_mount": Adapter("光罩挂载", ["/mes/reticle/{reticle_id}/mount"], card="P3-B4"),
+        "reticle_incident": Adapter("光罩事故录入", ["/mes/reticle/{reticle_id}/incident"], card="P3-B4"),
+        "reticle_get": Adapter("光罩详情", ["/mes/reticle/{reticle_id}"], card="P3-B4"),
+        "reticle_history": Adapter("光罩履历", ["/mes/reticle/{reticle_id}/history"], card="P3-B4"),
     }
 
 
@@ -102,6 +107,12 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "expect_eap_envelope_extra": ["eap_events"],
     "expect_alarm_list": ["alarm_list"],
     "replay": [],
+    # P3 草稿步骤（P3-B4 前不执行）
+    "reticle_mount": ["reticle_mount"],
+    "reticle_usage": ["eap_events"],  # 以后 B11 event_type=reticle_usage（P3 不实现）
+    "reticle_incident": ["reticle_incident"],
+    "expect_reticle": ["reticle_get"],
+    "expect_reticle_history": ["reticle_history"],
     "reuse": [],
     "precondition": [],
 }

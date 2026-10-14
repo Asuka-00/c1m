@@ -114,3 +114,8 @@ B9（`0a74f8a`）、B10（`d27b700`/`23c502d`）、B11（`8294b63`）已对齐�
 - `expect_body_422` 支持 `endpoint: move_in|track_in` + `lot`：未知字段期望 422 `unknown_field` `[body, 字段]`，前后比对批次行确认无副作用（tool-life-block 里用 move_in）。
 - 新步骤 `expect_eap_envelope_extra`：服务账号向 `/mes/eap/events` 发按 ALID 清除，`comment` 放信封顶层（D54 并进 payload），期望不 422（无 active 报警 -> cleared=false，无副作用）；没有服务账号时记 skip。
 - 请求体审计：`/mes/eap/events` 按“顶层多余字段并进 payload”后的 payload 审计。
+
+### P3 草稿场景（分支 eap/p3-sim）
+- `scenarios/p3-draft/`：光罩曝光计数上报、碰撞 → Hold，依据 P3-E1 草案 v0.6。场景顶层 `draft: 原因` → 整体 skipped，不连后端。
+- 草稿步骤（`reticle_mount`、`reticle_usage`、`reticle_incident`、`expect_reticle`、`expect_reticle_history`）只做格式校验，P3-B4 落地前执行会失败；落地后按 openapi 校正路径与字段，再实现。
+- `scenarios/*.yaml` 不含草稿目录，现有 5 个场景和请求体审计不受影响。

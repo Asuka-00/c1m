@@ -1,0 +1,31 @@
+# 草稿（P3-E1 v0.6 §3/§3.1）：光罩碰撞 → 自动 Hold。P3-B4 接口还没有，整体 skipped。
+# P3 碰撞只开人工录入（source=manual，D64）；以后划片机/光刻机上报事故走 B11（§9.1），这里先按人工接口写。
+# 覆盖：in_use 时录入碰撞 → hold（hold_reason=incident）、自动卸载（unmount_reason=incident）、inspection_required=true
+#       → 进站 409 check_blocked（not_mounted，不可放行）→ 同 Idempotency-Key 重放不重复写 → 带 source 422 unknown_field
+#       → 人工 hold 再录碰撞时 hold_reason 按 inspection_failed > incident > manual 取严格者（D64 补充 5）。
+name: reticle-collision-hold
+run_id: ret-incident-01
+draft: "等 P3-B4 光罩接口（POST /mes/reticle/{id}/incident 等）"
+target: http://127.0.0.1:8013
+equipment: [{code: EAP-LT01, type: LITHO}]
+steps:
+  - precondition: {eq: EAP-LT01, e10: SBY}
+  - reticle_mount: {eq: EAP-LT01, reticle: R-SIM-02, slot: S1, expect: {status: 200}}
+  - reticle_incident: {eq: EAP-LT01, reticle: R-SIM-02, kind: collision, save_as: inc1,
+                       expect: {status: 200, body: {data.source: manual}}}
+  - expect_reticle: {reticle: R-SIM-02, fields: {status_code: hold, hold_reason: incident, inspection_required: true, equipment_id: null}}
+  - expect_reticle_history: {reticle: R-SIM-02, latest: {type: unmount, unmount_reason: incident}}
+  # 进站：光罩已被自动卸载 → 只报 not_mounted，overridable=false
+  - track_in:
+      eq: EAP-LT01
+      lot: FX0001
+      reticle: R-SIM-02
+      expect: {status: 409, code: check_blocked, body: {detail.reason: not_mounted, detail.overridable: false}}
+  # D57：同 Idempotency-Key 同内容重放 → 200 duplicate=true 返回原记录，不重复写事故
+  - replay: {eq: EAP-LT01, seq: 2, expect: {status: 200, body: {duplicate: true}}}
+  # D30 + D65 补充 4：人工接口带 source → 422 unknown_field
+  - reticle_incident: {eq: EAP-LT01, reticle: R-SIM-02, kind: collision, extra: {source: eap},
+                       expect: {status: 422, code: unknown_field, loc: [body, source]}}
+  # hold_reason 只读：请求体带 hold_reason → 422 read_only_field（E1 v0.6 §2）
+  - reticle_incident: {eq: EAP-LT01, reticle: R-SIM-02, kind: collision, extra: {hold_reason: manual},
+                       expect: {status: 422}}

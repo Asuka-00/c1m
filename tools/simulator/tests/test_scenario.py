@@ -75,3 +75,36 @@ def test_tool_life_expectation_follows_b10():
 def test_invalid(data):
     with pytest.raises(ScenarioError):
         parse(data)
+
+
+def test_p3_draft_scenarios_parse_and_skip_without_backend():
+    import glob
+
+    from fake import FakeClient
+
+    from sim.runner import SKIPPED, Runner
+    from sim.scenario import load
+
+    files = sorted(glob.glob("scenarios/p3-draft/*.yaml"))
+    assert len(files) == 2
+    for f in files:
+        sc = load(f)
+        assert sc.draft
+        c = FakeClient()
+        rep = Runner(c).run(sc)
+        assert rep["status"] == SKIPPED and rep["reason"].startswith("草稿场景"), rep
+        assert c.calls == []  # 草稿不连后端
+        assert "reticle_mount" in sc.required_adapters() or "reticle_incident" in sc.required_adapters()
+
+
+def test_p3_draft_steps_not_runnable_even_if_paths_exist():
+    from fake import FakeClient
+
+    from sim.runner import FAILED, Runner
+    from sim.scenario import parse
+
+    sc = parse({"run_id": "d", "steps": [{"reticle_incident": {"eq": "EQ1", "reticle": "R1", "kind": "collision"}}]})
+    c = FakeClient(paths=None)
+    c.paths |= {"/mes/reticle/{reticle_id}/incident"}
+    rep = Runner(c).run(sc)
+    assert rep["status"] == FAILED and "草稿步骤" in rep["reason"]
