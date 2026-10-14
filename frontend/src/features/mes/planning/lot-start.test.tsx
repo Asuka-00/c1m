@@ -13,6 +13,7 @@ import { mesApi } from '@/lib/api/mes/common'
 import { woApi, type StartPlan } from '@/lib/api/mes/planning'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import LotStartPage from './lot-start'
+import { startFieldErrors, startTopErrors } from './start-errors'
 
 const PLAN: StartPlan = {
   work_order_id: 'W1',
@@ -223,5 +224,100 @@ describe('开批向导：客户来料（F6）', () => {
       await i18n.changeLanguage(lng)
       expect(t('mes.start.fe.customerLotRequired')).not.toContain('mes.start')
     }
+  })
+
+  it('9c5e568：非批次错误（route / bom_required）显示在顶部；缺客户时 customer_id、customer_lot_no 两条都标到行', async () => {
+    vi.spyOn(woApi, 'start').mockRejectedValue(
+      err422([
+        {
+          loc: ['body', 'route'],
+          msg: 'route: product has no active default route',
+          type: 'value_error',
+        },
+        {
+          loc: ['body', 'bom'],
+          msg: 'bom: P-001 has no active BOM',
+          type: 'value_error',
+        },
+        {
+          loc: ['body', 'lots', 0, 'customer_id'],
+          msg: 'lots.0: customer required for customer-owned material',
+          type: 'value_error',
+        },
+        {
+          loc: ['body', 'lots', 0, 'customer_lot_no'],
+          msg: 'lots.0: customer lot no. required for customer-owned material',
+          type: 'customer_lot_required',
+          code: 'customer_lot_required',
+        },
+      ])
+    )
+    const s = await show()
+    const row0 = s.getByTestId('lot-cust-0')
+    await row0.getByLabelText(t('mes.cust.ownership')).selectOptions('customer')
+    await row0.getByText(t('common.select')).click()
+    await s.getByRole('option', { name: 'C1 · Acme' }).click()
+    await row0.getByLabelText(t('mes.cust.lotNo')).fill('CL-1')
+    await next(s).click()
+    await s
+      .getByRole('button', {
+        name: t('mes.start.confirmStart', { count: 2, total: 50 }),
+      })
+      .click()
+    const top = s.getByTestId('start-top-errors')
+    await expect.element(top).toHaveTextContent(t('mes.start.fe.noRoute'))
+    await expect
+      .element(top)
+      .toHaveTextContent(t('mes.start.fe.noBom', { product: 'P-001' }))
+    const errs = () =>
+      Array.from(
+        document.querySelectorAll(
+          '[data-testid=lot-cust-0] [data-testid=lot-field-error]'
+        ),
+        (x) => x.textContent
+      )
+    await expect
+      .poll(errs)
+      .toEqual([
+        t('mes.start.fe.customerRequired'),
+        t('mes.start.fe.customerLotRequired'),
+      ])
+    expect(document.body.textContent).not.toContain('route:')
+  })
+})
+
+describe('start-errors 纯函数（9c5e568 样例）', () => {
+  it('批次级 value_error 无 code 按消息翻译；非批次错误不进行错误', () => {
+    const e = err422([
+      {
+        loc: ['body', 'route'],
+        msg: 'route: has no steps',
+        type: 'value_error',
+      },
+      {
+        loc: ['body', 'lots', 1, 'customer_id'],
+        msg: 'lots.1: customer only for ownership=customer',
+        type: 'value_error',
+      },
+      {
+        loc: ['body', 'lots', 1, 'customer_lot_no'],
+        msg: 'lots.1: customer lot no. only for ownership=customer',
+        type: 'value_error',
+      },
+    ])
+    expect(startFieldErrors(e)).toEqual({
+      1: {
+        customer_id: t('mes.start.fe.customerOwnOnly'),
+        customer_lot_no: t('mes.start.fe.customerLotOwnOnly'),
+      },
+    })
+    expect(startTopErrors(e)).toEqual([t('mes.start.fe.noSteps')])
+    expect(
+      startTopErrors(
+        err422([
+          { loc: ['body', 'lots', 0, 'qty'], msg: 'x', type: 'value_error' },
+        ])
+      )
+    ).toEqual([])
   })
 })

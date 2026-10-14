@@ -584,7 +584,10 @@
         "slots": "Invalid slots",
         "tooLong": "Too long",
         "invalid": "Invalid value",
-        "customerLotRequired": "Customer lot no. is required for customer-owned material"
+        "customerLotRequired": "Customer lot no. is required for customer-owned material",
+        "noRoute": "The product has no active default route",
+        "noSteps": "The route has no steps",
+        "noBom": "Product {{product}} has no active BOM; lots can't be started"
       }
     },
     "exec": {

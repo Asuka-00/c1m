@@ -323,7 +323,7 @@ function CustomerLotResult({ d }: { d: TraceResult }) {
         title={`${t('mes.traceq.lots')} · ${d.target.customer_lot_no ?? ''}`}
         rows={hits.map((h) => ({
           ...h,
-          id: h.lot_id,
+          id: h.lot_id ?? h.lot_no,
           code: h.lot_no,
           lot_status: enumLabel('lot_status', h.lot_status),
         }))}
@@ -331,12 +331,12 @@ function CustomerLotResult({ d }: { d: TraceResult }) {
       />
       {hits.map(
         (h) =>
-          h.backward && (
+          (h.backward || h.forward) && (
             <LotTraceBlock
-              key={h.lot_id}
+              key={h.lot_id ?? h.lot_no}
               title={h.lot_no}
               info={h}
-              backward={h.backward}
+              backward={h.backward ?? { lots: [], steps: [], materials: [] }}
               forward={h.forward}
             />
           )

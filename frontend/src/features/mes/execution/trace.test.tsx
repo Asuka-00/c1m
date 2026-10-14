@@ -152,4 +152,61 @@ describe('F6 追溯显示客户批号和归属', () => {
       .element(s.getByText(t('mes.enum.genealogy_relation.transform')))
       .toBeInTheDocument()
   })
+
+  it('FE-OF61-1：按 9c5e568 样例（正向子批只带 customer / customer_name、无 lot_id）显示客户名称', async () => {
+    const { s } = await show({
+      kind: 'customer_lot',
+      target: { customer_lot_no: 'CL-T' },
+      lots: [
+        {
+          lot_no: 'FX0001',
+          lot_status: 'moved_in',
+          customer_lot_no: 'CL-T',
+          ownership: 'customer',
+          customer_id: '3aa7707d-81da-480c-9915-0a8ade41db74',
+          customer: 'C1',
+          customer_name: 'Cust 1',
+          forward: {
+            lots: [
+              {
+                code: 'FX0001.01',
+                relation: 'split',
+                customer_lot_no: 'CL-T',
+                customer: 'C1',
+                customer_name: 'Cust 1',
+              },
+            ],
+          },
+        },
+        {
+          lot_no: 'FX0001.01',
+          lot_status: 'moved_in',
+          customer_lot_no: 'CL-T',
+          ownership: 'customer',
+          customer_id: '3aa7707d-81da-480c-9915-0a8ade41db74',
+          customer: 'C1',
+          customer_name: 'Cust 1',
+          forward: { lots: [] },
+        },
+      ],
+    } as unknown as TraceResult)
+    await s.getByRole('combobox', { name: t('mes.traceq.kind') }).click()
+    await s
+      .getByRole('option', { name: t('mes.traceq.k.customer_lot') })
+      .click()
+    await s.getByLabelText(t('mes.traceq.code')).fill('CL-T')
+    await userEvent.click(s.getByTestId('trace-search'))
+    const res = s.getByTestId('customer-lot-result')
+    await expect.element(res).toHaveTextContent('FX0001.01')
+    const labels = () =>
+      Array.from(
+        document.querySelectorAll(
+          '[data-testid=customer-lot-result] [data-testid=ownership-label]'
+        ),
+        (x) => x.textContent
+      )
+    // 匹配批次表 2 行 + 两个批次块头部各 1 + 正向子批 1 行，全部为「客户来料 · C1 · Cust 1」，没有误显示为自有
+    await expect.poll(() => labels().length).toBe(5)
+    expect(new Set(labels())).toEqual(new Set(['客户来料 · C1 · Cust 1']))
+  })
 })

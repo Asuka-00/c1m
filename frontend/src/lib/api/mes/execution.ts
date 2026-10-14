@@ -176,7 +176,8 @@ export interface TraceResult {
 }
 /** 按客户批号追溯：每个匹配批次带客户信息和各自的正反向追溯（kind=customer_lot）。 */
 export interface CustomerLotTrace {
-  lot_id: string
+  /** 9c5e568 样例中不带 lot_id，以 lot_no 兜底作行键 */
+  lot_id?: string
   lot_no: string
   lot_status: string
   customer_lot_no: string | null

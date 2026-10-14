@@ -40,7 +40,11 @@ import {
 import { RefSelect } from '@/features/mes/common/ref-select'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
-import { type LotFieldErrors, startFieldErrors } from './start-errors'
+import {
+  type LotFieldErrors,
+  startFieldErrors,
+  startTopErrors,
+} from './start-errors'
 import { WoProgress } from './wo-actions'
 
 type LotDraft = {
@@ -108,6 +112,7 @@ export default function LotStartPage() {
   const [created, setCreated] = useState<MesRow[] | null>(null)
   // 开批接口 422 定位到批次行的字段错误（行下标从 0 开始）
   const [lotErrs, setLotErrs] = useState<LotFieldErrors>({})
+  const [topErrs, setTopErrs] = useState<string[]>([])
 
   const wos = useQuery({
     queryKey: ['mes', 'work_order', 'startable', tk],
@@ -179,7 +184,10 @@ export default function LotStartPage() {
           ...customerBody(l),
         }))
       ),
-    onMutate: () => setLotErrs({}),
+    onMutate: () => {
+      setLotErrs({})
+      setTopErrs([])
+    },
     onSuccess: (r) => {
       setCreated(r.data)
       qc.invalidateQueries({ queryKey: ['mes'] })
@@ -187,6 +195,9 @@ export default function LotStartPage() {
     },
     onError: (e) => {
       const fe = startFieldErrors(e)
+      const top = startTopErrors(e)
+      // 非批次级错误（流程 / BOM 等）显示在页面顶部，与行错误同时保留
+      setTopErrs(top)
       if (fe) {
         // 标到对应批次行的字段下，并带回「拆分批次」这一步改正
         setLotErrs(fe)
@@ -278,6 +289,17 @@ export default function LotStartPage() {
     <Page title={t('menu.mes-lot-start')} description={t('mes.start.desc')}>
       <div className='space-y-4'>
         <Steps step={created ? 4 : step} />
+        {topErrs.length > 0 && !created && (
+          <ul
+            className='list-disc rounded-md border border-destructive/50 p-3 ps-8 text-sm text-destructive'
+            role='alert'
+            data-testid='start-top-errors'
+          >
+            {topErrs.map((x) => (
+              <li key={x}>{x}</li>
+            ))}
+          </ul>
+        )}
         {step === 1 && (
           <Card>
             <CardHeader>

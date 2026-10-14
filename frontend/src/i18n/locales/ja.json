@@ -584,7 +584,10 @@
         "slots": "スロットが正しくありません",
         "tooLong": "長すぎます",
         "invalid": "入力に誤りがあります",
-        "customerLotRequired": "顧客支給の場合は顧客ロット番号が必須です"
+        "customerLotRequired": "顧客支給の場合は顧客ロット番号が必須です",
+        "noRoute": "製品に有効な既定ルートがありません",
+        "noSteps": "ルートに工程がありません",
+        "noBom": "製品 {{product}} に有効な BOM がないため、ロットを投入できません"
       }
     },
     "exec": {

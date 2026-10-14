@@ -85,9 +85,10 @@ export interface CustomerInfo {
 /**
  * 归属文本（O-F6-1，全站统一）：客户来料「客户来料 · 编码 · 名称」，没有名称只显示编码；
  * 自有显示「自有」；历史空值按自有显示，不报错。
+ * 追溯正向子批行只带 customer / customer_name、不带 ownership（9c5e568 样例），有客户时按客户来料显示。
  */
 export function ownershipText(c: CustomerInfo): string {
-  const own = c.ownership || 'own'
+  const own = c.ownership || (c.customer ? 'customer' : 'own')
   const label = enumLabel('ownership', own)
   if (own !== 'customer') return label
   const who = c.customer

@@ -584,7 +584,10 @@
         "slots": "槽位不正确",
         "tooLong": "内容过长",
         "invalid": "输入有误",
-        "customerLotRequired": "客户来料须填写客户批号"
+        "customerLotRequired": "客户来料须填写客户批号",
+        "noRoute": "产品没有生效的默认流程",
+        "noSteps": "流程没有工步",
+        "noBom": "产品 {{product}} 没有生效的 BOM，不能开批"
       }
     },
     "exec": {

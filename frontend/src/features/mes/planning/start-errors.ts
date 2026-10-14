@@ -57,3 +57,35 @@ export function startFieldErrors(e: unknown): LotFieldErrors | null {
   }
   return Object.keys(out).length ? out : null
 }
+
+const TOP_RULES: [RegExp, string][] = [
+  [/no active default route/, 'mes.start.fe.noRoute'],
+  [/no operation steps|has no steps/, 'mes.start.fe.noSteps'],
+  [/has no active BOM/, 'mes.start.fe.noBom'],
+]
+
+/**
+ * 开批 422 中不属于某个批次行的错误（9c5e568：`["body","route"]`、`["body","bom"]` 即 bom_required 等），
+ * 本地化后显示在页面顶部，不随行错误丢失。
+ */
+export function startTopErrors(e: unknown): string[] {
+  if (!(e instanceof AxiosError) || e.response?.status !== 422) return []
+  const d = (e.response.data as { detail?: unknown })?.detail
+  if (!Array.isArray(d)) return []
+  const out: string[] = []
+  for (const it of d as Item[]) {
+    const loc = it.loc ?? []
+    const p = loc[0] === 'body' ? loc.slice(1) : loc
+    if (p[0] === 'lots' && typeof p[1] === 'number') continue
+    const msg = it.msg ?? ''
+    const hit = TOP_RULES.find(([re]) => re.test(msg))
+    if (!hit) {
+      out.push(msg)
+      continue
+    }
+    // "bom: P-001 has no active BOM" → 带上产品编码
+    const product = /^bom: (.+) has no active BOM/.exec(msg)?.[1]
+    out.push(t(hit[1], { product: product ?? '' }))
+  }
+  return [...new Set(out.filter(Boolean))]
+}
