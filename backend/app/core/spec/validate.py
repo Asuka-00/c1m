@@ -69,7 +69,7 @@ def validate(
     # 原始载荷校验器（在类型 / 枚举转换前，可直接抛 HTTPException 给出结构化错误）
     for fn in VALIDATORS.get(f"{e.code}:payload", []):
         fn(session, tenant_id, e, data, existing)
-    errors: list[tuple[str, str]] = []
+    errors: list[tuple[str, ...]] = []
     values: Row = {}
     for f in e.all_fields:
         key = f.column if f.column in data else f.name if f.name in data else None
@@ -78,7 +78,12 @@ def validate(
         try:
             values[f.column] = coerce(f, data[key])
         except (ValueError, TypeError) as ex:
-            errors.append((f.name, f"{f.name}: {ex}"))
+            code = getattr(ex, "code", None)
+            errors.append(
+                (f.name, f"{f.name}: {ex}", code)
+                if code
+                else (f.name, f"{f.name}: {ex}")
+            )
     if "attrs" in data:
         values["attrs"] = data["attrs"]
     merged = {**(existing or {}), **values}
@@ -100,8 +105,9 @@ def validate(
             if src not in (None, ""):
                 merged[f.column] = values[f.column] = src
     by_name = {f.name: f for f in e.all_fields}
+    bad_type = {x[0] for x in errors}
     for f in e.all_fields:
-        if merged.get(f.column) not in (None, ""):
+        if merged.get(f.column) not in (None, "") or f.name in bad_type:
             continue
         if f.required:
             errors.append((f.name, f"{f.name}: required"))

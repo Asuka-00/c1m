@@ -40,7 +40,7 @@ def test_uom_precision_and_count_units(client: TestClient, db: Session) -> None:
     m.post("uom_conversion", {"from_uom_id": box, "to_uom_id": ea, "factor": 3})
     m.post("uom_conversion", {"from_uom_id": kg, "to_uom_id": g, "factor": 1000})
     conv = f"{API}/_convert"
-    # 6 位小数四舍五入
+    # _convert 结果按 6 位小数四舍五入（换算结果，非录入值）
     assert _get(f, conv, from_uom=g, to_uom=kg, value=1.2345678)["value"] == "0.001235"
     assert _get(f, conv, from_uom=box, to_uom=ea, value=2)["value"] == "6"
     # D50：value 按十进制解析（字符串 / 数字 / 科学计数），结果为定点字符串、精确换算
@@ -60,11 +60,18 @@ def test_uom_precision_and_count_units(client: TestClient, db: Session) -> None:
         "material_lot", {**base, "code": "X1", "qty_remaining": 1.5, "uom_id": ea}, 422
     )
     assert "qty_remaining" in str(r)
-    ok = m.post(
+    # D60: more than 6 decimals -> 422 too_many_decimals (no rounding)
+    r = m.post(
         "material_lot",
         {**base, "code": "X2", "qty_remaining": 1.23456789, "uom_id": g},
+        422,
     )
-    assert ok["qty_remaining"] == 1.234568 and ok["initial_qty"] == 1.234568
+    assert [x["code"] for x in r["detail"]] == ["too_many_decimals"], r
+    ok = m.post(
+        "material_lot",
+        {**base, "code": "X2", "qty_remaining": 1.234567, "uom_id": g},
+    )
+    assert ok["qty_remaining"] == 1.234567 and ok["initial_qty"] == 1.234567
     m.post("material_lot", {**base, "code": "X3", "qty_remaining": 2, "uom_id": ea})
 
 

@@ -47,6 +47,12 @@ def dec_str(v: Any) -> str | None:
     return "0" if out in ("-0", "0") else out
 
 
+class TooManyDecimals(ValueError):
+    """定点字段小数位超过 scale（D60，错误码 ``too_many_decimals``）。"""
+
+    code = "too_many_decimals"
+
+
 def coerce(f: F, v: Any) -> Any:
     """把原始 JSON / xlsx 值转换为字段对应的 Python 值。
 
@@ -76,6 +82,10 @@ def coerce(f: F, v: Any) -> Any:
                 raise ValueError("must be a number") from ex
             if not d.is_finite():
                 raise ValueError("must be a number")
+            # D60：超出小数位一律 422 too_many_decimals，不静默舍入
+            exp = d.normalize().as_tuple().exponent
+            if isinstance(exp, int) and exp < -f.scale:
+                raise TooManyDecimals(f"too_many_decimals (max {f.scale})")
             q = d.quantize(Decimal(1).scaleb(-f.scale), rounding=ROUND_HALF_UP)
             if abs(q) >= Decimal(10) ** (18 - f.scale):
                 raise ValueError("out of range")
