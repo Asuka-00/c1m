@@ -514,6 +514,7 @@ def _register() -> None:
         after_404=check_holder_approval,
         before_delete=check_referenced,
         extra_var=EXTRA,
+        extra_fields=EXTRA_FIELDS,
     )
 
 

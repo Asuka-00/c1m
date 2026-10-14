@@ -33,7 +33,7 @@ from app.core.spec.write import (
 from app.mes.common import coderule
 from app.mes.common import idempotency as idem
 from app.mes.common.guard import need_key, raw_json
-from app.mes.common.keyed_write import KEYED, META_HOOKS
+from app.mes.common.keyed_write import KEYED, META_HOOKS, ROW_EXTRAS
 from app.mes.common.meta import all_meta
 from app.mes.common.uom import convert, count_errors
 from app.mes.common.validators import reject_unwritable
@@ -98,9 +98,7 @@ async def write_body(
         )
     # D65 补充 4 / D38：通用增删改查对所有实体（含旧实体）严格载荷，未知 / 系统字段 422。
     if kw:
-        extra = {
-            k: data.pop(k) for k in ("reason_id", "comment", "approved_by") if k in data
-        }
+        extra = {k: data.pop(k) for k in kw.extra_fields if k in data}
         reject_unwritable(e, data)
         request.state.keyed_extra = kw.extras(
             session, ctx.id, request.method, {**data, **extra}, ctx.user
@@ -147,7 +145,18 @@ def _keyed(
 def _one(
     session: SessionDep, ctx: TenantContext, e: Entity, row: dict[str, Any]
 ) -> dict[str, Any]:
-    return serialize(session, ctx.id, e, [row])[0]
+    out: dict[str, Any] = _with_extras(
+        e.code, serialize(session, ctx.id, e, [row]), [row]
+    )[0]
+    return out
+
+
+def _with_extras(code: str, out: list[Any], rows: list[Any]) -> list[Any]:
+    fn = ROW_EXTRAS.get(code)
+    if fn:
+        for o, r in zip(out, rows, strict=True):
+            o.update(fn(r))
+    return out
 
 
 @router.get("/_meta")
@@ -256,7 +265,8 @@ def mes_list(
         offset=params.offset,
         limit=params.limit,
     )
-    return {"data": serialize(session, ctx.id, e, rows), "count": count}
+    data = _with_extras(e.code, serialize(session, ctx.id, e, rows), rows)
+    return {"data": data, "count": count}
 
 
 @router.get("/{entity}/distinct/{field}")

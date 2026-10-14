@@ -94,7 +94,7 @@ def test_fourteen_paths_listed() -> None:
     routes = {
         p.path
         for p in rt_router.router.routes
-        if "POST" in getattr(p, "methods", set())
+        if "POST" in getattr(p, "methods", set()) and "{rid}/" in getattr(p, "path", "")
     }
     assert routes == {f"/mes/reticle/{{rid}}/{p}" for p in PATHS}
     assert len(PATHS) == 14

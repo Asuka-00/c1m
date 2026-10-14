@@ -479,7 +479,9 @@ def test_generic_crud_numeric_strings_and_value_error(
     lst = client.get(f"{API}/reticle", headers=r.m.h).json()["data"]
     assert [x["shot_count"] for x in lst] == ["1.25"]
     resp = client.patch(
-        f"{API}/reticle/{r.id}", headers=r.m.h, json={"max_shots": "1.1234567"}
+        f"{API}/reticle/{r.id}",
+        headers=r.m.hk("reticle"),
+        json={"max_shots": "1.1234567"},
     )
     assert resp.status_code == 422, resp.text
     d = resp.json()["detail"][0]
@@ -494,7 +496,7 @@ def test_delete_reticle_with_history_409_referenced(
     r = R(client, db)
     r.act("usage", {"delta": "5"})
     r.act("hold", {"reason": "x"})
-    resp = client.delete(f"{API}/reticle/{r.id}", headers=r.m.h)
+    resp = client.delete(f"{API}/reticle/{r.id}", headers=r.m.hk("reticle"))
     assert resp.status_code == 409, resp.text
     d = resp.json()["detail"]
     assert d["code"] == "referenced"
@@ -517,7 +519,9 @@ def test_delete_reticle_with_history_409_referenced(
         r.sql("DELETE FROM mes_reticle WHERE id = :r")
     # 没有履历的光罩可以删
     fresh = r.m.post("reticle", {"code": "RT2", "name": "rt2"})
-    assert client.delete(f"{API}/reticle/{fresh['id']}", headers=r.m.h).status_code in (
+    assert client.delete(
+        f"{API}/reticle/{fresh['id']}", headers=r.m.hk("reticle")
+    ).status_code in (
         200,
         204,
     )

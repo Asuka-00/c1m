@@ -28,9 +28,36 @@ class KeyedWrite:
     before_delete: Callable[[Session, uuid.UUID, uuid.UUID], None]
     #: 附加字段的上下文变量（写入钩子读取）
     extra_var: ContextVar[Row | None]
+    #: 从请求体取出、不写入实体本身的附加字段名
+    extra_fields: tuple[str, ...] = ()
+
+
+def _no_extras(_s: Session, _t: uuid.UUID, _m: str, _b: Row, _u: Any) -> Row:
+    return {}
+
+
+def _noop2(_a: Any, _b: Any) -> None:
+    return None
+
+
+def _noop3(_a: Any, _b: Any, _c: Any) -> None:
+    return None
+
+
+def keyed_only(name: str) -> KeyedWrite:
+    """只要求 Idempotency-Key、无附加字段与额外校验的受控写（如光罩主数据，D87）。"""
+    return KeyedWrite(
+        extras=_no_extras,
+        after_404=_noop2,
+        before_delete=_noop3,
+        extra_var=ContextVar(f"{name}_keyed_extra", default=None),
+    )
 
 
 KEYED: dict[str, KeyedWrite] = {}
 
 #: 实体元数据的租户级附加项（``GET /mes/_meta``）：fn(s, tid) -> dict（如 D64 warn_days）
 META_HOOKS: dict[str, Callable[[Session, uuid.UUID], Row]] = {}
+
+#: 通用 GET 列表 / 详情每行追加的计算字段：fn(原始行) -> dict（如光罩 life_state，D87）
+ROW_EXTRAS: dict[str, Callable[[Row], Row]] = {}

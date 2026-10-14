@@ -444,3 +444,96 @@ def history(
 
 
 _require_key_in_openapi()
+
+
+# ---------------- D87：主数据通用 CRUD（life_state + 受控写） ----------------
+# 实现仍是通用 /mes/{entity}；这里显式声明 /mes/reticle 的五个路由，只为 openapi 写明
+# life_state 与必填 Idempotency-Key（路径参数用 uuid 转换器，不挡 /export 等通用子路径）。
+from fastapi import Request  # noqa: E402
+
+from app.core.pagination import ListParamsDep  # noqa: E402
+from app.mes.common import router as crud  # noqa: E402
+from app.mes.common.keyed_write import KEYED, ROW_EXTRAS, keyed_only  # noqa: E402
+
+KEYED["reticle"] = keyed_only("reticle")
+ROW_EXTRAS["reticle"] = lambda r: {"life_state": svc.life_state(r)}
+
+_LIFE = {
+    "life_state": {
+        "type": "string",
+        "enum": ["ok", "warning", "reached"],
+        "description": "D54-5 / D87: shot life vs max_shots × warn_ratio",
+    }
+}
+_ROW = {"type": "object", "properties": _LIFE, "additionalProperties": True}
+_ONE: dict[int | str, dict[str, Any]] = {
+    "200": {"content": {"application/json": {"schema": _ROW}}}
+}
+_LIST: dict[int | str, dict[str, Any]] = {
+    "200": {
+        "content": {
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "data": {"type": "array", "items": _ROW},
+                        "count": {"type": "integer"},
+                    },
+                }
+            }
+        }
+    }
+}
+
+
+async def _body(session: SessionDep, ctx: CurrentTenant, request: Request) -> Any:
+    return await crud.write_body(session, ctx, "reticle", request)
+
+
+Body = Annotated[dict[str, Any], Depends(_body)]
+
+
+@router.get("", responses=_LIST)
+def reticle_list(
+    session: SessionDep, ctx: CurrentTenant, params: ListParamsDep, request: Request
+) -> Any:
+    """Reticle list (generic CRUD) with computed ``life_state``."""
+    return crud.mes_list(session, ctx, "reticle", params, request)
+
+
+@router.get("/{rid:uuid}", responses=_ONE)
+def reticle_get(session: SessionDep, ctx: CurrentTenant, rid: uuid.UUID) -> Any:
+    """Reticle detail (generic CRUD) with computed ``life_state``."""
+    return crud.mes_get(session, ctx, "reticle", rid)
+
+
+@router.post("", responses=_ONE, openapi_extra={"parameters": [KEY_PARAM]})
+def reticle_create(
+    session: SessionDep, ctx: CurrentTenant, body: Body, request: Request
+) -> Any:
+    """Create reticle master data; Idempotency-Key required (D87, D81 order)."""
+    return crud.mes_create(session, ctx, "reticle", body, request)
+
+
+@router.patch(
+    "/{rid:uuid}",
+    responses=_ONE,
+    openapi_extra={"parameters": [KEY_PARAM]},
+)
+def reticle_update(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    rid: uuid.UUID,
+    body: Body,
+    request: Request,
+) -> Any:
+    """Edit reticle master data; Idempotency-Key required (D87, D81 order)."""
+    return crud.mes_update(session, ctx, "reticle", rid, body, request)
+
+
+@router.delete("/{rid:uuid}", openapi_extra={"parameters": [KEY_PARAM]})
+def reticle_delete(
+    session: SessionDep, ctx: CurrentTenant, rid: uuid.UUID, request: Request
+) -> Any:
+    """Delete reticle master data; Idempotency-Key required (D87, D81 order)."""
+    return crud.mes_delete(session, ctx, "reticle", rid, request)
