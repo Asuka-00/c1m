@@ -111,3 +111,33 @@ def perm_only(p: str) -> Callable[..., None]:
         need(ctx, p)
 
     return dep
+
+
+def need_key(request: Request) -> str:
+    """D80 / D81：写接口必填 ``Idempotency-Key``；缺失或空白 → 422 ``missing``。"""
+    from app.core.spec.errors import err_422
+    from app.mes.common.idempotency import HEADER
+
+    key = (request.headers.get(HEADER) or "").strip()
+    if not key:
+        raise err_422(["header", HEADER], "Field required", "missing")
+    return key
+
+
+def perm_key_body[M: BaseModel](
+    p: str, model: type[M], *, optional: bool = False
+) -> Callable[..., Awaitable[M | None]]:
+    """依赖工厂（D81 顺序）：权限 403 → 缺 Idempotency-Key 422 → 请求体 422。
+
+    之后由路由做幂等重放 / 换体判断（422 ``idempotency_key_reused``），再进业务（404 → 409）。
+    """
+
+    async def dep(ctx: CurrentTenant, request: Request) -> M | None:
+        need(ctx, p)
+        need_key(request)
+        data = await raw_json(request)
+        if data is None and optional:
+            return None
+        return validate(model, data)
+
+    return dep

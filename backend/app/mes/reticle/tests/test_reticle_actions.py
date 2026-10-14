@@ -1,5 +1,6 @@
 """P3-B4 光罩状态机与动作接口（v0.8.2 §3 / §3.1 / §3.2 / §4 / §5 / §6，D66–D69）。"""
 
+import uuid
 from typing import Any
 
 import pytest
@@ -14,6 +15,10 @@ from app.testing.mes import API, Mes
 ROOT = API[:-4]
 
 
+def _k() -> dict[str, str]:
+    return {"Idempotency-Key": uuid.uuid4().hex}
+
+
 class R:
     def __init__(self, client: TestClient, db: Session, **rt: Any) -> None:
         self.m = Mes(client, db)
@@ -26,6 +31,8 @@ class R:
     def act(
         self, a: str, body: Any = None, status: int = 200, h: Any = None, **hdr: str
     ) -> Any:
+        # D80：写接口必填 Idempotency-Key；未显式给出时每次用新 key
+        hdr = {"Idempotency-Key": uuid.uuid4().hex, **hdr}
         r = self.c.post(
             f"{API}/reticle/{self.id}/{a}",
             headers={**(h or self.m.h), **hdr},
@@ -373,7 +380,7 @@ def test_history_merged_newest_first_and_cross_tenant(
         client.get(f"{API}/reticle/{r.id}/history", headers=other.h).status_code == 404
     )
     res = client.post(
-        f"{API}/reticle/{r.id}/hold", headers=other.h, json={"reason": "x"}
+        f"{API}/reticle/{r.id}/hold", headers={**other.h, **_k()}, json={"reason": "x"}
     )
     assert res.status_code == 404
 
@@ -387,9 +394,11 @@ def test_track_in_mounted_at_life_limit_blocked(
     f = Line(client, db)
     rt = f.m.post("reticle", {"code": "RTL", "name": "r", "max_shots": "10"})
     url = f"{API}/reticle/{rt['id']}"
-    res = client.post(f"{url}/mount", headers=f.m.h, json={"equipment_id": f.eq["id"]})
+    res = client.post(
+        f"{url}/mount", headers={**f.m.h, **_k()}, json={"equipment_id": f.eq["id"]}
+    )
     assert res.status_code == 200, res.text
-    res = client.post(f"{url}/usage", headers=f.m.h, json={"delta": "10"})
+    res = client.post(f"{url}/usage", headers={**f.m.h, **_k()}, json={"delta": "10"})
     assert res.json()["reticle"]["status_code"] == "pending_maintenance"
     f.sql(
         "INSERT INTO mes_step_resource (id, tenant_id, route_step_id, resource_kind, reticle_id) VALUES (gen_random_uuid(), :t, :s, 'reticle', :r)",

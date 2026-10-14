@@ -1188,6 +1188,8 @@
         "unmount_reason": "Unmount reason",
         "shots_at_mount": "Shots at mount",
         "shots_at_unmount": "Shots at unmount",
+        "event_type": "Event",
+        "mount_log": "Mount record",
         "comment": "Comment",
         "source": "Source",
         "external_event_id": "External event ID",
@@ -2028,6 +2030,16 @@
         "hold": "Hold",
         "repair": "Repair",
         "scrap": "Scrap"
+      },
+      "reticle_source": {
+        "manual": "Manual",
+        "eap": "EAP",
+        "simulator": "Simulator",
+        "system": "System"
+      },
+      "reticle_mount_event": {
+        "mount": "Mount",
+        "unmount": "Unmount"
       },
       "reticle_unmount_reason": {
         "manual": "Manual",

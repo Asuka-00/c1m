@@ -13,7 +13,7 @@ SRC = F(
     "source",
     "enum",
     "Source|来源|ソース",
-    enum="alarm_source",
+    enum="reticle_source",
     required=True,
     default="manual",
 )
@@ -83,6 +83,17 @@ ENUMS.update(
             ("hold", "Hold|Hold|ホールド"),
             ("repair", "Repair|维修|修理"),
             ("scrap", "Scrap|报废|廃棄"),
+        ],
+        # D80 G6：库里 CHECK (manual, eap, simulator, system)（迁移 0035）
+        "reticle_source": [
+            ("manual", "Manual|人工|手動"),
+            ("eap", "EAP|EAP|EAP"),
+            ("simulator", "Simulator|模拟器|シミュレータ"),
+            ("system", "System|系统|システム"),
+        ],
+        "reticle_mount_event": [
+            ("mount", "Mount|上机|装着"),
+            ("unmount", "Unmount|下机|取外し"),
         ],
         "reticle_unmount_reason": [
             ("manual", "Manual|人工|手動"),
@@ -221,6 +232,23 @@ register(
                 "float",
                 "Shots at unmount|卸载时 shot|取外し時ショット",
                 scale=6,
+            ),
+            # D80 G1：上机行 mount；下机单独一行 unmount（mount_log 指向上机行）
+            F(
+                "event_type",
+                "enum",
+                "Event|事件|イベント",
+                enum="reticle_mount_event",
+                required=True,
+                default="mount",
+            ),
+            F(
+                "mount_log",
+                "ref",
+                "Mount record|上机记录|装着記録",
+                ref="reticle_mount_log",
+                list=False,
+                filter=False,
             ),
             CMT,
             SRC,

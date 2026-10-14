@@ -130,7 +130,7 @@ def brief(s: Session, tid: uuid.UUID, rid: Any) -> Row:
 
 
 def event_time(v: datetime | None, field: str) -> datetime:
-    """事件时间：缺省服务器时间；超前 5 分钟以上 422 ``time_in_future``（D55）。"""
+    """事件时间：缺省服务器时间；严格超前 5 分钟以上 422 value_error ctx.reason=future_time（D82-4；接口层请求体校验已先拦）。"""
     cur = now()
     if v is None:
         return cur
@@ -139,9 +139,64 @@ def event_time(v: datetime | None, field: str) -> datetime:
     v = v.astimezone(UTC)
     if v > cur + CLOCK_SKEW:
         raise http_422(
-            [(field, f"{field}: more than 5 minutes in the future", "time_in_future")]
+            [
+                (
+                    field,
+                    f"{field}: more than 5 minutes in the future",
+                    "value_error",
+                    {"reason": "future_time"},
+                )
+            ]
         )
     return v
+
+
+def latest_event_at(
+    s: Session, tid: uuid.UUID, rid: Any, *, usage: bool = False
+) -> datetime | None:
+    """光罩最近一次事件时间：状态履历时间与历次下机时间中最晚者（检查记录不算，D82-4）。
+
+    ``usage``：事故补录另算最近一次计数时间（D82 补充）；上机 / 下机不算 usage。
+    """
+    log, mnt = TABLES["reticle_status_log"], TABLES["reticle_mount_log"]
+    srcs = [(log, "at"), (mnt, "unmounted_at")]
+    if usage:
+        srcs.append((TABLES["reticle_usage"], "occurred_at"))
+    vals = [
+        conn(s)
+        .execute(
+            sa.select(sa.func.max(t.c[c])).where(
+                t.c.tenant_id == tid, t.c.reticle_id == rid
+            )
+        )
+        .scalar()
+        for t, c in srcs
+    ]
+    got = [v for v in vals if v is not None]
+    return max(got) if got else None
+
+
+def check_order(
+    s: Session,
+    tid: uuid.UUID,
+    rt: Row,
+    given: datetime | None,
+    field: str,
+    *,
+    usage: bool = False,
+) -> None:
+    """补录时间早于该光罩最近一次事件时间 → 409 ``time_out_of_order``（相等合法，D82-4）。"""
+    if given is None:
+        return
+    last = latest_event_at(s, tid, rt["id"], usage=usage)
+    if last is not None and given < last:
+        raise conflict(
+            "time_out_of_order",
+            f"{field} is earlier than the latest event of reticle {rt['code']}",
+            rt,
+            field=field,
+            latest_event_at=last.astimezone(UTC).isoformat().replace("+00:00", "Z"),
+        )
 
 
 def _set(s: Session, tid: uuid.UUID, rt: Row, user: Any, **vals: Any) -> None:
@@ -161,12 +216,16 @@ def transition(
     reason: str | None = None,
     comment: str | None = None,
     trigger: str = "manual",
+    at: datetime | None = None,
     **vals: Any,
 ) -> Row:
-    """改状态 / hold_reason 并写状态履历 + 审计；返回 ``{from, to}``。"""
+    """改状态 / hold_reason 并写状态履历 + 审计；返回 ``{from, to}``。
+
+    ``at``：状态履历时间，补录事件（上机 / 下机 / 事故）传事件时间，缺省服务器时间。
+    """
     frm, hr0 = rt["status_code"], rt.get("hold_reason")
     _set(s, tid, rt, user, status_code=to, hold_reason=hold_reason, **vals)
-    at = now()
+    at = at or now()
     _ins(
         s,
         tid,
@@ -217,17 +276,51 @@ def _close_mount(
     user: Any,
     reason: str,
     at: datetime | None = None,
+    source: str = "manual",
+    external_event_id: str | None = None,
 ) -> Row | None:
-    """关闭挂载记录、清 equipment_id / mounted_at（不改状态、不发事件）。"""
+    """关闭挂载记录、清 equipment_id / mounted_at（不改状态、不发事件）。
+
+    D80 G1：下机单独记一行（``event_type=unmount``，带 source / external_event_id，
+    ``mount_log_id`` 指向上机行）；上机行只回填 unmounted_at / 原因 / 下机计数，不写事件号。
+    """
     cur = open_mount(s, tid, rt["id"])
     if not cur:
         return None
-    at = at or now()
-    if at < cur["mounted_at"]:
-        raise http_422(
-            [("unmounted_at", "unmounted_at: earlier than mounted_at", "value_error")]
+    # 未传时间（hold / scrap 顺带卸载等）取服务器时间，但不早于上机时间
+    at = at or max(now(), cur["mounted_at"])
+    if at < cur["mounted_at"]:  # D82 补充：早于对应上机时间（相等合法）
+        raise conflict(
+            "time_out_of_order",
+            f"unmounted_at is earlier than mounted_at of reticle {rt['code']}",
+            rt,
+            field="unmounted_at",
+            latest_event_at=cur["mounted_at"]
+            .astimezone(UTC)
+            .isoformat()
+            .replace("+00:00", "Z"),
         )
     shots = _dec(rt.get("shot_count"))
+    ev = _ins(
+        s,
+        tid,
+        "reticle_mount_log",
+        user,
+        reticle_id=rt["id"],
+        event_type="unmount",
+        mount_log_id=cur["id"],
+        equipment_id=cur["equipment_id"],
+        sub_unit_id=cur.get("sub_unit_id"),
+        slot_code=cur.get("slot_code"),
+        mounted_at=cur["mounted_at"],
+        unmounted_at=at,
+        unmount_reason=reason,
+        shots_at_mount=cur.get("shots_at_mount"),
+        shots_at_unmount=shots,
+        source=source,
+        external_event_id=external_event_id,
+        username=actor_name(user),
+    )
     _upd(
         s,
         tid,
@@ -239,7 +332,14 @@ def _close_mount(
         shots_at_unmount=shots,
     )
     _set(s, tid, rt, user, equipment_id=None, mounted_at=None)
-    cur.update(unmounted_at=at, unmount_reason=reason, shots_at_unmount=shots)
+    cur.update(
+        unmounted_at=at,
+        unmount_reason=reason,
+        shots_at_unmount=shots,
+        unmount_event_id=ev,
+        unmount_source=source,
+        unmount_external_event_id=external_event_id,
+    )
     return cur
 
 
@@ -252,9 +352,12 @@ def _unmount_event(s: Session, tid: uuid.UUID, rt: Row, user: Any, m: Row) -> No
         user,
         {
             "mount_id": str(m["id"]),
+            "unmount_event_id": str(m["unmount_event_id"]),
             "equipment_id": str(m["equipment_id"]),
             "unmount_reason": m["unmount_reason"],
             "shots_at_unmount": dec_str(m["shots_at_unmount"]),
+            "source": m["unmount_source"],
+            "external_event_id": m["unmount_external_event_id"],
         },
     )
 
@@ -303,6 +406,7 @@ def mount(s: Session, tid: uuid.UUID, rid: Any, body: Row, user: Any) -> Row:
                 mount_id=str(busy.id),
                 reticle_id=str(busy.reticle_id),
             )
+    check_order(s, tid, rt, body.get("mounted_at"), "mounted_at")
     at = event_time(body.get("mounted_at"), "mounted_at")
     mid = _ins(
         s,
@@ -316,6 +420,7 @@ def mount(s: Session, tid: uuid.UUID, rid: Any, body: Row, user: Any) -> Row:
         mounted_at=at,
         shots_at_mount=_dec(rt.get("shot_count")),
         comment=body.get("comment"),
+        event_type="mount",
         source="manual",
         username=actor_name(user),
     )
@@ -334,6 +439,7 @@ def mount(s: Session, tid: uuid.UUID, rid: Any, body: Row, user: Any) -> Row:
         user,
         "in_use",
         "mount",
+        at=at,
         comment=body.get("comment"),
         equipment_id=eq["id"],
         mounted_at=at,
@@ -344,26 +450,85 @@ def mount(s: Session, tid: uuid.UUID, rid: Any, body: Row, user: Any) -> Row:
         "reticle.mounted",
         rt,
         user,
-        {"mount_id": str(mid), "equipment_id": str(eq["id"]), "slot_code": slot},
+        {
+            "mount_id": str(mid),
+            "equipment_id": str(eq["id"]),
+            "slot_code": slot,
+            "source": "manual",
+            "external_event_id": None,
+        },
     )
     row = one(s, tid, "reticle_mount_log", mid)
     assert row
     return {"data": ser(s, tid, "reticle_mount_log", [row])[0]}
 
 
-def unmount(s: Session, tid: uuid.UUID, rid: Any, body: Row, user: Any) -> Row:
-    """卸载：in_use → available；非 in_use 仍挂着只关挂载记录、不改状态；都发 unmounted（D69 补充）。"""
+def unmount(
+    s: Session,
+    tid: uuid.UUID,
+    rid: Any,
+    body: Row,
+    user: Any,
+    *,
+    source: str = "manual",
+    external_event_id: str | None = None,
+) -> Row:
+    """卸载：in_use → available；非 in_use 仍挂着只关挂载记录、不改状态；都发 unmounted（D69 补充）。
+
+    D80 G1：下机单独记一行事件；带 ``external_event_id``（EAP / 模拟器）时按
+    (tenant, source, external_event_id) 去重，重复上报返回首次记录且 ``duplicate=true``，
+    不改状态、不发事件。手工接口不带事件号，响应不含 duplicate（幂等由 Idempotency-Key 负责）。
+    """
     rt = lock(s, tid, rid)
+    ext = (external_event_id or "").strip() or None
+    if ext:
+        t = TABLES["reticle_mount_log"]
+        dup = (
+            conn(s)
+            .execute(
+                sa.select(t).where(
+                    t.c.tenant_id == tid,
+                    t.c.source == source,
+                    t.c.external_event_id == ext,
+                )
+            )
+            .mappings()
+            .first()
+        )
+        if dup:
+            row = dict(dup)
+            mount_row = one(s, tid, "reticle_mount_log", row.get("mount_log_id"))
+            return {
+                "data": ser(s, tid, "reticle_mount_log", [mount_row or row])[0],
+                "unmount_event": ser(s, tid, "reticle_mount_log", [row])[0],
+                "duplicate": True,
+            }
+    check_order(s, tid, rt, body.get("unmounted_at"), "unmounted_at")
     at = event_time(body.get("unmounted_at"), "unmounted_at")
-    m = _close_mount(s, tid, rt, user, "manual", at)
+    m = _close_mount(s, tid, rt, user, "manual", at, source, ext)
     if not m:
         raise conflict("invalid_transition", f"reticle {rt['code']} is not mounted", rt)
     if rt["status_code"] == "in_use":
         transition(
-            s, tid, rt, user, "available", "unmount", comment=body.get("comment")
+            s,
+            tid,
+            rt,
+            user,
+            "available",
+            "unmount",
+            comment=body.get("comment"),
+            at=at,
         )
     _unmount_event(s, tid, rt, user, m)
-    return {"data": ser(s, tid, "reticle_mount_log", [m])[0]}
+    ev = one(s, tid, "reticle_mount_log", m["unmount_event_id"])
+    mount_row = one(s, tid, "reticle_mount_log", m["id"])
+    out: Row = {
+        "data": ser(s, tid, "reticle_mount_log", [mount_row or m])[0],
+        "unmount_event": ser(s, tid, "reticle_mount_log", [ev])[0] if ev else None,
+    }
+    if ext:
+        out["duplicate"] = False
+    return out
 
 
 # ---------------- Hold / release ----------------
@@ -377,12 +542,21 @@ def _enter_hold(
     *,
     reason: str | None = None,
     trigger: str = "manual",
+    event_at: datetime | None = None,
     **vals: Any,
 ) -> None:
-    """进入 on_hold：仍挂着的同事务卸载（发 unmounted）；status_before_hold 记当时状态，in_use 记 available。"""
+    """进入 on_hold：仍挂着的同事务卸载（发 unmounted）；status_before_hold 记当时状态，in_use 记 available。
+
+    ``event_at``：事故补录时间；顺带下机的 unmounted_at / 下机事件行与状态履历都记这个时间。
+    """
     before = "available" if rt["status_code"] == "in_use" else rt["status_code"]
     m = _close_mount(
-        s, tid, rt, user, "incident" if hold_reason == "incident" else "hold"
+        s,
+        tid,
+        rt,
+        user,
+        "incident" if hold_reason == "incident" else "hold",
+        event_at,
     )
     if m:
         _unmount_event(s, tid, rt, user, m)
@@ -397,6 +571,7 @@ def _enter_hold(
         reason=reason,
         trigger=trigger,
         status_before_hold=before,
+        at=event_at,
         **vals,
     )
     emit(
@@ -421,11 +596,22 @@ def system_hold(
     user: Any,
     hold_reason: str,
     action: str,
+    event_at: datetime | None = None,
     **vals: Any,
 ) -> None:
     """系统 Hold（事故 / 检查不合格）：非 on_hold 进入；已 on_hold 时更严则升级（状态与 status_before_hold 不变）。"""
     if rt["status_code"] != "on_hold":
-        _enter_hold(s, tid, rt, user, hold_reason, action, trigger="system", **vals)
+        _enter_hold(
+            s,
+            tid,
+            rt,
+            user,
+            hold_reason,
+            action,
+            trigger="system",
+            event_at=event_at,
+            **vals,
+        )
         return
     cur = rt.get("hold_reason") or "manual"
     if SEVERITY[hold_reason] <= SEVERITY[cur]:
@@ -441,6 +627,7 @@ def system_hold(
         action,
         hold_reason=hold_reason,
         trigger="system",
+        at=event_at,
         **vals,
     )
     emit(
@@ -677,6 +864,8 @@ def _count(
                 "shot_count": dec_str(after),
                 "max_shots": dec_str(mx),
                 "usage_id": str(uid),
+                "source": vals.get("source"),
+                "external_event_id": vals.get("external_event_id"),
             },
         )
     return uid
@@ -730,7 +919,21 @@ def incident(s: Session, tid: uuid.UUID, rid: Any, body: Row, user: Any) -> Row:
     ]
     if errs:
         raise http_422(errs)
+    check_order(s, tid, rt, body.get("occurred_at"), "occurred_at", usage=True)
     at = event_time(body.get("occurred_at"), "occurred_at")
+    cur = open_mount(s, tid, rt["id"])
+    if cur and at < cur["mounted_at"]:
+        # D82 补充：顺带下机的时间早于本次上机 → 整体 409，什么都不写（事务不提交）
+        raise conflict(
+            "time_out_of_order",
+            f"occurred_at is earlier than mounted_at of reticle {rt['code']}",
+            rt,
+            field="occurred_at",
+            latest_event_at=cur["mounted_at"]
+            .astimezone(UTC)
+            .isoformat()
+            .replace("+00:00", "Z"),
+        )
     iid = _ins(
         s,
         tid,
@@ -745,7 +948,16 @@ def incident(s: Session, tid: uuid.UUID, rid: Any, body: Row, user: Any) -> Row:
         source="manual",
         username=actor_name(user),
     )
-    system_hold(s, tid, rt, user, "incident", "incident", inspection_required=True)
+    system_hold(
+        s,
+        tid,
+        rt,
+        user,
+        "incident",
+        "incident",
+        event_at=at,
+        inspection_required=True,
+    )
     emit(
         s,
         tid,
@@ -819,6 +1031,7 @@ def inspection(s: Session, tid: uuid.UUID, rid: Any, body: Row, user: Any) -> Ro
         raise _invalid(rt, f"inspection {res}")
     if body.get("equipment_id") and not one(s, tid, "equipment", body["equipment_id"]):
         raise http_422([("equipment_id", "equipment_id: not found", "ref_not_found")])
+    check_order(s, tid, rt, body.get("inspected_at"), "inspected_at")
     at = event_time(body.get("inspected_at"), "inspected_at")
     # 时间窗起点：上次 pass → first_used_at → received_at（D64 C6）
     t = TABLES["reticle_inspection"]
@@ -926,8 +1139,9 @@ def history(s: Session, tid: uuid.UUID, rid: Any, offset: int, limit: int) -> Ro
             .mappings()
         ]
         for r, o in zip(rows, ser(s, tid, ent, rows), strict=True):
-            items.append(
-                (r[key], r["created_at"] or r[key], {"type": typ, "at": o[key], **o})
-            )
+            k, ty = key, typ
+            if ent == "reticle_mount_log" and r.get("event_type") == "unmount":
+                k, ty = "unmounted_at", "unmount"
+            items.append((r[k], r["created_at"] or r[k], {"type": ty, "at": o[k], **o}))
     items.sort(key=lambda x: (x[0], x[1]), reverse=True)
     return {"data": [x[2] for x in items[offset : offset + limit]], "count": len(items)}

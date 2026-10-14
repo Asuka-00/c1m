@@ -1188,6 +1188,8 @@
         "unmount_reason": "卸载原因",
         "shots_at_mount": "挂载时 shot",
         "shots_at_unmount": "卸载时 shot",
+        "event_type": "事件",
+        "mount_log": "上机记录",
         "comment": "备注",
         "source": "来源",
         "external_event_id": "外部事件号",
@@ -2028,6 +2030,16 @@
         "hold": "Hold",
         "repair": "维修",
         "scrap": "报废"
+      },
+      "reticle_source": {
+        "manual": "人工",
+        "eap": "EAP",
+        "simulator": "模拟器",
+        "system": "系统"
+      },
+      "reticle_mount_event": {
+        "mount": "上机",
+        "unmount": "下机"
       },
       "reticle_unmount_reason": {
         "manual": "人工",
