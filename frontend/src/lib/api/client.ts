@@ -73,7 +73,7 @@ export function queryErrorText(msg: string): string | null {
   return null
 }
 
-/** 一条查询参数 422（loc 以 query 开头）的文案：已知消息本地化，否则「参数: 原消息」。 */
+/** 一条查询 / 路径参数 422（loc 以 query 或 path 开头）的文案：已知消息本地化，否则「参数: 原消息」。 */
 export function queryItemText(x: { loc?: unknown[]; msg?: string }): string {
   const msg = String(x.msg ?? '')
   const known = queryErrorText(msg)
@@ -81,6 +81,10 @@ export function queryItemText(x: { loc?: unknown[]; msg?: string }): string {
   const name = String(x.loc?.[1] ?? '')
   return name && !msg.startsWith(name) ? `${name}: ${msg}` : msg
 }
+
+/** loc 第一段为 query / path（D65 补充 2）：参数错误，不映射到表单字段。 */
+export const isParamLoc = (x: { loc?: unknown[] }) =>
+  x?.loc?.[0] === 'query' || x?.loc?.[0] === 'path'
 
 /** 422 列表项带固定码（code / type）且有翻译时返回文案，否则 null。 */
 export function codeItemText(x: {
@@ -117,7 +121,7 @@ export function errorMessage(e: unknown): string {
         const coded = d.map(codeItemText)
         if (d.length && coded.every(Boolean))
           return [...new Set(coded)].join('；')
-        const isQ = (x: { loc?: unknown[] }) => x?.loc?.[0] === 'query'
+        const isQ = isParamLoc
         // 全是查询参数错误：逐条本地化，不加“校验失败”前缀
         if (d.length && d.every(isQ)) return d.map(queryItemText).join('；')
         const msgs = d

@@ -506,7 +506,8 @@
         "too_many_decimals": "At most 6 decimal places",
         "date_range_too_large": "The date range can span at most 92 days; narrow it down.",
         "read_only_field": "This field is read-only",
-        "unknown_field": "Contains an unknown field"
+        "unknown_field": "Contains an unknown field",
+        "timezone_required": "The time must include a time zone (e.g. 2026-10-14T08:00:00+08:00)"
       },
       "tooManyDecimals": "At most {{n}} decimal places",
       "onlyWhen": "Only allowed when {{cond}} is “{{value}}”",

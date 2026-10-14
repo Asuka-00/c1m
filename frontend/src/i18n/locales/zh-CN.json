@@ -506,7 +506,8 @@
         "too_many_decimals": "最多 6 位小数",
         "date_range_too_large": "日期跨度最多 92 天，请缩小范围。",
         "read_only_field": "该字段只读，不能修改",
-        "unknown_field": "包含未知字段"
+        "unknown_field": "包含未知字段",
+        "timezone_required": "时间必须带时区（如 2026-10-14T08:00:00+08:00）"
       },
       "tooManyDecimals": "最多 {{n}} 位小数",
       "onlyWhen": "仅当{{cond}}为「{{value}}」时才能填写",
