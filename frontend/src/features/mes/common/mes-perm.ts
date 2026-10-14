@@ -46,6 +46,12 @@ export const MES_PERM = {
   bomActivate: 'mes.bom:activate',
   /** 设备报警登记 / 清除（P2 / B9） */
   alarmWrite: 'mes.alarm:write',
+  /** 光罩查看（P3 / D69 Q10） */
+  reticleRead: 'mes.reticle:read',
+  /** 光罩动作：计数调整、Hold / Release、清洗、维修、检查（P3） */
+  reticleWrite: 'mes.reticle:write',
+  /** 光罩 restore / scrap / life-reset（P3 / D67、D68） */
+  reticleOverride: 'mes.reticle:override',
 } as const
 
 export type MesPerm = (typeof MES_PERM)[keyof typeof MES_PERM] | (string & {})

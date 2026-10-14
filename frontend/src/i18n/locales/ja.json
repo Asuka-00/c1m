@@ -1726,6 +1726,154 @@
         "all": "すべての移行状態",
         "hint": "移行 0029 で連動がなしに変更されました。「設備状態の切替」を再設定してください"
       }
+    },
+    "reticle": {
+      "title": "レチクル管理",
+      "desc": "レチクルの状態、寿命カウント、装着と検査の記録",
+      "mockHint": "デモデータです。バックエンド準備後に切り替えます",
+      "searchCode": "コードで検索",
+      "allStatus": "すべての状態",
+      "emptyHint": "記録がありません",
+      "inspectionPending": "要検査",
+      "system": "システム",
+      "mounted": "装着中",
+      "notCounted": "未計上",
+      "done": "{{action}}が完了しました",
+      "status": {
+        "available": "使用可能",
+        "in_use": "使用中",
+        "dirty": "要洗浄",
+        "inspecting": "検査中",
+        "on_hold": "保留",
+        "pending_maintenance": "保守待ち",
+        "scrapped": "廃棄済み"
+      },
+      "holdReason": {
+        "incident": "衝突",
+        "inspection_failed": "検査不合格",
+        "manual": "手動保留"
+      },
+      "countBasis": {
+        "track_out": "トラックアウト",
+        "eap": "装置報告"
+      },
+      "usageKind": {
+        "track_out": "トラックアウト",
+        "report": "報告",
+        "adjust": "調整",
+        "reset": "寿命リセット"
+      },
+      "inspKind": {
+        "particle": "パーティクル",
+        "haze": "ヘイズ",
+        "cd": "CD",
+        "other": "その他"
+      },
+      "result": {
+        "pass": "合格",
+        "fail": "不合格"
+      },
+      "disposition": {
+        "none": "なし",
+        "clean": "洗浄",
+        "hold": "保留",
+        "repair": "修理",
+        "scrap": "廃棄"
+      },
+      "action": {
+        "usage": "カウント調整",
+        "hold": "保留",
+        "release": "保留解除",
+        "restore": "手動復帰",
+        "clean-start": "洗浄開始",
+        "clean-complete": "洗浄完了",
+        "repair-complete": "修理完了",
+        "inspect-start": "検査開始",
+        "scrap": "廃棄",
+        "life-reset": "寿命リセット"
+      },
+      "actionDesc": {
+        "usage": "ショット数を増減します。減らす場合は理由コードが必要です",
+        "hold": "保留にします。使用中なら同時に取り外します",
+        "release": "保留理由に応じた状態に戻ります",
+        "restore": "使用可能に戻します。先に取り外しが必要で、復帰後は要検査",
+        "clean-start": "洗浄を開始します。先に取り外しが必要です",
+        "clean-complete": "洗浄完了後に検査へ進みます",
+        "repair-complete": "修理・洗浄完了後に検査へ進みます。先に取り外しが必要です",
+        "inspect-start": "検査を開始します。先に取り外しが必要です",
+        "scrap": "元に戻せません。装着中なら同時に取り外します",
+        "life-reset": "カウントをゼロにして復帰します。先に取り外しが必要です"
+      },
+      "field": {
+        "delta": "増減量",
+        "reason_id": "理由コード",
+        "note": "備考",
+        "reason": "理由",
+        "comment": "コメント",
+        "revision": "リビジョン",
+        "layer": "レイヤー",
+        "hold_reason": "保留理由",
+        "status_before_hold": "保留前の状態",
+        "shots": "ショット数 / 上限",
+        "mount_count": "装着回数",
+        "life_reset_count": "リセット回数",
+        "count_basis": "カウント基準",
+        "equipment": "装着装置",
+        "mounted_at": "装着日時",
+        "storage_location": "保管場所",
+        "next_inspection_due_at": "次回検査",
+        "status": "状態"
+      },
+      "tab": {
+        "status": "状態履歴",
+        "usage": "カウント記録",
+        "mounts": "装着記録",
+        "inspections": "検査記録"
+      },
+      "col": {
+        "code": "コード",
+        "status": "状態",
+        "layer": "レイヤー",
+        "shots": "ショット数",
+        "equipment": "装置",
+        "location": "保管場所",
+        "at": "日時",
+        "from": "変更前",
+        "to": "変更後",
+        "action": "操作",
+        "holdReason": "保留理由",
+        "reason": "理由",
+        "comment": "コメント",
+        "user": "操作者",
+        "kind": "種別",
+        "delta": "増減量",
+        "countAfter": "調整後",
+        "lot": "ロット",
+        "reasonId": "理由コード",
+        "slot": "スロット",
+        "mountedAt": "装着日時",
+        "unmountedAt": "取り外し日時",
+        "unmountReason": "取り外し理由",
+        "shotsAtMount": "装着時ショット",
+        "shotsAtUnmount": "取り外し時ショット",
+        "inspKind": "検査項目",
+        "result": "結果",
+        "defects": "欠陥数",
+        "disposition": "処置案"
+      },
+      "err": {
+        "deltaNonZero": "増減量は 0 以外の数値で入力してください",
+        "reasonIdRequired": "カウントを減らす場合は理由コードが必要です",
+        "tooLong": "{{max}} 文字以内で入力してください"
+      },
+      "code": {
+        "invalid_transition": "現在の状態では「{{action}}」を実行できません。更新して再試行してください",
+        "life_limit_reached": "寿命上限に達しているため復帰できません。寿命リセットを行ってください",
+        "already_mounted": "レチクルは別の装置に装着されています。先に取り外してください",
+        "still_mounted": "レチクルがまだ装着されています。取り外してから「{{action}}」を実行してください",
+        "reticle_unavailable": "現在の状態ではレチクルを装着できません",
+        "life_reached": "寿命上限に達しているためトラックインできません"
+      }
     }
   },
   "notify": {

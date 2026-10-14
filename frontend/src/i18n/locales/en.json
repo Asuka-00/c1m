@@ -1726,6 +1726,154 @@
         "all": "All migration states",
         "hint": "Migration 0029 turned the linkage off; reconfigure \"Set equipment state\""
       }
+    },
+    "reticle": {
+      "title": "Reticles",
+      "desc": "Reticle status, life count, mounts and inspections",
+      "mockHint": "Demo data until the backend is ready",
+      "searchCode": "Search by code",
+      "allStatus": "All statuses",
+      "emptyHint": "No records",
+      "inspectionPending": "Inspection due",
+      "system": "System",
+      "mounted": "Mounted",
+      "notCounted": "not counted",
+      "done": "{{action}} completed",
+      "status": {
+        "available": "Available",
+        "in_use": "In use",
+        "dirty": "Dirty",
+        "inspecting": "Inspecting",
+        "on_hold": "On hold",
+        "pending_maintenance": "Pending maintenance",
+        "scrapped": "Scrapped"
+      },
+      "holdReason": {
+        "incident": "Incident",
+        "inspection_failed": "Inspection failed",
+        "manual": "Manual hold"
+      },
+      "countBasis": {
+        "track_out": "Track out",
+        "eap": "Equipment report"
+      },
+      "usageKind": {
+        "track_out": "Track out",
+        "report": "Reported",
+        "adjust": "Adjust",
+        "reset": "Life reset"
+      },
+      "inspKind": {
+        "particle": "Particle",
+        "haze": "Haze",
+        "cd": "CD",
+        "other": "Other"
+      },
+      "result": {
+        "pass": "Pass",
+        "fail": "Fail"
+      },
+      "disposition": {
+        "none": "None",
+        "clean": "Clean",
+        "hold": "Hold",
+        "repair": "Repair",
+        "scrap": "Scrap"
+      },
+      "action": {
+        "usage": "Adjust count",
+        "hold": "Hold",
+        "release": "Release",
+        "restore": "Restore",
+        "clean-start": "Start cleaning",
+        "clean-complete": "Cleaning complete",
+        "repair-complete": "Repair complete",
+        "inspect-start": "Start inspection",
+        "scrap": "Scrap",
+        "life-reset": "Life reset"
+      },
+      "actionDesc": {
+        "usage": "Add or subtract shots; a reason code is required to subtract",
+        "hold": "Put on hold; unmounts if in use",
+        "release": "Returns to the state given by the hold reason",
+        "restore": "Restore to available; unmount first; inspection required after",
+        "clean-start": "Start cleaning; unmount first",
+        "clean-complete": "Moves to inspection after cleaning",
+        "repair-complete": "Moves to inspection after repair or cleaning; unmount first",
+        "inspect-start": "Start inspection; unmount first",
+        "scrap": "Cannot be undone; unmounts if mounted",
+        "life-reset": "Reset the count to zero and restore; unmount first"
+      },
+      "field": {
+        "delta": "Delta",
+        "reason_id": "Reason code",
+        "note": "Note",
+        "reason": "Reason",
+        "comment": "Comment",
+        "revision": "Revision",
+        "layer": "Layer",
+        "hold_reason": "Hold reason",
+        "status_before_hold": "Status before hold",
+        "shots": "Shots / limit",
+        "mount_count": "Mount count",
+        "life_reset_count": "Reset count",
+        "count_basis": "Count basis",
+        "equipment": "Mounted on",
+        "mounted_at": "Mounted at",
+        "storage_location": "Storage location",
+        "next_inspection_due_at": "Next inspection",
+        "status": "Status"
+      },
+      "tab": {
+        "status": "Status history",
+        "usage": "Usage",
+        "mounts": "Mounts",
+        "inspections": "Inspections"
+      },
+      "col": {
+        "code": "Code",
+        "status": "Status",
+        "layer": "Layer",
+        "shots": "Shots",
+        "equipment": "Equipment",
+        "location": "Location",
+        "at": "Time",
+        "from": "From",
+        "to": "To",
+        "action": "Action",
+        "holdReason": "Hold reason",
+        "reason": "Reason",
+        "comment": "Comment",
+        "user": "User",
+        "kind": "Kind",
+        "delta": "Delta",
+        "countAfter": "Count after",
+        "lot": "Lot",
+        "reasonId": "Reason code",
+        "slot": "Slot",
+        "mountedAt": "Mounted at",
+        "unmountedAt": "Unmounted at",
+        "unmountReason": "Unmount reason",
+        "shotsAtMount": "Shots at mount",
+        "shotsAtUnmount": "Shots at unmount",
+        "inspKind": "Inspection",
+        "result": "Result",
+        "defects": "Defects",
+        "disposition": "Disposition"
+      },
+      "err": {
+        "deltaNonZero": "Delta must be a non-zero number",
+        "reasonIdRequired": "A reason code is required to subtract shots",
+        "tooLong": "Must be at most {{max}} characters"
+      },
+      "code": {
+        "invalid_transition": "\"{{action}}\" is not allowed in the current status. Refresh and try again.",
+        "life_limit_reached": "The reticle has reached its life limit and cannot be restored. Use life reset.",
+        "already_mounted": "The reticle is mounted on another tool. Unmount it first.",
+        "still_mounted": "The reticle is still mounted. Unmount it before \"{{action}}\".",
+        "reticle_unavailable": "The reticle cannot be mounted in its current status",
+        "life_reached": "The reticle has reached its life limit and cannot be tracked in"
+      }
     }
   },
   "notify": {

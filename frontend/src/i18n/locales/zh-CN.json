@@ -1726,6 +1726,154 @@
         "all": "全部迁移状态",
         "hint": "0029 迁移时联动被改为不联动，请补配“切换设备状态”"
       }
+    },
+    "reticle": {
+      "title": "光罩管理",
+      "desc": "光罩状态、寿命计数、挂载与检查记录",
+      "mockHint": "演示数据，后端接口就绪后切换",
+      "searchCode": "按编码搜索",
+      "allStatus": "全部状态",
+      "emptyHint": "暂无记录",
+      "inspectionPending": "待检",
+      "system": "系统",
+      "mounted": "挂载中",
+      "notCounted": "未计入",
+      "done": "{{action}}已完成",
+      "status": {
+        "available": "可用",
+        "in_use": "使用中",
+        "dirty": "待清洗",
+        "inspecting": "检查中",
+        "on_hold": "Hold",
+        "pending_maintenance": "待维护",
+        "scrapped": "已报废"
+      },
+      "holdReason": {
+        "incident": "碰撞",
+        "inspection_failed": "检查不合格",
+        "manual": "人工 Hold"
+      },
+      "countBasis": {
+        "track_out": "按出站",
+        "eap": "按设备上报"
+      },
+      "usageKind": {
+        "track_out": "出站",
+        "report": "上报",
+        "adjust": "调整",
+        "reset": "寿命复位"
+      },
+      "inspKind": {
+        "particle": "颗粒",
+        "haze": "雾化",
+        "cd": "CD",
+        "other": "其他"
+      },
+      "result": {
+        "pass": "合格",
+        "fail": "不合格"
+      },
+      "disposition": {
+        "none": "无",
+        "clean": "清洗",
+        "hold": "Hold",
+        "repair": "维修",
+        "scrap": "报废"
+      },
+      "action": {
+        "usage": "计数调整",
+        "hold": "Hold",
+        "release": "Release",
+        "restore": "人工恢复",
+        "clean-start": "开始清洗",
+        "clean-complete": "清洗完成",
+        "repair-complete": "维修完成",
+        "inspect-start": "开始检查",
+        "scrap": "报废",
+        "life-reset": "寿命复位"
+      },
+      "actionDesc": {
+        "usage": "人工增减 shot 数；减少时必须选原因",
+        "hold": "转为 Hold，使用中会同时卸载",
+        "release": "按 Hold 原因回到对应状态",
+        "restore": "待维护恢复为可用，需先卸载，恢复后待检",
+        "clean-start": "开始清洗，需先卸载",
+        "clean-complete": "清洗完成后进入检查",
+        "repair-complete": "维修或清洗完成后进入检查，需先卸载",
+        "inspect-start": "开始检查，需先卸载",
+        "scrap": "报废后不可恢复，挂载中会同时卸载",
+        "life-reset": "计数清零并恢复为可用，需先卸载"
+      },
+      "field": {
+        "delta": "增减量",
+        "reason_id": "原因代码",
+        "note": "备注",
+        "reason": "原因",
+        "comment": "备注",
+        "revision": "版本",
+        "layer": "层次",
+        "hold_reason": "Hold 原因",
+        "status_before_hold": "Hold 前状态",
+        "shots": "shot 数 / 上限",
+        "mount_count": "挂载次数",
+        "life_reset_count": "复位次数",
+        "count_basis": "计数来源",
+        "equipment": "挂载机台",
+        "mounted_at": "挂载时间",
+        "storage_location": "库位",
+        "next_inspection_due_at": "下次检查",
+        "status": "状态"
+      },
+      "tab": {
+        "status": "状态履历",
+        "usage": "计数记录",
+        "mounts": "挂载记录",
+        "inspections": "检查记录"
+      },
+      "col": {
+        "code": "编码",
+        "status": "状态",
+        "layer": "层次",
+        "shots": "shot 数",
+        "equipment": "机台",
+        "location": "库位",
+        "at": "时间",
+        "from": "原状态",
+        "to": "新状态",
+        "action": "动作",
+        "holdReason": "Hold 原因",
+        "reason": "原因",
+        "comment": "备注",
+        "user": "操作人",
+        "kind": "类型",
+        "delta": "增减量",
+        "countAfter": "调整后",
+        "lot": "批次",
+        "reasonId": "原因代码",
+        "slot": "槽位",
+        "mountedAt": "挂载时间",
+        "unmountedAt": "卸载时间",
+        "unmountReason": "卸载原因",
+        "shotsAtMount": "挂载时 shot",
+        "shotsAtUnmount": "卸载时 shot",
+        "inspKind": "检查项",
+        "result": "结果",
+        "defects": "缺陷数",
+        "disposition": "处置建议"
+      },
+      "err": {
+        "deltaNonZero": "增减量须为非零数字",
+        "reasonIdRequired": "减少计数时必须填写原因代码",
+        "tooLong": "不能超过 {{max}} 个字符"
+      },
+      "code": {
+        "invalid_transition": "当前状态不允许「{{action}}」，请刷新后重试",
+        "life_limit_reached": "光罩已达寿命上限，不能恢复，请做寿命复位",
+        "already_mounted": "光罩已挂在其他机台，请先卸载",
+        "still_mounted": "光罩仍挂在机台上，请先卸载再执行「{{action}}」",
+        "reticle_unavailable": "光罩当前状态不可挂载",
+        "life_reached": "光罩已达寿命上限，不能进站"
+      }
     }
   },
   "notify": {

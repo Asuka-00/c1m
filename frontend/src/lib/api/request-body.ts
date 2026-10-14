@@ -140,6 +140,10 @@ export const BODY_KEYS = {
     'channels',
     'is_active',
   ],
+  /** 光罩动作（P3 v0.8.2 §3.2 / §5）：ReticleUsageIn / ReticleReasonIn / ReticleCommentIn */
+  reticleUsage: ['delta', 'reason_id', 'note'],
+  reticleReason: ['reason'],
+  reticleComment: ['comment'],
 } as const
 
 /** StageIn（含 dc / scrap / rework_units 子项）。 */
