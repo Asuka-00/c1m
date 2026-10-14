@@ -10,6 +10,14 @@ import { entityLabel, enumLabel, fieldLabel } from './labels'
 type V = Record<string, unknown>
 const blank = (x: unknown) => x == null || x === ''
 
+/**
+ * 前端补充的条件必填 / 仅允许（后端由校验器而非元数据 required_when 表达时用）。
+ * D59：alarm_code.target_state 仅在 action=set_state 时必填，action=none 时不能填。
+ */
+export const ONLY_WHEN: Record<string, Record<string, [string, unknown[]]>> = {
+  alarm_code: { target_state: ['action', ['set_state']] },
+}
+
 /** 使 `f` 必填的条件（同级字段 + 当前值）；
  *  无条件必填时为 `true`，可选时为 `null`。与后端的
  *  `required` / `required_when` 校验保持一致。 */
@@ -19,7 +27,12 @@ export function requiredBy(
   v: V
 ): true | { field: MesField; value: unknown } | null {
   if (f.required) return true
-  for (const [name, allowed] of Object.entries(f.required_when ?? {})) {
+  const extra = ONLY_WHEN[e.code]?.[f.name]
+  const when = {
+    ...(extra ? { [extra[0]]: extra[1] } : {}),
+    ...(f.required_when ?? {}),
+  }
+  for (const [name, allowed] of Object.entries(when)) {
     const other = e.fields.find((x) => x.name === name)
     if (!other) continue
     const cur = v[other.column]
@@ -52,6 +65,17 @@ export function validateRequired(e: MesEntity, v: V, skip: Set<string>) {
     const by = requiredBy(e, f, v)
     if (by && blank(v[f.column]))
       errs[f.name] = by === true ? t('mes.err.required') : condText(e, by)
+    const only = ONLY_WHEN[e.code]?.[f.name]
+    if (!by && only && !blank(v[f.column])) {
+      const other = e.fields.find((x) => x.name === only[0])
+      if (other)
+        errs[f.name] = t('mes.err.onlyWhen', {
+          cond: fieldLabel(e, other),
+          value: other.enum
+            ? enumLabel(other.enum, String(only[1][0]))
+            : String(only[1][0]),
+        })
+    }
   }
   return errs
 }
@@ -141,6 +165,15 @@ const MERGE_SOURCES = /duplicate|repeated|target|重复|目标/i
  * 后端按 N5 统一为 `detail: {code}` 后可删除。
  */
 function fieldCodeMessage(name: string, rest: string): string | null {
+  // D59：alarm_code.target_state 后端英文校验消息
+  if (name === 'target_state') {
+    if (/^required when action=set_state$/.test(rest))
+      return t('mes.alarm.err.targetRequired')
+    if (/^only allowed when action=set_state$/.test(rest))
+      return t('mes.alarm.err.targetOnly')
+    const u = /^unknown E10 state (.*)$/.exec(rest)
+    if (u) return t('mes.alarm.err.targetUnknown', { state: u[1] })
+  }
   if (name === 'on_hold') return t('mes.err.code.on_hold')
   if (
     (name === 'lot_status' || name === 'source_lot_ids') &&

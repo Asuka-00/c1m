@@ -502,7 +502,8 @@
         "too_many_decimals": "At most 6 decimal places",
         "date_range_too_large": "The date range can span at most 92 days; narrow it down."
       },
-      "tooManyDecimals": "At most {{n}} decimal places"
+      "tooManyDecimals": "At most {{n}} decimal places",
+      "onlyWhen": "Only allowed when {{cond}} is “{{value}}”"
     },
     "autoHint": "Leave blank to generate automatically",
     "currentStep": "Current",
@@ -1601,7 +1602,8 @@
         "on_hold": "child lot is on hold",
         "has_transactions": "child lot has later transactions",
         "has_descendants": "child lot has been split further",
-        "parent_status": "parent lot status has changed"
+        "parent_status": "parent lot status has changed",
+        "referenced": "Child lot is referenced by other records"
       },
       "already": "This transform was already undone",
       "info": "Undone at {{at}} · by {{by}} · reason {{reason}}",
@@ -1631,7 +1633,19 @@
       "clear": "Clear alarm",
       "clearDesc": "Equipment state is not restored automatically.",
       "cleared": "Alarm cleared",
-      "already": "Alarm was already cleared; nothing changed"
+      "already": "Alarm was already cleared; nothing changed",
+      "err": {
+        "targetRequired": "Target state is required when the action is “Set equipment state”",
+        "targetOnly": "Target state is only allowed when the action is “Set equipment state”",
+        "targetUnknown": "Target state {{state}} does not exist"
+      },
+      "skip": {
+        "unknown": "target state {{state}} does not exist",
+        "already": "equipment is already {{state}}",
+        "notAllowed": "the state transition table does not allow {{from}} → {{to}}"
+      },
+      "stateSkipped": "Equipment state not changed: {{why}}. The alarm was recorded.",
+      "stateUnchanged": "Equipment state not changed. The alarm was recorded."
     },
     "toolLife": {
       "warn": "Near end of life",

@@ -47,14 +47,28 @@ describe('D58 补充：trigger / source 三语显示', () => {
     for (const lng of ['zh-CN', 'en', 'ja']) {
       await i18n.changeLanguage(lng)
       expect(t('mes.alarm.clearDesc')).not.toMatch(/Hold|ホールド/i)
-      for (const k of ['hold_lot', 'hold_both'])
-        expect(t(`mes.enum.alarm_action.${k}`)).not.toMatch(
-          /^(Hold|ロットホールド)|Hold lots|Hold 批次$|両方|Both|两者/
-        )
-      expect(t('mes.field.alarm_code.hold_reason')).not.toMatch(
-        /Hold|ホールド/i
-      )
+      // D59（752503e）：联动只有 none / set_state，旧 hold_* 标签已删
+      expect(t('mes.enum.alarm_action.set_state')).not.toMatch(/Hold|ホールド/i)
+      expect(i18n.exists('mes.enum.alarm_action.hold_lot')).toBe(false)
+      expect(i18n.exists('mes.enum.alarm_action.hold_both')).toBe(false)
+      expect(i18n.exists('mes.field.alarm_code.hold_reason')).toBe(false)
+      expect(t('mes.field.alarm_code.target_state')).toBeTruthy()
       expect(t('mes.enum.e10_trigger.system')).toBeTruthy()
     }
   })
+})
+
+describe('E10 履历 trigger（752503e）', () => {
+  it.each(['manual', 'equipment', 'system'])(
+    'trigger=%s 三语有文案',
+    async (v) => {
+      for (const lng of ['zh-CN', 'en', 'ja']) {
+        await i18n.changeLanguage(lng)
+        const el = await cell('e10_history', 'trigger', { trigger: v })
+        await expect
+          .element(el)
+          .toHaveTextContent(t(`mes.enum.e10_trigger.${v}`))
+      }
+    }
+  )
 })

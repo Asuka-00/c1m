@@ -502,7 +502,8 @@
         "too_many_decimals": "最多 6 位小数",
         "date_range_too_large": "日期跨度最多 92 天，请缩小范围。"
       },
-      "tooManyDecimals": "最多 {{n}} 位小数"
+      "tooManyDecimals": "最多 {{n}} 位小数",
+      "onlyWhen": "仅当{{cond}}为「{{value}}」时才能填写"
     },
     "autoHint": "留空则自动生成",
     "currentStep": "当前",
@@ -1601,7 +1602,8 @@
         "on_hold": "子批处于 Hold",
         "has_transactions": "子批已有后续作业",
         "has_descendants": "子批已再分出下游批次",
-        "parent_status": "母批状态已变化"
+        "parent_status": "母批状态已变化",
+        "referenced": "子批已被其他记录引用"
       },
       "already": "该转换已撤销，不能重复撤销",
       "info": "撤销时间 {{at}} · 撤销人 {{by}} · 撤销原因 {{reason}}",
@@ -1631,7 +1633,19 @@
       "clear": "清除报警",
       "clearDesc": "清除后不会自动恢复设备状态。",
       "cleared": "报警已清除",
-      "already": "该报警已清除，未做改动"
+      "already": "该报警已清除，未做改动",
+      "err": {
+        "targetRequired": "联动为「切换设备状态」时必须填写目标状态",
+        "targetOnly": "联动为「不联动」时不能填写目标状态",
+        "targetUnknown": "目标状态 {{state}} 不存在"
+      },
+      "skip": {
+        "unknown": "目标状态 {{state}} 不存在",
+        "already": "设备已是 {{state}}",
+        "notAllowed": "状态迁移表不允许 {{from}} → {{to}}"
+      },
+      "stateSkipped": "设备状态未切换：{{why}}。报警已记录。",
+      "stateUnchanged": "设备状态未切换。报警已记录。"
     },
     "toolLife": {
       "warn": "接近寿命上限",
