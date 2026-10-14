@@ -6,7 +6,6 @@
 """
 
 import uuid
-from datetime import datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -14,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.deps import SessionDep
 from app.core.pagination import ListParamsDep
+from app.core.spec.qdates import DateTimeQ, check_range, parse_datetime
 from app.mes.common.guard import MB, need, perm_body
 from app.mes.common.query import one
 from app.mes.map import service as svc
@@ -93,8 +93,8 @@ def map_list(
     lot_id: uuid.UUID | None = None,
     bin_set_id: uuid.UUID | None = None,
     substrate_type: Literal["wafer", "strip"] | None = None,
-    imported_from: datetime | None = None,
-    imported_to: datetime | None = None,
+    imported_from: DateTimeQ = None,
+    imported_to: DateTimeQ = None,
     latest_only: bool = False,
 ) -> MapListOut:
     """Imported substrate maps (no cells), paginated (page_size <= 100).
@@ -103,6 +103,9 @@ def map_list(
     good_qty; q searches substrate ID / file name; imported_from / imported_to is
     a half-open range [from, to) and accepts any UTC offset."""
     need(ctx, READ)
+    i_from = parse_datetime("imported_from", imported_from)
+    i_to = parse_datetime("imported_to", imported_to)
+    check_range("imported_from", i_from, i_to)
     return list_maps(
         session,
         ctx.id,
@@ -111,8 +114,8 @@ def map_list(
         lot_id=lot_id,
         bin_set_id=bin_set_id,
         substrate_type=substrate_type,
-        imported_from=imported_from,
-        imported_to=imported_to,
+        imported_from=i_from,
+        imported_to=i_to,
         latest_only=latest_only,
     )
 

@@ -299,6 +299,8 @@ def test_date_filter_strict_pattern_d77_supp2(client: TestClient, db: Session) -
         "2026-03-10 00:00",
         "2026-3-10",
         "20260310",
+        "2026/10/01",
+        "2026-02-30",
     ):
         r = client.get(
             m.url("equipment_capability"),
@@ -336,3 +338,109 @@ def test_report_window_range_inverted_d77_supp2(
             ["query", "date_from"],
             {"reason": "range_inverted"},
         ), path
+
+
+def test_date_equality_and_datetime_garbage_pattern(
+    client: TestClient, db: Session
+) -> None:
+    """date 字段等值筛选同样 pattern；datetime 无法解析 → pattern，只给日期 → timezone_required。"""
+    m = Mes(client, db)
+
+    def err(ent: str, **kw: str) -> Any:
+        r = client.get(m.url(ent), headers=m.h, params=kw)
+        assert r.status_code == 422, (ent, kw, r.text)
+        return r.json()["detail"][0]
+
+    d = err("equipment_capability", qualified_until="2026/10/01")
+    assert (d["type"], d["loc"], d["ctx"]) == (
+        "value_error",
+        ["query", "qualified_until"],
+        {"reason": "pattern"},
+    )
+    for name in ("start_at_from", "start_at_to"):
+        d = err("downtime", **{name: "2026/10/01"})
+        assert (d["type"], d["ctx"]) == ("value_error", {"reason": "pattern"})
+        assert err("downtime", **{name: "2026-10-01"})["type"] == "timezone_required"
+    assert (
+        client.get(
+            m.url("equipment_capability"),
+            headers=m.h,
+            params={"qualified_until": "2026-10-01"},
+        ).status_code
+        == 200
+    )
+
+
+def test_custom_routes_dates_d77(client: TestClient, db: Session) -> None:
+    """自定义路由：shift-logs（date）pattern；holds / alarms / maps（datetime）D77 补充一。"""
+    m = Mes(client, db)
+    api = f"{settings.API_V1_STR}/mes"
+
+    def err(path: str, **kw: str) -> Any:
+        r = client.get(f"{api}/{path}", headers=m.h, params=kw)
+        assert r.status_code == 422, (path, kw, r.text)
+        return r.json()["detail"][0]
+
+    for raw in ("2026/10/01", "2026-10-01T00:00:00"):
+        d = err("exec/shift-logs", date_from=raw)
+        assert (d["type"], d["loc"], d["ctx"]) == (
+            "value_error",
+            ["query", "date_from"],
+            {"reason": "pattern"},
+        )
+    d = err("exec/shift-logs", date_from="2026-10-02", date_to="2026-10-01")
+    assert d["ctx"] == {"reason": "range_inverted"}
+    for path, f, t in (
+        ("exec/holds", "date_from", "date_to"),
+        ("eqp/alarms", "from", "to"),
+        ("map/maps", "imported_from", "imported_to"),
+    ):
+        d = err(path, **{f: "2026-10-01"})
+        assert (d["type"], d["loc"]) == ("timezone_required", ["query", f]), path
+        d = err(path, **{t: "2026-10-01T00:00:00"})
+        assert (d["type"], d["loc"]) == ("timezone_required", ["query", t]), path
+        d = err(path, **{f: "2026/10/01"})
+        assert d["ctx"] == {"reason": "pattern"}, path
+        d = err(path, **{f: "2026-10-02T00:00:00Z", t: "2026-10-01T00:00:00Z"})
+        assert (d["loc"], d["ctx"]) == (["query", f], {"reason": "range_inverted"})
+        ok = client.get(
+            f"{api}/{path}",
+            headers=m.h,
+            params={f: "2026-10-01T00:00:00+08:00", t: "2026-10-02T00:00:00Z"},
+        )
+        assert ok.status_code == 200, (path, ok.text)
+
+
+def test_report_window_strict_date_d77_supp3(client: TestClient, db: Session) -> None:
+    """D77 补充三：报表 date_from/date_to 只收严格 YYYY-MM-DD；格式先于 range_inverted。"""
+    m = Mes(client, db)
+    for path in ("output", "oee", "yield", "oee-trend"):
+        url = f"{settings.API_V1_STR}/mes/exec/reports/{path}"
+        for name in ("date_from", "date_to"):
+            for raw in (
+                "2026-03-10T00:00:00",
+                "2026-03-10T00:00:00+08:00",
+                "2026/03/10",
+            ):
+                r = client.get(url, headers=m.h, params={name: raw})
+                assert r.status_code == 422, (path, name, raw, r.text)
+                d = r.json()["detail"][0]
+                assert (d["type"], d["loc"], d["ctx"]) == (
+                    "value_error",
+                    ["query", name],
+                    {"reason": "pattern"},
+                ), (path, name, raw)
+        # 格式错误先于 range_inverted（from 合法但晚于 to，to 带时间）
+        r = client.get(
+            url,
+            headers=m.h,
+            params={"date_from": "2026-03-11", "date_to": "2026-03-10T00:00:00"},
+        )
+        d = r.json()["detail"][0]
+        assert (d["loc"], d["ctx"]) == (["query", "date_to"], {"reason": "pattern"})
+        r = client.get(
+            url,
+            headers=m.h,
+            params={"date_from": "2026-03-01", "date_to": "2026-03-10"},
+        )
+        assert r.status_code == 200, (path, r.text)

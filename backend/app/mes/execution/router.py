@@ -21,6 +21,13 @@ from app.core.schemas import NoBody
 from app.core.spec.engine import ENTITIES
 from app.core.spec.errors import err_422, http_422, query_422
 from app.core.spec.excel import tenant_tz
+from app.core.spec.qdates import (
+    DateQ,
+    DateTimeQ,
+    check_range,
+    parse_date,
+    parse_datetime,
+)
 from app.core.spec.serialize import serialize
 from app.mes.common import idempotency as idem
 from app.mes.common.guard import perm_body
@@ -153,8 +160,8 @@ def holds_list(
     reason_id: uuid.UUID | None = None,
     source: str | None = None,
     product_id: uuid.UUID | None = None,
-    date_from: datetime | None = None,
-    date_to: datetime | None = None,
+    date_from: DateTimeQ = None,
+    date_to: DateTimeQ = None,
     reason: str | None = None,
     product: str | None = None,
     q: str | None = Query(default=None, max_length=100),
@@ -166,6 +173,9 @@ def holds_list(
 ) -> Any:
     """Hold 管理页列表：服务端筛选、搜索、排序与分页，返回 ``{data, count}``。"""
     _need(ctx, "mes.exec:read")
+    df = parse_datetime("date_from", date_from)
+    dt = parse_datetime("date_to", date_to)
+    check_range("date_from", df, dt)
     rows = svc.list_holds(
         session,
         ctx.id,
@@ -173,8 +183,8 @@ def holds_list(
         reason_id,
         source,
         product_id,
-        date_from,
-        date_to,
+        df,
+        dt,
         include_terminal=include_terminal,
     )
     if reason:
@@ -297,14 +307,17 @@ class JumpIn(BaseModel):
 def _window(
     s: Session,
     tid: uuid.UUID,
-    date_from: date | None,
-    date_to: date | None,
+    date_from_raw: str | None,
+    date_to_raw: str | None,
     days: int,
 ) -> tuple[datetime, datetime]:
     """统计区间 [起始日 00:00, 结束日次日 00:00)（站点时区，D75），默认最近 ``days`` 天。
 
     返回带站点时区的时间（与 UTC 为同一时刻），报表按该时区分日。
     """
+    # D77 补充三：先查格式（严格 YYYY-MM-DD → 否则 value_error/pattern），再查 range_inverted
+    date_from = parse_date("date_from", date_from_raw)
+    date_to = parse_date("date_to", date_to_raw)
     tz = tenant_tz(s, tid)
     end_d = date_to or site_today(s, tid)
     start_d = date_from or end_d - timedelta(days=days - 1)
@@ -351,8 +364,8 @@ def report_wip(
 def report_output(
     session: SessionDep,
     ctx: CurrentTenant,
-    date_from: date | None = None,
-    date_to: date | None = None,
+    date_from: DateQ = None,
+    date_to: DateQ = None,
 ) -> Any:
     """Daily moves / output / scrap."""
     _need(ctx, "mes.exec:read")
@@ -364,8 +377,8 @@ def report_output(
 def report_oee(
     session: SessionDep,
     ctx: CurrentTenant,
-    date_from: date | None = None,
-    date_to: date | None = None,
+    date_from: DateQ = None,
+    date_to: DateQ = None,
 ) -> Any:
     """Equipment OEE (availability × performance × quality) over the window."""
     _need(ctx, "mes.exec:read")
@@ -381,8 +394,8 @@ def report_oee(
 def report_yield(
     session: SessionDep,
     ctx: CurrentTenant,
-    date_from: date | None = None,
-    date_to: date | None = None,
+    date_from: DateQ = None,
+    date_to: DateQ = None,
     group: Literal["operation", "product", "lot"] = "operation",
 ) -> Any:
     """Yield by operation / product / lot and scrap reason Pareto."""
@@ -399,8 +412,8 @@ def report_yield(
 def report_oee_trend(
     session: SessionDep,
     ctx: CurrentTenant,
-    date_from: date | None = None,
-    date_to: date | None = None,
+    date_from: DateQ = None,
+    date_to: DateQ = None,
     workcenter: str | None = None,
 ) -> Any:
     """Daily OEE trend (availability, quality, loading-weighted OEE)."""
@@ -620,12 +633,15 @@ class AckIn(BaseModel):
 def shift_logs(
     session: SessionDep,
     ctx: CurrentTenant,
-    date_from: date | None = None,
-    date_to: date | None = None,
+    date_from: DateQ = None,
+    date_to: DateQ = None,
 ) -> Any:
     """Shift handover logs in a date range."""
     _need(ctx, "mes.exec:read")
-    return {"data": shift_log.list_logs(session, ctx.id, date_from, date_to)}
+    df = parse_date("date_from", date_from)
+    dt = parse_date("date_to", date_to)
+    check_range("date_from", df, dt)
+    return {"data": shift_log.list_logs(session, ctx.id, df, dt)}
 
 
 @router.post("/shift-logs")

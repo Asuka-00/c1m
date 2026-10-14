@@ -1,8 +1,7 @@
 """通用租户范围查询：列表 / 筛选 / 搜索 / 排序、单行、全部行、树。"""
 
-import re
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import timedelta
 from typing import Any
 
 import sqlalchemy as sa
@@ -14,9 +13,8 @@ from app.core.spec.engine import (
     Entity,
 )
 from app.core.spec.errors import err_422, query_422
+from app.core.spec.qdates import parse_date, parse_datetime
 from app.core.spec.serialize import coerce, serialize
-
-_DATE_RE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 
 
 # ---------------- queries ----------------
@@ -85,6 +83,11 @@ def apply_filters(
         if f.type == "ref" and raw == "null":
             stmt = stmt.where(t.c[f.column].is_(None))
             continue
+        if f.type == "date":  # D77 补充二：等值筛选同样只收严格 YYYY-MM-DD
+            d = parse_date(name, raw)
+            if d is not None:
+                stmt = stmt.where(t.c[f.column] == d)
+            continue
         try:
             v = coerce(f, raw)
         except ValueError as ex:
@@ -116,8 +119,8 @@ def _range(
       → 422 ``timezone_required``（D77 补充一）。
     - 同一字段 ``_from`` 晚于 ``_to`` → 422 ``value_error``，``ctx.reason=range_inverted``
       （由 :func:`apply_filters` 在两端都解析后判断）。
-    - date 取值必须严格为 ``YYYY-MM-DD``，带时间等其它格式 → 422 ``value_error``，
-      ``ctx.reason=pattern``，loc ``["query", 字段名]``（D77 补充二）。
+    - date 取值必须严格为 ``YYYY-MM-DD``，其它任何写法 → 422 ``value_error``，
+      ``ctx.reason=pattern``；datetime 无法解析同样 ``pattern``（见 :mod:`qdates`）。
 
     其它名称忽略。
     """
@@ -128,29 +131,9 @@ def _range(
     col = base if f is None else f.column
     if kind not in ("date", "datetime") or col not in t.c:
         return stmt
-    if kind == "date" and not _DATE_RE.fullmatch(raw):
-        raise err_422(
-            ["query", name],
-            f"{name}: expected YYYY-MM-DD",
-            "value_error",
-            {"reason": "pattern"},
-            input=raw,
-        )
-    try:
-        v: Any = (
-            date.fromisoformat(raw)
-            if kind == "date"
-            else datetime.fromisoformat(raw.replace("Z", "+00:00"))
-        )
-    except ValueError as ex:
-        raise query_422([(name, f"{name}: invalid date")]) from ex
-    if kind == "datetime" and v.tzinfo is None:
-        raise err_422(
-            ["query", name],
-            f"{name}: timezone offset required (Z or +hh:mm)",
-            "timezone_required",
-            input=raw,
-        )
+    v: Any = parse_date(name, raw) if kind == "date" else parse_datetime(name, raw)
+    if v is None:
+        return stmt
     if bounds is not None:
         bounds.setdefault(base, {})[bound] = v
     c = t.c[col]
