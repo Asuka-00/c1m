@@ -90,6 +90,10 @@
     "en": "English"
   },
   "nav": {
+    "searchMenu": "搜索菜单",
+    "searchMenuHint": "输入菜单名称（中 / 英 / 日）或 key",
+    "searchMenuEmpty": "没有匹配的菜单",
+    "breadcrumb": "面包屑",
     "selectTenant": "选择厂区",
     "tenants": "厂区",
     "tenantsCount": "{{count}} 个厂区",
@@ -121,8 +125,8 @@
     "notifications": "消息中心",
     "notify-subscriptions": "通知订阅",
     "mes-wo-board": "工单进度",
-    "mes-change_order": "工程变更",
-    "mes-future_hold": "预约 Hold",
+    "mes-change_order": "工程变更（ECN）",
+    "mes-future_hold": "Future Hold（预约 Hold）",
     "mes-shift-handover": "交接班日志",
     "mes-label-print": "标签打印",
     "mes-operator_qual": "操作员资质"
@@ -479,7 +483,23 @@
       "defaultsFrom": "留空则使用{{field}}",
       "parentTypeMismatch": "必须与上级设备的设备类型一致（留空则自动继承）",
       "duplicateDefaultRoute": "该产品已有默认流程",
-      "productNeedsDefaultRoute": "生效前须绑定一个已生效的默认流程"
+      "productNeedsDefaultRoute": "生效前须绑定一个已生效的默认流程",
+      "code": {
+        "on_hold": "批次处于 Hold 状态，请先解除 Hold",
+        "lot_status": "批次当前状态不允许此操作",
+        "lot_status_is": "批次当前状态为“{{status}}”，不允许此操作",
+        "lot_status_stage": "“{{status}}”状态的批次不能执行 {{stage}}",
+        "lot_busy": "批次正被其他操作占用，请稍后重试",
+        "batch_blocked": "批量作业被检查规则阻断，请查看各批次的检查结果",
+        "idempotency_in_progress": "相同的请求正在处理中，请稍后刷新查看结果",
+        "idempotency_key_mismatch": "重复提交的内容与首次请求不一致，请刷新后重新操作",
+        "idempotency_key_reused": "该请求标识已用于其他操作，请刷新后重试",
+        "merge_source_invalid": "合批来源批次有重复，或包含了目标批次",
+        "rework_route_missing": "当前工步未配置返工路线，无法返工",
+        "qtime_rule_in_use": "Q-Time 规则 {{qtime_rule_code}} 已被 {{hold_count}} 条 Hold 记录引用，不能删除，请改为停用",
+        "qtime_action_invalid": "Q-Time 超时动作只能是警告、Hold 或返工",
+        "hold_not_found": "Hold 记录不存在或已被删除，请刷新列表"
+      }
     },
     "autoHint": "留空则自动生成",
     "currentStep": "当前",
@@ -599,7 +619,7 @@
       "takeBranch": "走分支至序号 {{seq}}（条件：{{cond}}）",
       "toRework": "转入返工流程 {{route}}",
       "preview": "预检卡控",
-      "holdBlocks": "批次处于 Hold 状态：需解除全部 Hold 后才能继续作业。",
+      "holdBlocks": "批次处于 Hold 状态：加工中的批次仍可 Track Out，但 Move In、Track In 和 Move Out 需解除全部 Hold 后才能进行。",
       "terminal": "批次已{{status}}，无后续作业。",
       "checks": "卡控结果",
       "checksHint": "执行或预检后显示卡控结果。",
@@ -640,7 +660,9 @@
       "eqpRecipe": "设备端配方名",
       "eqpRecipeHint": "设备上报或扫码（可选）",
       "chambers": "腔体",
-      "futureHold": "到达预约 Hold 工步，批次已 Hold：{{reason}}"
+      "futureHold": "到达预约 Hold 工步，批次已 Hold：{{reason}}",
+      "qtimeHandled": "Q-Time 超时已处置",
+      "qtimeStageSkipped": "本次 {{stage}} 未执行，请刷新后查看批次状态"
     },
     "trace": {
       "hint": "查看批次及其单元的全部操作记录。",
@@ -652,6 +674,8 @@
       "overrideReason": "放行原因：{{r}}"
     },
     "sm": {
+      "childMinus": "减少子批",
+      "childPlus": "增加子批",
       "title": "分批 / 合批",
       "split": "分批",
       "merge": "合批",
@@ -670,6 +694,7 @@
       "splitUnitHint": "将晶圆 / 单元分配到子批，未分配的留在母批。",
       "childCount": "子批数",
       "remain": "母批保留 {{n}} / {{total}}",
+      "tooMany": "子批合计必须小于母批数量 {{total}}（不能拆完）",
       "child": "子批 {{n}}",
       "childShort": "子{{n}}",
       "keep": "保留",
@@ -729,7 +754,8 @@
       "scrap": "报废",
       "bonus": "补数",
       "qty": "数量",
-      "adjusted": "已调整"
+      "adjusted": "已调整",
+      "runningScrapAll": "加工中的批次不能整批报废（报废后数量会变为 0），请等 Track Out 后再处理"
     },
     "qtime": {
       "hint": "查看等待中批次的 Q-Time 剩余时间与超时状态。",
@@ -853,7 +879,8 @@
         "manual": "手动",
         "qtime": "Q-Time",
         "oos": "超规",
-        "split": "分批继承"
+        "split": "分批继承",
+        "equipment": "设备"
       },
       "search": "搜索批次 / 产品 / 原因 / 备注",
       "allStatus": "全部（含历史）",
@@ -869,7 +896,9 @@
       "releasedAt": "解除时间",
       "releasedBy": "解除人",
       "releaseReason": "解除原因",
-      "releaseComment": "解除备注"
+      "releaseComment": "解除备注",
+      "showTerminal": "显示已报废、已合并的批次",
+      "lotStatus": "批次状态"
     },
     "report": {
       "hint": "在制分布、滞留批次与每日产出。",
@@ -1129,6 +1158,17 @@
       "info": "信息",
       "status": "状态",
       "qty": "数量"
+    },
+    "reasonCode": {
+      "qtime_expired": "Q-Time 超时"
+    },
+    "qtimeHold": {
+      "overdue": "超时 {{time}}",
+      "steps": "工步 {{from}} → {{to}}",
+      "rule": "Q-Time 规则",
+      "minutes": "{{m}} 分钟",
+      "hours": "{{h}} 小时",
+      "hoursMinutes": "{{h}} 小时 {{m}} 分钟"
     }
   },
   "notify": {

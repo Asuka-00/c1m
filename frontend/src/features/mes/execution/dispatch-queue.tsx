@@ -67,7 +67,7 @@ export function LotScan({ onLot }: { onLot: (id: string) => void }) {
 }
 
 /**
- * 派工队列：在制批次按“非 Hold → 急件 → 优先级 → Q-Time 剩余 → 滞留时长”排序，
+ * 在制队列（WIP Queue，非 RTD 派工）：在制批次按“非 Hold → 急件 → 优先级 → Q-Time 剩余 → 滞留时长”排序，
  * 支持关键字 / 状态 / 产品 / 工序 / Hold 筛选，点击行进入批次作业。
  *
  * @param onLot - 选择批次的回调（批次 id）
@@ -144,7 +144,12 @@ export function DispatchQueue({ onLot }: { onLot: (id: string) => void }) {
               className='inline-flex items-center gap-1 font-mono text-blue-600 hover:underline dark:text-blue-400'
               onClick={() => onLot(r.id)}
             >
-              {r.on_hold && <PauseCircle className='size-3.5 text-amber-600' />}
+              {r.on_hold && (
+                <PauseCircle
+                  className='size-3.5 text-amber-600'
+                  aria-label={t('mes.queue.held')}
+                />
+              )}
               {r.hot && (
                 <Flame
                   className='size-3.5 text-red-600'

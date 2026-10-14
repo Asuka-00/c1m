@@ -90,6 +90,10 @@
     "en": "English"
   },
   "nav": {
+    "searchMenu": "メニュー検索",
+    "searchMenuHint": "メニュー名（中 / 英 / 日）またはキーを入力",
+    "searchMenuEmpty": "一致するメニューはありません",
+    "breadcrumb": "パンくずリスト",
     "selectTenant": "工場を選択",
     "tenants": "工場",
     "tenantsCount": "{{count}} 工場",
@@ -121,7 +125,7 @@
     "notifications": "メッセージセンター",
     "notify-subscriptions": "通知購読",
     "mes-wo-board": "作業指示進捗",
-    "mes-change_order": "設計変更",
+    "mes-change_order": "設計変更（ECN）",
     "mes-future_hold": "予約ホールド",
     "mes-shift-handover": "シフト引継ぎ",
     "mes-label-print": "ラベル印刷",
@@ -344,7 +348,7 @@
     "languageDesc": "表示言語を選択します。"
   },
   "sidebar": {
-    "toggle": "サイドバー切替"
+    "toggle": "サイドバーの切り替え"
   },
   "config": {
     "title": "システム設定",
@@ -479,7 +483,23 @@
       "defaultsFrom": "空欄の場合は{{field}}を使用",
       "parentTypeMismatch": "親設備の設備タイプと一致する必要があります（空欄で継承）",
       "duplicateDefaultRoute": "この製品には既定ルートがあります",
-      "productNeedsDefaultRoute": "有効化の前に有効なルートを既定として割り当てる必要があります"
+      "productNeedsDefaultRoute": "有効化の前に有効なルートを既定として割り当てる必要があります",
+      "code": {
+        "on_hold": "ロットはホールド中です。先にホールドを解除してください",
+        "lot_status": "現在のロット状態ではこの操作はできません",
+        "lot_status_is": "ロットは「{{status}}」状態のため、この操作はできません",
+        "lot_status_stage": "「{{status}}」状態のロットは {{stage}} できません",
+        "lot_busy": "ロットは他の操作で使用中です。しばらくしてから再試行してください",
+        "batch_blocked": "一括作業がチェックで阻止されました。各ロットの結果を確認してください",
+        "idempotency_in_progress": "同じリクエストを処理中です。しばらくして更新してください",
+        "idempotency_key_mismatch": "再送信の内容が最初のリクエストと異なります。更新してやり直してください",
+        "idempotency_key_reused": "このリクエストキーは別の操作で使用済みです。更新して再試行してください",
+        "merge_source_invalid": "統合元ロットに重複があるか、統合先ロットが含まれています",
+        "rework_route_missing": "この工程にリワークルートが設定されていません",
+        "qtime_rule_in_use": "Q-Time 規則 {{qtime_rule_code}} は {{hold_count}} 件のホールド記録から参照されているため削除できません。無効化してください",
+        "qtime_action_invalid": "Q-Time の違反時処置は警告・ホールド・リワークのみ指定できます",
+        "hold_not_found": "ホールド記録が存在しないか削除されています。一覧を更新してください"
+      }
     },
     "autoHint": "空欄の場合は自動採番",
     "currentStep": "現在",
@@ -567,9 +587,9 @@
         "move_out": "ムーブアウト完了"
       },
       "qtimeAction": {
-        "hold": "Q タイム超過：ロットをホールド",
-        "scrap": "Q タイム超過：ロット廃棄",
-        "rework": "Q タイム超過：リワークへ"
+        "hold": "Q-Time 超過：ロットをホールド",
+        "scrap": "Q-Time 超過：ロット廃棄",
+        "rework": "Q-Time 超過：リワークへ"
       },
       "frame": {
         "sub_route": "サブルート",
@@ -599,7 +619,7 @@
       "takeBranch": "順番 {{seq}} へ分岐（条件：{{cond}}）",
       "toRework": "リワークルート {{route}} へ",
       "preview": "チェック事前確認",
-      "holdBlocks": "ロットはホールド中です。全ホールド解除後に作業できます。",
+      "holdBlocks": "ロットはホールド中です。加工中ロットは Track Out できますが、Move In・Track In・Move Out は全ホールド解除後に行えます。",
       "terminal": "ロットは{{status}}です。以降の作業はありません。",
       "checks": "チェック結果",
       "checksHint": "実行・事前確認後にチェック結果を表示します。",
@@ -640,7 +660,9 @@
       "eqpRecipe": "装置レシピ名",
       "eqpRecipeHint": "装置報告またはスキャン（任意）",
       "chambers": "チャンバー",
-      "futureHold": "予約ホールド工程に到着、ロットをホールド：{{reason}}"
+      "futureHold": "予約ホールド工程に到着、ロットをホールド：{{reason}}",
+      "qtimeHandled": "Q-Time 超過を処置しました",
+      "qtimeStageSkipped": "今回の {{stage}} は実行されていません。ロット状態を確認してください"
     },
     "trace": {
       "hint": "ロットとユニットの全操作履歴。",
@@ -652,6 +674,8 @@
       "overrideReason": "強制解除理由：{{r}}"
     },
     "sm": {
+      "childMinus": "子ロットを減らす",
+      "childPlus": "子ロットを増やす",
       "title": "分割・統合",
       "split": "分割",
       "merge": "統合",
@@ -670,6 +694,7 @@
       "splitUnitHint": "ウェーハ・ユニットを子ロットに割り当てます（未割当は親に残ります）。",
       "childCount": "子ロット数",
       "remain": "親ロット残 {{n}} / {{total}}",
+      "tooMany": "子ロット合計は親ロット数量 {{total}} 未満にしてください（全量分割不可）",
       "child": "子ロット {{n}}",
       "childShort": "子{{n}}",
       "keep": "残す",
@@ -679,7 +704,7 @@
       "mergeHint": "統合可能な同一製品・同一ステップのロット。",
       "noCandidates": "統合可能なロットはありません。",
       "mergedQty": "統合後数量：{{n}}",
-      "qtimeNote": "Q タイムは最も早い（厳しい）開始時刻を採用。",
+      "qtimeNote": "Q-Time は最も早い（厳しい）開始時刻を採用。",
       "factChildren": "子ロット：{{list}}",
       "factParent": "親ロット {{code}} から",
       "factTarget": "{{code}} へ統合",
@@ -729,10 +754,11 @@
       "scrap": "廃棄",
       "bonus": "補数",
       "qty": "数量",
-      "adjusted": "調整しました"
+      "adjusted": "調整しました",
+      "runningScrapAll": "加工中のロットは全数廃棄（数量 0）できません。Track Out 後に処理してください"
     },
     "qtime": {
-      "hint": "待機中ロットの Q タイム残り時間と超過状況。",
+      "hint": "待機中ロットの Q-Time 残り時間と超過状況。",
       "refresh": "更新",
       "sweep": "超過を今すぐスキャン",
       "swept": "{{checked}} ロットをスキャン、{{acted}} 件処置",
@@ -851,9 +877,10 @@
       "comment": "コメント",
       "src": {
         "manual": "手動",
-        "qtime": "Q タイム",
+        "qtime": "Q-Time",
         "oos": "規格外",
-        "split": "分割継承"
+        "split": "分割継承",
+        "equipment": "装置"
       },
       "search": "ロット / 製品 / 理由 / コメントを検索",
       "allStatus": "すべて（履歴含む）",
@@ -869,7 +896,9 @@
       "releasedAt": "解除日時",
       "releasedBy": "解除者",
       "releaseReason": "解除理由",
-      "releaseComment": "解除コメント"
+      "releaseComment": "解除コメント",
+      "showTerminal": "廃棄・統合済みロットを表示",
+      "lotStatus": "ロット状態"
     },
     "report": {
       "hint": "仕掛分布・滞留ロット・日次産出。",
@@ -917,9 +946,9 @@
       "allStatuses": "全ステータス",
       "allProducts": "全製品",
       "allOperations": "全工程",
-      "allHold": "Hold：全て",
-      "notHeld": "Hold なし",
-      "held": "Hold 中",
+      "allHold": "ホールド：全て",
+      "notHeld": "ホールドなし",
+      "held": "ホールド中",
       "empty": "仕掛ロットはありません",
       "lot": "ロット",
       "priority": "優先度",
@@ -1129,6 +1158,17 @@
       "info": "詳細",
       "status": "状態",
       "qty": "数量"
+    },
+    "reasonCode": {
+      "qtime_expired": "Q-Time 超過"
+    },
+    "qtimeHold": {
+      "overdue": "{{time}} 超過",
+      "steps": "工程 {{from}} → {{to}}",
+      "rule": "Q-Time ルール",
+      "minutes": "{{m}} 分",
+      "hours": "{{h}} 時間",
+      "hoursMinutes": "{{h}} 時間 {{m}} 分"
     }
   },
   "notify": {
@@ -1184,12 +1224,12 @@
     "event": {
       "mes": {
         "qtime_warn": {
-          "label": "Q タイム事前警告",
-          "title": "ロット {{lot}} の Q タイム {{rule}} が {{left}} 分後に超過します"
+          "label": "Q-Time 事前警告",
+          "title": "ロット {{lot}} の Q-Time {{rule}} が {{left}} 分後に超過します"
         },
         "qtime_exceeded": {
-          "label": "Q タイム超過",
-          "title": "ロット {{lot}} の Q タイム {{rule}} 超過：{{minutes}} > {{max}} 分（{{action}}）"
+          "label": "Q-Time 超過",
+          "title": "ロット {{lot}} の Q-Time {{rule}} 超過：{{minutes}} > {{max}} 分（{{action}}）"
         },
         "lot_hold": {
           "label": "ロット自動ホールド",

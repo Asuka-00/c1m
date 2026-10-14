@@ -25,6 +25,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { POPOVER_W } from '@/components/field-width'
+import { IconButton } from '@/components/icon-button'
 import {
   type FilterDef,
   filterKeys,
@@ -175,15 +177,14 @@ function TextFilter({
         className='h-9 ps-8 pe-8 [&::-webkit-search-cancel-button]:hidden'
       />
       {value && (
-        <Button
+        <IconButton
+          label={t('table.clearSearch')}
           variant='ghost'
-          size='icon'
           className='absolute end-0.5 top-1/2 size-8 -translate-y-1/2'
           onClick={clear}
-          aria-label={t('table.clearSearch')}
         >
           <X className='size-4' />
-        </Button>
+        </IconButton>
       )}
     </div>
   )
@@ -251,11 +252,22 @@ function SelectFilter({
             !value && 'text-muted-foreground'
           )}
         >
-          <span className='truncate'>{value ? current : def.label}</span>
+          <span
+            className='truncate'
+            title={value ? String(current) : def.label}
+          >
+            {value ? current : def.label}
+          </span>
           <ChevronDown className='size-4 opacity-50' />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className='w-72 p-0' align='start'>
+      <PopoverContent
+        className={cn(
+          POPOVER_W,
+          'min-w-[max(18rem,var(--radix-popover-trigger-width))] p-0'
+        )}
+        align='start'
+      >
         <Command shouldFilter={!remote}>
           <CommandInput
             value={q}
@@ -288,7 +300,12 @@ function SelectFilter({
                       o.value === value ? '' : 'opacity-0'
                     )}
                   />
-                  {o.label}
+                  <span
+                    className='break-words whitespace-normal'
+                    title={o.label}
+                  >
+                    {o.label}
+                  </span>
                 </CommandItem>
               ))}
             </CommandGroup>

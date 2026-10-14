@@ -29,9 +29,10 @@ import {
   useListParams,
   type FilterDef,
 } from '@/components/crud'
+import { IconButton } from '@/components/icon-button'
 import { optLabel } from '@/features/mes/common/labels'
+import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
-import { useMesMeta } from '@/features/mes/common/use-mes-meta'
 import { Pick } from '@/features/mes/execution/exec-parts'
 import { ChamberStates } from './chamber-states'
 
@@ -44,8 +45,7 @@ const opts = (vs: (string | null | undefined)[]) =>
 /** 设备状态看板页面：按工作中心排序，可按工作中心 / E10 状态 / PM / 停机筛选。 */
 export default function EqpBoard() {
   const tk = useTenantKey()
-  const { data: meta } = useMesMeta()
-  const can = (p: string) => (meta?.perms ?? []).includes(p)
+  const can = useMesCan()
   const [dlg, setDlg] = useState<
     { kind: 'e10'; row: E10Unit } | { kind: 'pm'; row: BoardRow } | null
   >(null)
@@ -204,11 +204,10 @@ export default function EqpBoard() {
             cell: (r) => (
               <span className='inline-flex items-center gap-1'>
                 {r.chambers.length > 0 && (
-                  <Button
-                    size='icon'
+                  <IconButton
+                    label={t('mes.eqp.chambers')}
                     variant='ghost'
                     className='size-6'
-                    aria-label={t('mes.eqp.chambers')}
                     aria-expanded={open.includes(r.id)}
                     onClick={() =>
                       setOpen((o) =>
@@ -224,7 +223,7 @@ export default function EqpBoard() {
                         open.includes(r.id) && 'rotate-90'
                       )}
                     />
-                  </Button>
+                  </IconButton>
                 )}
                 <span className='font-mono'>{r.code}</span>
               </span>
@@ -291,7 +290,7 @@ export default function EqpBoard() {
                 <Button
                   size='sm'
                   variant='outline'
-                  disabled={!can('mes.equipment:e10') || r.next.length === 0}
+                  disabled={!can(MES_PERM.equipmentE10) || r.next.length === 0}
                   onClick={() => setDlg({ kind: 'e10', row: r })}
                   data-testid={`e10-${r.code}`}
                 >
@@ -300,7 +299,7 @@ export default function EqpBoard() {
                 <Button
                   size='sm'
                   variant='outline'
-                  disabled={!can('mes.equipment:pm') || r.pm.length === 0}
+                  disabled={!can(MES_PERM.equipmentPm) || r.pm.length === 0}
                   onClick={() => setDlg({ kind: 'pm', row: r })}
                   data-testid={`pm-${r.code}`}
                 >
@@ -320,7 +319,7 @@ export default function EqpBoard() {
                 key={r.id}
                 main={r.code}
                 chambers={r.chambers}
-                canChange={can('mes.equipment:e10')}
+                canChange={can(MES_PERM.equipmentE10)}
                 onChange={(c) => setDlg({ kind: 'e10', row: c })}
               />
             ))}

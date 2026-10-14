@@ -8,7 +8,10 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { SidebarTrigger } from '@/components/ui/sidebar'
+import { IconTooltip } from '@/components/icon-button'
 import { ImpersonationBadge } from './impersonation-badge'
+import { MenuBreadcrumb } from './menu-breadcrumb'
+import { MenuSearch } from './menu-search'
 
 type HeaderProps = React.HTMLAttributes<HTMLElement> & {
   fixed?: boolean
@@ -53,7 +56,13 @@ export function Header({ className, fixed, children, ...props }: HeaderProps) {
             'after:absolute after:inset-0 after:-z-10 after:bg-background/20 after:backdrop-blur-lg'
         )}
       >
-        <SidebarTrigger variant='outline' className='max-md:scale-125' />
+        <IconTooltip label={t('sidebar.toggle')}>
+          <SidebarTrigger
+            variant='outline'
+            className='max-md:scale-125'
+            aria-label={t('sidebar.toggle')}
+          />
+        </IconTooltip>
         <Separator orientation='vertical' className='h-6' />
         {platform && (
           <>
@@ -75,6 +84,10 @@ export function Header({ className, fixed, children, ...props }: HeaderProps) {
           </>
         )}
         {!platform && <ImpersonationBadge />}
+        <div className='min-w-0 flex-1'>
+          <MenuBreadcrumb />
+        </div>
+        <MenuSearch />
         {children}
       </div>
     </header>

@@ -7,6 +7,7 @@ import { permDesc } from '@/lib/rbac-labels'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
+import { IconTooltip } from '@/components/icon-button'
 import {
   allIds,
   checkState,
@@ -55,23 +56,27 @@ export function PermissionTreeSelect({
           style={{ paddingInlineStart: depth * 20 + 8 }}
         >
           {hasKids ? (
-            <button
-              type='button'
-              className='text-muted-foreground'
-              aria-label={isOpen ? t('common.collapse') : t('common.expand')}
-              onClick={() => {
-                const s = new Set(open)
-                if (isOpen) s.delete(n.id)
-                else s.add(n.id)
-                setOpen(s)
-              }}
+            <IconTooltip
+              label={isOpen ? t('common.collapse') : t('common.expand')}
             >
-              {isOpen ? (
-                <ChevronDown className='size-4' />
-              ) : (
-                <ChevronRight className='size-4' />
-              )}
-            </button>
+              <button
+                type='button'
+                className='text-muted-foreground'
+                aria-label={isOpen ? t('common.collapse') : t('common.expand')}
+                onClick={() => {
+                  const s = new Set(open)
+                  if (isOpen) s.delete(n.id)
+                  else s.add(n.id)
+                  setOpen(s)
+                }}
+              >
+                {isOpen ? (
+                  <ChevronDown className='size-4' />
+                ) : (
+                  <ChevronRight className='size-4' />
+                )}
+              </button>
+            </IconTooltip>
           ) : (
             <span className='w-4' />
           )}

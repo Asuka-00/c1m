@@ -30,6 +30,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ConfirmDialog, FormDialog, Page, type Values } from '@/components/crud'
+import { IconButton, IconTooltip } from '@/components/icon-button'
 import { StatusBadge } from '../status'
 import { statusOptions } from '../status-options'
 import { allIds, filterTree, nodeLabel as label } from '../tree'
@@ -152,7 +153,10 @@ export default function PermissionTreePage() {
           onChange={(x) => setQ(x.target.value)}
         />
         <Select value={space} onValueChange={setSpace}>
-          <SelectTrigger className='w-40' aria-label={t('rbac.space')}>
+          <SelectTrigger
+            className='max-w-72 min-w-40'
+            aria-label={t('rbac.space')}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -166,7 +170,10 @@ export default function PermissionTreePage() {
           </SelectContent>
         </Select>
         <Select value={type} onValueChange={setType}>
-          <SelectTrigger className='w-36' aria-label={t('rbac.type')}>
+          <SelectTrigger
+            className='max-w-72 min-w-36'
+            aria-label={t('rbac.type')}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -230,22 +237,30 @@ export default function PermissionTreePage() {
                     style={{ paddingInlineStart: depth * 20 }}
                   >
                     {n.children.length ? (
-                      <button
-                        type='button'
-                        className='text-muted-foreground'
-                        aria-label={
+                      <IconTooltip
+                        label={
                           expanded.has(n.id)
                             ? t('common.collapse')
                             : t('common.expand')
                         }
-                        onClick={() => toggle(n.id)}
                       >
-                        {filtering || expanded.has(n.id) ? (
-                          <ChevronDown className='size-4' />
-                        ) : (
-                          <ChevronRight className='size-4' />
-                        )}
-                      </button>
+                        <button
+                          type='button'
+                          className='text-muted-foreground'
+                          aria-label={
+                            expanded.has(n.id)
+                              ? t('common.collapse')
+                              : t('common.expand')
+                          }
+                          onClick={() => toggle(n.id)}
+                        >
+                          {filtering || expanded.has(n.id) ? (
+                            <ChevronDown className='size-4' />
+                          ) : (
+                            <ChevronRight className='size-4' />
+                          )}
+                        </button>
+                      </IconTooltip>
                     ) : (
                       <span className='w-4' />
                     )}
@@ -306,10 +321,9 @@ export default function PermissionTreePage() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
-                      <Button
-                        size='icon'
+                      <IconButton
+                        label={t('common.edit')}
                         variant='ghost'
-                        aria-label={t('common.edit')}
                         onClick={() =>
                           setEdit({
                             mode: n.kind === 'menu' ? 'menu' : 'perm',
@@ -318,15 +332,14 @@ export default function PermissionTreePage() {
                         }
                       >
                         <Pencil className='size-4' />
-                      </Button>
-                      <Button
-                        size='icon'
+                      </IconButton>
+                      <IconButton
+                        label={t('common.delete')}
                         variant='ghost'
-                        aria-label={t('common.delete')}
                         onClick={() => setDeleting(n)}
                       >
                         <Trash2 className='size-4 text-destructive' />
-                      </Button>
+                      </IconButton>
                     </div>
                   )}
                 </TableCell>

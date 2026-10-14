@@ -39,7 +39,7 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Page } from '@/components/crud'
-import { enumLabel } from '@/features/mes/common/labels'
+import { enumLabel, reasonLabel } from '@/features/mes/common/labels'
 import { RefSelect } from '@/features/mes/common/ref-select'
 import { ResultBadge } from './exec-parts'
 import { GenealogyList } from './split-merge'
@@ -209,7 +209,7 @@ function HistoryTimeline({ rows }: { rows: MesRow[] }) {
                   {enumLabel('lot_status', String(h.to_status))}
                 </Badge>
               )}
-              {!!h.reason_label && <span>{String(h.reason_label)}</span>}
+              {!!h.reason_label && <span>{reasonLabel(h.reason_label)}</span>}
               {!!h.comment && (
                 <span className='text-muted-foreground'>
                   “{String(h.comment)}”

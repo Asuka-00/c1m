@@ -34,6 +34,11 @@ import {
   type NavGroup as NavGroupProps,
 } from './types'
 
+/** 子菜单项允许换行：长名称（如「Future Hold（预约 Hold）」）不被截断，高度随内容增长。 */
+const SUB_WRAP = 'h-auto min-h-7 py-1'
+/** 覆盖按钮里 `[&>span:last-child]:truncate` 的单行截断。 */
+const LABEL_WRAP = 'whitespace-normal! [overflow-wrap:anywhere]'
+
 /** 分组 id（key 优先，回退到标题）。 */
 const groupId = (item: NavCollapsible) => item.key ?? item.title
 
@@ -190,10 +195,15 @@ function SidebarMenuCollapsible({
                   <SidebarMenuSubButton
                     asChild
                     isActive={checkIsActive(href, subItem)}
+                    className={SUB_WRAP}
                   >
-                    <Link to={subItem.url} onClick={() => setOpenMobile(false)}>
+                    <Link
+                      to={subItem.url}
+                      title={subItem.title}
+                      onClick={() => setOpenMobile(false)}
+                    >
                       {subItem.icon && <subItem.icon />}
-                      <span>{subItem.title}</span>
+                      <span className={LABEL_WRAP}>{subItem.title}</span>
                       {subItem.badge && <NavBadge>{subItem.badge}</NavBadge>}
                     </Link>
                   </SidebarMenuSubButton>

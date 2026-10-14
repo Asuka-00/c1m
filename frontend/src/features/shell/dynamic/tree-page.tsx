@@ -14,6 +14,7 @@ import { mesApi, type MesRow } from '@/lib/api/mes/common'
 import { cn } from '@/lib/utils'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Page, PageEmbedContext } from '@/components/crud'
+import { IconTooltip } from '@/components/icon-button'
 import { rowLabel } from '@/features/mes/common/labels'
 import { useMesMeta } from '@/features/mes/common/use-mes-meta'
 import { ForbiddenError } from '@/features/shell/errors/forbidden'
@@ -171,20 +172,26 @@ function Level({
               {leaf ? (
                 <span className='size-5' />
               ) : (
-                <button
-                  type='button'
-                  className='rounded p-0.5'
-                  aria-label={
+                <IconTooltip
+                  label={
                     expanded ? t('mes.tree.collapse') : t('mes.tree.expand')
                   }
-                  onClick={() => setOpen((o) => ({ ...o, [id]: !expanded }))}
                 >
-                  {expanded ? (
-                    <ChevronDown className='size-4' />
-                  ) : (
-                    <ChevronRight className='size-4' />
-                  )}
-                </button>
+                  <button
+                    type='button'
+                    className='rounded p-0.5'
+                    aria-label={
+                      expanded ? t('mes.tree.collapse') : t('mes.tree.expand')
+                    }
+                    onClick={() => setOpen((o) => ({ ...o, [id]: !expanded }))}
+                  >
+                    {expanded ? (
+                      <ChevronDown className='size-4' />
+                    ) : (
+                      <ChevronRight className='size-4' />
+                    )}
+                  </button>
+                </IconTooltip>
               )}
               <button
                 type='button'

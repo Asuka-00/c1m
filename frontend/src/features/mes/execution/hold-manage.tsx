@@ -22,6 +22,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import {
   DataTable,
@@ -31,14 +32,22 @@ import {
   useListParams,
   type FilterDef,
 } from '@/components/crud'
-import { optLabel } from '@/features/mes/common/labels'
+import { IconButton } from '@/components/icon-button'
+import {
+  enumLabel,
+  HOLD_SOURCES,
+  holdSourceLabel,
+  optLabel,
+  reasonOptLabel,
+} from '@/features/mes/common/labels'
+import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { RefLink } from '@/features/mes/common/ref-link'
 import { mesErrorMessage } from '@/features/mes/common/required'
-import { useMesMeta } from '@/features/mes/common/use-mes-meta'
 import { Pick } from './exec-parts'
+import { QtimeHoldInfo } from './qtime-hold-info'
 
 /** Hold 来源。 */
-const SOURCES = ['manual', 'qtime', 'oos', 'split']
+const SOURCES = HOLD_SOURCES
 /** 状态切换：生效中（默认）/ 已解除（历史）/ 全部。 */
 type Status = 'active' | 'released' | 'all'
 
@@ -54,14 +63,12 @@ const codeOptions =
     )
 
 /** 来源显示文本。 */
-const srcLabel = (s: string) =>
-  SOURCES.includes(s) ? t(`mes.holdrel.src.${s}`) : s
+const srcLabel = holdSourceLabel
 
 /** Hold 管理。 */
 export default function HoldManagePage() {
   const tk = useTenantKey()
-  const { data: meta } = useMesMeta()
-  const canRelease = (meta?.perms ?? []).includes('mes.exec:hold')
+  const canRelease = useMesCan()(MES_PERM.execHold)
   const [sel, setSel] = useState<string[]>([])
   const [releasing, setReleasing] = useState<string[] | null>(null)
   const [statusSeen, setStatusSeen] = useState<Status>('active')
@@ -106,9 +113,14 @@ export default function HoldManagePage() {
     setStatusSeen(status)
     setSel([])
   }
+  // 默认隐藏 scrapped / merged 批次的 Hold（修订版 N6，completed / stored 默认显示），
+  // 开关打开时请求 include_terminal=true 显示全部
+  const [showTerminal, setShowTerminal] = useState(false)
+  const terminalParam = showTerminal ? { include_terminal: 'true' } : {}
   const q = useQuery({
-    queryKey: ['mes', 'exec', tk, 'holds', lp.query],
-    queryFn: () => execApi.holds({ status: 'all', ...lp.query }),
+    queryKey: ['mes', 'exec', tk, 'holds', lp.query, terminalParam],
+    queryFn: () =>
+      execApi.holds({ status: 'all', ...lp.query, ...terminalParam }),
   })
   const rows = useMemo(() => q.data?.data ?? [], [q.data])
   const total = q.data?.count ?? 0
@@ -142,6 +154,7 @@ export default function HoldManagePage() {
               const { data: all } = await execApi.holds({
                 status: 'all',
                 ...lp.query,
+                ...terminalParam,
                 page: 1,
                 page_size: 5000,
               })
@@ -183,6 +196,17 @@ export default function HoldManagePage() {
             <Download className='size-4' />
             {t('mes.export')}
           </Button>
+          <Label className='flex items-center gap-2 font-normal'>
+            <Switch
+              checked={showTerminal}
+              onCheckedChange={(v) => {
+                setShowTerminal(v)
+                setSel([])
+              }}
+              data-testid='show-terminal'
+            />
+            {t('mes.holdrel.showTerminal')}
+          </Label>
           {canRelease && (
             <Button
               disabled={sel.length === 0}
@@ -240,6 +264,21 @@ export default function HoldManagePage() {
               <RefLink target='lot' id={r.lot_id} label={r.lot} mono />
             ),
           },
+          ...(rows.some((r) => r.lot_status != null)
+            ? [
+                {
+                  header: t('mes.holdrel.lotStatus'),
+                  cell: (r: HoldRow) =>
+                    r.lot_status ? (
+                      <span data-testid='hold-lot-status'>
+                        {enumLabel('lot_status', r.lot_status)}
+                      </span>
+                    ) : (
+                      '—'
+                    ),
+                },
+              ]
+            : []),
           {
             header: t('mes.holdrel.product'),
             sortKey: 'product',
@@ -254,11 +293,18 @@ export default function HoldManagePage() {
             header: t('mes.holdrel.reason'),
             sortKey: 'reason',
             cell: (r) =>
-              r.reason ? `${r.reason} · ${r.reason_name ?? ''}` : '—',
+              r.reason
+                ? reasonOptLabel({ code: r.reason, name: r.reason_name ?? '' })
+                : '—',
           },
           {
             header: t('mes.holdrel.source'),
-            cell: (r) => srcLabel(r.source),
+            cell: (r) => (
+              <div className='space-y-0.5'>
+                <div>{srcLabel(r.source)}</div>
+                <QtimeHoldInfo hold={r} />
+              </div>
+            ),
           },
           {
             header: t('mes.holdrel.heldAt'),
@@ -315,15 +361,13 @@ export default function HoldManagePage() {
             header: '',
             cell: (r) =>
               canRelease && r.is_active ? (
-                <Button
-                  size='icon'
+                <IconButton
+                  label={t('mes.exec.release')}
                   variant='ghost'
-                  title={t('mes.exec.release')}
-                  aria-label={t('mes.exec.release')}
                   onClick={() => setReleasing([r.id])}
                 >
                   <PlayCircle className='size-4' />
-                </Button>
+                </IconButton>
               ) : null,
           },
         ]}

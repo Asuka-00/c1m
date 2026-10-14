@@ -128,6 +128,15 @@ export interface HoldRow {
   released_by: string | null
   release_reason: string | null
   release_comment: string | null
+  /** 批次状态（N6；旧版接口无此字段） */
+  lot_status?: string | null
+  /** D20：Q-Time 自动 Hold 的规则、起止工步与超时秒数（手动 Hold / 旧记录为 null 或缺失） */
+  qtime_rule_id?: string | null
+  qtime_from_step_id?: string | null
+  qtime_to_step_id?: string | null
+  qtime_overdue_seconds?: number | null
+  qtime_from_step_name?: string | null
+  qtime_to_step_name?: string | null
 }
 /** 追溯对象类型。 */
 export type TraceKind = 'lot' | 'wafer' | 'equipment' | 'material_lot'
@@ -188,6 +197,8 @@ export interface CarrierRow {
   status: string
   lot_id: string | null
   lot: string | null
+  /** 载具内非终态批次的状态；空载具为 null（旧版接口无此字段） */
+  lot_status?: string | null
   wafers: number
   capacity: number | null
   use_count: number

@@ -23,10 +23,12 @@ import {
   type FilterDef,
 } from '@/components/crud'
 import { enumLabel } from '@/features/mes/common/labels'
+import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { RefLink } from '@/features/mes/common/ref-link'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { CarrierDue } from './carrier-due'
 import { Pick } from './exec-parts'
+import { canChangeCarrier } from './lot-rules'
 import { SorterDialog } from './sorter-dialog'
 
 /** 载具管理。 */
@@ -74,6 +76,9 @@ export default function CarrierOps() {
   const view = clientList(all, lp, {
     text: (r) => `${r.code} ${r.lot ?? ''}`,
   })
+  const can = useMesCan()
+  const canMove = (r: CarrierRow) =>
+    can(MES_PERM.execWrite) && canChangeCarrier(r.lot_status)
   const done = (msg: string) => {
     toast.success(msg)
     qc.invalidateQueries({ queryKey: ['mes'] })
@@ -205,6 +210,8 @@ export default function CarrierOps() {
                     <Button
                       size='sm'
                       variant='ghost'
+                      disabled={!canMove(r)}
+                      data-testid='carrier-change'
                       onClick={() => setMove(r)}
                     >
                       <ArrowRightLeft className='size-4' />
@@ -213,6 +220,8 @@ export default function CarrierOps() {
                     <Button
                       size='sm'
                       variant='ghost'
+                      disabled={!canMove(r)}
+                      data-testid='carrier-sort'
                       onClick={() => setSort(r)}
                     >
                       <ListOrdered className='size-4' />
@@ -230,12 +239,20 @@ export default function CarrierOps() {
                     </Button>
                   </>
                 )}
-                {!r.lot_id && r.status !== 'retired' && (
-                  <Button size='sm' variant='ghost' onClick={() => setClean(r)}>
-                    <Sparkles className='size-4' />
-                    {t('mes.carrier.clean')}
-                  </Button>
-                )}
+                {!r.lot_id &&
+                  r.status !== 'retired' &&
+                  can(MES_PERM.execWrite) && (
+                    <Button
+                      size='sm'
+                      variant='ghost'
+                      disabled={!can(MES_PERM.execWrite)}
+                      data-testid='carrier-clean'
+                      onClick={() => setClean(r)}
+                    >
+                      <Sparkles className='size-4' />
+                      {t('mes.carrier.clean')}
+                    </Button>
+                  )}
               </span>
             ),
           },

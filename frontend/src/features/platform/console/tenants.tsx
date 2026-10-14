@@ -18,6 +18,7 @@ import {
   type FilterDef,
   searchFilter,
 } from '@/components/crud'
+import { IconButton } from '@/components/icon-button'
 import { useEnterTenant } from './enter-tenant'
 import { TenantBrandingDialog } from './tenant-branding-dialog'
 import { TenantMembersDialog } from './tenant-members-dialog'
@@ -169,34 +170,28 @@ export default function PlatformTenantsPage() {
                   r.slug === 'default' ? undefined : () => s.openDelete(r)
                 }
               >
-                <Button
-                  size='icon'
+                <IconButton
+                  label={t('platform.members')}
                   variant='ghost'
-                  aria-label={t('platform.members')}
-                  title={t('platform.members')}
                   onClick={() => setMembers(r)}
                 >
                   <Users className='size-4' />
-                </Button>
-                <Button
-                  size='icon'
+                </IconButton>
+                <IconButton
+                  label={t('platform.branding')}
                   variant='ghost'
-                  aria-label={t('platform.branding')}
-                  title={t('platform.branding')}
                   onClick={() => setBranding(r)}
                 >
                   <Palette className='size-4' />
-                </Button>
-                <Button
-                  size='icon'
+                </IconButton>
+                <IconButton
+                  label={t('platform.enter')}
                   variant='ghost'
-                  aria-label={t('platform.enter')}
-                  title={t('platform.enter')}
                   data-testid={`enter-${r.slug}`}
                   onClick={() => enter(r)}
                 >
                   <LogIn className='size-4' />
-                </Button>
+                </IconButton>
               </RowActions>
             ),
           },

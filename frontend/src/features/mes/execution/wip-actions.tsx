@@ -2,9 +2,16 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { t } from '@/i18n'
-import { Flame, PackageMinus, SkipForward, Wrench } from 'lucide-react'
+import {
+  Flame,
+  PackageMinus,
+  SkipForward,
+  TriangleAlert,
+  Wrench,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { execApi, type ExecContext } from '@/lib/api/mes/execution'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -26,30 +33,28 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { optLabel } from '@/features/mes/common/labels'
+import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
 import { Pick } from './exec-parts'
+import {
+  blocksScrapToZero,
+  canAdjustLot,
+  canChangePriority,
+  canJumpLot,
+} from './lot-rules'
 import { PriorityDialog } from './priority-dialog'
 
 /** 在制调整卡片：按权限与批次状态提供跳站等操作。 */
-export function WipActionsCard({
-  cx,
-  perms,
-}: {
-  cx: ExecContext
-  perms: string[]
-}) {
+export function WipActionsCard({ cx }: { cx: ExecContext }) {
+  const can = useMesCan()
   const [open, setOpen] = useState<'jump' | 'adjust' | 'priority' | null>(null)
-  const st = String(cx.lot.lot_status)
   const canJump =
-    perms.includes('mes.exec:jump') &&
-    st === 'waiting' &&
-    !cx.lot.on_hold &&
+    can(MES_PERM.execJump) &&
+    canJumpLot(cx.lot) &&
     (cx.route_steps?.length ?? 0) > 1
-  const canAdjust =
-    perms.includes('mes.exec:adjust') &&
-    ['waiting', 'moved_in', 'running'].includes(st) &&
-    !cx.lot.on_hold
+  const canAdjust = can(MES_PERM.execAdjust) && canAdjustLot(cx.lot)
+  const canPriority = can(MES_PERM.execAdjust) && canChangePriority(cx.lot)
   return (
     <Card className='gap-3'>
       <CardHeader>
@@ -61,7 +66,7 @@ export function WipActionsCard({
           <Button
             size='sm'
             variant='outline'
-            disabled={!canAdjust}
+            disabled={!canPriority}
             onClick={() => setOpen('priority')}
             data-testid='open-priority'
           >
@@ -96,19 +101,19 @@ export function WipActionsCard({
       <JumpDialog
         cx={cx}
         open={open === 'jump'}
-        canOverride={perms.includes('mes.exec:override')}
+        canOverride={can(MES_PERM.execOverride)}
         onOpenChange={(o) => setOpen(o ? 'jump' : null)}
       />
       <PriorityDialog
         cx={cx}
         open={open === 'priority'}
-        canOverride={perms.includes('mes.exec:override')}
+        canOverride={can(MES_PERM.execOverride)}
         onOpenChange={(o) => setOpen(o ? 'priority' : null)}
       />
       <AdjustDialog
         cx={cx}
         open={open === 'adjust'}
-        canOverride={perms.includes('mes.exec:override')}
+        canOverride={can(MES_PERM.execOverride)}
         onOpenChange={(o) => setOpen(o ? 'adjust' : null)}
       />
     </Card>
@@ -252,6 +257,11 @@ function AdjustDialog({
   const live = cx.units.filter((u) => u.status !== 'scrapped')
   const byUnit = unitLevel && kind === 'scrap'
   const reasons = (kind === 'scrap' ? cx.reasons.scrap : cx.reasons.bonus) ?? []
+  const scrapAll =
+    kind === 'scrap' &&
+    (byUnit
+      ? blocksScrapToZero(cx.lot, units.length, live.length)
+      : blocksScrapToZero(cx.lot, Number(qty) || 0, Number(cx.lot.qty ?? 0)))
   const m = useMutation({
     mutationFn: () =>
       execApi.adjust(String(cx.lot.id), {
@@ -366,9 +376,17 @@ function AdjustDialog({
             )}
           </div>
         )}
+        {scrapAll && (
+          <Alert variant='destructive' data-testid='scrap-all-running'>
+            <TriangleAlert />
+            <AlertDescription>{t('mes.wip.runningScrapAll')}</AlertDescription>
+          </Alert>
+        )}
         <DialogFooter>
           <Button
+            data-testid='do-adjust'
             disabled={
+              scrapAll ||
               !reason ||
               (byUnit ? units.length === 0 : !(Number(qty) > 0)) ||
               (override && !ovReason.trim()) ||

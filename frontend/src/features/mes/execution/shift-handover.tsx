@@ -28,8 +28,9 @@ import {
   useListParams,
   type FilterDef,
 } from '@/components/crud'
+import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
-import { useMesEntity, useMesMeta } from '@/features/mes/common/use-mes-meta'
+import { useMesEntity } from '@/features/mes/common/use-mes-meta'
 import { Pick } from './exec-parts'
 import { DateRange } from './report-parts'
 import { isoDay } from './report-utils'
@@ -38,9 +39,8 @@ import { isoDay } from './report-utils'
 export default function ShiftHandover() {
   const tk = useTenantKey()
   const qc = useQueryClient()
-  const { data: meta } = useMesMeta()
   const { entity } = useMesEntity('shift_log')
-  const canWrite = (meta?.perms ?? []).includes('mes.exec:write')
+  const canWrite = useMesCan()(MES_PERM.execWrite)
   const [from, setFrom] = useState(isoDay(-6))
   const [to, setTo] = useState(isoDay())
   const [creating, setCreating] = useState(false)

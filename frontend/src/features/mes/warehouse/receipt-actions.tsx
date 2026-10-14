@@ -6,7 +6,6 @@ import { MoreHorizontal, PackageCheck, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { type MesRow } from '@/lib/api/mes/common'
 import { receiptApi } from '@/lib/api/mes/warehouse'
-import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ConfirmDialog } from '@/components/crud'
+import { IconButton } from '@/components/icon-button'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity, useMesMeta } from '@/features/mes/common/use-mes-meta'
 
@@ -51,11 +51,9 @@ export function ReceiptActions({ row }: { row: MesRow }) {
   return (
     <>
       {quick && (
-        <Button
-          size='icon'
+        <IconButton
+          label={t(`mes.receipt.action.${quick[0]}`)}
           variant='ghost'
-          title={t(`mes.receipt.action.${quick[0]}`)}
-          aria-label={t(`mes.receipt.action.${quick[0]}`)}
           onClick={() => setConfirm(quick[0])}
         >
           {quick[0] === 'submit' ? (
@@ -63,17 +61,13 @@ export function ReceiptActions({ row }: { row: MesRow }) {
           ) : (
             <PackageCheck className='size-4' />
           )}
-        </Button>
+        </IconButton>
       )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
-            size='icon'
-            variant='ghost'
-            aria-label={t('mes.receipt.actions')}
-          >
+          <IconButton label={t('mes.receipt.actions')} variant='ghost'>
             <MoreHorizontal className='size-4' />
-          </Button>
+          </IconButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent align='end'>
           {offered.map(([a]) => (

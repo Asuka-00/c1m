@@ -6,46 +6,31 @@ import { t } from '@/i18n'
 import { Gauge, History, PlayCircle } from 'lucide-react'
 import { useTenantKey } from '@/lib/api/hooks'
 import { mesApi, type MesRow } from '@/lib/api/mes/common'
-import { Button } from '@/components/ui/button'
-import { useMesMeta } from '@/features/mes/common/use-mes-meta'
-import { ReleaseDialog } from './lot-console'
-
-const pageLink = (page: string, lot: unknown) => ({
-  to: '/$' as const,
-  params: { _splat: `mes/${page}` },
-  search: { lot: String(lot) } as never,
-})
+import { IconButton } from '@/components/icon-button'
+import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
+import { ReleaseDialog } from './lot-console/release-dialog'
+import { lotPageLink } from './lot-links'
 
 /** 批次行操作：在操作台 / 履历时间线中打开。 */
 export function LotActions({ row }: { row: MesRow }) {
   return (
     <>
-      <Button
-        size='icon'
-        variant='ghost'
-        asChild
-        title={t('menu.mes-lot-console')}
-      >
+      <IconButton label={t('menu.mes-lot-console')} variant='ghost' asChild>
         <Link
-          {...pageLink('lot-console', row.id)}
+          {...lotPageLink('lot-console', row.id)}
           aria-label={t('menu.mes-lot-console')}
         >
           <Gauge className='size-4' />
         </Link>
-      </Button>
-      <Button
-        size='icon'
-        variant='ghost'
-        asChild
-        title={t('menu.mes-lot-trace')}
-      >
+      </IconButton>
+      <IconButton label={t('menu.mes-lot-trace')} variant='ghost' asChild>
         <Link
-          {...pageLink('lot-trace', row.id)}
+          {...lotPageLink('lot-trace', row.id)}
           aria-label={t('menu.mes-lot-trace')}
         >
           <History className='size-4' />
         </Link>
-      </Button>
+      </IconButton>
     </>
   )
 }
@@ -54,7 +39,7 @@ export function LotActions({ row }: { row: MesRow }) {
 export function HoldActions({ row }: { row: MesRow }) {
   const [open, setOpen] = useState(false)
   const tk = useTenantKey()
-  const { data: meta } = useMesMeta()
+  const can = useMesCan()
   const reasons = useQuery({
     queryKey: ['mes', 'reason_code', 'release', tk],
     queryFn: () =>
@@ -63,29 +48,22 @@ export function HoldActions({ row }: { row: MesRow }) {
   })
   return (
     <>
-      <Button
-        size='icon'
-        variant='ghost'
-        asChild
-        title={t('menu.mes-lot-console')}
-      >
+      <IconButton label={t('menu.mes-lot-console')} variant='ghost' asChild>
         <Link
-          {...pageLink('lot-console', row.lot_id)}
+          {...lotPageLink('lot-console', row.lot_id)}
           aria-label={t('menu.mes-lot-console')}
         >
           <Gauge className='size-4' />
         </Link>
-      </Button>
-      {row.is_active && meta?.perms.includes('mes.exec:hold') ? (
-        <Button
-          size='icon'
+      </IconButton>
+      {row.is_active && can(MES_PERM.execHold) ? (
+        <IconButton
+          label={t('mes.exec.release')}
           variant='ghost'
-          title={t('mes.exec.release')}
-          aria-label={t('mes.exec.release')}
           onClick={() => setOpen(true)}
         >
           <PlayCircle className='size-4' />
-        </Button>
+        </IconButton>
       ) : null}
       <ReleaseDialog
         hold={row}

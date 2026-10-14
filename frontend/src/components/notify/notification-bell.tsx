@@ -12,6 +12,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { IconButton } from '@/components/icon-button'
 import { SeverityBadge } from './severity-badge'
 import { linkTarget, noteTitle } from './utils'
 
@@ -40,11 +41,10 @@ export function NotificationBell() {
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <Button
+        <IconButton
+          label={t('notify.bell')}
           variant='ghost'
-          size='icon'
           className='relative rounded-full'
-          aria-label={t('notify.bell')}
         >
           <Bell className='size-[1.2rem]' />
           {unread > 0 && (
@@ -55,7 +55,7 @@ export function NotificationBell() {
               {unread > 99 ? '99+' : unread}
             </span>
           )}
-        </Button>
+        </IconButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align='end' className='w-96 p-0'>
         <div className='flex items-center justify-between border-b px-3 py-2'>

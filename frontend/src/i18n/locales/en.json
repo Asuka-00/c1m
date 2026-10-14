@@ -90,6 +90,10 @@
     "en": "English"
   },
   "nav": {
+    "searchMenu": "Search menus",
+    "searchMenuHint": "Type a menu name (zh / en / ja) or key",
+    "searchMenuEmpty": "No matching menus",
+    "breadcrumb": "Breadcrumb",
     "selectTenant": "Select site",
     "tenants": "Sites",
     "tenantsCount": "{{count}} sites",
@@ -121,7 +125,7 @@
     "notifications": "Message Center",
     "notify-subscriptions": "Notification Subscriptions",
     "mes-wo-board": "WO Progress",
-    "mes-change_order": "Engineering Change",
+    "mes-change_order": "ECN",
     "mes-future_hold": "Future Hold",
     "mes-shift-handover": "Shift Handover",
     "mes-label-print": "Label Printing",
@@ -479,7 +483,23 @@
       "defaultsFrom": "Leave blank to use {{field}}",
       "parentTypeMismatch": "must match the parent equipment's type (leave blank to inherit)",
       "duplicateDefaultRoute": "the product already has a default route",
-      "productNeedsDefaultRoute": "an Active route must be bound as default before activation"
+      "productNeedsDefaultRoute": "an Active route must be bound as default before activation",
+      "code": {
+        "on_hold": "The lot is on hold; release it first",
+        "lot_status": "The lot status does not allow this action",
+        "lot_status_is": "The lot is {{status}}; this action is not allowed",
+        "lot_status_stage": "A {{status}} lot cannot {{stage}}",
+        "lot_busy": "The lot is being used by another operation; try again shortly",
+        "batch_blocked": "The batch was blocked by checks; review each lot's check results",
+        "idempotency_in_progress": "The same request is still being processed; refresh shortly to see the result",
+        "idempotency_key_mismatch": "The resubmitted request differs from the original; refresh and try again",
+        "idempotency_key_reused": "This request key was already used for another operation; refresh and try again",
+        "merge_source_invalid": "The source lots contain duplicates or include the target lot",
+        "rework_route_missing": "No rework route is configured for this step",
+        "qtime_rule_in_use": "Q-Time rule {{qtime_rule_code}} is referenced by {{hold_count}} hold record(s) and cannot be deleted. Deactivate it instead.",
+        "qtime_action_invalid": "The Q-Time action must be Warn, Hold or Rework",
+        "hold_not_found": "The hold record does not exist or was deleted; refresh the list"
+      }
     },
     "autoHint": "Leave blank to generate automatically",
     "currentStep": "Current",
@@ -599,7 +619,7 @@
       "takeBranch": "Take branch to seq. {{seq}} (condition: {{cond}})",
       "toRework": "Send to rework route {{route}}",
       "preview": "Preview checks",
-      "holdBlocks": "The lot is on hold: release every hold before the next stage.",
+      "holdBlocks": "The lot is on hold: a running lot can still Track Out, but Move In, Track In and Move Out require every hold to be released.",
       "terminal": "Lot is {{status}} — no further stages.",
       "checks": "Check results",
       "checksHint": "Check results appear after running or previewing.",
@@ -640,7 +660,9 @@
       "eqpRecipe": "Equipment recipe",
       "eqpRecipeHint": "Reported / scanned (optional)",
       "chambers": "Chambers",
-      "futureHold": "Future hold at this step, lot held: {{reason}}"
+      "futureHold": "Future hold at this step, lot held: {{reason}}",
+      "qtimeHandled": "Q-Time exceeded and handled",
+      "qtimeStageSkipped": "{{stage}} was not performed; check the lot status"
     },
     "trace": {
       "hint": "All operations on the lot and its units.",
@@ -652,6 +674,8 @@
       "overrideReason": "override reason: {{r}}"
     },
     "sm": {
+      "childMinus": "Fewer child lots",
+      "childPlus": "More child lots",
       "title": "Split / merge",
       "split": "Split",
       "merge": "Merge",
@@ -670,6 +694,7 @@
       "splitUnitHint": "Assign wafers / units to child lots; the rest stay in the parent.",
       "childCount": "Child lots",
       "remain": "Parent keeps {{n}} / {{total}}",
+      "tooMany": "Child lots must total less than the parent qty {{total}} (cannot split everything)",
       "child": "Child {{n}}",
       "childShort": "C{{n}}",
       "keep": "Keep",
@@ -729,7 +754,8 @@
       "scrap": "Scrap",
       "bonus": "Bonus",
       "qty": "Quantity",
-      "adjusted": "Adjusted"
+      "adjusted": "Adjusted",
+      "runningScrapAll": "A running lot cannot be scrapped down to 0; handle it after Track Out"
     },
     "qtime": {
       "hint": "Remaining Q-Time and violations of waiting lots.",
@@ -853,7 +879,8 @@
         "manual": "Manual",
         "qtime": "Q-Time",
         "oos": "Out of spec",
-        "split": "Split (inherited)"
+        "split": "Split (inherited)",
+        "equipment": "Equipment"
       },
       "search": "Search lot / product / reason / comment",
       "allStatus": "All (incl. history)",
@@ -869,7 +896,9 @@
       "releasedAt": "Released at",
       "releasedBy": "Released by",
       "releaseReason": "Release reason",
-      "releaseComment": "Release comment"
+      "releaseComment": "Release comment",
+      "showTerminal": "Show scrapped / merged lots",
+      "lotStatus": "Lot status"
     },
     "report": {
       "hint": "WIP distribution, waiting lots and daily output.",
@@ -1129,6 +1158,17 @@
       "info": "Details",
       "status": "Status",
       "qty": "Qty"
+    },
+    "reasonCode": {
+      "qtime_expired": "Q-Time expired"
+    },
+    "qtimeHold": {
+      "overdue": "Overdue by {{time}}",
+      "steps": "Steps {{from}} → {{to}}",
+      "rule": "Q-Time rule",
+      "minutes": "{{m}} min",
+      "hours": "{{h}} h",
+      "hoursMinutes": "{{h}} h {{m}} min"
     }
   },
   "notify": {
