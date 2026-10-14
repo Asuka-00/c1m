@@ -3,12 +3,20 @@
 工作表布局：第 1 行为列键（字段名，版本化数据加 ``version``/``status``，自定义属性为
 ``attr:<code>``）。引用以目标编码读写（``CODE`` = 激活或最新版本，``CODE@2`` = 指定版本），
 无编码的目标使用 id。导入按业务唯一键新增或更新，全部成功或全部回滚。
+
+时间（D46 P2）：datetime 字段写成 Excel 日期单元格，按租户时区换算（租户时区取第一个启用
+厂区的 timezone，没有厂区时用 Asia/Taipei），列名带时区，如 ``created_at (Asia/Taipei)``；
+date 字段写成日期单元格（无时区，列名不变）。导入时去掉列名里的时区后缀，无时区的
+datetime 按同一租户时区理解。接口 JSON 仍输出 UTC Z（D45）。
 """
 
 import io
 import json
+import re
 import uuid
+from datetime import date, datetime
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import sqlalchemy as sa
 from fastapi import HTTPException
@@ -23,6 +31,34 @@ from app.core.spec.validate import attr_defs
 from app.core.spec.write import create_row, update_row
 
 MAX_ROWS = 5000
+DEFAULT_TZ = "Asia/Taipei"
+DT_FORMAT = "yyyy-mm-dd hh:mm:ss"
+DATE_FORMAT = "yyyy-mm-dd"
+_TZ_SUFFIX = re.compile(r"\s+\([^()]+\)$")
+
+
+def tenant_tz(session: Session, tenant_id: uuid.UUID) -> ZoneInfo:
+    """租户时区：第一个启用厂区（按编码）的 timezone；无厂区或时区无效时用 Asia/Taipei。"""
+    t = table(ENTITIES["site"])
+    name = (
+        conn(session)
+        .execute(
+            sa.select(t.c.timezone)
+            .where(t.c.tenant_id == tenant_id, t.c.is_active.is_not(False))
+            .order_by(t.c.code)
+            .limit(1)
+        )
+        .scalar()
+    )
+    try:
+        return ZoneInfo(name or DEFAULT_TZ)
+    except ZoneInfoNotFoundError, ValueError:
+        return ZoneInfo(DEFAULT_TZ)
+
+
+def _header(e: Entity, col: str, tz: ZoneInfo) -> str:
+    f = e.field(col) if not col.startswith("attr:") else None
+    return f"{col} ({tz.key})" if f and f.type == "datetime" else col
 
 
 def _ref_code(
@@ -82,7 +118,8 @@ def export_xlsx(
     ws = wb.active
     assert ws is not None
     ws.title = e.code[:31]
-    ws.append(cols)
+    tz = tenant_tz(session, tenant_id)
+    ws.append([_header(e, c, tz) for c in cols])
     for r in rows:
         line: list[Any] = []
         for c in cols:
@@ -98,10 +135,28 @@ def export_xlsx(
                 )
             else:
                 v = r[f.column if f else c]
-                line.append(
-                    to_json(v) if f and f.type in ("date", "time", "datetime") else v
-                )
+                if f and f.type == "datetime" and isinstance(v, datetime):
+                    # openpyxl 不接受带时区的 datetime：换算到租户时区后去掉 tzinfo
+                    line.append(
+                        v.astimezone(tz).replace(tzinfo=None) if v.tzinfo else v
+                    )
+                elif (
+                    f
+                    and f.type in ("date", "time", "datetime")
+                    and not isinstance(v, date)
+                ):
+                    line.append(to_json(v))
+                elif f and f.type == "time":
+                    line.append(to_json(v))
+                else:
+                    line.append(v)
         ws.append(line)
+        for cell, c in zip(ws[ws.max_row], cols, strict=True):
+            f = e.field(c) if not c.startswith("attr:") else None
+            if f and f.type == "datetime" and isinstance(cell.value, datetime):
+                cell.number_format = DT_FORMAT
+            elif f and f.type == "date" and isinstance(cell.value, date):
+                cell.number_format = DATE_FORMAT
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()
@@ -153,7 +208,11 @@ def import_xlsx(
         raise HTTPException(status_code=400, detail="Not a valid .xlsx file") from ex
     ws = wb.worksheets[0]
     it = ws.iter_rows(values_only=True)
-    header = [str(h).strip() if h is not None else "" for h in next(it, ())]
+    header = [
+        _TZ_SUFFIX.sub("", str(h).strip()) if h is not None else ""
+        for h in next(it, ())
+    ]
+    tz = tenant_tz(session, tenant_id)
     if not header or not any(header):
         raise HTTPException(status_code=400, detail="Empty sheet")
     known = set(columns(session, tenant_id, e)) | {""}
@@ -191,6 +250,10 @@ def import_xlsx(
                     payload[f.column] = rid
                 elif f and f.type == "json" and isinstance(v, str) and v.strip():
                     payload[k] = json.loads(v)
+                elif f and f.type == "datetime" and isinstance(v, datetime):
+                    payload[k] = v if v.tzinfo else v.replace(tzinfo=tz)
+                elif f and f.type == "date" and isinstance(v, datetime):
+                    payload[k] = v.date()
                 else:
                     payload[k] = v
             if attrs:

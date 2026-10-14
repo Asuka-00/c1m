@@ -74,8 +74,10 @@ def test_meta_conditional_scope_fields(client: TestClient, db: Session) -> None:
 
 
 def test_export_datetime_fields_utc_z(client: TestClient, db: Session) -> None:
-    """带时区的 datetime 字段导出为 UTC Z 字符串（openpyxl 不接受带时区的 datetime）。"""
+    """D46 P2：xlsx 里 datetime 是按租户时区换算的 Excel 日期单元格，列名带时区；
+    接口 JSON 仍是 UTC Z。导出文件可原样导回（列名时区后缀被去掉）。"""
     import io
+    from datetime import datetime
 
     from openpyxl import load_workbook
 
@@ -95,5 +97,38 @@ def test_export_datetime_fields_utc_z(client: TestClient, db: Session) -> None:
     ws = load_workbook(io.BytesIO(r.content)).active
     assert ws is not None
     rows = list(ws.iter_rows(values_only=True))
-    i = rows[0].index("start_at")
-    assert "2026-04-01T00:00:00Z" in [x[i] for x in rows[1:]]
+    # 没有厂区：默认 Asia/Taipei
+    i = rows[0].index("start_at (Asia/Taipei)")
+    assert datetime(2026, 4, 1, 8, 0) in [x[i] for x in rows[1:]]
+    assert ws.cell(row=2, column=i + 1).number_format == "yyyy-mm-dd hh:mm:ss"
+    assert "equipment" in rows[0]  # 非时间列名不变
+    js = m.list("downtime")["data"]
+    assert js[0]["start_at"] == "2026-04-01T00:00:00Z"
+    # 租户时区取第一个启用厂区
+    m.post("site", {"code": "A-UTC", "name": "s", "timezone": "UTC"})
+    r = client.get(m.url("downtime", "export"), headers=m.h)
+    rows = list(load_workbook(io.BytesIO(r.content)).active.iter_rows(values_only=True))  # type: ignore[union-attr]
+    i = rows[0].index("start_at (UTC)")
+    assert datetime(2026, 4, 1, 0, 0) in [x[i] for x in rows[1:]]
+
+
+def test_export_import_datetime_roundtrip(client: TestClient, db: Session) -> None:
+    """D46 P2：导出的 xlsx（列名带时区、日期单元格）可原样导回，时间不偏移。"""
+    m = Mes(client, db)
+    eq = m.post("equipment", {"code": "EQ-RT", "name": "eq"})
+    rc = m.post(
+        "reason_code", {"code": "DT-RT", "name": "d", "reason_type": "downtime"}
+    )
+    m.post(
+        "downtime",
+        {
+            "equipment_id": eq["id"],
+            "start_at": "2026-04-01T08:30:00+08:00",
+            "reason_id": rc["id"],
+        },
+    )
+    rows = m.export("downtime")
+    assert "start_at (Asia/Taipei)" in rows[0]
+    m.import_rows("downtime", rows)
+    got = [x["start_at"] for x in m.list("downtime")["data"]]
+    assert got == ["2026-04-01T00:30:00Z", "2026-04-01T00:30:00Z"], got
