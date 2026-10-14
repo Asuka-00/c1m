@@ -194,6 +194,25 @@ const fmtOffset = (min: number) => {
 }
 
 /**
+ * D82：站点墙上时间（`YYYY-MM-DDTHH:mm` 或带秒）→ 带偏移 ISO（如 `2026-10-15T08:30:00+08:00`）。
+ * 时区非法时用 Asia/Taipei；格式不对返回 null。
+ */
+export function siteWallToIso(
+  local: string,
+  tz: string = current
+): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(
+    local.trim()
+  )
+  if (!m) return null
+  const zone = isValidTz(tz) ? tz : DEFAULT_SITE_TZ
+  const [y, mo, d, h, mi, se] = m.slice(1).map((x) => Number(x ?? 0))
+  const wall = Date.UTC(y, mo - 1, d, h, mi, se)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${m[1]}-${m[2]}-${m[3]}T${p(h)}:${p(mi)}:${p(se)}${fmtOffset(offsetAtWall(wall, zone))}`
+}
+
+/**
  * 站点日期的当天边界（D75，带偏移，后端不换算时区、两头都含）：
  * 开始 `YYYY-MM-DDT00:00:00+HH:MM`，结束 `YYYY-MM-DDT23:59:59.999999+HH:MM`。
  * 偏移按当天该时刻的实际偏移算（夏令时切换日开始和结束的偏移可以不同）。

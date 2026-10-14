@@ -105,3 +105,10 @@
 
 - N-E1：读回码为空提示「请填写读回码」（`mes.marking.err.readCodeRequired`），后端 422 missing body.read_code 同文案。
 - N-E2 / D81：P3 打标、光罩 mock 校验顺序 —— 缺 Idempotency-Key 422 → body 422 → 幂等重放（换请求体 422 reused）→ 404 → 409 状态 / 业务。mock 无认证层（401/403 不模拟）。检验完全不带 read_code 也返回 422 missing。
+
+## D82 补录时间（光罩上机 / 下机 / 登记异常）
+
+- 对话框加可选「补录时间」（datetime-local，站点墙上时间）；不填不传，填了用 `siteWallToIso`（site_tz，非法时 Asia/Taipei）转带偏移 ISO，提交为 `mounted_at` / `unmounted_at` / `occurred_at`（be/p3 59fb7c5 MountIn / UnmountIn / IncidentIn）。
+- 前端：比当前晚超过 5 分钟拦住（正好 5:00 放行）。
+- mock（D81 顺序 422 → 404 → 409）：无偏移 422 `timezone_required`；超前 >5 分钟 422 `value_error` ctx.reason=`future_time`；早于最近一次下机 / 事件 409 `time_out_of_order`；下机早于对应上机 409（相等合法）。文案三语；后端现有 `time_in_future` 码也识别。
+- ct-move 404 按 `operation_not_found` / `product_not_found` 分开提示。

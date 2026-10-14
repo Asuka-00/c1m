@@ -517,7 +517,8 @@
         "enum": "取值无效，可选：{{expected}}",
         "step_ids_mismatch": "工步列表与当前流程的工步不一致，请刷新后重试。",
         "not_text_filter": "{{field}} 不是可筛选的文本字段",
-        "range_inverted": "开始时间不能晚于结束时间"
+        "range_inverted": "开始时间不能晚于结束时间",
+        "time_in_future": "补录时间不能晚于当前时间 5 分钟以上"
       },
       "tooManyDecimals": "最多 {{n}} 位小数",
       "onlyWhen": "仅当{{cond}}为「{{value}}」时才能填写",
@@ -1713,7 +1714,9 @@
       "reworkMoves": "返工 Move（批 / 片）",
       "hold": "平均 Hold 时长（小时）",
       "notFound": "所选工序或产品不存在，请重新选择",
-      "onHold": "期末 Hold（批 / 片）"
+      "onHold": "期末 Hold（批 / 片）",
+      "operationNotFound": "所选工序不存在，请重新选择",
+      "productNotFound": "所选产品不存在，请重新选择"
     },
     "qual": {
       "notQualified": "{{user}} 不具备工序 {{op}} 的有效资质，不能进站，且不可放行。请先取得或续期资质。",
@@ -1847,7 +1850,8 @@
         "equipment_id": "机台",
         "slot_code": "槽位",
         "lot_id": "批次 ID",
-        "description": "异常描述"
+        "description": "异常描述",
+        "backfill_at": "补录时间"
       },
       "tab": {
         "status": "状态履历",
@@ -1893,7 +1897,9 @@
         "reasonIdRequired": "减少计数时必须填写原因代码",
         "tooLong": "不能超过 {{max}} 个字符",
         "nonNegInt": "须为非负整数",
-        "maxPlaces": "增减量最多 {{max}} 位小数"
+        "maxPlaces": "增减量最多 {{max}} 位小数",
+        "futureTime": "补录时间不能晚于当前时间 5 分钟以上",
+        "backfillInvalid": "请输入有效的补录时间"
       },
       "code": {
         "invalid_transition": "当前状态不允许「{{action}}」，请刷新后重试",
@@ -1904,7 +1910,8 @@
         "life_reached": "光罩已达寿命上限，不能进站",
         "idempotency_in_progress": "上一次提交还在处理中，请稍后重试",
         "referenced": "光罩已有履历记录，不能删除；如不再使用请报废",
-        "slot_occupied": "该机台槽位已有光罩"
+        "slot_occupied": "该机台槽位已有光罩",
+        "time_out_of_order": "时间早于这张光罩最近一次下机或事件，或下机早于上机"
       },
       "scrappedHint": "光罩已报废，不能再计数、录入检查或执行其他动作",
       "delete": "删除",
@@ -1913,7 +1920,8 @@
         "collision": "碰撞",
         "drop": "跌落",
         "other": "其他"
-      }
+      },
+      "backfillHint": "可选；不填按当前时间，按站点时区提交"
     },
     "marking": {
       "tplTitle": "打标模板",

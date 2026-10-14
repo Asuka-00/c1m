@@ -517,7 +517,8 @@
         "enum": "Invalid value; allowed: {{expected}}",
         "step_ids_mismatch": "The step list does not match the current route; refresh and try again.",
         "not_text_filter": "{{field}} is not a filterable text field",
-        "range_inverted": "The start cannot be later than the end"
+        "range_inverted": "The start cannot be later than the end",
+        "time_in_future": "The backfill time cannot be more than 5 minutes in the future"
       },
       "tooManyDecimals": "At most {{n}} decimal places",
       "onlyWhen": "Only allowed when {{cond}} is “{{value}}”",
@@ -1713,7 +1714,9 @@
       "reworkMoves": "Rework moves (lots / wafers)",
       "hold": "Avg hold time (h)",
       "notFound": "The selected operation or product does not exist; choose again",
-      "onHold": "On hold at end (lots / qty)"
+      "onHold": "On hold at end (lots / qty)",
+      "operationNotFound": "The selected operation does not exist; choose again",
+      "productNotFound": "The selected product does not exist; choose again"
     },
     "qual": {
       "notQualified": "{{user}} has no valid qualification for operation {{op}} and cannot track in. This cannot be overridden. Obtain or renew the qualification first.",
@@ -1847,7 +1850,8 @@
         "equipment_id": "Equipment",
         "slot_code": "Slot",
         "lot_id": "Lot ID",
-        "description": "Description"
+        "description": "Description",
+        "backfill_at": "Backfill time"
       },
       "tab": {
         "status": "Status history",
@@ -1893,7 +1897,9 @@
         "reasonIdRequired": "A reason code is required to subtract shots",
         "tooLong": "Must be at most {{max}} characters",
         "nonNegInt": "Must be a non-negative integer",
-        "maxPlaces": "Delta allows at most {{max}} decimal places"
+        "maxPlaces": "Delta allows at most {{max}} decimal places",
+        "futureTime": "The backfill time cannot be more than 5 minutes in the future",
+        "backfillInvalid": "Enter a valid backfill time"
       },
       "code": {
         "invalid_transition": "\"{{action}}\" is not allowed in the current status. Refresh and try again.",
@@ -1904,7 +1910,8 @@
         "life_reached": "The reticle has reached its life limit and cannot be tracked in",
         "idempotency_in_progress": "The previous submission is still being processed. Please try again shortly.",
         "referenced": "The reticle has history records and can't be deleted. Scrap it instead.",
-        "slot_occupied": "That slot on the equipment already holds a reticle"
+        "slot_occupied": "That slot on the equipment already holds a reticle",
+        "time_out_of_order": "The time is earlier than this reticle’s latest unmount or event, or the unmount is earlier than the mount"
       },
       "scrappedHint": "The reticle is scrapped; usage, inspection and other actions are not allowed",
       "delete": "Delete",
@@ -1913,7 +1920,8 @@
         "collision": "Collision",
         "drop": "Drop",
         "other": "Other"
-      }
+      },
+      "backfillHint": "Optional; leave blank for now. Submitted in the site time zone"
     },
     "marking": {
       "tplTitle": "Marking templates",

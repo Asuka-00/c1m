@@ -302,3 +302,36 @@ describe('CT/Move 跨度边界（含两端 ≤92 天，to − from ≤ 91）', (
     })
   })
 })
+
+describe('ct-move 404 分开提示（be/p3 59fb7c5）', () => {
+  it.each(['zh-CN', 'en', 'ja'])(
+    '%s：operation_not_found / product_not_found',
+    async (lg) => {
+      await i18n.changeLanguage(lg)
+      const get = (f: () => unknown) => {
+        try {
+          f()
+        } catch (e) {
+          return e
+        }
+        throw new Error('expected')
+      }
+      const op = get(() =>
+        mockCtMoveReport({
+          date_from: '2026-10-01',
+          date_to: '2026-10-01',
+          operation_id: 'nope',
+        })
+      )
+      const pr = get(() =>
+        mockCtMoveReport({
+          date_from: '2026-10-01',
+          date_to: '2026-10-01',
+          product_id: 'missing-1',
+        })
+      )
+      expect(ctMoveErrorMessage(op)).toBe(t('mes.ctMove.operationNotFound'))
+      expect(ctMoveErrorMessage(pr)).toBe(t('mes.ctMove.productNotFound'))
+    }
+  )
+})

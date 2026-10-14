@@ -5,12 +5,14 @@ import { t } from '@/i18n'
 import { toast } from 'sonner'
 import { eqpApi } from '@/lib/api/mes/equipment'
 import {
+  BACKFILL_FIELD,
   bodySignature,
   reticleApi,
   type Reticle,
   type ReticleAction,
   type ReticleActionInput,
 } from '@/lib/api/mes/reticle'
+import { siteWallToIso } from '@/lib/site-tz'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -81,8 +83,14 @@ function Body({
   const fields = ACTIONS[action].fields
   const m = useMutation({
     mutationFn: () => {
+      // D82：补录时间不填不传；填了按站点时区转带偏移 ISO
+      const { backfill_at, ...rest } = v
+      const bf = BACKFILL_FIELD[action]
       const input: ReticleActionInput = {
-        ...v,
+        ...rest,
+        ...(bf && backfill_at
+          ? { [bf]: siteWallToIso(backfill_at) ?? undefined }
+          : {}),
         defect_count:
           String(v.defect_count ?? '').trim() === ''
             ? undefined
@@ -289,6 +297,24 @@ function Body({
           </>
         )}
         {fields.includes('reason') && text('reason', true)}
+        {BACKFILL_FIELD[action] && (
+          <div className='grid gap-1'>
+            <Label htmlFor='reticle-backfill_at'>
+              {t('mes.reticle.field.backfill_at')}
+            </Label>
+            <Input
+              id='reticle-backfill_at'
+              data-testid='reticle-backfill_at'
+              type='datetime-local'
+              value={v.backfill_at ?? ''}
+              onChange={(e) => set('backfill_at')(e.target.value)}
+            />
+            <p className='text-xs text-muted-foreground'>
+              {t('mes.reticle.backfillHint')}
+            </p>
+            <FieldErr msg={errs.backfill_at} />
+          </div>
+        )}
         {fields.includes('comment') && text('comment', false)}
       </div>
       <DialogFooter>

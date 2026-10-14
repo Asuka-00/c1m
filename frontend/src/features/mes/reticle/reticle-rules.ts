@@ -1,13 +1,15 @@
 /** 光罩动作规则：权限、可用状态、表单校验与 409 错误码三语提示（v0.8.2 §3.2）。 */
 import { AxiosError } from 'axios'
 import { t } from '@/i18n'
-import type {
-  Reticle,
-  ReticleAction,
-  ReticleActionInput,
-  ReticleStatus,
+import {
+  tooFarInFuture,
+  type Reticle,
+  type ReticleAction,
+  type ReticleActionInput,
+  type ReticleStatus,
 } from '@/lib/api/mes/reticle'
 import { compareDecimal } from '@/lib/decimal'
+import { siteWallToIso } from '@/lib/site-tz'
 import { MES_PERM } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
 
@@ -148,7 +150,8 @@ export function disabledHint(r: Pick<Reticle, 'status_code'>) {
 /** 表单校验，返回 字段 → 错误文案。 */
 export function validateAction(
   a: ReticleAction,
-  v: ReticleActionInput
+  v: ReticleActionInput,
+  now: number = Date.now()
 ): Record<string, string> {
   const e: Record<string, string> = {}
   const tooLong = (s?: string) => (s ?? '').length > TEXT_MAX
@@ -180,6 +183,14 @@ export function validateAction(
     if ((v.slot_code ?? '').length > SLOT_MAX)
       e.slot_code = t('mes.reticle.err.tooLong', { max: SLOT_MAX })
   }
+  // D82：补录时间（站点墙上时间）比当前晚超过 5 分钟拦住
+  const bf = (v as { backfill_at?: string }).backfill_at
+  if (bf) {
+    const iso = siteWallToIso(bf)
+    if (!iso) e.backfill_at = t('mes.reticle.err.backfillInvalid')
+    else if (tooFarInFuture(iso, now))
+      e.backfill_at = t('mes.reticle.err.futureTime')
+  }
   if (a === 'incident') {
     if (!(INCIDENT_KINDS as readonly string[]).includes(v.kind ?? ''))
       e.kind = t('mes.err.required')
@@ -208,6 +219,8 @@ export const RETICLE_CODES = [
   'life_reached',
   // mount：同机台同槽位已有光罩
   'slot_occupied',
+  // D82：补录时间早于最近一次下机 / 事件，或下机早于上机
+  'time_out_of_order',
   // 409：上次同 key 请求仍在处理；重试时内容不变复用同一 key
   'idempotency_in_progress',
   // D72：有履历的光罩删除 → 409 referenced
@@ -223,6 +236,15 @@ export function reticleErrorMessage(err: unknown, action?: ReticleAction) {
     if (Array.isArray(d)) {
       // D80：缺 Idempotency-Key / 同 key 换请求体
       const items = d as { loc?: unknown[]; type?: string; code?: string }[]
+      // D82：补录时间超前（mock value_error+future_time；后端 59fb7c5 为 time_in_future）
+      if (
+        items.some(
+          (x) =>
+            (x as { ctx?: { reason?: unknown } })?.ctx?.reason ===
+              'future_time' || (x?.type ?? x?.code) === 'time_in_future'
+        )
+      )
+        return t('mes.reticle.err.futureTime')
       if (items.some((x) => (x?.type ?? x?.code) === 'idempotency_key_reused'))
         return t('mes.reticle.err.keyReused')
       if (

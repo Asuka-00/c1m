@@ -159,6 +159,9 @@ export interface ReticleActionInput {
   occurred_at?: string
   lot_id?: string
   description?: string
+  unmounted_at?: string
+  /** D82：对话框里的补录时间（站点墙上时间，不提交；提交前换成对应字段） */
+  backfill_at?: string
 }
 
 /**
@@ -309,7 +312,31 @@ export const httpReticleApi: Api = {
 
 /* ---------------- mock ---------------- */
 
-const now = () => new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
+let mockNow = () => new Date()
+/** 测试用：mock 的当前时间。 */
+export const setReticleMockNow = (f: () => Date) => {
+  mockNow = f
+}
+const now = () =>
+  mockNow()
+    .toISOString()
+    .replace(/\.\d{3}Z$/, 'Z')
+
+/** D82：补录时间字段（mount / unmount / incident）。 */
+export const BACKFILL_FIELD: Partial<
+  Record<ReticleAction, 'mounted_at' | 'unmounted_at' | 'occurred_at'>
+> = {
+  mount: 'mounted_at',
+  unmount: 'unmounted_at',
+  incident: 'occurred_at',
+}
+/** 时钟偏差容忍：比当前晚超过 5 分钟拒绝（正好 5:00 放行，D55/D82）。 */
+export const CLOCK_SKEW_MS = 5 * 60_000
+/** 是否带时区偏移（Z 或 ±hh:mm）。 */
+export const hasOffset = (v: string) => /(Z|[+-]\d{2}:\d{2})$/.test(v.trim())
+/** 补录时间是否超前当前超过 5 分钟。 */
+export const tooFarInFuture = (iso: string, nowMs: number = Date.now()) =>
+  Date.parse(iso) - nowMs > CLOCK_SKEW_MS
 const base = (o: Partial<Reticle> & Pick<Reticle, 'id' | 'code'>): Reticle => ({
   name: o.code,
   revision: 'A',
@@ -465,6 +492,7 @@ const idem = new Map<string, { sig: string; out: ReticleActionOut }>()
 
 /** 测试用：重置 mock 数据。 */
 export function resetReticleMock() {
+  mockNow = () => new Date()
   store = seed()
   idem.clear()
 }
@@ -550,6 +578,30 @@ const logAction = (a: ReticleAction) => a.replace('-', '_')
  * 请求体 422（N-E2：缺 key 之后、幂等重放和 409 之前，与后端 pydantic 校验同序）。
  */
 function bodyCheck(action: ReticleAction, body: ReticleActionInput) {
+  // D82：补录时间 —— 无偏移 422 timezone_required；超前 >5 分钟 422 value_error future_time
+  const tf = BACKFILL_FIELD[action]
+  const tv = tf ? body[tf] : undefined
+  if (tf && tv != null && tv !== '') {
+    if (!hasOffset(String(tv)) || Number.isNaN(Date.parse(String(tv))))
+      throw apiError(422, [
+        {
+          loc: ['body', tf],
+          type: 'timezone_required',
+          code: 'timezone_required',
+          msg: `${tf}: timezone required`,
+        },
+      ])
+    if (tooFarInFuture(String(tv), mockNow().getTime()))
+      throw apiError(422, [
+        {
+          loc: ['body', tf],
+          type: 'value_error',
+          code: 'value_error',
+          msg: `${tf}: more than 5 minutes in the future`,
+          ctx: { reason: 'future_time' },
+        },
+      ])
+  }
   if (action === 'usage') {
     const raw = String(body.delta ?? '')
     const d = Number(raw)
@@ -649,7 +701,28 @@ function mockAct(
   const h = store.hist[id]
   const from = x.status_code
   const holdFrom = x.hold_reason
-  const at = now()
+  // D82：补录时间；早于最近一次下机 / 事件 409 time_out_of_order；下机早于对应上机 409（相等合法）
+  const tf = BACKFILL_FIELD[action]
+  const given = tf && body[tf] ? String(body[tf]) : null
+  const at = given
+    ? new Date(Date.parse(given)).toISOString().replace(/\.\d{3}Z$/, 'Z')
+    : now()
+  if (given) {
+    const ms = Date.parse(given)
+    if (action === 'unmount') {
+      const om = openMount(id)
+      if (om && ms < Date.parse(om.mounted_at))
+        throw conflict('time_out_of_order')
+    }
+    const last = Math.max(
+      ...h.status_log.map((s) => Date.parse(s.at)),
+      ...h.mounts
+        .filter((m) => m.unmounted_at)
+        .map((m) => Date.parse(m.unmounted_at!)),
+      -Infinity
+    )
+    if (ms < last) throw conflict('time_out_of_order')
+  }
   const closeMount = (reason: string) => {
     const m = openMount(id)
     if (!m) return null
@@ -703,7 +776,7 @@ function mockAct(
       equipment_id: body.equipment_id!,
       equipment_label: body.equipment_id!,
       slot_code: body.slot_code?.trim() || null,
-      mounted_at: body.mounted_at ?? at,
+      mounted_at: at,
       unmounted_at: null,
       unmount_reason: null,
       shots_at_mount: x.shot_count,
@@ -730,7 +803,7 @@ function mockAct(
       data: {
         id: `inc${Date.now()}`,
         kind: body.kind,
-        occurred_at: body.occurred_at ?? at,
+        occurred_at: at,
         equipment_id: body.equipment_id ?? null,
         lot_id: body.lot_id ?? null,
         description: body.description ?? null,

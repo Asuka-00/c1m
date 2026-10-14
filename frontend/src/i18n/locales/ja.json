@@ -517,7 +517,8 @@
         "enum": "値が無効です。指定可能：{{expected}}",
         "step_ids_mismatch": "工程リストが現在のルートと一致しません。更新して再試行してください。",
         "not_text_filter": "{{field}} はフィルタ可能なテキスト項目ではありません",
-        "range_inverted": "開始は終了より後にできません"
+        "range_inverted": "開始は終了より後にできません",
+        "time_in_future": "補録時刻は現在より 5 分以上先にできません"
       },
       "tooManyDecimals": "小数は最大 {{n}} 桁です",
       "onlyWhen": "{{cond}}が「{{value}}」のときのみ入力できます",
@@ -1713,7 +1714,9 @@
       "reworkMoves": "リワーク Move（ロット / 枚）",
       "hold": "平均 Hold 時間（時間）",
       "notFound": "選択した工程または製品が存在しません。選び直してください",
-      "onHold": "期末ホールド（ロット / 数量）"
+      "onHold": "期末ホールド（ロット / 数量）",
+      "operationNotFound": "選択した工程が存在しません。選び直してください",
+      "productNotFound": "選択した製品が存在しません。選び直してください"
     },
     "qual": {
       "notQualified": "{{user}} は工程 {{op}} の有効な資格がないため投入できません。強制解除もできません。資格を取得または更新してください。",
@@ -1847,7 +1850,8 @@
         "equipment_id": "装置",
         "slot_code": "スロット",
         "lot_id": "ロット ID",
-        "description": "異常内容"
+        "description": "異常内容",
+        "backfill_at": "補録時刻"
       },
       "tab": {
         "status": "状態履歴",
@@ -1893,7 +1897,9 @@
         "reasonIdRequired": "カウントを減らす場合は理由コードが必要です",
         "tooLong": "{{max}} 文字以内で入力してください",
         "nonNegInt": "0 以上の整数で入力してください",
-        "maxPlaces": "増減量は小数点以下 {{max}} 桁までです"
+        "maxPlaces": "増減量は小数点以下 {{max}} 桁までです",
+        "futureTime": "補録時刻は現在より 5 分以上先にできません",
+        "backfillInvalid": "有効な補録時刻を入力してください"
       },
       "code": {
         "invalid_transition": "現在の状態では「{{action}}」を実行できません。更新して再試行してください",
@@ -1904,7 +1910,8 @@
         "life_reached": "寿命上限に達しているためトラックインできません",
         "idempotency_in_progress": "前回の送信をまだ処理中です。しばらくしてから再試行してください",
         "referenced": "レチクルに履歴があるため削除できません。不要な場合は廃棄してください",
-        "slot_occupied": "装置のそのスロットには既にレチクルがあります"
+        "slot_occupied": "装置のそのスロットには既にレチクルがあります",
+        "time_out_of_order": "このレチクルの直近の取り外し・イベントより前、または取り外しが装着より前です"
       },
       "scrappedHint": "レチクルは廃棄済みのため、カウント・検査登録などの操作はできません",
       "delete": "削除",
@@ -1913,7 +1920,8 @@
         "collision": "衝突",
         "drop": "落下",
         "other": "その他"
-      }
+      },
+      "backfillHint": "任意。空欄なら現在時刻。拠点のタイムゾーンで送信します"
     },
     "marking": {
       "tplTitle": "マーキングテンプレート",

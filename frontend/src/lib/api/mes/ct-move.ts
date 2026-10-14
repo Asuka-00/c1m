@@ -248,9 +248,15 @@ export function mockCtMoveReport(p: CtMoveParams): CtMoveReport {
       },
     ])
   if (p.operation_id && !OPS.some(([id]) => id === p.operation_id))
-    throw mockErr(404, 'operation not found')
+    throw mockErr(404, {
+      code: 'operation_not_found',
+      message: 'operation not found',
+    })
   if (p.product_id && p.product_id.startsWith('missing'))
-    throw mockErr(404, 'product not found')
+    throw mockErr(404, {
+      code: 'product_not_found',
+      message: 'product not found',
+    })
   return ctMoveMock(p)
 }
 
