@@ -5,7 +5,7 @@
 """
 
 import uuid
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -40,6 +40,10 @@ class LotIn(BaseModel):
     slots: list[int] | None = None
     source_ref: str | None = Field(default=None, max_length=100)
     wafer_sources: list[str] | None = None
+    # B7 客户来料
+    customer_lot_no: str | None = Field(default=None, max_length=100)
+    ownership: Literal["own", "customer"] | None = None
+    customer_id: uuid.UUID | None = None
 
 
 class StartIn(BaseModel):

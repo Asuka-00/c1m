@@ -27,7 +27,14 @@ from app.mes.execution.sm_rules import (
 )
 from app.mes.execution.stage_common import _brief, _ov
 from app.mes.execution.stages import LOT
-from app.mes.lot.service import check_transition, history, lock_lot, lot_error, units
+from app.mes.lot.service import (
+    check_transition,
+    history,
+    inherit_customer,
+    lock_lot,
+    lot_error,
+    units,
+)
 
 Row = dict[str, Any]
 
@@ -143,7 +150,7 @@ def split(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
     holds = find(s, tid, "lot_hold", lot_id=lot["id"], is_active=True)
     out: list[Row] = []
     for i, code in enumerate(codes):
-        vals = {k: lot[k] for k in COPY}
+        vals = {k: lot[k] for k in COPY} | inherit_customer(lot)
         vals["attrs"] = dict(lot.get("attrs") or {})
         cid = _ins(
             s,

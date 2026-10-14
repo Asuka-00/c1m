@@ -28,7 +28,15 @@ from app.mes.execution.sm_rules import (
 )
 from app.mes.execution.stage_common import _brief, _ov
 from app.mes.execution.stages import LOT
-from app.mes.lot.service import check_transition, history, lock_lots, lot_error, units
+from app.mes.lot.service import (
+    check_transition,
+    customer_mismatch,
+    history,
+    lock_lots,
+    lot_error,
+    units,
+)
+from app.mes.lot.service import customer_info as cust_info
 from app.mes.product import service as bom_svc
 
 Row = dict[str, Any]
@@ -65,6 +73,8 @@ def merge_problems(
         p.append(f"{c}: different sub-route / rework frame")
     if src.get("bom_id") != target.get("bom_id"):  # D28：空与非空也算不同
         p.append(f"{c}: different BOM version")
+    if customer_mismatch(target, src):  # B7
+        p.append(f"{c}: different customer / ownership")
     if (
         rule
         and rule.get("merge_same_wo", True)
@@ -203,6 +213,23 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
                 source_bom_id=src.get("bom_id") and str(src["bom_id"]),
                 source_bom_version=sv,
             )
+    # B7：客户 / 物料归属必须一致，硬性拒绝，不可强制放行
+    for src in sorted(srcs, key=lambda x: x["id"]):
+        if customer_mismatch(target, src):
+            ti, si = cust_info(s, tid, target), cust_info(s, tid, src)
+            raise lot_error(
+                "customer_mismatch",
+                f"customer differs: target {target['code']} "
+                f"{ti['customer'] or ti['ownership']}, source {src['code']} "
+                f"{si['customer'] or si['ownership']}",
+                src,
+                action="merge_source",
+                target_lot_code=target["code"],
+                target_customer_id=ti["customer_id"],
+                target_ownership=ti["ownership"],
+                source_customer_id=si["customer_id"],
+                source_ownership=si["ownership"],
+            )
     rule = rule_for(s, tid, target)
     errs: list[str] = []
     if target["lot_status"] not in SPLIT_STATES:
@@ -276,7 +303,12 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
             user,
             from_status=old_status,
             comment=body.get("comment"),
-            details={"target": target["code"], "qty": old_qty, "units": ucodes},
+            details={
+                "target": target["code"],
+                "qty": old_qty,
+                "units": ucodes,
+                "customer_lot_no": src.get("customer_lot_no"),
+            },
         )
         audit(
             s,

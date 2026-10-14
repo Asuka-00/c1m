@@ -271,3 +271,44 @@ def test_pm_notify_dedupe_key_format_independent(
     assert maint.pm_notify(db, tid) == 0
     db.commit()
     assert _types(f).count(ev) == 1
+
+
+def test_pm_notify_legacy_key_session_utc(client: TestClient, db: Session) -> None:
+    """旧键兼容不依赖会话时区：会话时区为 UTC 时，+08:00 写法的旧键也不重发。"""
+    from datetime import UTC, datetime, timedelta, timezone
+
+    from sqlalchemy import text
+
+    from app.mes.equipment import maint
+
+    f = Line(client, db)
+    _sub_all(f)
+    tid = uuid.UUID(str(f.m.tid))
+    eq_id = f.eq["id"]
+    p = f.m.post(
+        "pm_plan",
+        {"code": "PM-U", "name": "pm", "equipment_id": eq_id, "interval_days": 1},
+    )
+    done = datetime.now(UTC).replace(microsecond=0) - timedelta(days=2)
+    f.sql(
+        "INSERT INTO mes_pm_record (id, tenant_id, pm_plan_id, equipment_id, result, done_at) "
+        "VALUES (gen_random_uuid(), :t, :p, :e, 'ok', :d)",
+        t=tid,
+        p=p["id"],
+        e=eq_id,
+        d=done,
+    )
+    set_tenant(db, tid)
+    db.exec(text("SET TIME ZONE 'UTC'"))  # type: ignore[call-overload]
+    ev = maint.PM_OVERDUE
+    old = done.astimezone(timezone(timedelta(hours=8))).isoformat()
+    assert old.endswith("+08:00")
+    kw: dict[str, Any] = {"title": "t", "object_type": "equipment", "object_id": eq_id}
+    assert svc.notify(db, tid, ev, dedupe_key=f"{ev}:{eq_id}:{p['id']}:{old}", **kw)
+    db.flush()
+    try:
+        assert maint.pm_notify(db, tid) == 0
+    finally:
+        db.exec(text("RESET TIME ZONE"))  # type: ignore[call-overload]
+        db.commit()
+    assert _types(f).count(ev) == 1

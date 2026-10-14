@@ -15,11 +15,13 @@ from pydantic import BaseModel, Field
 
 from app.core.deps import SessionDep
 from app.core.spec.engine import ENTITIES
+from app.core.spec.errors import http_422
 from app.core.spec.serialize import serialize
 from app.mes.common.query import one
 from app.mes.execution import dispatch, shift_log
 from app.mes.execution import service as sm
 from app.mes.execution import service as svc
+from app.mes.lot.service import lookup_customer_lots
 from app.platform.auth.deps import CurrentTenant
 from app.platform.tenants.service import TenantContext
 
@@ -368,12 +370,26 @@ def report_oee_trend(
 def trace(
     session: SessionDep,
     ctx: CurrentTenant,
-    kind: Literal["lot", "wafer", "equipment", "material_lot"],
+    kind: Literal["lot", "wafer", "equipment", "material_lot", "customer_lot"],
     code: str,
 ) -> Any:
     """Traceability: backward (sources, equipment, materials) and forward (outputs)."""
     _need(ctx, "mes.exec:read")
     return svc.trace(session, ctx.id, kind, code)
+
+
+@router.get("/customer-lots")
+def customer_lots(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    customer_lot_no: str | None = Query(None, min_length=1, max_length=100),
+    lot_no: str | None = Query(None, min_length=1, max_length=100),
+) -> Any:
+    """B7: look up internal lot numbers by customer lot no., or the reverse."""
+    _need(ctx, "mes.exec:read")
+    if not customer_lot_no and not lot_no:
+        raise http_422([("customer_lot_no", "customer_lot_no or lot_no required")])
+    return {"data": lookup_customer_lots(session, ctx.id, customer_lot_no, lot_no)}
 
 
 @router.get("/wafers/{wafer_id}/history")

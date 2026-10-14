@@ -1,5 +1,20 @@
 """批次模块公开 API（供 planning / execution 使用）。"""
 
+from app.mes.lot.customer import (
+    customer_info as customer_info,
+)
+from app.mes.lot.customer import (
+    customer_mismatch as customer_mismatch,
+)
+from app.mes.lot.customer import (
+    customer_start_errors as customer_start_errors,
+)
+from app.mes.lot.customer import (
+    inherit_customer as inherit_customer,
+)
+from app.mes.lot.customer import (
+    lookup_customer_lots as lookup_customer_lots,
+)
 from app.mes.lot.lots import (
     TERMINAL as TERMINAL,
 )

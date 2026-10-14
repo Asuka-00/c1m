@@ -48,6 +48,7 @@
       "shift": "シフト",
       "work_calendar": "稼働カレンダー",
       "calendar_day": "カレンダー日",
+      "customer": "顧客",
       "lot_priority": "ロット優先度",
       "lot_type": "ロットタイプ",
       "split_merge_rule": "分割・統合規則",
@@ -266,7 +267,7 @@
         "done_by": "登録者",
         "done_at": "登録日時",
         "comment": "コメント",
-        "chamber": "チャンバー・サブユニット",
+        "sub_unit": "サブユニット（チャンバー・スピンドル・テストヘッド・ボンドヘッド）",
         "source": "ソース",
         "external_event_id": "外部イベント ID"
       },
@@ -395,6 +396,12 @@
         "shifts": "シフト",
         "note": "備考"
       },
+      "customer": {
+        "code": "コード",
+        "name": "名称",
+        "short_name": "略称",
+        "description": "説明"
+      },
       "lot_priority": {
         "code": "コード",
         "name": "名称",
@@ -475,6 +482,9 @@
         "started_at": "投入日時",
         "started_by": "投入者",
         "bom": "BOM 版",
+        "customer_lot_no": "顧客ロット番号",
+        "ownership": "所有区分",
+        "customer": "顧客",
         "description": "説明"
       },
       "wafer": {
@@ -829,6 +839,8 @@
         "expiry_date": "有効期限",
         "location": "ロケーション",
         "ml_status": "状態",
+        "ownership": "所有区分",
+        "customer": "顧客",
         "description": "説明"
       },
       "measurement_item": {
@@ -1246,6 +1258,10 @@
         "split": "分割",
         "merge": "統合"
       },
+      "ownership": {
+        "own": "自社",
+        "customer": "顧客支給"
+      },
       "wo_status": {
         "draft": "下書き",
         "released": "リリース済",
@@ -1627,6 +1643,7 @@
     "mes-e10_auto_rule": "E10 自動遷移",
     "mes-lot_type": "ロットタイプ",
     "mes-lot_priority": "優先度",
+    "mes-customer": "顧客",
     "mes-split_merge_rule": "分割・統合ルール",
     "mes-site": "工場",
     "mes-area": "エリア",

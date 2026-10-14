@@ -5,14 +5,15 @@
 """
 
 import uuid
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
 
 from app.core.deps import SessionDep
 from app.core.spec.engine import ENTITIES
 from app.core.spec.serialize import serialize
+from app.mes.common.guard import perm_body
 from app.mes.product import bom as svc
 from app.platform.auth.deps import CurrentTenant
 from app.platform.tenants.service import TenantContext
@@ -48,7 +49,9 @@ def bom_activate(
     session: SessionDep,
     ctx: CurrentTenant,
     bom_id: uuid.UUID,
-    _body: NoBody | None = None,
+    _body: Annotated[
+        NoBody | None, Depends(perm_body("mes.bom:activate", NoBody, optional=True))
+    ],
 ) -> Any:
     """Draft → active; the previous active version becomes superseded.
 
@@ -65,7 +68,9 @@ def bom_void(
     session: SessionDep,
     ctx: CurrentTenant,
     bom_id: uuid.UUID,
-    _body: NoBody | None = None,
+    _body: Annotated[
+        NoBody | None, Depends(perm_body("mes.bom:activate", NoBody, optional=True))
+    ],
 ) -> Any:
     """Draft / active → void (lots that locked it keep the reference)."""
     _need(ctx, "mes.bom:activate")
@@ -78,7 +83,9 @@ def bom_copy(
     session: SessionDep,
     ctx: CurrentTenant,
     bom_id: uuid.UUID,
-    _body: NoBody | None = None,
+    _body: Annotated[
+        NoBody | None, Depends(perm_body("mes.bom:write", NoBody, optional=True))
+    ],
 ) -> Any:
     """Copy any version (lines + substitutes) to the next draft version."""
     _need(ctx, "mes.bom:write")

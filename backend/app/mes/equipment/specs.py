@@ -587,9 +587,9 @@ register(
             F("comment", "str", "Comment|备注|コメント", max_length=300, list=False),
             # 预留给 EAP 上报（本期人工登记不开放，一律 manual / 空）
             F(
-                "chamber",
+                "sub_unit",
                 "ref",
-                "Chamber / sub-unit|腔体 / 子单元|チャンバー・サブユニット",
+                "Sub-unit (chamber / spindle / test head / bond head)|子单元（腔体 / 主轴 / 测试头 / 焊头）|サブユニット（チャンバー・スピンドル・テストヘッド・ボンドヘッド）",
                 ref="equipment",
                 list=False,
             ),

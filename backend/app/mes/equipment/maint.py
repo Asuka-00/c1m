@@ -1,7 +1,7 @@
 """设备维护：E10 手动改状态与状态履历、PM 计划到期判定与执行、设备状态看板。"""
 
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Any
 
 import sqlalchemy as sa
@@ -27,6 +27,7 @@ from app.mes.equipment.qual import open_task, start_qual
 from app.mes.equipment.status import e10_current
 from app.platform.notification.models import Notification
 
+TAIPEI = timezone(timedelta(hours=8))  # 固定 +08:00，不依赖会话时区
 Row = dict[str, Any]
 #: 视为宕机（触发设备宕机通知）的 E10 类别：计划 / 非计划停机
 DOWN_CATEGORIES = ("UDT", "SDT")
@@ -349,15 +350,21 @@ def pm_dedupe_key(ev: str, eq_id: Any, plan_id: Any, due_at: datetime) -> str:
 
 
 def _legacy_keys(ev: str, eq_id: Any, plan_id: Any, last: datetime | None) -> list[str]:
-    """D33 之前的旧格式去重键（按上次 PM 时间的字符串）的所有可能写法，用于兼容判断。"""
+    """D33 之前的旧格式去重键（按上次 PM 时间的字符串）的所有可能写法，用于兼容判断。
+
+    不依赖当前数据库会话的时区：除会话时区的 isoformat 外，固定加上 Asia/Taipei（+08:00）
+    与 UTC（+00:00 / Z / 无时区）几种写法。
+    """
     if last is None:
         bases = ["initial"]
     else:
         u = last.astimezone(UTC)
+        tw = last.astimezone(TAIPEI)
         bases = list(
             dict.fromkeys(
                 [
                     last.isoformat(),
+                    tw.isoformat(),
                     u.isoformat(),
                     iso_utc(last),
                     u.replace(tzinfo=None).isoformat(),

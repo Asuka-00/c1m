@@ -521,6 +521,16 @@ register(
                 required=True,
                 default="available",
             ),
+            # B7：物料归属与客户（客户来料）
+            F(
+                "ownership",
+                "enum",
+                "Ownership|物料归属|所有区分",
+                enum="ownership",
+                default="own",
+                list=False,
+            ),
+            F("customer", "ref", "Customer|客户|顧客", ref="customer", list=False),
         ],
         phase=6,
         has_name=False,

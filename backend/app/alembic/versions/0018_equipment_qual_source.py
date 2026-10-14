@@ -53,13 +53,14 @@ def upgrade():
         op.alter_column(T, "source", server_default=None)
     if "external_event_id" not in cols:
         op.add_column(T, sa.Column("external_event_id", sa.String(length=128)))
-    if "chamber_id" not in cols:
+    # 0019 已把 chamber_id 改名为 sub_unit_id：重复执行时不再补回旧列
+    if "chamber_id" not in cols and "sub_unit_id" not in cols:
         op.add_column(T, sa.Column("chamber_id", sa.Uuid(), nullable=True))
         op.create_foreign_key(
             FK, T, "mes_equipment", ["chamber_id"], ["id"], ondelete="RESTRICT"
         )
     idx = _idx()
-    if f"ix_{T}_chamber_id" not in idx:
+    if "chamber_id" in _cols() and f"ix_{T}_chamber_id" not in idx:
         op.create_index(op.f(f"ix_{T}_chamber_id"), T, ["chamber_id"], unique=False)
     if IDX not in idx:
         op.create_index(

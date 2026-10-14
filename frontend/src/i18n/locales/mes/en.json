@@ -48,6 +48,7 @@
       "shift": "Shift",
       "work_calendar": "Work calendar",
       "calendar_day": "Calendar day",
+      "customer": "Customer",
       "lot_priority": "Lot priority",
       "lot_type": "Lot type",
       "split_merge_rule": "Split / merge rule",
@@ -266,7 +267,7 @@
         "done_by": "Recorded by",
         "done_at": "Recorded at",
         "comment": "Comment",
-        "chamber": "Chamber / sub-unit",
+        "sub_unit": "Sub-unit (chamber / spindle / test head / bond head)",
         "source": "Source",
         "external_event_id": "External event ID"
       },
@@ -395,6 +396,12 @@
         "shifts": "Shifts",
         "note": "Note"
       },
+      "customer": {
+        "code": "Code",
+        "name": "Name",
+        "short_name": "Short name",
+        "description": "Description"
+      },
       "lot_priority": {
         "code": "Code",
         "name": "Name",
@@ -475,6 +482,9 @@
         "started_at": "Started at",
         "started_by": "Started by",
         "bom": "BOM version",
+        "customer_lot_no": "Customer lot no.",
+        "ownership": "Ownership",
+        "customer": "Customer",
         "description": "Description"
       },
       "wafer": {
@@ -829,6 +839,8 @@
         "expiry_date": "Expiry",
         "location": "Location",
         "ml_status": "Status",
+        "ownership": "Ownership",
+        "customer": "Customer",
         "description": "Description"
       },
       "measurement_item": {
@@ -1246,6 +1258,10 @@
         "split": "Split",
         "merge": "Merge"
       },
+      "ownership": {
+        "own": "Own",
+        "customer": "Customer-owned"
+      },
       "wo_status": {
         "draft": "Draft",
         "released": "Released",
@@ -1627,6 +1643,7 @@
     "mes-e10_auto_rule": "E10 Auto Transition",
     "mes-lot_type": "Lot Type",
     "mes-lot_priority": "Priority",
+    "mes-customer": "Customer",
     "mes-split_merge_rule": "Split / Merge Rule",
     "mes-site": "Site",
     "mes-area": "Area",

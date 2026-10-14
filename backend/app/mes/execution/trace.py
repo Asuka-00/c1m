@@ -10,9 +10,10 @@ from sqlmodel import Session
 from app.core.spec.base import conn
 from app.core.spec.engine import TABLES
 from app.mes.common.query import find, jsonable, one
+from app.mes.lot import service as lot_svc
 
 Row = dict[str, Any]
-KINDS = ("lot", "wafer", "equipment", "material_lot")
+KINDS = ("lot", "wafer", "equipment", "material_lot", "customer_lot")
 
 
 def _code(s: Session, tid: uuid.UUID, ent: str, rid: Any) -> str | None:
@@ -39,6 +40,7 @@ def _walk(s: Session, tid: uuid.UUID, start: Any, up: bool) -> list[Row]:
                 seen[o] = {
                     "id": str(o),
                     "code": lot and lot["code"],
+                    **lot_svc.customer_info(s, tid, lot),
                     "relation": g["relation"],
                     "qty": g["qty"],
                     "via": _code(s, tid, "lot", lid),
@@ -146,6 +148,19 @@ def trace(s: Session, tid: uuid.UUID, kind: str, code: str) -> Row:
     """
     if kind not in KINDS:
         raise HTTPException(status_code=422, detail=f"kind must be one of {KINDS}")
+    if kind == "customer_lot":  # B7：按客户批号找到批次，各批次再做正反向追溯
+        hits = lot_svc.lookup_customer_lots(s, tid, customer_lot_no=code)
+        if not hits:
+            raise HTTPException(
+                status_code=404, detail=f"customer lot {code} not found"
+            )
+        res = []
+        for x in hits:
+            lot = one(s, tid, "lot", uuid.UUID(x["lot_id"]))
+            res.append({**x, **(_lot_trace(s, tid, lot) if lot else {})})
+        return jsonable(  # type: ignore[no-any-return]
+            {"kind": kind, "target": {"customer_lot_no": code.strip()}, "lots": res}
+        )
     t = TABLES[kind]
     hit = (
         conn(s)
@@ -164,6 +179,7 @@ def trace(s: Session, tid: uuid.UUID, kind: str, code: str) -> Row:
             raise HTTPException(status_code=404, detail="lot not found")
         out["target"]["lot"] = lot["code"]
         out["target"]["lot_id"] = str(lot["id"])
+        out["target"] |= lot_svc.customer_info(s, tid, lot)
         out |= _lot_trace(s, tid, lot)
     elif kind == "equipment":
         out["lots"] = _lots_by(

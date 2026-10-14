@@ -476,6 +476,7 @@ def start(
                     f"lot {i}: {n} distinct slots within 1..{width} required",
                 )
             )
+        errs += lot_svc.customer_start_errors(s, tid, i, x)
         srcs = x.get("wafer_sources") or []
         if srcs and len(srcs) != n:
             errs.append((f"lots.{i}.wafer_sources", f"lot {i}: one source per wafer"))
@@ -529,6 +530,7 @@ def start(
                 started_at=at,
                 started_by=actor_name(user),
                 bom_id=bom and bom["id"],
+                **lot_svc.inherit_customer(x),
                 attrs=dict(tag),
                 **sysv,
             )

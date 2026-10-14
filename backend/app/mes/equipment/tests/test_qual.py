@@ -126,7 +126,12 @@ def test_qual_payload_and_permission(client: TestClient, db: Session) -> None:
     assert f.post(f"{EQP}/qual/{f.eq['id']}/result", {"result": "pass"}, 404)
 
 
-def _migration_roundtrip(prev: str, tag: str, check: Any) -> None:
+def _migration_roundtrip(
+    prev: str,
+    tag: str,
+    check: Any,
+    keys: tuple[str, ...] = ("mes_equipment_qual", "qual_state"),
+) -> None:
     """升到 head → 与表定义对比 → stamp prev 再升（已存在）→ 降回 prev → stamp head 再降
     （已不在）→ 再升。``check(insp)`` 返回 (升级后期望, 降级后期望) 之一的当前状态。"""
     import os
@@ -169,9 +174,7 @@ def _migration_roundtrip(prev: str, tag: str, check: Any) -> None:
         with eng.connect() as c:
             diffs = compare_metadata(MigrationContext.configure(c), SQLModel.metadata)
         flat = [d for x in diffs for d in (x if isinstance(x, list) else [x])]
-        bad = [
-            d for d in flat if "mes_equipment_qual" in str(d) or "qual_state" in str(d)
-        ]
+        bad = [d for d in flat if any(k in str(d) for k in keys)]
         assert not bad, bad
         alembic("stamp", prev)
         alembic("upgrade", "head")  # 已存在：不报错
@@ -202,13 +205,13 @@ def test_migration_0017_up_down() -> None:
 
 
 def test_migration_0018_qual_source_index() -> None:
-    """0018 可重复执行：source / external_event_id / chamber_id 与部分唯一索引。"""
+    """0018 可重复执行：source / external_event_id / chamber_id（0019 起为 sub_unit_id）与部分唯一索引。"""
 
     def check(i: Any) -> tuple[frozenset[str], bool]:
         cols = frozenset(
             x["name"]
             for x in i.get_columns("mes_equipment_qual")
-            if x["name"] in ("source", "external_event_id", "chamber_id")
+            if x["name"] in ("source", "external_event_id", "chamber_id", "sub_unit_id")
         )
         idx = any(
             x["name"] == "uq_mes_eqp_qual_event"
@@ -220,12 +223,12 @@ def test_migration_0018_qual_source_index() -> None:
 
 
 def test_qual_reserved_fields_rejected(client: TestClient, db: Session) -> None:
-    """人工登记不开放 source / external_event_id / chamber（子单元）：传了 422；本期一律
+    """人工登记不开放 source / external_event_id / sub_unit（子单元）：传了 422；本期一律
     manual / 空。"""
     f = Line(client, db)
     _, r = _pm(f)
     task = r["qual_task"]
-    assert (task["source"], task["external_event_id"], task["chamber_id"]) == (
+    assert (task["source"], task["external_event_id"], task["sub_unit_id"]) == (
         "manual",
         None,
         None,
@@ -234,9 +237,33 @@ def test_qual_reserved_fields_rejected(client: TestClient, db: Session) -> None:
         ("source", "eap"),
         ("source", "manual"),
         ("external_event_id", "EV-1"),
+        ("sub_unit_id", f.eq["id"]),
+        ("sub_unit", "C1"),
         ("chamber_id", f.eq["id"]),
-        ("chamber", "C1"),
     ):
         d = _qual(f, task, 422, result="pass", **{k: v})["detail"]
         assert any(x["loc"][-1] == k for x in d), (k, d)
     assert _qual(f, task, result="pass")["data"]["source"] == "manual"
+
+
+def test_migration_0019_customer_sub_unit() -> None:
+    """0019 可重复执行、可降级：客户表 / 批次与物料批客户字段 / chamber_id → sub_unit_id。"""
+
+    def check(i: Any) -> tuple[Any, ...]:
+        def cols(t: str) -> frozenset[str]:
+            return frozenset(x["name"] for x in i.get_columns(t))
+
+        q = cols("mes_equipment_qual")
+        return (
+            "mes_customer" in i.get_table_names(),
+            cols("mes_lot") & {"customer_lot_no", "ownership", "customer_id"},
+            cols("mes_material_lot") & {"ownership", "customer_id"},
+            q & {"chamber_id", "sub_unit_id"},
+        )
+
+    _migration_roundtrip(
+        "0018_equipment_qual_source",
+        "b7",
+        check,
+        ("mes_equipment_qual", "qual_state", "customer", "ownership"),
+    )

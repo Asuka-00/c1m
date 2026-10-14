@@ -178,7 +178,7 @@ MERGED: dict[str, tuple[str, str, str, list[str]]] = {
         "/mes/lot-rules",
         "Layers",
         "tabs",
-        ["mes-lot_type", "mes-lot_priority", "mes-split_merge_rule"],
+        ["mes-lot_type", "mes-lot_priority", "mes-split_merge_rule", "mes-customer"],
     ),
     "mes-factory-model": (
         "/mes/factory-model",
@@ -250,6 +250,7 @@ TAB_TITLES: dict[str, str] = {
     "mes-e10_auto_rule": "E10 Auto Transition|E10 自动迁移|E10 自動遷移",
     "mes-lot_type": "Lot Type|批次类型|ロットタイプ",
     "mes-lot_priority": "Priority|优先级|優先度",
+    "mes-customer": "Customer|客户|顧客",
     "mes-split_merge_rule": "Split / Merge Rule|分批合批规则|分割・統合ルール",
     "mes-site": "Site|工厂|工場",
     "mes-area": "Area|区域|エリア",

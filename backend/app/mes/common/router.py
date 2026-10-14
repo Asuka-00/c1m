@@ -7,7 +7,8 @@
 import uuid
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
@@ -28,6 +29,7 @@ from app.core.spec.write import (
     update_row,
 )
 from app.mes.common import coderule
+from app.mes.common.guard import raw_json
 from app.mes.common.meta import all_meta
 from app.mes.common.uom import convert, count_errors
 from app.platform.auth.deps import CurrentTenant
@@ -49,6 +51,26 @@ def require_entity(
     if not ctx.can(perm(e.pmod, action)):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     return e
+
+
+async def write_body(
+    ctx: CurrentTenant, entity: str, request: Request
+) -> dict[str, Any]:
+    """通用新建 / 修改的请求体：先查实体写权限，再解析 JSON 对象（D34）。"""
+    require_entity(ctx, entity, "write")
+    data = await raw_json(request)
+    if not isinstance(data, dict):
+        raise RequestValidationError(
+            [
+                {
+                    "type": "dict_type",
+                    "loc": ("body",),
+                    "msg": "Input should be a valid dictionary",
+                    "input": data,
+                }
+            ]
+        )
+    return data
 
 
 def _one(
@@ -222,7 +244,10 @@ def mes_get(
 
 @router.post("/{entity}")
 def mes_create(
-    session: SessionDep, ctx: CurrentTenant, entity: str, body: dict[str, Any]
+    session: SessionDep,
+    ctx: CurrentTenant,
+    entity: str,
+    body: Annotated[dict[str, Any], Depends(write_body)],
 ) -> Any:
     e = require_entity(ctx, entity, "write")
     return _one(session, ctx, e, create_row(session, ctx.id, e, body, ctx.user))
@@ -234,7 +259,7 @@ def mes_update(
     ctx: CurrentTenant,
     entity: str,
     rid: uuid.UUID,
-    body: dict[str, Any],
+    body: Annotated[dict[str, Any], Depends(write_body)],
 ) -> Any:
     e = require_entity(ctx, entity, "write")
     return _one(session, ctx, e, update_row(session, ctx.id, e, rid, body, ctx.user))

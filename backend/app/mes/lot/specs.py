@@ -3,6 +3,40 @@
 from app.core.spec.engine import ENUMS, Entity, F, register
 
 register(
+    # ---------------- customer (B7) ----------------
+    Entity(
+        "customer",
+        "lot",
+        "Customer|客户|顧客",
+        [
+            F("short_name", "str", "Short name|简称|略称", max_length=50, search=True),
+        ],
+        phase=4,
+        icon="Building2",
+        order=0,
+    ),
+)
+
+CUSTOMER_FIELDS = [
+    F(
+        "customer_lot_no",
+        "str",
+        "Customer lot no.|客户批号|顧客ロット番号",
+        max_length=100,
+        search=True,
+    ),
+    F(
+        "ownership",
+        "enum",
+        "Ownership|物料归属|所有区分",
+        enum="ownership",
+        default="own",
+        list=False,
+    ),
+    F("customer", "ref", "Customer|客户|顧客", ref="customer", list=False),
+]
+
+register(
     # ---------------- lot / wafer rules ----------------
     Entity(
         "lot_priority",
@@ -229,6 +263,10 @@ register(
 
 ENUMS.update(
     {
+        "ownership": [
+            ("own", "Own|自有|自社"),
+            ("customer", "Customer-owned|客户来料|顧客支給"),
+        ],
         "wo_status": [
             ("draft", "Draft|草稿|下書き"),
             ("released", "Released|已下达|リリース済"),
@@ -385,6 +423,7 @@ register(
                 filter=False,
                 help="Locked at lot start (D28); blank = no active BOM then|开批时锁定（D28），为空表示当时没有生效的 BOM|投入時に固定（D28）、空欄は当時有効な BOM なし",
             ),
+            *CUSTOMER_FIELDS,  # B7：开批时填写，拆批 / 合批 / 单位转换的子批继承
         ],
         phase=5,
         icon="Layers",

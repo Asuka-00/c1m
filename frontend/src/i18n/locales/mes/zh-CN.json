@@ -48,6 +48,7 @@
       "shift": "班次",
       "work_calendar": "工作日历",
       "calendar_day": "日历日",
+      "customer": "客户",
       "lot_priority": "批次优先级",
       "lot_type": "批次类型",
       "split_merge_rule": "分批合批规则",
@@ -266,7 +267,7 @@
         "done_by": "登记人",
         "done_at": "登记时间",
         "comment": "备注",
-        "chamber": "腔体 / 子单元",
+        "sub_unit": "子单元（腔体 / 主轴 / 测试头 / 焊头）",
         "source": "来源",
         "external_event_id": "外部事件号"
       },
@@ -395,6 +396,12 @@
         "shifts": "班次",
         "note": "备注"
       },
+      "customer": {
+        "code": "编码",
+        "name": "名称",
+        "short_name": "简称",
+        "description": "描述"
+      },
       "lot_priority": {
         "code": "编码",
         "name": "名称",
@@ -475,6 +482,9 @@
         "started_at": "投产时间",
         "started_by": "投产人",
         "bom": "BOM 版本",
+        "customer_lot_no": "客户批号",
+        "ownership": "物料归属",
+        "customer": "客户",
         "description": "描述"
       },
       "wafer": {
@@ -829,6 +839,8 @@
         "expiry_date": "有效期",
         "location": "库位",
         "ml_status": "状态",
+        "ownership": "物料归属",
+        "customer": "客户",
         "description": "描述"
       },
       "measurement_item": {
@@ -1246,6 +1258,10 @@
         "split": "分批",
         "merge": "合批"
       },
+      "ownership": {
+        "own": "自有",
+        "customer": "客户来料"
+      },
       "wo_status": {
         "draft": "草稿",
         "released": "已下达",
@@ -1627,6 +1643,7 @@
     "mes-e10_auto_rule": "E10 自动迁移",
     "mes-lot_type": "批次类型",
     "mes-lot_priority": "优先级",
+    "mes-customer": "客户",
     "mes-split_merge_rule": "分批合批规则",
     "mes-site": "工厂",
     "mes-area": "区域",

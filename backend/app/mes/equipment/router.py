@@ -6,12 +6,13 @@ mes.equipment:pm（登记 PM 完成）、mes.equipment:qual（登记 PM 后 Qual
 
 import uuid
 from datetime import datetime
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.deps import SessionDep
+from app.mes.common.guard import perm_body
 from app.mes.common.query import one
 from app.mes.equipment import mount as mount_svc
 from app.mes.equipment import service as svc
@@ -95,7 +96,12 @@ class QualResultIn(BaseModel):
 
 @router.post("/qual/{task_id}/result")
 def qual_result(
-    session: SessionDep, ctx: CurrentTenant, task_id: uuid.UUID, body: QualResultIn
+    session: SessionDep,
+    ctx: CurrentTenant,
+    task_id: uuid.UUID,
+    body: Annotated[
+        QualResultIn, Depends(perm_body("mes.equipment:qual", QualResultIn))
+    ],
 ) -> Any:
     """Record a Qual result after PM: pass → equipment ready; fail → stays WAIT_QUAL
     with a retest task (409 qual_task_closed when the task is already recorded)."""
@@ -129,7 +135,10 @@ def unmount(
     session: SessionDep,
     ctx: CurrentTenant,
     mount_id: uuid.UUID,
-    body: UnmountIn | None = None,
+    body: Annotated[
+        UnmountIn | None,
+        Depends(perm_body("mes.equipment:mount", UnmountIn, optional=True)),
+    ],
 ) -> Any:
     """Unmount a material lot (unmounted_at defaults to now)."""
     _need(ctx, "mes.equipment:mount")
@@ -139,7 +148,10 @@ def unmount(
 
 @router.post("/{eq_id}/mount")
 def mount(
-    session: SessionDep, ctx: CurrentTenant, eq_id: uuid.UUID, body: MountIn
+    session: SessionDep,
+    ctx: CurrentTenant,
+    eq_id: uuid.UUID,
+    body: Annotated[MountIn, Depends(perm_body("mes.equipment:mount", MountIn))],
 ) -> Any:
     """Manual mount (409 port_occupied when the port already holds a lot)."""
     _need(ctx, "mes.equipment:mount")
