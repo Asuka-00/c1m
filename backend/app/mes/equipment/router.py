@@ -1,7 +1,7 @@
 """设备接口：状态看板、E10 手动改状态、PM 状态与完成登记。
 
 权限：mes.equipment:read（看板 / PM 状态）、mes.equipment:e10（手动改 E10）、
-mes.equipment:pm（登记 PM 完成）。E10 履历、PM 计划、停机记录的 CRUD 走通用接口。
+mes.equipment:pm（登记 PM 完成）、mes.equipment:qual（登记 PM 后 Qual 结果）。E10 履历、PM 计划、停机记录的 CRUD 走通用接口。
 """
 
 import uuid
@@ -83,6 +83,24 @@ class MountIn(BaseModel):
     mounted_at: datetime | None = None
     external_event_id: str | None = Field(default=None, max_length=128)
     comment: str | None = Field(default=None, max_length=300)
+
+
+class QualResultIn(BaseModel):
+    # 只接受可写字段：传了只读字段（qual_status、done_by …）即 422
+    model_config = ConfigDict(extra="forbid")
+
+    result: Literal["pass", "fail"]
+    comment: str | None = Field(default=None, max_length=300)
+
+
+@router.post("/qual/{task_id}/result")
+def qual_result(
+    session: SessionDep, ctx: CurrentTenant, task_id: uuid.UUID, body: QualResultIn
+) -> Any:
+    """Record a Qual result after PM: pass → equipment ready; fail → stays WAIT_QUAL
+    with a retest task (409 qual_task_closed when the task is already recorded)."""
+    _need(ctx, "mes.equipment:qual")
+    return svc.record_result(session, ctx.id, task_id, body.model_dump(), ctx.user)
 
 
 class UnmountIn(BaseModel):

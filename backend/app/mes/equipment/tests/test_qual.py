@@ -1,0 +1,190 @@
+"""B6 验收（bom-p1-tasks.md）：PM 判 OK 后机台待 Qual（WAIT_QUAL）并生成 Qual 任务；待 Qual
+时进站（Move In / Track In）硬拦截并写卡控记录；Qual 通过恢复、不通过保持待 Qual（生成复测
+任务）；PM 判 NG 周期不重置、机台状态不变；接口严格载荷、权限；PM 输出时间为 UTC Z；迁移 0017。
+"""
+
+from typing import Any
+
+from fastapi.testclient import TestClient
+from sqlmodel import Session
+
+from app.mes.execution.tests.test_exec import Line
+from app.mes.product.tests.test_bom import _member
+
+EQP = "/api/v1/mes/eqp"
+
+
+def _pm(f: Line, **kw: Any) -> tuple[Any, Any]:
+    plan = f.m.post(
+        "pm_plan",
+        {"code": "PM-Q", "name": "pm", "equipment_id": f.eq["id"], "interval_days": 30},
+    )
+    return plan, f.post(
+        f"{EQP}/pm/{plan['id']}/complete", {"equipment_id": f.eq["id"], **kw}
+    )
+
+
+def _blocked(r: Any) -> list[Any]:
+    d = r["detail"]
+    assert d["code"] == "check_blocked", r
+    return [x for x in d["results"] if x["check_type"] == "eqp_wait_qual"]
+
+
+def _qual(f: Line, task: Any, status: int = 200, h: Any = None, **body: Any) -> Any:
+    return f.post(f"{EQP}/qual/{task['id']}/result", body, status, h=h)
+
+
+def _eq(f: Line) -> Any:
+    return f.m.list("equipment", q=f.eq["code"])["data"][0]
+
+
+def test_pm_ok_wait_qual_interlock_and_release(client: TestClient, db: Session) -> None:
+    f = Line(client, db)
+    a, b = f.start(1, 1)
+    f.stage(b, "move_in", equipment_id=f.eq["id"])  # PM 前已进站
+    plan, r = _pm(f)
+    # PM 判 OK：待 Qual + 一条 Qual 任务；PM 输出时间为 UTC Z
+    assert r["qual_state"] == "wait_qual" and r["qual_task"]["qual_status"] == "open"
+    task = r["qual_task"]
+    assert task["pm_plan_id"] == plan["id"] and task["requested_at"].endswith("Z")
+    pm = r["pm"][0]
+    assert pm["last_done"].endswith("Z") and pm["next_due"].endswith("Z")
+    assert _eq(f)["qual_state"] == "wait_qual"
+    board = client.get(f"{EQP}/board", headers=f.m.h).json()["data"]
+    row = next(x for x in board if x["id"] == f.eq["id"])
+    assert row["qual_state"] == "wait_qual" and row["qual_task_id"] == task["id"]
+    assert row["pm"][0]["last_done"].endswith("Z")
+    # 再判一次 OK：沿用未登记的任务，不重复生成
+    f.post(f"{EQP}/pm/{plan['id']}/complete", {"equipment_id": f.eq["id"]})
+    assert f.m.list("equipment_qual", equipment=f.eq["id"])["count"] == 1
+    # 进站被拦（Move In 与 Track In），强制放行也不行；写卡控记录
+    (x,) = _blocked(f.stage(a, "move_in", 409, equipment_id=f.eq["id"]))
+    assert x["data"]["task_id"] == task["id"] and not x["overridable"]
+    _blocked(
+        f.stage(
+            a,
+            "move_in",
+            409,
+            equipment_id=f.eq["id"],
+            override=True,
+            override_reason="try",
+        )
+    )
+    _blocked(f.stage(b, "track_in", 409, equipment_id=f.eq["id"]))
+    logs = f.m.list("check_log", check_type="eqp_wait_qual")["data"]
+    assert {(g["trigger"], g["result"]) for g in logs} == {
+        ("move_in", "block"),
+        ("track_in", "block"),
+    }
+    assert len(logs) == 3
+    # Qual 不通过：任务 failed + 复测任务，机台保持待 Qual，仍拦截
+    r = _qual(f, task, result="fail", comment="particle NG")
+    assert r["data"]["qual_status"] == "failed" and r["data"]["done_at"].endswith("Z")
+    nxt = r["next_task"]
+    assert nxt["qual_status"] == "open" and nxt["retry_of_id"] == task["id"]
+    assert r["equipment"]["qual_state"] == "wait_qual"
+    _blocked(f.stage(b, "track_in", 409, equipment_id=f.eq["id"]))
+    # 已登记的任务不能再登记
+    d = _qual(f, task, 409, result="pass")["detail"]
+    assert d["code"] == "qual_task_closed" and d["qual_status"] == "failed"
+    # 复测通过：恢复可生产，进站放行
+    r = _qual(f, nxt, result="pass")
+    assert r["next_task"] is None and r["equipment"]["qual_state"] == "ready"
+    f.stage(b, "track_in", equipment_id=f.eq["id"])
+    f.stage(a, "move_in", equipment_id=f.eq["id"])
+
+
+def test_pm_ng_keeps_state(client: TestClient, db: Session) -> None:
+    """PM 判 NG：周期不重置、机台状态不变、不生成 Qual 任务。"""
+    f = Line(client, db)
+    _, r = _pm(f, result="ng")
+    assert r["qual_state"] == "ready" and r["qual_task"] is None
+    assert r["pm"][0]["last_done"] is None
+    assert f.m.list("equipment_qual")["count"] == 0
+    (a,) = f.start(1)
+    f.stage(a, "move_in", equipment_id=f.eq["id"])
+
+
+def test_qual_payload_and_permission(client: TestClient, db: Session) -> None:
+    f = Line(client, db)
+    _, r = _pm(f)
+    task = r["qual_task"]
+    for body in (
+        {"result": "pass", "qual_status": "passed"},
+        {"result": "pass", "done_by": "x"},
+        {"result": "maybe"},
+        {},
+    ):
+        _qual(f, task, 422, **body)
+    hm = _member(client, db, f.m)
+    _qual(f, task, 403, h=hm, result="pass")
+    # 通用接口只读
+    url = "/api/v1/mes/equipment-qual"
+    assert client.get(url, headers=hm).status_code == 200
+    r = client.post(url, headers=f.m.h, json={"equipment_id": f.eq["id"]})
+    assert r.status_code in (403, 405)
+    assert f.post(f"{EQP}/qual/{f.eq['id']}/result", {"result": "pass"}, 404)
+
+
+def test_migration_0017_up_down() -> None:
+    """0017 可重复执行；表定义与迁移一致。"""
+    import os
+    import subprocess
+    from pathlib import Path
+
+    from alembic.autogenerate import compare_metadata
+    from alembic.migration import MigrationContext
+    from sqlalchemy import create_engine, inspect, text
+    from sqlalchemy.engine import make_url
+    from sqlmodel import SQLModel
+
+    from app.core.config import settings
+
+    base = make_url(settings.migration_database_url)
+    name = f"{base.database}_mig_b6"
+    server = create_engine(base.set(database="postgres"), isolation_level="AUTOCOMMIT")
+    with server.connect() as c:
+        c.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
+        c.execute(text(f'CREATE DATABASE "{name}"'))
+    url = base.set(database=name).render_as_string(hide_password=False)
+    backend = Path(__file__).resolve().parents[4]
+
+    def alembic(*args: str) -> None:
+        env = {**os.environ, "MIGRATION_DATABASE_URL": url}
+        r = subprocess.run(
+            ["alembic", *args], cwd=backend, env=env, capture_output=True, text=True
+        )
+        assert r.returncode == 0, r.stderr[-2000:]
+
+    eng = create_engine(url)
+
+    def state() -> tuple[bool, bool]:
+        with eng.connect() as c:
+            i = inspect(c)
+            col = any(x["name"] == "qual_state" for x in i.get_columns("mes_equipment"))
+            return col, "mes_equipment_qual" in i.get_table_names()
+
+    prev = "0016_material_consumption_event"
+    try:
+        alembic("upgrade", "head")
+        assert state() == (True, True)
+        with eng.connect() as c:
+            diffs = compare_metadata(MigrationContext.configure(c), SQLModel.metadata)
+        flat = [d for x in diffs for d in (x if isinstance(x, list) else [x])]
+        bad = [
+            d for d in flat if "mes_equipment_qual" in str(d) or "qual_state" in str(d)
+        ]
+        assert not bad, bad
+        alembic("stamp", prev)
+        alembic("upgrade", "head")  # 已存在：不报错
+        alembic("downgrade", prev)
+        assert state() == (False, False)
+        alembic("stamp", "head")
+        alembic("downgrade", prev)  # 已不在：不报错
+        alembic("upgrade", "head")
+        assert state() == (True, True)
+    finally:
+        eng.dispose()
+        with server.connect() as c:
+            c.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
+        server.dispose()

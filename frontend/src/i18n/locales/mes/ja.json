@@ -33,6 +33,7 @@
       "pm_record": "PM 実施記録",
       "downtime": "停止記録",
       "equipment_material_mount": "装置資材装着記録",
+      "equipment_qual": "Qual タスク",
       "check_rule": "チェックルール",
       "check_plan": "チェックプラン",
       "check_plan_item": "プランルール",
@@ -175,6 +176,7 @@
         "serial_no": "シリアル番号",
         "initial_state": "初期 E10 状態",
         "e10_state": "現在 E10 状態",
+        "qual_state": "Qual 状態",
         "ideal_uph": "理論スループット（UPH）",
         "is_active": "有効",
         "description": "説明"
@@ -252,6 +254,17 @@
         "external_event_id": "外部イベント ID",
         "mounted_by": "装着者",
         "unmounted_by": "取外し者",
+        "comment": "コメント"
+      },
+      "equipment_qual": {
+        "equipment": "設備",
+        "pm_plan": "PM 計画",
+        "pm_record": "PM 記録",
+        "qual_status": "状態",
+        "retry_of": "再テスト元",
+        "requested_at": "作成日時",
+        "done_by": "登録者",
+        "done_at": "登録日時",
         "comment": "コメント"
       },
       "check_rule": {
@@ -940,6 +953,7 @@
         "pattern": "トークン：{YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}"
       },
       "equipment": {
+        "qual_state": "PM OK 後は Qual 合格まで Qual 待ち",
         "ideal_uph": "任意。OEE 性能稼働率用に予約"
       },
       "tool": {
@@ -1037,7 +1051,8 @@
         "split": "分割",
         "qtime_rework": "Q-Time リワーク",
         "merge": "統合",
-        "e10": "E10 状態変更"
+        "e10": "E10 状態変更",
+        "qual": "Qual（PM 後）"
       },
       "seq_reset": {
         "never": "リセットしない",
@@ -1089,6 +1104,15 @@
         "ok": "合格",
         "ng": "不合格"
       },
+      "qual_state": {
+        "ready": "生産可",
+        "wait_qual": "Qual 待ち"
+      },
+      "qual_status": {
+        "open": "未登録",
+        "passed": "合格",
+        "failed": "不合格"
+      },
       "mount_source": {
         "manual": "手動",
         "eap": "EAP"
@@ -1128,6 +1152,7 @@
         "chamber_available": "チャンバー E10 状態使用可",
         "qtime": "Q-Time",
         "lot_hold": "ロット非ホールド",
+        "eqp_wait_qual": "設備 Qual 待ちでない（PM 後）",
         "wo_status": "作業指示状態",
         "dc_complete": "データ収集完了",
         "oos": "規格外",
@@ -1552,6 +1577,7 @@
     "mes-e10_history": "E10 状態履歴",
     "mes-tool": "消耗品・治具寿命",
     "mes-equipment_material_mount": "装置資材装着記録",
+    "mes-equipment_qual": "Qual タスク",
     "mes-equipment-master": "装置マスタ",
     "mes-e10-model": "E10 状態設定",
     "mes-dc_result": "測定データ",
@@ -1679,6 +1705,7 @@
     "mes_equipment__e10": "設備·E10 状態変更",
     "mes_equipment__pm": "設備·PM 記録",
     "mes_equipment__mount": "設備·資材装着 / 取外し",
+    "mes_equipment__qual": "設備·Qual 結果登録",
     "mes_exec__override": "生産実行·強制解除",
     "mes_exec__hold": "生産実行·保留 / 解除",
     "mes_exec__split": "生産実行·ロット分割",
@@ -1744,6 +1771,7 @@
     "mes_equipment__e10": "許可：設備·E10 状態変更",
     "mes_equipment__pm": "許可：設備·PM 記録",
     "mes_equipment__mount": "許可：設備·資材装着 / 取外し",
+    "mes_equipment__qual": "許可：設備·Qual 結果登録",
     "mes_exec__override": "許可：生産実行·強制解除",
     "mes_exec__hold": "許可：生産実行·保留 / 解除",
     "mes_exec__split": "許可：生産実行·ロット分割",

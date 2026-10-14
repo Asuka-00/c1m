@@ -15,6 +15,7 @@ from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, ENUMS, TABLES
 from app.mes.common.query import find, jsonable, one
+from app.mes.equipment.service import qual_block
 
 Row = dict[str, Any]
 Outcome = tuple[str, str, Row]  # ("pass" | "fail" | "warn" | "na", 消息, 数据)
@@ -304,6 +305,9 @@ def run(ctx: Ctx) -> list[Row]:
     return out
 
 
+QUAL_TRIGGERS = ("move_in", "track_in")  # 进站：Move In / Track In
+
+
 def evaluate(
     ctx: Ctx,
     user: Any,
@@ -331,7 +335,25 @@ def evaluate(
         HTTPException: 放行但未填写原因（422）。
     """
     ctx.operator = ctx.operator or actor_name(user)
-    results = [*(extra or []), *run(ctx)]
+    builtin = []
+    # B6：PM 后待 Qual 的机台进站硬拦截（不可强制放行），结果同样写卡控记录
+    blk = (
+        qual_block(ctx.s, ctx.tid, ctx.equipment)
+        if ctx.trigger in QUAL_TRIGGERS
+        else None
+    )
+    if blk:
+        builtin.append(
+            result(
+                "eqp_wait_qual",
+                "fail",
+                f"{blk['equipment']} is waiting for Qual after PM (WAIT_QUAL)",
+                severity="block",
+                data=blk,
+                overridable=False,
+            )
+        )
+    results = [*builtin, *(extra or []), *run(ctx)]
     blocks = [r for r in results if r["result"] == "block"]
     hard = [r for r in blocks if not r["overridable"]]
     # 仅当所有阻断都可放行（无硬阻断）且非预览时才允许强制放行

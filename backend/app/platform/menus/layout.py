@@ -84,6 +84,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
             "mes-equipment_material_mount",
             "Equipment Material Mount|机台上料记录|装置資材装着記録",
         ),
+        ("mes-equipment_qual", "Qual Task|Qual 任务|Qual タスク"),
         ("mes-equipment-master", "Equipment Master|机台主数据|装置マスタ"),
         ("mes-e10-model", "E10 State Configuration|E10 状态配置|E10 状態設定"),
     ],

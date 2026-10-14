@@ -227,6 +227,8 @@ def test_pm_due_check_and_switch(client: TestClient, db: Session) -> None:
     # 登记 PM 后放行
     r = f.post(f"{EQP}/pm/{plan['id']}/complete", {"equipment_id": f.eq["id"]})
     assert not r["pm"][0]["due"]
+    # B6：PM OK 后机台待 Qual，登记通过才放行
+    f.post(f"{EQP}/qual/{r['qual_task']['id']}/result", {"result": "pass"})
     f.stage(b, "track_in", equipment_id=f.eq["id"])
     # 开关：同一工步绑定 pm_due = off
     (c,) = f.start(1)

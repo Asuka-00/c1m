@@ -13,6 +13,7 @@ from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, TABLES
 from app.core.spec.errors import http_422
+from app.core.spec.serialize import iso_utc, serialize
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
 from app.mes.equipment.events import (
@@ -22,6 +23,7 @@ from app.mes.equipment.events import (
     PM_OVERDUE,
     notify_eqp,
 )
+from app.mes.equipment.qual import open_task, start_qual
 from app.mes.equipment.status import e10_current
 
 Row = dict[str, Any]
@@ -204,8 +206,8 @@ def pm_status(
             {
                 "plan_id": str(p["id"]),
                 "plan": p["code"],
-                "last_done": last and last.isoformat(),
-                "next_due": nxt and nxt.isoformat(),
+                "last_done": last and iso_utc(last),
+                "next_due": nxt and iso_utc(nxt),
                 "days_left": days_left,
                 "lots_since": lots,
                 "interval_lots": p["interval_lots"],
@@ -219,7 +221,10 @@ def pm_status(
 def pm_complete(
     s: Session, tid: uuid.UUID, plan_id: uuid.UUID, body: Row, user: Any
 ) -> Row:
-    """登记 PM 完成（重置该设备该计划的天数 / 批次周期）。
+    """登记 PM 完成。
+
+    结果 OK：重置该设备该计划的天数 / 批次周期，机台转待 Qual（WAIT_QUAL）并生成 Qual
+    任务（B6）；NG：不重置周期，机台状态不变。
 
     Args:
         s: 数据库会话。
@@ -237,7 +242,8 @@ def pm_complete(
         raise HTTPException(status_code=404, detail="PM plan / equipment not found")
     if not any(x["id"] == p["id"] for x in _plans(s, tid, eq)):
         raise http_422([("equipment_id", "equipment_id: plan does not apply")])
-    _ins(
+    ok = (body.get("result") or "ok") == "ok"
+    rec_id = _ins(
         s,
         tid,
         "pm_record",
@@ -250,8 +256,14 @@ def pm_complete(
         done_at=now(),
     )
     audit(s, tid, ENTITIES["equipment"], "pm", eq, user, {"pm": (None, p["code"])})
+    task = start_qual(s, tid, eq, p["id"], rec_id, user) if ok else None
     s.commit()
-    return {"pm": pm_status(s, tid, eq)}
+    cur = one(s, tid, "equipment", eq["id"]) or eq
+    return {
+        "pm": pm_status(s, tid, cur),
+        "qual_state": cur.get("qual_state") or "ready",
+        "qual_task": task and serialize(s, tid, ENTITIES["equipment_qual"], [task])[0],
+    }
 
 
 def equipment_board(s: Session, tid: uuid.UUID) -> list[Row]:
@@ -308,6 +320,8 @@ def equipment_board(s: Session, tid: uuid.UUID) -> list[Row]:
                 "pm_due": any(x["due"] for x in pm),
                 "pm_warn": any(x["warn"] for x in pm),
                 "down": eq["id"] in open_dt,
+                "qual_state": eq.get("qual_state") or "ready",
+                "qual_task_id": (t := open_task(s, tid, eq["id"])) and str(t["id"]),
             }
         )
     return out

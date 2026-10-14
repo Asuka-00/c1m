@@ -56,6 +56,10 @@ CHECK_TYPES = [
     ),
     ("qtime", "Q-Time|Q-Time|Q-Time"),
     ("lot_hold", "Lot not on hold|批次未 Hold|ロット非ホールド"),
+    (
+        "eqp_wait_qual",
+        "Equipment not waiting for Qual after PM|设备非待 Qual（PM 后）|設備 Qual 待ちでない（PM 後）",
+    ),
     ("wo_status", "Work order status|工单状态|作業指示状態"),
     ("dc_complete", "DC completeness|数据收集完整|データ収集完了"),
     ("oos", "Out of spec|超规|規格外"),

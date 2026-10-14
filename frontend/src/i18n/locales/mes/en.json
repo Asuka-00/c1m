@@ -33,6 +33,7 @@
       "pm_record": "PM record",
       "downtime": "Downtime",
       "equipment_material_mount": "Equipment material mount",
+      "equipment_qual": "Qual task",
       "check_rule": "Check rule",
       "check_plan": "Check plan",
       "check_plan_item": "Plan rule",
@@ -175,6 +176,7 @@
         "serial_no": "Serial no.",
         "initial_state": "Initial E10 state",
         "e10_state": "Current E10 state",
+        "qual_state": "Qual state",
         "ideal_uph": "Ideal throughput (UPH)",
         "is_active": "Active",
         "description": "Description"
@@ -252,6 +254,17 @@
         "external_event_id": "External event ID",
         "mounted_by": "Mounted by",
         "unmounted_by": "Unmounted by",
+        "comment": "Comment"
+      },
+      "equipment_qual": {
+        "equipment": "Equipment",
+        "pm_plan": "PM plan",
+        "pm_record": "PM record",
+        "qual_status": "Status",
+        "retry_of": "Retry of",
+        "requested_at": "Requested at",
+        "done_by": "Recorded by",
+        "done_at": "Recorded at",
         "comment": "Comment"
       },
       "check_rule": {
@@ -940,6 +953,7 @@
         "pattern": "Tokens: {YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}"
       },
       "equipment": {
+        "qual_state": "WAIT_QUAL after an OK PM until a Qual passes",
         "ideal_uph": "Optional; reserved for OEE performance rate"
       },
       "tool": {
@@ -1037,7 +1051,8 @@
         "split": "Split",
         "qtime_rework": "Q-Time rework",
         "merge": "Merge",
-        "e10": "E10 state change"
+        "e10": "E10 state change",
+        "qual": "Qual (after PM)"
       },
       "seq_reset": {
         "never": "Never",
@@ -1089,6 +1104,15 @@
         "ok": "OK",
         "ng": "NG"
       },
+      "qual_state": {
+        "ready": "Ready",
+        "wait_qual": "Waiting Qual (WAIT_QUAL)"
+      },
+      "qual_status": {
+        "open": "Open",
+        "passed": "Passed",
+        "failed": "Failed"
+      },
       "mount_source": {
         "manual": "Manual",
         "eap": "EAP"
@@ -1128,6 +1152,7 @@
         "chamber_available": "Chamber E10 state available",
         "qtime": "Q-Time",
         "lot_hold": "Lot not on hold",
+        "eqp_wait_qual": "Equipment not waiting for Qual after PM",
         "wo_status": "Work order status",
         "dc_complete": "DC completeness",
         "oos": "Out of spec",
@@ -1552,6 +1577,7 @@
     "mes-e10_history": "E10 History",
     "mes-tool": "Consumable Life",
     "mes-equipment_material_mount": "Equipment Material Mount",
+    "mes-equipment_qual": "Qual Task",
     "mes-equipment-master": "Equipment Master",
     "mes-e10-model": "E10 State Configuration",
     "mes-dc_result": "Metrology / DC Data",
@@ -1679,6 +1705,7 @@
     "mes_equipment__e10": "Equipment·Change E10 state",
     "mes_equipment__pm": "Equipment·Record PM",
     "mes_equipment__mount": "Equipment·Mount / unmount material",
+    "mes_equipment__qual": "Equipment·Record Qual result",
     "mes_exec__override": "Execution·Override checks",
     "mes_exec__hold": "Execution·Hold / release",
     "mes_exec__split": "Execution·Split lots",
@@ -1744,6 +1771,7 @@
     "mes_equipment__e10": "Allows: Equipment·Change E10 state",
     "mes_equipment__pm": "Allows: Equipment·Record PM",
     "mes_equipment__mount": "Allows: Equipment·Mount / unmount material",
+    "mes_equipment__qual": "Allows: Equipment·Record Qual result",
     "mes_exec__override": "Allows: Execution·Override checks",
     "mes_exec__hold": "Allows: Execution·Hold / release",
     "mes_exec__split": "Allows: Execution·Split lots",

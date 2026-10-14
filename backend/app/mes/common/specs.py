@@ -67,6 +67,7 @@ ENUMS.update(
             ("qtime_rework", "Q-Time rework|Q-Time 返工|Q-Time リワーク"),
             ("merge", "Merge|合批|統合"),
             ("e10", "E10 state change|E10 状态变更|E10 状態変更"),
+            ("qual", "Qual (after PM)|Qual（PM 后）|Qual（PM 後）"),
         ],
         "seq_reset": [
             ("never", "Never|不重置|リセットしない"),

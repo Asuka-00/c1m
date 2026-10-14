@@ -33,6 +33,7 @@
       "pm_record": "PM 执行记录",
       "downtime": "停机记录",
       "equipment_material_mount": "机台上料记录",
+      "equipment_qual": "Qual 任务",
       "check_rule": "卡控规则",
       "check_plan": "卡控方案",
       "check_plan_item": "方案规则",
@@ -175,6 +176,7 @@
         "serial_no": "序列号",
         "initial_state": "初始 E10 状态",
         "e10_state": "当前 E10 状态",
+        "qual_state": "Qual 状态",
         "ideal_uph": "理论产能（UPH）",
         "is_active": "启用",
         "description": "描述"
@@ -252,6 +254,17 @@
         "external_event_id": "外部事件号",
         "mounted_by": "上料人",
         "unmounted_by": "卸料人",
+        "comment": "备注"
+      },
+      "equipment_qual": {
+        "equipment": "设备",
+        "pm_plan": "PM 计划",
+        "pm_record": "PM 记录",
+        "qual_status": "状态",
+        "retry_of": "复测自",
+        "requested_at": "生成时间",
+        "done_by": "登记人",
+        "done_at": "登记时间",
         "comment": "备注"
       },
       "check_rule": {
@@ -940,6 +953,7 @@
         "pattern": "占位符：{YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}"
       },
       "equipment": {
+        "qual_state": "PM 判 OK 后进入待 Qual，Qual 通过才恢复",
         "ideal_uph": "可选，预留给 OEE 性能稼动率"
       },
       "tool": {
@@ -1037,7 +1051,8 @@
         "split": "分批",
         "qtime_rework": "Q-Time 返工",
         "merge": "合批",
-        "e10": "E10 状态变更"
+        "e10": "E10 状态变更",
+        "qual": "Qual（PM 后）"
       },
       "seq_reset": {
         "never": "不重置",
@@ -1089,6 +1104,15 @@
         "ok": "合格",
         "ng": "不合格"
       },
+      "qual_state": {
+        "ready": "可生产",
+        "wait_qual": "待 Qual"
+      },
+      "qual_status": {
+        "open": "待登记",
+        "passed": "通过",
+        "failed": "不通过"
+      },
       "mount_source": {
         "manual": "人工",
         "eap": "EAP"
@@ -1128,6 +1152,7 @@
         "chamber_available": "腔体 E10 状态可用",
         "qtime": "Q-Time",
         "lot_hold": "批次未 Hold",
+        "eqp_wait_qual": "设备非待 Qual（PM 后）",
         "wo_status": "工单状态",
         "dc_complete": "数据收集完整",
         "oos": "超规",
@@ -1552,6 +1577,7 @@
     "mes-e10_history": "E10 状态履历",
     "mes-tool": "耗材/治具寿命",
     "mes-equipment_material_mount": "机台上料记录",
+    "mes-equipment_qual": "Qual 任务",
     "mes-equipment-master": "机台主数据",
     "mes-e10-model": "E10 状态配置",
     "mes-dc_result": "量测数据",
@@ -1679,6 +1705,7 @@
     "mes_equipment__e10": "设备·变更 E10 状态",
     "mes_equipment__pm": "设备·记录保养",
     "mes_equipment__mount": "设备·上料 / 卸料",
+    "mes_equipment__qual": "设备·登记 Qual 结果",
     "mes_exec__override": "生产执行·强制放行",
     "mes_exec__hold": "生产执行·暂停 / 释放",
     "mes_exec__split": "生产执行·分批",
@@ -1744,6 +1771,7 @@
     "mes_equipment__e10": "允许：设备·变更 E10 状态",
     "mes_equipment__pm": "允许：设备·记录保养",
     "mes_equipment__mount": "允许：设备·上料 / 卸料",
+    "mes_equipment__qual": "允许：设备·登记 Qual 结果",
     "mes_exec__override": "允许：生产执行·强制放行",
     "mes_exec__hold": "允许：生产执行·暂停 / 释放",
     "mes_exec__split": "允许：生产执行·分批",

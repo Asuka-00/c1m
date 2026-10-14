@@ -157,6 +157,16 @@ register(
                 system=True,
             ),
             F(
+                "qual_state",
+                "enum",
+                "Qual state|Qual 状态|Qual 状態",
+                enum="qual_state",
+                default="ready",
+                system=True,
+                help="WAIT_QUAL after an OK PM until a Qual passes|PM 判 OK 后进入待 Qual，"
+                "Qual 通过才恢复|PM OK 後は Qual 合格まで Qual 待ち",
+            ),
+            F(
                 "ideal_uph",
                 "float",
                 "Ideal throughput (UPH)|理论产能（UPH）|理論スループット（UPH）",
@@ -313,6 +323,16 @@ ENUMS.update(
         "pm_result": [
             ("ok", "OK|合格|合格"),
             ("ng", "NG|不合格|不合格"),
+        ],
+        # B6：PM 后 Qual 放行（wait_qual 即设计中的 WAIT_QUAL）
+        "qual_state": [
+            ("ready", "Ready|可生产|生産可"),
+            ("wait_qual", "Waiting Qual (WAIT_QUAL)|待 Qual|Qual 待ち"),
+        ],
+        "qual_status": [
+            ("open", "Open|待登记|未登録"),
+            ("passed", "Passed|通过|合格"),
+            ("failed", "Failed|不通过|不合格"),
         ],
     }
 )
@@ -527,5 +547,51 @@ register(
         order=20,
         sort_default="mounted_at",
         label_field="port_code",
+    ),
+)
+
+
+register(
+    # PM 后 Qual 任务（B6）：PM 判 OK 生成；登记通过后机台恢复可生产，不通过生成复测任务
+    Entity(
+        "equipment_qual",
+        "equipment",
+        "Qual task|Qual 任务|Qual タスク",
+        [
+            F("equipment", "ref", required=True, ref="equipment", cascade=True),
+            F("pm_plan", "ref", "PM plan|PM 计划|PM 計画", ref="pm_plan"),
+            F(
+                "pm_record",
+                "ref",
+                "PM record|PM 记录|PM 記録",
+                ref="pm_record",
+                list=False,
+            ),
+            F(
+                "qual_status",
+                "enum",
+                "Status|状态|状態",
+                enum="qual_status",
+                default="open",
+            ),
+            F(
+                "retry_of",
+                "ref",
+                "Retry of|复测自|再テスト元",
+                ref="equipment_qual",
+                list=False,
+            ),
+            F("requested_at", "datetime", "Requested at|生成时间|作成日時"),
+            F("done_by", "str", "Recorded by|登记人|登録者", max_length=255),
+            F("done_at", "datetime", "Recorded at|登记时间|登録日時"),
+            F("comment", "str", "Comment|备注|コメント", max_length=300, list=False),
+        ],
+        phase=6,
+        has_code=False,
+        readonly=True,
+        icon="BadgeCheck",
+        order=10,
+        sort_default="requested_at",
+        label_field="requested_at",
     ),
 )
