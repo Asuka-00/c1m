@@ -267,3 +267,30 @@ def test_migration_0019_customer_sub_unit() -> None:
         check,
         ("mes_equipment_qual", "qual_state", "customer", "ownership"),
     )
+
+
+def test_retry_task_keeps_sub_unit(client: TestClient, db: Session) -> None:
+    """D35：不通过生成的复测任务沿用原任务的子单元（字段预留给 EAP，这里直接写库模拟）。"""
+    import uuid
+
+    import sqlalchemy as sa
+
+    from app.core.db import engine
+    from app.core.spec.base import table
+    from app.core.spec.engine import ENTITIES
+    from app.core.tenant import set_tenant
+
+    f = Line(client, db)
+    sub = f.m.post("equipment", {"code": "EQ-SUB-1", "name": "spindle"})
+    _, r = _pm(f)
+    task = r["qual_task"]
+    t = table(ENTITIES["equipment_qual"])
+    with Session(engine) as s:
+        set_tenant(s, uuid.UUID(f.m.tid))
+        n = s.execute(
+            sa.update(t).where(t.c.id == task["id"]).values(sub_unit_id=sub["id"])
+        ).rowcount
+        s.commit()
+    assert n == 1
+    nxt = _qual(f, task, result="fail")["next_task"]
+    assert nxt["retry_of_id"] == task["id"] and nxt["sub_unit_id"] == sub["id"]

@@ -45,6 +45,7 @@ def _new_task(
     plan_id: Any = None,
     record_id: Any = None,
     retry_of: Any = None,
+    sub_unit: Any = None,
 ) -> Row:
     rid = _ins(
         s,
@@ -55,6 +56,7 @@ def _new_task(
         pm_plan_id=plan_id,
         pm_record_id=record_id,
         retry_of_id=retry_of,
+        sub_unit_id=sub_unit,
         qual_status="open",
         requested_at=now(),
         source="manual",
@@ -142,6 +144,7 @@ def record_result(
             plan_id=task["pm_plan_id"],
             record_id=task["pm_record_id"],
             retry_of=task["id"],
+            sub_unit=task.get("sub_unit_id"),  # D35：复测沿用子单元
         )
         if eq.get("qual_state") != WAIT:
             _upd(s, tid, "equipment", eq["id"], user, qual_state=WAIT)
