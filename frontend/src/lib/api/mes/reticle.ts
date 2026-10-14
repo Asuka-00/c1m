@@ -297,13 +297,16 @@ export interface ReticleActionOut {
   duplicate?: boolean
 }
 
-/** 动作响应里的光罩当前行（unmount 不带，返回 null）。 */
+/** 动作响应里的光罩当前行（mount / unmount 不带，返回 null）。 */
 export function actionReticle(
   action: ReticleAction,
   out: ReticleActionOut
 ): Reticle | null {
   if (out.reticle) return out.reticle
-  return action === 'unmount' ? null : (out.data as unknown as Reticle)
+  // 8011 联调：mount 返回 {data: 上机行}，unmount 返回 {data: 上机行, unmount_event}，都不带光罩
+  return action === 'unmount' || action === 'mount'
+    ? null
+    : (out.data as unknown as Reticle)
 }
 
 type HistoryItem = Record<string, unknown> & { type: string }
