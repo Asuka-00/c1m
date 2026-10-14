@@ -498,7 +498,7 @@ def test_reticle_report_draft_e2():
     from sim.scenario import ScenarioError, load, parse
 
     sc = load("scenarios/p3-draft/reticle-report.yaml")
-    assert not sc.draft and sc.run_id == "ret-report-11" and "reticle_report" in P3_DRAFT_STEPS
+    assert not sc.draft and sc.run_id == "ret-report-12" and "reticle_report" in P3_DRAFT_STEPS
     # EAP 光罩上报未开（D67）：依赖 reticle_report 结果的断言都带 needs，记未实现而不是失败
     rep_saves = {s.args.get("save_as") for s in sc.steps if s.kind == "reticle_report"}
     assert all(s.args.get("save_as") for s in sc.steps if s.kind == "reticle_report")
@@ -509,8 +509,8 @@ def test_reticle_report_draft_e2():
     exp = [s.args.get("expect") or {} for s in st]
     codes = [e.get("code") for e in exp]
     assert (
-        codes.count("idempotency_key_reused") == 4 and codes.count("invalid_transition") == 3
-    )  # +1 未挂载下机（386c4e0）
+        codes.count("idempotency_key_reused") == 5 and codes.count("invalid_transition") == 3
+    )  # +1 未挂载下机（386c4e0）；+1 D87 删除换目标 reused（ff79d22）
     assert any((e.get("ctx") or {}).get("max_places") == 6 for e in exp)
     # EAP 重放 duplicate=true；手工重放无 duplicate
     for s in st:
@@ -539,7 +539,7 @@ def test_reticle_report_draft_e2():
     for s in st:
         if s.args.get("no_idem"):
             assert s.args["expect"]["loc"] == ["header", "Idempotency-Key"]
-    assert sum(1 for s in st if s.args.get("expect", {}).get("code") == "idempotency_key_reused") == 4
+    assert sum(1 for s in st if s.args.get("expect", {}).get("code") == "idempotency_key_reused") == 5  # +1 D87 删除换目标 reused
     with pytest.raises(ScenarioError):
         parse({"run_id": "r", "steps": [{"reticle_report": {"eq": "E", "reticle": "R", "kind": "inspect"}}]})
 
@@ -892,16 +892,21 @@ def test_d86_supp2_replayed_header():
 
 
 def test_reticle_crud_d87():
-    """D87 补充一：光罩 CRUD 带 key、每步唯一（回放除外）；缺 key / 回放头 / life_state 标 xfail。"""
+    """D87 补充一：光罩 CRUD 带 key、每步唯一（回放 / 4xx 重发除外）；ff79d22 落地后缺 key / 回放头 / life_state 都是真实断言。"""
     sc = load("scenarios/p3-draft/reticle-report.yaml")
     cr = [s.args for s in sc.steps if s.kind == "reticle_crud"]
     assert {a["action"] for a in cr if a.get("no_idem")} == {"create", "patch", "delete"}
-    assert all(a["expect"]["code"] == "missing" and a.get("xfail") for a in cr if a.get("no_idem"))
+    assert all(a["expect"]["code"] == "missing" and not a.get("xfail") for a in cr if a.get("no_idem"))
     rep = [a for a in cr if a["expect"].get("replayed") is True]
-    assert rep and all(a.get("xfail") for a in rep)
-    first = [a["idem"] for a in cr if a.get("idem") and a["expect"].get("replayed") is False]
+    assert rep and not any(a.get("xfail") for a in cr)
+    first = [a["idem"] for a in cr if a.get("idem") and a["expect"].get("replayed") is False and a["expect"].get("status") != 409]
     assert len(first) == len(set(first)) and {a["idem"] for a in rep} <= set(first)
-    assert all(not a.get("xfail") for a in cr if a["expect"].get("replayed") is False)
+    # D87 删除回放：成功删除同 key 回放 + 换目标 reused（对象格式）；有履历光罩 409 referenced 同 key 重发仍 409
+    dl = [a for a in cr if a["action"] == "delete" and a.get("idem")]
+    assert any(a["expect"].get("replayed") is True and a["expect"].get("same_body_as") for a in dl)
+    assert any(a["expect"].get("code") == "idempotency_key_reused" and a["expect"].get("detail_object") for a in dl)
+    d409 = [a for a in dl if a["expect"].get("status") == 409]
+    assert len(d409) == 2 and d409[0]["idem"] == d409[1]["idem"] and all(a["expect"]["replayed"] is False for a in d409)
     ls = [s.args for s in sc.steps if s.kind == "expect_reticle_life_state"]
-    assert ls and all(a.get("xfail") for a in ls)
+    assert ls and not any(a.get("xfail") for a in ls)
     assert "inspection_pending:" not in open("scenarios/p3-draft/reticle-report.yaml", encoding="utf-8").read()

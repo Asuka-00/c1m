@@ -1,4 +1,5 @@
-# 草稿（P3-B6 人员资质履历；p3-tasks「B6 验收要点」05:09 + D74 + D81 + D85 + 补充一 + 补充二）。B6 未落地，整体 skipped，不连后端。
+# 契约说明（P3-B6 人员资质履历；D74/D81/D85 补充二~四/D86/D88）。B6 已在 be/p3 40e4342 落地（对 ff79d22 联调）。
+# 通用 DSL 还没有 operator_qual 步骤 → 本文件仍按 draft 跳过；实际执行由 sim/opq.py（`python -m sim opq`）按本文件逐条直连跑，报告 opq-01。
 # 契约要点：
 #   - 进站检查项名 operator_qualified；过期 → 409 check_blocked，results[] 有 {check_type: operator_qualified, result: block,
 #     ctx: {qual_id, expires_on: YYYY-MM-DD}}（补充二-3）；overridable=false（D74）；过期不自动停用
@@ -19,8 +20,11 @@
 #   - 只读账号：不借 8011 的 fe-it-ro.cred；用本环境（8013 / app_it_eap）自建 eap_it_ro（角色 eap-it-ro，仅 mes.*:read），
 #     凭据 eap/env/creds-ro.json（chmod 600，不进 git），由 eap/env/mk-ro-account.py 经租户管理接口创建；无凭据则 403 步骤跳过
 # TODO（等 B6 提交核对）：
-#   TODO-1 资源路径：通用 CRUD 是 /mes/exec/operator-qual 还是 /mes/operator_qual（暂用前者）
-#   TODO-4 reason_id 用的原因表行：类别 operator_qual，具体行和种子待 B6；场景暂用 $reason.qual
+#   已定 TODO-1（40e4342 源码核对）：写 = 通用 CRUD /mes/operator-qual[/{id}]（- 换 _ 同一接口）；读履历 /mes/exec/operator-qual/{id}/history，到期 /mes/exec/operator-qual/expiring
+#   授予成功是 200（不是 201）；D88：任何带 expires_on 的 PATCH 都算延期（缩短也要 approved_by），缩短的履历/事件是 changed
+#   已定 TODO-4：reason_code.reason_type=operator_qual 且 is_active；app_it_eap 不跑 initial_data，sim/opq.py 自建 OPQ-SIM 一行
+#   进站卡控：本库无 demo 方案，sim/opq.py 自建 CR-QUAL-SIM(block)/CP-QUAL-SIM 绑 track_in+OP-MK；用 EAP-MK01 / OP-MK 新开一批代替 EAP-DA01/FX0001
+#   TODO-8：本租户只有模拟器一个成员 → 没有第二批准人，延期/缩短/holder_approval/延期回放步骤跳过（与 TODO-7 同一待决项）
 #   TODO-7 creds-ro.json 尚未建成（缺租户管理员凭据），建好前 as: readonly 步骤跳过
 name: operator-qual
 run_id: opq-01
@@ -32,7 +36,7 @@ steps:
   - precondition: {eq: EAP-DA01, e10: SBY}
   - precondition: {lot: FX0001, lot_status: waiting}
   # ---- 授予：新建两条资质（op1 = 进站操作员；q-exp 昨天到期，q-ok 30 天后到期）
-  - operator_qual: {action: create, idem: opq-c1, save_as: qexp, body: {username: $user.op1, operation: $op.FX0001, equipment_type: DIEBOND, expires_on: $date.-1, is_active: true}, expect: {status: 201}}   # 授予不带 reason/approved_by；已过期种子
+  - operator_qual: {action: create, idem: opq-c1, save_as: qexp, body: {username: $user.op1, operation: $op.FX0001, equipment_type: DIEBOND, expires_on: $date.-1, is_active: true}, expect: {status: 200}}   # 授予不带 reason/approved_by；已过期种子
   - expect_operator_qual_history: {qual: $qexp.id, latest: {action: granted, comment: null, reason_id: null, approved_by: null}}
   - expect_operator_qual_events: {qual: $qexp.id, latest: {event: operator_qual.granted}}
   # ---- 过期 → 进站 409 check_blocked（不自动停用）

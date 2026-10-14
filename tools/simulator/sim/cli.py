@@ -137,6 +137,27 @@ def cmd_seed_p3(args) -> int:
     return 0
 
 
+def cmd_opq(args) -> int:
+    """opq-01：B6 人员资质直连场景（sim/opq.py）。lead = 批准人用户名（须为本租户成员，否则相关步骤 skip）。"""
+    import collections
+    import time
+
+    from sim.opq import Opq
+
+    try:
+        target = check_target(resolve_target(args.target, None) or "")
+    except UnsafeTarget as e:
+        print(f"拒绝：{e}", file=sys.stderr)
+        return 2
+    steps = Opq(_client(target), f"opq-01:{int(time.time())}", args.lead).run_all()
+    for s in steps:
+        print(f"{s['i']:>2}. {s['result']:<5} {s['step']}" + (f"  ← {s['error']}" if s.get("error") else ""))
+    print(dict(collections.Counter(s["result"] for s in steps)))
+    if args.report:
+        Path(args.report).write_text(json.dumps({"run_id": "opq-01", "steps": steps}, ensure_ascii=False, indent=1), encoding="utf-8")  # noqa: E501
+    return 1 if any(s["result"] == "fail" for s in steps) else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="sim", description="CIM 设备模拟器（模式 A）")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -151,6 +172,11 @@ def main(argv: list[str] | None = None) -> int:
     sd = sub.add_parser("seed-p3", help="P3 场景种子数据（只对 app_it_eap / 8013，需 SIM_SEED_DB=app_it_eap）")
     sd.add_argument("--target", help="必须是 http://127.0.0.1:8013")
     sd.set_defaults(fn=cmd_seed_p3)
+    o = sub.add_parser("opq", help="opq-01 人员资质（B6）直连场景")
+    o.add_argument("--target", required=True)
+    o.add_argument("--lead", required=True, help="批准人用户名")
+    o.add_argument("--report")
+    o.set_defaults(fn=cmd_opq)
     for x in (r, v):
         x.add_argument("--target", help="覆盖场景 target（也可用 SIM_TARGET）；端口须在 SIM_ALLOWED_PORTS 里")
         x.add_argument(

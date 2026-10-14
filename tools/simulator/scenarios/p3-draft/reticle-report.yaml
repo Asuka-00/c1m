@@ -17,7 +17,7 @@
 #     incident 顺带下机用 occurred_at（无则当前时间）；occurred_at < 当前 mounted_at → 整体 409，不 Hold、不下机、不写事件
 #   - D80 G5：mounted / unmounted / life_reached 带 source、external_event_id（手工为 null）；G6：source ∈ manual/eap/simulator/system
 name: reticle-report
-run_id: ret-report-11
+run_id: ret-report-12
 target: http://127.0.0.1:8013
 equipment: [{code: EAP-LT01, type: LITHO}]
 steps:
@@ -228,36 +228,42 @@ steps:
   - expect_query_422: {path: /mes/reticle_status_log, params: {at: "2026-10-15"}, field: at, type: timezone_required, no_ctx: true}
   - expect_query_422: {path: /mes/reticle_status_log, params: {at: garbage}, field: at, type: value_error, reason: pattern}
   # ---- created_at（QA P2-1，D85 补充四：所有 datetime 列都按 D77 校验，等值按 UTC 同一时刻、完整微秒精确匹配）
-  # 1ef2eff 未实现（created_at 等值被忽略 → 200 不筛选），标 xfail 等 B6 提交；--strict-xfail 下按失败记
-  - expect_query_422: {path: /mes/reticle, params: {created_at: garbage}, field: created_at, type: value_error, reason: pattern, xfail: "D85 补充四 created_at 等值未校验，等 B6 提交"}
-  - expect_query_422: {path: /mes/reticle, params: {created_at: "2026-10-15"}, field: created_at, type: timezone_required, no_ctx: true, xfail: "D85 补充四，等 B6 提交"}
-  - expect_datetime_eq_match: {entity: reticle, field: created_at, xfail: "D85 补充四 created_at 等值不筛选，等 B6 提交"}
-  - expect_query_422: {path: /mes/reticle_incident, params: {created_at: garbage}, field: created_at, type: value_error, reason: pattern, xfail: "D85 补充四 created_at 等值未校验，等 B6 提交"}
-  - expect_query_422: {path: /mes/reticle_incident, params: {created_at: "2026-10-15"}, field: created_at, type: timezone_required, no_ctx: true, xfail: "D85 补充四，等 B6 提交"}
-  - expect_datetime_eq_match: {entity: reticle_incident, field: created_at, xfail: "D85 补充四 created_at 等值不筛选，等 B6 提交"}
-  - expect_query_422: {path: /mes/reticle_mount_log, params: {created_at: garbage}, field: created_at, type: value_error, reason: pattern, xfail: "D85 补充四 created_at 等值未校验，等 B6 提交"}
-  - expect_query_422: {path: /mes/reticle_mount_log, params: {created_at: "2026-10-15"}, field: created_at, type: timezone_required, no_ctx: true, xfail: "D85 补充四，等 B6 提交"}
-  - expect_datetime_eq_match: {entity: reticle_mount_log, field: created_at, xfail: "D85 补充四 created_at 等值不筛选，等 B6 提交"}
-  - expect_query_422: {path: /mes/reticle_usage, params: {created_at: garbage}, field: created_at, type: value_error, reason: pattern, xfail: "D85 补充四 created_at 等值未校验，等 B6 提交"}
-  - expect_query_422: {path: /mes/reticle_usage, params: {created_at: "2026-10-15"}, field: created_at, type: timezone_required, no_ctx: true, xfail: "D85 补充四，等 B6 提交"}
-  - expect_datetime_eq_match: {entity: reticle_usage, field: created_at, xfail: "D85 补充四 created_at 等值不筛选，等 B6 提交"}
-  - expect_query_422: {path: /mes/reticle_inspection, params: {created_at: garbage}, field: created_at, type: value_error, reason: pattern, xfail: "D85 补充四 created_at 等值未校验，等 B6 提交"}
-  - expect_query_422: {path: /mes/reticle_inspection, params: {created_at: "2026-10-15"}, field: created_at, type: timezone_required, no_ctx: true, xfail: "D85 补充四，等 B6 提交"}
-  - expect_datetime_eq_match: {entity: reticle_inspection, field: created_at, xfail: "D85 补充四 created_at 等值不筛选，等 B6 提交"}
-  - expect_query_422: {path: /mes/reticle_status_log, params: {created_at: garbage}, field: created_at, type: value_error, reason: pattern, xfail: "D85 补充四 created_at 等值未校验，等 B6 提交"}
-  - expect_query_422: {path: /mes/reticle_status_log, params: {created_at: "2026-10-15"}, field: created_at, type: timezone_required, no_ctx: true, xfail: "D85 补充四，等 B6 提交"}
-  - expect_datetime_eq_match: {entity: reticle_status_log, field: created_at, xfail: "D85 补充四 created_at 等值不筛选，等 B6 提交"}
+  # 40e4342（B6）已实现：xfail 摘除，按真实断言判（ret-report-12 / ff79d22）
+  - expect_query_422: {path: /mes/reticle, params: {created_at: garbage}, field: created_at, type: value_error, reason: pattern}
+  - expect_query_422: {path: /mes/reticle, params: {created_at: "2026-10-15"}, field: created_at, type: timezone_required, no_ctx: true}
+  - expect_datetime_eq_match: {entity: reticle, field: created_at}
+  - expect_query_422: {path: /mes/reticle_incident, params: {created_at: garbage}, field: created_at, type: value_error, reason: pattern}
+  - expect_query_422: {path: /mes/reticle_incident, params: {created_at: "2026-10-15"}, field: created_at, type: timezone_required, no_ctx: true}
+  - expect_datetime_eq_match: {entity: reticle_incident, field: created_at}
+  - expect_query_422: {path: /mes/reticle_mount_log, params: {created_at: garbage}, field: created_at, type: value_error, reason: pattern}
+  - expect_query_422: {path: /mes/reticle_mount_log, params: {created_at: "2026-10-15"}, field: created_at, type: timezone_required, no_ctx: true}
+  - expect_datetime_eq_match: {entity: reticle_mount_log, field: created_at}
+  - expect_query_422: {path: /mes/reticle_usage, params: {created_at: garbage}, field: created_at, type: value_error, reason: pattern}
+  - expect_query_422: {path: /mes/reticle_usage, params: {created_at: "2026-10-15"}, field: created_at, type: timezone_required, no_ctx: true}
+  - expect_datetime_eq_match: {entity: reticle_usage, field: created_at}
+  - expect_query_422: {path: /mes/reticle_inspection, params: {created_at: garbage}, field: created_at, type: value_error, reason: pattern}
+  - expect_query_422: {path: /mes/reticle_inspection, params: {created_at: "2026-10-15"}, field: created_at, type: timezone_required, no_ctx: true}
+  - expect_datetime_eq_match: {entity: reticle_inspection, field: created_at}
+  - expect_query_422: {path: /mes/reticle_status_log, params: {created_at: garbage}, field: created_at, type: value_error, reason: pattern}
+  - expect_query_422: {path: /mes/reticle_status_log, params: {created_at: "2026-10-15"}, field: created_at, type: timezone_required, no_ctx: true}
+  - expect_datetime_eq_match: {entity: reticle_status_log, field: created_at}
   # ---- D87 补充一：光罩主数据通用 CRUD 新建 / 编辑 / 删除必须带 Idempotency-Key（每步唯一 key，回放除外）；种子 seed-p3 建光罩也带 key
-  # 带 key 的首次写在 1ef2eff 上照常通过；缺 key 422 missing、回放头 Idempotent-Replayed（D86 补充二）等后端小提交 → xfail
+  # ff79d22 已落地 D87：缺 key 422 missing、回放头 Idempotent-Replayed（D86 补充二）、life_state 均按真实断言
   - reticle_crud: {action: create, idem: ret-crud-c1, code: R-SIM-CRUD1, body: {name: R-SIM-CRUD1, max_shots: 250}, expect: {status_in: [200, 201], replayed: false}}
-  - reticle_crud: {action: create, idem: ret-crud-c1, code: R-SIM-CRUD1, body: {name: R-SIM-CRUD1, max_shots: 250}, expect: {status_in: [200, 201], replayed: true}, xfail: "D87 补充一，等后端 B6 之后的小提交"}
+  - reticle_crud: {action: create, idem: ret-crud-c1, code: R-SIM-CRUD1, body: {name: R-SIM-CRUD1, max_shots: 250}, expect: {status_in: [200, 201], replayed: true}}
   - reticle_crud: {action: create, idem: ret-crud-c3, code: R-SIM-CRUD3, body: {name: R-SIM-CRUD3, max_shots: 250}, expect: {status_in: [200, 201], replayed: false}}
   - reticle_crud: {action: patch, idem: ret-crud-p1, reticle: R-SIM-CRUD1, body: {name: R-SIM-CRUD1-改}, expect: {status: 200, replayed: false}}
-  - reticle_crud: {action: patch, idem: ret-crud-p1, reticle: R-SIM-CRUD1, body: {name: R-SIM-CRUD1-改}, expect: {status: 200, replayed: true}, xfail: "D87 补充一，等后端 B6 之后的小提交"}
+  - reticle_crud: {action: patch, idem: ret-crud-p1, reticle: R-SIM-CRUD1, body: {name: R-SIM-CRUD1-改}, expect: {status: 200, replayed: true}}
   # ---- D87：GET 详情和列表补 life_state，值与写操作（用量调整）返回的 brief 一致；不断言 inspection_pending
-  - expect_reticle_life_state: {reticle: R-SIM-CRUD3, idem: ret-life-1, delta: "1", xfail: "D87 life_state，等后端 B6 之后的小提交"}
+  - expect_reticle_life_state: {reticle: R-SIM-CRUD3, idem: ret-life-1, delta: "1"}
   # 缺 key（1ef2eff 上会照常写入：CRUD2 被新建；CRUD3 有用量记录 → 409 referenced。只影响本组自建的光罩。D81：缺 key 422 先于 409）
-  - reticle_crud: {action: create, no_idem: true, code: R-SIM-CRUD2, body: {name: R-SIM-CRUD2, max_shots: 250}, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}, xfail: "D87 补充一，等后端 B6 之后的小提交"}
-  - reticle_crud: {action: patch, no_idem: true, reticle: R-SIM-CRUD1, body: {name: R-SIM-CRUD1-改}, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}, xfail: "D87 补充一，等后端 B6 之后的小提交"}
-  - reticle_crud: {action: delete, no_idem: true, reticle: R-SIM-CRUD3, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}, xfail: "D87 补充一，等后端 B6 之后的小提交"}
-  - reticle_crud: {action: delete, idem: ret-crud-d1, reticle: R-SIM-CRUD1, expect: {status_in: [200, 204], replayed: false}}
+  - reticle_crud: {action: create, no_idem: true, code: R-SIM-CRUD2, body: {name: R-SIM-CRUD2, max_shots: 250}, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
+  - reticle_crud: {action: patch, no_idem: true, reticle: R-SIM-CRUD1, body: {name: R-SIM-CRUD1-改}, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
+  - reticle_crud: {action: delete, no_idem: true, reticle: R-SIM-CRUD3, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
+  - reticle_crud: {action: delete, idem: ret-crud-d1, save_as: d1, reticle: R-SIM-CRUD1, expect: {status_in: [200, 204], replayed: false}}
+  # ---- D87 删除回放：无履历光罩删除成功 → 同 key 同目标重发 = 原响应 + Idempotent-Replayed: true；同 key 换目标 = 422 reused（对象格式，无 ctx）
+  - reticle_crud: {action: delete, idem: ret-crud-d1, reticle: R-SIM-CRUD1, expect: {status_in: [200, 204], replayed: true, same_body_as: d1}}
+  - reticle_crud: {action: delete, idem: ret-crud-d1, reticle: R-SIM-CRUD3, expect: {status: 422, code: idempotency_key_reused, detail_object: true}}
+  # 有用量记录的光罩：缺 key 422（上面）→ 带 key 409 referenced（光罩这一期 tables[]）→ 同 key 再发仍 409，不带回放头（4xx 不缓存，D86）
+  - reticle_crud: {action: delete, idem: ret-crud-d3, reticle: R-SIM-CRUD3, expect: {status: 409, code: referenced, replayed: false, detail_has: [tables]}}
+  - reticle_crud: {action: delete, idem: ret-crud-d3, reticle: R-SIM-CRUD3, expect: {status: 409, code: referenced, replayed: false, detail_has: [tables]}}

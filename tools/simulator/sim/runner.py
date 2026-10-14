@@ -696,6 +696,10 @@ class Runner:
             call = Call("PATCH", fill(self._ad("crud_item"), entity="alarm_code", rid=hit[0]["id"]), body)
         else:
             call = Call("POST", self._ad("crud").replace("{entity}", "alarm_code"), body)
+        # D87 补充二：alarm_code 新建 / 编辑带 Idempotency-Key（B8 未落地前多带 key 无害）；每次唯一，不复用
+        import uuid as _uuid
+
+        call.idem = f"alarm-code:{_uuid.uuid4()}"
         self._send(entry, call, a.get("expect"))
 
     def _expect_e10_history(self, a: dict, entry: dict) -> None:
@@ -825,11 +829,14 @@ class Runner:
         if act == "create":
             path, method, body = "/mes/reticle", "POST", {"code": a["code"], **(a.get("body") or {})}
         else:
-            path = f"/mes/reticle/{self.rid('reticle', a['reticle'])}"
+            dead = getattr(self, "_deleted", {}).get(a["reticle"])
+            path = f"/mes/reticle/{dead or self.rid('reticle', a['reticle'])}"
             method, body = ("PATCH", a.get("body") or {}) if act == "patch" else ("DELETE", None)
         r = self.c.request(method, path, body, headers=hdr)
         if act == "delete" and r.status in (200, 204):
-            self._ids.pop(("reticle", a["reticle"]), None)
+            # 保留已删光罩的 id：同 key 回放 / 换目标 reused 还要用（不再按编码查）
+            self._deleted = getattr(self, "_deleted", {})
+            self._deleted[a["reticle"]] = self._ids.pop(("reticle", a["reticle"]), None) or self._deleted.get(a["reticle"])
         rep = r.headers.get("idempotent-replayed")
         entry.update(method=method, path=path, status=r.status, code=r.code, idempotency_key=idem, replayed=rep)
         exp = a.get("expect") or {}
@@ -847,6 +854,18 @@ class Runner:
             raise StepFailed(f"{method} {path} 回放应带 Idempotent-Replayed: true，实际 {rep!r}")
         if exp.get("replayed") is False and rep is not None:
             raise StepFailed(f"{method} {path} 首次执行不应带 Idempotent-Replayed，实际 {rep!r}")
+        self._crud_bodies = getattr(self, "_crud_bodies", {})
+        if a.get("save_as"):
+            self._crud_bodies[a["save_as"]] = r.body
+        if exp.get("same_body_as") is not None and r.body != self._crud_bodies.get(exp["same_body_as"]):
+            raise StepFailed(f"{method} {path} 回放响应体与首次不同：{r.body!r}"[:300])
+        det = r.body.get("detail") if isinstance(r.body, dict) else None
+        if exp.get("detail_object"):
+            if not isinstance(det, dict) or "ctx" in det or not det.get("message"):
+                raise StepFailed(f"{method} {path} detail 应为对象 {{code, message}} 且无 ctx，实际 {det!r}"[:300])
+        for k in exp.get("detail_has") or []:
+            if not isinstance(det, dict) or k not in det:
+                raise StepFailed(f"{method} {path} detail 缺 {k}：{det!r}"[:300])
 
     def _expect_reticle_life_state(self, run_id: str, a: dict, entry: dict) -> None:
         """D87：写操作返回的 brief.life_state 与 GET 详情、列表的 life_state 一致（不断言 inspection_pending）。
