@@ -77,3 +77,31 @@ describe('D87 补充一 光罩主数据带 key', () => {
     )
   })
 })
+
+describe('删除幂等（后端补充）', () => {
+  it('删除成功后同 key 同请求重发：原样回放第一次的成功响应并带 Idempotent-Replayed，不报 404', async () => {
+    const first = await mockReticleApi.remove('r7', 'DEL-1')
+    expect(mockIdemHeaders()).toEqual({})
+    const again = await mockReticleApi.remove('r7', 'DEL-1')
+    expect(again).toEqual(first)
+    expect(mockIdemHeaders()).toEqual({ 'Idempotent-Replayed': 'true' })
+    // 换新 key 才是新请求 → 404
+    expect(await st(mockReticleApi.remove('r7', 'DEL-2'))).toMatchObject({
+      s: 404,
+    })
+  })
+  it('有用量记录：不带 key 先 422 missing，补 key 重发 409 referenced（4xx 不缓存、非回放）', async () => {
+    await mockReticleApi.act('r1', 'usage', { delta: '5' }, 'U1')
+    expect(await st(mockReticleApi.remove('r1', no))).toEqual(MISSING)
+    const r = await st(mockReticleApi.remove('r1', 'DEL-3'))
+    expect(r).toMatchObject({ s: 409, d: { code: 'referenced' } })
+    expect((r as { d: { tables: string[] } }).d.tables).toContain(
+      'mes_reticle_usage'
+    )
+    expect(mockIdemHeaders()).toEqual({})
+    expect(await st(mockReticleApi.remove('r1', 'DEL-3'))).toMatchObject({
+      s: 409,
+    })
+    expect(mockIdemHeaders()).toEqual({})
+  })
+})
