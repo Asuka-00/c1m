@@ -228,6 +228,13 @@ def check_p3_expect(resp: Resp, expect: dict | None) -> list[str]:
             errs.append(f"errors {slim!r} != 期望 {want!r}"[:400])
     if "results" in expect:
         errs += check_results(resp, expect["results"])
+    # D86 补充二：replayed true → 头 Idempotent-Replayed: true；false → 不带该头（首次执行 / 4xx 重发）
+    if "replayed" in expect:
+        rep = (resp.headers or {}).get("idempotent-replayed")
+        if expect["replayed"] is True and rep != "true":
+            errs.append(f"应带 Idempotent-Replayed: true，实际 {rep!r}")
+        if expect["replayed"] is False and rep is not None:
+            errs.append(f"不应带 Idempotent-Replayed，实际 {rep!r}")
     for k in expect.get("absent") or []:
         b = resp.body if isinstance(resp.body, dict) else {}
         if has_key(b, k) or has_key(b.get("data"), k):
@@ -331,6 +338,8 @@ class P3Exec:
             if out == v and v == "$now":
                 out = resolve_relative("$now+0s", now_utc())
             return out
+        if v == "$missing_uuid":  # 不存在的 id（测 404 及 D81 里排在 404 前的 422）
+            return "00000000-0000-0000-0000-00000000dead"
         name, _, rest = v[1:].partition(".")
         if name == "ext":
             return self._need(self.ext, rest, v)

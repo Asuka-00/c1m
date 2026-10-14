@@ -270,7 +270,7 @@ def test_marking_draft_follows_d78():
     )  # 作废后上报改为 no_active_marking（D79 补充 2） and "trace_code_mismatch" in codes
     assert codes.count("check_blocked") == 8 and "idempotency_key_reused" in codes
     assert (
-        sum(1 for e in exp if e.get("loc") == ["header", "Idempotency-Key"]) == 12
+        sum(1 for e in exp if e.get("loc") == ["header", "Idempotency-Key"]) == 13  # +1 B1 模板 D81 顺序（marking-13）
     )  # 打印、检验、作废，D81 不存在主记录作废；+4 D79 补充七 模板四个写接口缺 key
     # 补充三 4：逐条列出，值取 config；手工和 EAP 两个入口各有单条和双条
     errs = [e["errors"] for e in exp if "errors" in e and e["errors"][0]["loc"][-1] == "trace_code"]
@@ -380,7 +380,7 @@ def test_marking_draft_follows_d79():
     assert set(tr[1]["first"]["prints"][0]) == {"print_id", "seq", "marked_at", "latest_inspection_result"}
     ls = [s.args for s in sc.steps if s.kind == "expect_marking_list"]
     assert {"marked_at_from", "marked_at_to"} <= {k for a in ls for k in a} and [a["count"] for a in ls] == [1, 0, 0, 1]
-    ro = next(s for s in sc.steps if s.args.get("as") == "read_only")
+    ro = next(s for s in sc.steps if s.args.get("as") == "read_only" and s.kind != "marking_template")
     assert ro.kind == "marking_print" and ro.args["expect"]["status"] == 403
     assert "qty" not in open("scenarios/p3-draft/marking-report.yaml").read()
 
@@ -437,7 +437,7 @@ def test_marking_draft_follows_d79_supplement2():
     insp = [(i, s) for i, s in mk1 if s.kind == "marking_inspect" and s.args.get("idem", "").startswith("mk-insp")]
     # 复检都在出站前；出站后只有一次，且 409
     after = [s for i, s in insp if i > out_ok]
-    assert len(after) == 1 and after[0].args["expect"] == {"status": 409, "code": "invalid_transition"}
+    assert len(after) == 1 and after[0].args["expect"] == {"status": 409, "detail_object": True, "code": "invalid_transition"}
     ov = next(s for i, s in insp if s.args["idem"] == "mk-insp-ov")
     ok = next(s for i, s in insp if s.args["idem"] == "mk-insp-ok")
     assert st.index(ov) < st.index(ok) < out_ok
@@ -648,7 +648,7 @@ def test_marking_draft_mk0003_track_out_before_scrap():
     from sim.scenario import load
 
     sc = load("scenarios/p3-draft/marking-report.yaml")
-    assert sc.run_id == "marking-12" and sc.draft
+    assert sc.run_id == "marking-13" and sc.draft
     st = sc.steps
     scrap = next(s for s in st if s.kind == "lot_scrap" and s.args.get("lot") == "MK0003")
     assert scrap.args["units"] == "all" and scrap.args.get("override") is True

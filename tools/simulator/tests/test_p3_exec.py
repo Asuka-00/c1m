@@ -598,7 +598,7 @@ def test_marking_scenario_d79_supp7():
     appr = [
         (a.get("as"), a["expect"]["status"], a["expect"].get("code"))
         for a in tpl
-        if a["action"] == "approve" and a.get("idem")
+        if a["action"] == "approve" and a.get("idem") and a.get("template") == "$tpl.id"
     ]
     assert appr == [
         (None, 422, "self_approval"),
@@ -608,7 +608,7 @@ def test_marking_scenario_d79_supp7():
     ]
     exp = [s.args.get("expect") or {} for s in st]
     assert any(e.get("code") == "idempotency_key_reused" and e.get("detail_object") for e in exp if e)
-    cl = [e for e in exp if any((x.get("loc") == ["body", "comment"]) for x in e.get("errors") or [])]
+    cl = [e for e in exp if any((x.get("loc") == ["body", "comment"]) for x in e.get("errors") or []) and e["errors"][0].get("type") == "value_error"]
     assert len(cl) == 2 and all(e["errors"][0]["ctx"] == {"reason": "max_length", "max_length": 300} for e in cl)
     blocked = [e for e in exp if e.get("code") == "check_blocked"]
     assert blocked and all(e.get("results") for e in blocked)
