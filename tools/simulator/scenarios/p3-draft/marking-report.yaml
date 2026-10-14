@@ -34,7 +34,7 @@
 #       补充五：纯空白按 re.fullmatch(r"[ \t\r\n\u3000]*") 判断，不用 strip()，U+FEFF / \x1f 报 pattern）
 # 打标记录没有 numeric 列（D78），不测超位小数。
 name: marking-report
-run_id: marking-09
+run_id: marking-10
 draft: "等 P3-B2/B3 打标接口（POST /mes/marking 建主记录、/prints、/inspect、/void、/inspections、/config、/mes/exec/trace kind=trace_code，D78、D79；B11 event_type=marking 本期不做）"
 target: http://127.0.0.1:8013
 equipment: [{code: EAP-MK01, type: MARKER}]
@@ -165,18 +165,31 @@ steps:
                       expect: {status: 422, errors: [{type: missing, loc: [body, read_code]}]}}
   - marking_inspect: {lot: MK0001, result: pass, read_code: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", idem: mk-insp-rc3,
                       expect: {status: 422, errors: [{type: value_error, loc: [body, read_code], ctx: {reason: max_length, max_length: 128}}]}}   # 129 码点
-  - expect_marking_inspections: {lot: MK0001, count: 4, last: {result: fail, seq: 2, read_code: "ab_1 "}}   # 422 不入库
+  # N-E4 / D79 补充三：纯空白、null 一律 422 missing；非字符串 422 string_type；都不落库、不强制 fail
+  #   （null 要按键存在、值为 null 发送，不能省略字段）
+  - marking_inspect: {lot: MK0001, result: pass, read_code: " \t\u3000\r\n", idem: mk-insp-rc4,
+                      expect: {status: 422, errors: [{type: missing, loc: [body, read_code]}]}}
+  - marking_inspect: {lot: MK0001, result: pass, read_code: null, idem: mk-insp-rc5,
+                      expect: {status: 422, errors: [{type: missing, loc: [body, read_code]}]}}
+  - marking_inspect: {lot: MK0001, result: pass, read_code: 12345, idem: mk-insp-rc6,
+                      expect: {status: 422, errors: [{type: string_type, loc: [body, read_code]}]}}
+  - marking_inspect: {lot: MK0001, result: pass, read_code: [ABC], idem: mk-insp-rc7,
+                      expect: {status: 422, errors: [{type: string_type, loc: [body, read_code]}]}}
+  # U+FEFF 不算空白，按普通字符串：与 expected_code 不一致 → 强制 fail + result_overridden=true，原值存
+  - marking_inspect: {lot: MK0001, result: pass, read_code: "\ufeff", idem: mk-insp-rc8,
+                      expect: {status: 200, body: {data.result: fail, data.read_code: "\ufeff", data.result_overridden: true}}}
+  - expect_marking_inspections: {lot: MK0001, count: 5, last: {result: fail, seq: 2, read_code: "\ufeff"}}   # 422 不入库，FEFF 入库
   # 最新一次 fail → 出站 409
   - track_out: {eq: EAP-MK01, lot: MK0001,
                 expect: {status: 409, code: check_blocked, ctx: {check: marking_inspection, reason: fail, marking_id: $marking.MK0001}, overridable: false}}
   - marking_inspect: {lot: MK0001, result: pass, read_code: $issued, idem: mk-insp-ok, expect: {status: 200, body: {data.result: pass, data.result_overridden: false}}}
-  - expect_marking_inspections: {lot: MK0001, count: 5, last: {result: pass, seq: 2}}
+  - expect_marking_inspections: {lot: MK0001, count: 6, last: {result: pass, seq: 2}}
   - expect_marking: {lot: MK0001, fields: {latest_inspection_status: pass}}
   # 最新打印的最新检验 pass → 放行
   - track_out: {eq: EAP-MK01, lot: MK0001, expect: {status: 200}}
   # 离开打标工步后再检验 → 409 invalid_transition，不入库
   - marking_inspect: {lot: MK0001, result: pass, read_code: $issued, idem: mk-insp-after, expect: {status: 409, code: invalid_transition}}
-  - expect_marking_inspections: {lot: MK0001, count: 5}
+  - expect_marking_inspections: {lot: MK0001, count: 6}
   # ---- 批次 MK0002：EAP 上报（主记录先建；EAP 打印落到同一套 /prints 逻辑）
   - marking_create: {lot: MK0002, idem: mk-c-2, expect: {status: 200}}
   - marking_report: {eq: EAP-MK01, lot: MK0002, seq: 1, kind: print, payload: {trace_code: $issued}, save_as: rep1,

@@ -553,3 +553,20 @@ def test_d80_s2_flow_idem_and_reused_object():
     arr = Resp(422, {"detail": [{"type": "value_error", "code": "idempotency_key_reused", "msg": "x"}]})
     want = {"status": 422, "code": "idempotency_key_reused", "detail_object": True}
     assert check_expect(obj, want) == [] and check_expect(arr, want)
+
+
+def test_marking_draft_read_code_n_e4():
+    from sim.marking import check_read_code
+    from sim.scenario import load
+
+    st = [s for s in load("scenarios/p3-draft/marking-report.yaml").steps if s.kind == "marking_inspect"]
+    rc = {repr(s.args["read_code"]): s.args["expect"] for s in st if "read_code" in s.args}
+    for v, typ in ((" \t\u3000\r\n", "missing"), (None, "missing"), (12345, "string_type"), (["ABC"], "string_type")):
+        e = rc[repr(v)]
+        assert e["status"] == 422 and e["errors"] == [{"type": typ, "loc": ["body", "read_code"]}], v
+        assert check_read_code(v) == [{"type": typ}], v
+    fe = rc[repr("\ufeff")]
+    assert check_read_code("\ufeff") == []
+    assert fe["status"] == 200 and fe["body"]["data.result"] == "fail" and fe["body"]["data.result_overridden"] is True
+    txt = open("scenarios/p3-draft/reticle-report.yaml").read()
+    assert "N-E6" in txt and "先校验 Idempotency-Key header" in txt
