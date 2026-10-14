@@ -1527,6 +1527,44 @@
         "mapQty": "数量不一致：子ロット {{children}} + 除外 {{excluded}} ≠ マップ総数 {{total}}",
         "trfQty": "{{wafer}}：割当 {{allocated}} ≠ 良品数 {{good}}"
       }
+    },
+    "bin": {
+      "title": "ビン別分割",
+      "desc": "ロットをビンごとに子ロットへ分割します。数量と整合をプレビューしてから実行します。",
+      "bin": "ビン",
+      "qty": "数量",
+      "child": "子ロット",
+      "noMap": "マップなし：手入力（合計 {{sum}}）",
+      "binOf": "{{wafer}} {{n}} 行目のビンコード",
+      "qtyOf": "{{wafer}} {{n}} 行目の数量",
+      "addBin": "ビンを追加",
+      "commit": "分割を実行",
+      "summary": "ビン別集計",
+      "excluded": "除外",
+      "ok": "合格",
+      "fail": "不合格",
+      "conserve": "{{wafer}}：子ロット {{children}} + 除外 {{excluded}} / 総数 {{total}}",
+      "diff": "差分 {{diff}}",
+      "children": "作成される子ロット",
+      "outLine": "ビン {{bin}}：{{qty}} ダイ",
+      "done": "分割完了、子ロット：{{list}}",
+      "e": {
+        "need": "{{wafer}}：マップがありません。各ビンの数量を入力してください",
+        "code": "{{wafer}}：ビンコードは必須で、32 文字以内です",
+        "dup": "{{wafer}}：ビン {{bin}} が重複しています",
+        "reason": "ビン数量を手入力する場合は理由コードが必要です"
+      },
+      "be": {
+        "manualWithMap": "マップがあるためビン数量は手入力できません",
+        "needManual": "マップがありません。ビン数量と理由を入力してください",
+        "reason": "ビン数量を手入力する場合は理由コードが必要です",
+        "duplicate": "ビンが重複しています",
+        "noGross": "製品に gross die がないため手入力のビン数量を照合できません",
+        "route": "投入ロットの工程が異なるため、ルートの指定が必要です",
+        "mapQty": "数量不一致：子ロット {{children}} + 除外 {{excluded}} ≠ マップ総数 {{total}}（差分 {{diff}}）",
+        "binQty": "{{wafer}}：ビン合計 {{actual}} ≠ 期待値 {{expected}}（差分 {{diff}}）",
+        "unassigned": "子ロットに割り当てられていないビン：{{list}}"
+      }
     }
   },
   "notify": {

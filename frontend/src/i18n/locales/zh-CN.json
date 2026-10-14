@@ -1527,6 +1527,44 @@
         "mapQty": "数量不守恒：子批 {{children}} + 排除 {{excluded}} ≠ 坐标图总数 {{total}}",
         "trfQty": "{{wafer}}：已分配 {{allocated}} ≠ 良品数 {{good}}"
       }
+    },
+    "bin": {
+      "title": "按 bin 拆批",
+      "desc": "按 bin 把整批拆成子批：先预览确认各 bin 数量和守恒，再提交。",
+      "bin": "Bin",
+      "qty": "数量",
+      "child": "子批",
+      "noMap": "无坐标图：人工录入（合计 {{sum}}）",
+      "binOf": "{{wafer}} 第 {{n}} 行 bin 码",
+      "qtyOf": "{{wafer}} 第 {{n}} 行数量",
+      "addBin": "添加 bin",
+      "commit": "确认拆批",
+      "summary": "Bin 分档汇总",
+      "excluded": "排除",
+      "ok": "通过",
+      "fail": "不通过",
+      "conserve": "{{wafer}}：子批 {{children}} + 排除 {{excluded}} / 总数 {{total}}",
+      "diff": "差额 {{diff}}",
+      "children": "将生成子批",
+      "outLine": "Bin {{bin}}：{{qty}} 颗",
+      "done": "拆批完成，子批：{{list}}",
+      "e": {
+        "need": "{{wafer}}：没有坐标图，请录入各 bin 数量",
+        "code": "{{wafer}}：bin 码必填，最多 32 个字符",
+        "dup": "{{wafer}}：bin {{bin}} 重复",
+        "reason": "人工录入 bin 数量时必须选择原因码"
+      },
+      "be": {
+        "manualWithMap": "已有坐标图，不能人工录入 bin 数量",
+        "needManual": "没有坐标图，请录入各 bin 数量并填原因",
+        "reason": "人工录入 bin 数量必须填原因码",
+        "duplicate": "bin 重复",
+        "noGross": "产品未设 gross die，无法核对人工 bin 数量",
+        "route": "输入批次不在同一工步，必须指定流程",
+        "mapQty": "数量不守恒：子批 {{children}} + 排除 {{excluded}} ≠ 坐标图总数 {{total}}（差额 {{diff}}）",
+        "binQty": "{{wafer}}：bin 合计 {{actual}} ≠ 期望 {{expected}}（差额 {{diff}}）",
+        "unassigned": "以下 bin 没有分到子批：{{list}}"
+      }
     }
   },
   "notify": {

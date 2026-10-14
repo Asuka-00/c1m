@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { t } from '@/i18n'
 import {
   Flame,
+  Grid3x3,
   Layers,
   PackageMinus,
   SkipForward,
@@ -37,6 +38,7 @@ import { optLabel } from '@/features/mes/common/labels'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
+import { BinSplitDialog } from './bin-split-dialog'
 import { Pick } from './exec-parts'
 import {
   blocksScrapToZero,
@@ -52,7 +54,7 @@ import { TransformDialog } from './transform-dialog'
 export function WipActionsCard({ cx }: { cx: ExecContext }) {
   const can = useMesCan()
   const [open, setOpen] = useState<
-    'jump' | 'adjust' | 'priority' | 'transform' | null
+    'jump' | 'adjust' | 'priority' | 'transform' | 'bin' | null
   >(null)
   const canJump =
     can(MES_PERM.execJump) &&
@@ -81,6 +83,16 @@ export function WipActionsCard({ cx }: { cx: ExecContext }) {
           >
             <Layers className='size-4' />
             {t('mes.trf.title')}
+          </Button>
+          <Button
+            size='sm'
+            variant='outline'
+            disabled={!canTransform}
+            onClick={() => setOpen('bin')}
+            data-testid='open-bin-split'
+          >
+            <Grid3x3 className='size-4' />
+            {t('mes.bin.title')}
           </Button>
           <Button
             size='sm'
@@ -134,6 +146,13 @@ export function WipActionsCard({ cx }: { cx: ExecContext }) {
           cx={cx}
           open
           onOpenChange={(o) => setOpen(o ? 'transform' : null)}
+        />
+      )}
+      {open === 'bin' && (
+        <BinSplitDialog
+          cx={cx}
+          open
+          onOpenChange={(o) => setOpen(o ? 'bin' : null)}
         />
       )}
       <AdjustDialog

@@ -570,6 +570,43 @@ export interface TransformPreview {
   }[]
   warnings: { code: string; message?: string; wafer?: string }[]
 }
+/** 按 bin 拆批请求（B8 / F7；不给 outputs 时每个 bin 一个子批）。 */
+export interface BinSplitBody {
+  input_lot_ids: string[]
+  outputs?: { bin_codes: string[]; product_id?: string; route_id?: string }[]
+  manual_bins?: {
+    wafer_id: string
+    bins: { bin_code: string; qty: number }[]
+  }[]
+  reason_id?: string
+  comment?: string
+}
+/** 按 bin 拆批预览：逐片晶圆各 bin 数量与守恒、各子批数量（不写库）。 */
+export interface BinSplitPreview {
+  inputs: {
+    lot: string
+    wafer: string
+    wafer_id: string
+    bin_source: 'map' | 'manual'
+    substrate_map_id: string | null
+    map_version: number | null
+    bin_set: { code: string; version: number } | null
+    total_qty: number
+    excluded_qty: number
+    bin_counts: Record<string, number>
+    split_counts: Record<string, number>
+    children_qty: number
+    conserved: boolean
+  }[]
+  outputs: {
+    bin_code: string
+    bin_codes: string[]
+    product_id: string
+    route_id: string | null
+    qty: number
+  }[]
+  warnings: { code: string; message?: string; wafer?: string }[]
+}
 /** 转换 / 按 bin 拆批提交结果。 */
 export interface TransformResult {
   transform: MesRow
@@ -715,6 +752,14 @@ export const execApi = {
   /** 单位转换提交：母批 → converted，生成子批。 */
   transform: (body: TransformBody) =>
     http.post<TransformResult>('/mes/exec/transform', body).then((r) => r.data),
+  /** 按 bin 拆批预览（mes.exec:transform；不写库）。 */
+  binSplitPreview: (body: BinSplitBody) =>
+    http
+      .post<BinSplitPreview>('/mes/exec/bin-split/preview', body)
+      .then((r) => r.data),
+  /** 按 bin 拆批提交：母批 → converted，子批带 bin_code。 */
+  binSplit: (body: BinSplitBody) =>
+    http.post<TransformResult>('/mes/exec/bin-split', body).then((r) => r.data),
   /** 批次 BOM 用量（计划 / 实际 / 超量；需 mes.exec:read，不存在 404）。 */
   bomUsage: (lotId: string) =>
     http.get<BomUsage>(`/mes/exec/lots/${lotId}/bom-usage`).then((r) => r.data),

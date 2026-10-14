@@ -205,6 +205,12 @@ export function trfWarningText(w: {
 
 const MSG_RULES: [RegExp, string][] = [
   [/manual good qty not allowed/, 'mes.trf.be.manualWithMap'],
+  [/manual bins not allowed/, 'mes.bin.be.manualWithMap'],
+  [/enter bin quantities with a reason/, 'mes.bin.be.needManual'],
+  [/reason required for manual bin/, 'mes.bin.be.reason'],
+  [/duplicate bin/, 'mes.bin.be.duplicate'],
+  [/no gross die to check bins/, 'mes.bin.be.noGross'],
+  [/different steps; route required/, 'mes.bin.be.route'],
   [/no substrate map and product has no gross die/, 'mes.trf.be.noGross'],
   [/reason required/, 'mes.trf.be.reason'],
   [/reason not found/, 'mes.trf.be.reasonNotFound'],

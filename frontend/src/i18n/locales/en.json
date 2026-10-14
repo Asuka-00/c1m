@@ -1527,6 +1527,44 @@
         "mapQty": "Quantities don't balance: children {{children}} + excluded {{excluded}} ≠ map total {{total}}",
         "trfQty": "{{wafer}}: allocated {{allocated}} ≠ good {{good}}"
       }
+    },
+    "bin": {
+      "title": "Split by bin",
+      "desc": "Split a whole lot into child lots by bin: preview bin quantities and the balance check, then submit.",
+      "bin": "Bin",
+      "qty": "Qty",
+      "child": "Child lot",
+      "noMap": "No map: enter manually (total {{sum}})",
+      "binOf": "{{wafer}} row {{n}} bin code",
+      "qtyOf": "{{wafer}} row {{n}} qty",
+      "addBin": "Add bin",
+      "commit": "Split",
+      "summary": "Bin summary",
+      "excluded": "Excluded",
+      "ok": "Pass",
+      "fail": "Fail",
+      "conserve": "{{wafer}}: children {{children}} + excluded {{excluded}} / total {{total}}",
+      "diff": "Difference {{diff}}",
+      "children": "Child lots to create",
+      "outLine": "Bin {{bin}}: {{qty}} dies",
+      "done": "Split done, child lots: {{list}}",
+      "e": {
+        "need": "{{wafer}}: no substrate map; enter bin quantities",
+        "code": "{{wafer}}: bin code is required, up to 32 characters",
+        "dup": "{{wafer}}: bin {{bin}} is duplicated",
+        "reason": "A reason code is required for manual bin quantities"
+      },
+      "be": {
+        "manualWithMap": "Has a substrate map; manual bin quantities not allowed",
+        "needManual": "No substrate map; enter bin quantities with a reason",
+        "reason": "A reason code is required for manual bin quantities",
+        "duplicate": "Duplicate bin",
+        "noGross": "The product has no gross die to check manual bins against",
+        "route": "Input lots are at different steps; a route is required",
+        "mapQty": "Quantities don't balance: children {{children}} + excluded {{excluded}} ≠ map total {{total}} (difference {{diff}})",
+        "binQty": "{{wafer}}: bins total {{actual}} ≠ expected {{expected}} (difference {{diff}})",
+        "unassigned": "Bins not assigned to any child lot: {{list}}"
+      }
     }
   },
   "notify": {

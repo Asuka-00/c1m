@@ -6,9 +6,8 @@
  * - 每个输出（产品、流程、追踪单位）按晶圆分配 die；单输出时默认分配全部良品。
  * - 改动任何输入后预览失效，需要重新预览才能提交。撤销转换推到 P2（D41），提交前以预览把关。
  */
-import { useMemo, useState } from 'react'
-import { AxiosError } from 'axios'
-import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { t } from '@/i18n'
 import { Plus, Trash2, TriangleAlert } from 'lucide-react'
 import { toast } from 'sonner'
@@ -18,7 +17,6 @@ import {
   type TransformPreview,
   type TransformResult,
 } from '@/lib/api/mes/execution'
-import { mapApi } from '@/lib/api/mes/map'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
@@ -47,8 +45,8 @@ import {
   trfWarningText,
   type TrfDraft,
   type TrfOutput,
-  type TrfWafer,
 } from './transform-plan'
+import { useWaferMaps } from './wafer-maps'
 
 export function TransformDialog({
   cx,
@@ -70,36 +68,7 @@ export function TransformDialog({
   } | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [done, setDone] = useState<TransformResult | null>(null)
-  const units = useMemo(
-    () =>
-      cx.units.filter(
-        (u) => u.unit_kind === 'wafer' && u.status !== 'scrapped'
-      ),
-    [cx.units]
-  )
-  const maps = useQueries({
-    queries: units.map((u) => ({
-      queryKey: ['mes', 'map', 'substrate', u.code],
-      queryFn: async () => {
-        try {
-          return await mapApi.bySubstrate(u.code)
-        } catch (e) {
-          if (e instanceof AxiosError && e.response?.status === 404) return null
-          throw e
-        }
-      },
-      enabled: open,
-      retry: false,
-    })),
-  })
-  const wafers: TrfWafer[] = units.map((u, i) => {
-    const q = maps[i]
-    return {
-      id: u.id,
-      code: u.code,
-      map: q?.isSuccess ? q.data : undefined,
-    }
-  })
+  const wafers = useWaferMaps(cx, open)
   const lotId = String(cx.lot.id)
   const body = transformBody(lotId, wafers, d)
   const key = JSON.stringify(body)
