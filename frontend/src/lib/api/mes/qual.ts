@@ -1,5 +1,6 @@
 /** PM 后 Qual 放行接口（后端 B6：`/mes/eqp/qual/{task_id}/result`，任务走通用实体 equipment_qual）。 */
 import { http } from '../client'
+import { BODY_KEYS, pickBody } from '../request-body'
 import { mesApi } from './common'
 
 /** 待登记的 Qual 任务（时间为带 Z 的 UTC）。 */
@@ -36,6 +37,9 @@ export const qualApi = {
     body: { result: 'pass' | 'fail'; comment?: string }
   ) =>
     http
-      .post<QualResultOut>(`/mes/eqp/qual/${taskId}/result`, body)
+      .post<QualResultOut>(
+        `/mes/eqp/qual/${taskId}/result`,
+        pickBody(body, BODY_KEYS.qualResult)
+      )
       .then((r) => r.data),
 }

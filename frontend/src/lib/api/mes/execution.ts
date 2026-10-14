@@ -1,6 +1,15 @@
 /** MES 批次执行：阶段作业、检查、Hold、拆合批。 */
 import type { StageWarning } from '@/features/mes/execution/over-consumption'
 import { http } from '../client'
+import {
+  BODY_KEYS,
+  binSplitBody,
+  pickBody,
+  sortBody,
+  splitBody,
+  stageBody,
+  transformBody,
+} from '../request-body'
 import type { MesRow } from './common'
 
 /** 执行阶段。 */
@@ -650,7 +659,10 @@ export const execApi = {
       override?: boolean
       override_reason?: string
     }
-  ) => http.post(`/mes/exec/lots/${lotId}/sort`, body).then((r) => r.data),
+  ) =>
+    http
+      .post(`/mes/exec/lots/${lotId}/sort`, sortBody(body))
+      .then((r) => r.data),
   /** 载具总览。 */
   carrierBoard: () =>
     http
@@ -659,15 +671,18 @@ export const execApi = {
   /** 清洗载具。 */
   carrierClean: (id: string, comment?: string) =>
     http
-      .post(`/mes/exec/carriers/${id}/clean`, { comment })
+      .post(
+        `/mes/exec/carriers/${id}/clean`,
+        pickBody({ comment }, BODY_KEYS.comment)
+      )
       .then((r) => r.data),
   /** 批次换载具。 */
   changeCarrier: (lotId: string, carrierId: string, comment?: string) =>
     http
-      .post(`/mes/exec/lots/${lotId}/carrier`, {
-        carrier_id: carrierId,
-        comment,
-      })
+      .post(
+        `/mes/exec/lots/${lotId}/carrier`,
+        pickBody({ carrier_id: carrierId, comment }, BODY_KEYS.carrierChange)
+      )
       .then((r) => r.data),
   /** 批量作业候选批次。 */
   batchCandidates: (stage: BatchStage, equipmentId: string) =>
@@ -681,7 +696,7 @@ export const execApi = {
     http
       .post<{
         items: BatchItem[]
-      }>(`/mes/exec/batch/${stage}`, { lot_ids: lotIds, ...body })
+      }>(`/mes/exec/batch/${stage}`, { lot_ids: lotIds, ...stageBody(body) })
       .then((r) => r.data.items),
   /** 批次晶圆图。 */
   waferMap: (lotId: string) =>
@@ -693,14 +708,17 @@ export const execApi = {
       .then((r) => r.data.data),
   split: (lotId: string, children: SplitChild[], body: SmBody) =>
     http
-      .post<SmResult>(`/mes/exec/lots/${lotId}/split`, { children, ...body })
+      .post<SmResult>(
+        `/mes/exec/lots/${lotId}/split`,
+        splitBody({ ...body, children })
+      )
       .then((r) => r.data),
   merge: (lotId: string, source_lot_ids: string[], body: SmBody) =>
     http
-      .post<SmResult>(`/mes/exec/lots/${lotId}/merge`, {
-        source_lot_ids,
-        ...body,
-      })
+      .post<SmResult>(
+        `/mes/exec/lots/${lotId}/merge`,
+        pickBody({ ...body, source_lot_ids }, BODY_KEYS.merge)
+      )
       .then((r) => r.data),
   context: (lotId: string) =>
     http.get<ExecContext>(`/mes/exec/lots/${lotId}`).then((r) => r.data),
@@ -710,11 +728,11 @@ export const execApi = {
         results: CheckResult[]
         /** c6b5907：整体能否放行（任一阻断项不可放行即 false；无阻断时也为 false） */
         overridable?: boolean
-      }>(`/mes/exec/lots/${lotId}/preview/${stage}`, body)
+      }>(`/mes/exec/lots/${lotId}/preview/${stage}`, stageBody(body))
       .then((r) => r.data),
   stage: (lotId: string, stage: ExecStage, body: StageBody) =>
     http
-      .post<StageResult>(`/mes/exec/lots/${lotId}/${stage}`, body)
+      .post<StageResult>(`/mes/exec/lots/${lotId}/${stage}`, stageBody(body))
       .then((r) => r.data),
   /** WIP 看板汇总。 */
   wip: (p: { product_id?: string; lot_type_id?: string; route_id?: string }) =>
@@ -761,16 +779,24 @@ export const execApi = {
       .post<{
         released: string[]
         failed: { id: string; error: string }[]
-      }>('/mes/exec/holds/release-batch', body)
+      }>(
+        '/mes/exec/holds/release-batch',
+        pickBody(body, BODY_KEYS.releaseBatch)
+      )
       .then((r) => r.data),
   /** 单位转换预览（mes.exec:transform；不写库）。 */
   transformPreview: (body: TransformBody) =>
     http
-      .post<TransformPreview>('/mes/exec/transform/preview', body)
+      .post<TransformPreview>(
+        '/mes/exec/transform/preview',
+        transformBody(body)
+      )
       .then((r) => r.data),
   /** 单位转换提交：母批 → converted，生成子批。 */
   transform: (body: TransformBody) =>
-    http.post<TransformResult>('/mes/exec/transform', body).then((r) => r.data),
+    http
+      .post<TransformResult>('/mes/exec/transform', transformBody(body))
+      .then((r) => r.data),
   /** 撤销单位转换 / 按 bin 拆批（mes.exec:transform；子批未动过才可撤销，否则 409）。 */
   transformUndo: (
     transformId: string,
@@ -779,17 +805,19 @@ export const execApi = {
     http
       .post<TransformUndoResult>(
         `/mes/exec/transform/${transformId}/undo`,
-        body
+        pickBody(body, BODY_KEYS.transformUndo)
       )
       .then((r) => r.data),
   /** 按 bin 拆批预览（mes.exec:transform；不写库）。 */
   binSplitPreview: (body: BinSplitBody) =>
     http
-      .post<BinSplitPreview>('/mes/exec/bin-split/preview', body)
+      .post<BinSplitPreview>('/mes/exec/bin-split/preview', binSplitBody(body))
       .then((r) => r.data),
   /** 按 bin 拆批提交：母批 → converted，子批带 bin_code。 */
   binSplit: (body: BinSplitBody) =>
-    http.post<TransformResult>('/mes/exec/bin-split', body).then((r) => r.data),
+    http
+      .post<TransformResult>('/mes/exec/bin-split', binSplitBody(body))
+      .then((r) => r.data),
   /** 批次 BOM 用量（计划 / 实际 / 超量；需 mes.exec:read，不存在 404）。 */
   bomUsage: (lotId: string) =>
     http.get<BomUsage>(`/mes/exec/lots/${lotId}/bom-usage`).then((r) => r.data),
@@ -827,7 +855,10 @@ export const execApi = {
     }
   ) =>
     http
-      .post<StageResult>(`/mes/exec/lots/${id}/priority`, body)
+      .post<StageResult>(
+        `/mes/exec/lots/${id}/priority`,
+        pickBody(body, BODY_KEYS.priority)
+      )
       .then((r) => r.data),
   adjust: (
     id: string,
@@ -842,7 +873,10 @@ export const execApi = {
     }
   ) =>
     http
-      .post<StageResult>(`/mes/exec/lots/${id}/adjust`, body)
+      .post<StageResult>(
+        `/mes/exec/lots/${id}/adjust`,
+        pickBody(body, BODY_KEYS.adjust)
+      )
       .then((r) => r.data),
   jump: (
     lotId: string,
@@ -855,7 +889,10 @@ export const execApi = {
     }
   ) =>
     http
-      .post<StageResult>(`/mes/exec/lots/${lotId}/jump`, body)
+      .post<StageResult>(
+        `/mes/exec/lots/${lotId}/jump`,
+        pickBody(body, BODY_KEYS.jump)
+      )
       .then((r) => r.data),
   hold: (lotId: string, reason_id: string, comment?: string) =>
     http

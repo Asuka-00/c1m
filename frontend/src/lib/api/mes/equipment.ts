@@ -1,5 +1,6 @@
 /** 设备接口（状态看板、E10 手动改状态、PM）。 */
 import { http } from '../client'
+import { BODY_KEYS, pickBody } from '../request-body'
 
 /** PM 计划到期状态。 */
 export interface PmStatus {
@@ -61,11 +62,17 @@ export const eqpApi = {
   changeE10: (
     id: string,
     body: { to_state_id: string; reason_id?: string; comment?: string }
-  ) => http.post(`/mes/eqp/${id}/e10`, body).then((r) => r.data),
+  ) =>
+    http
+      .post(`/mes/eqp/${id}/e10`, pickBody(body, BODY_KEYS.e10))
+      .then((r) => r.data),
   pmComplete: (
     planId: string,
     body: { equipment_id: string; result: 'ok' | 'ng'; comment?: string }
-  ) => http.post(`/mes/eqp/pm/${planId}/complete`, body).then((r) => r.data),
+  ) =>
+    http
+      .post(`/mes/eqp/pm/${planId}/complete`, pickBody(body, BODY_KEYS.pm))
+      .then((r) => r.data),
   /** 清除报警（B9）：不自动恢复 E10 状态；已清除时 `cleared=false`（D55）。 */
   alarmClear: (id: string, body: { comment?: string }) =>
     http
@@ -73,7 +80,7 @@ export const eqpApi = {
         data: Record<string, unknown>
         duplicate: boolean
         cleared: boolean
-      }>(`/mes/eqp/alarms/${id}/clear`, body)
+      }>(`/mes/eqp/alarms/${id}/clear`, pickBody(body, BODY_KEYS.alarmClear))
       .then((r) => r.data),
 }
 
@@ -114,7 +121,7 @@ export const mountApi = {
       .post<{
         data: MountRow
         duplicate: boolean
-      }>(`/mes/eqp/${eqId}/mount`, body)
+      }>(`/mes/eqp/${eqId}/mount`, pickBody(body, BODY_KEYS.mount))
       .then((r) => r.data),
   /** 卸料（卸下时间默认现在，不带请求体）。 */
   unmount: (mountId: string) =>
