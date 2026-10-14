@@ -448,6 +448,10 @@ export interface MarkingApi {
   newVersion: (id: string, key?: string) => Promise<MarkingTemplate>
   approve: (id: string, key?: string) => Promise<MarkingTemplate>
   retire: (id: string) => Promise<MarkingTemplate>
+  /** POST /mes/marking-template/preview（只读，不带 Idempotency-Key） */
+  templatePreview: (input: TemplateCheckInput) => Promise<TemplatePreviewOut>
+  /** POST /mes/marking-template/validate（只读，不带 Idempotency-Key） */
+  templateValidate: (input: TemplateCheckInput) => Promise<TemplateValidateOut>
   preview: (lotId: string) => Promise<MarkingPreview>
   records: (q: RecordQuery) => Promise<MarkingRecord[]>
   /** 单条主记录（出站拦截提示跳转用） */
@@ -463,6 +467,20 @@ export interface MarkingApi {
   void: (id: string, input: VoidInput, key?: string) => Promise<MarkingRecord>
   config: () => Promise<MarkingConfig>
   trace: (code: string, includeVoided?: boolean) => Promise<TraceCodeResult>
+}
+
+/** 模板预览 / 校验请求体（模拟器场景用 {template_id}；未保存草稿可直接给 lines）。 */
+export interface TemplateCheckInput {
+  template_id?: string
+  lines?: string[]
+}
+export interface TemplatePreviewOut {
+  template_id: string | null
+  lines: string[]
+}
+export interface TemplateValidateOut {
+  valid: boolean
+  unknown_placeholders: string[]
 }
 
 const idemHeaders = (key?: string) =>
@@ -514,6 +532,14 @@ export const httpMarkingApi: MarkingApi = {
   retire: (id) =>
     http
       .post<MarkingTemplate>(`/mes/marking-template/${id}/retire`)
+      .then((r) => r.data),
+  templatePreview: (input) =>
+    http
+      .post<TemplatePreviewOut>('/mes/marking-template/preview', input)
+      .then((r) => r.data),
+  templateValidate: (input) =>
+    http
+      .post<TemplateValidateOut>('/mes/marking-template/validate', input)
       .then((r) => r.data),
   preview: (lotId) =>
     http
@@ -1150,6 +1176,29 @@ function mockRetire(id: string) {
   return tpl
 }
 
+const checkLines = (input: TemplateCheckInput) =>
+  input.template_id ? findTpl(input.template_id).lines : (input.lines ?? [])
+
+/** 模板预览（只读）：用示例值渲染。 */
+function mockTplPreview(input: TemplateCheckInput): TemplatePreviewOut {
+  return {
+    template_id: input.template_id ?? null,
+    lines: renderLines(checkLines(input), {
+      trace_code: '26420001',
+      date_code: '2642',
+      lot_id: 'LOT-SAMPLE',
+      product_code: 'PRODUCT',
+      customer_code: 'CUSTOMER',
+    }),
+  }
+}
+
+/** 模板校验（只读）：白名单外占位符。 */
+function mockTplValidate(input: TemplateCheckInput): TemplateValidateOut {
+  const bad = unknownPlaceholders(checkLines(input))
+  return { valid: bad.length === 0, unknown_placeholders: bad }
+}
+
 function mockPreview(lotId: string): MarkingPreview {
   const lot = findLot(lotId)
   const tpl = activeTpl(lot)
@@ -1259,6 +1308,9 @@ function mockPrint(id: string, input: PrintInput): MarkingRecord {
 function inspectBody(input: InspectInput) {
   if (input.result !== 'pass' && input.result !== 'fail')
     throw err422('result', 'enum', 'result: pass or fail')
+  // 后端补充确认：comment ≤300，超长 value_error ctx={reason:max_length, max_length:300}
+  if (typeof input.comment === 'string' && commentTooLong(input.comment))
+    throw commentLongErr()
   {
     // D79 补充三：校验不过不入库、不强制 fail
     const e = readCodeErrors(input.read_code)
@@ -1431,6 +1483,8 @@ export const mockMarkingApi: MarkingApi = {
       )
     ),
   retire: (id) => later(() => mockRetire(id)),
+  templatePreview: (input) => later(() => mockTplPreview(input)),
+  templateValidate: (input) => later(() => mockTplValidate(input)),
   preview: (lotId) => later(() => mockPreview(lotId)),
   records: (q) => later(() => mockRecords(q)),
   record: (id) => later(() => findRec(id)),
