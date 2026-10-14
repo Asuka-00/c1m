@@ -1171,7 +1171,7 @@
       "hoursMinutes": "{{h}} h {{m}} min"
     },
     "map": {
-      "title": "Map Import",
+      "title": "Wafer/Strip Map Import",
       "description": "Import wafer or strip map CSV files. Preview and validate first, then confirm to save.",
       "chooseFile": "Choose CSV file",
       "confirm": "Confirm import",

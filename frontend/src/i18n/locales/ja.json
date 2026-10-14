@@ -1171,8 +1171,8 @@
       "hoursMinutes": "{{h}} 時間 {{m}} 分"
     },
     "map": {
-      "title": "マップ取込",
-      "description": "マップ CSV をプレビューで検証してから取り込みます。",
+      "title": "座標マップ取込",
+      "description": "座標マップ CSV をプレビューで検証してから取り込みます。",
       "chooseFile": "CSV ファイルを選択",
       "confirm": "取込を確定",
       "previewFailed": "プレビューに失敗しました",
