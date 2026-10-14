@@ -21,7 +21,7 @@ from app.core.spec.serialize import serialize
 from app.mes.common.guard import perm_body
 from app.mes.common.query import one
 from app.mes.execution import bin_split as bin_split_svc
-from app.mes.execution import dispatch, shift_log
+from app.mes.execution import dispatch, shift_log, transform_undo
 from app.mes.execution import service as sm
 from app.mes.execution import service as svc
 from app.mes.execution import transform as transform_svc
@@ -710,6 +710,34 @@ def transform(session: SessionDep, ctx: CurrentTenant, body: TransformBody) -> A
     """Unit transform (dicing / die attach / singulation), whole lots, multi-in
     multi-out; parents become converted, children start on their own route."""
     return transform_svc.transform(session, ctx.id, body.model_dump(), ctx.user)
+
+
+class TransformUndoIn(_Strict):
+    """撤销单位转换（严格载荷；空请求体 / {} 也可以）。"""
+
+    reason_id: uuid.UUID | None = None
+    comment: str | None = Field(default=None, max_length=300)
+
+
+@router.post("/transform/{transform_id}/undo")
+def transform_undo_(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    transform_id: uuid.UUID,
+    body: Annotated[
+        TransformUndoIn | None,
+        Depends(perm_body("mes.exec:transform", TransformUndoIn, optional=True)),
+    ],
+) -> Any:
+    """Undo a unit transform / bin split while every child lot is still untouched
+    (waiting, not on hold, no later transactions); 409 transform_undo_blocked
+    otherwise. Parents return to their pre-transform status."""
+    data = body.model_dump() if body else {}
+    if data.get("reason_id") and not one(
+        session, ctx.id, "reason_code", data["reason_id"]
+    ):
+        raise http_422([(("reason_id",), "reason not found")])
+    return transform_undo.undo(session, ctx.id, transform_id, data, ctx.user)
 
 
 # ---------------- 按 bin 拆批（B8） ----------------

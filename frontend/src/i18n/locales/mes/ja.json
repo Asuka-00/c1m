@@ -1352,6 +1352,7 @@
         "split": "分割",
         "merge": "統合",
         "transform": "単位変換",
+        "transform_undo": "単位変換取消",
         "jump": "ステップジャンプ",
         "bonus": "追加",
         "carrier_change": "キャリア変更",

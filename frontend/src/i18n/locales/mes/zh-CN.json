@@ -1352,6 +1352,7 @@
         "split": "分批",
         "merge": "合批",
         "transform": "单位转换",
+        "transform_undo": "撤销单位转换",
         "jump": "跳站",
         "bonus": "补数",
         "carrier_change": "换载具",

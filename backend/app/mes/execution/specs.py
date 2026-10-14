@@ -153,6 +153,7 @@ ENUMS.update(
             ("split", "Split|分批|分割"),
             ("merge", "Merge|合批|統合"),
             ("transform", "Unit transform|单位转换|単位変換"),
+            ("transform_undo", "Transform undone|撤销单位转换|単位変換取消"),
             ("jump", "Jump step|跳站|ステップジャンプ"),
             ("bonus", "Bonus|补数|追加"),
             ("carrier_change", "Carrier change|换载具|キャリア変更"),

@@ -1352,6 +1352,7 @@
         "split": "Split",
         "merge": "Merge",
         "transform": "Unit transform",
+        "transform_undo": "Transform undone",
         "jump": "Jump step",
         "bonus": "Bonus",
         "carrier_change": "Carrier change",
