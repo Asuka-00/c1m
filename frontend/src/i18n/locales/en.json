@@ -1707,11 +1707,13 @@
       "name": "Name",
       "trend": "CT and move trend",
       "byOperation": "By operation",
-      "mock": "Sample data (API not available)",
+      "mock": "Sample data",
       "timezone": "Time zone: {{tz}}",
       "rangeInvalid": "Select a valid date range (start no later than end).",
       "reworkMoves": "Rework moves (lots / wafers)",
-      "hold": "Avg hold time (h)"
+      "hold": "Avg hold time (h)",
+      "notFound": "The selected operation or product does not exist; choose again",
+      "onHold": "On hold at end (lots / qty)"
     },
     "qual": {
       "notQualified": "{{user}} has no valid qualification for operation {{op}} and cannot track in. This cannot be overridden. Obtain or renew the qualification first.",
@@ -2025,7 +2027,8 @@
         "traceRequired": "Trace code is required",
         "unknownPlaceholder": "Unknown placeholder {{name}}",
         "selfApproval": "The drafter cannot approve their own template",
-        "readCodeTooLong": "Read-back code must be at most {{n}} characters"
+        "readCodeTooLong": "Read-back code must be at most {{n}} characters",
+        "readCodeRequired": "Read-back code is required"
       },
       "code": {
         "template_readonly": "Approved versions are read-only; create a new version",

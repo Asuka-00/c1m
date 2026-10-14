@@ -546,6 +546,55 @@ const num = (v: string | null) => (v == null || v === '' ? null : v)
 /** 状态履历 action 枚举（下划线）。 */
 const logAction = (a: ReticleAction) => a.replace('-', '_')
 
+/**
+ * 请求体 422（N-E2：缺 key 之后、幂等重放和 409 之前，与后端 pydantic 校验同序）。
+ */
+function bodyCheck(action: ReticleAction, body: ReticleActionInput) {
+  if (action === 'usage') {
+    const raw = String(body.delta ?? '')
+    const d = Number(raw)
+    if ((parseDecimal(raw)?.decimals ?? 0) > 6)
+      throw apiError(422, [
+        {
+          loc: ['body', 'delta'],
+          type: 'value_error',
+          code: 'value_error',
+          msg: 'delta: Value error, at most 6 decimal places',
+          ctx: { max_places: 6 },
+        },
+      ])
+    if (!Number.isFinite(d) || d === 0)
+      throw apiError(422, [
+        { loc: ['body', 'delta'], code: 'value_error', msg: 'delta' },
+      ])
+    if (d < 0 && !body.reason_id)
+      throw apiError(422, [
+        { loc: ['body', 'reason_id'], code: 'missing', msg: 'reason_id' },
+      ])
+  }
+  if (action === 'mount' && !body.equipment_id)
+    throw apiError(422, [
+      {
+        loc: ['body', 'equipment_id'],
+        type: 'missing',
+        code: 'missing',
+        msg: 'equipment_id: field required',
+      },
+    ])
+  if (
+    action === 'incident' &&
+    !['collision', 'drop', 'other'].includes(String(body.kind))
+  )
+    throw apiError(422, [
+      {
+        loc: ['body', 'kind'],
+        type: 'literal_error',
+        code: 'literal_error',
+        msg: 'kind',
+      },
+    ])
+}
+
 function mockAct(
   id: string,
   action: ReticleAction,
@@ -564,6 +613,7 @@ function mockAct(
         msg: 'Idempotency-Key: field required',
       },
     ])
+  bodyCheck(action, body)
   if (IDEMPOTENT.includes(action) && key && idem.has(key)) {
     const hit = idem.get(key)!
     // D57/D80：同 key 不同内容 → 422 idempotency_key_reused
@@ -586,30 +636,9 @@ function mockAct(
     })
   // mount（service.mount）：已挂载 409 already_mounted；非 available 409 reticle_unavailable
   if (action === 'mount') {
-    if (!body.equipment_id)
-      throw apiError(422, [
-        {
-          loc: ['body', 'equipment_id'],
-          type: 'missing',
-          code: 'missing',
-          msg: 'equipment_id: field required',
-        },
-      ])
     if (openMount(id)) throw conflict('already_mounted')
     if (x.status_code !== 'available') throw conflict('reticle_unavailable')
   }
-  if (
-    action === 'incident' &&
-    !['collision', 'drop', 'other'].includes(String(body.kind))
-  )
-    throw apiError(422, [
-      {
-        loc: ['body', 'kind'],
-        type: 'literal_error',
-        code: 'literal_error',
-        msg: 'kind',
-      },
-    ])
   // D71：先 invalid_transition，再 still_mounted
   const to = target(x, action, body)
   if (to == null) throw conflict('invalid_transition')
@@ -636,24 +665,6 @@ function mockAct(
   if (action === 'usage') {
     const raw = String(body.delta ?? '')
     const d = Number(raw)
-    if ((parseDecimal(raw)?.decimals ?? 0) > 6)
-      throw apiError(422, [
-        {
-          loc: ['body', 'delta'],
-          type: 'value_error',
-          code: 'value_error',
-          msg: 'delta: Value error, at most 6 decimal places',
-          ctx: { max_places: 6 },
-        },
-      ])
-    if (!Number.isFinite(d) || d === 0)
-      throw apiError(422, [
-        { loc: ['body', 'delta'], code: 'value_error', msg: 'delta' },
-      ])
-    if (d < 0 && !body.reason_id)
-      throw apiError(422, [
-        { loc: ['body', 'reason_id'], code: 'missing', msg: 'reason_id' },
-      ])
     // 计数按十进制字符串精确累加（D72，不经过浮点）
     const after = addDecimal(x.shot_count, raw) ?? x.shot_count
     if (compareDecimal(after, 0) < 0)

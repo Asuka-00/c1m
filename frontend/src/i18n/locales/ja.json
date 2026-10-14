@@ -1707,11 +1707,13 @@
       "name": "名称",
       "trend": "CT と Move の推移",
       "byOperation": "工程別",
-      "mock": "サンプルデータ（API 未提供）",
+      "mock": "サンプルデータ",
       "timezone": "タイムゾーン：{{tz}}",
       "rangeInvalid": "有効な期間を選択してください（開始日は終了日以前）。",
       "reworkMoves": "リワーク Move（ロット / 枚）",
-      "hold": "平均 Hold 時間（時間）"
+      "hold": "平均 Hold 時間（時間）",
+      "notFound": "選択した工程または製品が存在しません。選び直してください",
+      "onHold": "期末ホールド（ロット / 数量）"
     },
     "qual": {
       "notQualified": "{{user}} は工程 {{op}} の有効な資格がないため投入できません。強制解除もできません。資格を取得または更新してください。",
@@ -2025,7 +2027,8 @@
         "traceRequired": "トレースコードを入力してください",
         "unknownPlaceholder": "未対応のプレースホルダー {{name}}",
         "selfApproval": "起案者は自分のテンプレートを承認できません",
-        "readCodeTooLong": "読取コードは {{n}} 文字以内"
+        "readCodeTooLong": "読取コードは {{n}} 文字以内",
+        "readCodeRequired": "読取コードを入力してください"
       },
       "code": {
         "template_readonly": "承認済みは読取専用です。新バージョンを作成してください",

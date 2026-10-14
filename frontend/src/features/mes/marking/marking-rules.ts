@@ -69,6 +69,9 @@ export function markingErrorMessage(err: unknown): string {
           return t('mes.marking.code.idempotency_key_reused')
         if (type === 'missing' && x.loc?.[0] === 'header')
           return t('mes.marking.code.key_missing')
+        // N-E1：读回码缺失用读回码文案
+        if (type === 'missing' && field === 'read_code')
+          return t('mes.marking.err.readCodeRequired')
         if (
           type === 'missing' &&
           (field === 'reason_id' || field === 'comment')

@@ -152,7 +152,7 @@ describe('打标作业页', () => {
     await s.getByTestId('mk-act-ok').click()
     await expect
       .element(s.getByTestId('mk-err-read_code'))
-      .toHaveTextContent(t('mes.marking.err.traceRequired'))
+      .toHaveTextContent(t('mes.marking.err.readCodeRequired'))
     await userEvent.fill(s.getByTestId('mk-read-code').element(), 'X-1')
     await s.getByTestId('mk-act-ok').click()
     // D79-4：填 pass 但读回不一致 → 系统改记 fail 并提示

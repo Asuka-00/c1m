@@ -546,7 +546,7 @@ function ActDialog({
         ? traceErrorTexts(readCode, rule)
         : readCodeErrors(readCode).map((k) =>
             k === 'missing'
-              ? t('mes.marking.err.traceRequired')
+              ? t('mes.marking.err.readCodeRequired')
               : t('mes.marking.err.readCodeTooLong', { n: READ_CODE_MAX })
           )
       if (bad.length) e.read_code = bad.join('\n')

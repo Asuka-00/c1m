@@ -1707,11 +1707,13 @@
       "name": "名称",
       "trend": "CT 与 Move 趋势",
       "byOperation": "按工序",
-      "mock": "示例数据（接口未上线）",
+      "mock": "示例数据",
       "timezone": "时区：{{tz}}",
       "rangeInvalid": "请选择有效的日期区间（开始不晚于结束）。",
       "reworkMoves": "返工 Move（批 / 片）",
-      "hold": "平均 Hold 时长（小时）"
+      "hold": "平均 Hold 时长（小时）",
+      "notFound": "所选工序或产品不存在，请重新选择",
+      "onHold": "期末 Hold（批 / 片）"
     },
     "qual": {
       "notQualified": "{{user}} 不具备工序 {{op}} 的有效资质，不能进站，且不可放行。请先取得或续期资质。",
@@ -2025,7 +2027,8 @@
         "traceRequired": "请填写追溯码",
         "unknownPlaceholder": "不支持的占位符 {{name}}",
         "selfApproval": "起草人不能审批自己的模板",
-        "readCodeTooLong": "读回码不能超过 {{n}} 个字符"
+        "readCodeTooLong": "读回码不能超过 {{n}} 个字符",
+        "readCodeRequired": "请填写读回码"
       },
       "code": {
         "template_readonly": "已批准的版本只读，请新建版本",

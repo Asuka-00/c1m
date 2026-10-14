@@ -35,3 +35,10 @@
 
 ## 待定
 无。工艺口径 T5-1～T5-3 已由工艺专家答复定稿（见上文 Move、返工、Hold、在制各条）；以后如调整，只改计算口径，接口不变。
+
+## P3-B5 接入（be/p3 2c19bb3）
+
+- 真实接口 `GET /api/v1/mes/exec/reports/ct-move`（`mes.exec:read`），菜单 `mes-ct-move-report` → `/mes/ct-move-report`，父级 `g-wip`（menu-keys.json 已同步）。404 不再回退示例数据；`VITE_CT_MOVE_MOCK=1` 时用 `mockCtMoveReport`。
+- 跨度含两端 ≤92 天（to − from ≤ 91），93 天前端拦住；from 晚于 to 拦住（`range_inverted`）。无数据的天计数 0、时长 null（显示「—」）。显示响应里的 `timezone`。
+- by_operation 增加 `on_hold_lots` / `on_hold_qty`（期末 Hold 批 / 片）。
+- 错误：422 `date_range_too_large`（ctx.max_days=92）、`range_inverted`、404（工序 / 产品不存在，`mes.ctMove.notFound`）三语。

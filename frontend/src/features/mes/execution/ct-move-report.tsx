@@ -27,7 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Page } from '@/components/crud'
 import { RefSelect } from '@/features/mes/common/ref-select'
-import { mesErrorMessage } from '@/features/mes/common/required'
+import { ctMoveErrorMessage } from './ct-move-errors'
 import { DataCard, DateRange, Kpi } from './report-parts'
 import { isoDay } from './report-utils'
 
@@ -152,12 +152,14 @@ export default function CtMoveReport() {
             ? t('mes.err.code.date_range_too_large', {
                 max_days: CT_MOVE_MAX_DAYS,
               })
-            : t('mes.ctMove.rangeInvalid')}
+            : problem === 'inverted'
+              ? t('mes.err.code.range_inverted')
+              : t('mes.ctMove.rangeInvalid')}
         </p>
       )}
       {ok && q.isError && (
         <p className='text-sm text-destructive' data-testid='ct-move-error'>
-          {mesErrorMessage(q.error, undefined)}
+          {ctMoveErrorMessage(q.error)}
         </p>
       )}
       <div className='grid gap-3 sm:grid-cols-3 lg:grid-cols-5'>
@@ -228,6 +230,11 @@ export default function CtMoveReport() {
             right: true,
           },
           { head: t('mes.ctMove.wip'), get: (r) => r.wip_lots, right: true },
+          {
+            head: t('mes.ctMove.onHold'),
+            get: (r) => `${r.on_hold_lots} / ${decimalText(r.on_hold_qty)}`,
+            right: true,
+          },
         ]}
       />
     </Page>

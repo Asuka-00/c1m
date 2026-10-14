@@ -888,8 +888,16 @@ const err422 = (
 const scrappedErr = () =>
   err409('invalid_transition', 'lot or marking record is scrapped or voided')
 
-/** D57：缺 key 422 missing（header）；同 key 同内容返回首次结果；不同内容 422 idempotency_key_reused。 */
-function withIdem<T>(key: string | undefined, sig: string, f: () => T): T {
+/**
+ * D57：缺 key 422 missing（header）；同 key 同内容返回首次结果；不同内容 422 idempotency_key_reused。
+ * N-E2：顺序与后端一致 —— 缺 key 422 → 请求体 422（pre）→ 幂等重放 → 状态 / 业务 409（f）。
+ */
+function withIdem<T>(
+  key: string | undefined,
+  sig: string,
+  f: () => T,
+  pre?: () => void
+): T {
   if (!key)
     throw apiError(422, [
       {
@@ -899,6 +907,7 @@ function withIdem<T>(key: string | undefined, sig: string, f: () => T): T {
         msg: 'Idempotency-Key: field required',
       },
     ])
+  pre?.()
   const hit = idem.get(key)
   if (hit) {
     if (hit.sig !== sig)
@@ -1174,16 +1183,10 @@ function mockPrint(id: string, input: PrintInput): MarkingRecord {
   return r
 }
 
-function mockInspect(id: string, input: InspectInput): InspectOut {
-  const r = findRec(id)
-  if (isLocked(r) || lotOf(r)?.scrapped) throw scrappedErr()
+/** 检验请求体 422（N-E2：先于幂等重放和 409 状态校验）。 */
+function inspectBody(input: InspectInput) {
   if (input.result !== 'pass' && input.result !== 'fail')
     throw err422('result', 'enum', 'result: pass or fail')
-  if (!r.prints.length)
-    throw err409('invalid_transition', 'nothing printed yet')
-  // D79 补充二-1：同一次打印可多次检验，以最新一次为准；批次离开打标工步后 409
-  if (lotOf(r)?.left_step)
-    throw err409('invalid_transition', 'lot has left the marking step')
   {
     // D79 补充三：校验不过不入库、不强制 fail
     const e = readCodeErrors(input.read_code)
@@ -1202,6 +1205,17 @@ function mockInspect(id: string, input: InspectInput): InspectOut {
         })
     }
   }
+}
+
+function mockInspect(id: string, input: InspectInput): InspectOut {
+  const r = findRec(id)
+  if (isLocked(r) || lotOf(r)?.scrapped) throw scrappedErr()
+  inspectBody(input)
+  if (!r.prints.length)
+    throw err409('invalid_transition', 'nothing printed yet')
+  // D79 补充二-1：同一次打印可多次检验，以最新一次为准；批次离开打标工步后 409
+  if (lotOf(r)?.left_step)
+    throw err409('invalid_transition', 'lot has left the marking step')
   const print = r.prints[r.prints.length - 1]
   const result = effectiveResult(input, r.trace_code)
   const overridden = result !== input.result
@@ -1229,9 +1243,8 @@ function mockInspect(id: string, input: InspectInput): InspectOut {
   }
 }
 
-function mockVoid(id: string, input: VoidInput) {
-  const r = findRec(id)
-  if (isLocked(r) || lotOf(r)?.scrapped) throw scrappedErr()
+/** 作废请求体 422（N-E2）。 */
+function voidBody(input: VoidInput) {
   if (!input.reason_id?.trim())
     throw err422('reason_id', 'missing', 'reason_id: field required')
   if (!input.comment?.trim())
@@ -1240,6 +1253,12 @@ function mockVoid(id: string, input: VoidInput) {
     throw err422('comment', 'string_too_long', 'comment: max 300', {
       max_length: COMMENT_MAX,
     })
+}
+
+function mockVoid(id: string, input: VoidInput) {
+  const r = findRec(id)
+  if (isLocked(r) || lotOf(r)?.scrapped) throw scrappedErr()
+  voidBody(input)
   r.voided = true
   r.voided_at = mockNow().toISOString()
   r.voided_by = mockUser
@@ -1338,13 +1357,17 @@ export const mockMarkingApi: MarkingApi = {
       withIdem(
         key,
         sig(`inspect:${id}`, pickBody(input, MARKING_BODY.inspect)),
-        () => mockInspect(id, input)
+        () => mockInspect(id, input),
+        () => inspectBody(input)
       )
     ),
   void: (id, input, key) =>
     later(() =>
-      withIdem(key, sig(`void:${id}`, pickBody(input, MARKING_BODY.void)), () =>
-        mockVoid(id, input)
+      withIdem(
+        key,
+        sig(`void:${id}`, pickBody(input, MARKING_BODY.void)),
+        () => mockVoid(id, input),
+        () => voidBody(input)
       )
     ),
   config: () => later(() => ({ ...mockConfig })),

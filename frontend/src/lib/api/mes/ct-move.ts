@@ -9,9 +9,10 @@
  * - CT：上一工序出站（首工序为开批）→ 本工序出站，小时，十进制字符串（D50），按出站日期归天，不扣 Hold；
  *   Hold 时长单独 `hold_hours`（小时字符串）。没有数据：计数 0，时长 null；`trend` 每天都列。
  * - 分桶按站点时区（后端算）：前端不硬编码，显示响应里的 `timezone`。
- * 后端返回 404（接口未上线）时前端用 `ctMoveMock` 示例数据，并在页面标注“示例数据”。
+ * P3-B5（be/p3 2c19bb3）已上线：默认走真实接口；`VITE_CT_MOVE_MOCK=1` 时用 `mockCtMoveReport`（页面标注“示例数据”）。
+ * 404 = 工序 / 产品不存在（不再回退示例数据）；422 date_range_too_large（ctx.max_days=92）/ range_inverted。
  */
-import { AxiosError } from 'axios'
+import { AxiosError, AxiosHeaders } from 'axios'
 import { http } from '../client'
 import type { DecimalValue } from './execution'
 
@@ -35,6 +36,8 @@ export interface CtMoveMetrics {
   rework_moves: number
   /** 返工出站片数 */
   rework_move_qty: DecimalValue
+  /** 返工片数（T5-1） */
+  rework_qty?: DecimalValue
   /** 平均工序 CT（小时），无数据 null */
   ct_avg_hours: DecimalValue | null
   /** 平均 Hold 时长（按出站批次平均，同 ct_avg_hours；小时，CT 内不扣除，单独列；字段名已定稿），无数据 null */
@@ -54,8 +57,12 @@ export interface CtMoveOperationRow extends CtMoveMetrics {
   operation_name: string | null
   ct_p50_hours: DecimalValue | null
   ct_p90_hours: DecimalValue | null
-  /** 期末在制批次数 */
+  /** 期末在制批次数（date_to 站点日结束时点） */
   wip_lots: number
+  /** 期末 Hold 批次数 */
+  on_hold_lots: number
+  /** 期末 Hold 片数 */
+  on_hold_qty: DecimalValue
 }
 
 export interface CtMoveReport {
@@ -80,11 +87,13 @@ export function rangeDays(from: string, to: string): number | null {
   return Math.round((b - a) / 86_400_000) + 1
 }
 
-/** 前端预校验：null 表示可查询，否则返回问题类型。 */
+/** 前端预校验：null 表示可查询，否则返回问题类型（倒序单独为 inverted，D77 补充一）。 */
 export function rangeProblem(
   from: string,
   to: string
-): 'invalid' | 'too_large' | null {
+): 'invalid' | 'inverted' | 'too_large' | null {
+  const re = /^\d{4}-\d{2}-\d{2}$/
+  if (re.test(from) && re.test(to) && from > to) return 'inverted'
   const n = rangeDays(from, to)
   if (n == null) return 'invalid'
   return n > CT_MOVE_MAX_DAYS ? 'too_large' : null
@@ -127,6 +136,8 @@ export function normalizeReport(r: CtMoveReport): CtMoveReport {
           ct_p50_hours: null,
           ct_p90_hours: null,
           wip_lots: 0,
+          on_hold_lots: 0,
+          on_hold_qty: '0',
           ...fix(x),
         }) as CtMoveOperationRow
     ),
@@ -176,6 +187,8 @@ export function ctMoveMock(p: CtMoveParams): CtMoveReport {
     ct_p90_hours: (3.2 + k * 1.1).toFixed(2),
     hold_hours: (0.1 + k * 0.05).toFixed(2),
     wip_lots: 3 + k,
+    on_hold_lots: k % 2,
+    on_hold_qty: String((k % 2) * 25),
   }))
   const moves = trend.reduce((n, x) => n + x.moves, 0)
   const rw = trend.reduce((n, x) => n + x.rework_moves, 0)
@@ -197,23 +210,65 @@ export function ctMoveMock(p: CtMoveParams): CtMoveReport {
   }
 }
 
+const mockErr = (status: number, detail: unknown) => {
+  const e = new AxiosError('mock', 'ERR_BAD_REQUEST')
+  e.response = {
+    status,
+    statusText: '',
+    headers: {},
+    config: { headers: new AxiosHeaders() },
+    data: { detail },
+  }
+  return e
+}
+
+/** mock 版接口：与后端同样校验（422 missing / value_error range_inverted / date_range_too_large，404 工序或产品不存在）。 */
+export function mockCtMoveReport(p: CtMoveParams): CtMoveReport {
+  for (const k of ['date_from', 'date_to'] as const)
+    if (!p[k])
+      throw mockErr(422, [
+        { loc: ['query', k], type: 'missing', msg: 'Field required' },
+      ])
+  if (p.date_from > p.date_to)
+    throw mockErr(422, [
+      {
+        loc: ['query', 'date_from'],
+        type: 'value_error',
+        msg: 'date_from after date_to',
+        ctx: { reason: 'range_inverted' },
+      },
+    ])
+  if ((rangeDays(p.date_from, p.date_to) ?? 0) > CT_MOVE_MAX_DAYS)
+    throw mockErr(422, [
+      {
+        loc: ['query', 'date_to'],
+        type: 'date_range_too_large',
+        msg: `range too long (max ${CT_MOVE_MAX_DAYS} days)`,
+        ctx: { max_days: CT_MOVE_MAX_DAYS },
+      },
+    ])
+  if (p.operation_id && !OPS.some(([id]) => id === p.operation_id))
+    throw mockErr(404, 'operation not found')
+  if (p.product_id && p.product_id.startsWith('missing'))
+    throw mockErr(404, 'product not found')
+  return ctMoveMock(p)
+}
+
+/** 是否用 mock（默认走真实接口）。 */
+export const CT_MOVE_MOCK = import.meta.env.VITE_CT_MOVE_MOCK === '1'
+
 export const ctMoveApi = {
   report: async (p: CtMoveParams): Promise<CtMoveReport> => {
-    try {
-      const r = (
-        await http.get<CtMoveReport>('/mes/exec/reports/ct-move', {
-          params: {
-            ...p,
-            operation_id: p.operation_id || undefined,
-            product_id: p.product_id || undefined,
-          },
-        })
-      ).data
-      return normalizeReport(r)
-    } catch (e) {
-      if (e instanceof AxiosError && e.response?.status === 404)
-        return ctMoveMock(p)
-      throw e
-    }
+    if (CT_MOVE_MOCK) return mockCtMoveReport(p)
+    const r = (
+      await http.get<CtMoveReport>('/mes/exec/reports/ct-move', {
+        params: {
+          ...p,
+          operation_id: p.operation_id || undefined,
+          product_id: p.product_id || undefined,
+        },
+      })
+    ).data
+    return normalizeReport(r)
   },
 }

@@ -119,3 +119,16 @@ describe('D79 补充四：超长 / 格式错误文案', () => {
     ).toBe(t('mes.marking.err.trace_pattern_rule', { pattern: '^[A-F0-9]+$' }))
   })
 })
+
+describe('N-E1：读回码缺失文案', () => {
+  it('422 missing body.read_code 显示读回码必填', () => {
+    expect(
+      markingErrorMessage(
+        apiError(422, [{ loc: ['body', 'read_code'], type: 'missing' }])
+      )
+    ).toBe(t('mes.marking.err.readCodeRequired'))
+    expect(t('mes.marking.err.readCodeRequired')).not.toBe(
+      t('mes.marking.err.traceRequired')
+    )
+  })
+})

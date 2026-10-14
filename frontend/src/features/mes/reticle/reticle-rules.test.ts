@@ -723,3 +723,31 @@ describe('D80 补充二：上机 / 登记异常对话框的接口与 mock', () =
     }
   })
 })
+
+describe('N-E2：光罩 mock 校验顺序', () => {
+  it('缺 key 422 → body 422 → 重放 → 409', async () => {
+    // r7 为 scrapped：状态校验 409
+    await expect(
+      mockReticleApi.act('r7', 'usage', { delta: 0 })
+    ).rejects.toMatchObject({
+      response: { status: 422, data: { detail: [{ type: 'missing' }] } },
+    })
+    await expect(act('r7', 'usage', { delta: 0 }, 'o1')).rejects.toMatchObject({
+      response: { status: 422 },
+    })
+    await expect(act('r7', 'mount', {}, 'o2')).rejects.toMatchObject({
+      response: { status: 422 },
+    })
+    await expect(act('r7', 'usage', { delta: 1 }, 'o3')).rejects.toMatchObject({
+      response: { status: 409 },
+    })
+    // 重放先于 409：r1 hold 成功后再 hold 同 key 返回原响应
+    const h = await act('r1', 'hold', { reason: 'x' }, 'o4')
+    expect(await act('r1', 'hold', { reason: 'x' }, 'o4')).toEqual(h)
+    await expect(
+      act('r1', 'hold', { reason: 'x' }, 'o5')
+    ).rejects.toMatchObject({
+      response: { status: 409 },
+    })
+  })
+})

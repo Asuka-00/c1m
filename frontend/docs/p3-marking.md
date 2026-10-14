@@ -100,3 +100,8 @@
 
 - 范围倒置：`rangeInverted(from, to)`（`components/crud/filter-defs.ts`，按前 10 位比较；相等不拦）。通用筛选弹层、报表 `DateRange`、打标作业页、坐标图列表在 from 晚于 to 时拦住并提示（`errors.rangeInverted`），`use-list-params` / `mapListParams` 倒置时不发范围参数。后端 422 `value_error` + `ctx.reason=range_inverted|timezone_required` 由 `codeItemText` 兜底三语文案。mock：打标记录 marked_at 倒置 422 range_inverted。
 - 未首打主记录：`marked_at`、`last_printed_at`、`latest_inspection_status` 为 null；`InspectBadge` 显示「未打印」，时间显示「—」；出站校验按 `not_marked`；mock 按 marked_at 筛选时排除 null 行。
+
+## N-E1 / N-E2（D81）
+
+- N-E1：读回码为空提示「请填写读回码」（`mes.marking.err.readCodeRequired`），后端 422 missing body.read_code 同文案。
+- N-E2 / D81：P3 打标、光罩 mock 校验顺序 —— 缺 Idempotency-Key 422 → body 422 → 幂等重放（换请求体 422 reused）→ 404 → 409 状态 / 业务。mock 无认证层（401/403 不模拟）。检验完全不带 read_code 也返回 422 missing。

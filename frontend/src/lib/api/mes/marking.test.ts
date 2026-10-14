@@ -725,3 +725,46 @@ describe('D79 补充四：超长 / 格式 422 的 ctx 字段', () => {
     expect((await api.config()).trace_code_max_length).toBe(32)
   })
 })
+
+describe('N-E2：mock 校验顺序 缺 key → 请求体 422 → 幂等重放 → 409', () => {
+  it('检验：缺 key 优先于 body；body 422 优先于 left_step 409；重放优先于 409', async () => {
+    const r = await firstPrint()
+    const bad = { result: 'pass', read_code: '' } as InspectInput
+    expect(
+      await detail(api.inspect(r.id, bad, undefined as never))
+    ).toMatchObject({
+      status: 422,
+      detail: [{ loc: ['header', 'Idempotency-Key'], type: 'missing' }],
+    })
+    const ok = { result: 'pass', read_code: r.trace_code } as InspectInput
+    const first = await api.inspect(r.id, ok, 'ord1')
+    markingMockLeaveStep('lot1')
+    expect(await detail(api.inspect(r.id, bad, 'ord2'))).toMatchObject({
+      status: 422,
+      detail: [{ loc: ['body', 'read_code'], type: 'missing' }],
+    })
+    expect(await api.inspect(r.id, ok, 'ord1')).toEqual(first)
+    expect(await detail(api.inspect(r.id, ok, 'ord3'))).toMatchObject({
+      status: 409,
+    })
+  })
+  it('检验完全不带 read_code → 422 missing', async () => {
+    const r = await firstPrint()
+    expect(
+      await detail(api.inspect(r.id, { result: 'pass' } as InspectInput, 'nr'))
+    ).toMatchObject({
+      status: 422,
+      detail: [{ loc: ['body', 'read_code'], type: 'missing' }],
+    })
+  })
+  it('作废：body 422 先于 409 invalid_transition', async () => {
+    const r = await firstPrint()
+    scrapMarkingMockRecord(r.id)
+    expect(
+      await detail(api.void(r.id, { reason_id: '', comment: '' }, 'v1'))
+    ).toMatchObject({ status: 422 })
+    expect(
+      await detail(api.void(r.id, { reason_id: 'V', comment: 'c' }, 'v2'))
+    ).toMatchObject({ status: 409 })
+  })
+})
