@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.deps import SessionDep
+from app.core.models import iso_utc
 from app.core.spec.engine import ENTITIES
 from app.core.spec.errors import http_422
 from app.core.spec.serialize import serialize
@@ -336,7 +337,11 @@ def report_oee(
     """Equipment OEE (availability × performance × quality) over the window."""
     _need(ctx, "mes.exec:read")
     a, b = _window(date_from, date_to, 7)
-    return {"data": svc.oee(session, ctx.id, a, b), "from": a, "to": b}
+    return {
+        "data": svc.oee(session, ctx.id, a, b),
+        "from": iso_utc(a),
+        "to": iso_utc(b),
+    }
 
 
 @router.get("/reports/yield")
@@ -350,7 +355,11 @@ def report_yield(
     """Yield by operation / product / lot and scrap reason Pareto."""
     _need(ctx, "mes.exec:read")
     a, b = _window(date_from, date_to, 30)
-    return {**svc.yield_report(session, ctx.id, a, b, group), "from": a, "to": b}
+    return {
+        **svc.yield_report(session, ctx.id, a, b, group),
+        "from": iso_utc(a),
+        "to": iso_utc(b),
+    }
 
 
 @router.get("/reports/oee-trend")

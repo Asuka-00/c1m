@@ -18,7 +18,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import Session, SQLModel, col, func, select
 
-from app.core.models import get_datetime_utc
+from app.core.models import get_datetime_utc, iso_utc
 from app.core.pagination import ListParams, paginate
 from app.platform.notification.channels import CHANNELS
 from app.platform.notification.channels import register_channel as register_channel
@@ -179,8 +179,8 @@ def _row(n: Notification, read_at: datetime | None) -> Row:
         "object_id": n.object_id,
         "object_code": n.object_code,
         "link": n.link,
-        "created_at": n.created_at,
-        "read_at": read_at,
+        "created_at": n.created_at and iso_utc(n.created_at),
+        "read_at": read_at and iso_utc(read_at),
         "is_read": read_at is not None,
     }
 

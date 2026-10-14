@@ -2,8 +2,10 @@
 
 import json
 import re
+import time
 from datetime import datetime, timedelta, timezone
 
+import pytest
 from fastapi.encoders import jsonable_encoder
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
@@ -39,9 +41,16 @@ def test_utc_datetime_type_accepts_offset_input() -> None:
 
 
 def test_no_offset_timestamps_in_get_endpoints(
-    client: TestClient, superuser_token_headers: dict[str, str]
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """扫描所有无路径参数的 GET 接口，响应中不得出现带非 Z 偏移的时间字符串。"""
+    """扫描所有无路径参数的 GET 接口，响应中不得出现带非 Z 偏移的时间字符串。
+
+    服务器时区固定为 Asia/Taipei：报表区间等按本地时区计算的时间也必须输出 Z。
+    """
+    monkeypatch.setenv("TZ", "Asia/Taipei")
+    time.tzset()
     bad: list[str] = []
     for r in app.routes:
         if not isinstance(r, APIRoute) or "GET" not in r.methods or "{" in r.path:
@@ -57,3 +66,20 @@ def test_no_offset_timestamps_in_get_endpoints(
         if m:
             bad.append(f"{r.path}: {m.group(0)}")
     assert not bad, bad
+
+
+def test_notification_row_times_utc() -> None:
+    """通知列表/摘要（-> Any，不经 jsonable_encoder）手写输出 Z。"""
+    from app.platform.notification.models import Notification
+    from app.platform.notification.service import _row
+
+    n = Notification(
+        tenant_id=None,
+        event_type="x",
+        title="t",
+        created_at=datetime(2026, 1, 1, 8, tzinfo=TW),
+    )
+    out = _row(n, datetime(2026, 1, 1, 9, tzinfo=TW))
+    assert out["created_at"] == "2026-01-01T00:00:00Z"
+    assert out["read_at"] == "2026-01-01T01:00:00Z"
+    assert _row(n, None)["read_at"] is None
