@@ -519,7 +519,9 @@ function seed() {
     username: 'qa1',
     inspected_at: '2026-10-12T05:00:00Z',
   })
-  return { r, hist }
+  /** 下机事件行（D80 G1，后端履历里 type=unmount），只在履历接口合并返回 */
+  const unmountEv: Record<string, ReticleMount[]> = {}
+  return { r, hist, unmountEv }
 }
 
 let store = seed()
@@ -866,6 +868,7 @@ function mockAct(
       event_type: 'unmount',
       mount_log_id: m.id,
     }
+    ;(store.unmountEv[id] ??= []).push({ ...ev })
     out = { data: { ...m }, unmount_event: ev }
   } else {
     if (action === 'restore') {
@@ -1011,9 +1014,19 @@ export const mockReticleApi: Api = {
   list: () => later(() => store.r),
   get: (id) => later(() => find(id)),
   history: (id) => {
+    // QA P3-1：与真实接口同形——合并列表（type + 行）再经 groupHistory 分组，下机行在这里被过滤
     return later(() => {
       find(id)
-      return store.hist[id]
+      const h = store.hist[id]
+      const tag = (type: string, rows: object[]) =>
+        rows.map((x) => ({ ...x, type }))
+      return groupHistory([
+        ...tag('status', h.status_log),
+        ...tag('usage', h.usage),
+        ...tag('mount', h.mounts),
+        ...tag('unmount', store.unmountEv[id] ?? []),
+        ...tag('inspection', h.inspections),
+      ])
     })
   },
   act: (id, action, input, key) => later(() => mockAct(id, action, input, key)),

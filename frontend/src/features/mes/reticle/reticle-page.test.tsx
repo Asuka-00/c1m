@@ -4,7 +4,7 @@ import { Toaster } from 'sonner'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { render } from 'vitest-browser-react'
 import { userEvent } from 'vitest/browser'
-import { resetReticleMock } from '@/lib/api/mes/reticle'
+import { mockReticleApi, resetReticleMock } from '@/lib/api/mes/reticle'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { PageEmbedContext } from '@/components/crud/page-embed'
 import { MES_PERM } from '@/features/mes/common/mes-perm'
@@ -33,6 +33,19 @@ const wrap = (perms: string[]) => {
 beforeEach(() => resetReticleMock())
 
 describe('光罩页面', () => {
+  it('QA P3-1：下机后挂载页签只显示上机行（下机事件行经 groupHistory 过滤）', async () => {
+    const out = await mockReticleApi.act('r2', 'unmount', {}, 'p3-1-unmount')
+    expect(out.unmount_event).toMatchObject({ event_type: 'unmount' })
+    // mock 履历接口返回的也是分组后的数据：没有下机事件行
+    const h = await mockReticleApi.history('r2')
+    expect(h.mounts.map((m) => m.event_type)).toEqual(['mount'])
+    const s = await render(wrap([MES_PERM.reticleWrite]))
+    await s.getByTestId('reticle-row-RTC-M1-002').click()
+    await s.getByRole('tab', { name: t('mes.reticle.tab.mounts') }).click()
+    const table = s.getByTestId('reticle-mount-log')
+    await expect.element(table).toHaveTextContent('LITHO-01')
+    expect(table.element().querySelectorAll('tbody tr')).toHaveLength(1)
+  })
   it('列表 + 详情四个页签', async () => {
     const s = await render(wrap([MES_PERM.reticleWrite]))
     await expect.element(s.getByTestId('reticle-row-RTC-M1-002')).toBeVisible()
