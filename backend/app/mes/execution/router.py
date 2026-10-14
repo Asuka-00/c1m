@@ -12,16 +12,19 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
+from sqlmodel import Session
 
 from app.core.deps import SessionDep
 from app.core.models import iso_utc
 from app.core.schemas import NoBody
 from app.core.spec.engine import ENTITIES
 from app.core.spec.errors import err_422, http_422, query_422
+from app.core.spec.excel import tenant_tz
 from app.core.spec.serialize import serialize
 from app.mes.common import idempotency as idem
 from app.mes.common.guard import perm_body
 from app.mes.common.query import one
+from app.mes.common.sitedate import site_today
 from app.mes.execution import bin_split as bin_split_svc
 from app.mes.execution import dispatch, shift_log, transform_undo
 from app.mes.execution import service as sm
@@ -290,11 +293,18 @@ class JumpIn(BaseModel):
 
 
 def _window(
-    date_from: date | None, date_to: date | None, days: int
+    s: Session,
+    tid: uuid.UUID,
+    date_from: date | None,
+    date_to: date | None,
+    days: int,
 ) -> tuple[datetime, datetime]:
-    """统计区间 [起始日 00:00, 结束日次日 00:00)（服务器时区），默认最近 ``days`` 天。"""
-    tz = datetime.now().astimezone().tzinfo
-    end_d = date_to or datetime.now(tz).date()
+    """统计区间 [起始日 00:00, 结束日次日 00:00)（站点时区，D75），默认最近 ``days`` 天。
+
+    返回带站点时区的时间（与 UTC 为同一时刻），报表按该时区分日。
+    """
+    tz = tenant_tz(s, tid)
+    end_d = date_to or site_today(s, tid)
     start_d = date_from or end_d - timedelta(days=days - 1)
     if start_d > end_d:
         raise err_422(
@@ -341,7 +351,7 @@ def report_output(
 ) -> Any:
     """Daily moves / output / scrap."""
     _need(ctx, "mes.exec:read")
-    a, b = _window(date_from, date_to, 7)
+    a, b = _window(session, ctx.id, date_from, date_to, 7)
     return {"data": svc.daily_output(session, ctx.id, a, b)}
 
 
@@ -354,7 +364,7 @@ def report_oee(
 ) -> Any:
     """Equipment OEE (availability × performance × quality) over the window."""
     _need(ctx, "mes.exec:read")
-    a, b = _window(date_from, date_to, 7)
+    a, b = _window(session, ctx.id, date_from, date_to, 7)
     return {
         "data": svc.oee(session, ctx.id, a, b),
         "from": iso_utc(a),
@@ -372,7 +382,7 @@ def report_yield(
 ) -> Any:
     """Yield by operation / product / lot and scrap reason Pareto."""
     _need(ctx, "mes.exec:read")
-    a, b = _window(date_from, date_to, 30)
+    a, b = _window(session, ctx.id, date_from, date_to, 30)
     return {
         **svc.yield_report(session, ctx.id, a, b, group),
         "from": iso_utc(a),
@@ -390,7 +400,7 @@ def report_oee_trend(
 ) -> Any:
     """Daily OEE trend (availability, quality, loading-weighted OEE)."""
     _need(ctx, "mes.exec:read")
-    a, b = _window(date_from, date_to, 7)
+    a, b = _window(session, ctx.id, date_from, date_to, 7)
     if (b - a).days > 92:
         raise err_422(
             ["query", "date_to"],

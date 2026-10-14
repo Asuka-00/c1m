@@ -1,7 +1,7 @@
 """站点日期：有效期类判断里的「今天」按站点时区取（D74 第 7 条），与 D54 导出共用时区来源。"""
 
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time, timedelta
 
 from sqlmodel import Session
 
@@ -14,3 +14,13 @@ def site_today(s: Session, tid: uuid.UUID, at: datetime | None = None) -> date:
     if t.tzinfo is None:
         t = t.replace(tzinfo=UTC)
     return t.astimezone(tenant_tz(s, tid)).date()
+
+
+def site_day_bounds(
+    s: Session, tid: uuid.UUID, day: date, days: int = 1
+) -> tuple[datetime, datetime]:
+    """站点时区下 ``day`` 起 ``days`` 天的半开区间 [当日 00:00, 末日次日 00:00)，转为 UTC。"""
+    tz = tenant_tz(s, tid)
+    a = datetime.combine(day, time.min, tz)
+    b = datetime.combine(day + timedelta(days=days), time.min, tz)
+    return a.astimezone(UTC), b.astimezone(UTC)
