@@ -1,29 +1,35 @@
-# 首批验收场景 1（设计 §6.1）：报警触发 Hold，外加 D55 的三条边界。依赖 B9，接口不存在时整体 skipped。
-# 1001 是 DIEBOND 已登记的 ALID；9999 是未登记 ALID（D53-2）。
+# 首批验收场景 1（设计 §6.1）：报警触发 Hold，外加 D55 边界和 OQ-5 三种清除情况。
+# manual 模式依赖 B9 + B11 新增的 POST /mes/eqp/alarms/clear；b11 模式依赖 POST /mes/eap/events。接口不存在时整体 skipped。
+# 1001 是 DIEBOND 已登记的 ALID；9999 是未登记 ALID（D53-2）；9998 从未上报过。
 name: alarm-hold
-run_id: alarm-hold-02
+run_id: alarm-hold-03
 target: http://127.0.0.1:8013
 equipment: [{code: EAP-DA01, type: DIEBOND}]
 steps:
   - precondition: {lot: FX0002}
-  # 已登记报警 -> Hold（source=equipment），重放不重复 Hold，清除后 Hold 仍在
-  - alarm_set: {eq: EAP-DA01, alid: "1001", lots: [FX0002], save_as: alm1, expect: {body: {duplicate: false}}}
+  # 已登记报警 -> Hold（source=equipment），重放不重复 Hold
+  - alarm_set: {eq: EAP-DA01, alid: "1001", lots: [FX0002], save_as: alm1, expect: {body: {duplicate: false}}}   # seq 1
   - expect_hold: {lot: FX0002, source: equipment, count: 1}
   - replay: {eq: EAP-DA01, seq: 1, expect: idempotent}   # 同 external_event_id 不重复 Hold
   - expect_hold: {lot: FX0002, source: equipment, count: 1}
-  - alarm_clear: {eq: EAP-DA01, alarm: $alm1, expect: {body: {cleared: true}}}
-  - expect_hold: {lot: FX0002, source: equipment, count: 1}  # 清除后不自动解 Hold（E1）
-  # D55 OQ-5：同一个 clear 重放 -> 返回原记录，状态不变
-  - replay: {eq: EAP-DA01, seq: 2, expect: idempotent}
-  # D55 OQ-5：报警已不是 active 时再 clear（新事件号）-> 200，cleared=false，不改数据
-  # B9 没有按 ALID 清除的接口，所以用对已清除报警的再次 clear 来测
-  - alarm_clear: {eq: EAP-DA01, alarm: $alm1, expect: {status: 200, body: {cleared: false, duplicate: false}}}
+  # OQ-5 ①：有 active 报警，按设备 + ALID 清除 -> cleared=true；清除后不自动解 Hold（E1）
+  - alarm_clear: {eq: EAP-DA01, alid: "1001", expect: {body: {cleared: true, data.alarm_status: cleared}}}   # seq 2
+  - expect_hold: {lot: FX0002, source: equipment, count: 1}
+  - replay: {eq: EAP-DA01, seq: 2, expect: idempotent}   # 同一个 clear 事件重放，返回原记录
+  # OQ-5 ②：没有 active 报警再按 ALID 清除（新事件号）-> 200，cleared=false，data=null，不改数据
+  - alarm_clear: {eq: EAP-DA01, alid: "1001", expect: {status: 200, body: {cleared: false, duplicate: false, data: null}}}   # seq 3
+  - alarm_clear: {eq: EAP-DA01, alid: "9998", expect: {status: 200, body: {cleared: false, data: null}}}   # seq 4，从未上报的 ALID
   - expect_alarm: {alarm: $alm1, alarm_status: cleared}
-  # D55 OQ-3：未登记 ALID -> 记 unregistered=true，照样写 mes_alarm_lot，但不 Hold、不改 E10
+  # D55 OQ-3：未登记 ALID -> unregistered=true，照样写 mes_alarm_lot，但不 Hold、不改 E10
   - expect_e10: {eq: EAP-DA01, save_as: e10_before}
-  - alarm_set: {eq: EAP-DA01, alid: "9999", lots: [FX0002], save_as: alm_unreg}
+  - alarm_set: {eq: EAP-DA01, alid: "9999", lots: [FX0002], save_as: alm_unreg}   # seq 5
   - expect_alarm: {alarm: $alm_unreg, unregistered: true, alarm_status: active, lots: [FX0002]}
   - expect_hold: {lot: FX0002, source: equipment, count: 1}   # 仍是第一次那条，没有新增
+  - expect_e10: {eq: EAP-DA01, same_as: $e10_before}
+  # OQ-5 ③：未登记 ALID 的 active 报警按 ALID 清除 -> cleared=true，Hold、E10 都不变
+  - alarm_clear: {eq: EAP-DA01, alid: "9999", expect: {body: {cleared: true}}}   # seq 6
+  - expect_alarm: {alarm: $alm_unreg, unregistered: true, alarm_status: cleared}
+  - expect_hold: {lot: FX0002, source: equipment, count: 1}
   - expect_e10: {eq: EAP-DA01, same_as: $e10_before}
   # D55 OQ-2：事件时间晚于服务器时间超过 5 分钟 -> 422 time_in_future（5 分钟以内照收）
   - alarm_set:

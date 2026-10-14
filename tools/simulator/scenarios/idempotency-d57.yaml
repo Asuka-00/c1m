@@ -1,0 +1,22 @@
+# D57 反例（后端 8294b63）：同一个幂等键换请求内容重发 -> 422 idempotency_key_reused，不写入。
+#   manual：键是 Idempotency-Key（E10 手工接口、B10 usage 的 external_event_id）
+#   b11：键是 (source, external_event_id)
+# 同键同内容重放：E10 返回首次响应（不再因 SBY->SBY 报 422）；usage 返回 duplicate=true。
+# 前提：EAP-DA01 当前 SBY；T-SIM-01 count_basis=reported；reason_code 里有 REWORK。场景结束时 E10 回到 SBY。
+name: idempotency-d57
+run_id: idem-d57-01
+target: http://127.0.0.1:8013
+equipment: [{code: EAP-DA01, type: DIEBOND}]
+steps:
+  - precondition: {eq: EAP-DA01, e10: SBY}
+  - state: {eq: EAP-DA01, to: PRD}                                  # seq 1
+  - reuse: {eq: EAP-DA01, seq: 1, change: {to: SBY}}                # 同键换目标状态 -> 422
+  - expect_e10: {eq: EAP-DA01, state: PRD}                          # 没写入
+  - replay: {eq: EAP-DA01, seq: 1, expect: idempotent}             # 同键同内容 -> 原响应
+  - expect_e10: {eq: EAP-DA01, state: PRD}
+  - tool_reset: {tool: T-SIM-01, reason: REWORK}
+  - tool_usage: {eq: EAP-DA01, tool: T-SIM-01, delta: 10}           # seq 2
+  - reuse: {eq: EAP-DA01, seq: 2, change: {delta: 20}}              # 同事件号换 delta -> 422
+  - replay: {eq: EAP-DA01, seq: 2, expect: {status: 200, body: {duplicate: true, tool.usage_count: "10"}}}
+  - expect_tool_log: {tool: T-SIM-01, last: {kind: report, delta: "10", count_after: "10"}}
+  - state: {eq: EAP-DA01, to: SBY}                                  # seq 3，恢复

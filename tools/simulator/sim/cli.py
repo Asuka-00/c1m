@@ -7,7 +7,8 @@
 目标与安全（D54）：
 - ``--target`` > 环境变量 ``SIM_TARGET`` > 场景里的 ``target``。
 - 只允许 127.0.0.1/localhost；端口必须列在 ``SIM_ALLOWED_PORTS``（逗号分隔）里，默认空 = 全部拒绝。
-- ``--mode b11``（或 ``SIM_MODE=b11``）：占位，改走 ``POST /mes/eap/events``，默认 manual。
+- ``--mode b11``（或 ``SIM_MODE=b11``）：改走 ``POST /mes/eap/events``（B11 8294b63），默认 manual。
+  需要 ``eap_service`` 角色的服务账号。
 """
 
 from __future__ import annotations
@@ -117,7 +118,7 @@ def main(argv: list[str] | None = None) -> int:
             "--mode",
             choices=MODES,
             default=os.environ.get("SIM_MODE") or "manual",
-            help="manual（默认，手工接口，不传 source）；b11 占位，走 POST /mes/eap/events",
+            help="manual（默认，手工接口，不传 source）；b11 走 POST /mes/eap/events（需 eap_service 服务账号）",
         )
     a = p.parse_args(argv)
     return a.fn(a)

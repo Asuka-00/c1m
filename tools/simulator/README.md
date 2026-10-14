@@ -41,7 +41,8 @@ steps:
 | `move_in/track_in/track_out {eq,lot,tools?,scrap?}` | `POST /mes/exec/lots/{id}/{stage}` | |
 | `mount {eq,port,material_lot,save_as?}` / `unmount {mount:$名}` | `/mes/eqp/{id}/mount`、`/mes/eqp/mount/{id}/unmount` | mount 带 external_event_id |
 | `alarm_set {eq,alid,lots?,save_as?,time_offset_s?}` | `POST /mes/eqp/{eq_id}/alarms`（B9） | 事件时间放 `set_at`；`time_offset_s` 往后推，测 D55 的 422 `time_in_future` |
-| `alarm_clear {eq,alarm:$名}` | `POST /mes/eqp/alarms/{id}/clear`（B9） | 时间放 `cleared_at`。B9 没有按 ALID 清除的接口；D55「不是 active -> 200 cleared=false」用对已清除报警再 clear 来测 |
+| `alarm_clear {eq,alid}` | `POST /mes/eqp/alarms/clear`（B11 `8294b63` 新增的手工接口） | 按设备 + ALID 清除，时间放 `cleared_at`；没有 active 报警时 200 `{data:null, cleared:false}`（D55 OQ-5） |
+| `alarm_clear {eq,alarm:$名}` | `POST /mes/eqp/alarms/{id}/clear`（B9） | 按报警 id 清除。b11 模式下改发 `alid`（取 `save_as` 时记下的 ALID），B11 不认 `alarm_id` |
 | `expect_alarm {alarm:$名,unregistered?,alarm_status?,alid?,lots?}` | `GET /mes/eqp/alarms/{id}`（B9） | 校验 `unregistered` 和 `data.lots`（mes_alarm_lot，D55 OQ-3） |
 | `expect_e10 {eq,state?,save_as?,same_as?:$名}` | `GET /mes/eqp/board` | 记下/比较 E10 状态，验证「报警不改 E10」 |
 | `tool_usage {eq,tool,delta,reason?}` | `POST /mes/eqp/tools/{tool_id}/usage`（B10） | delta 按字符串传（D50）；负数是调整，必须给 `reason`（reason_code 编码） |
@@ -50,7 +51,8 @@ steps:
 | `tool_unmount {tool,reason}` / `tool_replace {tool,new_tool,reason}` | `POST .../unmount`、`.../replace` | reason：life_end/broken/pm/swap/other |
 | `expect_tool_log {tool,log?:usage\|mounts,count?,last?}` | `GET .../usage`、`.../mounts` | `last` 比较最新一条（倒序） |
 | `expect_hold {lot,source?,present?,count?}` | `GET /mes/exec/holds` | |
-| `replay {eq,seq|from_seq,to_seq,expect:idempotent}` | 原样重发 | 要求同状态码、同记录 id |
+| `replay {eq,seq|from_seq,to_seq,expect:idempotent}` | 原样重发 | 要求同状态码、同记录 id；`expect` 也可写成断言映射，如 `{body: {duplicate: true}}` |
+| `reuse {eq,seq,change,expect?}` | 同一个幂等键换内容重发（D57） | manual 用原 `Idempotency-Key`/`external_event_id`，b11 用原事件号，把 `change` 改进请求体（b11 改进 `payload`；`to` 是 E10 状态编码简写）。默认期望 422 `idempotency_key_reused`；有没有写入用后面的 `expect_*` 步骤验证 |
 | `precondition {eq?,qual_state?,e10?,lot?,lot_status?}` | 只读 | 不满足 -> skipped |
 
 `expect` 默认 `{status: 200}`；`code` 取自 `detail.code`；`data` 按字段比较响应 `data`；`body` 按点号路径比较整个响应体（如 B9 清除的 `{cleared: false}`、B10 的 `{"tool.life_state": warning}`）；`check` 在 `detail.results` 里按 `check_type` 找检查项并比较其余字段。
@@ -58,7 +60,13 @@ steps:
 ## 关键规则
 - `external_event_id = sim:{run_id}:{设备}:{序号}`，序号按设备从 1 递增，同一场景重放 ID 完全相同；写请求同时带 `Idempotency-Key`。
 - D30：走手工接口时**不传 `source`**，MES 里记为 `manual`，靠 `Idempotency-Key` 防重复（D54）。
-- **B11 模式（占位，默认关闭）**：D54 新增 EAP 写入入口 `POST /mes/eap/events`（P2-B11）。`--mode b11`（或 `SIM_MODE=b11`）时，`state`/`alarm_set`/`alarm_clear`/`tool_usage` 改发到这个入口，请求体 `{source: "simulator", external_event_id, event_type, equipment_id, payload}`，幂等键 (tenant, source, external_event_id)。后端没有这个入口时场景 skipped（依赖 B11）。请求体是猜的，B11 契约定稿后再对齐；在那之前请保持默认 `manual`。
+- **B11 模式**（已对齐后端 `8294b63`，默认仍是 manual）：`--mode b11`（或 `SIM_MODE=b11`）时，`state`/`alarm_set`/`alarm_clear`/`tool_usage` 改发到 `POST /mes/eap/events`，请求体 `{source: "simulator", external_event_id, event_type, equipment_id, payload}`，幂等键 (tenant, source, external_event_id)，不带 `Idempotency-Key`。
+  - payload 严格校验：`external_event_id`、`equipment_id` 只放信封；`tool_usage` 的 `tool_id` 放进 payload；`alarm_clear` 只发 `alid`（不发 `alarm_id`）。
+  - 响应是 `{data: 台账行, duplicate, result: 下层接口响应}`。模拟器断言和 `save_as` 用 `result`（和手工接口同形），`duplicate` 取信封上的（重放时 `result` 原样是首次的），台账行在 `event` 下。
+  - 重放：200 `duplicate=true`、`result` 同首次；同事件号换内容：422 `idempotency_key_reused`，不写入（D57）。
+  - **服务账号**：B11 需要权限 `mes.eap:write`，只在租户角色 **`eap_service`** 里；owner、admin、平台超级用户调用都是 403。运行 b11 模式前，请在目标租户里给模拟器专用账号分配 `eap_service` 角色，用它的 `SIM_USER`/`SIM_PASSWORD`（运行时注入，不写文件、不打印）或 `SIM_TOKEN`。manual 模式不需要这个角色。
+  - 后端没有这个入口时场景 skipped（依赖 B11）。
+- **D57 Idempotency-Key**：manual 模式下 E10（`/mes/eqp/{id}/e10`）和工序（`/mes/exec/lots/{id}/{stage}`）请求都带 `Idempotency-Key = external_event_id`；同键同内容重放返回首次响应（SBY→SBY 不再 422），同键换内容 422 `idempotency_key_reused`。
 - 可插拔适配层（`sim/adapters.py`）：每类事件列出候选路径，运行前读后端 `openapi.json`；需要的接口一个都不存在时，场景整体 skipped 并写明依赖的卡（B9/B10），不发任何写请求。B9（`0a74f8a`）、B10（`d27b700`）的路径已对齐。B10 的 reset/mount/unmount/replace 请求体严格、不收 `external_event_id`，模拟器标识放 comment 和 `Idempotency-Key`。
 
 ## 场景
@@ -66,8 +74,9 @@ steps:
 |---|---|
 | `e10-state-cycle.yaml` | 现在可跑：EAP-DA01 SBY→PRD→SBY（要求起始为 SBY） |
 | `wait-qual-block.yaml` | 现在可跑：待 Qual 的 EAP-DA02 开工被 409 `check_blocked`/`eqp_wait_qual`/`overridable=false` 拦（D43），被拦请求不改状态，可重复跑 |
-| `alarm-hold.yaml` | 等 B9：报警 → Hold（source=equipment）→ 重放不重复 Hold → 清除后 Hold 仍在 → clear 重放返回原记录；D55：无 active 报警 clear → 200 `cleared=false`；未登记 ALID → `unregistered=true`、写 `mes_alarm_lot`、不 Hold、不改 E10；事件时间超前 >5 分钟 → 422 `time_in_future` |
-| `tool-life-block.yaml` | 等 B10（D54-5 修订版）：先 `reset` 清零；用量到 `max_usage × warn_ratio`（默认 0.9）进入预警区间，`track_in` 照常 200，警告只写进检查记录和批次履历，不需要放行；用量 `>= max_usage` 时 `track_in` 返回 409 `check_blocked`/`tool_life`/`overridable=false`（`move_in` 不判断）。前提 T-SIM-01 上限 1000、`warn_ratio` 0.9 |
+| `alarm-hold.yaml` | 等 B9 + B11（manual 要 `/mes/eqp/alarms/clear`）：报警 → Hold（source=equipment）→ 重放不重复 Hold；OQ-5 三种清除：①有 active 按 ALID 清除 `cleared=true`、Hold 仍在、clear 重放返回原记录 ②无 active（已清除的 1001、从未上报的 9998）→ 200 `cleared=false`、`data=null` ③未登记 ALID 9999 → `unregistered=true`、写 `mes_alarm_lot`、不 Hold、不改 E10，清除后 Hold/E10 仍不变；事件时间超前 >5 分钟 → 422 `time_in_future` |
+| `idempotency-d57.yaml` | 等 B10 + D57：E10 同键换目标状态 → 422 `idempotency_key_reused`、状态不变、同键同内容重放返回首次响应；usage 同事件号换 delta → 422、履历不变，重放 `duplicate=true`。要求 EAP-DA01 起始 SBY，结束时回到 SBY |
+| `tool-life-block.yaml` | 等 B10（D54-5 修订版）：先 `reset` 清零；用量到 `max_usage × warn_ratio`（默认 0.9）进入预警区间，`track_in` 照常 200，警告只写进检查记录和批次履历，不需要放行；用量 `>= max_usage` 时 `track_in` 返回 409 `check_blocked`/`tool_life`/`overridable=false`（`move_in` 不判断）。额外断言 `tool.effective_max_usage="1000"`、`tool.effective_warn_ratio="0.9"`（`23c502d`），usage 同事件号换 delta → 422 且不写入。前提 T-SIM-01 上限 1000、`warn_ratio` 0.9 |
 
 场景里的设备/批次编码对应 8013（租户 it-eap）的测试数据，换环境时改编码即可。
 
@@ -78,4 +87,4 @@ steps:
 单元测试用内存假后端，不连网络。
 
 ## 未做
-B9/B10/B11 的接口路径和请求体仍是猜的（`sim/adapters.py` 候选列表），契约定稿后对齐；模式 B（HSMS）、时间偏移 `at`（目前解析后忽略、顺序执行）、乱序/断线场景。
+B9（`0a74f8a`）、B10（`d27b700`/`23c502d`）、B11（`8294b63`）已对齐；还没对真实后端跑过 b11 模式（8013 还没部署 B11）。模式 B（HSMS）、时间偏移 `at`（目前解析后忽略、顺序执行）、乱序/断线场景。

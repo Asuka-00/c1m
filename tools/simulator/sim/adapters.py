@@ -6,9 +6,10 @@
 按 D30，手工接口不传 ``source``；模拟器标识放在 ``external_event_id``（支持的接口）、
 ``Idempotency-Key`` 请求头和 comment 里，数据在 MES 里记为 manual（D54）。
 
-D54 的 EAP 写入入口 ``POST /mes/eap/events``（P2-B11）落地后，可用 ``--mode b11`` 切过去：
-E10 状态、报警、清除、耗材计数都发到这个入口，带 ``source=simulator`` 和 ``external_event_id``。
-这是占位实现，默认关闭（mode=manual）；请求体形状等 B11 契约定稿后再对齐。
+``--mode b11``：E10 状态、报警、清除、耗材计数改发到 D54 的 EAP 写入入口 ``POST /mes/eap/events``
+（P2-B11，后端 8294b63），带 ``source=simulator`` 和 ``external_event_id``，幂等键
+(tenant, source, external_event_id)。只有 ``eap_service`` 角色的服务账号能调（其他账号 403）。
+默认仍是 manual。
 """
 
 from __future__ import annotations
@@ -51,6 +52,8 @@ def default_adapters() -> dict[str, Adapter]:
         # B9（0a74f8a）：/mes/eqp 下的报警接口。B9 没有按 ALID 清除的接口，清除只能按报警 id。
         "alarm_set": Adapter("报警上报", ["/mes/eqp/{eq_id}/alarms"], card="B9"),
         "alarm_clear": Adapter("报警清除", ["/mes/eqp/alarms/{alarm_id}/clear"], card="B9"),
+        # B11（8294b63）新增的手工接口：按设备 + ALID 清除
+        "alarm_clear_alid": Adapter("按 ALID 清除报警", ["/mes/eqp/alarms/clear"], card="B11"),
         # D55 OQ-3：查报警记录及关联在制批（mes_alarm_lot -> data.lots）
         "alarm_get": Adapter("报警记录查询", ["/mes/eqp/alarms/{alarm_id}"], card="B9"),
         # D54：EAP 写入入口，仅 --mode b11 使用
@@ -87,6 +90,7 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "expect_alarm": ["alarm_get"],
     "expect_e10": [],
     "replay": [],
+    "reuse": [],
     "precondition": [],
 }
 
@@ -99,6 +103,8 @@ MODES = ("manual", "b11")
 def step_adapters(kind: str, args: dict | None = None, mode: str = "manual") -> list[str]:
     if mode == "b11" and kind in B11_STEPS:
         return ["eap_events"]
+    if kind == "alarm_clear" and args and args.get("alid") is not None:
+        return ["alarm_clear_alid"]
     if kind == "expect_tool_log" and args and args.get("log") == "mounts":
         return ["tool_mounts"]
     return STEP_ADAPTERS[kind]

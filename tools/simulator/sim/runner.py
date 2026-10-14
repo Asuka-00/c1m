@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -178,7 +179,9 @@ class Runner:
             code=r.code,
             http_ms=r.elapsed_ms,
         )
-        errs = check_expect(r, expect)
+        if call.idem:
+            entry["idempotency_key"] = call.idem
+        errs = check_expect(self.view(call, r), expect)
         if errs:
             raise StepFailed("；".join(errs))
         return r
@@ -199,6 +202,8 @@ class Runner:
             return self._expect_hold(a, entry)
         if k == "replay":
             return self._replay(a, entry, sent)
+        if k == "reuse":
+            return self._reuse(a, entry, sent)
         if k == "expect_e10":
             return self._expect_e10(a, entry, saved)
         if k == "expect_alarm":
@@ -254,10 +259,20 @@ class Runner:
             call = Call("POST", fill(self._ad("alarm_set"), eq_id=eq_id), body, ext)
         elif k == "alarm_clear":
             body = {"external_event_id": ext, "cleared_at": utcnow(float(a.get("time_offset_s", 0)))}
-            aid = saved.get(str(a["alarm"]).lstrip("$"))
-            if not aid:
-                raise StepFailed(f"alarm_clear 找不到保存的报警 {a.get('alarm')}")
-            call = Call("POST", fill(self._ad("alarm_clear"), alarm_id=aid), body, ext)
+            if a.get("alid") is not None:
+                # B11 8294b63：按 (equipment_id, alid) 清除，没有 active 报警时 200 cleared=false、data=null
+                body = {"equipment_id": eq_id, "alid": str(a["alid"]), **body}
+                call = Call("POST", self._ad("alarm_clear_alid"), body, ext)
+            else:
+                aid = saved.get(str(a["alarm"]).lstrip("$"))
+                if not aid:
+                    raise StepFailed(f"alarm_clear 找不到保存的报警 {a.get('alarm')}")
+                call = Call("POST", fill(self._ad("alarm_clear"), alarm_id=aid), body, ext)
+                if self.mode == "b11":  # B11 只认 alid：用 save_as 时记下的 alid
+                    alid = saved.get(str(a["alarm"]).lstrip("$") + "#alid")
+                    if not alid:
+                        raise StepFailed(f"b11 模式下 alarm_clear 需要 alid（{a['alarm']} 没记下 alid）")
+                    call.body = {"alid": alid, **body}
         elif k == "tool_usage":
             body = {"delta": str(a["delta"]), "equipment_id": eq_id, "external_event_id": ext}
             if a.get("reason"):  # 负数调整必须带 reason_id（reason_code）
@@ -275,14 +290,36 @@ class Runner:
         r = self._send(entry, call, a.get("expect"))
         sent[(eq, n)] = (call, r)
         if a.get("save_as") and isinstance(r.body, dict):
-            d = r.body.get("data", r.body)
+            d = self.view(call, r).body
+            d = d.get("data", d) if isinstance(d, dict) else None
             saved[a["save_as"]] = d.get("id") if isinstance(d, dict) else None
+            if k == "alarm_set":
+                saved[a["save_as"] + "#alid"] = str(a["alid"])
+
+    @staticmethod
+    def is_b11(call: Call) -> bool:
+        return isinstance(call.body, dict) and "event_type" in call.body and "payload" in call.body
+
+    def view(self, call: Call, r: Resp) -> Resp:
+        """B11 响应是 {data: 台账行, duplicate, result: 下层接口响应}。断言和 save_as 用 result
+        （和手工接口同形），但 duplicate 取信封上的（重放时 result 原样是首次的）；台账行放在 event。"""
+        if not self.is_b11(call) or not isinstance(r.body, dict) or "result" not in r.body:
+            return r
+        res = r.body.get("result")
+        res = dict(res) if isinstance(res, dict) else {"data": res}
+        res.update(duplicate=r.body.get("duplicate"), event=r.body.get("data"))
+        return Resp(r.status, res, r.elapsed_ms)
 
     def _to_b11(self, kind: str, eq_id: str, ext: str, manual: Call) -> Call:
-        """占位：把手工接口调用改写成 D54 的 EAP 入口事件。契约定稿前形状可能变。"""
-        payload = {k: v for k, v in (manual.body or {}).items() if k != "external_event_id"}
+        """把手工接口调用改写成 B11（8294b63）的 EAP 入口事件。
+
+        payload 是严格校验的：external_event_id、equipment_id 只放信封；tool_usage 把路径里的
+        tool_id 放进 payload；alarm_clear 只发 alid（B11 不认 alarm_id）。"""
+        payload = {k: v for k, v in (manual.body or {}).items() if k not in ("external_event_id", "equipment_id")}
+        if kind == "tool_usage":
+            payload["tool_id"] = manual.path.rstrip("/").split("/")[-2]
         if kind == "alarm_clear" and "alid" not in payload:
-            payload["alarm_id"] = manual.path.rstrip("/").split("/")[-2]
+            raise StepFailed("B11 alarm_clear 必须带 alid")
         body = {
             "source": "simulator",  # D53-4 / D54
             "external_event_id": ext,
@@ -290,7 +327,7 @@ class Runner:
             "equipment_id": eq_id,
             "payload": payload,
         }
-        return Call("POST", self._ad("eap_events"), body, ext)
+        return Call("POST", self._ad("eap_events"), body, None)
 
     def _tool_action(self, sc, st: Step, entry: dict) -> None:
         """B10 reset / unmount / replace：请求体严格（extra=forbid），不收 external_event_id，
@@ -404,21 +441,45 @@ class Runner:
             if (eq, n) not in sent:
                 raise StepFailed(f"没有 {eq} 序号 {n} 的已发送事件可重放")
             call, first = sent[(eq, n)]
-            r = self.c.request(call.method, call.path, call.body, headers={"Idempotency-Key": call.idem})
-            item = {"seq": n, "external_event_id": call.idem, "status": r.status, "code": r.code}
+            r = self.c.request(
+                call.method, call.path, call.body, headers={"Idempotency-Key": call.idem} if call.idem else None
+            )
+            key = call.idem or (call.body or {}).get("external_event_id")
+            item = {"seq": n, "external_event_id": key, "status": r.status, "code": r.code}
             entry["replayed"].append(item)
+            first, r = self.view(call, first), self.view(call, r)
             mode = a.get("expect", "idempotent")
             if mode == "idempotent":
                 if r.status != first.status:
-                    raise StepFailed(f"重放 {call.idem} HTTP {r.status} != 首次 {first.status}")
+                    raise StepFailed(f"重放 {key} HTTP {r.status} != 首次 {first.status}")
                 fd = (first.body or {}).get("data") if isinstance(first.body, dict) else None
                 rd = (r.body or {}).get("data") if isinstance(r.body, dict) else None
                 if isinstance(fd, dict) and isinstance(rd, dict) and fd.get("id") != rd.get("id"):
-                    raise StepFailed(f"重放 {call.idem} 生成了新记录（{rd.get('id')}）")
+                    raise StepFailed(f"重放 {key} 生成了新记录（{rd.get('id')}）")
             elif isinstance(mode, dict):
                 errs = check_expect(r, mode)
                 if errs:
                     raise StepFailed("；".join(errs))
+
+    def _reuse(self, a: dict, entry: dict, sent) -> None:
+        """D57 反例：同一个 key（manual 是 Idempotency-Key，b11 是 external_event_id）换请求内容重发，
+        默认期望 422 idempotency_key_reused。change 里的字段改到请求体（b11 改到 payload）；
+        ``to`` 是 E10 状态编码的简写，会解析成 to_state_id。是否没写入由后面的 expect_* 步骤验证。"""
+        eq, n = a["eq"], int(a["seq"])
+        if (eq, n) not in sent:
+            raise StepFailed(f"没有 {eq} 序号 {n} 的已发送事件可改内容重发")
+        call, _ = sent[(eq, n)]
+        body = copy.deepcopy(call.body)
+        target = body["payload"] if self.is_b11(call) else body
+        for f, v in (a.get("change") or {}).items():
+            if f == "to":
+                target["to_state_id"] = self.rid("e10_state", v)
+            else:
+                target[f] = str(v) if f == "delta" else v
+        if body == call.body:
+            raise StepFailed("reuse 的 change 没有改变请求内容")
+        new = Call(call.method, call.path, body, call.idem)
+        self._send(entry, new, a.get("expect") or {"status": 422, "code": "idempotency_key_reused"})
 
 
 __all__ = ["Runner", "check_expect", "STEP_ADAPTERS", "PASSED", "FAILED", "SKIPPED", "ERROR"]

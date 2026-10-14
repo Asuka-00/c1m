@@ -32,7 +32,8 @@ B10 = {
     "/mes/eqp/tools/{tool_id}/replace",
     "/mes/eqp/tools/{tool_id}/mounts",
 }
-B11 = {"/mes/eap/events"}
+B11 = {"/mes/eap/events", "/mes/eqp/alarms/clear"}
+REUSED = {"detail": {"code": "idempotency_key_reused", "message": "Idempotency-Key was already used"}}
 REGISTERED_ALIDS = {"1001"}
 
 IDS = {
@@ -71,13 +72,65 @@ class FakeClient(Client):
         self.usage_log = []  # newest first
         self.tool_mounts = {}  # tool_id -> 是否在机
         self.mount_log = []
+        self.idem = {}  # (接口, key) -> (请求哈希, Resp)   D57
+        self.events = {}  # (source, ext) -> (哈希, 台账行, result)   B11
+        self.e10_writes = 0
+        self.service = True  # 当前账号是否有 eap_service
 
     def openapi_paths(self):
         return self.paths
 
     def request(self, method, path, json_body=None, params=None, headers=None, form=None):
         self.calls.append((method, path, json_body, headers, params))
-        params = params or {}
+        key = (headers or {}).get("Idempotency-Key")
+        if method == "POST" and key and (path.endswith("/e10") or "/mes/exec/lots/" in path):
+            ep = "e10" if path.endswith("/e10") else "stage"
+            h = repr((path, sorted((json_body or {}).items())))
+            if (ep, key) in self.idem:
+                old_h, old = self.idem[(ep, key)]
+                return old if old_h == h else Resp(422, REUSED)
+            r = self._dispatch(method, path, json_body, params or {})
+            if r.status < 400:
+                self.idem[(ep, key)] = (h, r)
+            return r
+        return self._dispatch(method, path, json_body, params or {})
+
+    def _b11(self, body):
+        if not self.service:
+            return Resp(403, {"detail": "Not enough permissions"})
+        allowed = {
+            "state": {"to_state_id", "reason_id", "event_at", "comment"},
+            "alarm_set": {"alid", "set_at", "lot_ids", "alarm_text", "alcd_raw", "raw", "comment"},
+            "alarm_clear": {"alid", "cleared_at", "comment"},
+            "tool_usage": {"tool_id", "delta", "lot_id", "occurred_at", "reason_id", "comment"},
+        }
+        typ, pl, eq = body["event_type"], body.get("payload") or {}, body["equipment_id"]
+        k = (body["source"], body["external_event_id"])
+        h = repr((typ, eq, sorted(pl.items())))
+        if k in self.events:
+            old_h, row, res = self.events[k]
+            return Resp(422, REUSED) if old_h != h else Resp(200, {"data": row, "duplicate": True, "result": res})
+        extra = set(pl) - allowed[typ]
+        if extra:
+            return Resp(422, {"detail": [{"loc": ["body", "payload", sorted(extra)[0]], "type": "extra_forbidden"}]})
+        pl = dict(pl, external_event_id=body["external_event_id"])
+        if typ == "state":
+            pl.pop("external_event_id")
+            r = self._dispatch("POST", f"/mes/eqp/{eq}/e10", pl, {})
+        elif typ == "alarm_set":
+            r = self._dispatch("POST", f"/mes/eqp/{eq}/alarms", pl, {})
+        elif typ == "alarm_clear":
+            r = self._dispatch("POST", "/mes/eqp/alarms/clear", dict(pl, equipment_id=eq), {})
+        else:
+            tid = pl.pop("tool_id")
+            r = self._dispatch("POST", f"/mes/eqp/tools/{tid}/usage", dict(pl, equipment_id=eq), {})
+        if r.status >= 400:
+            return r
+        row = {"id": f"ev-{len(self.events) + 1}", "source": k[0], "external_event_id": k[1], "event_type": typ}
+        self.events[k] = (h, row, r.body)
+        return Resp(200, {"data": row, "duplicate": False, "result": r.body})
+
+    def _dispatch(self, method, path, json_body, params):
         if method == "GET" and path.count("/") == 2:  # /mes/{entity}
             ent = path.split("/")[2]
             rid = IDS.get((ent, params.get("code")))
@@ -89,7 +142,17 @@ class FakeClient(Client):
         if path == "/mes/eqp/board":
             return Resp(200, {"data": [{"code": c, "state": {"code": self.e10}} for c in ("EQ1", "EAP-DA01")]})
         if path == "/mes/eap/events":
-            return Resp(200, {"data": {"id": "ev-" + json_body["external_event_id"]}})
+            return self._b11(json_body)
+        if path == "/mes/eqp/alarms/clear":
+            if set(json_body) - {"equipment_id", "alid", "cleared_at", "comment", "external_event_id"}:
+                return Resp(422, {"detail": [{"loc": ["body", "source"], "type": "extra_forbidden"}]})
+            act = [
+                r for r in self.alarm_rows.values() if r["alid"] == json_body["alid"] and r["alarm_status"] == "active"
+            ]
+            if not act:
+                return Resp(200, {"data": None, "duplicate": False, "cleared": False})
+            act[0].update(alarm_status="cleared", clear_event_id=json_body.get("external_event_id"))
+            return Resp(200, {"data": act[0], "duplicate": False, "cleared": True})
         if method == "GET" and path.startswith("/mes/eqp/alarms/"):
             row = self.alarm_rows.get(path.split("/")[-1])
             return Resp(200, {"data": row}) if row else Resp(404, {"detail": "Not Found"})
@@ -98,7 +161,12 @@ class FakeClient(Client):
         if path == "/mes/exec/holds":
             return Resp(200, {"data": [{"lot_code": params.get("q") or "L1"}] * self.holds})
         if path.endswith("/e10"):
-            return Resp(200, {"data": {"id": "log"}})
+            to = {"s-prd": "PRD", "s-sby": "SBY"}.get(json_body.get("to_state_id"), "UDT")
+            if to == self.e10:  # 迁移表不允许原地迁移
+                return Resp(422, {"detail": [{"loc": ["body", "to_state_id"], "type": "value_error"}]})
+            self.e10_writes += 1
+            frm, self.e10 = self.e10, to
+            return Resp(200, {"data": {"id": f"log-{self.e10_writes}"}, "from": frm, "to": to})
         if path.endswith("/move_in") or path.endswith("/track_in"):
             # B10：tool_life 只在 track_in 判断，用量 >= 上限硬拦（overridable=false）；预警区间不拦
             if path.endswith("/track_in") and json_body.get("tool_ids") and self.usage >= self.max_usage:
@@ -165,6 +233,8 @@ class FakeClient(Client):
             "life_state": life,
             "tool_status": st,
             "warn_ratio": n(self.warn_ratio),
+            "effective_max_usage": n(self.max_usage),  # 23c502d
+            "effective_warn_ratio": n(self.warn_ratio),
         }
 
     def _tools(self, method, path, body):
@@ -185,6 +255,8 @@ class FakeClient(Client):
         if act == "usage":
             ext = body.get("external_event_id")
             if ext and ext in self.usage_events:
+                if self.usage_events[ext]["delta"] != body["delta"]:  # D57：同事件号内容不同
+                    return Resp(422, REUSED)
                 return Resp(
                     200,
                     {

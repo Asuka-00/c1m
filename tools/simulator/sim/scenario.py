@@ -83,10 +83,10 @@ def parse(data: dict, path: str | None = None) -> Scenario:
             raise ScenarioError(f"第 {i} 步 {k} 的参数必须是映射")
         if k in EQ_STEPS and not args.get("eq"):
             raise ScenarioError(f"第 {i} 步 {k} 缺少 eq")
-        if k == "alarm_clear" and not args.get("alarm"):
-            raise ScenarioError(
-                f"第 {i} 步 alarm_clear 需要 alarm: $名（B9 只能按报警 id 清除，没有按 ALID 清除的接口）"
-            )
+        if k == "alarm_clear" and bool(args.get("alarm")) == (args.get("alid") is not None):
+            raise ScenarioError(f"第 {i} 步 alarm_clear 要二选一：alarm: $名（按报警 id）或 alid（按设备 + ALID）")
+        if k == "reuse" and (not args.get("eq") or not args.get("seq") or not args.get("change")):
+            raise ScenarioError(f"第 {i} 步 reuse 需要 eq、seq 和 change")
         if k.startswith("tool_") or k == "expect_tool_log":
             if not args.get("tool"):
                 raise ScenarioError(f"第 {i} 步 {k} 缺少 tool")

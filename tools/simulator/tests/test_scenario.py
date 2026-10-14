@@ -18,9 +18,10 @@ def test_required_adapters():
     assert load(ROOT / "alarm-hold.yaml").required_adapters() == [
         "alarm_set",
         "holds",
-        "alarm_clear",
+        "alarm_clear_alid",
         "alarm_get",
     ]
+    assert load(ROOT / "alarm-hold.yaml").required_adapters("b11") == ["eap_events", "holds", "alarm_get"]
     assert "tool_usage" in load(ROOT / "tool-life-block.yaml").required_adapters()
 
 
