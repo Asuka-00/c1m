@@ -138,6 +138,7 @@ P3_DRAFT_STEPS = {
     "expect_reticle_history",
     "expect_reticle_events",
     "expect_effective_track_in_action",
+    "delete_alarm_code",
     "reticle_adjust",
     "reticle_hold",
     "reticle_release",

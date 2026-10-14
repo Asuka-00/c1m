@@ -153,7 +153,7 @@ def test_b8_draft_reuses_alarm_and_track_in_steps():
     assert any(a.get("level") == "equipment" and a.get("value") is None and a["expect"]["status"] == 200 for a in sets)
     assert "expect_effective_track_in_action" in kinds
     # B8 补充：ctx.alarms[] 带 sub_unit_id；多腔体整机拦截后清除放行；已清除不再拦；覆盖层 null 继承类型层
-    assert sc.run_id == "alarm-tia-03"
+    assert sc.run_id == "alarm-tia-04"
     blocks = [s.args["expect"] for s in tis if s.args["expect"].get("status") == 409 and "body" in s.args["expect"]]
     assert all(
         v.get("sub_unit_id", "missing") != "missing" for b in blocks for k, v in b["body"].items() if ".alarms." in k
@@ -189,3 +189,43 @@ def test_b8_draft_asserts_effective_source_and_uses_sub_unit_id():
     nxt = next(s for s in sc.steps[i + 1 :] if s.kind == "expect_effective_track_in_action")
     assert nxt.args["source"] == "equipment_type"
     assert "sub_unit:" not in text and "sub_unit_id: EAP-MC01-CH1" in text
+
+
+def test_b8_draft_type_row_rules():
+    from sim.scenario import load
+
+    sc = load("scenarios/p3-draft/alarm-track-in-action.yaml")
+    st = sc.steps
+    seeds = [(n, s.args) for n, s in enumerate(st) if s.kind == "seed_alarm_code"]
+    # 每个成功建的单台行之前，都已有同 (设备, ALID) 的类型行
+    for n, a in seeds:
+        if a.get("level") != "type" and "expect" not in a:
+            assert any(
+                m < n and b.get("level") == "type" and b["alid"] == a["alid"] and b["eq"] == a["eq"] for m, b in seeds
+            ), a
+    # 2104：类型行 off，单台行 null → 生效 off、来源 equipment_type
+    assert any(
+        s.kind == "expect_effective_track_in_action"
+        and s.args == {"eq": "EAP-DA01", "alid": "2104", "value": "off", "source": "equipment_type"}
+        for s in st
+    )
+    reasons = {
+        a["expect"]["ctx"]["reason"]
+        for _, a in seeds
+        if a.get("expect", {}).get("status") == 422 and "ctx" in a["expect"]
+    }
+    assert reasons == {"type_row_missing", "equipment_type_missing"}
+    assert all(
+        a["expect"]["code"] == "value_error"
+        for _, a in seeds
+        if a.get("expect", {}).get("status") == 422 and "ctx" in a["expect"]
+    )
+    nt = [a for _, a in seeds if a["eq"] == "EAP-NT01"]
+    assert nt and nt[0]["expect"]["ctx"]["reason"] == "equipment_type_missing"
+    assert {"code": "EAP-NT01"} in [dict(e) for e in sc.equipment] or any(
+        (e.get("code") if isinstance(e, dict) else getattr(e, "code", None)) == "EAP-NT01" for e in sc.equipment
+    )
+    dels = [s.args for s in st if s.kind == "delete_alarm_code"]
+    assert dels == [
+        {"eq": "EAP-DA01", "alid": "2101", "level": "type", "expect": {"status": 409, "code": "referenced"}}
+    ]

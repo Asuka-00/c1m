@@ -132,3 +132,4 @@ B9（`0a74f8a`）、B10（`d27b700`/`23c502d`）、B11（`8294b63`）已对齐�
 - 履历条目 `type` 取值 `mount`/`usage`/`inspection`/`incident`/`status`；卸载与挂载是同一行；状态行字段 `from_status`/`to_status`/`action`/`reason`/`username`/`at`（D71）。草稿用 `latest_of` + `fields`。
 - `incident` 返回 201（重放也是 201）；`mount` 响应 `data` 是挂载记录；请求体 `slot` → `slot_code`、`reason`（调整）→ `reason_id`。
 - D71：先 `invalid_transition` 后 `still_mounted`（335db8a 顺序相反，等下个提交）；超 6 位小数 422 `value_error`、`ctx.max_places=6`（335db8a ctx 尚无 max_places）。
+- **D70 补充（两层一致性）**：单台覆盖行必须先有对应的类型行；草稿先建类型行再建单台行。反例：缺类型行 422 `value_error` `ctx.reason=type_row_missing`；设备无设备类型 422 `value_error` `ctx.reason=equipment_type_missing`（测试设备 EAP-NT01）；删除仍被引用的类型行 409 `referenced`（草稿步骤 `delete_alarm_code`，适配器 `alarm_code_delete`，B8 落地后核对）。

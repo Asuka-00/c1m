@@ -14,16 +14,23 @@
 #   类型层非空默认 off，单台覆盖层 null = 继承类型层；只算未清除报警（mes_alarm_log.cleared_at IS NULL）；
 #   查找顺序：本机覆盖行非空 → 类型层；unregistered 或两层都没有 → 不参与。
 #   多腔体：P3 整机拦截，不管报警带不带 sub_unit_id；ctx.alarms[] 每条带 sub_unit_id（整机报警为 null）。
+# D70 补充（两层一致性）：单台覆盖行必须有对应的类型行（设备类型 + ALID）——
+#   - 建单台行时对应类型行不存在 → 422 value_error，ctx.reason=type_row_missing；
+#   - 设备没有设备类型时建单台行 → 422 value_error，ctx.reason=equipment_type_missing；
+#   - 删除仍被单台行引用的类型行 → 409 referenced；
+#   - 迁移 0034 为缺类型行的已有单台行自动补类型行（off）。本场景先建类型行再建单台行。
 # 复用：seed_alarm_code、alarm_set / alarm_clear（manual / b11 都能走）、track_in、expect_hold、expect_eap_read 用的服务账号。
-# 草稿步骤（B8 落地后核对）：set_track_in_action {eq, alid, level: type|equipment, value, as?}、expect_effective_track_in_action。
-# 报警码 action=none，不联动设备状态；设备全程 SBY。前提：EAP-DA01 SBY；FX0001～FX0006 waiting；EAP-MC01（两个腔体子单元）SBY；9999 未登记。
+# 草稿步骤（B8 落地后核对）：set_track_in_action {eq, alid, level: type|equipment, value, as?}、
+#   expect_effective_track_in_action {eq, alid, value, source?}、delete_alarm_code {eq, alid, level: type|equipment}。
+# 报警码 action=none，不联动设备状态；设备全程 SBY。前提：EAP-DA01 SBY；EAP-NT01 没有设备类型（只用于 equipment_type_missing 反例）；FX0001～FX0006 waiting；EAP-MC01（两个腔体子单元）SBY；9999 未登记。
 name: alarm-track-in-action
-run_id: alarm-tia-03
+run_id: alarm-tia-04
 draft: "等 P3-B8（D70 / D70 补充 track_in_action、effective_track_in_action、alarm_severity 进站检查）落地"
 target: http://127.0.0.1:8013
 equipment:
   - {code: EAP-DA01, type: DIEBOND}
   - {code: EAP-MC01, type: ETCH, sub_units: [EAP-MC01-CH1, EAP-MC01-CH2]}
+  - {code: EAP-NT01}   # 无设备类型
 steps:
   - precondition: {eq: EAP-DA01, e10: SBY}
   - precondition: {lot: FX0001, lot_status: waiting}
@@ -33,13 +40,28 @@ steps:
   - precondition: {lot: FX0005, lot_status: waiting}
   - precondition: {lot: FX0006, lot_status: waiting}
   - precondition: {eq: EAP-MC01, e10: SBY}
-  # 报警码种子：2101～2104 单台设备覆盖层；2105 只配类型层（覆盖层优先用例）
+  # 报警码种子：先建类型行（DIEBOND + ALID，track_in_action 默认 off），再建 EAP-DA01 的单台覆盖行（D70 补充：单台行必须有类型行）
+  - seed_alarm_code: {eq: EAP-DA01, alid: "2101", action: none, level: type}
+  - seed_alarm_code: {eq: EAP-DA01, alid: "2102", action: none, level: type}
+  - seed_alarm_code: {eq: EAP-DA01, alid: "2103", action: none, level: type}
+  - seed_alarm_code: {eq: EAP-DA01, alid: "2104", action: none, level: type}
+  - expect_effective_track_in_action: {eq: EAP-DA01, alid: "2104", level: type, value: "off"}
   - seed_alarm_code: {eq: EAP-DA01, alid: "2101", action: none}
   - seed_alarm_code: {eq: EAP-DA01, alid: "2102", action: none}
   - seed_alarm_code: {eq: EAP-DA01, alid: "2103", action: none}
   - seed_alarm_code: {eq: EAP-DA01, alid: "2104", action: none}
-  # 默认 off
-  - expect_effective_track_in_action: {eq: EAP-DA01, alid: "2104", value: "off"}
+  # 2104 单台行 track_in_action 为 null → 继承类型行的默认 off，来源 equipment_type
+  - expect_effective_track_in_action: {eq: EAP-DA01, alid: "2104", value: "off", source: equipment_type}
+  # 反例（D70 补充）：
+  #   类型行不存在时建单台行 → 422 value_error / type_row_missing（2199 没有 DIEBOND 类型行）
+  - seed_alarm_code: {eq: EAP-DA01, alid: "2199", action: none,
+                      expect: {status: 422, code: value_error, ctx: {reason: type_row_missing}}}
+  #   设备没有设备类型时建单台行 → 422 value_error / equipment_type_missing
+  - seed_alarm_code: {eq: EAP-NT01, alid: "2101", action: none,
+                      expect: {status: 422, code: value_error, ctx: {reason: equipment_type_missing}}}
+  #   删除仍被单台行引用的类型行 → 409 referenced（类型行和单台行都还在）
+  - delete_alarm_code: {eq: EAP-DA01, alid: "2101", level: type, expect: {status: 409, code: referenced}}
+  - expect_effective_track_in_action: {eq: EAP-DA01, alid: "2101", level: type, value: "off"}
   - set_track_in_action: {eq: EAP-DA01, alid: "2101", level: equipment, value: "off", expect: {status: 200}}
   - set_track_in_action: {eq: EAP-DA01, alid: "2102", level: equipment, value: warn, expect: {status: 200}}
   - set_track_in_action: {eq: EAP-DA01, alid: "2103", level: equipment, value: block, expect: {status: 200}}
@@ -99,7 +121,7 @@ steps:
   - track_in: {eq: EAP-DA01, lot: FX0003, expect: {status: 200, absent_warning: alarm_severity}}
   - expect_hold: {lot: FX0003, present: false}
 
-  # ⑤ 覆盖层优先：2105 类型层 block，单台覆盖层 off → 生效 off，不拦；覆盖层传 null 清空 → 继承 block，拦
+  # ⑤ 覆盖层优先：2105 先建类型层 block，再建单台覆盖层 off → 生效 off，不拦；覆盖层传 null 清空 → 继承 block，拦
   - seed_alarm_code: {eq: EAP-DA01, alid: "2105", action: none, level: type}
   - set_track_in_action: {eq: EAP-DA01, alid: "2105", level: type, value: block, expect: {status: 200}}
   - set_track_in_action: {eq: EAP-DA01, alid: "2105", level: type, value: null,

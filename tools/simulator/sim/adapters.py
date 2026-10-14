@@ -90,6 +90,8 @@ def default_adapters() -> dict[str, Adapter]:
         #   设备类型层传 null 422，单台设备覆盖层传 null = 清空改为继承；eap_service 不能改（403）
         "alarm_track_in_action": Adapter("报警码进站动作配置", ["/mes/alarm_code/{rid}"], card="P3-B8"),
         "alarm_code_get": Adapter("报警码详情", ["/mes/alarm_code/{rid}"], card="P3-B8"),
+        # D70 补充：删除仍被单台行引用的类型行 409 referenced（通用 CRUD DELETE），B8 落地后核对
+        "alarm_code_delete": Adapter("报警码删除", ["/mes/alarm_code/{rid}"], card="P3-B8"),
     }
 
 
@@ -129,6 +131,7 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "expect_reticle_history": ["reticle_history"],
     "expect_reticle_events": ["reticle_events"],
     "expect_effective_track_in_action": ["alarm_code_get"],
+    "delete_alarm_code": ["alarm_code_delete"],
     "reticle_adjust": ["reticle_usage_manual"],
     "reticle_hold": ["reticle_hold"],
     "reticle_release": ["reticle_release"],
