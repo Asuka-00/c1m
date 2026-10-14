@@ -10,17 +10,26 @@
 - 运行时角色名取 ``settings.DATABASE_URL`` 的 username，不硬编码；与迁移角色相同
   （未分离）时跳过并记日志。
 - 角色不存在：**跳过并记 WARNING**（不建角色、不改密码）。选跳过而非报错，是为了不让
-  没有运行时角色的环境（如只用 owner 的单机部署）无法升级。DBA 建好角色后执行
-  ``alembic downgrade 0035_d80_reticle_source_unmount && alembic upgrade head`` 补授权
-  （downgrade 只撤默认权限，安全）。
+  没有运行时角色的环境（如只用 owner 的单机部署）无法升级。**注意：之后不会自动补授权**
+  （本迁移已记为完成，后续迁移不再执行它）。补救：DBA 建好角色后，用迁移角色执行
+  ``python scripts/grant_runtime_role.py``（只执行本迁移同一组幂等 GRANT /
+  默认权限语句，不建角色、不改密码；**不要**用 downgrade/upgrade 重放，会连带回退
+  之后的迁移）。
 - GRANT CONNECT ON DATABASE <当前库>、USAGE ON SCHEMA public、表 DML、序列 USAGE/SELECT；
   ALTER DEFAULT PRIVILEGES FOR ROLE <迁移角色> IN SCHEMA public（表 DML、序列 USAGE/SELECT；
   迁移角色取 migration_database_url 的用户名，D83 补充一，明确默认权限属主，不依赖
   current_user）；alembic_version 先 REVOKE ALL 再只给 SELECT。
 
-downgrade：只撤销本迁移设置的 default privileges，已授予的表 / 序列 / 库 / schema 权限
-保留——撤掉会让正在运行的应用立刻无法访问数据，而降到 0035 的库仍需要这些权限才能用
-（0035 及以前的库原本靠 setup_db_roles.py 给同样的权限）。
+downgrade：只撤销本迁移设置的 default privileges（``FOR ROLE <迁移角色>`` 的表 DML、
+序列 USAGE/SELECT）。**注意**：pg_default_acl 按 (属主, schema, 对象类型) 只存一条，若旧的
+``setup_db_roles.py`` 曾以同一属主设过同样的默认权限，会被一并撤掉（无法区分来源）；
+已授予的表 / 序列 / 库 / schema 权限不受影响（撤掉会让运行中的应用立刻无法访问数据，
+降到 0035 的库仍需要它们）。降级后新建的表需由 DBA 手工授权或再次 upgrade。
+
+角色口径（QA P3-3）：``runtime_role()`` 取 ``settings.DATABASE_URL`` 的用户名（运行时连接），
+``migration_role()`` 取 ``settings.migration_database_url`` 的用户名（迁移连接，取不到时
+current_user）；两者都从配置的连接 URL 取，而“是否分离”的判断用 current_user（实际执行
+迁移的角色），二者一致时跳过授权。
 
 Revision ID: 0036_d83_runtime_role_grants
 Revises: 0035_d80_reticle_source_unmount
@@ -56,8 +65,10 @@ def runtime_role(bind: sa.engine.Connection) -> str | None:
         sa.text("SELECT 1 FROM pg_roles WHERE rolname = :r"), {"r": role}
     ).first():
         log.warning(
-            "D83 runtime role %r does not exist: grants skipped "
-            "(create the role, then re-apply this migration)",
+            "D83 runtime role %r does not exist: grants skipped and will NOT be "
+            "re-applied by later migrations. After creating the role run "
+            "`python scripts/grant_runtime_role.py` as the migration role "
+            "(do not downgrade/upgrade to replay).",
             role,
         )
         return None
@@ -105,6 +116,7 @@ def upgrade():
 
 
 def downgrade():
+    """撤销本迁移的默认权限（见模块说明：同属主同内容的旧默认权限会一并撤掉）。"""
     bind = op.get_bind()
     role = runtime_role(bind)
     if not role:

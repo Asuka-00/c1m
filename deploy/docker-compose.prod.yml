@@ -46,7 +46,6 @@ services:
       SEED_DEMO: ${SEED_DEMO:-0}
     command: >
       sh -c "alembic upgrade head &&
-             python scripts/setup_db_roles.py &&
              python -m app.initial_data &&
              if [ \"$$SEED_DEMO\" = 1 ]; then python scripts/mes_demo.py seed; fi"
     depends_on:

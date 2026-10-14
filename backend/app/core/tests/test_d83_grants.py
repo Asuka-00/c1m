@@ -149,3 +149,38 @@ def test_default_privileges_for_migration_role() -> None:
             {"p": f"%{ROLE}=%"},
         ).all()
         assert {(r, k) for r, k in rows} >= {(owner, "r"), (owner, "S")}
+
+
+def test_downgrade_keeps_table_grants() -> None:
+    """downgrade 只撤默认权限，已有表 / 序列授权保留（事务内执行后回滚）。"""
+    from alembic.migration import MigrationContext
+    from alembic.operations import Operations
+
+    m = _mig()
+    with admin_engine.connect() as c:
+        ctx = MigrationContext.configure(c)
+        with Operations.context(ctx):
+            m.downgrade()
+        assert _missing(c) == []
+        left = c.execute(
+            text("SELECT count(*) FROM pg_default_acl WHERE defaclacl::text LIKE :p"),
+            {"p": f"%{ROLE}=%"},
+        ).scalar()
+        assert left == 0
+        c.rollback()
+
+
+def test_missing_role_warning_names_remedy(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    m = _mig()
+    url = make_url(str(settings.DATABASE_URL)).set(username="d83_no_such_role")
+    monkeypatch.setattr(
+        settings, "DATABASE_URL", url.render_as_string(hide_password=False)
+    )
+    with caplog.at_level(logging.WARNING, logger="alembic.runtime.migration"):
+        with admin_engine.connect() as c:
+            assert m.runtime_role(c) is None
+    msg = " ".join(r.getMessage() for r in caplog.records)
+    assert "NOT be re-applied" in msg and "scripts/grant_runtime_role.py" in msg
+    assert (Path(m.__file__).parents[3] / "scripts/grant_runtime_role.py").exists()

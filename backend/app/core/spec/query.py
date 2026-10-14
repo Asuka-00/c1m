@@ -88,6 +88,11 @@ def apply_filters(
             if d is not None:
                 stmt = stmt.where(t.c[f.column] == d)
             continue
+        if f.type == "datetime":  # D85：等值筛选同 _from/_to，走 qdates
+            dt = parse_datetime(name, raw)
+            if dt is not None:
+                stmt = stmt.where(t.c[f.column] == dt)
+            continue
         try:
             v = coerce(f, raw)
         except ValueError as ex:

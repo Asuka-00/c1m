@@ -444,3 +444,50 @@ def test_report_window_strict_date_d77_supp3(client: TestClient, db: Session) ->
             params={"date_from": "2026-03-01", "date_to": "2026-03-10"},
         )
         assert r.status_code == 200, (path, r.text)
+
+
+def test_datetime_equality_filter_strict(client: TestClient, db: Session) -> None:
+    """D85：datetime 字段等值筛选同 _from/_to 走 qdates。"""
+    m = Mes(client, db)
+
+    def get(**kw: str) -> Any:
+        return client.get(m.url("lot"), headers=m.h, params=kw)
+
+    for raw in ("2026-10-01", "2026-10-01T00:00:00"):
+        r = get(started_at=raw)
+        assert r.status_code == 422, raw
+        d = r.json()["detail"][0]
+        assert (d["type"], d["loc"]) == ("timezone_required", ["query", "started_at"])
+    r = get(started_at="2026/10/01")
+    d = r.json()["detail"][0]
+    assert (r.status_code, d["type"], d["ctx"]) == (
+        422,
+        "value_error",
+        {"reason": "pattern"},
+    )
+    assert get(started_at="2026-10-01T00:00:00Z").status_code == 200
+
+
+def test_field_named_from_to_equality_validated(
+    client: TestClient, db: Session
+) -> None:
+    """字段名本身以 _from/_to 结尾：等值筛选按字段校验，不当作区间后缀剥掉跳过。"""
+    m = Mes(client, db)
+    ent = "product_route"
+
+    def get(**kw: str) -> Any:
+        return client.get(m.url(ent), headers=m.h, params=kw)
+
+    for name in ("effective_from", "effective_to"):
+        r = get(**{name: "2026/10/01"})
+        assert r.status_code == 422, (name, r.text)
+        d = r.json()["detail"][0]
+        assert (d["type"], d["loc"], d["ctx"]) == (
+            "value_error",
+            ["query", name],
+            {"reason": "pattern"},
+        )
+        assert get(**{name: "2026-10-01"}).status_code == 200
+        # 字段本身的区间筛选 <字段>_from 仍可用且同样校验
+        assert get(**{f"{name}_from": "2026-10-01"}).status_code == 200
+        assert get(**{f"{name}_to": "x"}).status_code == 422

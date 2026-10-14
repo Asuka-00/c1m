@@ -6,7 +6,6 @@ mes.exec:jump（跳站）、mes.exec:adjust（在制报废 / 补数）。
 阶段被阻断时返回 409 ``{"detail": {"code": "check_blocked", "results": [...]}}``。
 """
 
-import re
 import uuid
 from datetime import date, datetime, time, timedelta
 from typing import Annotated, Any, Literal
@@ -429,20 +428,12 @@ def report_oee_trend(
     return {"data": svc.oee_trend(session, ctx.id, a, b, workcenter)}
 
 
-_ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
-
-
 def _req_date(name: str, v: str | None) -> date:
-    if v is None or v == "":
+    """必填日期（D77 补充三）：严格 YYYY-MM-DD，错误 ctx.reason=pattern。"""
+    d = parse_date(name, v)
+    if d is None:
         raise err_422(["query", name], "Field required", "missing")
-    try:
-        if not _ISO_DATE.fullmatch(v):
-            raise ValueError(v)
-        return date.fromisoformat(v)
-    except ValueError:
-        raise err_422(
-            ["query", name], "must be a date YYYY-MM-DD", "value_error", input=v
-        ) from None
+    return d
 
 
 def _opt_ref(s: Session, tid: uuid.UUID, name: str, code: str, v: str | None) -> Any:
@@ -466,8 +457,8 @@ def _opt_ref(s: Session, tid: uuid.UUID, name: str, code: str, v: str | None) ->
 def report_ct_move(
     session: SessionDep,
     ctx: CurrentTenant,
-    date_from: str | None = None,
-    date_to: str | None = None,
+    date_from: DateQ = None,
+    date_to: DateQ = None,
     operation_id: str | None = None,
     product_id: str | None = None,
 ) -> Any:

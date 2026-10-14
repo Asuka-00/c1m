@@ -246,6 +246,12 @@ def test_validation_and_permission(client: TestClient, db: Session) -> None:
     for bad in ("2026-3-1", "2026/03/01", "20260301", "2026-02-30", "2026-W10-1"):
         e = err(date_from=bad, date_to="2026-03-01")
         assert (e["type"], e["loc"]) == ("value_error", ["query", "date_from"]), bad
+        assert e["ctx"] == {"reason": "pattern"}, bad
+    ps = client.get("/api/v1/openapi.json").json()["paths"][URL]
+    for prm in ps["get"]["parameters"]:
+        if prm["name"] in ("date_from", "date_to"):
+            sch = prm["schema"]
+            assert sch.get("format") == "date" and sch.get("pattern"), prm
     e = err(date_from="2026-03-02", date_to="2026-03-01")
     assert e["type"] == "value_error" and e["ctx"] == {"reason": "range_inverted"}
     r = _get(f, date_from="2026-03-01", date_to="2026-03-01")  # from == to：当天
