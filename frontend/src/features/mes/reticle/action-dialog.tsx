@@ -25,6 +25,7 @@ import { newEventId } from '@/features/mes/common/event-id'
 import {
   ACTIONS,
   TEXT_MAX,
+  actionLabel,
   reticleErrorMessage,
   validateAction,
 } from './reticle-rules'
@@ -73,11 +74,21 @@ function Body({
   const [key] = useState(newEventId)
   const fields = ACTIONS[action].fields
   const m = useMutation({
-    mutationFn: () => reticleApi.act(reticle.id, action, v, key),
+    mutationFn: () =>
+      reticleApi.act(
+        reticle.id,
+        action,
+        {
+          ...v,
+          defect_count:
+            String(v.defect_count ?? '').trim() === ''
+              ? undefined
+              : Number(v.defect_count),
+        },
+        key
+      ),
     onSuccess: () => {
-      toast.success(
-        t('mes.reticle.done', { action: t(`mes.reticle.action.${action}`) })
-      )
+      toast.success(t('mes.reticle.done', { action: actionLabel(action) }))
       qc.invalidateQueries({ queryKey: ['mes', 'reticle'] })
       onClose()
     },
@@ -104,6 +115,34 @@ function Body({
         value={v[k] ?? ''}
         onChange={(e) => set(k)(e.target.value)}
       />
+      <FieldErr msg={errs[k]} />
+    </div>
+  )
+  const sel = (
+    k: 'kind' | 'result' | 'disposition',
+    opts: string[],
+    ns: string,
+    required: boolean
+  ) => (
+    <div className='grid gap-1'>
+      <Label htmlFor={`reticle-${k}`}>
+        {t(`mes.reticle.field.${k}`)}
+        {required ? ' *' : ''}
+      </Label>
+      <select
+        id={`reticle-${k}`}
+        data-testid={`reticle-${k}`}
+        className='h-9 rounded-md border border-input bg-transparent px-2 text-sm'
+        value={v[k] ?? ''}
+        onChange={(e) => set(k)(e.target.value)}
+      >
+        <option value=''>—</option>
+        {opts.map((o) => (
+          <option key={o} value={o}>
+            {t(`mes.reticle.${ns}.${o}`)}
+          </option>
+        ))}
+      </select>
       <FieldErr msg={errs[k]} />
     </div>
   )
@@ -146,6 +185,31 @@ function Body({
               <FieldErr msg={errs.reason_id} />
             </div>
             {text('note', false)}
+          </>
+        )}
+        {fields.includes('inspection') && (
+          <>
+            {sel('kind', ['particle', 'haze', 'cd', 'other'], 'inspKind', true)}
+            {sel('result', ['pass', 'fail'], 'result', true)}
+            <div className='grid gap-1'>
+              <Label htmlFor='reticle-defect_count'>
+                {t('mes.reticle.col.defects')}
+              </Label>
+              <Input
+                id='reticle-defect_count'
+                data-testid='reticle-defect_count'
+                inputMode='numeric'
+                value={String(v.defect_count ?? '')}
+                onChange={(e) => set('defect_count')(e.target.value)}
+              />
+              <FieldErr msg={errs.defect_count} />
+            </div>
+            {sel(
+              'disposition',
+              ['none', 'clean', 'hold', 'repair', 'scrap'],
+              'disposition',
+              false
+            )}
           </>
         )}
         {fields.includes('reason') && text('reason', true)}

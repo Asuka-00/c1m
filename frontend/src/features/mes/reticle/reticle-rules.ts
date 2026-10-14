@@ -12,10 +12,12 @@ import { mesErrorMessage } from '@/features/mes/common/required'
 
 /** reason / comment / note 上限。 */
 export const TEXT_MAX = 300
+/** delta 小数位上限（D60；B4 422 value_error，ctx.max_places）。 */
+export const MAX_PLACES = 6
 /** storage_location 上限。 */
 export const LOCATION_MAX = 64
 
-type Field = 'delta' | 'reason' | 'comment'
+type Field = 'delta' | 'reason' | 'comment' | 'inspection'
 interface Spec {
   perm: string
   from: ReticleStatus[] | 'non_terminal'
@@ -78,6 +80,18 @@ export const ACTIONS: Record<ReticleAction, Spec> = {
     from: 'non_terminal',
     fields: ['reason'],
   },
+  /** 卸载（仍挂着时才可用；非 in_use 只关闭挂载记录） */
+  unmount: {
+    perm: MES_PERM.reticleWrite,
+    from: 'non_terminal',
+    fields: ['comment'],
+  },
+  /** 检查记录录入（D69 Q10：mes.reticle:write）；pass 仅 inspecting，fail 还可 on_hold */
+  inspection: {
+    perm: MES_PERM.reticleWrite,
+    from: ['inspecting', 'on_hold'],
+    fields: ['inspection', 'comment'],
+  },
 }
 
 export const ACTION_LIST = Object.keys(ACTIONS) as ReticleAction[]
@@ -89,9 +103,10 @@ export function visibleActions(can: (p: string) => boolean) {
 
 /** 当前状态是否允许该动作（只做界面提示，后端最终校验；挂载规则交给后端 409）。 */
 export function actionEnabled(
-  r: Pick<Reticle, 'status_code'>,
+  r: Pick<Reticle, 'status_code'> & Partial<Pick<Reticle, 'equipment_id'>>,
   a: ReticleAction
 ) {
+  if (a === 'unmount' && !r.equipment_id) return false
   const from = ACTIONS[a].from
   return from === 'non_terminal'
     ? r.status_code !== 'scrapped'
@@ -111,11 +126,17 @@ export function validateAction(
     if (!raw || !Number.isFinite(d) || d === 0)
       e.delta = t('mes.reticle.err.deltaNonZero')
     else if (!/^-?\d+(\.\d{1,6})?$/.test(raw))
-      e.delta = t('mes.err.code.too_many_decimals')
+      e.delta = t('mes.reticle.err.maxPlaces', { max: MAX_PLACES })
     else if (d < 0 && !(v.reason_id ?? '').trim())
       e.reason_id = t('mes.reticle.err.reasonIdRequired')
     if (tooLong(v.note))
       e.note = t('mes.reticle.err.tooLong', { max: TEXT_MAX })
+  }
+  if (a === 'inspection') {
+    if (!v.kind) e.kind = t('mes.err.required')
+    if (!v.result) e.result = t('mes.err.required')
+    const dc = String(v.defect_count ?? '').trim()
+    if (dc && !/^\d+$/.test(dc)) e.defect_count = t('mes.reticle.err.nonNegInt')
   }
   if (ACTIONS[a].fields.includes('reason')) {
     if (!(v.reason ?? '').trim()) e.reason = t('mes.err.required')
@@ -148,6 +169,13 @@ export const RETICLE_CODES = [
 export function reticleErrorMessage(err: unknown, action?: ReticleAction) {
   if (err instanceof AxiosError && err.response) {
     const d = (err.response.data as { detail?: unknown })?.detail
+    // D71：超 6 位小数为 422 value_error，ctx 带 max_places
+    if (Array.isArray(d)) {
+      const mp = d.find(
+        (x: { ctx?: { max_places?: unknown } }) => x?.ctx?.max_places != null
+      ) as { ctx: { max_places: unknown } } | undefined
+      if (mp) return t('mes.reticle.err.maxPlaces', { max: mp.ctx.max_places })
+    }
     const code =
       d && typeof d === 'object' && !Array.isArray(d)
         ? (d as { code?: unknown }).code
@@ -157,7 +185,7 @@ export function reticleErrorMessage(err: unknown, action?: ReticleAction) {
       (RETICLE_CODES as readonly string[]).includes(code)
     )
       return t(`mes.reticle.code.${code}`, {
-        action: action ? t(`mes.reticle.action.${action}`) : '',
+        action: action ? actionLabel(action) : '',
       })
   }
   return mesErrorMessage(err, undefined)
@@ -167,4 +195,11 @@ export function reticleErrorMessage(err: unknown, action?: ReticleAction) {
 export function lifeRatio(r: Pick<Reticle, 'shot_count' | 'max_shots'>) {
   if (r.max_shots == null || Number(r.max_shots) <= 0) return null
   return Number(r.shot_count) / Number(r.max_shots)
+}
+
+/** 动作 / 履历 action 枚举（下划线或连字符）→ 三语名称。 */
+export function actionLabel(a: string) {
+  if (a === 'system') return t('mes.reticle.system')
+  const k = a.replace(/_/g, '-')
+  return t(`mes.reticle.action.${k}`, { defaultValue: a })
 }

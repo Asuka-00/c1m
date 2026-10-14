@@ -25,7 +25,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Page } from '@/components/crud'
 import { useMesCan } from '@/features/mes/common/mes-perm'
 import { ReticleActionDialog } from './action-dialog'
-import { actionEnabled, lifeRatio, visibleActions } from './reticle-rules'
+import {
+  actionEnabled,
+  actionLabel,
+  lifeRatio,
+  visibleActions,
+} from './reticle-rules'
 
 const dash = (v: unknown) => (v == null || v === '' ? '—' : String(v))
 const statusText = (s: string | null) =>
@@ -117,7 +122,7 @@ export function ReticleDetail({ reticle }: { reticle: Reticle }) {
       <div className='flex flex-wrap items-center gap-2'>
         <h3 className='text-lg font-semibold'>{reticle.code}</h3>
         <StatusBadge status={reticle.status_code} />
-        {reticle.inspection_pending && (
+        {(reticle.inspection_pending ?? reticle.inspection_required) && (
           <Badge variant='secondary'>
             {t('mes.reticle.inspectionPending')}
           </Badge>
@@ -147,7 +152,7 @@ export function ReticleDetail({ reticle }: { reticle: Reticle }) {
             t('mes.reticle.field.count_basis'),
             t(`mes.reticle.countBasis.${reticle.count_basis}`),
           ],
-          [t('mes.reticle.field.equipment'), dash(reticle.equipment_code)],
+          [t('mes.reticle.field.equipment'), dash(reticle.equipment_label)],
           [t('mes.reticle.field.mounted_at'), fmtDateTime(reticle.mounted_at)],
           [
             t('mes.reticle.field.storage_location'),
@@ -205,11 +210,7 @@ export function ReticleDetail({ reticle }: { reticle: Reticle }) {
               fmtDateTime(x.at),
               statusText(x.from_status),
               statusText(x.to_status),
-              x.action === 'system'
-                ? t('mes.reticle.system')
-                : t(`mes.reticle.action.${x.action}`, {
-                    defaultValue: x.action,
-                  }),
+              actionLabel(x.action),
               holdText(x.hold_reason_to),
               dash(x.reason),
               dash(x.comment),
@@ -237,8 +238,8 @@ export function ReticleDetail({ reticle }: { reticle: Reticle }) {
               x.counted
                 ? x.count_after
                 : `${x.count_after} (${t('mes.reticle.notCounted')})`,
-              dash(x.lot_id),
-              dash(x.reason_id),
+              dash(x.lot_label ?? x.lot_id),
+              dash(x.reason_label ?? x.reason_id),
               dash(x.comment),
               dash(x.username),
             ])}
@@ -257,7 +258,7 @@ export function ReticleDetail({ reticle }: { reticle: Reticle }) {
               'shotsAtUnmount',
             ]}
             rows={(h.data?.mounts ?? []).map((x) => [
-              dash(x.equipment_code ?? x.equipment_id),
+              dash(x.equipment_label ?? x.equipment_id),
               dash(x.slot_code),
               fmtDateTime(x.mounted_at),
               x.unmounted_at
@@ -373,7 +374,7 @@ export default function ReticlePage() {
               <TableCell>
                 {r.shot_count} / {dash(r.max_shots)}
               </TableCell>
-              <TableCell>{dash(r.equipment_code)}</TableCell>
+              <TableCell>{dash(r.equipment_label)}</TableCell>
               <TableCell>{dash(r.storage_location)}</TableCell>
             </TableRow>
           ))}

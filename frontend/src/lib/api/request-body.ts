@@ -144,6 +144,18 @@ export const BODY_KEYS = {
   reticleUsage: ['delta', 'reason_id', 'note'],
   reticleReason: ['reason'],
   reticleComment: ['comment'],
+  /** UnmountIn / InspectionIn（be/p3 335db8a reticle/router.py） */
+  reticleUnmount: ['unmounted_at', 'comment'],
+  reticleInspection: [
+    'kind',
+    'result',
+    'defect_count',
+    'measured',
+    'equipment_id',
+    'inspected_at',
+    'disposition',
+    'comment',
+  ],
 } as const
 
 /** StageIn（含 dc / scrap / rework_units 子项）。 */

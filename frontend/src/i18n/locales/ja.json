@@ -1790,7 +1790,11 @@
         "repair-complete": "修理完了",
         "inspect-start": "検査開始",
         "scrap": "廃棄",
-        "life-reset": "寿命リセット"
+        "life-reset": "寿命リセット",
+        "unmount": "取り外し",
+        "inspection": "検査登録",
+        "mount": "装着",
+        "incident": "事故"
       },
       "actionDesc": {
         "usage": "ショット数を増減します。減らす場合は理由コードが必要です",
@@ -1802,7 +1806,9 @@
         "repair-complete": "修理・洗浄完了後に検査へ進みます。先に取り外しが必要です",
         "inspect-start": "検査を開始します。先に取り外しが必要です",
         "scrap": "元に戻せません。装着中なら同時に取り外します",
-        "life-reset": "カウントをゼロにして復帰します。先に取り外しが必要です"
+        "life-reset": "カウントをゼロにして復帰します。先に取り外しが必要です",
+        "unmount": "装置から取り外します。使用中以外は装着記録のみ閉じます",
+        "inspection": "合格で使用可能、不合格で保留になります"
       },
       "field": {
         "delta": "増減量",
@@ -1822,7 +1828,10 @@
         "mounted_at": "装着日時",
         "storage_location": "保管場所",
         "next_inspection_due_at": "次回検査",
-        "status": "状態"
+        "status": "状態",
+        "kind": "検査項目",
+        "result": "結果",
+        "disposition": "処置案"
       },
       "tab": {
         "status": "状態履歴",
@@ -1864,7 +1873,9 @@
       "err": {
         "deltaNonZero": "増減量は 0 以外の数値で入力してください",
         "reasonIdRequired": "カウントを減らす場合は理由コードが必要です",
-        "tooLong": "{{max}} 文字以内で入力してください"
+        "tooLong": "{{max}} 文字以内で入力してください",
+        "nonNegInt": "0 以上の整数で入力してください",
+        "maxPlaces": "増減量は小数点以下 {{max}} 桁までです"
       },
       "code": {
         "invalid_transition": "現在の状態では「{{action}}」を実行できません。更新して再試行してください",

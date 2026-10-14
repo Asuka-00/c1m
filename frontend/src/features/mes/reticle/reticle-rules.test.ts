@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { http } from '@/lib/api/client'
 import {
   actionBody,
+  actionReticle,
   apiError,
   httpReticleApi,
   mockReticleApi,
@@ -12,6 +13,7 @@ import {
 import { MES_PERM } from '@/features/mes/common/mes-perm'
 import {
   ACTION_LIST,
+  actionLabel,
   actionEnabled,
   reticleErrorMessage,
   validateAction,
@@ -34,7 +36,7 @@ describe('权限', () => {
     const w = only([MES_PERM.reticleWrite])
     expect(w).not.toContain('scrap')
     expect(w).toContain('usage')
-    expect(w).toHaveLength(7)
+    expect(w).toHaveLength(9)
     expect(only([])).toEqual([])
   })
   it('scrapped 终态所有动作都不可用', () => {
@@ -87,7 +89,7 @@ describe('表单校验', () => {
     )
     expect(validateAction('usage', { delta: '0' }).delta).toBeTruthy()
     expect(validateAction('usage', { delta: '1.1234567' }).delta).toBe(
-      t('mes.err.code.too_many_decimals')
+      t('mes.reticle.err.maxPlaces', { max: 6 })
     )
   })
   it('reason 必填且 ≤300，comment/note ≤300，库位 ≤64', () => {
@@ -131,47 +133,151 @@ describe('409 错误码三语', () => {
   })
 })
 
+describe('对齐 B4 接口', () => {
+  it('列表 page_size ≤100；历史合并列表按 type 分组', async () => {
+    const get = vi.spyOn(http, 'get').mockImplementation(((url: string) =>
+      Promise.resolve({
+        data: url.endsWith('/history')
+          ? {
+              data: [
+                {
+                  type: 'status',
+                  at: 'z',
+                  username: 'u',
+                  action: 'life_reset',
+                },
+                { type: 'usage', at: 'z' },
+                { type: 'mount', at: 'z' },
+                { type: 'inspection', at: 'z' },
+                { type: 'incident', at: 'z' },
+              ],
+              count: 5,
+            }
+          : { data: [], count: 0 },
+      })) as never)
+    await httpReticleApi.list()
+    expect(get).toHaveBeenCalledWith('/mes/reticle', {
+      params: { page_size: 100 },
+    })
+    const h = await httpReticleApi.history('r1')
+    expect(get).toHaveBeenLastCalledWith('/mes/reticle/r1/history', {
+      params: { page_size: 200 },
+    })
+    expect(h.status_log[0]).toMatchObject({ username: 'u', at: 'z' })
+    expect([h.usage, h.mounts, h.inspections].map((x) => x.length)).toEqual([
+      1, 1, 1,
+    ])
+  })
+  it('动作响应取光罩行：usage/inspection 取 reticle，unmount 无', () => {
+    const r = { id: 'r' } as never
+    expect(actionReticle('hold', { data: r })).toBe(r)
+    expect(actionReticle('usage', { data: {}, reticle: r })).toBe(r)
+    expect(actionReticle('unmount', { data: {} })).toBeNull()
+  })
+  it('履历 action 枚举（下划线）显示为动作名', () => {
+    expect(actionLabel('life_reset')).toBe(t('mes.reticle.action.life-reset'))
+    expect(actionLabel('system')).toBe(t('mes.reticle.system'))
+    expect(actionLabel('mount')).toBe(t('mes.reticle.action.mount'))
+  })
+  it('检查与卸载请求体白名单', () => {
+    expect(
+      actionBody('inspection', {
+        kind: 'particle',
+        result: 'fail',
+        reason: 'x',
+        defect_count: 2,
+      })
+    ).toEqual({ kind: 'particle', result: 'fail', defect_count: 2 })
+    expect(actionBody('unmount', { comment: 'c', reason: 'x' })).toEqual({
+      comment: 'c',
+    })
+    expect(validateAction('inspection', {}).result).toBeTruthy()
+    expect(
+      actionEnabled({ status_code: 'available', equipment_id: null }, 'unmount')
+    ).toBe(false)
+  })
+  it('422 value_error 带 ctx.max_places 时提示小数位上限', () => {
+    const m = reticleErrorMessage(
+      apiError(422, [
+        {
+          loc: ['body', 'delta'],
+          type: 'value_error',
+          msg: 'x',
+          ctx: { max_places: 6 },
+        },
+      ])
+    )
+    expect(m).toBe(t('mes.reticle.err.maxPlaces', { max: 6 }))
+  })
+})
+
 describe('mock', () => {
-  it('仍挂载时五个动作返回 still_mounted', async () => {
+  it('仍挂载时返回 still_mounted；状态不对先 invalid_transition（D71）', async () => {
     // r3：pending_maintenance 且仍挂着
     for (const a of ['restore', 'life-reset', 'repair-complete'] as const)
       await expect(
         mockReticleApi.act('r3', a, { reason: 'x' })
       ).rejects.toMatchObject({
-        response: { status: 409, data: { detail: { code: 'still_mounted' } } },
+        response: {
+          status: 409,
+          data: {
+            detail: {
+              code: 'still_mounted',
+              status_code: 'pending_maintenance',
+            },
+          },
+        },
       })
+    // r2 在用且挂着：inspect-start 状态不允许 → invalid_transition 优先
+    await expect(
+      mockReticleApi.act('r2', 'clean-complete', {})
+    ).rejects.toMatchObject({
+      response: { data: { detail: { code: 'invalid_transition' } } },
+    })
   })
-  it('非法迁移 invalid_transition；restore 到上限 life_limit_reached', async () => {
+  it('超 6 位小数 422 value_error + ctx.max_places', async () => {
+    await expect(
+      mockReticleApi.act('r1', 'usage', { delta: '1.1234567' })
+    ).rejects.toMatchObject({
+      response: {
+        status: 422,
+        data: { detail: [{ code: 'value_error', ctx: { max_places: 6 } }] },
+      },
+    })
+  })
+  it('非法迁移；restore 到上限 life_limit_reached；卸载后可 life-reset', async () => {
     await expect(
       mockReticleApi.act('r7', 'hold', { reason: 'x' })
     ).rejects.toMatchObject({
       response: { data: { detail: { code: 'invalid_transition' } } },
     })
-    // 先 hold 卸载 r3，再 release 回 status_before_hold，restore 达上限
-    await mockReticleApi.act('r3', 'hold', { reason: 'x' })
-    await mockReticleApi.act('r3', 'release', {})
+    const u = await mockReticleApi.act('r3', 'unmount', {})
+    expect(u.data).toMatchObject({ unmount_reason: 'manual' })
+    expect((await mockReticleApi.get('r3')).status_code).toBe(
+      'pending_maintenance'
+    )
     await expect(
       mockReticleApi.act('r3', 'restore', { reason: 'x' })
     ).rejects.toMatchObject({
       response: { data: { detail: { code: 'life_limit_reached' } } },
     })
     const r = await mockReticleApi.act('r3', 'life-reset', { reason: 'pm' })
-    expect(r.status_code).toBe('available')
-    expect(r.shot_count).toBe('0')
-    const h = await mockReticleApi.history('r3')
-    expect(h.usage[0]).toMatchObject({
+    expect(r.data).toMatchObject({ status_code: 'available', shot_count: '0' })
+    expect(r.usage).toMatchObject({
       kind: 'reset',
       comment: 'pm',
       reason_id: null,
     })
+    const h = await mockReticleApi.history('r3')
+    expect(h.status_log[0]).toMatchObject({ action: 'life_reset' })
   })
   it('usage 同 key 重放不重复计数；在用 hold 记 available 并卸载', async () => {
     await mockReticleApi.act('r1', 'usage', { delta: 10 }, 'k')
     const r = await mockReticleApi.act('r1', 'usage', { delta: 10 }, 'k')
-    expect(r.shot_count).toBe('1210')
+    expect(r.reticle?.shot_count).toBe('1210')
     expect((await mockReticleApi.history('r1')).usage).toHaveLength(1)
     const h = await mockReticleApi.act('r2', 'hold', { reason: 'x' })
-    expect(h).toMatchObject({
+    expect(h.data).toMatchObject({
       status_code: 'on_hold',
       hold_reason: 'manual',
       status_before_hold: 'available',
@@ -182,6 +288,26 @@ describe('mock', () => {
       from_status: 'in_use',
       to_status: 'on_hold',
       reason: 'x',
+      username: 'me',
+    })
+  })
+  it('检查：inspecting pass → available；fail → on_hold(inspection_failed)', async () => {
+    const p = await mockReticleApi.act('r6', 'inspection', {
+      kind: 'particle',
+      result: 'pass',
+    })
+    expect(p.reticle).toMatchObject({
+      status_code: 'available',
+      inspection_required: false,
+    })
+    await mockReticleApi.act('r1', 'inspect-start', {})
+    const f = await mockReticleApi.act('r1', 'inspection', {
+      kind: 'haze',
+      result: 'fail',
+    })
+    expect(f.reticle).toMatchObject({
+      status_code: 'on_hold',
+      hold_reason: 'inspection_failed',
     })
   })
 })

@@ -1790,7 +1790,11 @@
         "repair-complete": "维修完成",
         "inspect-start": "开始检查",
         "scrap": "报废",
-        "life-reset": "寿命复位"
+        "life-reset": "寿命复位",
+        "unmount": "卸载",
+        "inspection": "录入检查",
+        "mount": "挂载",
+        "incident": "事故"
       },
       "actionDesc": {
         "usage": "人工增减 shot 数；减少时必须选原因",
@@ -1802,7 +1806,9 @@
         "repair-complete": "维修或清洗完成后进入检查，需先卸载",
         "inspect-start": "开始检查，需先卸载",
         "scrap": "报废后不可恢复，挂载中会同时卸载",
-        "life-reset": "计数清零并恢复为可用，需先卸载"
+        "life-reset": "计数清零并恢复为可用，需先卸载",
+        "unmount": "从机台卸下；非使用中时只关闭挂载记录",
+        "inspection": "合格回到可用，不合格转 Hold"
       },
       "field": {
         "delta": "增减量",
@@ -1822,7 +1828,10 @@
         "mounted_at": "挂载时间",
         "storage_location": "库位",
         "next_inspection_due_at": "下次检查",
-        "status": "状态"
+        "status": "状态",
+        "kind": "检查项",
+        "result": "结果",
+        "disposition": "处置建议"
       },
       "tab": {
         "status": "状态履历",
@@ -1864,7 +1873,9 @@
       "err": {
         "deltaNonZero": "增减量须为非零数字",
         "reasonIdRequired": "减少计数时必须填写原因代码",
-        "tooLong": "不能超过 {{max}} 个字符"
+        "tooLong": "不能超过 {{max}} 个字符",
+        "nonNegInt": "须为非负整数",
+        "maxPlaces": "增减量最多 {{max}} 位小数"
       },
       "code": {
         "invalid_transition": "当前状态不允许「{{action}}」，请刷新后重试",

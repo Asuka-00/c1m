@@ -1790,7 +1790,11 @@
         "repair-complete": "Repair complete",
         "inspect-start": "Start inspection",
         "scrap": "Scrap",
-        "life-reset": "Life reset"
+        "life-reset": "Life reset",
+        "unmount": "Unmount",
+        "inspection": "Record inspection",
+        "mount": "Mount",
+        "incident": "Incident"
       },
       "actionDesc": {
         "usage": "Add or subtract shots; a reason code is required to subtract",
@@ -1802,7 +1806,9 @@
         "repair-complete": "Moves to inspection after repair or cleaning; unmount first",
         "inspect-start": "Start inspection; unmount first",
         "scrap": "Cannot be undone; unmounts if mounted",
-        "life-reset": "Reset the count to zero and restore; unmount first"
+        "life-reset": "Reset the count to zero and restore; unmount first",
+        "unmount": "Remove from the tool; if not in use only the mount record is closed",
+        "inspection": "Pass returns to available; fail puts it on hold"
       },
       "field": {
         "delta": "Delta",
@@ -1822,7 +1828,10 @@
         "mounted_at": "Mounted at",
         "storage_location": "Storage location",
         "next_inspection_due_at": "Next inspection",
-        "status": "Status"
+        "status": "Status",
+        "kind": "Inspection",
+        "result": "Result",
+        "disposition": "Disposition"
       },
       "tab": {
         "status": "Status history",
@@ -1864,7 +1873,9 @@
       "err": {
         "deltaNonZero": "Delta must be a non-zero number",
         "reasonIdRequired": "A reason code is required to subtract shots",
-        "tooLong": "Must be at most {{max}} characters"
+        "tooLong": "Must be at most {{max}} characters",
+        "nonNegInt": "Must be a non-negative integer",
+        "maxPlaces": "Delta allows at most {{max}} decimal places"
       },
       "code": {
         "invalid_transition": "\"{{action}}\" is not allowed in the current status. Refresh and try again.",

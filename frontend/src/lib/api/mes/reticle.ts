@@ -39,10 +39,13 @@ export interface Reticle {
   count_basis: 'track_out' | 'eap'
   storage_location: string | null
   equipment_id: string | null
-  equipment_code: string | null
+  equipment_label: string | null
   mounted_at: string | null
   inspection_required: boolean
-  inspection_pending: boolean
+  /** v0.8.2 §2 计算字段；B4（335db8a）列表/详情暂未返回，缺省按 inspection_required 显示 */
+  inspection_pending?: boolean
+  /** 仅动作响应（brief）带：ok / warning / reached */
+  life_state?: 'ok' | 'warning' | 'reached'
   last_inspected_at: string | null
   next_inspection_due_at: string | null
 }
@@ -52,6 +55,7 @@ export interface ReticleStatusLog {
   id: string
   from_status: ReticleStatus | null
   to_status: ReticleStatus
+  /** enum reticle_action（下划线：life_reset、clean_start…；含 mount / unmount / inspection / incident / system） */
   action: string
   hold_reason_from: ReticleHoldReason | null
   hold_reason_to: ReticleHoldReason | null
@@ -69,11 +73,13 @@ export interface ReticleUsage {
   count_after: string
   kind: 'track_out' | 'report' | 'adjust' | 'reset'
   reason_id: string | null
+  reason_label?: string | null
   comment: string | null
   source: string
   counted: boolean
   estimated: boolean
   lot_id: string | null
+  lot_label?: string | null
   username: string | null
   occurred_at: string
 }
@@ -82,7 +88,7 @@ export interface ReticleUsage {
 export interface ReticleMount {
   id: string
   equipment_id: string
-  equipment_code: string | null
+  equipment_label: string | null
   slot_code: string | null
   mounted_at: string
   unmounted_at: string | null
@@ -124,6 +130,8 @@ export type ReticleAction =
   | 'inspect-start'
   | 'scrap'
   | 'life-reset'
+  | 'unmount'
+  | 'inspection'
 
 export interface ReticleActionInput {
   delta?: number | string
@@ -131,6 +139,10 @@ export interface ReticleActionInput {
   note?: string
   reason?: string
   comment?: string
+  kind?: string
+  result?: string
+  defect_count?: number | string
+  disposition?: string
 }
 
 /** 各动作请求体白名单。 */
@@ -145,6 +157,8 @@ export const ACTION_BODY: Record<ReticleAction, readonly string[]> = {
   'clean-complete': BODY_KEYS.reticleComment,
   'repair-complete': BODY_KEYS.reticleComment,
   'inspect-start': BODY_KEYS.reticleComment,
+  unmount: BODY_KEYS.reticleUnmount,
+  inspection: BODY_KEYS.reticleInspection,
 }
 
 /** 按动作挑选请求体（空字符串视为未填）。 */
@@ -164,21 +178,59 @@ interface Api {
     action: ReticleAction,
     input: ReticleActionInput,
     idempotencyKey?: string
-  ) => Promise<Reticle>
+  ) => Promise<ReticleActionOut>
+}
+
+/**
+ * 动作响应（B4 335db8a）：多数动作 `{data: 光罩}`；usage / inspection 为
+ * `{data: 记录, reticle: 光罩}`；life-reset `{data: 光罩, usage}`；unmount `{data: 挂载记录}`。
+ */
+export interface ReticleActionOut {
+  data: Record<string, unknown>
+  reticle?: Reticle
+  usage?: ReticleUsage
+}
+
+/** 动作响应里的光罩当前行（unmount 不带，返回 null）。 */
+export function actionReticle(
+  action: ReticleAction,
+  out: ReticleActionOut
+): Reticle | null {
+  if (out.reticle) return out.reticle
+  return action === 'unmount' ? null : (out.data as unknown as Reticle)
+}
+
+type HistoryItem = Record<string, unknown> & { type: string }
+
+/** `GET /mes/reticle/{id}/history` 的合并列表（type + at）按类型分组。 */
+export function groupHistory(items: HistoryItem[]): ReticleHistory {
+  const pick = <T>(type: string) =>
+    items.filter((x) => x.type === type) as unknown as T[]
+  return {
+    status_log: pick<ReticleStatusLog>('status'),
+    usage: pick<ReticleUsage>('usage'),
+    mounts: pick<ReticleMount>('mount'),
+    inspections: pick<ReticleInspection>('inspection'),
+  }
 }
 
 /** 真实接口。 */
 export const httpReticleApi: Api = {
   list: () =>
     http
-      .get<{ data: Reticle[] }>('/mes/reticle', { params: { page_size: 200 } })
+      // 通用实体列表 page_size 上限 100（core/pagination.py）
+      .get<{ data: Reticle[] }>('/mes/reticle', { params: { page_size: 100 } })
       .then((r) => r.data.data),
   get: (id) => http.get<Reticle>(`/mes/reticle/${id}`).then((r) => r.data),
   history: (id) =>
-    http.get<ReticleHistory>(`/mes/reticle/${id}/history`).then((r) => r.data),
+    http
+      .get<{ data: HistoryItem[] }>(`/mes/reticle/${id}/history`, {
+        params: { page_size: 200 },
+      })
+      .then((r) => groupHistory(r.data.data)),
   act: (id, action, input, key) =>
     http
-      .post<Reticle>(
+      .post<ReticleActionOut>(
         `/mes/reticle/${id}/${action}`,
         actionBody(action, input),
         action === 'usage' && key
@@ -207,7 +259,7 @@ const base = (o: Partial<Reticle> & Pick<Reticle, 'id' | 'code'>): Reticle => ({
   count_basis: 'track_out',
   storage_location: 'STK-01-A01',
   equipment_id: null,
-  equipment_code: null,
+  equipment_label: null,
   mounted_at: null,
   inspection_required: false,
   inspection_pending: false,
@@ -226,7 +278,7 @@ function seed() {
       shot_count: '45000',
       mount_count: 3,
       equipment_id: 'e1',
-      equipment_code: 'LITHO-01',
+      equipment_label: 'LITHO-01',
       mounted_at: '2026-10-14T01:00:00Z',
     }),
     base({
@@ -236,7 +288,7 @@ function seed() {
       status_code: 'pending_maintenance',
       shot_count: '100000',
       equipment_id: 'e1',
-      equipment_code: 'LITHO-01',
+      equipment_label: 'LITHO-01',
       mounted_at: '2026-10-13T01:00:00Z',
     }),
     base({
@@ -265,7 +317,7 @@ function seed() {
   hist.r2.mounts.push({
     id: 'm1',
     equipment_id: 'e1',
-    equipment_code: 'LITHO-01',
+    equipment_label: 'LITHO-01',
     slot_code: 'S1',
     mounted_at: '2026-10-14T01:00:00Z',
     unmounted_at: null,
@@ -284,14 +336,15 @@ function seed() {
     source: 'manual',
     counted: true,
     estimated: false,
-    lot_id: 'LOT-0001',
+    lot_id: 'l1',
+    lot_label: 'LOT-0001',
     username: 'op1',
     occurred_at: '2026-10-14T03:00:00Z',
   })
   hist.r3.mounts.push({
     id: 'm2',
     equipment_id: 'e1',
-    equipment_code: 'LITHO-01',
+    equipment_label: 'LITHO-01',
     slot_code: 'S2',
     mounted_at: '2026-10-13T01:00:00Z',
     unmounted_at: null,
@@ -341,7 +394,7 @@ function seed() {
 }
 
 let store = seed()
-const idem = new Map<string, Reticle>()
+const idem = new Map<string, ReticleActionOut>()
 
 /** 测试用：重置 mock 数据。 */
 export function resetReticleMock() {
@@ -359,8 +412,6 @@ export function apiError(status: number, detail: unknown) {
     data: { detail },
   })
 }
-const conflict = (code: string) => apiError(409, { code, message: code })
-
 const find = (id: string) => {
   const x = store.r.find((y) => y.id === id)
   if (!x) throw apiError(404, 'not found')
@@ -369,7 +420,8 @@ const find = (id: string) => {
 const openMount = (id: string) =>
   store.hist[id].mounts.find((m) => m.unmounted_at == null)
 
-const STILL_MOUNTED: ReticleAction[] = [
+/** 仍有未关闭挂载时 409 still_mounted 的动作（D69 补充）。 */
+export const STILL_MOUNTED: ReticleAction[] = [
   'restore',
   'life-reset',
   'repair-complete',
@@ -377,8 +429,12 @@ const STILL_MOUNTED: ReticleAction[] = [
   'clean-start',
 ]
 
-/** 动作目标状态（null = 非法迁移）。 */
-function target(x: Reticle, a: ReticleAction): ReticleStatus | null {
+/** 动作目标状态（null = 非法迁移；unmount 不改状态时返回原状态）。 */
+function target(
+  x: Reticle,
+  a: ReticleAction,
+  input: ReticleActionInput
+): ReticleStatus | null {
   const s = x.status_code
   if (s === 'scrapped') return null
   switch (a) {
@@ -404,28 +460,48 @@ function target(x: Reticle, a: ReticleAction): ReticleStatus | null {
       return s === 'available' ? 'inspecting' : null
     case 'scrap':
       return 'scrapped'
+    case 'unmount':
+      return s === 'in_use' ? 'available' : s
+    case 'inspection':
+      if (input.result === 'pass')
+        return s === 'inspecting' ? 'available' : null
+      return s === 'inspecting' || s === 'on_hold' ? 'on_hold' : null
     case 'usage':
       return s
   }
 }
 
 const num = (v: string | null) => (v == null ? null : Number(v))
+/** 状态履历 action 枚举（下划线）。 */
+const logAction = (a: ReticleAction) => a.replace('-', '_')
 
 function mockAct(
   id: string,
   action: ReticleAction,
   input: ReticleActionInput,
   key?: string
-): Reticle {
+): ReticleActionOut {
   const body = actionBody(action, input) as ReticleActionInput
-  if (action === 'usage' && key && idem.has(key)) return { ...idem.get(key)! }
+  if (action === 'usage' && key && idem.has(key))
+    return structuredClone(idem.get(key)!)
   const x = find(id)
-  const to = target(x, action)
+  const conflict = (code: string) =>
+    apiError(409, {
+      code,
+      message: code,
+      status_code: x.status_code,
+      hold_reason: x.hold_reason,
+    })
+  // D71：先 invalid_transition，再 still_mounted
+  const to = target(x, action, body)
   if (to == null) throw conflict('invalid_transition')
   if (STILL_MOUNTED.includes(action) && openMount(id))
     throw conflict('still_mounted')
+  if (action === 'unmount' && !openMount(id))
+    throw conflict('invalid_transition')
   const h = store.hist[id]
   const from = x.status_code
+  const holdFrom = x.hold_reason
   const at = now()
   const closeMount = (reason: string) => {
     const m = openMount(id)
@@ -434,12 +510,24 @@ function mockAct(
     m.unmount_reason = reason
     m.shots_at_unmount = x.shot_count
     x.equipment_id = null
-    x.equipment_code = null
+    x.equipment_label = null
     x.mounted_at = null
     return m
   }
+  let out: ReticleActionOut
   if (action === 'usage') {
-    const d = Number(body.delta)
+    const raw = String(body.delta ?? '')
+    const d = Number(raw)
+    if (/\.\d{7,}$/.test(raw))
+      throw apiError(422, [
+        {
+          loc: ['body', 'delta'],
+          type: 'value_error',
+          code: 'value_error',
+          msg: 'Value error, too_many_decimals (max 6)',
+          ctx: { max_places: 6 },
+        },
+      ])
     if (!Number.isFinite(d) || d === 0)
       throw apiError(422, [
         { loc: ['body', 'delta'], code: 'value_error', msg: 'delta' },
@@ -453,8 +541,9 @@ function mockAct(
       throw apiError(422, [
         { loc: ['body', 'delta'], code: 'value_error', msg: 'delta' },
       ])
+    const before = Number(x.shot_count)
     x.shot_count = String(after)
-    h.usage.unshift({
+    const row: ReticleUsage = {
       id: `u${Date.now()}`,
       delta: String(d),
       count_after: x.shot_count,
@@ -467,14 +556,21 @@ function mockAct(
       lot_id: null,
       username: 'me',
       occurred_at: at,
-    })
+    }
+    h.usage.unshift(row)
     const max = num(x.max_shots)
     if (
       max != null &&
       after >= max &&
+      before < max &&
       (from === 'available' || from === 'in_use')
     )
       x.status_code = 'pending_maintenance'
+    out = { data: { ...row }, reticle: { ...x } }
+  } else if (action === 'unmount') {
+    const m = closeMount('manual')!
+    x.status_code = to
+    out = { data: { ...m } }
   } else {
     if (action === 'restore') {
       const max = num(x.max_shots)
@@ -510,6 +606,27 @@ function mockAct(
     } else if (action === 'release') {
       x.hold_reason = null
       x.status_before_hold = null
+    } else if (action === 'inspection') {
+      h.inspections.unshift({
+        id: `i${Date.now()}`,
+        kind: (body.kind ?? 'other') as ReticleInspection['kind'],
+        result: body.result as ReticleInspection['result'],
+        defect_count:
+          body.defect_count == null ? null : Number(body.defect_count),
+        disposition: (body.disposition ??
+          'none') as ReticleInspection['disposition'],
+        shots_at_inspection: x.shot_count,
+        comment: body.comment ?? null,
+        username: 'me',
+        inspected_at: at,
+      })
+      if (body.result === 'pass') {
+        x.inspection_required = false
+        x.inspection_pending = false
+      } else {
+        if (from !== 'on_hold') x.status_before_hold = from
+        x.hold_reason = 'inspection_failed'
+      }
     }
     if (
       ['restore', 'life-reset', 'clean-complete', 'repair-complete'].includes(
@@ -520,14 +637,20 @@ function mockAct(
       x.inspection_pending = true
     }
     x.status_code = to
+    out =
+      action === 'inspection'
+        ? { data: { ...h.inspections[0] }, reticle: { ...x } }
+        : action === 'life-reset'
+          ? { data: { ...x }, usage: { ...h.usage[0] } }
+          : { data: { ...x } }
   }
-  if (x.status_code !== from || action !== 'usage')
+  if (x.status_code !== from || x.hold_reason !== holdFrom)
     h.status_log.unshift({
       id: `s${Date.now()}`,
       from_status: from,
       to_status: x.status_code,
-      action: action === 'usage' ? 'system' : action,
-      hold_reason_from: null,
+      action: action === 'usage' ? 'system' : logAction(action),
+      hold_reason_from: holdFrom,
       hold_reason_to: x.hold_reason,
       reason: ['hold', 'restore', 'scrap'].includes(action)
         ? (body.reason ?? null)
@@ -537,8 +660,7 @@ function mockAct(
       username: 'me',
       at,
     })
-  const out = { ...x }
-  if (action === 'usage' && key) idem.set(key, out)
+  if (action === 'usage' && key) idem.set(key, structuredClone(out))
   return out
 }
 
