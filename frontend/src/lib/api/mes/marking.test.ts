@@ -177,14 +177,17 @@ describe('模板 mock（D79）', () => {
   it('白名单外占位符 422 value_error ctx.reason=unknown_placeholder', async () => {
     expect(
       await detail(
-        api.createTemplate({
-          code: 'X',
-          product_id: 'p3',
-          customer_id: 'c1',
-          lines: ['{model}'],
-          date_code_basis: 'marking',
-          uses_bin: false,
-        })
+        api.createTemplate(
+          {
+            code: 'X',
+            product_id: 'p3',
+            customer_id: 'c1',
+            lines: ['{model}'],
+            date_code_basis: 'marking',
+            uses_bin: false,
+          },
+          'tk9'
+        )
       )
     ).toMatchObject({
       status: 422,
@@ -198,27 +201,27 @@ describe('模板 mock（D79）', () => {
   })
   it('新版本复制最新版本为草稿、版本号递增；已有草稿 409 draft_exists', async () => {
     setMarkingMockUser('eng1')
-    const d = await api.newVersion('t1')
+    const d = await api.newVersion('t1', 'tk10')
     expect(d).toMatchObject({ version: 3, status: 'draft', created_by: 'eng1' })
     expect(d.lines).toEqual(['{product_code}', '{date_code} {trace_code}'])
-    expect(await detail(api.newVersion('t2'))).toMatchObject({
+    expect(await detail(api.newVersion('t2', 'tk11'))).toMatchObject({
       status: 409,
       detail: { code: 'draft_exists' },
     })
   })
   it('自批 422 value_error ctx.reason=self_approval；他人审批后旧版本 retired；已批准改动 409', async () => {
     setMarkingMockUser('eng1')
-    const t = await api.newVersion('t2')
-    expect(await detail(api.approve(t.id))).toMatchObject({
+    const t = await api.newVersion('t2', 'tk12')
+    expect(await detail(api.approve(t.id, 'tk13'))).toMatchObject({
       status: 422,
       detail: [{ type: 'value_error', ctx: { reason: 'self_approval' } }],
     })
     setMarkingMockUser('qa1')
-    await api.approve(t.id)
+    await api.approve(t.id, 'tk14')
     const all = await api.templates()
     expect(all.find((x) => x.id === 't2')!.status).toBe('retired')
     expect(
-      await detail(api.updateTemplate(t.id, { lines: ['x'] }))
+      await detail(api.updateTemplate(t.id, { lines: ['x'] }, 'tk15'))
     ).toMatchObject({
       status: 409,
       detail: { code: 'template_readonly' },
@@ -671,14 +674,17 @@ describe('QA 评审 F1–F5（口径集中在 MARKING_POLICY）', () => {
     expect(canReprint(r)).toBe(true)
     const r2 = await api.print(r.id, { reason_id: 'R', comment: '缺损' }, 'kr')
     expect(r2.prints).toHaveLength(2)
-    const t = await api.createTemplate({
-      code: 'X',
-      product_id: 'p3',
-      customer_id: 'c1',
-      lines: ['{product_code}', '', '{date_code}'],
-      date_code_basis: 'marking',
-      uses_bin: false,
-    })
+    const t = await api.createTemplate(
+      {
+        code: 'X',
+        product_id: 'p3',
+        customer_id: 'c1',
+        lines: ['{product_code}', '', '{date_code}'],
+        date_code_basis: 'marking',
+        uses_bin: false,
+      },
+      'tk16'
+    )
     expect(t.lines).toEqual(['{product_code}', '', '{date_code}'])
   })
 })

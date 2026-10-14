@@ -11,6 +11,7 @@ import {
   isSelfApproval,
   MARKING_MOCK,
   markingApi,
+  markingSignature,
   setMarkingMockUser,
   siblingVersions,
   unknownPlaceholders,
@@ -41,6 +42,7 @@ import {
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { Page } from '@/components/crud'
+import { useOperationKey } from '@/features/mes/common/idem-key'
 import { useMesCan } from '@/features/mes/common/mes-perm'
 import { MARKING_PERM, markingErrorMessage } from './marking-rules'
 
@@ -194,10 +196,16 @@ function TemplateDetail({
   const can = useMesCan()
   const qc = useQueryClient()
   const self = isSelfApproval(tpl, me)
+  // D81/D82：审批、新版本每次操作一个 Idempotency-Key，重试沿用，成功后换新
+  const approveKey = useOperationKey()
+  const nvKey = useOperationKey()
   const act = useMutation({
     mutationFn: (a: 'approve' | 'retire') =>
-      a === 'approve' ? markingApi.approve(tpl.id) : markingApi.retire(tpl.id),
+      a === 'approve'
+        ? markingApi.approve(tpl.id, approveKey.key(`approve:${tpl.id}`))
+        : markingApi.retire(tpl.id),
     onSuccess: (_, a) => {
+      if (a === 'approve') approveKey.done()
       toast.success(t(`mes.marking.done.${a}`))
       void qc.invalidateQueries({ queryKey: KEY })
     },
@@ -205,8 +213,10 @@ function TemplateDetail({
   })
   // D79-1：POST .../{id}/versions 复制最新版本为草稿，版本号后端递增
   const nv = useMutation({
-    mutationFn: () => markingApi.newVersion(tpl.id),
+    mutationFn: () =>
+      markingApi.newVersion(tpl.id, nvKey.key(`version:${tpl.id}`)),
     onSuccess: (r) => {
+      nvKey.done()
       toast.success(t('mes.marking.done.newVersion', { v: r.version }))
       void qc.invalidateQueries({ queryKey: KEY })
       onNewVersion(r.id)
@@ -430,16 +440,29 @@ function TemplateDialog({
     uses_bin: tpl?.uses_bin ?? false,
   })
   const [err, setErr] = useState('')
+  // D81/D82：保存每次操作一个 Idempotency-Key；内容不变的重试沿用，内容变了换新
+  const saveKey = useOperationKey()
   const save = useMutation({
-    mutationFn: () =>
-      editing
-        ? markingApi.updateTemplate(tpl.id, {
-            lines: f.lines,
-            date_code_basis: f.date_code_basis,
-            uses_bin: f.uses_bin,
-          })
-        : markingApi.createTemplate(f),
+    mutationFn: () => {
+      if (editing) {
+        const body = {
+          lines: f.lines,
+          date_code_basis: f.date_code_basis,
+          uses_bin: f.uses_bin,
+        }
+        return markingApi.updateTemplate(
+          tpl.id,
+          body,
+          saveKey.key(markingSignature(`tpl-update:${tpl.id}`, body))
+        )
+      }
+      return markingApi.createTemplate(
+        f,
+        saveKey.key(markingSignature('tpl-create', f))
+      )
+    },
     onSuccess: (r) => {
+      saveKey.done()
       toast.success(t('mes.marking.done.save'))
       void qc.invalidateQueries({ queryKey: KEY })
       onClose(r.id)

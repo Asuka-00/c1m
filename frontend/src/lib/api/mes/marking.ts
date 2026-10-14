@@ -434,14 +434,19 @@ export interface MarkingApi {
     status?: TemplateStatus | ''
   }) => Promise<MarkingTemplate[]>
   template: (id: string) => Promise<MarkingTemplate>
-  createTemplate: (input: TemplateInput) => Promise<MarkingTemplate>
+  /** 模板写接口 key：Idempotency-Key（D81/D82，必填） */
+  createTemplate: (
+    input: TemplateInput,
+    key?: string
+  ) => Promise<MarkingTemplate>
   updateTemplate: (
     id: string,
-    input: Partial<TemplateInput>
+    input: Partial<TemplateInput>,
+    key?: string
   ) => Promise<MarkingTemplate>
   /** 复制最新版本为草稿（D79-1） */
-  newVersion: (id: string) => Promise<MarkingTemplate>
-  approve: (id: string) => Promise<MarkingTemplate>
+  newVersion: (id: string, key?: string) => Promise<MarkingTemplate>
+  approve: (id: string, key?: string) => Promise<MarkingTemplate>
   retire: (id: string) => Promise<MarkingTemplate>
   preview: (lotId: string) => Promise<MarkingPreview>
   records: (q: RecordQuery) => Promise<MarkingRecord[]>
@@ -474,27 +479,37 @@ export const httpMarkingApi: MarkingApi = {
     http
       .get<MarkingTemplate>(`/mes/marking-template/${id}`)
       .then((r) => r.data),
-  createTemplate: (input) =>
+  createTemplate: (input, key) =>
     http
       .post<MarkingTemplate>(
         '/mes/marking-template',
-        pickBody(input, MARKING_BODY.template)
+        pickBody(input, MARKING_BODY.template),
+        idemHeaders(key)
       )
       .then((r) => r.data),
-  updateTemplate: (id, input) =>
+  updateTemplate: (id, input, key) =>
     http
       .patch<MarkingTemplate>(
         `/mes/marking-template/${id}`,
-        pickBody(input, MARKING_BODY.template)
+        pickBody(input, MARKING_BODY.template),
+        idemHeaders(key)
       )
       .then((r) => r.data),
-  newVersion: (id) =>
+  newVersion: (id, key) =>
     http
-      .post<MarkingTemplate>(`/mes/marking-template/${id}/versions`)
+      .post<MarkingTemplate>(
+        `/mes/marking-template/${id}/versions`,
+        undefined,
+        idemHeaders(key)
+      )
       .then((r) => r.data),
-  approve: (id) =>
+  approve: (id, key) =>
     http
-      .post<MarkingTemplate>(`/mes/marking-template/${id}/approve`)
+      .post<MarkingTemplate>(
+        `/mes/marking-template/${id}/approve`,
+        undefined,
+        idemHeaders(key)
+      )
       .then((r) => r.data),
   retire: (id) =>
     http
@@ -739,7 +754,8 @@ export function mockTrackOutMarkingCheck(lotId: string) {
   const ctx: Record<string, unknown> = { check: INSPECT_BLOCK_CHECK, reason }
   if (live) {
     ctx.marking_id = live.id
-    ctx.trace_code = live.trace_code
+    // 后端答复（P3 Q4）：未首打时 trace_code 为 null
+    ctx.trace_code = live.prints.length ? live.trace_code : null
   }
   return apiError(409, {
     code: 'check_blocked',
@@ -1100,9 +1116,8 @@ function mockUpdate(id: string, input: Partial<TemplateInput>) {
 
 function mockApprove(id: string) {
   const tpl = findTpl(id)
-  if (tpl.status !== 'draft')
-    throw err409('invalid_transition', 'only draft can be approved')
-  // D79-2：自批 422 value_error ctx.reason=self_approval（同 D74）
+  // D79-2：自批 422 value_error ctx.reason=self_approval（同 D74）。
+  // 需查到记录才能判断的 422 排在 404 之后、409 之前：非草稿自批也先返回 self_approval
   if (isSelfApproval(tpl, mockUser))
     throw err422(
       'approved_by',
@@ -1112,6 +1127,8 @@ function mockApprove(id: string) {
         reason: 'self_approval',
       }
     )
+  if (tpl.status !== 'draft')
+    throw err409('invalid_transition', 'only draft can be approved')
   for (const y of store.t)
     if (
       y.status === 'approved' &&
@@ -1382,10 +1399,37 @@ export const mockMarkingApi: MarkingApi = {
   templates: (q) =>
     later(() => store.t.filter((x) => !q?.status || x.status === q.status)),
   template: (id) => later(() => findTpl(id)),
-  createTemplate: (input) => later(() => mockCreate(input)),
-  updateTemplate: (id, input) => later(() => mockUpdate(id, input)),
-  newVersion: (id) => later(() => mockNewVersion(id)),
-  approve: (id) => later(() => mockApprove(id)),
+  // D81/D82：模板写接口 Idempotency-Key 必填；顺序 缺 key 422 → 请求体 422 → 重放 → 404 → 422 → 409
+  createTemplate: (input, key) =>
+    later(() =>
+      withIdem(
+        key,
+        markingSignature('tpl-create', input),
+        () => mockCreate(input),
+        () => validateTemplate(input, true)
+      )
+    ),
+  updateTemplate: (id, input, key) =>
+    later(() =>
+      withIdem(
+        key,
+        markingSignature(`tpl-update:${id}`, input),
+        () => mockUpdate(id, input),
+        () => validateTemplate(input, false)
+      )
+    ),
+  newVersion: (id, key) =>
+    later(() =>
+      withIdem(key, markingSignature(`tpl-version:${id}`, {}), () =>
+        mockNewVersion(id)
+      )
+    ),
+  approve: (id, key) =>
+    later(() =>
+      withIdem(key, markingSignature(`tpl-approve:${id}`, {}), () =>
+        mockApprove(id)
+      )
+    ),
   retire: (id) => later(() => mockRetire(id)),
   preview: (lotId) => later(() => mockPreview(lotId)),
   records: (q) => later(() => mockRecords(q)),

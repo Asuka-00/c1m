@@ -40,31 +40,81 @@ afterEach(async () => {
 })
 
 describe('B1 模板审批', () => {
+  it('起草人审批自己的非草稿模板：先 422 self_approval，他人再 409 invalid_transition', async () => {
+    const [ok] = await api.templates({ status: 'approved' })
+    setMarkingMockUser(ok.created_by!)
+    expect(await detail(api.approve(ok.id, 'sa1'))).toMatchObject({
+      status: 422,
+      detail: [{ type: 'value_error', ctx: { reason: 'self_approval' } }],
+    })
+    setMarkingMockUser('someone-else')
+    expect(await detail(api.approve(ok.id, 'sa2'))).toMatchObject({
+      status: 409,
+      detail: { code: 'invalid_transition' },
+    })
+    expect(await detail(api.approve('nope', 'sa3'))).toMatchObject({
+      status: 404,
+    })
+  })
+  it('模板四个写接口缺 Idempotency-Key 422 missing（header），同 key 同内容重放', async () => {
+    const [ok] = await api.templates({ status: 'approved' })
+    const input = {
+      code: 'K',
+      product_id: 'p3',
+      customer_id: 'c1',
+      lines: ['{product_code}'],
+      date_code_basis: 'marking' as const,
+      uses_bin: false,
+    }
+    const calls = [
+      api.createTemplate(input),
+      api.updateTemplate(ok.id, { lines: ['x'] }),
+      api.newVersion(ok.id),
+      api.approve(ok.id),
+    ]
+    for (const c of calls)
+      expect(await detail(c)).toMatchObject({
+        status: 422,
+        detail: [
+          {
+            loc: ['header', 'Idempotency-Key'],
+            type: 'missing',
+            code: 'missing',
+          },
+        ],
+      })
+    const a = await api.createTemplate(input, 'ck')
+    const b = await api.createTemplate(input, 'ck')
+    expect(b.id).toBe(a.id)
+    expect(
+      await detail(api.createTemplate({ ...input, code: 'K2' }, 'ck'))
+    ).toMatchObject({ status: 422, detail: { code: 'idempotency_key_reused' } })
+  })
   it('修改已批准版本：请求体 422 先于 404 / 409 template_readonly（D81）', async () => {
     const [ok] = await api.templates({ status: 'approved' })
     expect(
-      await detail(api.updateTemplate(ok.id, { lines: ['{nope}'] }))
+      await detail(api.updateTemplate(ok.id, { lines: ['{nope}'] }, 'tk1'))
     ).toMatchObject({
       status: 422,
       detail: [{ type: 'value_error', ctx: { reason: 'unknown_placeholder' } }],
     })
     expect(
-      await detail(api.updateTemplate('missing', { lines: ['{nope}'] }))
+      await detail(api.updateTemplate('missing', { lines: ['{nope}'] }, 'tk2'))
     ).toMatchObject({ status: 422 })
     expect(
-      await detail(api.updateTemplate('missing', { lines: ['x'] }))
+      await detail(api.updateTemplate('missing', { lines: ['x'] }, 'tk3'))
     ).toMatchObject({ status: 404 })
     expect(
-      await detail(api.updateTemplate(ok.id, { lines: ['x'] }))
+      await detail(api.updateTemplate(ok.id, { lines: ['x'] }, 'tk4'))
     ).toMatchObject({ status: 409, detail: { code: 'template_readonly' } })
   })
   it('self_approval / template_readonly / draft_exists 三语文案', async () => {
     setMarkingMockUser('eng1')
     const [ok] = await api.templates({ status: 'approved' })
-    const d = await api.newVersion(ok.id)
-    const self = await err(api.approve(d.id))
-    const dup = await err(api.newVersion(ok.id))
-    const ro = await err(api.updateTemplate(ok.id, { lines: ['x'] }))
+    const d = await api.newVersion(ok.id, 'tk5')
+    const self = await err(api.approve(d.id, 'tk6'))
+    const dup = await err(api.newVersion(ok.id, 'tk7'))
+    const ro = await err(api.updateTemplate(ok.id, { lines: ['x'] }, 'tk8'))
     for (const lng of ['zh-CN', 'en', 'ja']) {
       await i18n.changeLanguage(lng)
       expect(markingErrorMessage(self)).toBe(t('mes.marking.err.selfApproval'))
@@ -162,12 +212,30 @@ describe('出站 409 check_blocked（marking_inspection）', () => {
     })
     expect(ctxOf(e0).ctx).not.toHaveProperty('marking_id')
     const r = await api.create({ lot_id: 'lot1' }, 'c1')
-    expect(ctxOf(mockTrackOutMarkingCheck('lot1'))).toMatchObject({
-      ctx: { reason: 'not_marked', marking_id: r.id },
+    const e1 = ctxOf(mockTrackOutMarkingCheck('lot1')) as unknown as {
+      ctx: object
+      results: { ctx: object }[]
+    }
+    // 未首打：marking_id 有、trace_code 为 null；results[] 打标项同样
+    expect(e1).toMatchObject({
+      ctx: { reason: 'not_marked', marking_id: r.id, trace_code: null },
+    })
+    expect(e1.results[0].ctx).toMatchObject({
+      check: 'marking_inspection',
+      marking_id: r.id,
+      trace_code: null,
     })
     await api.print(r.id, {}, 'p1')
-    expect(ctxOf(mockTrackOutMarkingCheck('lot1'))).toMatchObject({
-      ctx: { reason: 'pending', marking_id: r.id },
+    const e2 = ctxOf(mockTrackOutMarkingCheck('lot1')) as unknown as {
+      ctx: object
+      results: { ctx: object }[]
+    }
+    expect(e2).toMatchObject({
+      ctx: { reason: 'pending', marking_id: r.id, trace_code: r.trace_code },
+    })
+    expect(e2.results[0].ctx).toMatchObject({
+      marking_id: r.id,
+      trace_code: r.trace_code,
     })
     await api.inspect(r.id, { result: 'fail', read_code: r.trace_code }, 'i1')
     const ef = mockTrackOutMarkingCheck('lot1')
