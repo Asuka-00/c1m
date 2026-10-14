@@ -110,28 +110,29 @@ def template_call(a: dict, resolve: Any, path: Any, idem: Any) -> Call:
 
 
 def check_results(resp: Resp, want: list[dict]) -> list[str]:
-    """D79 补充七：check_blocked 的 results[] 每项含 check、status、ctx；按 check 找项，字段按子集匹配。"""
+    """D79 补充七（04:28 更正）：check_blocked 的 results[] 每项含 check_type、result、ctx（沿用现有字段名）；
+    按 check_type 找项，字段按子集匹配。"""
     d = detail(resp)
     rows = d.get("results") if isinstance(d, dict) else None
     if not isinstance(rows, list):
         return [f"detail.results 不是列表：{rows!r}"[:200]]
     errs = []
     for r in rows:
-        miss = [k for k in ("check", "status", "ctx") if not isinstance(r, dict) or k not in r]
+        miss = [k for k in ("check_type", "result", "ctx") if not isinstance(r, dict) or k not in r]
         if miss:
             errs.append(f"results 项缺 {miss}：{r!r}"[:200])
     for w in want:
-        hit = [r for r in rows if isinstance(r, dict) and r.get("check") == w.get("check")]
+        hit = [r for r in rows if isinstance(r, dict) and r.get("check_type") == w.get("check_type")]
         if not hit:
-            errs.append(f"results 里没有 check={w.get('check')!r}")
+            errs.append(f"results 里没有 check_type={w.get('check_type')!r}")
             continue
         ctx = hit[0].get("ctx") if isinstance(hit[0].get("ctx"), dict) else {}
         for k in w.get("absent_ctx") or []:
             if k in ctx:
-                errs.append(f"results[{w['check']}].ctx 不应带 {k}")
+                errs.append(f"results[{w['check_type']}].ctx 不应带 {k}")
         body = {k: v for k, v in w.items() if k != "absent_ctx"}
         if not match(hit[0], body):
-            errs.append(f"results[{w['check']}] {hit[0]!r} != 期望 {body!r}"[:300])
+            errs.append(f"results[{w['check_type']}] {hit[0]!r} != 期望 {body!r}"[:300])
     return errs
 
 

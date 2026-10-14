@@ -549,7 +549,7 @@ def test_scenario_template_key_rules():
     one({"marking_template": {"action": "validate"}})
 
 
-def test_check_results_items_have_check_status_ctx():
+def test_check_results_items_have_check_type_result_ctx():
     from sim.client import Resp
     from sim.p3 import check_p3_expect
 
@@ -559,20 +559,22 @@ def test_check_results_items_have_check_status_ctx():
             "ctx": {"check": "marking_inspection", "reason": "not_marked", "marking_id": "m1"},
             "results": [
                 {
-                    "check": "marking_inspection",
-                    "status": "blocked",
+                    "check_type": "marking_inspection",
+                    "result": "blocked",
                     "ctx": {"reason": "not_marked", "marking_id": "m1", "trace_code": None},
                 },
-                {"check": "qtime", "status": "pass", "ctx": {}},
+                {"check_type": "qtime", "result": "pass", "ctx": {}},
             ],
         }
     }
     r = Resp(409, body)
-    want = [{"check": "marking_inspection", "status": "$nonempty", "ctx": {"marking_id": "m1", "trace_code": None}}]
+    want = [
+        {"check_type": "marking_inspection", "result": "$nonempty", "ctx": {"marking_id": "m1", "trace_code": None}}
+    ]
     assert check_p3_expect(r, {"results": want}) == []
-    assert check_p3_expect(r, {"results": [{"check": "marking_inspection", "ctx": {"trace_code": "X"}}]})
-    assert check_p3_expect(r, {"results": [{"check": "marking_inspection", "absent_ctx": ["trace_code"]}]})
-    bad = Resp(409, {"detail": {"code": "check_blocked", "results": [{"check": "marking_inspection", "ctx": {}}]}})
+    assert check_p3_expect(r, {"results": [{"check_type": "marking_inspection", "ctx": {"trace_code": "X"}}]})
+    assert check_p3_expect(r, {"results": [{"check_type": "marking_inspection", "absent_ctx": ["trace_code"]}]})
+    bad = Resp(409, {"detail": {"code": "check_blocked", "results": [{"check_type": "marking_inspection", "ctx": {}}]}})
     assert any("缺" in e for e in check_p3_expect(bad, {"results": []}))
     assert check_p3_expect(Resp(409, {"detail": {"code": "check_blocked"}}), {"results": []})
 
@@ -612,3 +614,24 @@ def test_marking_scenario_d79_supp7():
     ]
     i = mk2.index("invalid_transition")
     assert mk2[i - 3 : i - 1] == ["missing", "missing"]
+
+
+def test_marking_scenario_d79_supp7_note():
+    """补充七附注（04:28）：创建 / 新版本 201，编辑 / 审批 200；comment 上限 300；results 用 check_type / result。"""
+    from sim.adapters import default_adapters
+
+    AD = default_adapters()
+
+    sc = load("scenarios/p3-draft/marking-report.yaml")
+    ok = {}
+    for s in sc.steps:
+        if s.kind == "marking_template" and (s.args.get("idem")) and s.args["expect"]["status"] < 400:
+            ok.setdefault(s.args["action"], set()).add(s.args["expect"]["status"])
+    assert ok["create"] == {201} and ok["new_version"] == {201} and ok["update"] == {200} and ok["approve"] == {200}
+    for s in sc.steps:
+        for r in (s.args.get("expect") or {}).get("results") or []:
+            assert "check_type" in r and "result" in r and "check" not in r and "status" not in r
+    assert AD["marking_template_item"].candidates == ["/mes/marking-template/{id}"]
+    assert AD["marking_template_version"].candidates == ["/mes/marking-template/{id}/versions"]
+    assert AD["marking_template_preview"].candidates == ["/mes/marking-template/preview"]
+    assert AD["marking_template_validate"].candidates == ["/mes/marking-template/validate"]
