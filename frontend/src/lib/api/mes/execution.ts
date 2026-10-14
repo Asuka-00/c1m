@@ -1,6 +1,7 @@
 /** MES 批次执行：阶段作业、检查、Hold、拆合批。 */
 import type { StageWarning } from '@/features/mes/execution/over-consumption'
 import { http } from '../client'
+import { offsetDatetime } from '../query-dates'
 import {
   BODY_KEYS,
   binSplitBody,
@@ -859,7 +860,12 @@ export const execApi = {
     const { held_at_from, held_at_to, ...rest } = p
     return http
       .get<{ data: HoldRow[]; count: number }>('/mes/exec/holds', {
-        params: { ...rest, date_from: held_at_from, date_to: held_at_to },
+        // a72b85b：datetime 必须带偏移（按 site_tz）
+        params: {
+          ...rest,
+          date_from: offsetDatetime(held_at_from as string | undefined),
+          date_to: offsetDatetime(held_at_to as string | undefined, true),
+        },
       })
       .then((r) => r.data)
   },

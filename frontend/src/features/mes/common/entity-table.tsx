@@ -14,6 +14,7 @@ import {
 import { toast } from 'sonner'
 import { useTenantKey } from '@/lib/api/hooks'
 import { mesApi, type MesEntity, type MesRow } from '@/lib/api/mes/common'
+import { normalizeListQuery } from '@/lib/api/query-dates'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -86,7 +87,8 @@ export function EntityTable({
   const fileRef = useRef<HTMLInputElement>(null)
   const hide = Object.keys(fixed)
   const filters = useMesFilters(e, hide)
-  const query = { ...params.query, ...fixed }
+  // a72b85b：date 严格 YYYY-MM-DD，datetime 带偏移
+  const query = normalizeListQuery(e, { ...params.query, ...fixed })
   const list = useQuery({
     queryKey: ['mes', e.code, 'list', tk, query],
     queryFn: () => mesApi.list(e.code, query),
@@ -272,7 +274,11 @@ export function EntityTable({
         variant='outline'
         size='sm'
         title={t('mes.exportHint')}
-        onClick={() => mesApi.exportXlsx(e.code, params.query).catch(onErr)}
+        onClick={() =>
+          mesApi
+            .exportXlsx(e.code, normalizeListQuery(e, params.query))
+            .catch(onErr)
+        }
       >
         <Download />
         {t('mes.export')}

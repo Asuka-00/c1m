@@ -14,6 +14,7 @@
  */
 import { AxiosError, AxiosHeaders } from 'axios'
 import { http } from '../client'
+import { mockQueryDateCheck, strictDate } from '../query-dates'
 import type { DecimalValue } from './execution'
 
 /** 日期跨度上限（D62-3，含两端）。 */
@@ -229,6 +230,12 @@ export function mockCtMoveReport(p: CtMoveParams): CtMoveReport {
       throw mockErr(422, [
         { loc: ['query', k], type: 'missing', msg: 'Field required' },
       ])
+  // a72b85b：先格式（value_error reason=pattern），再范围
+  const bad = mockQueryDateCheck(p as never, {
+    date_from: 'date',
+    date_to: 'date',
+  })
+  if (bad) throw bad
   if (p.date_from > p.date_to)
     throw mockErr(422, [
       {
@@ -270,6 +277,9 @@ export const ctMoveApi = {
       await http.get<CtMoveReport>('/mes/exec/reports/ct-move', {
         params: {
           ...p,
+          // a72b85b：只发严格 YYYY-MM-DD
+          date_from: strictDate(p.date_from),
+          date_to: strictDate(p.date_to),
           operation_id: p.operation_id || undefined,
           product_id: p.product_id || undefined,
         },
