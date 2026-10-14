@@ -2004,6 +2004,7 @@
         "maxPlaces": "最多 {{n}} 位小数",
         "trace_max_length": "追溯码不能超过 {{n}} 位",
         "trace_pattern": "追溯码只能包含大写字母、数字和连字符",
+        "trace_pattern_rule": "追溯码格式不符合规则 {{pattern}}",
         "traceRequired": "请填写追溯码",
         "unknownPlaceholder": "不支持的占位符 {{name}}",
         "selfApproval": "起草人不能审批自己的模板",

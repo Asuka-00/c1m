@@ -2004,6 +2004,7 @@
         "maxPlaces": "小数は {{n}} 桁まで",
         "trace_max_length": "トレースコードは {{n}} 文字以内",
         "trace_pattern": "トレースコードは英大文字・数字・ハイフンのみ",
+        "trace_pattern_rule": "トレースコードが規則 {{pattern}} に一致しません",
         "traceRequired": "トレースコードを入力してください",
         "unknownPlaceholder": "未対応のプレースホルダー {{name}}",
         "selfApproval": "起案者は自分のテンプレートを承認できません",

@@ -82,11 +82,24 @@ export function markingErrorMessage(err: unknown): string {
           return t('mes.marking.err.unknownPlaceholder', {
             name: `{${String(x.ctx.placeholder ?? '')}}`,
           })
+        // D79 补充四：超长 ctx={reason:max_length, max_length:N}；格式 ctx={reason:pattern, pattern}
+        if (
+          type === 'value_error' &&
+          x.ctx?.reason === 'max_length' &&
+          field === 'read_code'
+        )
+          return t('mes.marking.err.readCodeTooLong', {
+            n: x.ctx.max_length != null ? Number(x.ctx.max_length) : 128,
+          })
         if (
           type === 'value_error' &&
           (x.ctx?.reason === 'max_length' || x.ctx?.reason === 'pattern')
         )
-          return traceReasonText(x.ctx.reason, Number(x.ctx.max_length))
+          return traceReasonText(
+            x.ctx.reason,
+            Number(x.ctx.max_length),
+            typeof x.ctx.pattern === 'string' ? x.ctx.pattern : null
+          )
         if (type === 'value_error' && x.ctx?.max_places != null)
           return t('mes.marking.err.maxPlaces', {
             n: String(x.ctx.max_places),
@@ -112,15 +125,28 @@ export function useIdemKey() {
   }
 }
 
-/** 追溯码单条错误文案。 */
-export const traceReasonText = (r: TraceCodeReason, n: number) =>
-  r === 'missing'
-    ? t('mes.marking.err.traceRequired')
-    : t(`mes.marking.err.trace_${r}`, { n: Number.isFinite(n) ? n : 32 })
+const DEFAULT_TRACE_PATTERN = '^[A-Z0-9-]+$'
+
+/**
+ * 追溯码单条错误文案（D79 补充四）。超长用 ctx.max_length；
+ * 格式错误时 config 正则不是默认 ^[A-Z0-9-]+$ 就把原样正则显示出来。
+ */
+export const traceReasonText = (
+  r: TraceCodeReason,
+  n: number,
+  pattern?: string | null
+) => {
+  if (r === 'missing') return t('mes.marking.err.traceRequired')
+  if (r === 'pattern' && pattern && pattern !== DEFAULT_TRACE_PATTERN)
+    return t('mes.marking.err.trace_pattern_rule', { pattern })
+  return t(`mes.marking.err.trace_${r}`, { n: Number.isFinite(n) ? n : 32 })
+}
 
 /** 追溯码逐条错误文案（违反几条显示几条）。 */
 export const traceErrorTexts = (v: string, rule: TraceRule) =>
-  traceCodeErrors(v, rule).map((r) => traceReasonText(r, rule.maxLength))
+  traceCodeErrors(v, rule).map((r) =>
+    traceReasonText(r, rule.maxLength, rule.pattern?.source ?? null)
+  )
 
 /** 追溯码校验规则：以 GET /mes/marking/config 为准，取不到用默认（≤32、^[A-Z0-9-]+$）。 */
 export function useTraceRule(): TraceRule {

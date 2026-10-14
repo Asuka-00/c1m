@@ -24,6 +24,7 @@ import {
   resetMarkingMock,
   ruleFromConfig,
   scrapMarkingMockRecord,
+  setMarkingMockConfig,
   setMarkingMockNow,
   setMarkingMockUser,
   siblingVersions,
@@ -672,5 +673,55 @@ describe('QA 评审 F1–F5（口径集中在 MARKING_POLICY）', () => {
       uses_bin: false,
     })
     expect(t.lines).toEqual(['{product_code}', '', '{date_code}'])
+  })
+})
+
+describe('D79 补充四：超长 / 格式 422 的 ctx 字段', () => {
+  it('trace_code 的 max_length 取 config，pattern 为 config 原样正则', async () => {
+    setMarkingMockConfig({
+      trace_code_max_length: 4,
+      trace_code_pattern: '^[A-F0-9]+$',
+    })
+    expect(await api.config()).toEqual({
+      trace_code_max_length: 4,
+      trace_code_pattern: '^[A-F0-9]+$',
+    })
+    expect(await detail(api.trace('ABCXYZ'))).toEqual({
+      status: 422,
+      detail: [
+        expect.objectContaining({
+          type: 'value_error',
+          loc: ['body', 'code'],
+          ctx: { reason: 'max_length', max_length: 4 },
+        }),
+        expect.objectContaining({
+          type: 'value_error',
+          loc: ['body', 'code'],
+          ctx: { reason: 'pattern', pattern: '^[A-F0-9]+$' },
+        }),
+      ],
+    })
+  })
+  it('read_code 的 max_length 固定 128，不随 config 变，也不报 pattern', async () => {
+    setMarkingMockConfig({ trace_code_max_length: 4 })
+    const r = await firstPrint()
+    expect(
+      await detail(
+        api.inspect(r.id, { result: 'pass', read_code: 'x'.repeat(129) }, 'k')
+      )
+    ).toMatchObject({
+      status: 422,
+      detail: [
+        {
+          type: 'value_error',
+          ctx: { reason: 'max_length', max_length: 128 },
+        },
+      ],
+    })
+  })
+  it('resetMarkingMock 恢复默认 config', async () => {
+    setMarkingMockConfig({ trace_code_max_length: 4 })
+    resetMarkingMock()
+    expect((await api.config()).trace_code_max_length).toBe(32)
   })
 })

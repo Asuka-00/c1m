@@ -2004,6 +2004,7 @@
         "maxPlaces": "At most {{n}} decimal places",
         "trace_max_length": "Trace code must be at most {{n}} characters",
         "trace_pattern": "Trace code may only contain A–Z, 0–9 and hyphens",
+        "trace_pattern_rule": "Trace code does not match the rule {{pattern}}",
         "traceRequired": "Trace code is required",
         "unknownPlaceholder": "Unknown placeholder {{name}}",
         "selfApproval": "The drafter cannot approve their own template",

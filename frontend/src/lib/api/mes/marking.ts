@@ -240,13 +240,29 @@ export function ruleFromConfig(
   }
 }
 
-/** 追溯码 422：每条违反规则一条 value_error。 */
-function traceCode422(
-  loc: string,
-  v: string,
-  rule: TraceRule = TRACE_CODE_RULE
-) {
-  const bad = traceCodeErrors(v, rule)
+/** mock 的 GET /mes/marking/config（测试可用 setMarkingMockConfig 改）。 */
+let mockConfig: MarkingConfig = { ...DEFAULT_MARKING_CONFIG }
+/** 测试用：设置 mock 的打标配置；传 null 恢复默认。 */
+export function setMarkingMockConfig(c: Partial<MarkingConfig> | null) {
+  mockConfig = { ...DEFAULT_MARKING_CONFIG, ...(c ?? {}) }
+}
+
+/**
+ * 追溯码 422（D79 补充四）：每条违反规则一条 value_error。
+ * 超长 ctx={reason:'max_length', max_length:N}（N 取 config）；
+ * 格式 ctx={reason:'pattern', pattern:<config 原样正则>}。
+ */
+function traceCode422(loc: string, v: string) {
+  const cfg = mockConfig
+  const rule = ruleFromConfig(cfg)
+  // 后端按 config 原样正则校验；前端白名单不收的正则这里也照样编译（编译失败则不校验格式）
+  let re: RegExp | null
+  try {
+    re = new RegExp(cfg.trace_code_pattern)
+  } catch {
+    re = null
+  }
+  const bad = traceCodeErrors(v, { ...rule, pattern: re })
   if (!bad.length) return null
   return apiError(
     422,
@@ -260,7 +276,7 @@ function traceCode422(
           ? undefined
           : reason === 'max_length'
             ? { reason, max_length: rule.maxLength }
-            : { reason, pattern: rule.pattern?.source ?? null },
+            : { reason, pattern: cfg.trace_code_pattern },
     }))
   )
 }
@@ -833,6 +849,7 @@ let mockNow: () => Date = () => new Date()
 /** 测试用：重置 mock 数据。 */
 export function resetMarkingMock() {
   store = seed()
+  setMarkingMockConfig(null)
   for (const l of LOTS) delete l.left_step
   idem.clear()
   mockUser = 'admin'
@@ -1308,7 +1325,7 @@ export const mockMarkingApi: MarkingApi = {
         mockVoid(id, input)
       )
     ),
-  config: () => later(() => ({ ...DEFAULT_MARKING_CONFIG })),
+  config: () => later(() => ({ ...mockConfig })),
   trace: (code, includeVoided) => later(() => mockTrace(code, includeVoided)),
 }
 

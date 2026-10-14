@@ -75,3 +75,10 @@
 - N-F1：配置正则白名单收紧为单个 `^[...]+$`，类内只许大写字母、数字、同类升序区间，`-` 只能放在类的最后；拒绝 `[^…]` 与任何反斜杠。不符合时前端不做格式预校验。（N-X1 多类串联待架构师/后端统一）
 - N-F2（D79 补充三）：read_code 必填；缺字段 / null / 空串 / 纯空白 → 422 `missing`（loc `["body","read_code"]`），不入库也不强制 fail；非字符串 → 422 `string_type`；其余原值不 trim、不校验格式，>128 码点 → 422 `value_error`（`ctx.reason=max_length`）；与 expected_code 不一致强制 fail 并 `result_overridden=true`；U+FEFF、`\x1f` 按普通字符。
 - N-F3：记录带只读 `at_marking_step`；为 false（批次已离开打标工步）时检验按钮禁用并提示；缺省视为无工步信息，由后端 409 兜底。
+
+## D79 补充四（超长 / 格式 422 字段定稿）
+
+- 超长：422 `type=value_error`，`ctx={reason:"max_length", max_length:N}`；trace_code 的 N 取 `GET /mes/marking/config` 的 `trace_code_max_length`，read_code 的 N 固定 128，两者字段一致。
+- 格式：422 `type=value_error`，`ctx={reason:"pattern", pattern:"<config 原样正则>"}`，只用于 trace_code（read_code 不校验格式）。
+- 前端：mock 按当前 config（`setMarkingMockConfig`，`resetMarkingMock` 恢复默认）出 ctx；错误显示用 `ctx.max_length`（read_code 用读回码文案）；格式错误在正则不是默认 `^[A-Z0-9-]+$` 时显示原样正则（新文案 `trace_pattern_rule`，三语）。
+- D79 补充五（config 保存 422 `pattern_unsupported`）：前端目前没有保存 config 的页面，暂不处理。

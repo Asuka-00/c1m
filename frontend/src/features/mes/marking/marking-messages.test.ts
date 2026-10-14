@@ -88,3 +88,34 @@ describe('打标错误文案', () => {
     ).toBe(t('mes.marking.err.selfApproval'))
   })
 })
+
+describe('D79 补充四：超长 / 格式错误文案', () => {
+  const e = (loc: string, ctx: Record<string, unknown>) =>
+    apiError(422, [{ loc: ['body', loc], type: 'value_error', ctx }])
+  it('trace_code 超长用 ctx.max_length', () => {
+    expect(
+      markingErrorMessage(
+        e('trace_code', { reason: 'max_length', max_length: 20 })
+      )
+    ).toBe(t('mes.marking.err.trace_max_length', { n: 20 }))
+  })
+  it('read_code 超长用读回码文案和 ctx.max_length', () => {
+    expect(
+      markingErrorMessage(
+        e('read_code', { reason: 'max_length', max_length: 128 })
+      )
+    ).toBe(t('mes.marking.err.readCodeTooLong', { n: 128 }))
+  })
+  it('格式错误：默认正则用固定文案，自定义正则显示原样正则', () => {
+    expect(
+      markingErrorMessage(
+        e('trace_code', { reason: 'pattern', pattern: '^[A-Z0-9-]+$' })
+      )
+    ).toBe(t('mes.marking.err.trace_pattern', { n: 32 }))
+    expect(
+      markingErrorMessage(
+        e('trace_code', { reason: 'pattern', pattern: '^[A-F0-9]+$' })
+      )
+    ).toBe(t('mes.marking.err.trace_pattern_rule', { pattern: '^[A-F0-9]+$' }))
+  })
+})
