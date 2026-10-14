@@ -14,8 +14,9 @@
   ``alembic downgrade 0035_d80_reticle_source_unmount && alembic upgrade head`` 补授权
   （downgrade 只撤默认权限，安全）。
 - GRANT CONNECT ON DATABASE <当前库>、USAGE ON SCHEMA public、表 DML、序列 USAGE/SELECT；
-  ALTER DEFAULT PRIVILEGES IN SCHEMA public（表 DML、序列 USAGE/SELECT，作用于迁移角色
-  以后建的对象）；alembic_version 先 REVOKE ALL 再只给 SELECT。
+  ALTER DEFAULT PRIVILEGES FOR ROLE <迁移角色> IN SCHEMA public（表 DML、序列 USAGE/SELECT；
+  迁移角色取 migration_database_url 的用户名，D83 补充一，明确默认权限属主，不依赖
+  current_user）；alembic_version 先 REVOKE ALL 再只给 SELECT。
 
 downgrade：只撤销本迁移设置的 default privileges，已授予的表 / 序列 / 库 / schema 权限
 保留——撤掉会让正在运行的应用立刻无法访问数据，而降到 0035 的库仍需要这些权限才能用
@@ -63,16 +64,30 @@ def runtime_role(bind: sa.engine.Connection) -> str | None:
     return role
 
 
-def grant_statements(role: str, db: str) -> list[str]:
+def _q(name: str) -> str:
+    return '"' + name.replace('"', '""') + '"'
+
+
+def migration_role(bind: sa.engine.Connection) -> str:
+    """默认权限的属主：migration_database_url 的用户名（取不到时用 current_user）。"""
+    return make_url(settings.migration_database_url).username or str(
+        bind.execute(sa.text("SELECT current_user")).scalar()
+    )
+
+
+def grant_statements(role: str, db: str, owner: str | None = None) -> list[str]:
+    """授权语句；``owner`` 为迁移角色，默认权限写成 ``FOR ROLE <owner>``（D83 补充一）。"""
     r = '"' + role.replace('"', '""') + '"'
     d = '"' + db.replace('"', '""') + '"'
+    dp = "ALTER DEFAULT PRIVILEGES" + (f" FOR ROLE {_q(owner)}" if owner else "")
+    dp += " IN SCHEMA public"
     return [
         f"GRANT CONNECT ON DATABASE {d} TO {r}",
         f"GRANT USAGE ON SCHEMA public TO {r}",
         f"GRANT {TABLE_PRIVS} ON ALL TABLES IN SCHEMA public TO {r}",
         f"GRANT {SEQ_PRIVS} ON ALL SEQUENCES IN SCHEMA public TO {r}",
-        f"ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT {TABLE_PRIVS} ON TABLES TO {r}",
-        f"ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT {SEQ_PRIVS} ON SEQUENCES TO {r}",
+        f"{dp} GRANT {TABLE_PRIVS} ON TABLES TO {r}",
+        f"{dp} GRANT {SEQ_PRIVS} ON SEQUENCES TO {r}",
         f"REVOKE ALL ON alembic_version FROM {r}",
         f"GRANT SELECT ON alembic_version TO {r}",
     ]
@@ -84,7 +99,7 @@ def upgrade():
     if not role:
         return
     db = bind.execute(sa.text("SELECT current_database()")).scalar()
-    for stmt in grant_statements(role, str(db)):
+    for stmt in grant_statements(role, str(db), migration_role(bind)):
         op.execute(stmt)
     log.info("D83 runtime role %r granted on %s", role, db)
 
@@ -94,10 +109,7 @@ def downgrade():
     role = runtime_role(bind)
     if not role:
         return
-    r = '"' + role.replace('"', '""') + '"'
-    op.execute(
-        f"ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE {TABLE_PRIVS} ON TABLES FROM {r}"
-    )
-    op.execute(
-        f"ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE {SEQ_PRIVS} ON SEQUENCES FROM {r}"
-    )
+    r = _q(role)
+    dp = f"ALTER DEFAULT PRIVILEGES FOR ROLE {_q(migration_role(bind))} IN SCHEMA public"
+    op.execute(f"{dp} REVOKE {TABLE_PRIVS} ON TABLES FROM {r}")
+    op.execute(f"{dp} REVOKE {SEQ_PRIVS} ON SEQUENCES FROM {r}")

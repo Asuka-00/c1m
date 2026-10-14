@@ -46,7 +46,7 @@ def _apply(m: ModuleType, c: Any) -> None:
     role = m.runtime_role(c)
     assert role == ROLE
     db = c.execute(text("SELECT current_database()")).scalar()
-    for stmt in m.grant_statements(role, db):
+    for stmt in m.grant_statements(role, db, m.migration_role(c)):
         c.execute(text(stmt))
 
 
@@ -128,3 +128,24 @@ def test_same_role_as_migration_skipped(
         with caplog.at_level(logging.INFO, logger="alembic.runtime.migration"):
             assert m.runtime_role(c) is None
     assert any("skip grants" in r.getMessage() for r in caplog.records)
+
+
+def test_default_privileges_for_migration_role() -> None:
+    """D83 补充一：默认权限写成 FOR ROLE <迁移角色>（migration_database_url 用户名）。"""
+    m = _mig()
+    owner = make_url(settings.migration_database_url).username
+    assert owner
+    with admin_engine.connect() as c:
+        assert m.migration_role(c) == owner
+        stmts = m.grant_statements(ROLE, "db", owner)
+        dp = [x for x in stmts if x.startswith("ALTER DEFAULT PRIVILEGES")]
+        assert len(dp) == 2
+        assert all(f'FOR ROLE "{owner}" IN SCHEMA public' in x for x in dp)
+        rows = c.execute(
+            text(
+                "SELECT defaclrole::regrole::text, defaclobjtype FROM pg_default_acl "
+                "WHERE defaclacl::text LIKE :p"
+            ),
+            {"p": f"%{ROLE}=%"},
+        ).all()
+        assert {(r, k) for r, k in rows} >= {(owner, "r"), (owner, "S")}
