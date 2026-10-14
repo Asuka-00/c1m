@@ -2028,7 +2028,8 @@
       "checkNotMarked": "This lot has not been marked yet; cannot track out",
       "checkPending": "Marking awaiting inspection ({{trace}}); pass inspection before track-out",
       "openRecord": "Open marking record",
-      "patternInvalidHint": "Trace code pattern config is invalid; the server will validate format"
+      "patternInvalidHint": "Trace code pattern config is invalid; the server will validate format",
+      "leftStepHint": "The lot has left the marking step; inspection is no longer allowed"
     }
   },
   "notify": {

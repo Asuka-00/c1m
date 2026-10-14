@@ -1,6 +1,7 @@
 import type { AxiosError } from 'axios'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
+  type InspectInput,
   diffTemplates,
   effectiveResult,
   inspectionsByPrint,
@@ -8,6 +9,8 @@ import {
   isSelfApproval,
   codeLength,
   markingMockLeaveStep,
+  isAllowedTracePattern,
+  hasLeftMarkingStep,
   readCodeErrors,
   canInspect,
   canReprint,
@@ -243,7 +246,7 @@ describe('打标作业 mock（D78/D79）', () => {
     const r = await api.create({ lot_id: 'lot1' }, 'c')
     for (const p of [
       api.print(r.id, {}),
-      api.inspect(r.id, { result: 'pass' }),
+      api.inspect(r.id, { result: 'pass', read_code: r.trace_code }),
       api.void(r.id, { reason_id: 'V', comment: 'x' }),
     ])
       expect(await detail(p)).toMatchObject({
@@ -288,7 +291,7 @@ describe('打标作业 mock（D78/D79）', () => {
   })
   it('重打必填原因、seq=2、号不变、检验回到 pending', async () => {
     const r = await firstPrint()
-    await api.inspect(r.id, { result: 'fail' }, 'ki')
+    await api.inspect(r.id, { result: 'fail', read_code: r.trace_code }, 'ki')
     expect(await detail(api.print(r.id, {}, 'kr0'))).toMatchObject({
       status: 422,
       detail: [{ type: 'missing', loc: ['body', 'reason_id'] }],
@@ -338,7 +341,9 @@ describe('打标作业 mock（D78/D79）', () => {
     const v = await api.void(r.id, { reason_id: 'V1', comment: '错批' }, 'kv1')
     expect(v.voided).toBe(true)
     expect(
-      await detail(api.inspect(r.id, { result: 'pass' }, 'ki'))
+      await detail(
+        api.inspect(r.id, { result: 'pass', read_code: r.trace_code }, 'ki')
+      )
     ).toMatchObject({
       status: 409,
       detail: { code: 'invalid_transition' },
@@ -357,7 +362,9 @@ describe('打标作业 mock（D78/D79）', () => {
     const r = await firstPrint()
     scrapMarkingMockRecord(r.id)
     expect(
-      await detail(api.inspect(r.id, { result: 'pass' }, 'ki'))
+      await detail(
+        api.inspect(r.id, { result: 'pass', read_code: r.trace_code }, 'ki')
+      )
     ).toMatchObject({
       status: 409,
       detail: { code: 'invalid_transition' },
@@ -394,7 +401,7 @@ describe('打标作业 mock（D78/D79）', () => {
 describe('kind=trace_code 追溯（D79-6）', () => {
   it('结果形状；默认不含已作废，include_voided=true 才含；格式不符逐条 422', async () => {
     const r = await firstPrint()
-    await api.inspect(r.id, { result: 'pass' }, 'ki')
+    await api.inspect(r.id, { result: 'pass', read_code: r.trace_code }, 'ki')
     expect(await api.trace(r.trace_code)).toEqual({
       marking_id: r.id,
       lot_id: 'lot1',
@@ -435,14 +442,18 @@ describe('D79 补充', () => {
   })
   it('作废后旧主记录保留检验状态；出站只看未作废主记录', async () => {
     const r = await firstPrint()
-    await api.inspect(r.id, { result: 'fail' }, 'ki')
+    await api.inspect(r.id, { result: 'fail', read_code: r.trace_code }, 'ki')
     const v = await api.void(r.id, { reason_id: 'V', comment: 'x' }, 'kv')
     expect(v.latest_inspection_status).toBe('fail')
     expect(trackOutBlock([v])).toBe('not_marked')
     expect(trackOutBlock([v], false)).toBeNull()
     const n = await firstPrint('lot1', 'k2')
     expect(trackOutBlock([v, n])).toBe('pending')
-    const ok = await api.inspect(n.id, { result: 'pass' }, 'ki2')
+    const ok = await api.inspect(
+      n.id,
+      { result: 'pass', read_code: n.trace_code },
+      'ki2'
+    )
     expect(trackOutBlock([v, ok.record])).toBeNull()
   })
   it('EAP 上报找不到未作废主记录 409 no_active_marking', async () => {
@@ -493,14 +504,25 @@ describe('QA 评审 F1–F5（口径集中在 MARKING_POLICY）', () => {
   })
   it('D79 补充二-1：同一次打印可多次检验，以最新为准；离开打标工步后 409', async () => {
     const r = await firstPrint()
-    await api.inspect(r.id, { result: 'pass' }, 'ki1')
-    const o = await api.inspect(r.id, { result: 'fail' }, 'ki2')
+    await api.inspect(r.id, { result: 'pass', read_code: r.trace_code }, 'ki1')
+    const o = await api.inspect(
+      r.id,
+      { result: 'fail', read_code: r.trace_code },
+      'ki2'
+    )
     expect(o.record.latest_inspection_status).toBe('fail')
     expect(o.record.inspections.map((i) => i.seq)).toEqual([1, 1])
     expect(canInspect(o.record)).toBe(true)
     markingMockLeaveStep('lot1')
+    // QA N-F3：有工步信息且已离开时禁用检验
+    const left = (await api.records({ lot_id: 'lot1' }))[0]
+    expect(hasLeftMarkingStep(left)).toBe(true)
+    expect(canInspect(left)).toBe(false)
+    expect(canInspect({ ...left, at_marking_step: undefined })).toBe(true)
     expect(
-      await detail(api.inspect(r.id, { result: 'pass' }, 'ki3'))
+      await detail(
+        api.inspect(r.id, { result: 'pass', read_code: r.trace_code }, 'ki3')
+      )
     ).toMatchObject({
       status: 409,
       detail: { code: 'invalid_transition' },
@@ -522,13 +544,92 @@ describe('QA 评审 F1–F5（口径集中在 MARKING_POLICY）', () => {
       ],
     })
   })
+  it('D79 补充三：read_code 缺字段/null/空串/纯空白 422 missing，不入库不记 fail', async () => {
+    const r = await firstPrint()
+    const bads: unknown[] = [undefined, null, '', ' \t\r\n\u3000']
+    for (const [n, v] of bads.entries()) {
+      const body = (
+        v === undefined ? { result: 'pass' } : { result: 'pass', read_code: v }
+      ) as InspectInput
+      expect(await detail(api.inspect(r.id, body, `m${n}`))).toMatchObject({
+        status: 422,
+        detail: [{ type: 'missing', loc: ['body', 'read_code'] }],
+      })
+    }
+    expect(
+      await detail(
+        api.inspect(
+          r.id,
+          { result: 'pass', read_code: 123 as unknown as string },
+          'st'
+        )
+      )
+    ).toMatchObject({
+      status: 422,
+      detail: [{ type: 'string_type', loc: ['body', 'read_code'] }],
+    })
+    const after = (await api.records({ lot_id: 'lot1' }))[0]
+    expect(after.inspections).toHaveLength(0)
+    expect(after.latest_inspection_status).toBe('pending')
+  })
+  it('D79 补充三：其余原值不 trim；U+FEFF、\\x1f 按普通字符，不一致强制 fail', async () => {
+    const r = await firstPrint()
+    expect(readCodeErrors('\uFEFF')).toEqual([])
+    expect(readCodeErrors('\x1f')).toEqual([])
+    for (const [n, v] of [
+      ` ${r.trace_code}`,
+      `\uFEFF${r.trace_code}`,
+      '\x1f',
+    ].entries()) {
+      const o = await api.inspect(
+        r.id,
+        { result: 'pass', read_code: v },
+        `f${n}`
+      )
+      expect(o).toMatchObject({
+        result: 'fail',
+        result_overridden: true,
+        read_code: v,
+      })
+    }
+    const ok = await api.inspect(
+      r.id,
+      { result: 'pass', read_code: r.trace_code },
+      'ok'
+    )
+    expect(ok).toMatchObject({ result: 'pass', result_overridden: false })
+  })
   it('D79 补充二-4：配置正则只允许正向字符类', () => {
     expect(
       ruleFromConfig({ trace_code_pattern: '^[A-Z0-9-]+$' }).pattern?.source
     ).toBe('^[A-Z0-9-]+$')
+    for (const ok of [
+      '^[A-Z]+$',
+      '^[0-9]+$',
+      '^[A-F0-9]+$',
+      '^[A-Z0-9-]+$',
+      '^[ABC1-3-]+$',
+    ])
+      expect(isAllowedTracePattern(ok)).toBe(true)
+    // QA N-F1：反斜杠、小写、_、- 在中间、降序区间、跨类区间、空类都拒
+    for (const bad of [
+      '^[A-Z\\-]+$',
+      '^[\\w]+$',
+      '^[A-Z\\]]+$',
+      '^[a-z]+$',
+      '^[A-Z_]+$',
+      '^[A-Z-0-9]+$',
+      '^[-A-Z]+$',
+      '^[Z-A]+$',
+      '^[9-0]+$',
+      '^[0-Z]+$',
+      '^[]+$',
+      '^[A-Z][0-9]+$',
+    ])
+      expect(isAllowedTracePattern(bad), bad).toBe(false)
     expect(
-      ruleFromConfig({ trace_code_pattern: '^[A-Z\\]]+$' }).pattern
-    ).not.toBeNull()
+      ruleFromConfig({ trace_code_pattern: '^[A-Z\\-]+$' }).pattern
+    ).toBeNull()
     for (const bad of [
       '^[^a-z]+$',
       '^A+$',

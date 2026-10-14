@@ -69,3 +69,9 @@
 6. E7：`marked_at` 为首打时间（未首打为 null），之后不变；新增只读 `last_printed_at`；`marked_at_from/_to` 按首打时间筛选（D77 半开）；列表显示「首打时间」「最近打印」两列。
 
 待定问题仍只剩 Q7（出站检验失败未处理的错误码）。
+
+## QA 评审收尾（N-F1 / N-F2 / N-F3）
+
+- N-F1：配置正则白名单收紧为单个 `^[...]+$`，类内只许大写字母、数字、同类升序区间，`-` 只能放在类的最后；拒绝 `[^…]` 与任何反斜杠。不符合时前端不做格式预校验。（N-X1 多类串联待架构师/后端统一）
+- N-F2（D79 补充三）：read_code 必填；缺字段 / null / 空串 / 纯空白 → 422 `missing`（loc `["body","read_code"]`），不入库也不强制 fail；非字符串 → 422 `string_type`；其余原值不 trim、不校验格式，>128 码点 → 422 `value_error`（`ctx.reason=max_length`）；与 expected_code 不一致强制 fail 并 `result_overridden=true`；U+FEFF、`\x1f` 按普通字符。
+- N-F3：记录带只读 `at_marking_step`；为 false（批次已离开打标工步）时检验按钮禁用并提示；缺省视为无工步信息，由后端 409 兜底。

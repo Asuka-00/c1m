@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { render } from 'vitest-browser-react'
 import { userEvent } from 'vitest/browser'
 import {
+  markingMockLeaveStep,
   mockMarkingApi,
   resetMarkingMock,
   setMarkingMockNow,
@@ -233,6 +234,16 @@ describe('打标作业页', () => {
     await expect
       .element(s.getByTestId('mk-err-read_code'))
       .toHaveTextContent(t('mes.marking.err.readCodeTooLong', { n: 128 }))
+  })
+  it('批次已离开打标工步：检验按钮禁用并提示', async () => {
+    await seedPrint()
+    markingMockLeaveStep('lot1')
+    const s = await render(wrap(<JobPage />, ALL))
+    await s.getByTestId('mk-row-LOT-A001').click()
+    await expect.element(s.getByTestId('mk-act-inspect')).toBeDisabled()
+    await expect
+      .element(s.getByTestId('mk-left-step'))
+      .toHaveTextContent(t('mes.marking.leftStepHint'))
   })
   it('列表同时显示首打时间与最近打印', async () => {
     await seedPrint()

@@ -2028,7 +2028,8 @@
       "checkNotMarked": "该批次尚未打标，不能出站",
       "checkPending": "打标待检验（{{trace}}），检验合格后才能出站",
       "openRecord": "查看打标记录",
-      "patternInvalidHint": "追溯码格式配置无效，格式以服务端校验为准"
+      "patternInvalidHint": "追溯码格式配置无效，格式以服务端校验为准",
+      "leftStepHint": "批次已离开打标工步，不能再检验"
     }
   },
   "notify": {

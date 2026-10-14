@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import {
   COMMENT_MAX,
   canInspect,
+  hasLeftMarkingStep,
   MARKING_POLICY,
   READ_CODE_MAX,
   readCodeErrors,
@@ -346,6 +347,14 @@ function RecordDetail({ rec }: { rec: MarkingRecord }) {
             >
               {t('mes.marking.inspect')}
             </Button>
+            {hasLeftMarkingStep(rec) && !isLocked(rec) && (
+              <span
+                className='self-center text-sm text-muted-foreground'
+                data-testid='mk-left-step'
+              >
+                {t('mes.marking.leftStepHint')}
+              </span>
+            )}
             <Button
               variant='outline'
               disabled={!canReprint(rec)}
@@ -470,7 +479,7 @@ function ActDialog({
         const body = {
           result,
           // D78 补充四：原值提交，不去空格
-          read_code: readCode === '' ? null : readCode,
+          read_code: readCode,
           comment: comment.trim() || null,
         }
         return markingApi.inspect(
@@ -513,7 +522,8 @@ function ActDialog({
   const submit = () => {
     const e: Record<string, string> = {}
     // 读回码是否校验格式见 MARKING_POLICY（待架构师定）
-    if (act === 'inspect' && readCode !== '') {
+    // D79 补充三：读回码必填（空 / 纯空白 missing），不校验格式、不 trim
+    if (act === 'inspect') {
       const bad = MARKING_POLICY.validateReadCodeFormat
         ? traceErrorTexts(readCode, rule)
         : readCodeErrors(readCode).map((k) =>

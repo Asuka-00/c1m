@@ -2028,7 +2028,8 @@
       "checkNotMarked": "このロットは未マーキングのため搬出できません",
       "checkPending": "マーキング検査待ち（{{trace}}）。合格後に搬出可",
       "openRecord": "マーキング記録を開く",
-      "patternInvalidHint": "トレースコード形式の設定が無効です。形式はサーバーで検証します"
+      "patternInvalidHint": "トレースコード形式の設定が無効です。形式はサーバーで検証します",
+      "leftStepHint": "ロットは印字工程を通過済みのため、検査できません"
     }
   },
   "notify": {

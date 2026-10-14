@@ -153,14 +153,33 @@ export const MARKING_POLICY: MarkingPolicy = {
 /** 读回码最大码点数（D79 补充二-3）。 */
 export const READ_CODE_MAX = 128
 
-/** 读回码校验：空值 / 纯空白 missing；超过 128 码点 max_length；不校验格式。 */
-export function readCodeErrors(v: string): ('missing' | 'max_length')[] {
+/**
+ * 读回码校验（D79 补充三）：缺字段 / null / 空串 / 纯空白 → missing；非字符串 → string_type；
+ * 超过 128 码点 → max_length；其余不校验格式、不 trim（U+FEFF、\x1f 按普通字符）。
+ */
+export function readCodeErrors(
+  v: unknown
+): ('missing' | 'string_type' | 'max_length')[] {
+  if (v == null) return ['missing']
+  if (typeof v !== 'string') return ['string_type']
   if (isBlankTraceCode(v)) return ['missing']
   return codeLength(v, 'codepoint') > READ_CODE_MAX ? ['max_length'] : []
 }
 
-/** 配置正则只允许正向字符类：^[...]+$（D79 补充二-4）。 */
-export const POSITIVE_CLASS_RE = /^\^\[(?!\^)(?:\\.|[^\]\\])+\]\+\$$/
+/**
+ * 配置正则白名单（D79 补充二-4，QA N-F1）：只接受单个 ^[...]+$；
+ * 类里只能有大写字母、数字和同类升序区间（A-Z、0-9 子区间），- 只能放在类的最后；
+ * 不允许 [^…]，不允许任何反斜杠。
+ */
+export const POSITIVE_CLASS_RE =
+  /^\^\[(?:[A-Z](?:-[A-Z])?|[0-9](?:-[0-9])?)+-?\]\+\$$/
+export function isAllowedTracePattern(src: string): boolean {
+  if (!POSITIVE_CLASS_RE.test(src)) return false
+  // 区间须升序（如 Z-A、9-0 不收）
+  for (const m of src.slice(2, -3).matchAll(/([A-Z0-9])-([A-Z0-9])/g))
+    if (m[1] > m[2]) return false
+  return true
+}
 /** 按口径计算长度。 */
 export const codeLength = (
   v: string,
@@ -208,7 +227,7 @@ export function ruleFromConfig(
   let pattern: RegExp | null = TRACE_CODE_RULE.pattern
   if (c?.trace_code_pattern) {
     try {
-      pattern = POSITIVE_CLASS_RE.test(c.trace_code_pattern)
+      pattern = isAllowedTracePattern(c.trace_code_pattern)
         ? new RegExp(c.trace_code_pattern)
         : null
     } catch {
@@ -252,15 +271,24 @@ export const isValidTraceCode = (
   rule: { maxLength: number; pattern: RegExp } = TRACE_CODE_RULE
 ) => traceCodeError(v, rule) === null
 
-/** 检验按钮可用：有打印、未锁定；不允许多次检验时只在 pending 可用。 */
+/** 有工步信息且批次已离开打标工步（QA N-F3）；无工步信息时视为未离开，由后端 409 兜底。 */
+export const hasLeftMarkingStep = (r: Pick<MarkingRecord, 'at_marking_step'>) =>
+  r.at_marking_step === false
+
+/** 检验按钮可用：有打印、未锁定、未离开打标工步；不允许多次检验时只在 pending 可用。 */
 export const canInspect = (
   r: Pick<
     MarkingRecord,
-    'prints' | 'latest_inspection_status' | 'voided' | 'scrapped'
+    | 'prints'
+    | 'latest_inspection_status'
+    | 'voided'
+    | 'scrapped'
+    | 'at_marking_step'
   >,
   policy: MarkingPolicy = MARKING_POLICY
 ) =>
   !isLocked(r) &&
+  !hasLeftMarkingStep(r) &&
   r.prints.length > 0 &&
   (policy.multipleInspections || r.latest_inspection_status === 'pending')
 
@@ -290,6 +318,8 @@ export interface MarkingRecord {
   operator: string | null
   /** 首打时间，之后不变（D79 补充二-6）；未首打为 null */
   marked_at: string | null
+  /** 只读：批次是否仍在打标工步；缺省表示无工步信息 */
+  at_marking_step?: boolean
   /** 只读：最近一次打印时间 */
   last_printed_at: string | null
   /** 只读：最近一次打印的检验状态；拦出站直接看它，重打后回到 pending（D78 补充二） */
@@ -323,8 +353,8 @@ export interface PrintInput {
 }
 export interface InspectInput {
   result: InspectResult
-  /** OCR / 人工读回的码；与系统号不一致时一律记 fail */
-  read_code?: string | null
+  /** OCR / 人工读回的码（D79 补充三：必填）；与系统号不一致时一律记 fail */
+  read_code: string
   comment?: string | null
 }
 
@@ -624,9 +654,7 @@ export const effectiveResult = (
   input: InspectInput,
   expected: string
 ): InspectResult =>
-  input.read_code != null &&
-  input.read_code !== '' &&
-  input.read_code !== expected
+  typeof input.read_code === 'string' && input.read_code !== expected
     ? 'fail'
     : input.result
 
@@ -1073,6 +1101,7 @@ function mockCreateRec(input: CreateInput): MarkingRecord {
     operator: mockUser,
     marked_at: null,
     last_printed_at: null,
+    at_marking_step: true,
     latest_inspection_status: 'pending',
     reprint_count: 0,
     prints: [],
@@ -1135,14 +1164,17 @@ function mockInspect(id: string, input: InspectInput): InspectOut {
   // D79 补充二-1：同一次打印可多次检验，以最新一次为准；批次离开打标工步后 409
   if (lotOf(r)?.left_step)
     throw err409('invalid_transition', 'lot has left the marking step')
-  if (input.read_code != null && input.read_code !== '') {
+  {
+    // D79 补充三：校验不过不入库、不强制 fail
+    const e = readCodeErrors(input.read_code)
+    if (e[0] === 'missing')
+      throw err422('read_code', 'missing', 'read_code: field required')
+    if (e[0] === 'string_type')
+      throw err422('read_code', 'string_type', 'read_code: must be a string')
     if (MARKING_POLICY.validateReadCodeFormat) {
       const bad = traceCode422('read_code', input.read_code)
       if (bad) throw bad
     } else {
-      const e = readCodeErrors(input.read_code)
-      if (e[0] === 'missing')
-        throw err422('read_code', 'missing', 'read_code: field required')
       if (e[0] === 'max_length')
         throw err422('read_code', 'value_error', 'read_code: too long', {
           reason: 'max_length',
@@ -1317,6 +1349,7 @@ export function mockEapPrintReport(
 export function markingMockLeaveStep(lotId: string) {
   const l = LOTS.find((x) => x.id === lotId)
   if (l) l.left_step = true
+  for (const r of store.rec) if (r.lot_id === lotId) r.at_marking_step = false
 }
 
 /** 测试用：把 mock 记录标为已报废。 */
