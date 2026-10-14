@@ -183,6 +183,38 @@ def check_p3_expect(resp: Resp, expect: dict | None) -> list[str]:
     return errs
 
 
+INACTIVE_UNIT = ("scrapped", "converted")
+
+
+def active_units(unit_rows: list[dict]) -> list[dict]:
+    """在批、未报废 / 未转换的片，按 slot、code 排序（同后端 lots.units）。"""
+    act = [u for u in unit_rows if (u.get("wafer_status") or u.get("status")) not in INACTIVE_UNIT]
+    return sorted(act, key=lambda u: (u.get("slot") or 0, str(u.get("code") or "")))
+
+
+def scrap_body(lot: dict, unit_rows: list[dict], a: dict, reason_id: str | None, comment: str) -> dict:
+    """组 adjust kind=scrap 的请求体：晶圆 / 单元级带 unit_ids，数量级带 qty。"""
+    body: dict[str, Any] = {"kind": "scrap", "reason_id": reason_id, "comment": comment}
+    if a.get("override"):  # qty_adjust_limit 等可放行卡控（409 check_blocked, overridable）
+        body.update(override=True, override_reason=a.get("override_reason") or comment)
+    if (lot.get("tracking_level") or "wafer") == "quantity":
+        qty = a.get("qty", lot.get("qty"))
+        body["qty"] = int(Decimal(str(qty))) if qty is not None else None
+        return body
+    act = active_units(unit_rows)
+    want = a.get("units", "all")
+    if want == "all" or want is None:
+        picked = act
+    elif isinstance(want, int):
+        picked = act[:want]
+    else:
+        codes = [str(x) for x in want]
+        by_code = {str(u.get("code")): u for u in act}
+        picked = [by_code[c] for c in codes if c in by_code]
+    body["unit_ids"] = [u["id"] for u in picked]
+    return body
+
+
 def route_missing(resp: Resp) -> bool:
     """FastAPI 路由不存在：404 {"detail": "Not Found"}；或 405。业务 404（带 code 的对象）不算。"""
     if resp.status == 405:
@@ -657,20 +689,29 @@ class P3Exec:
         entry.update(ok=None, message="B1 模板接口已出现，绑定方式待按 openapi 补执行（不算失败）")
 
     def _lot_scrap(self, a: dict, entry: dict) -> None:
+        """批次报废（POST /mes/exec/lots/{id}/adjust kind=scrap）。
+
+        后端 adjust.py：晶圆级 / 单元级批次按 ``unit_ids``（本批次内、未报废的片），只有数量级批次按 ``qty``。
+        执行器先查批次的 tracking_level；非数量级时从 ``GET /mes/wafer?lot_id=`` 取在批的片号。
+        场景参数 ``units``：省略 / ``all`` = 剩下的全部；整数 N = 按 slot 顺序前 N 片；列表 = 指定片号（code）。
+        数量级批次 ``qty`` 省略时 = 批次当前数量。
+        """
         lid = self.id_of("lot", a["lot"])
         row = self.r.row("lot", a["lot"])
-        qty = row.get("qty") if isinstance(row, dict) else None
-        body = {
-            "kind": "scrap",
-            "qty": int(Decimal(str(qty))) if qty is not None else None,
-            "reason_id": self.id_of("reason_code", a["reason"]) if a.get("reason") else None,
-            "comment": a.get("comment") or f"sim {self.run_id}",
-        }
+        row = row if isinstance(row, dict) else {}
+        unit_rows: list[dict] = []
+        if (row.get("tracking_level") or "wafer") != "quantity":
+            r = self.r.c.get("/mes/wafer", lot_id=lid, page_size=100)
+            if r.status != 200:
+                self._fail_if([f"查 {a['lot']} 的片号 GET /mes/wafer HTTP {r.status}"])
+            unit_rows = self._rows(r)
+        reason_id = self.id_of("reason_code", a["reason"]) if a.get("reason") else None
+        body = scrap_body(row, unit_rows, a, reason_id, a.get("comment") or f"sim {self.run_id}")
+        entry["tracking_level"] = row.get("tracking_level")
         call = Call("POST", self.path("lot_adjust", lot_id=lid), body, f"{self.run_id}:scrap:{a['lot']}")
-        r = self.send(entry, call, a.get("expect"), "lot_scrap", a.get("save_as"))
+        self.send(entry, call, a.get("expect"), "lot_scrap", a.get("save_as"))
         if a.get("save_as"):
             self.saved[a["save_as"]] = {"at": now_iso(), **(self.saved.get(a["save_as"]) or {})}
-        _ = r
 
     def _expect_marking(self, a: dict, entry: dict) -> None:
         ref = a.get("marking")

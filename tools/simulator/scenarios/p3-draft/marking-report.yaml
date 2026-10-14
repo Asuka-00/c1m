@@ -296,7 +296,9 @@ steps:
   - expect_marking: {lot: MK0003, fields: {marked_at: $print_seq_1.printed_at, last_printed_at: $print_seq_2.printed_at}}
   - expect_marking_list: {lot: MK0003, marked_at_from: $print_seq_2.printed_at, count: 0}   # 首打早于 seq=2
   - expect_marking_list: {lot: MK0003, marked_at_to: $print_seq_2.printed_at, count: 1}
-  - lot_scrap: {lot: MK0003, reason: R-scrap, comment: "整批报废到 0", save_as: scrap3, expect: {status: 200, body: {lot.lot_status: scrapped}}}
+  # 晶圆级批次报废按 unit_ids（adjust.py:82-94）：units: all = 剩下的全部片，执行器从 GET /mes/wafer?lot_id= 取片号
+  # 注意：59fb7c5 下 running（已进站）批次报废到 0 返回 422 lot_status「cannot scrap a running lot」（adjust.py:97），此步前批次需非 running——待架构师定
+  - lot_scrap: {lot: MK0003, reason: R-scrap, units: all, override: true, override_reason: "整批报废（qty_adjust_limit 10% 放行）", comment: "整批报废到 0", save_as: scrap3, expect: {status: 200, body: {lot.lot_status: scrapped}}}
   - marking_print: {lot: MK0003, eq: EAP-MK01, reason: R-MKREPRINT, comment: "报废后", idem: mk-rep-30,
                       expect: {status: 409, code: invalid_transition}}
   - marking_inspect: {lot: MK0003, result: pass, read_code: X, idem: mk-insp-30, expect: {status: 409, code: invalid_transition}}
