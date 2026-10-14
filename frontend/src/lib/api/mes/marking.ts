@@ -5,12 +5,13 @@
  * 按 D78（回应设备集成预审 eap/p3 e462675）：每次打印追加 mes_marking_print（seq 从 1 起），
  * 重打（seq>1）必填 reason_id + comment（≤300）；检验独立成 mes_marking_inspection；
  * 手工打印 / 重打 / 检验必须带 Idempotency-Key（D57）；报废对象 409 invalid_transition；source=manual/eap/simulator。
+ * D79：主记录 POST /mes/marking，打印（含首打）POST /mes/marking/{id}/prints；新版本 POST .../{id}/versions；
+ * 占位符白名单；自批 422 value_error ctx.reason=self_approval；pass 但读回不一致强制 fail（result_overridden）；
+ * 作废后可重新首打（新主记录）；追溯默认不含已作废（include_voided=true 才含）；无 qty。
  */
-import { decimalText, parseDecimal } from '@/lib/decimal'
 import { siteDate } from '@/lib/site-tz'
 import { http } from '../client'
 import { pickBody } from '../request-body'
-import type { TraceResult } from './execution'
 import { apiError } from './reticle'
 
 /** 模板状态：draft → approved → retired。 */
@@ -30,12 +31,14 @@ export interface MarkingTemplate {
   id: string
   code: string
   product_id: string
-  product?: string | null
+  /** 只读 */
+  product_name?: string | null
   customer_id: string
-  customer?: string | null
+  /** 只读 */
+  customer_name?: string | null
   version: number
   status: TemplateStatus
-  /** 每行一段打标文本，占位符 {model} {yyww} {trace} {bin}（形状待确认） */
+  /** 字符串数组；占位符 `{name}`，只允许 PLACEHOLDERS（D79） */
   lines: string[]
   date_code_basis: DateCodeBasis
   uses_bin: boolean
@@ -60,15 +63,15 @@ export type TemplateInput = Pick<
 export interface MarkingPreview {
   lot_id: string
   lot: string
-  /** 片数（定点字符串，兼容数字） */
-  qty: string | number
   bin: string | null
   template_id: string
   template_code: string
   template_version: number
   date_code: string
-  /** 预览时尚未发号：null；已打过标时为原号 */
+  /** 预览时尚未发号：null；已有未作废主记录时为原号 */
   trace_code: string | null
+  /** 已有未作废主记录时的 id（还没首打则 prints 为空） */
+  marking_id?: string | null
   lines: string[]
 }
 
@@ -103,6 +106,8 @@ export interface MarkingInspection {
   result: InspectResult
   expected_code: string | null
   read_code: string | null
+  /** 填了 pass 但读回不一致，系统改记 fail（D79-4）；一直返回，未改写为 false */
+  result_overridden: boolean
   comment: string | null
   inspected_by: string | null
   inspected_at: string
@@ -116,8 +121,14 @@ export const INSPECT_BLOCK_CHECK = 'marking_inspection'
 export const REPRINT_REASON_TYPE = 'marking_reprint'
 /** 重打备注长度上限。 */
 export const COMMENT_MAX = 300
-/** 定点数最多小数位（D60/D72）。 */
-export const MAX_PLACES = 6
+/** 模板占位符白名单（D79-1）。 */
+export const PLACEHOLDERS = [
+  'trace_code',
+  'date_code',
+  'lot_id',
+  'product_code',
+  'customer_code',
+] as const
 /** 追溯码规则（D78 Q7：待工艺专家确认，暂按 ≤32、[A-Z0-9-]，可配置）。 */
 export const TRACE_CODE_RULE = { maxLength: 32, pattern: /^[A-Z0-9-]+$/ }
 
@@ -125,7 +136,43 @@ export const TRACE_CODE_RULE = { maxLength: 32, pattern: /^[A-Z0-9-]+$/ }
 export const BLANK_RE = /^[ \t\r\n\u3000]*$/
 export const isBlankTraceCode = (v: string) => BLANK_RE.test(v)
 
-export type TraceRule = { maxLength: number; pattern: RegExp }
+/** 打标口径（D79 补充二已定：码点长度、读回码不校验格式、可多次检验；集中在这里便于以后调整）。 */
+export interface MarkingPolicy {
+  /** 追溯码长度口径：utf16（JS length）或 codepoint（[...s].length，同 Python len） */
+  lengthMode: 'utf16' | 'codepoint'
+  /** 读回码是否按追溯码规则校验格式；false 时只校验空值，格式不符按不一致强制 fail */
+  validateReadCodeFormat: boolean
+  /** 同一次打印是否允许多次检验（以最新一次为准） */
+  multipleInspections: boolean
+}
+export const MARKING_POLICY: MarkingPolicy = {
+  lengthMode: 'codepoint',
+  validateReadCodeFormat: false,
+  multipleInspections: true,
+}
+/** 读回码最大码点数（D79 补充二-3）。 */
+export const READ_CODE_MAX = 128
+
+/** 读回码校验：空值 / 纯空白 missing；超过 128 码点 max_length；不校验格式。 */
+export function readCodeErrors(v: string): ('missing' | 'max_length')[] {
+  if (isBlankTraceCode(v)) return ['missing']
+  return codeLength(v, 'codepoint') > READ_CODE_MAX ? ['max_length'] : []
+}
+
+/** 配置正则只允许正向字符类：^[...]+$（D79 补充二-4）。 */
+export const POSITIVE_CLASS_RE = /^\^\[(?!\^)(?:\\.|[^\]\\])+\]\+\$$/
+/** 按口径计算长度。 */
+export const codeLength = (
+  v: string,
+  mode: MarkingPolicy['lengthMode'] = MARKING_POLICY.lengthMode
+) => (mode === 'codepoint' ? [...v].length : v.length)
+
+/** pattern 为 null：配置里的正则非法，前端不做格式预校验（以后端为准，QA F6）。 */
+export type TraceRule = {
+  maxLength: number
+  pattern: RegExp | null
+  lengthMode?: MarkingPolicy['lengthMode']
+}
 export type TraceCodeReason = 'missing' | 'max_length' | 'pattern'
 
 /** 追溯码逐条校验：违反几条返回几条（D78 补充三，同后端 422 value_error 逐条 ctx.reason）。 */
@@ -136,8 +183,8 @@ export function traceCodeErrors(
   // D78 补充四：空串 / 纯空白只报一条必填；不改写输入（不去空格、不转大写），全串匹配
   if (isBlankTraceCode(v)) return ['missing']
   const out: TraceCodeReason[] = []
-  if (v.length > rule.maxLength) out.push('max_length')
-  if (!rule.pattern.test(v)) out.push('pattern')
+  if (codeLength(v, rule.lengthMode) > rule.maxLength) out.push('max_length')
+  if (rule.pattern && !rule.pattern.test(v)) out.push('pattern')
   return out
 }
 /** 第一条错误（兼容单条提示场景）。 */
@@ -153,16 +200,20 @@ export const DEFAULT_MARKING_CONFIG: MarkingConfig = {
   trace_code_max_length: 32,
   trace_code_pattern: '^[A-Z0-9-]+$',
 }
-/** 配置转校验规则；字段缺失或正则非法时退回默认（≤32、^[A-Z0-9-]+$）。 */
+/** 配置转校验规则：长度缺失用默认；正则非法时 pattern=null（不预校验格式，页面提示以后端为准，QA F6）。 */
 export function ruleFromConfig(
   c: Partial<MarkingConfig> | null | undefined
 ): TraceRule {
   const n = Number(c?.trace_code_max_length)
-  let pattern = TRACE_CODE_RULE.pattern
-  try {
-    if (c?.trace_code_pattern) pattern = new RegExp(c.trace_code_pattern)
-  } catch {
-    pattern = TRACE_CODE_RULE.pattern
+  let pattern: RegExp | null = TRACE_CODE_RULE.pattern
+  if (c?.trace_code_pattern) {
+    try {
+      pattern = POSITIVE_CLASS_RE.test(c.trace_code_pattern)
+        ? new RegExp(c.trace_code_pattern)
+        : null
+    } catch {
+      pattern = null
+    }
   }
   return {
     maxLength: Number.isInteger(n) && n > 0 ? n : TRACE_CODE_RULE.maxLength,
@@ -190,7 +241,7 @@ function traceCode422(
           ? undefined
           : reason === 'max_length'
             ? { reason, max_length: rule.maxLength }
-            : { reason, pattern: rule.pattern.source },
+            : { reason, pattern: rule.pattern?.source ?? null },
     }))
   )
 }
@@ -200,6 +251,23 @@ export const isValidTraceCode = (
   v: string,
   rule: { maxLength: number; pattern: RegExp } = TRACE_CODE_RULE
 ) => traceCodeError(v, rule) === null
+
+/** 检验按钮可用：有打印、未锁定；不允许多次检验时只在 pending 可用。 */
+export const canInspect = (
+  r: Pick<
+    MarkingRecord,
+    'prints' | 'latest_inspection_status' | 'voided' | 'scrapped'
+  >,
+  policy: MarkingPolicy = MARKING_POLICY
+) =>
+  !isLocked(r) &&
+  r.prints.length > 0 &&
+  (policy.multipleInspections || r.latest_inspection_status === 'pending')
+
+/** 重打按钮可用：已有首打且未锁定（QA F5：决策未限制只能对 fail 重打）。 */
+export const canReprint = (
+  r: Pick<MarkingRecord, 'prints' | 'voided' | 'scrapped'>
+) => !isLocked(r) && r.prints.length > 0
 
 /** 作废 / 批次报废后禁用打印、检验、作废。 */
 export const isLocked = (r: Pick<MarkingRecord, 'voided' | 'scrapped'>) =>
@@ -217,12 +285,13 @@ export interface MarkingRecord {
   trace_code: string
   /** 日期码 YYWW（站点日期，D75） */
   date_code: string
-  /** 打标数量（定点字符串，兼容数字；字段待确认） */
-  qty?: string | number | null
   equipment_id: string | null
   equipment: string | null
   operator: string | null
-  marked_at: string
+  /** 首打时间，之后不变（D79 补充二-6）；未首打为 null */
+  marked_at: string | null
+  /** 只读：最近一次打印时间 */
+  last_printed_at: string | null
   /** 只读：最近一次打印的检验状态；拦出站直接看它，重打后回到 pending（D78 补充二） */
   latest_inspection_status: InspectionStatus
   /** 已报废（批次或记录）：后续操作 409 invalid_transition */
@@ -241,17 +310,16 @@ export interface MarkingRecord {
   external_event_id: string | null
 }
 
-export interface MarkInput {
+/** 创建主记录（POST /mes/marking）。 */
+export interface CreateInput {
   lot_id: string
   equipment_id?: string | null
-  /** 重打时带原记录 id（字段名待确认） */
-  record_id?: string | null
-  /** 重打原因码（reason_code，重打必填） */
+}
+/** 打印（POST /mes/marking/{id}/prints）：seq 后端分配；seq>1 必填 reason_id + comment。 */
+export interface PrintInput {
+  equipment_id?: string | null
   reason_id?: string | null
-  /** 重打备注（重打必填，≤300） */
   comment?: string | null
-  /** 打标数量（可选，≤6 位小数） */
-  qty?: string | null
 }
 export interface InspectInput {
   result: InspectResult
@@ -275,6 +343,29 @@ export interface RecordQuery {
   marked_at_to?: string
 }
 
+/** 检验响应（D79-4）。 */
+export interface InspectOut {
+  record: MarkingRecord
+  result: InspectResult
+  expected_code: string
+  read_code: string | null
+  result_overridden: boolean
+}
+
+/** kind=trace_code 追溯结果（D79-6）。 */
+export interface TraceCodeResult {
+  marking_id: string
+  lot_id: string
+  trace_code: string
+  voided: boolean
+  prints: {
+    print_id: string
+    seq: number
+    marked_at: string
+    latest_inspection_result: InspectionStatus
+  }[]
+}
+
 /** 请求体白名单。 */
 export const MARKING_BODY = {
   template: [
@@ -285,7 +376,8 @@ export const MARKING_BODY = {
     'date_code_basis',
     'uses_bin',
   ],
-  mark: ['lot_id', 'equipment_id', 'record_id', 'reason_id', 'comment', 'qty'],
+  create: ['lot_id', 'equipment_id'],
+  print: ['equipment_id', 'reason_id', 'comment'],
   inspect: ['result', 'read_code', 'comment'],
   void: ['reason_id', 'comment'],
 } as const
@@ -300,29 +392,29 @@ export interface MarkingApi {
     id: string,
     input: Partial<TemplateInput>
   ) => Promise<MarkingTemplate>
+  /** 复制最新版本为草稿（D79-1） */
+  newVersion: (id: string) => Promise<MarkingTemplate>
   approve: (id: string) => Promise<MarkingTemplate>
   retire: (id: string) => Promise<MarkingTemplate>
   preview: (lotId: string) => Promise<MarkingPreview>
   records: (q: RecordQuery) => Promise<MarkingRecord[]>
+  /** 单条主记录（出站拦截提示跳转用） */
+  record: (id: string) => Promise<MarkingRecord>
   /** key：Idempotency-Key（D57） */
-  mark: (input: MarkInput, key?: string) => Promise<MarkingRecord>
+  create: (input: CreateInput, key?: string) => Promise<MarkingRecord>
+  print: (id: string, input: PrintInput, key?: string) => Promise<MarkingRecord>
   inspect: (
     id: string,
     input: InspectInput,
     key?: string
-  ) => Promise<MarkingRecord>
+  ) => Promise<InspectOut>
   void: (id: string, input: VoidInput, key?: string) => Promise<MarkingRecord>
   config: () => Promise<MarkingConfig>
+  trace: (code: string, includeVoided?: boolean) => Promise<TraceCodeResult>
 }
 
 const idemHeaders = (key?: string) =>
   key ? { headers: { 'Idempotency-Key': key } } : undefined
-
-/** 规范化：定点数 / 数字统一成文本。 */
-const normPreview = (p: MarkingPreview): MarkingPreview => ({
-  ...p,
-  qty: decimalText(p.qty),
-})
 
 export const httpMarkingApi: MarkingApi = {
   templates: (q) =>
@@ -349,6 +441,10 @@ export const httpMarkingApi: MarkingApi = {
         pickBody(input, MARKING_BODY.template)
       )
       .then((r) => r.data),
+  newVersion: (id) =>
+    http
+      .post<MarkingTemplate>(`/mes/marking-template/${id}/versions`)
+      .then((r) => r.data),
   approve: (id) =>
     http
       .post<MarkingTemplate>(`/mes/marking-template/${id}/approve`)
@@ -362,24 +458,34 @@ export const httpMarkingApi: MarkingApi = {
       .get<MarkingPreview>('/mes/marking/preview', {
         params: { lot_id: lotId },
       })
-      .then((r) => normPreview(r.data)),
+      .then((r) => r.data),
   records: (q) =>
     http
       .get<{ data: MarkingRecord[] }>('/mes/marking', {
         params: { page_size: 100, ...q },
       })
       .then((r) => r.data.data),
-  mark: (input, key) =>
+  record: (id) =>
+    http.get<MarkingRecord>(`/mes/marking/${id}`).then((r) => r.data),
+  create: (input, key) =>
     http
       .post<MarkingRecord>(
         '/mes/marking',
-        pickBody(input, MARKING_BODY.mark),
+        pickBody(input, MARKING_BODY.create),
+        idemHeaders(key)
+      )
+      .then((r) => r.data),
+  print: (id, input, key) =>
+    http
+      .post<MarkingRecord>(
+        `/mes/marking/${id}/prints`,
+        pickBody(input, MARKING_BODY.print),
         idemHeaders(key)
       )
       .then((r) => r.data),
   inspect: (id, input, key) =>
     http
-      .post<MarkingRecord>(
+      .post<InspectOut>(
         `/mes/marking/${id}/inspect`,
         pickBody(input, MARKING_BODY.inspect),
         idemHeaders(key)
@@ -395,6 +501,16 @@ export const httpMarkingApi: MarkingApi = {
       .then((r) => r.data),
   config: () =>
     http.get<MarkingConfig>('/mes/marking/config').then((r) => r.data),
+  trace: (code, includeVoided) =>
+    http
+      .get<TraceCodeResult>('/mes/exec/trace', {
+        params: {
+          kind: 'trace_code',
+          code,
+          ...(includeVoided ? { include_voided: true } : {}),
+        },
+      })
+      .then((r) => r.data),
 }
 
 // ───────────────────────── 规则（页面与 mock 共用） ─────────────────────────
@@ -422,19 +538,26 @@ export function isoYyww(ymd: string): string {
   return `${String(year).slice(-2)}${String(week).padStart(2, '0')}`
 }
 
-/** 按模板行替换占位符生成打标内容。 */
+/** 模板行里用到的白名单以外的占位符（D79-1，前端预校验；后端 422 value_error ctx.reason=unknown_placeholder）。 */
+export function unknownPlaceholders(lines: string[]): string[] {
+  const bad = new Set<string>()
+  for (const l of lines)
+    for (const m of l.matchAll(/\{([^{}]*)\}/g))
+      if (!(PLACEHOLDERS as readonly string[]).includes(m[1])) bad.add(m[1])
+  return [...bad]
+}
+
+/** 按模板行替换占位符生成打标内容（未发号时 trace_code 显示占位）。 */
 export function renderLines(
   lines: string[],
-  v: { model: string; yyww: string; trace: string | null; bin: string | null }
+  v: Record<(typeof PLACEHOLDERS)[number], string | null>
 ): string[] {
-  const map: Record<string, string> = {
-    model: v.model,
-    yyww: v.yyww,
-    trace: v.trace ?? '••••',
-    bin: v.bin ?? '',
-  }
   return lines.map((l) =>
-    l.replace(/\{(model|yyww|trace|bin)\}/g, (_, k: string) => map[k])
+    l.replace(
+      /\{(trace_code|date_code|lot_id|product_code|customer_code)\}/g,
+      (_, k: (typeof PLACEHOLDERS)[number]) =>
+        v[k] ?? (k === 'trace_code' ? '••••' : '')
+    )
   )
 }
 
@@ -487,20 +610,13 @@ export const siblingVersions = (all: MarkingTemplate[], tpl: MarkingTemplate) =>
 
 /** 重打原因校验：reason_id、comment 都必填，comment ≤300；返回缺失 / 超长字段。 */
 export function reprintErrors(
-  input: Pick<MarkInput, 'reason_id' | 'comment'>
+  input: Pick<PrintInput, 'reason_id' | 'comment'>
 ): ('reason_id' | 'comment' | 'comment_too_long')[] {
   const out: ('reason_id' | 'comment' | 'comment_too_long')[] = []
   if (!input.reason_id?.trim()) out.push('reason_id')
   if (!input.comment?.trim()) out.push('comment')
   else if (input.comment.length > COMMENT_MAX) out.push('comment_too_long')
   return out
-}
-
-/** 小数位数超过 MAX_PLACES（不四舍五入，D60）。 */
-export function tooManyPlaces(v: string | null | undefined): boolean {
-  if (v == null || v === '') return false
-  const d = parseDecimal(String(v))
-  return !!d && d.decimals > MAX_PLACES
 }
 
 /** 检验最终结果：读回码与系统号不一致时强制 fail（D78 Q3）。 */
@@ -530,6 +646,25 @@ export function inspectionsByPrint(
 export const lastInspection = (r: Pick<MarkingRecord, 'inspections'>) =>
   r.inspections.length ? r.inspections[r.inspections.length - 1] : null
 
+/**
+ * 出站拦截判断（D79 补充）：只看未作废主记录（同一批次最多一条）；已作废记录上的 fail 不拦。
+ * 产品有已批准模板但没有未作废主记录 → not_marked；最新打印待检 / 不合格 → pending / fail；合格 → null。
+ */
+export function trackOutBlock(
+  records: Pick<MarkingRecord, 'voided' | 'latest_inspection_status'>[],
+  hasApprovedTemplate = true
+): 'not_marked' | 'pending' | 'fail' | null {
+  const live = records.find((r) => !r.voided)
+  if (!live) return hasApprovedTemplate ? 'not_marked' : null
+  return live.latest_inspection_status === 'pass'
+    ? null
+    : live.latest_inspection_status
+}
+
+/** 出站 check_blocked（marking_inspection）的 ctx.reason（D79 补充）。 */
+export const MARKING_BLOCK_REASONS = ['not_marked', 'pending', 'fail'] as const
+export type MarkingBlockReason = (typeof MARKING_BLOCK_REASONS)[number]
+
 /** 请求体签名（同 key 不同内容 → 422 idempotency_key_reused）。 */
 export const markingSignature = (op: string, body: object) =>
   `${op}:${JSON.stringify(body, Object.keys(body).sort())}`
@@ -540,14 +675,14 @@ interface MockLot {
   id: string
   code: string
   product_id: string
-  product: string
+  product_code: string
   customer_id: string
-  customer: string
-  model: string
-  qty: string
+  customer_code: string
   bin: string | null
   started_at: string
   scrapped?: boolean
+  /** 已离开打标工步（之后检验 409） */
+  left_step?: boolean
 }
 
 const LOTS: MockLot[] = [
@@ -555,11 +690,9 @@ const LOTS: MockLot[] = [
     id: 'lot1',
     code: 'LOT-A001',
     product_id: 'p1',
-    product: 'QFN32-A',
+    product_code: 'FS3201',
     customer_id: 'c1',
-    customer: 'ACME',
-    model: 'FS3201',
-    qty: '25',
+    customer_code: 'ACME',
     bin: null,
     started_at: '2026-10-05T02:00:00Z',
   },
@@ -567,11 +700,9 @@ const LOTS: MockLot[] = [
     id: 'lot2',
     code: 'LOT-B001-001',
     product_id: 'p2',
-    product: 'SOP8-B',
+    product_code: 'FS0802',
     customer_id: 'c2',
-    customer: 'Globex',
-    model: 'FS0802',
-    qty: '12.5',
+    customer_code: 'GLOBEX',
     bin: 'B1',
     started_at: '2026-10-06T02:00:00Z',
   },
@@ -579,11 +710,9 @@ const LOTS: MockLot[] = [
     id: 'lot3',
     code: 'LOT-C001',
     product_id: 'p3',
-    product: 'BGA-C',
+    product_code: 'FS9000',
     customer_id: 'c1',
-    customer: 'ACME',
-    model: 'FS9000',
-    qty: '10',
+    customer_code: 'ACME',
     bin: null,
     started_at: '2026-10-07T02:00:00Z',
   },
@@ -591,28 +720,33 @@ const LOTS: MockLot[] = [
     id: 'lot4',
     code: 'LOT-A002',
     product_id: 'p1',
-    product: 'QFN32-A',
+    product_code: 'FS3201',
     customer_id: 'c1',
-    customer: 'ACME',
-    model: 'FS3201',
-    qty: '0',
+    customer_code: 'ACME',
     bin: null,
     started_at: '2026-10-05T02:00:00Z',
     scrapped: true,
   },
 ]
+const NAMES: Record<string, string> = {
+  p1: 'QFN32-A',
+  p2: 'SOP8-B',
+  p3: 'BGA-C',
+  c1: 'ACME',
+  c2: 'Globex',
+}
 
 const tplSeed = (): MarkingTemplate[] => [
   {
     id: 't1',
     code: 'MK-QFN32-ACME',
     product_id: 'p1',
-    product: 'QFN32-A',
+    product_name: 'QFN32-A',
     customer_id: 'c1',
-    customer: 'ACME',
+    customer_name: 'ACME',
     version: 1,
     status: 'retired',
-    lines: ['{model}', '{yyww}'],
+    lines: ['{product_code}', '{date_code}'],
     date_code_basis: 'lot_start',
     uses_bin: false,
     created_by: 'eng1',
@@ -624,12 +758,12 @@ const tplSeed = (): MarkingTemplate[] => [
     id: 't2',
     code: 'MK-QFN32-ACME',
     product_id: 'p1',
-    product: 'QFN32-A',
+    product_name: 'QFN32-A',
     customer_id: 'c1',
-    customer: 'ACME',
+    customer_name: 'ACME',
     version: 2,
     status: 'approved',
-    lines: ['{model}', '{yyww} {trace}'],
+    lines: ['{product_code}', '{date_code} {trace_code}'],
     date_code_basis: 'marking',
     uses_bin: false,
     created_by: 'eng1',
@@ -641,12 +775,12 @@ const tplSeed = (): MarkingTemplate[] => [
     id: 't3',
     code: 'MK-SOP8-GLOBEX',
     product_id: 'p2',
-    product: 'SOP8-B',
+    product_name: 'SOP8-B',
     customer_id: 'c2',
-    customer: 'Globex',
+    customer_name: 'Globex',
     version: 1,
     status: 'draft',
-    lines: ['{model}{bin}', '{yyww}{trace}'],
+    lines: ['{product_code}', '{date_code}{trace_code}'],
     date_code_basis: 'assembly_done',
     uses_bin: true,
     created_by: 'admin',
@@ -664,13 +798,14 @@ interface Store {
 }
 const seed = (): Store => ({ t: tplSeed(), rec: [], seq: {}, n: 0 })
 let store = seed()
-const idem = new Map<string, { sig: string; out: MarkingRecord }>()
+const idem = new Map<string, { sig: string; out: unknown }>()
 let mockUser = 'admin'
 let mockNow: () => Date = () => new Date()
 
 /** 测试用：重置 mock 数据。 */
 export function resetMarkingMock() {
   store = seed()
+  for (const l of LOTS) delete l.left_step
   idem.clear()
   mockUser = 'admin'
   mockNow = () => new Date()
@@ -703,14 +838,10 @@ const err422 = (
   ctx?: Record<string, unknown>
 ) => apiError(422, [{ loc: ['body', loc], type, code: type, msg, ctx }])
 const scrappedErr = () =>
-  err409('invalid_transition', 'lot or marking record is scrapped')
+  err409('invalid_transition', 'lot or marking record is scrapped or voided')
 
-/** D57：同 key 同内容返回首次结果；同 key 不同内容 422 idempotency_key_reused。 */
-function withIdem(
-  key: string | undefined,
-  sig: string,
-  f: () => MarkingRecord
-): MarkingRecord {
+/** D57：缺 key 422 missing（header）；同 key 同内容返回首次结果；不同内容 422 idempotency_key_reused。 */
+function withIdem<T>(key: string | undefined, sig: string, f: () => T): T {
   if (!key)
     throw apiError(422, [
       {
@@ -720,20 +851,18 @@ function withIdem(
         msg: 'Idempotency-Key: field required',
       },
     ])
-  {
-    const hit = idem.get(key)
-    if (hit) {
-      if (hit.sig !== sig)
-        throw apiError(422, [
-          {
-            loc: ['header', 'Idempotency-Key'],
-            type: 'idempotency_key_reused',
-            code: 'idempotency_key_reused',
-            msg: 'Idempotency-Key reused with a different body',
-          },
-        ])
-      return hit.out
-    }
+  const hit = idem.get(key)
+  if (hit) {
+    if (hit.sig !== sig)
+      throw apiError(422, [
+        {
+          loc: ['header', 'Idempotency-Key'],
+          type: 'idempotency_key_reused',
+          code: 'idempotency_key_reused',
+          msg: 'Idempotency-Key reused with a different body',
+        },
+      ])
+    return structuredClone(hit.out) as T
   }
   const out = f()
   idem.set(key, { sig, out: structuredClone(out) })
@@ -750,6 +879,12 @@ const findLot = (id: string) => {
   if (!x) throw apiError(404, 'not found')
   return x
 }
+const findRec = (id: string) => {
+  const r = store.rec.find((x) => x.id === id)
+  if (!r) throw apiError(404, 'not found')
+  return r
+}
+const lotOf = (r: MarkingRecord) => LOTS.find((l) => l.id === r.lot_id)
 const activeTpl = (lot: MockLot) => {
   const x = store.t.find(
     (y) =>
@@ -761,16 +896,40 @@ const activeTpl = (lot: MockLot) => {
     throw err409('marking_template_missing', 'no approved marking template')
   return x
 }
+/** 当前未作废主记录（同一批次最多一条，D79-5）。 */
+const liveRec = (lotId: string) =>
+  store.rec.find((r) => r.lot_id === lotId && !r.voided)
 /** 日期码取值日期（站点时区，D75）。 */
 const basisDate = (tpl: MarkingTemplate, lot: MockLot) =>
   siteDate(tpl.date_code_basis === 'lot_start' ? lot.started_at : mockNow())
+const values = (lot: MockLot, yyww: string, trace: string | null) => ({
+  trace_code: trace,
+  date_code: yyww,
+  lot_id: lot.code,
+  product_code: lot.product_code,
+  customer_code: lot.customer_code,
+})
 
 function validateTemplate(input: Partial<TemplateInput>, create: boolean) {
   for (const k of ['code', 'product_id', 'customer_id'] as const)
     if (create && !input[k]?.toString().trim())
       throw err422(k, 'missing', `${k}: field required`)
-  if (input.lines !== undefined && !input.lines.some((l) => l.trim()))
-    throw err422('lines', 'missing', 'lines: at least one line')
+  if (input.lines !== undefined) {
+    if (!input.lines.some((l) => !isBlankTraceCode(l)))
+      throw err422('lines', 'missing', 'lines: at least one line')
+    const bad = unknownPlaceholders(input.lines)
+    if (bad.length)
+      throw apiError(
+        422,
+        bad.map((name) => ({
+          loc: ['body', 'lines'],
+          type: 'value_error',
+          code: 'value_error',
+          msg: `lines: unknown placeholder {${name}}`,
+          ctx: { reason: 'unknown_placeholder', placeholder: name },
+        }))
+      )
+  }
 }
 
 function mockCreate(input: TemplateInput): MarkingTemplate {
@@ -781,15 +940,13 @@ function mockCreate(input: TemplateInput): MarkingTemplate {
   )
   if (same.some((y) => y.status === 'draft'))
     throw err409('draft_exists', 'a draft already exists')
-  const lot = LOTS.find((l) => l.product_id === input.product_id)
-  const tpl: MarkingTemplate = {
+  const tpl = {
     ...pickBody(input, MARKING_BODY.template),
-    lines: input.lines.filter((l) => l.trim()),
+    // QA F4：不静默丢弃空行，原样保存（后端口径待对齐）
+    lines: [...input.lines],
     id: `t${store.t.length + 1}-${++store.n}`,
-    product: lot?.product ?? input.product_id,
-    customer:
-      LOTS.find((l) => l.customer_id === input.customer_id)?.customer ??
-      input.customer_id,
+    product_name: NAMES[input.product_id] ?? null,
+    customer_name: NAMES[input.customer_id] ?? null,
     version: Math.max(0, ...same.map((y) => y.version)) + 1,
     status: 'draft',
     created_by: mockUser,
@@ -797,6 +954,30 @@ function mockCreate(input: TemplateInput): MarkingTemplate {
     approved_by: null,
     approved_at: null,
   } as MarkingTemplate
+  store.t.push(tpl)
+  return tpl
+}
+
+/** D79-1：复制同「产品+客户」的最新版本为草稿，版本号递增。 */
+function mockNewVersion(id: string): MarkingTemplate {
+  const base = findTpl(id)
+  const same = store.t.filter(
+    (y) =>
+      y.product_id === base.product_id && y.customer_id === base.customer_id
+  )
+  if (same.some((y) => y.status === 'draft'))
+    throw err409('draft_exists', 'a draft already exists')
+  const latest = same.reduce((a, b) => (b.version > a.version ? b : a))
+  const tpl: MarkingTemplate = {
+    ...structuredClone(latest),
+    id: `t${store.t.length + 1}-${++store.n}`,
+    version: latest.version + 1,
+    status: 'draft',
+    created_by: mockUser,
+    created_at: mockNow().toISOString(),
+    approved_by: null,
+    approved_at: null,
+  }
   store.t.push(tpl)
   return tpl
 }
@@ -814,9 +995,16 @@ function mockApprove(id: string) {
   const tpl = findTpl(id)
   if (tpl.status !== 'draft')
     throw err409('invalid_transition', 'only draft can be approved')
+  // D79-2：自批 422 value_error ctx.reason=self_approval（同 D74）
   if (isSelfApproval(tpl, mockUser))
-    throw err409('self_approval', 'approver cannot be the drafter')
-  // 新版本批准后旧的生效版本自动 retired
+    throw err422(
+      'approved_by',
+      'value_error',
+      'approver cannot be the drafter',
+      {
+        reason: 'self_approval',
+      }
+    )
   for (const y of store.t)
     if (
       y.status === 'approved' &&
@@ -841,77 +1029,30 @@ function mockRetire(id: string) {
 function mockPreview(lotId: string): MarkingPreview {
   const lot = findLot(lotId)
   const tpl = activeTpl(lot)
-  const done = store.rec.find((r) => r.lot_id === lot.id)
-  const yyww = isoYyww(basisDate(tpl, lot))
+  const live = liveRec(lot.id)
+  const yyww = live?.date_code ?? isoYyww(basisDate(tpl, lot))
   return {
     lot_id: lot.id,
     lot: lot.code,
-    qty: lot.qty,
     bin: lot.bin,
-    template_id: tpl.id,
-    template_code: tpl.code,
-    template_version: tpl.version,
+    template_id: live?.template_id ?? tpl.id,
+    template_code: live?.template_code ?? tpl.code,
+    template_version: live?.template_version ?? tpl.version,
     date_code: yyww,
-    trace_code: done?.trace_code ?? null,
-    lines: done
-      ? done.content
-      : renderLines(tpl.lines, {
-          model: lot.model,
-          yyww,
-          trace: null,
-          bin: lot.bin,
-        }),
+    trace_code: live?.trace_code ?? null,
+    marking_id: live?.id ?? null,
+    lines: live
+      ? live.content
+      : renderLines(tpl.lines, values(lot, yyww, null)),
   }
 }
 
-function mockMark(input: MarkInput): MarkingRecord {
+/** D79-3：创建主记录（发号），不打印。同一批次已有未作废主记录 409 already_marked。 */
+function mockCreateRec(input: CreateInput): MarkingRecord {
   const lot = findLot(input.lot_id)
-  if (tooManyPlaces(input.qty))
-    throw err422('qty', 'value_error', 'qty: too many decimal places', {
-      max_places: MAX_PLACES,
-    })
-  if (input.record_id) {
-    // 重打：沿用原号，每次追加一条子记录（Q1），reprint_count 同步 +1
-    const miss = reprintErrors(input)
-    if (miss.includes('reason_id'))
-      throw err422('reason_id', 'missing', 'reason_id: field required')
-    if (miss.includes('comment'))
-      throw err422('comment', 'missing', 'comment: field required')
-    if (miss.includes('comment_too_long'))
-      throw err422('comment', 'string_too_long', 'comment: max 300', {
-        max_length: COMMENT_MAX,
-      })
-    const r = store.rec.find((x) => x.id === input.record_id)
-    if (!r || r.lot_id !== lot.id) throw apiError(404, 'not found')
-    if (lot.scrapped || isLocked(r)) throw scrappedErr()
-    if (r.latest_inspection_status !== 'fail')
-      throw err409('invalid_transition', 'only failed marking can be reprinted')
-    const at = mockNow().toISOString()
-    r.prints.push({
-      id: `${r.id}-p${r.prints.length + 1}`,
-      seq: r.prints.length + 1,
-      reason_id: input.reason_id!,
-      reason_code: input.reason_id,
-      comment: input.comment!,
-      equipment_id: input.equipment_id || r.equipment_id,
-      operator: mockUser,
-      printed_at: at,
-      source: 'manual',
-      external_event_id: null,
-    })
-    r.reprint_count = r.prints.length - 1
-    r.latest_inspection_status = 'pending'
-    r.marked_at = at
-    r.operator = mockUser
-    if (input.equipment_id) {
-      r.equipment_id = input.equipment_id
-      r.equipment = input.equipment_id
-    }
-    return r
-  }
   if (lot.scrapped) throw scrappedErr()
-  if (store.rec.some((x) => x.lot_id === lot.id))
-    throw err409('already_marked', 'lot already marked; use reprint')
+  if (liveRec(lot.id))
+    throw err409('already_marked', 'lot already has a live marking record')
   const tpl = activeTpl(lot)
   const yyww = isoYyww(basisDate(tpl, lot))
   const key = `${lot.customer_id}|${lot.product_id}|${yyww}`
@@ -924,19 +1065,14 @@ function mockMark(input: MarkInput): MarkingRecord {
     template_id: tpl.id,
     template_code: tpl.code,
     template_version: tpl.version,
-    content: renderLines(tpl.lines, {
-      model: lot.model,
-      yyww,
-      trace,
-      bin: lot.bin,
-    }),
+    content: renderLines(tpl.lines, values(lot, yyww, trace)),
     trace_code: trace,
     date_code: yyww,
-    qty: input.qty ? decimalText(input.qty) : lot.qty,
     equipment_id: input.equipment_id ?? null,
     equipment: input.equipment_id ?? null,
     operator: mockUser,
-    marked_at: mockNow().toISOString(),
+    marked_at: null,
+    last_printed_at: null,
     latest_inspection_status: 'pending',
     reprint_count: 0,
     prints: [],
@@ -944,36 +1080,79 @@ function mockMark(input: MarkInput): MarkingRecord {
     source: 'manual',
     external_event_id: null,
   }
-  rec.prints.push({
-    id: `${rec.id}-p1`,
-    seq: 1,
-    reason_id: null,
-    comment: null,
-    equipment_id: rec.equipment_id,
-    operator: mockUser,
-    printed_at: rec.marked_at,
-    source: 'manual',
-    external_event_id: null,
-  })
   store.rec.push(rec)
   return rec
 }
 
-function mockInspect(id: string, input: InspectInput) {
-  const r = store.rec.find((x) => x.id === id)
-  if (!r) throw apiError(404, 'not found')
-  if (isLocked(r) || LOTS.find((l) => l.id === r.lot_id)?.scrapped)
-    throw scrappedErr()
+/** D79-3：打印（含首打），seq 后端分配；seq>1 必填 reason_id + comment，且上一次检验须为 fail。 */
+function mockPrint(id: string, input: PrintInput): MarkingRecord {
+  const r = findRec(id)
+  if (isLocked(r) || lotOf(r)?.scrapped) throw scrappedErr()
+  const seq = r.prints.length + 1
+  if (seq > 1) {
+    const miss = reprintErrors(input)
+    if (miss.includes('reason_id'))
+      throw err422('reason_id', 'missing', 'reason_id: field required')
+    if (miss.includes('comment'))
+      throw err422('comment', 'missing', 'comment: field required')
+    if (miss.includes('comment_too_long'))
+      throw err422('comment', 'string_too_long', 'comment: max 300', {
+        max_length: COMMENT_MAX,
+      })
+  }
+  const at = mockNow().toISOString()
+  r.prints.push({
+    id: `${r.id}-p${seq}`,
+    seq,
+    reason_id: seq > 1 ? input.reason_id! : null,
+    reason_code: seq > 1 ? input.reason_id : null,
+    comment: seq > 1 ? input.comment! : null,
+    equipment_id: input.equipment_id || r.equipment_id,
+    operator: mockUser,
+    printed_at: at,
+    source: 'manual',
+    external_event_id: null,
+  })
+  r.reprint_count = r.prints.length - 1
+  r.latest_inspection_status = 'pending'
+  if (seq === 1) r.marked_at = at
+  r.last_printed_at = at
+  r.operator = mockUser
+  if (input.equipment_id) {
+    r.equipment_id = input.equipment_id
+    r.equipment = input.equipment_id
+  }
+  return r
+}
+
+function mockInspect(id: string, input: InspectInput): InspectOut {
+  const r = findRec(id)
+  if (isLocked(r) || lotOf(r)?.scrapped) throw scrappedErr()
   if (input.result !== 'pass' && input.result !== 'fail')
     throw err422('result', 'enum', 'result: pass or fail')
-  if (r.latest_inspection_status !== 'pending')
-    throw err409('invalid_transition', 'already inspected')
-  const bad = input.read_code
-    ? traceCode422('read_code', input.read_code)
-    : null
-  if (bad) throw bad
+  if (!r.prints.length)
+    throw err409('invalid_transition', 'nothing printed yet')
+  // D79 补充二-1：同一次打印可多次检验，以最新一次为准；批次离开打标工步后 409
+  if (lotOf(r)?.left_step)
+    throw err409('invalid_transition', 'lot has left the marking step')
+  if (input.read_code != null && input.read_code !== '') {
+    if (MARKING_POLICY.validateReadCodeFormat) {
+      const bad = traceCode422('read_code', input.read_code)
+      if (bad) throw bad
+    } else {
+      const e = readCodeErrors(input.read_code)
+      if (e[0] === 'missing')
+        throw err422('read_code', 'missing', 'read_code: field required')
+      if (e[0] === 'max_length')
+        throw err422('read_code', 'value_error', 'read_code: too long', {
+          reason: 'max_length',
+          max_length: READ_CODE_MAX,
+        })
+    }
+  }
   const print = r.prints[r.prints.length - 1]
   const result = effectiveResult(input, r.trace_code)
+  const overridden = result !== input.result
   r.inspections.push({
     id: `${r.id}-i${r.inspections.length + 1}`,
     print_id: print.id,
@@ -981,6 +1160,7 @@ function mockInspect(id: string, input: InspectInput) {
     result,
     expected_code: r.trace_code,
     read_code: input.read_code ?? null,
+    result_overridden: overridden,
     comment: input.comment ?? null,
     inspected_by: mockUser,
     inspected_at: mockNow().toISOString(),
@@ -988,14 +1168,18 @@ function mockInspect(id: string, input: InspectInput) {
     external_event_id: null,
   })
   r.latest_inspection_status = result
-  return r
+  return {
+    record: r,
+    result,
+    expected_code: r.trace_code,
+    read_code: input.read_code ?? null,
+    result_overridden: overridden,
+  }
 }
 
 function mockVoid(id: string, input: VoidInput) {
-  const r = store.rec.find((x) => x.id === id)
-  if (!r) throw apiError(404, 'not found')
-  if (isLocked(r) || LOTS.find((l) => l.id === r.lot_id)?.scrapped)
-    throw scrappedErr()
+  const r = findRec(id)
+  if (isLocked(r) || lotOf(r)?.scrapped) throw scrappedErr()
   if (!input.reason_id?.trim())
     throw err422('reason_id', 'missing', 'reason_id: field required')
   if (!input.comment?.trim())
@@ -1014,13 +1198,42 @@ function mockVoid(id: string, input: VoidInput) {
 
 /** D77：marked_at 范围半开区间 [from, to)。 */
 function mockRecords(q: RecordQuery) {
-  const t = (s: string) => new Date(s).getTime()
+  const t = (s: string | null) => (s ? new Date(s).getTime() : NaN)
   return store.rec
     .filter((r) => !q.lot_id || r.lot_id === q.lot_id || r.lot === q.lot_id)
     .filter((r) => !q.marked_at_from || t(r.marked_at) >= t(q.marked_at_from))
     .filter((r) => !q.marked_at_to || t(r.marked_at) < t(q.marked_at_to))
-    .sort((a, b) => b.marked_at.localeCompare(a.marked_at))
+    .sort((a, b) => (b.marked_at ?? '~').localeCompare(a.marked_at ?? '~'))
 }
+
+/** D79-6：kind=trace_code；默认不含已作废，include_voided=true 才含。格式不符逐条 422。 */
+function mockTrace(code: string, includeVoided?: boolean): TraceCodeResult {
+  const bad = traceCode422('code', code)
+  if (bad) throw bad
+  const r = store.rec.find(
+    (x) => x.trace_code === code && (includeVoided || !x.voided)
+  )
+  if (!r) throw apiError(404, 'not found')
+  return {
+    marking_id: r.id,
+    lot_id: r.lot_id,
+    trace_code: r.trace_code,
+    voided: !!r.voided,
+    prints: r.prints.map((p) => {
+      const insp = r.inspections.filter((i) => i.print_id === p.id)
+      return {
+        print_id: p.id,
+        seq: p.seq,
+        marked_at: p.printed_at,
+        latest_inspection_result: insp.length
+          ? insp[insp.length - 1].result
+          : 'pending',
+      }
+    }),
+  }
+}
+
+const sig = (op: string, body: object) => markingSignature(op, body)
 
 /** 前端 mock 实现（同形数据与错误码）。 */
 export const mockMarkingApi: MarkingApi = {
@@ -1029,46 +1242,50 @@ export const mockMarkingApi: MarkingApi = {
   template: (id) => later(() => findTpl(id)),
   createTemplate: (input) => later(() => mockCreate(input)),
   updateTemplate: (id, input) => later(() => mockUpdate(id, input)),
+  newVersion: (id) => later(() => mockNewVersion(id)),
   approve: (id) => later(() => mockApprove(id)),
   retire: (id) => later(() => mockRetire(id)),
-  preview: (lotId) => later(() => normPreview(mockPreview(lotId))),
+  preview: (lotId) => later(() => mockPreview(lotId)),
   records: (q) => later(() => mockRecords(q)),
-  mark: (input, key) =>
+  record: (id) => later(() => findRec(id)),
+  create: (input, key) =>
+    later(() =>
+      withIdem(key, sig('create', pickBody(input, MARKING_BODY.create)), () =>
+        mockCreateRec(input)
+      )
+    ),
+  print: (id, input, key) =>
     later(() =>
       withIdem(
         key,
-        markingSignature('mark', pickBody(input, MARKING_BODY.mark)),
-        () => mockMark(input)
+        sig(`print:${id}`, pickBody(input, MARKING_BODY.print)),
+        () => mockPrint(id, input)
       )
     ),
   inspect: (id, input, key) =>
     later(() =>
       withIdem(
         key,
-        markingSignature(
-          `inspect:${id}`,
-          pickBody(input, MARKING_BODY.inspect)
-        ),
+        sig(`inspect:${id}`, pickBody(input, MARKING_BODY.inspect)),
         () => mockInspect(id, input)
       )
     ),
   void: (id, input, key) =>
     later(() =>
-      withIdem(
-        key,
-        markingSignature(`void:${id}`, pickBody(input, MARKING_BODY.void)),
-        () => mockVoid(id, input)
+      withIdem(key, sig(`void:${id}`, pickBody(input, MARKING_BODY.void)), () =>
+        mockVoid(id, input)
       )
     ),
   config: () => later(() => ({ ...DEFAULT_MARKING_CONFIG })),
+  trace: (code, includeVoided) => later(() => mockTrace(code, includeVoided)),
 }
 
 /**
  * mock：EAP 回报打印结果（D78 Q3）。号与系统发号不一致 409 trace_code_mismatch（ctx.expected / actual）；
- * 已报废 409 invalid_transition；按 (source, external_event_id) 去重。
+ * 已报废 / 作废 409 invalid_transition。
  */
 export function mockEapPrintReport(
-  recordId: string,
+  lotId: string,
   report: {
     trace_code: string
     external_event_id: string
@@ -1076,9 +1293,11 @@ export function mockEapPrintReport(
   }
 ) {
   return later(() => {
-    const r = store.rec.find((x) => x.id === recordId)
-    if (!r) throw apiError(404, 'not found')
-    if (isLocked(r)) throw scrappedErr()
+    const lot = findLot(lotId)
+    if (lot.scrapped) throw scrappedErr()
+    // D79 补充：找不到未作废主记录 409 no_active_marking
+    const r = liveRec(lot.id)
+    if (!r) throw err409('no_active_marking', 'no live marking record for lot')
     const bad = traceCode422('trace_code', report.trace_code)
     if (bad) throw bad
     if (report.trace_code !== r.trace_code)
@@ -1094,36 +1313,10 @@ export function mockEapPrintReport(
   })
 }
 
-/** mock：kind=trace_code 追溯（B3 未就绪）。格式不符 422 value_error ctx.reason；查不到 404。 */
-export function mockTraceByCode(code: string): Promise<TraceResult> {
-  return later(() => {
-    const bad = traceCode422('code', code)
-    if (bad) throw bad
-    const r = store.rec.find((x) => x.trace_code === code && !x.voided)
-    if (!r) throw apiError(404, 'not found')
-    const n = Number(decimalText(r.qty ?? 0)) || 0
-    return {
-      kind: 'trace_code' as const,
-      target: { id: r.lot_id, code: r.lot, lot_id: r.lot_id },
-      marking: {
-        trace_code: r.trace_code,
-        content: r.content.join(' / '),
-        template: `${r.template_code} v${r.template_version}`,
-        date_code: r.date_code,
-        equipment: r.equipment,
-        user: r.operator,
-        marked_at: r.marked_at,
-        reprint_count: r.reprint_count,
-        latest_inspection_status: r.latest_inspection_status,
-      },
-      wafers: Array.from({ length: Math.min(n, 25) }, (_, i) => ({
-        wafer: `${r.lot}-W${String(i + 1).padStart(2, '0')}`,
-        slot: i + 1,
-      })),
-      backward: { lots: [], steps: [], materials: [] },
-      forward: { lots: [] },
-    }
-  })
+/** 测试用：批次离开打标工步。 */
+export function markingMockLeaveStep(lotId: string) {
+  const l = LOTS.find((x) => x.id === lotId)
+  if (l) l.left_step = true
 }
 
 /** 测试用：把 mock 记录标为已报废。 */

@@ -344,27 +344,39 @@ describe('F6 追溯显示客户批号和归属', () => {
 })
 
 describe('P3-F4 追溯码（kind=trace_code）', () => {
-  it('显示打标记录和晶圆', async () => {
-    const { s } = await show({
-      kind: 'trace_code',
-      target: { code: 'LOT-A001', id: 'lot1' },
-      marking: {
-        trace_code: '26420001',
-        content: 'FS3201 / 2642 26420001',
-        latest_inspection_status: 'pass',
-      },
-      wafers: [{ wafer: 'LOT-A001-W01', slot: 1 }],
+  it('D79-6：显示打印与检验；默认不含已作废，开关打开传 include_voided', async () => {
+    const m = await import('@/lib/api/mes/marking')
+    const tr = vi.spyOn(m.markingApi, 'trace').mockResolvedValue({
+      marking_id: 'm1',
+      lot_id: 'lot1',
+      trace_code: '26420001',
+      voided: true,
+      prints: [
+        {
+          print_id: 'p1',
+          seq: 1,
+          marked_at: '2026-10-14T17:00:00Z',
+          latest_inspection_result: 'pass',
+        },
+      ],
     })
+    const { s, spy } = await show({ kind: 'lot', target: {} })
+    await s.getByLabelText(t('mes.traceq.kind')).click()
+    await s.getByRole('option', { name: t('mes.traceq.k.trace_code') }).click()
     await userEvent.fill(
       s.getByLabelText(t('mes.traceq.code')).element(),
-      'LOT-A001'
+      '26420001'
     )
     await s.getByTestId('trace-search').click()
-    await expect.element(s.getByText('26420001', { exact: true })).toBeVisible()
-    await expect.element(s.getByText('LOT-A001-W01')).toBeVisible()
+    await expect.element(s.getByTestId('trace-code-result')).toBeVisible()
+    expect(tr).toHaveBeenLastCalledWith('26420001', false)
+    await expect.element(s.getByTestId('trace-code-voided')).toBeVisible()
     await expect
       .element(s.getByText(t('mes.marking.insp.pass'), { exact: true }))
       .toBeVisible()
+    await s.getByTestId('trace-include-voided').click()
+    await expect.poll(() => tr.mock.lastCall).toEqual(['26420001', true])
+    expect(spy).not.toHaveBeenCalled()
   })
   it('追溯码格式不符前端逐条提示，不发请求', async () => {
     const { s, spy } = await show({ kind: 'lot', target: {} })

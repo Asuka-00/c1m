@@ -940,21 +940,15 @@
         "die_row": "ダイ行",
         "die_col": "ダイ列",
         "transform_id": "変換記録",
-        "trace_code": "トレースコード",
-        "content": "印字内容",
-        "template": "テンプレート",
-        "date_code": "日付コード",
-        "reprint_count": "再印字回数",
         "latest_inspection_status": "検査",
         "marked_at": "印字日時",
-        "wafer": "ウェハ",
-        "slot": "スロット"
+        "seq": "印字番号"
       },
       "origins": "元ウェーハとダイ座標",
       "dies": "このウェーハのダイの行き先",
       "outOrigins": "下流子ロットの位置",
       "marking": "マーキング記録",
-      "wafers": "ウェハ"
+      "includeVoided": "無効化済みを含む"
     },
     "holdrel": {
       "hint": "ホールド中のロットを確認・解除します。",
@@ -1918,7 +1912,7 @@
       "retire": "廃止",
       "selfApprovalHint": "起案者は自分のテンプレートを承認できません",
       "formHint": "プレースホルダーは下記参照",
-      "linesHint": "1 行ずつ。{model} {yyww} {trace} {bin} が使えます",
+      "linesHint": "1 行ずつ。{trace_code} {date_code} {lot_id} {product_code} {customer_code}",
       "compareWith": "比較対象",
       "noOtherVersion": "他のバージョンはありません",
       "noDiff": "差分はありません",
@@ -1934,8 +1928,8 @@
       "voidedHint": "無効化済み（{{by}}：{{comment}}）",
       "scrappedHint": "ロットは廃棄済みです",
       "traceAssignedHint": "トレースコードは印字時に採番",
-      "markedFrom": "印字日（開始）",
-      "markedTo": "印字日（終了）",
+      "markedFrom": "初回印字日（開始）",
+      "markedTo": "初回印字日（終了）",
       "printLog": "印字・検査履歴",
       "readCode": "読取コード（OCR）",
       "reasonId": "理由コード",
@@ -1980,13 +1974,13 @@
         "lot": "ロット",
         "template": "テンプレート",
         "dateCode": "日付コード",
-        "qty": "数量",
         "bin": "bin",
         "equipment": "マーカー",
         "traceCode": "トレースコード",
         "reprints": "再印字回数",
         "inspection": "検査",
-        "markedAt": "印字日時"
+        "markedAt": "初回印字日時",
+        "lastPrintedAt": "最終印字日時"
       },
       "actHint": {
         "inspect": "読取コード不一致は不合格",
@@ -2000,7 +1994,8 @@
         "print": "印字しました（{{code}}）",
         "inspect": "検査を登録しました",
         "reprint": "再印字しました",
-        "void": "無効化しました"
+        "void": "無効化しました",
+        "newVersion": "下書き v{{v}} を作成しました"
       },
       "err": {
         "reason_idRequired": "理由コードを入力してください",
@@ -2009,22 +2004,31 @@
         "maxPlaces": "小数は {{n}} 桁まで",
         "trace_max_length": "トレースコードは {{n}} 文字以内",
         "trace_pattern": "トレースコードは英大文字・数字・ハイフンのみ",
-        "traceRequired": "トレースコードを入力してください"
+        "traceRequired": "トレースコードを入力してください",
+        "unknownPlaceholder": "未対応のプレースホルダー {{name}}",
+        "selfApproval": "起案者は自分のテンプレートを承認できません",
+        "readCodeTooLong": "読取コードは {{n}} 文字以内"
       },
       "code": {
-        "self_approval": "起案者は自分のテンプレートを承認できません",
         "template_readonly": "承認済みは読取専用です。新バージョンを作成してください",
         "draft_exists": "この製品・顧客には下書きがあります",
         "invalid_transition": "現在の状態では実行できません（無効・廃棄済み）",
         "marking_template_missing": "承認済みテンプレートがありません",
-        "already_marked": "打刻済みです。不合格時は再印字してください",
+        "already_marked": "このロットには有効なマーキング記録があります",
         "trace_code_mismatch": "報告コード {{actual}} が採番 {{expected}} と不一致",
         "check_blocked": "チェック不合格",
         "inspect_blocked": "マーキング検査不合格のため搬出できません（強制不可）",
         "idempotency_key_reused": "内容の異なる同一リクエストです。再読込してください",
-        "key_missing": "冪等キーがありません。再読込してください"
+        "key_missing": "冪等キーがありません。再読込してください",
+        "no_active_marking": "このロットには有効なマーキング記録がありません"
       },
-      "checkBlocked": "マーキング検査不合格（{{trace}}）。処理前は搬出不可"
+      "checkBlocked": "マーキング検査不合格（{{trace}}）。処理前は搬出不可",
+      "overridden": "pass と入力されましたが fail として記録しました（期待 {{expected}}、読取 {{read}}）",
+      "overriddenTag": "システム判定",
+      "checkNotMarked": "このロットは未マーキングのため搬出できません",
+      "checkPending": "マーキング検査待ち（{{trace}}）。合格後に搬出可",
+      "openRecord": "マーキング記録を開く",
+      "patternInvalidHint": "トレースコード形式の設定が無効です。形式はサーバーで検証します"
     }
   },
   "notify": {

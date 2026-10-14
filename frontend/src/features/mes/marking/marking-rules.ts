@@ -13,25 +13,29 @@ import {
 import { newEventId } from '@/features/mes/common/event-id'
 import { mesErrorMessage } from '@/features/mes/common/required'
 
-/** 打标权限码（p3-tasks B1/B2；追溯沿用 mes.trace:read）。 */
+/** 打标权限码（D79-7；追溯沿用 mes.exec:read）。 */
 export const MARKING_PERM = {
+  /** 模板与作业的读 */
   read: 'mes.marking:read',
-  write: 'mes.marking:write',
-  approve: 'mes.marking:approve',
+  /** 模板编辑 / 新建版本 */
+  templateWrite: 'mes.marking_template:write',
+  /** 模板审批 / 退役 */
+  templateApprove: 'mes.marking_template:approve',
+  /** 打印、检验 */
   exec: 'mes.marking:exec',
   /** 作废（D78 补充三，与 exec 分开） */
   void: 'mes.marking:void',
 } as const
 
-/** 409 业务码（mock 与后端同名；self_approval / template_readonly / draft_exists / already_marked 待后端确认）。 */
+/** 409 业务码（D78/D79）。 */
 export const MARKING_CODES = [
-  'self_approval',
   'template_readonly',
   'draft_exists',
   'invalid_transition',
   'marking_template_missing',
   'already_marked',
   'trace_code_mismatch',
+  'no_active_marking',
   'check_blocked',
 ] as const
 
@@ -70,6 +74,14 @@ export function markingErrorMessage(err: unknown): string {
           (field === 'reason_id' || field === 'comment')
         )
           return t(`mes.marking.err.${field}Required`)
+        // D79-2：自批 422 value_error ctx.reason=self_approval
+        if (type === 'value_error' && x.ctx?.reason === 'self_approval')
+          return t('mes.marking.err.selfApproval')
+        // D79-1：白名单外占位符
+        if (type === 'value_error' && x.ctx?.reason === 'unknown_placeholder')
+          return t('mes.marking.err.unknownPlaceholder', {
+            name: `{${String(x.ctx.placeholder ?? '')}}`,
+          })
         if (
           type === 'value_error' &&
           (x.ctx?.reason === 'max_length' || x.ctx?.reason === 'pattern')
@@ -112,11 +124,17 @@ export const traceErrorTexts = (v: string, rule: TraceRule) =>
 
 /** 追溯码校验规则：以 GET /mes/marking/config 为准，取不到用默认（≤32、^[A-Z0-9-]+$）。 */
 export function useTraceRule(): TraceRule {
+  return useTraceConfig().rule
+}
+
+/** 规则 + 配置正则是否非法（非法时不做格式预校验，页面提示以后端为准）。 */
+export function useTraceConfig(): { rule: TraceRule; patternInvalid: boolean } {
   const q = useQuery({
     queryKey: ['mes', 'marking', 'config'],
     queryFn: markingApi.config,
     retry: false,
     staleTime: 5 * 60_000,
   })
-  return ruleFromConfig(q.data)
+  const rule = ruleFromConfig(q.data)
+  return { rule, patternInvalid: rule.pattern === null }
 }

@@ -14,8 +14,8 @@ import {
 } from '@/lib/api/mes/execution'
 import {
   isBlankTraceCode,
-  MARKING_MOCK,
-  mockTraceByCode,
+  markingApi,
+  type TraceCodeResult,
 } from '@/lib/api/mes/marking'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -34,8 +34,9 @@ import { CustomerBadges, OwnershipLabel } from '@/features/mes/common/customer'
 import { enumLabel } from '@/features/mes/common/labels'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import {
+  markingErrorMessage,
   traceErrorTexts,
-  useTraceRule,
+  useTraceConfig,
 } from '@/features/mes/marking/marking-rules'
 import { Pick } from './exec-parts'
 import { genealogyRows } from './trace-rows'
@@ -224,18 +225,23 @@ export default function TracePage() {
   const [query, setQuery] = useState<{ kind: TraceKind; code: string } | null>(
     null
   )
+  const [includeVoided, setIncludeVoided] = useState(false)
+  const isCode = query?.kind === 'trace_code'
   const q = useQuery({
     queryKey: ['mes', 'exec', tk, 'trace', query],
-    // P3-B3 未就绪：trace_code 在 mock 模式下走打标 mock
-    queryFn: () =>
-      query!.kind === 'trace_code' && MARKING_MOCK
-        ? mockTraceByCode(query!.code)
-        : execApi.trace(query!.kind, query!.code),
-    enabled: !!query,
+    queryFn: () => execApi.trace(query!.kind, query!.code),
+    enabled: !!query && !isCode,
+    retry: false,
+  })
+  // D79-6：kind=trace_code 单独形状；默认不含已作废，开关打开传 include_voided=true
+  const tq = useQuery({
+    queryKey: ['mes', 'exec', tk, 'trace-code', query?.code, includeVoided],
+    queryFn: () => markingApi.trace(query!.code, includeVoided),
+    enabled: !!query && isCode,
     retry: false,
   })
   const [codeErr, setCodeErr] = useState<string[]>([])
-  const rule = useTraceRule()
+  const { rule, patternInvalid } = useTraceConfig()
   const d = q.data
   return (
     <Page title={t('menu.mes-trace')} description={t('mes.traceq.hint')}>
@@ -275,11 +281,30 @@ export default function TracePage() {
             onChange={(e) => setCode(e.target.value)}
           />
         </div>
+        {kind === 'trace_code' && (
+          <label className='flex items-center gap-2 pb-2 text-sm'>
+            <input
+              type='checkbox'
+              checked={includeVoided}
+              onChange={(e) => setIncludeVoided(e.target.checked)}
+              data-testid='trace-include-voided'
+            />
+            {t('mes.traceq.includeVoided')}
+          </label>
+        )}
         <Button type='submit' data-testid='trace-search'>
           <Search className='size-4' />
           {t('mes.traceq.search')}
         </Button>
       </form>
+      {kind === 'trace_code' && patternInvalid && (
+        <p
+          className='text-xs text-muted-foreground'
+          data-testid='trace-pattern-invalid'
+        >
+          {t('mes.marking.patternInvalidHint')}
+        </p>
+      )}
       {codeErr.length > 0 && (
         <div className='text-sm text-destructive' data-testid='trace-code-err'>
           {codeErr.map((m) => (
@@ -287,36 +312,21 @@ export default function TracePage() {
           ))}
         </div>
       )}
-      {d?.marking && (
-        <TraceTable
-          title={t('mes.traceq.marking')}
-          rows={[d.marking]}
-          cols={[
-            'trace_code',
-            'content',
-            'template',
-            'date_code',
-            'equipment',
-            'user',
-            'reprint_count',
-            'latest_inspection_status',
-            'marked_at',
-          ]}
-        />
+      {isCode && tq.data && <TraceCodeBlock r={tq.data} />}
+      {isCode && tq.error && (
+        <p
+          className='text-sm text-destructive'
+          data-testid='trace-code-api-err'
+        >
+          {markingErrorMessage(tq.error)}
+        </p>
       )}
-      {d?.wafers && (
-        <TraceTable
-          title={`${t('mes.traceq.wafers')} · ${d.target.code ?? ''}`}
-          rows={d.wafers}
-          cols={['wafer', 'slot']}
-        />
-      )}
-      {q.error && (
+      {!isCode && q.error && (
         <p className='text-sm text-destructive'>
           {mesErrorMessage(q.error, undefined)}
         </p>
       )}
-      {d?.backward && (
+      {!isCode && d?.backward && (
         <LotTraceBlock
           title={d.target.code ?? ''}
           info={d.target}
@@ -439,6 +449,39 @@ function CustomerLotResult({ d }: { d: TraceResult }) {
             />
           )
       )}
+    </div>
+  )
+}
+
+/** kind=trace_code 结果：主记录 + 各次打印的检验结果（D79-6）。 */
+function TraceCodeBlock({ r }: { r: TraceCodeResult }) {
+  return (
+    <div className='grid gap-3' data-testid='trace-code-result'>
+      <h3 className='flex flex-wrap items-center gap-2 font-semibold'>
+        <span className='font-mono'>{r.trace_code}</span>
+        <Link
+          to='/$'
+          params={{ _splat: 'mes/lot-history' }}
+          search={{ tab: 'mes-lot-trace', lot: r.lot_id } as never}
+          className='text-sm font-normal underline-offset-2 hover:underline'
+        >
+          {t('mes.traceq.c.lot')}
+        </Link>
+        {r.voided && (
+          <Badge variant='outline' data-testid='trace-code-voided'>
+            {t('mes.marking.voided')}
+          </Badge>
+        )}
+      </h3>
+      <TraceTable
+        title={t('mes.traceq.marking')}
+        rows={r.prints.map((p) => ({
+          seq: p.seq,
+          marked_at: p.marked_at,
+          latest_inspection_status: p.latest_inspection_result,
+        }))}
+        cols={['seq', 'marked_at', 'latest_inspection_status']}
+      />
     </div>
   )
 }

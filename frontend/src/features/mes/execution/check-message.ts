@@ -13,12 +13,8 @@ export function checkMessage(r: CheckResult): string {
     })
   }
   // D78 Q5：打标检验不合格未处理，不能出站，不可强制放行
-  if (r.check_type === 'marking_inspection' && r.result !== 'pass') {
-    const code = r.data?.trace_code
-    return t('mes.marking.checkBlocked', {
-      trace: typeof code === 'string' ? code : '—',
-    })
-  }
+  if (r.check_type === 'marking_inspection' && r.result !== 'pass')
+    return markingCheckMessage(r)
   if (r.check_type === 'tool_life' && r.result !== 'pass')
     return toolLifeMessage(r)
   const qual = operatorQualMessage(r)
@@ -46,4 +42,33 @@ export function reasonTexts(v: unknown): string[] {
       return ''
     })
     .filter(Boolean)
+}
+
+/** 打标检验拦出站：读 ctx.reason（not_marked / pending / fail，D79 补充）；兼容 data。 */
+export function markingCheckInfo(r: CheckResult): {
+  reason: string | null
+  markingId: string | null
+  trace: string | null
+} {
+  const o = r as unknown as {
+    ctx?: Record<string, unknown> | null
+    data?: Record<string, unknown> | null
+  }
+  const pick = (k: string) => {
+    const v = o.ctx?.[k] ?? o.data?.[k]
+    return typeof v === 'string' && v ? v : null
+  }
+  return {
+    reason: pick('reason'),
+    markingId: pick('marking_id'),
+    trace: pick('trace_code'),
+  }
+}
+
+function markingCheckMessage(r: CheckResult): string {
+  const { reason, trace } = markingCheckInfo(r)
+  const v = { trace: trace ?? '—' }
+  if (reason === 'pending') return t('mes.marking.checkPending', v)
+  if (reason === 'fail') return t('mes.marking.checkBlocked', v)
+  return t('mes.marking.checkNotMarked')
 }

@@ -940,21 +940,15 @@
         "die_row": "die 行",
         "die_col": "die 列",
         "transform_id": "转换记录",
-        "trace_code": "追溯码",
-        "content": "打标内容",
-        "template": "模板",
-        "date_code": "日期码",
-        "reprint_count": "重打次数",
         "latest_inspection_status": "检验",
         "marked_at": "打标时间",
-        "wafer": "晶圆",
-        "slot": "槽位"
+        "seq": "打印序号"
       },
       "origins": "来源晶圆与 die 坐标",
       "dies": "该晶圆的 die 去向",
       "outOrigins": "下游子批位置",
       "marking": "打标记录",
-      "wafers": "晶圆"
+      "includeVoided": "含已作废"
     },
     "holdrel": {
       "hint": "查看并释放 Hold 中的批次。",
@@ -1918,7 +1912,7 @@
       "retire": "退役",
       "selfApprovalHint": "起草人不能审批自己的模板",
       "formHint": "占位符见下方说明",
-      "linesHint": "每行一段，可用 {model} {yyww} {trace} {bin}",
+      "linesHint": "每行一段，可用 {trace_code} {date_code} {lot_id} {product_code} {customer_code}",
       "compareWith": "对比版本",
       "noOtherVersion": "没有其他版本",
       "noDiff": "两个版本内容相同",
@@ -1934,8 +1928,8 @@
       "voidedHint": "已作废（{{by}}：{{comment}}），不能再操作",
       "scrappedHint": "批次已报废，不能再操作",
       "traceAssignedHint": "追溯码在打印时由系统发号",
-      "markedFrom": "打标日期从",
-      "markedTo": "打标日期至",
+      "markedFrom": "首打日期从",
+      "markedTo": "首打日期至",
       "printLog": "打印与检验履历",
       "readCode": "读回码（OCR）",
       "reasonId": "原因码",
@@ -1980,13 +1974,13 @@
         "lot": "批次",
         "template": "模板",
         "dateCode": "日期码",
-        "qty": "数量",
         "bin": "bin",
         "equipment": "打标机",
         "traceCode": "追溯码",
         "reprints": "重打次数",
         "inspection": "检验",
-        "markedAt": "打标时间"
+        "markedAt": "首打时间",
+        "lastPrintedAt": "最近打印"
       },
       "actHint": {
         "inspect": "读回码与系统号不一致时记为不合格",
@@ -2000,7 +1994,8 @@
         "print": "已打印，追溯码 {{code}}",
         "inspect": "已录入检验",
         "reprint": "已重打",
-        "void": "已作废"
+        "void": "已作废",
+        "newVersion": "已新建草稿 v{{v}}"
       },
       "err": {
         "reason_idRequired": "请填写原因码",
@@ -2009,22 +2004,31 @@
         "maxPlaces": "最多 {{n}} 位小数",
         "trace_max_length": "追溯码不能超过 {{n}} 位",
         "trace_pattern": "追溯码只能包含大写字母、数字和连字符",
-        "traceRequired": "请填写追溯码"
+        "traceRequired": "请填写追溯码",
+        "unknownPlaceholder": "不支持的占位符 {{name}}",
+        "selfApproval": "起草人不能审批自己的模板",
+        "readCodeTooLong": "读回码不能超过 {{n}} 个字符"
       },
       "code": {
-        "self_approval": "起草人不能审批自己的模板",
         "template_readonly": "已批准的版本只读，请新建版本",
         "draft_exists": "该产品和客户已有草稿",
         "invalid_transition": "当前状态不允许该操作（可能已作废或已报废）",
         "marking_template_missing": "该批次的产品和客户没有已批准的打标模板",
-        "already_marked": "该批次已打标，不合格时请重打",
+        "already_marked": "该批次已有未作废的打标记录",
         "trace_code_mismatch": "设备回报的追溯码 {{actual}} 与系统发号 {{expected}} 不一致",
         "check_blocked": "检查未通过",
         "inspect_blocked": "打标检验不合格且未处理，不能出站，不可强制放行",
         "idempotency_key_reused": "请求已提交过且内容不同，请刷新后重试",
-        "key_missing": "请求缺少幂等键，请刷新页面后重试"
+        "key_missing": "请求缺少幂等键，请刷新页面后重试",
+        "no_active_marking": "该批次没有未作废的打标记录"
       },
-      "checkBlocked": "打标检验不合格（{{trace}}），处理前不能出站"
+      "checkBlocked": "打标检验不合格（{{trace}}），处理前不能出站",
+      "overridden": "你填的是 pass，系统已记为 fail：应为 {{expected}}，读到 {{read}}",
+      "overriddenTag": "系统改判",
+      "checkNotMarked": "该批次尚未打标，不能出站",
+      "checkPending": "打标待检验（{{trace}}），检验合格后才能出站",
+      "openRecord": "查看打标记录",
+      "patternInvalidHint": "追溯码格式配置无效，格式以服务端校验为准"
     }
   },
   "notify": {

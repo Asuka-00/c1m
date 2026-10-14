@@ -13,6 +13,7 @@ import {
   markingApi,
   setMarkingMockUser,
   siblingVersions,
+  unknownPlaceholders,
   TEMPLATE_STATUSES,
   type MarkingTemplate,
   type TemplateInput,
@@ -87,7 +88,7 @@ export default function MarkingTemplatePage() {
     (r) =>
       (!status || r.status === status) &&
       (!q ||
-        `${r.code} ${r.product ?? ''} ${r.customer ?? ''}`
+        `${r.code} ${r.product_name ?? ''} ${r.customer_name ?? ''}`
           .toLowerCase()
           .includes(q.toLowerCase()))
   )
@@ -121,7 +122,7 @@ export default function MarkingTemplatePage() {
             </option>
           ))}
         </select>
-        {can(MARKING_PERM.write) && (
+        {can(MARKING_PERM.templateWrite) && (
           <Button onClick={() => setEdit('new')} data-testid='tpl-new'>
             {t('mes.marking.newTpl')}
           </Button>
@@ -144,8 +145,8 @@ export default function MarkingTemplatePage() {
               data-testid={`tpl-row-${r.code}-v${r.version}`}
             >
               <TableCell>{r.code}</TableCell>
-              <TableCell>{dash(r.product ?? r.product_id)}</TableCell>
-              <TableCell>{dash(r.customer ?? r.customer_id)}</TableCell>
+              <TableCell>{dash(r.product_name ?? r.product_id)}</TableCell>
+              <TableCell>{dash(r.customer_name ?? r.customer_id)}</TableCell>
               <TableCell>v{r.version}</TableCell>
               <TableCell>
                 <StatusBadge status={r.status} />
@@ -160,7 +161,7 @@ export default function MarkingTemplatePage() {
           all={list.data ?? []}
           me={me}
           onEdit={() => setEdit(cur)}
-          onNewVersion={() => setEdit({ ...cur, id: '' })}
+          onNewVersion={(id) => setSel(id)}
         />
       )}
       {edit && (
@@ -188,7 +189,7 @@ function TemplateDetail({
   all: MarkingTemplate[]
   me: string | null
   onEdit: () => void
-  onNewVersion: () => void
+  onNewVersion: (id: string) => void
 }) {
   const can = useMesCan()
   const qc = useQueryClient()
@@ -199,6 +200,16 @@ function TemplateDetail({
     onSuccess: (_, a) => {
       toast.success(t(`mes.marking.done.${a}`))
       void qc.invalidateQueries({ queryKey: KEY })
+    },
+    onError: (e) => toast.error(markingErrorMessage(e)),
+  })
+  // D79-1：POST .../{id}/versions 复制最新版本为草稿，版本号后端递增
+  const nv = useMutation({
+    mutationFn: () => markingApi.newVersion(tpl.id),
+    onSuccess: (r) => {
+      toast.success(t('mes.marking.done.newVersion', { v: r.version }))
+      void qc.invalidateQueries({ queryKey: KEY })
+      onNewVersion(r.id)
     },
     onError: (e) => toast.error(markingErrorMessage(e)),
   })
@@ -219,21 +230,24 @@ function TemplateDetail({
         </h3>
         <StatusBadge status={tpl.status} />
         <div className='ms-auto flex flex-wrap gap-2'>
-          {can(MARKING_PERM.write) && isEditable(tpl) && (
+          {can(MARKING_PERM.templateWrite) && isEditable(tpl) && (
             <Button variant='outline' onClick={onEdit} data-testid='tpl-edit'>
               {t('mes.marking.edit')}
             </Button>
           )}
-          {can(MARKING_PERM.write) && tpl.status !== 'draft' && !draft && (
-            <Button
-              variant='outline'
-              onClick={onNewVersion}
-              data-testid='tpl-new-version'
-            >
-              {t('mes.marking.newVersion')}
-            </Button>
-          )}
-          {can(MARKING_PERM.approve) && tpl.status === 'draft' && (
+          {can(MARKING_PERM.templateWrite) &&
+            tpl.status !== 'draft' &&
+            !draft && (
+              <Button
+                variant='outline'
+                onClick={() => nv.mutate()}
+                disabled={nv.isPending}
+                data-testid='tpl-new-version'
+              >
+                {t('mes.marking.newVersion')}
+              </Button>
+            )}
+          {can(MARKING_PERM.templateApprove) && tpl.status === 'draft' && (
             <Button
               onClick={() => act.mutate('approve')}
               disabled={self || act.isPending}
@@ -243,7 +257,7 @@ function TemplateDetail({
               {t('mes.marking.approve')}
             </Button>
           )}
-          {can(MARKING_PERM.approve) && tpl.status === 'approved' && (
+          {can(MARKING_PERM.templateApprove) && tpl.status === 'approved' && (
             <Button
               variant='outline'
               onClick={() => act.mutate('retire')}
@@ -255,7 +269,7 @@ function TemplateDetail({
           )}
         </div>
       </div>
-      {self && tpl.status === 'draft' && can(MARKING_PERM.approve) && (
+      {self && tpl.status === 'draft' && can(MARKING_PERM.templateApprove) && (
         <p
           className='text-sm text-muted-foreground'
           data-testid='tpl-self-hint'
@@ -264,8 +278,8 @@ function TemplateDetail({
         </p>
       )}
       <dl className='grid grid-cols-2 gap-2 text-sm md:grid-cols-4'>
-        <Info k='product' v={tpl.product ?? tpl.product_id} />
-        <Info k='customer' v={tpl.customer ?? tpl.customer_id} />
+        <Info k='product' v={tpl.product_name ?? tpl.product_id} />
+        <Info k='customer' v={tpl.customer_name ?? tpl.customer_id} />
         <Info
           k='dateCodeBasis'
           v={t(`mes.marking.basis.${tpl.date_code_basis}`)}
@@ -411,7 +425,7 @@ function TemplateDialog({
     code: tpl?.code ?? '',
     product_id: tpl?.product_id ?? '',
     customer_id: tpl?.customer_id ?? '',
-    lines: tpl?.lines ?? ['{model}', '{yyww}{trace}'],
+    lines: tpl?.lines ?? ['{product_code}', '{date_code}{trace_code}'],
     date_code_basis: tpl?.date_code_basis ?? 'marking',
     uses_bin: tpl?.uses_bin ?? false,
   })
@@ -432,13 +446,14 @@ function TemplateDialog({
     },
     onError: (e) => setErr(markingErrorMessage(e)),
   })
+  const unknown = unknownPlaceholders(f.lines)
   const text = (k: 'code' | 'product_id' | 'customer_id', label: string) => (
     <div className='grid gap-1'>
       <Label htmlFor={`tpl-${k}`}>{label}</Label>
       <Input
         id={`tpl-${k}`}
         value={f[k]}
-        disabled={editing || (!!tpl && k !== 'code')}
+        disabled={editing}
         onChange={(e) => setF({ ...f, [k]: e.target.value })}
         data-testid={`tpl-f-${k}`}
       />
@@ -449,11 +464,7 @@ function TemplateDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {editing
-              ? t('mes.marking.edit')
-              : tpl
-                ? t('mes.marking.newVersion')
-                : t('mes.marking.newTpl')}
+            {editing ? t('mes.marking.edit') : t('mes.marking.newTpl')}
           </DialogTitle>
           <DialogDescription>{t('mes.marking.formHint')}</DialogDescription>
         </DialogHeader>
@@ -507,6 +518,15 @@ function TemplateDialog({
             <p className='text-xs text-muted-foreground'>
               {t('mes.marking.linesHint')}
             </p>
+            {unknown.map((n) => (
+              <p
+                key={n}
+                className='text-sm text-destructive'
+                data-testid='tpl-err-placeholder'
+              >
+                {t('mes.marking.err.unknownPlaceholder', { name: `{${n}}` })}
+              </p>
+            ))}
           </div>
           {err && (
             <p className='text-sm text-destructive' data-testid='tpl-err'>
@@ -523,7 +543,7 @@ function TemplateDialog({
               setErr('')
               save.mutate()
             }}
-            disabled={save.isPending}
+            disabled={save.isPending || unknown.length > 0}
             data-testid='tpl-save'
           >
             {t('common.save')}

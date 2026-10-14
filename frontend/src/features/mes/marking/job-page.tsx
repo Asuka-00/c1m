@@ -5,16 +5,21 @@ import { fmtDateTime, t } from '@/i18n'
 import { toast } from 'sonner'
 import {
   COMMENT_MAX,
+  canInspect,
+  MARKING_POLICY,
+  READ_CODE_MAX,
+  readCodeErrors,
+  canReprint,
   inspectionsByPrint,
   isLocked,
   MARKING_MOCK,
   markingApi,
   markingSignature,
   reprintErrors,
+  type InspectOut,
   type InspectResult,
   type MarkingRecord,
 } from '@/lib/api/mes/marking'
-import { decimalText } from '@/lib/decimal'
 import { siteToday } from '@/lib/site-tz'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -46,7 +51,7 @@ import {
   markingErrorMessage,
   traceErrorTexts,
   useIdemKey,
-  useTraceRule,
+  useTraceConfig,
 } from './marking-rules'
 
 const REC_KEY = ['mes', 'marking', 'records']
@@ -71,14 +76,18 @@ export function InspectBadge({ status }: { status: string }) {
 export default function MarkingJobPage() {
   const can = useMesCan()
   const qc = useQueryClient()
-  const keyOf = useIdemKey()
+  const createKey = useIdemKey()
+  const printKey = useIdemKey()
   const [lot, setLot] = useState('')
   const [lotQ, setLotQ] = useState('')
   const [equipment, setEquipment] = useState('')
   const today = siteToday()
   const [from, setFrom] = useState(today)
   const [to, setTo] = useState(today)
-  const [sel, setSel] = useState<string | null>(null)
+  // 出站拦截提示的跳转：/mes/marking?record=<marking_id>
+  const [sel, setSel] = useState<string | null>(() =>
+    new URLSearchParams(window.location.search).get('record')
+  )
   const preview = useQuery({
     queryKey: ['mes', 'marking', 'preview', lotQ],
     queryFn: () => markingApi.preview(lotQ),
@@ -94,13 +103,33 @@ export default function MarkingJobPage() {
     queryKey: [...REC_KEY, range],
     queryFn: () => markingApi.records(range),
   })
+  // 该批次的主记录（判断是否已有未作废主记录、是否已首打）
+  const lotRecs = useQuery({
+    queryKey: [...REC_KEY, 'lot', preview.data?.lot_id],
+    queryFn: () => markingApi.records({ lot_id: preview.data!.lot_id }),
+    enabled: !!preview.data,
+  })
+  const live = lotRecs.data?.find((r) => !r.voided)
+  // D79-3：先建主记录（POST /mes/marking），再走 prints 首打（seq=1）；作废后可重新首打
   const print = useMutation({
-    mutationFn: () => {
-      const body = {
-        lot_id: preview.data!.lot_id,
-        equipment_id: equipment || null,
+    mutationFn: async () => {
+      const eq = equipment || null
+      let id = live?.id
+      if (!id) {
+        const body = { lot_id: preview.data!.lot_id, equipment_id: eq }
+        id = (
+          await markingApi.create(
+            body,
+            createKey(markingSignature('create', body))
+          )
+        ).id
       }
-      return markingApi.mark(body, keyOf(markingSignature('mark', body)))
+      const body = { equipment_id: eq }
+      return markingApi.print(
+        id,
+        body,
+        printKey(markingSignature(`print:${id}`, body))
+      )
     },
     onSuccess: (r) => {
       toast.success(t('mes.marking.done.print', { code: r.trace_code }))
@@ -109,7 +138,13 @@ export default function MarkingJobPage() {
     },
     onError: (e) => toast.error(markingErrorMessage(e)),
   })
-  const cur = records.data?.find((r) => r.id === sel)
+  const one = useQuery({
+    queryKey: [...REC_KEY, 'one', sel],
+    queryFn: () => markingApi.record(sel!),
+    enabled: !!sel && !records.data?.some((r) => r.id === sel),
+    retry: false,
+  })
+  const cur = records.data?.find((r) => r.id === sel) ?? one.data
   const p = preview.data
   return (
     <Page
@@ -159,9 +194,6 @@ export default function MarkingJobPage() {
             <span>
               {t('mes.marking.col.dateCode')}: {p.date_code}
             </span>
-            <span>
-              {t('mes.marking.col.qty')}: {decimalText(p.qty)}
-            </span>
             {p.bin && (
               <span>
                 {t('mes.marking.col.bin')}: {p.bin}
@@ -179,7 +211,7 @@ export default function MarkingJobPage() {
               {t('mes.marking.traceAssignedHint')}
             </p>
           )}
-          {can(MARKING_PERM.exec) && !p.trace_code && (
+          {can(MARKING_PERM.exec) && (!live || live.prints.length === 0) && (
             <div className='flex flex-wrap items-end gap-3'>
               <div className='grid w-48 gap-1'>
                 <Label htmlFor='mk-eqp'>{t('mes.marking.col.equipment')}</Label>
@@ -230,6 +262,7 @@ export default function MarkingJobPage() {
               'reprints',
               'inspection',
               'markedAt',
+              'lastPrintedAt',
             ].map((c) => (
               <TableHead key={c}>{t(`mes.marking.col.${c}`)}</TableHead>
             ))}
@@ -256,7 +289,12 @@ export default function MarkingJobPage() {
                   <InspectBadge status={r.latest_inspection_status} />
                 )}
               </TableCell>
-              <TableCell>{fmtDateTime(r.marked_at)}</TableCell>
+              <TableCell>
+                {r.marked_at ? fmtDateTime(r.marked_at) : '—'}
+              </TableCell>
+              <TableCell>
+                {r.last_printed_at ? fmtDateTime(r.last_printed_at) : '—'}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -302,7 +340,7 @@ function RecordDetail({ rec }: { rec: MarkingRecord }) {
           <div className='ms-auto flex flex-wrap gap-2'>
             <Button
               variant='outline'
-              disabled={locked || rec.latest_inspection_status !== 'pending'}
+              disabled={!canInspect(rec)}
               onClick={() => setAct('inspect')}
               data-testid='mk-act-inspect'
             >
@@ -310,7 +348,7 @@ function RecordDetail({ rec }: { rec: MarkingRecord }) {
             </Button>
             <Button
               variant='outline'
-              disabled={locked || rec.latest_inspection_status !== 'fail'}
+              disabled={!canReprint(rec)}
               onClick={() => setAct('reprint')}
               data-testid='mk-act-reprint'
             >
@@ -382,6 +420,11 @@ function RecordDetail({ rec }: { rec: MarkingRecord }) {
                   <InspectBadge status={i.result} />
                   <span>{fmtDateTime(i.inspected_at)}</span>
                   <span>{dash(i.inspected_by)}</span>
+                  {i.result_overridden && (
+                    <Badge variant='destructive' data-testid='mk-overridden'>
+                      {t('mes.marking.overriddenTag')}
+                    </Badge>
+                  )}
                   {i.read_code && i.read_code !== i.expected_code && (
                     <span data-testid='mk-ocr-diff' className='font-mono'>
                       {t('mes.marking.ocrDiff', {
@@ -414,7 +457,7 @@ function ActDialog({
 }) {
   const qc = useQueryClient()
   const keyOf = useIdemKey()
-  const rule = useTraceRule()
+  const { rule, patternInvalid } = useTraceConfig()
   const [result, setResult] = useState<InspectResult>('pass')
   const [readCode, setReadCode] = useState('')
   const [reasonId, setReasonId] = useState('')
@@ -422,7 +465,7 @@ function ActDialog({
   const [confirm, setConfirm] = useState(false)
   const [errs, setErrs] = useState<Record<string, string>>({})
   const m = useMutation({
-    mutationFn: () => {
+    mutationFn: (): Promise<MarkingRecord | InspectOut> => {
       if (act === 'inspect') {
         const body = {
           result,
@@ -437,13 +480,12 @@ function ActDialog({
         )
       }
       if (act === 'reprint') {
-        const body = {
-          lot_id: rec.lot_id,
-          record_id: rec.id,
-          reason_id: reasonId.trim(),
-          comment: comment.trim(),
-        }
-        return markingApi.mark(body, keyOf(markingSignature('mark', body)))
+        const body = { reason_id: reasonId.trim(), comment: comment.trim() }
+        return markingApi.print(
+          rec.id,
+          body,
+          keyOf(markingSignature(`print:${rec.id}`, body))
+        )
       }
       const body = { reason_id: reasonId.trim(), comment: comment.trim() }
       return markingApi.void(
@@ -452,8 +494,17 @@ function ActDialog({
         keyOf(markingSignature(`void:${rec.id}`, body))
       )
     },
-    onSuccess: () => {
-      toast.success(t(`mes.marking.done.${act}`))
+    onSuccess: (out) => {
+      // D79-4：填了 pass 但读回不一致，系统改记 fail
+      const o = out as Partial<InspectOut>
+      if (act === 'inspect' && o.result_overridden)
+        toast.warning(
+          t('mes.marking.overridden', {
+            expected: o.expected_code ?? '',
+            read: o.read_code ?? '',
+          })
+        )
+      else toast.success(t(`mes.marking.done.${act}`))
       void qc.invalidateQueries({ queryKey: ['mes', 'marking'] })
       onClose()
     },
@@ -461,8 +512,15 @@ function ActDialog({
   })
   const submit = () => {
     const e: Record<string, string> = {}
+    // 读回码是否校验格式见 MARKING_POLICY（待架构师定）
     if (act === 'inspect' && readCode !== '') {
-      const bad = traceErrorTexts(readCode, rule)
+      const bad = MARKING_POLICY.validateReadCodeFormat
+        ? traceErrorTexts(readCode, rule)
+        : readCodeErrors(readCode).map((k) =>
+            k === 'missing'
+              ? t('mes.marking.err.traceRequired')
+              : t('mes.marking.err.readCodeTooLong', { n: READ_CODE_MAX })
+          )
       if (bad.length) e.read_code = bad.join('\n')
     }
     if (act !== 'inspect') {
@@ -518,6 +576,11 @@ function ActDialog({
                   data-testid='mk-read-code'
                 />
                 <FieldErr k='read_code' msg={errs.read_code} />
+                {patternInvalid && (
+                  <p className='text-xs text-muted-foreground'>
+                    {t('mes.marking.patternInvalidHint')}
+                  </p>
+                )}
               </div>
             </>
           )}

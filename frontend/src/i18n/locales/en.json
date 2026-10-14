@@ -940,21 +940,15 @@
         "die_row": "Die row",
         "die_col": "Die col",
         "transform_id": "Transform record",
-        "trace_code": "Trace code",
-        "content": "Marking content",
-        "template": "Template",
-        "date_code": "Date code",
-        "reprint_count": "Reprints",
         "latest_inspection_status": "Inspection",
         "marked_at": "Marked at",
-        "wafer": "Wafer",
-        "slot": "Slot"
+        "seq": "Print #"
       },
       "origins": "Source wafers & die coordinates",
       "dies": "Where this wafer's dies went",
       "outOrigins": "Downstream child positions",
       "marking": "Marking record",
-      "wafers": "Wafers"
+      "includeVoided": "Include voided"
     },
     "holdrel": {
       "hint": "View and release held lots.",
@@ -1918,7 +1912,7 @@
       "retire": "Retire",
       "selfApprovalHint": "The drafter cannot approve their own template",
       "formHint": "Placeholders are listed below",
-      "linesHint": "One line each; use {model} {yyww} {trace} {bin}",
+      "linesHint": "One per line; placeholders {trace_code} {date_code} {lot_id} {product_code} {customer_code}",
       "compareWith": "Compare with",
       "noOtherVersion": "No other versions",
       "noDiff": "No differences",
@@ -1934,8 +1928,8 @@
       "voidedHint": "Voided ({{by}}: {{comment}}); no further actions",
       "scrappedHint": "Lot is scrapped; no further actions",
       "traceAssignedHint": "The trace code is assigned when printing",
-      "markedFrom": "Marked from",
-      "markedTo": "Marked to",
+      "markedFrom": "First printed from",
+      "markedTo": "First printed to",
       "printLog": "Print and inspection history",
       "readCode": "Read-back code (OCR)",
       "reasonId": "Reason code",
@@ -1980,13 +1974,13 @@
         "lot": "Lot",
         "template": "Template",
         "dateCode": "Date code",
-        "qty": "Qty",
         "bin": "Bin",
         "equipment": "Marker",
         "traceCode": "Trace code",
         "reprints": "Reprints",
         "inspection": "Inspection",
-        "markedAt": "Marked at"
+        "markedAt": "First printed",
+        "lastPrintedAt": "Last printed"
       },
       "actHint": {
         "inspect": "A read-back mismatch is recorded as fail",
@@ -2000,7 +1994,8 @@
         "print": "Printed, trace code {{code}}",
         "inspect": "Inspection recorded",
         "reprint": "Reprinted",
-        "void": "Voided"
+        "void": "Voided",
+        "newVersion": "Draft v{{v}} created"
       },
       "err": {
         "reason_idRequired": "Reason code is required",
@@ -2009,22 +2004,31 @@
         "maxPlaces": "At most {{n}} decimal places",
         "trace_max_length": "Trace code must be at most {{n}} characters",
         "trace_pattern": "Trace code may only contain A–Z, 0–9 and hyphens",
-        "traceRequired": "Trace code is required"
+        "traceRequired": "Trace code is required",
+        "unknownPlaceholder": "Unknown placeholder {{name}}",
+        "selfApproval": "The drafter cannot approve their own template",
+        "readCodeTooLong": "Read-back code must be at most {{n}} characters"
       },
       "code": {
-        "self_approval": "The drafter cannot approve their own template",
         "template_readonly": "Approved versions are read-only; create a new version",
         "draft_exists": "A draft already exists for this product and customer",
         "invalid_transition": "Not allowed in the current state (voided or scrapped?)",
         "marking_template_missing": "No approved marking template for this lot's product and customer",
-        "already_marked": "Lot already marked; reprint if inspection failed",
+        "already_marked": "This lot already has a live marking record",
         "trace_code_mismatch": "Reported trace code {{actual}} differs from issued {{expected}}",
         "check_blocked": "Check failed",
         "inspect_blocked": "Marking inspection failed and is unresolved; cannot track out or override",
         "idempotency_key_reused": "This request was already sent with different content; refresh and retry",
-        "key_missing": "Request is missing its idempotency key; refresh and retry"
+        "key_missing": "Request is missing its idempotency key; refresh and retry",
+        "no_active_marking": "This lot has no live marking record"
       },
-      "checkBlocked": "Marking inspection failed ({{trace}}); resolve before track-out"
+      "checkBlocked": "Marking inspection failed ({{trace}}); resolve before track-out",
+      "overridden": "You entered pass, but the system recorded fail: expected {{expected}}, read {{read}}",
+      "overriddenTag": "Overridden",
+      "checkNotMarked": "This lot has not been marked yet; cannot track out",
+      "checkPending": "Marking awaiting inspection ({{trace}}); pass inspection before track-out",
+      "openRecord": "Open marking record",
+      "patternInvalidHint": "Trace code pattern config is invalid; the server will validate format"
     }
   },
   "notify": {

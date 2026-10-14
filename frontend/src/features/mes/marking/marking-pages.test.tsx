@@ -39,6 +39,12 @@ const wrap = (node: React.ReactNode, perms: string[], me = 'admin') => {
 
 const ALL = Object.values(MARKING_PERM)
 
+/** mock：建主记录 + 首打。 */
+const seedPrint = async () => {
+  const r = await mockMarkingApi.create({ lot_id: 'lot1' }, 'seed-c')
+  return mockMarkingApi.print(r.id, {}, 'seed-p')
+}
+
 beforeEach(async () => {
   await i18n.changeLanguage('zh-CN')
   resetMarkingMock()
@@ -72,10 +78,49 @@ describe('打标模板页', () => {
     await userEvent.selectOptions(s.getByTestId('tpl-compare').element(), 't1')
     await expect
       .element(s.getByTestId('tpl-diff'))
-      .toHaveTextContent('{yyww} {trace}')
+      .toHaveTextContent('{date_code} {trace_code}')
     await expect
       .element(s.getByTestId('tpl-diff'))
       .toHaveTextContent(t('mes.marking.lineN', { n: 2 }))
+  })
+})
+
+describe('打标模板页（D79）', () => {
+  it('新建版本：复制最新版本为草稿 v3 并选中', async () => {
+    const s = await render(wrap(<TemplatePage />, ALL, 'eng9'))
+    await s.getByTestId('tpl-row-MK-QFN32-ACME-v2').click()
+    await s.getByTestId('tpl-new-version').click()
+    await expect
+      .element(s.getByTestId('tpl-row-MK-QFN32-ACME-v3'))
+      .toBeVisible()
+    await expect.element(s.getByTestId('tpl-edit')).toBeVisible()
+  })
+  it('只有 marking:read + template:approve 时不显示编辑', async () => {
+    const s = await render(
+      wrap(
+        <TemplatePage />,
+        [MARKING_PERM.read, MARKING_PERM.templateApprove],
+        'qa9'
+      )
+    )
+    await s.getByTestId('tpl-row-MK-SOP8-GLOBEX-v1').click()
+    await expect.element(s.getByTestId('tpl-edit')).not.toBeInTheDocument()
+    await expect.element(s.getByTestId('tpl-approve')).toBeEnabled()
+  })
+  it('白名单外占位符前端预校验，保存禁用', async () => {
+    const s = await render(wrap(<TemplatePage />, ALL))
+    await s.getByTestId('tpl-row-MK-SOP8-GLOBEX-v1').click()
+    await s.getByTestId('tpl-edit').click()
+    await userEvent.fill(
+      s.getByTestId('tpl-f-lines').element(),
+      '{model}\n{date_code}'
+    )
+    await expect
+      .element(s.getByTestId('tpl-err-placeholder'))
+      .toHaveTextContent(
+        t('mes.marking.err.unknownPlaceholder', { name: '{model}' })
+      )
+    await expect.element(s.getByTestId('tpl-save')).toBeDisabled()
   })
 })
 
@@ -102,14 +147,26 @@ describe('打标作业页', () => {
     await expect.element(s.getByTestId('mk-print-1')).toBeVisible()
     // 检验：读回码格式错误前端拦
     await s.getByTestId('mk-act-inspect').click()
-    await userEvent.fill(s.getByTestId('mk-read-code').element(), 'ab')
+    await userEvent.fill(s.getByTestId('mk-read-code').element(), '\u3000 ')
     await s.getByTestId('mk-act-ok').click()
     await expect
       .element(s.getByTestId('mk-err-read_code'))
-      .toHaveTextContent(t('mes.marking.err.trace_pattern'))
+      .toHaveTextContent(t('mes.marking.err.traceRequired'))
     await userEvent.fill(s.getByTestId('mk-read-code').element(), 'X-1')
     await s.getByTestId('mk-act-ok').click()
+    // D79-4：填 pass 但读回不一致 → 系统改记 fail 并提示
     await expect.element(s.getByTestId('mk-ocr-diff')).toBeVisible()
+    await expect.element(s.getByTestId('mk-overridden')).toBeVisible()
+    await expect
+      .element(
+        s.getByText(
+          t('mes.marking.overridden', { expected: '', read: 'X-1' }).split(
+            '：'
+          )[0],
+          { exact: false }
+        )
+      )
+      .toBeVisible()
     await expect.element(s.getByTestId('mk-act-reprint')).toBeEnabled()
     // 重打：原因必填
     await s.getByTestId('mk-act-reprint').click()
@@ -127,7 +184,7 @@ describe('打标作业页', () => {
     await expect.element(s.getByTestId('insp-pending').first()).toBeVisible()
   })
   it('作废需要二次确认，作废后按钮全部禁用', async () => {
-    const r = await mockMarkingApi.mark({ lot_id: 'lot1' }, 'seed')
+    const r = await seedPrint()
     const s = await render(wrap(<JobPage />, ALL))
     await s.getByTestId('mk-row-LOT-A001').click()
     await s.getByTestId('mk-act-void').click()
@@ -143,8 +200,19 @@ describe('打标作业页', () => {
     await expect.element(s.getByTestId('mk-act-inspect')).toBeDisabled()
     await expect.element(s.getByTestId('mk-act-reprint')).toBeDisabled()
   })
+  it('作废后同一批次预览可重新首打（新主记录）', async () => {
+    const r = await seedPrint()
+    await mockMarkingApi.void(r.id, { reason_id: 'V', comment: 'x' }, 'v')
+    const s = await render(wrap(<JobPage />, ALL))
+    await userEvent.fill(s.getByTestId('mk-lot').element(), 'lot1')
+    await s.getByTestId('mk-preview').click()
+    await s.getByTestId('mk-print').click()
+    await expect.element(s.getByTestId('mk-detail')).toBeVisible()
+    await expect.element(s.getByTestId('mk-voided')).not.toBeInTheDocument()
+    await expect.element(s.getByTestId('mk-print-1')).toBeVisible()
+  })
   it('只有 exec 没有 void 时不显示作废', async () => {
-    await mockMarkingApi.mark({ lot_id: 'lot1' }, 'seed')
+    await seedPrint()
     const s = await render(
       wrap(<JobPage />, [MARKING_PERM.read, MARKING_PERM.exec])
     )
@@ -152,22 +220,28 @@ describe('打标作业页', () => {
     await expect.element(s.getByTestId('mk-act-inspect')).toBeVisible()
     await expect.element(s.getByTestId('mk-act-void')).not.toBeInTheDocument()
   })
-  it('读回码违反两条规则逐条显示', async () => {
-    await mockMarkingApi.mark({ lot_id: 'lot1' }, 'seed')
+  it('读回码超过 128 码点前端拦截；不校验格式', async () => {
+    await seedPrint()
     const s = await render(wrap(<JobPage />, ALL))
     await s.getByTestId('mk-row-LOT-A001').click()
     await s.getByTestId('mk-act-inspect').click()
     await userEvent.fill(
       s.getByTestId('mk-read-code').element(),
-      'a'.repeat(33)
+      'a'.repeat(129)
     )
     await s.getByTestId('mk-act-ok').click()
-    const err = s.getByTestId('mk-err-read_code')
     await expect
-      .element(err)
-      .toHaveTextContent(t('mes.marking.err.trace_max_length', { n: 32 }))
+      .element(s.getByTestId('mk-err-read_code'))
+      .toHaveTextContent(t('mes.marking.err.readCodeTooLong', { n: 128 }))
+  })
+  it('列表同时显示首打时间与最近打印', async () => {
+    await seedPrint()
+    const s = await render(wrap(<JobPage />, ALL))
     await expect
-      .element(err)
-      .toHaveTextContent(t('mes.marking.err.trace_pattern'))
+      .element(s.getByText(t('mes.marking.col.markedAt')))
+      .toBeVisible()
+    await expect
+      .element(s.getByText(t('mes.marking.col.lastPrintedAt')))
+      .toBeVisible()
   })
 })

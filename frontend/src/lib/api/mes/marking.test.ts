@@ -1,25 +1,34 @@
 import type { AxiosError } from 'axios'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   diffTemplates,
   effectiveResult,
+  inspectionsByPrint,
   isoYyww,
   isSelfApproval,
-  inspectionsByPrint,
+  codeLength,
+  markingMockLeaveStep,
+  readCodeErrors,
+  canInspect,
+  canReprint,
   isValidTraceCode,
-  traceCodeError,
+  MARKING_POLICY,
   MARKING_BODY,
   mockEapPrintReport,
   mockMarkingApi as api,
   renderLines,
   reprintErrors,
   resetMarkingMock,
+  ruleFromConfig,
   scrapMarkingMockRecord,
   setMarkingMockNow,
   setMarkingMockUser,
   siblingVersions,
-  tooManyPlaces,
+  traceCodeError,
+  traceCodeErrors,
+  trackOutBlock,
   TRACE_CODE_RULE,
+  unknownPlaceholders,
 } from './marking'
 
 const detail = async (p: Promise<unknown>) => {
@@ -30,6 +39,12 @@ const detail = async (p: Promise<unknown>) => {
     return { status: r.status, detail: (r.data as { detail: unknown }).detail }
   }
   throw new Error('expected rejection')
+}
+
+/** 建主记录 + 首打。 */
+const firstPrint = async (lot = 'lot1', k = 'k1') => {
+  const r = await api.create({ lot_id: lot }, `${k}-c`)
+  return api.print(r.id, {}, `${k}-p`)
 }
 
 beforeEach(() => {
@@ -44,15 +59,29 @@ describe('打标规则', () => {
     expect(isoYyww('2027-01-01')).toBe('2653')
     expect(isoYyww('2026-01-01')).toBe('2601')
   })
-  it('占位符替换，未发号显示占位', () => {
+  it('D79 占位符替换，未发号显示占位', () => {
     expect(
-      renderLines(['{model}{bin}', '{yyww} {trace}'], {
-        model: 'M',
-        yyww: '2642',
-        trace: null,
-        bin: 'B1',
-      })
-    ).toEqual(['MB1', '2642 ••••'])
+      renderLines(
+        [
+          '{product_code}-{customer_code}',
+          '{date_code} {trace_code}',
+          '{lot_id}',
+        ],
+        {
+          trace_code: null,
+          date_code: '2642',
+          lot_id: 'L1',
+          product_code: 'P',
+          customer_code: 'C',
+        }
+      )
+    ).toEqual(['P-C', '2642 ••••', 'L1'])
+  })
+  it('D79 白名单外占位符', () => {
+    expect(
+      unknownPlaceholders(['{trace_code}', '{model} {yyww}', '{model}'])
+    ).toEqual(['model', 'yyww'])
+    expect(unknownPlaceholders(['{date_code}{lot_id}'])).toEqual([])
   })
   it('起草人不能自批', () => {
     expect(isSelfApproval({ created_by: 'a' }, 'a')).toBe(true)
@@ -68,16 +97,25 @@ describe('打标规则', () => {
       reprintErrors({ reason_id: 'R1', comment: 'x'.repeat(300) })
     ).toEqual([])
   })
-  it('追溯码 ≤32、[A-Z0-9-]，规则可配置', () => {
+  it('追溯码规则可配置', () => {
     expect(isValidTraceCode('2642-0001')).toBe(true)
     expect(isValidTraceCode('a1')).toBe(false)
-    expect(isValidTraceCode('A'.repeat(33))).toBe(false)
-    expect(isValidTraceCode('abc', { maxLength: 4, pattern: /^[a-z]+$/ })).toBe(
-      true
-    )
-    expect(TRACE_CODE_RULE.maxLength).toBe(32)
     expect(traceCodeError('A'.repeat(33))).toBe('max_length')
-    expect(traceCodeError('ab')).toBe('pattern')
+    expect(TRACE_CODE_RULE.maxLength).toBe(32)
+    const r = ruleFromConfig({
+      trace_code_max_length: 4,
+      trace_code_pattern: '^[A-Z]+$',
+    })
+    expect(traceCodeErrors('ABCDE', r)).toEqual(['max_length'])
+    expect(traceCodeErrors('AB1', r)).toEqual(['pattern'])
+    const bad = ruleFromConfig({
+      trace_code_max_length: 8,
+      trace_code_pattern: '(',
+    })
+    // QA F6：正则非法 → 不做格式预校验
+    expect(bad.pattern).toBeNull()
+    expect(traceCodeErrors('anything', bad)).toEqual([])
+    expect(ruleFromConfig(null).maxLength).toBe(32)
   })
   it('读回码不一致强制 fail', () => {
     expect(effectiveResult({ result: 'pass', read_code: 'X' }, 'Y')).toBe(
@@ -87,269 +125,11 @@ describe('打标规则', () => {
       'pass'
     )
   })
-  it('超过 6 位小数', () => {
-    expect(tooManyPlaces('1.1234567')).toBe(true)
-    expect(tooManyPlaces('1.123456')).toBe(false)
-  })
-  it('请求体白名单不含 seq / source', () => {
-    expect(MARKING_BODY.mark).not.toContain('seq')
-    expect(MARKING_BODY.mark).not.toContain('source')
-  })
-})
-
-describe('模板 mock', () => {
-  it('版本对比：逐字段、逐行', async () => {
-    const all = await api.templates()
-    const [v1, v2] = [all[0], all[1]]
-    expect(siblingVersions(all, v2).map((x) => x.id)).toEqual(['t1'])
-    expect(diffTemplates(v1, v2)).toEqual([
-      { field: 'date_code_basis', before: 'lot_start', after: 'marking' },
-      { field: 'lines', line: 2, before: '{yyww}', after: '{yyww} {trace}' },
-    ])
-  })
-  it('起草人审批 409 self_approval；他人审批后旧版本 retired', async () => {
-    setMarkingMockUser('eng1')
-    const t = await api.createTemplate({
-      code: 'MK-QFN32-ACME',
-      product_id: 'p1',
-      customer_id: 'c1',
-      lines: ['{model}', ''],
-      date_code_basis: 'marking',
-      uses_bin: false,
-    })
-    expect(t.version).toBe(3)
-    expect(t.lines).toEqual(['{model}'])
-    expect(await detail(api.approve(t.id))).toMatchObject({
-      status: 409,
-      detail: { code: 'self_approval' },
-    })
-    setMarkingMockUser('qa1')
-    await api.approve(t.id)
-    const all = await api.templates()
-    expect(all.find((x) => x.id === 't2')!.status).toBe('retired')
-    expect(
-      await detail(api.updateTemplate(t.id, { lines: ['x'] }))
-    ).toMatchObject({ status: 409, detail: { code: 'template_readonly' } })
-  })
-})
-
-describe('打标作业 mock（D78）', () => {
-  it('没有已批准模板 409 marking_template_missing', async () => {
-    expect(await detail(api.preview('lot3'))).toMatchObject({
-      status: 409,
-      detail: { code: 'marking_template_missing' },
-    })
-  })
-  it('预览日期码按站点日期', async () => {
-    const p = await api.preview('lot1')
-    expect(p.date_code).toBe('2642')
-    expect(p.trace_code).toBeNull()
-  })
-  it('缺 Idempotency-Key 422 missing（loc=header）', async () => {
-    expect(await detail(api.mark({ lot_id: 'lot1' }))).toMatchObject({
-      status: 422,
-      detail: [{ type: 'missing', loc: ['header', 'Idempotency-Key'] }],
-    })
-  })
-  it('首打 seq=1；同 key 重放返回原结果不占新号；不同内容 422', async () => {
-    const r1 = await api.mark({ lot_id: 'lot1', equipment_id: 'LM-01' }, 'k1')
-    const r2 = await api.mark({ lot_id: 'lot1', equipment_id: 'LM-01' }, 'k1')
-    expect(r2).toEqual(r1)
-    expect(r1.prints.map((p) => p.seq)).toEqual([1])
-    expect(r1.trace_code).toBe('26420001')
-    expect(
-      await detail(api.mark({ lot_id: 'lot1', equipment_id: 'LM-02' }, 'k1'))
-    ).toMatchObject({
-      status: 422,
-      detail: [{ type: 'idempotency_key_reused' }],
-    })
-  })
-  it('数量超 6 位小数 422 value_error ctx.max_places', async () => {
-    expect(
-      await detail(api.mark({ lot_id: 'lot1', qty: '1.1234567' }, 'kq'))
-    ).toMatchObject({
-      status: 422,
-      detail: [{ type: 'value_error', ctx: { max_places: 6 } }],
-    })
-  })
-  it('检验 OCR 不一致记 fail；重打必填原因、追加 seq=2、号不变', async () => {
-    const r = await api.mark({ lot_id: 'lot1' }, 'k1')
-    const i = await api.inspect(
-      r.id,
-      { result: 'pass', read_code: '26420002' },
-      'ki'
-    )
-    expect(i.latest_inspection_status).toBe('fail')
-    expect(i.inspections[0]).toMatchObject({
-      expected_code: '26420001',
-      read_code: '26420002',
-    })
-    expect(
-      await detail(api.mark({ lot_id: 'lot1', record_id: r.id }, 'kr0'))
-    ).toMatchObject({
-      status: 422,
-      detail: [{ type: 'missing', loc: ['body', 'reason_id'] }],
-    })
-    const re = {
-      lot_id: 'lot1',
-      record_id: r.id,
-      reason_id: 'R1',
-      comment: '模糊',
+  it('请求体白名单：无 seq / source / qty', () => {
+    for (const k of ['seq', 'source', 'qty']) {
+      expect(MARKING_BODY.create).not.toContain(k)
+      expect(MARKING_BODY.print).not.toContain(k)
     }
-    const r2 = await api.mark(re, 'kr1')
-    const again = await api.mark(re, 'kr1')
-    expect(again.prints.length).toBe(2)
-    expect(r2.prints.map((p) => p.seq)).toEqual([1, 2])
-    expect(r2.reprint_count).toBe(1)
-    expect(r2.trace_code).toBe(r.trace_code)
-    expect(r2.latest_inspection_status).toBe('pending')
-    expect(inspectionsByPrint(r2).map((g) => g.inspections.length)).toEqual([
-      1, 0,
-    ])
-  })
-  it('报废对象 409 invalid_transition', async () => {
-    expect(await detail(api.mark({ lot_id: 'lot4' }, 'ks'))).toMatchObject({
-      status: 409,
-      detail: { code: 'invalid_transition' },
-    })
-    const r = await api.mark({ lot_id: 'lot1' }, 'k1')
-    scrapMarkingMockRecord(r.id)
-    expect(
-      await detail(api.inspect(r.id, { result: 'pass' }, 'ki'))
-    ).toMatchObject({ status: 409, detail: { code: 'invalid_transition' } })
-  })
-  it('作废：原因必填；作废后打印 / 检验 / 作废 409；读回码格式 422 ctx.reason', async () => {
-    const r = await api.mark({ lot_id: 'lot1' }, 'k1')
-    expect(
-      await detail(api.inspect(r.id, { result: 'pass', read_code: 'ab' }, 'kx'))
-    ).toMatchObject({
-      status: 422,
-      detail: [{ type: 'value_error', ctx: { reason: 'pattern' } }],
-    })
-    expect(
-      await detail(api.void(r.id, { reason_id: 'V1', comment: '' }, 'kv0'))
-    ).toMatchObject({
-      status: 422,
-      detail: [{ type: 'missing', loc: ['body', 'comment'] }],
-    })
-    const v = await api.void(r.id, { reason_id: 'V1', comment: '错批' }, 'kv1')
-    expect(v.voided).toBe(true)
-    expect(
-      await detail(api.inspect(r.id, { result: 'pass' }, 'ki'))
-    ).toMatchObject({ status: 409, detail: { code: 'invalid_transition' } })
-    expect(
-      await detail(api.void(r.id, { reason_id: 'V1', comment: 'x' }, 'kv2'))
-    ).toMatchObject({ status: 409 })
-  })
-  it('EAP 回报号不一致 409 trace_code_mismatch', async () => {
-    const r = await api.mark({ lot_id: 'lot1' }, 'k1')
-    expect(
-      await detail(
-        mockEapPrintReport(r.id, { trace_code: 'X', external_event_id: 'e1' })
-      )
-    ).toMatchObject({
-      status: 409,
-      detail: {
-        code: 'trace_code_mismatch',
-        ctx: { expected: r.trace_code, actual: 'X' },
-      },
-    })
-  })
-  it('marked_at 范围半开区间：等于结束边界不含，等于开始边界含', async () => {
-    await api.mark({ lot_id: 'lot1' }, 'k1')
-    const at = '2026-10-14T17:00:00.000Z'
-    expect(await api.records({ marked_at_from: at })).toHaveLength(1)
-    expect(await api.records({ marked_at_to: at })).toHaveLength(0)
-  })
-})
-
-describe('追溯码 mock（B3）', () => {
-  it('按追溯码反查批次和晶圆；格式不符 422；作废后查不到', async () => {
-    const { mockTraceByCode } = await import('./marking')
-    const r = await api.mark({ lot_id: 'lot1' }, 'k1')
-    const tr = await mockTraceByCode(r.trace_code)
-    expect(tr.target.code).toBe('LOT-A001')
-    expect(tr.wafers).toHaveLength(25)
-    expect(await detail(mockTraceByCode('ab'))).toMatchObject({
-      status: 422,
-      detail: [{ ctx: { reason: 'pattern' } }],
-    })
-    await api.void(r.id, { reason_id: 'V', comment: 'x' }, 'kv')
-    expect(await detail(mockTraceByCode(r.trace_code))).toMatchObject({
-      status: 404,
-    })
-  })
-})
-
-describe('D78 补充三', () => {
-  it('追溯码违反两条规则返回两条 422', async () => {
-    const { traceCodeErrors, mockTraceByCode } = await import('./marking')
-    expect(traceCodeErrors('a'.repeat(33))).toEqual(['max_length', 'pattern'])
-    expect(await detail(mockTraceByCode('a'.repeat(33)))).toMatchObject({
-      status: 422,
-      detail: [
-        { ctx: { reason: 'max_length', max_length: 32 } },
-        { ctx: { reason: 'pattern', pattern: '^[A-Z0-9-]+$' } },
-      ],
-    })
-  })
-  it('config：mock 返回默认；缺失或非法时退回默认', async () => {
-    const { ruleFromConfig } = await import('./marking')
-    expect(await api.config()).toEqual({
-      trace_code_max_length: 32,
-      trace_code_pattern: '^[A-Z0-9-]+$',
-    })
-    expect(ruleFromConfig(null).maxLength).toBe(32)
-    const r = ruleFromConfig({
-      trace_code_max_length: 8,
-      trace_code_pattern: '(',
-    })
-    expect(r.maxLength).toBe(8)
-    expect(r.pattern.source).toBe('^[A-Z0-9-]+$')
-  })
-  it('void 缺 Idempotency-Key 422', async () => {
-    const r = await api.mark({ lot_id: 'lot1' }, 'k1')
-    expect(
-      await detail(api.void(r.id, { reason_id: 'V', comment: 'x' }))
-    ).toMatchObject({
-      status: 422,
-      detail: [{ loc: ['header', 'Idempotency-Key'] }],
-    })
-  })
-})
-
-describe('D78 补充四', () => {
-  it('空串 / 纯空白只报必填；不改写输入；全串匹配', async () => {
-    const { traceCodeErrors, ruleFromConfig } = await import('./marking')
-    expect(traceCodeErrors('')).toEqual(['missing'])
-    expect(traceCodeErrors('   ')).toEqual(['missing'])
-    expect(traceCodeErrors(' AB1')).toEqual(['pattern'])
-    expect(traceCodeErrors('ab1')).toEqual(['pattern'])
-    const r = ruleFromConfig({
-      trace_code_max_length: 4,
-      trace_code_pattern: '^[A-Z]+$',
-    })
-    expect(traceCodeErrors('ABCDE', r)).toEqual(['max_length'])
-    expect(traceCodeErrors('AB1', r)).toEqual(['pattern'])
-  })
-  it('读回码纯空白 422 missing，原值不去空格（开头空格报格式错）', async () => {
-    const r = await api.mark({ lot_id: 'lot1' }, 'k1')
-    expect(
-      await detail(api.inspect(r.id, { result: 'pass', read_code: '  ' }, 'ki'))
-    ).toMatchObject({
-      status: 422,
-      detail: [{ type: 'missing', loc: ['body', 'read_code'] }],
-    })
-    // 原值提交：开头带空格不去掉，按格式错误报
-    expect(
-      await detail(
-        api.inspect(
-          r.id,
-          { result: 'pass', read_code: ` ${r.trace_code}` },
-          'ki2'
-        )
-      )
-    ).toMatchObject({ status: 422, detail: [{ ctx: { reason: 'pattern' } }] })
   })
 })
 
@@ -368,8 +148,428 @@ describe('D78 补充五：纯空白只认 /^[ \\t\\r\\n\\u3000]*$/', () => {
     ['U+FEFF', '\ufeff', ['pattern']],
     ['\\x1f', '\x1f', ['pattern']],
     ['空串', '', ['missing']],
-  ])('%s', async (_, v, want) => {
-    const { traceCodeErrors } = await import('./marking')
+  ])('%s', (_, v, want) => {
     expect(traceCodeErrors(v)).toEqual(want)
+  })
+})
+
+describe('模板 mock（D79）', () => {
+  it('版本对比：逐字段、逐行', async () => {
+    const all = await api.templates()
+    const [v1, v2] = [all[0], all[1]]
+    expect(siblingVersions(all, v2).map((x) => x.id)).toEqual(['t1'])
+    expect(diffTemplates(v1, v2)).toEqual([
+      { field: 'date_code_basis', before: 'lot_start', after: 'marking' },
+      {
+        field: 'lines',
+        line: 2,
+        before: '{date_code}',
+        after: '{date_code} {trace_code}',
+      },
+    ])
+    expect(v2.product_name).toBe('QFN32-A')
+    expect(v2.customer_name).toBe('ACME')
+  })
+  it('白名单外占位符 422 value_error ctx.reason=unknown_placeholder', async () => {
+    expect(
+      await detail(
+        api.createTemplate({
+          code: 'X',
+          product_id: 'p3',
+          customer_id: 'c1',
+          lines: ['{model}'],
+          date_code_basis: 'marking',
+          uses_bin: false,
+        })
+      )
+    ).toMatchObject({
+      status: 422,
+      detail: [
+        {
+          type: 'value_error',
+          ctx: { reason: 'unknown_placeholder', placeholder: 'model' },
+        },
+      ],
+    })
+  })
+  it('新版本复制最新版本为草稿、版本号递增；已有草稿 409 draft_exists', async () => {
+    setMarkingMockUser('eng1')
+    const d = await api.newVersion('t1')
+    expect(d).toMatchObject({ version: 3, status: 'draft', created_by: 'eng1' })
+    expect(d.lines).toEqual(['{product_code}', '{date_code} {trace_code}'])
+    expect(await detail(api.newVersion('t2'))).toMatchObject({
+      status: 409,
+      detail: { code: 'draft_exists' },
+    })
+  })
+  it('自批 422 value_error ctx.reason=self_approval；他人审批后旧版本 retired；已批准改动 409', async () => {
+    setMarkingMockUser('eng1')
+    const t = await api.newVersion('t2')
+    expect(await detail(api.approve(t.id))).toMatchObject({
+      status: 422,
+      detail: [{ type: 'value_error', ctx: { reason: 'self_approval' } }],
+    })
+    setMarkingMockUser('qa1')
+    await api.approve(t.id)
+    const all = await api.templates()
+    expect(all.find((x) => x.id === 't2')!.status).toBe('retired')
+    expect(
+      await detail(api.updateTemplate(t.id, { lines: ['x'] }))
+    ).toMatchObject({
+      status: 409,
+      detail: { code: 'template_readonly' },
+    })
+  })
+})
+
+describe('打标作业 mock（D78/D79）', () => {
+  it('没有已批准模板 409 marking_template_missing', async () => {
+    expect(await detail(api.preview('lot3'))).toMatchObject({
+      status: 409,
+      detail: { code: 'marking_template_missing' },
+    })
+  })
+  it('预览日期码按站点日期', async () => {
+    const p = await api.preview('lot1')
+    expect(p.date_code).toBe('2642')
+    expect(p.trace_code).toBeNull()
+    expect(p.lines).toEqual(['FS3201', '2642 ••••'])
+  })
+  it('缺 Idempotency-Key 422 missing（loc=header）', async () => {
+    expect(await detail(api.create({ lot_id: 'lot1' }))).toMatchObject({
+      status: 422,
+      detail: [{ type: 'missing', loc: ['header', 'Idempotency-Key'] }],
+    })
+    const r = await api.create({ lot_id: 'lot1' }, 'c')
+    for (const p of [
+      api.print(r.id, {}),
+      api.inspect(r.id, { result: 'pass' }),
+      api.void(r.id, { reason_id: 'V', comment: 'x' }),
+    ])
+      expect(await detail(p)).toMatchObject({
+        status: 422,
+        detail: [{ loc: ['header', 'Idempotency-Key'] }],
+      })
+  })
+  it('建主记录不打印；首打走 prints（seq=1）；同 key 重放不占新 seq；不同内容 422', async () => {
+    const r = await api.create({ lot_id: 'lot1', equipment_id: 'LM-01' }, 'c1')
+    expect(r.prints).toEqual([])
+    expect(r.trace_code).toBe('26420001')
+    const p1 = await api.print(r.id, {}, 'p1')
+    const again = await api.print(r.id, {}, 'p1')
+    expect(again).toEqual(p1)
+    expect(p1.prints.map((p) => p.seq)).toEqual([1])
+    expect(
+      await detail(api.print(r.id, { equipment_id: 'X' }, 'p1'))
+    ).toMatchObject({
+      status: 422,
+      detail: [{ type: 'idempotency_key_reused' }],
+    })
+    expect(await detail(api.create({ lot_id: 'lot1' }, 'c2'))).toMatchObject({
+      status: 409,
+      detail: { code: 'already_marked' },
+    })
+  })
+  it('pass 但读回不一致：强制 fail，响应带 result_overridden', async () => {
+    const r = await firstPrint()
+    const o = await api.inspect(
+      r.id,
+      { result: 'pass', read_code: '26420002' },
+      'ki'
+    )
+    expect(o).toMatchObject({
+      result: 'fail',
+      expected_code: '26420001',
+      read_code: '26420002',
+      result_overridden: true,
+    })
+    expect(o.record.latest_inspection_status).toBe('fail')
+    expect(o.record.inspections[0].result_overridden).toBe(true)
+  })
+  it('重打必填原因、seq=2、号不变、检验回到 pending', async () => {
+    const r = await firstPrint()
+    await api.inspect(r.id, { result: 'fail' }, 'ki')
+    expect(await detail(api.print(r.id, {}, 'kr0'))).toMatchObject({
+      status: 422,
+      detail: [{ type: 'missing', loc: ['body', 'reason_id'] }],
+    })
+    const re = { reason_id: 'R1', comment: '模糊' }
+    const r2 = await api.print(r.id, re, 'kr1')
+    const again = await api.print(r.id, re, 'kr1')
+    expect(again.prints.length).toBe(2)
+    expect(r2.prints.map((p) => p.seq)).toEqual([1, 2])
+    expect(r2.reprint_count).toBe(1)
+    expect(r2.trace_code).toBe(r.trace_code)
+    expect(r2.latest_inspection_status).toBe('pending')
+    expect(inspectionsByPrint(r2).map((g) => g.inspections.length)).toEqual([
+      1, 0,
+    ])
+  })
+  it('作废后同一批次可重新首打：新主记录、新号、seq 从 1 开始', async () => {
+    const r = await firstPrint()
+    await api.void(r.id, { reason_id: 'V1', comment: '错批' }, 'kv')
+    const n = await firstPrint('lot1', 'k2')
+    expect(n.id).not.toBe(r.id)
+    expect(n.trace_code).toBe('26420002')
+    expect(n.prints.map((p) => p.seq)).toEqual([1])
+    expect(await detail(api.print(r.id, {}, 'kx'))).toMatchObject({
+      status: 409,
+      detail: { code: 'invalid_transition' },
+    })
+  })
+  it('作废：原因必填；作废后检验 / 作废 409；读回码格式 422', async () => {
+    const r = await firstPrint()
+    // D79 补充二-3：读回码不校验格式，不一致强制 fail
+    expect(
+      await api.inspect(r.id, { result: 'pass', read_code: 'ab' }, 'kx')
+    ).toMatchObject({ result: 'fail', result_overridden: true })
+    expect(
+      await detail(api.inspect(r.id, { result: 'pass', read_code: '  ' }, 'kw'))
+    ).toMatchObject({
+      status: 422,
+      detail: [{ type: 'missing', loc: ['body', 'read_code'] }],
+    })
+    expect(
+      await detail(api.void(r.id, { reason_id: 'V1', comment: '' }, 'kv0'))
+    ).toMatchObject({
+      status: 422,
+      detail: [{ type: 'missing', loc: ['body', 'comment'] }],
+    })
+    const v = await api.void(r.id, { reason_id: 'V1', comment: '错批' }, 'kv1')
+    expect(v.voided).toBe(true)
+    expect(
+      await detail(api.inspect(r.id, { result: 'pass' }, 'ki'))
+    ).toMatchObject({
+      status: 409,
+      detail: { code: 'invalid_transition' },
+    })
+    expect(
+      await detail(api.void(r.id, { reason_id: 'V1', comment: 'x' }, 'kv2'))
+    ).toMatchObject({
+      status: 409,
+    })
+  })
+  it('报废对象 409 invalid_transition', async () => {
+    expect(await detail(api.create({ lot_id: 'lot4' }, 'ks'))).toMatchObject({
+      status: 409,
+      detail: { code: 'invalid_transition' },
+    })
+    const r = await firstPrint()
+    scrapMarkingMockRecord(r.id)
+    expect(
+      await detail(api.inspect(r.id, { result: 'pass' }, 'ki'))
+    ).toMatchObject({
+      status: 409,
+      detail: { code: 'invalid_transition' },
+    })
+  })
+  it('EAP 回报号不一致 409 trace_code_mismatch', async () => {
+    const r = await firstPrint()
+    expect(
+      await detail(
+        mockEapPrintReport('lot1', { trace_code: 'X', external_event_id: 'e1' })
+      )
+    ).toMatchObject({
+      status: 409,
+      detail: {
+        code: 'trace_code_mismatch',
+        ctx: { expected: r.trace_code, actual: 'X' },
+      },
+    })
+  })
+  it('marked_at 范围半开区间：等于结束边界不含，等于开始边界含', async () => {
+    await firstPrint()
+    const at = '2026-10-14T17:00:00.000Z'
+    expect(await api.records({ marked_at_from: at })).toHaveLength(1)
+    expect(await api.records({ marked_at_to: at })).toHaveLength(0)
+  })
+  it('config：mock 返回默认', async () => {
+    expect(await api.config()).toEqual({
+      trace_code_max_length: 32,
+      trace_code_pattern: '^[A-Z0-9-]+$',
+    })
+  })
+})
+
+describe('kind=trace_code 追溯（D79-6）', () => {
+  it('结果形状；默认不含已作废，include_voided=true 才含；格式不符逐条 422', async () => {
+    const r = await firstPrint()
+    await api.inspect(r.id, { result: 'pass' }, 'ki')
+    expect(await api.trace(r.trace_code)).toEqual({
+      marking_id: r.id,
+      lot_id: 'lot1',
+      trace_code: r.trace_code,
+      voided: false,
+      prints: [
+        {
+          print_id: r.prints[0].id,
+          seq: 1,
+          marked_at: r.prints[0].printed_at,
+          latest_inspection_result: 'pass',
+        },
+      ],
+    })
+    await api.void(r.id, { reason_id: 'V', comment: 'x' }, 'kv')
+    expect(await detail(api.trace(r.trace_code))).toMatchObject({ status: 404 })
+    expect((await api.trace(r.trace_code, true)).voided).toBe(true)
+    expect(await detail(api.trace('a'.repeat(33)))).toMatchObject({
+      status: 422,
+      detail: [
+        { ctx: { reason: 'max_length', max_length: 32 } },
+        { ctx: { reason: 'pattern', pattern: '^[A-Z0-9-]+$' } },
+      ],
+    })
+  })
+})
+
+describe('D79 补充', () => {
+  it('result_overridden 未改写时为 false', async () => {
+    const r = await firstPrint()
+    const o = await api.inspect(
+      r.id,
+      { result: 'pass', read_code: r.trace_code },
+      'ki'
+    )
+    expect(o.result_overridden).toBe(false)
+    expect(o.record.inspections[0].result_overridden).toBe(false)
+  })
+  it('作废后旧主记录保留检验状态；出站只看未作废主记录', async () => {
+    const r = await firstPrint()
+    await api.inspect(r.id, { result: 'fail' }, 'ki')
+    const v = await api.void(r.id, { reason_id: 'V', comment: 'x' }, 'kv')
+    expect(v.latest_inspection_status).toBe('fail')
+    expect(trackOutBlock([v])).toBe('not_marked')
+    expect(trackOutBlock([v], false)).toBeNull()
+    const n = await firstPrint('lot1', 'k2')
+    expect(trackOutBlock([v, n])).toBe('pending')
+    const ok = await api.inspect(n.id, { result: 'pass' }, 'ki2')
+    expect(trackOutBlock([v, ok.record])).toBeNull()
+  })
+  it('EAP 上报找不到未作废主记录 409 no_active_marking', async () => {
+    const r = await firstPrint()
+    await api.void(r.id, { reason_id: 'V', comment: 'x' }, 'kv')
+    expect(
+      await detail(
+        mockEapPrintReport('lot1', {
+          trace_code: r.trace_code,
+          external_event_id: 'e1',
+        })
+      )
+    ).toMatchObject({ status: 409, detail: { code: 'no_active_marking' } })
+  })
+})
+
+describe('QA 评审 F1–F5（口径集中在 MARKING_POLICY）', () => {
+  const saved = { ...MARKING_POLICY }
+  afterEach(() => Object.assign(MARKING_POLICY, saved))
+
+  it('F3 长度口径：utf16 与 codepoint', () => {
+    const v = 'A'.repeat(31) + '😀'
+    expect(codeLength(v, 'utf16')).toBe(33)
+    expect(codeLength(v, 'codepoint')).toBe(32)
+    // D79 补充二-2：默认按码点
+    expect(traceCodeErrors(v)).toEqual(['pattern'])
+    expect(
+      traceCodeErrors(v, { ...TRACE_CODE_RULE, lengthMode: 'utf16' })
+    ).toEqual(['max_length', 'pattern'])
+    expect(
+      traceCodeErrors(v, { ...TRACE_CODE_RULE, lengthMode: 'codepoint' })
+    ).toEqual(['pattern'])
+  })
+  it('F2 读回码不校验格式时：格式不符按不一致强制 fail，纯空白 422 missing', async () => {
+    MARKING_POLICY.validateReadCodeFormat = false
+    const r = await firstPrint()
+    expect(
+      await detail(
+        api.inspect(r.id, { result: 'pass', read_code: ' \t' }, 'kw')
+      )
+    ).toMatchObject({ status: 422, detail: [{ type: 'missing' }] })
+    const o = await api.inspect(
+      r.id,
+      { result: 'pass', read_code: 'abc' },
+      'ki'
+    )
+    expect(o).toMatchObject({ result: 'fail', result_overridden: true })
+  })
+  it('D79 补充二-1：同一次打印可多次检验，以最新为准；离开打标工步后 409', async () => {
+    const r = await firstPrint()
+    await api.inspect(r.id, { result: 'pass' }, 'ki1')
+    const o = await api.inspect(r.id, { result: 'fail' }, 'ki2')
+    expect(o.record.latest_inspection_status).toBe('fail')
+    expect(o.record.inspections.map((i) => i.seq)).toEqual([1, 1])
+    expect(canInspect(o.record)).toBe(true)
+    markingMockLeaveStep('lot1')
+    expect(
+      await detail(api.inspect(r.id, { result: 'pass' }, 'ki3'))
+    ).toMatchObject({
+      status: 409,
+      detail: { code: 'invalid_transition' },
+    })
+  })
+  it('D79 补充二-3：读回码不校验格式；超过 128 码点 422 max_length', async () => {
+    const r = await firstPrint()
+    expect(readCodeErrors('😀'.repeat(128))).toEqual([])
+    expect(readCodeErrors('😀'.repeat(129))).toEqual(['max_length'])
+    expect(readCodeErrors('\u3000')).toEqual(['missing'])
+    expect(
+      await detail(
+        api.inspect(r.id, { result: 'pass', read_code: 'x'.repeat(129) }, 'kl')
+      )
+    ).toMatchObject({
+      status: 422,
+      detail: [
+        { type: 'value_error', ctx: { reason: 'max_length', max_length: 128 } },
+      ],
+    })
+  })
+  it('D79 补充二-4：配置正则只允许正向字符类', () => {
+    expect(
+      ruleFromConfig({ trace_code_pattern: '^[A-Z0-9-]+$' }).pattern?.source
+    ).toBe('^[A-Z0-9-]+$')
+    expect(
+      ruleFromConfig({ trace_code_pattern: '^[A-Z\\]]+$' }).pattern
+    ).not.toBeNull()
+    for (const bad of [
+      '^[^a-z]+$',
+      '^A+$',
+      '[A-Z]+',
+      '^[A-Z]*$',
+      '^(A|B)+$',
+      '^[A-Z]+$|x',
+    ])
+      expect(ruleFromConfig({ trace_code_pattern: bad }).pattern).toBeNull()
+  })
+  it('D79 补充二-6：marked_at 取首打时间不变，last_printed_at 跟随重打；按首打时间筛选', async () => {
+    const c = await api.create({ lot_id: 'lot1' }, 'c')
+    expect(c.marked_at).toBeNull()
+    expect(
+      await api.records({ marked_at_from: '2000-01-01T00:00:00Z' })
+    ).toHaveLength(0)
+    const p1 = await api.print(c.id, {}, 'p1')
+    setMarkingMockNow(() => new Date('2026-10-15T03:00:00Z'))
+    const p2 = await api.print(c.id, { reason_id: 'R', comment: 'x' }, 'p2')
+    expect(p2.marked_at).toBe(p1.marked_at)
+    expect(p2.last_printed_at).toBe('2026-10-15T03:00:00.000Z')
+    expect(
+      await api.records({ marked_at_to: '2026-10-15T00:00:00Z' })
+    ).toHaveLength(1)
+    expect(
+      await api.records({ marked_at_from: '2026-10-15T00:00:00Z' })
+    ).toHaveLength(0)
+  })
+  it('F5 重打不限于 fail；F4 空行不丢', async () => {
+    const r = await firstPrint()
+    expect(canReprint(r)).toBe(true)
+    const r2 = await api.print(r.id, { reason_id: 'R', comment: '缺损' }, 'kr')
+    expect(r2.prints).toHaveLength(2)
+    const t = await api.createTemplate({
+      code: 'X',
+      product_id: 'p3',
+      customer_id: 'c1',
+      lines: ['{product_code}', '', '{date_code}'],
+      date_code_basis: 'marking',
+      uses_bin: false,
+    })
+    expect(t.lines).toEqual(['{product_code}', '', '{date_code}'])
   })
 })
