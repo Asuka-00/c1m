@@ -480,7 +480,7 @@ def test_reticle_report_draft_e2():
     from sim.scenario import ScenarioError, load, parse
 
     sc = load("scenarios/p3-draft/reticle-report.yaml")
-    assert not sc.draft and sc.run_id == "ret-report-08" and "reticle_report" in P3_DRAFT_STEPS
+    assert not sc.draft and sc.run_id == "ret-report-09" and "reticle_report" in P3_DRAFT_STEPS
     # EAP 光罩上报未开（D67）：依赖 reticle_report 结果的断言都带 needs，记未实现而不是失败
     rep_saves = {s.args.get("save_as") for s in sc.steps if s.kind == "reticle_report"}
     assert all(s.args.get("save_as") for s in sc.steps if s.kind == "reticle_report")
@@ -490,7 +490,9 @@ def test_reticle_report_draft_e2():
     assert {s.args["kind"] for s in rep} == {"mount", "unmount", "usage"}
     exp = [s.args.get("expect") or {} for s in st]
     codes = [e.get("code") for e in exp]
-    assert codes.count("idempotency_key_reused") == 4 and codes.count("invalid_transition") == 2
+    assert (
+        codes.count("idempotency_key_reused") == 4 and codes.count("invalid_transition") == 3
+    )  # +1 未挂载下机（386c4e0）
     assert any((e.get("ctx") or {}).get("max_places") == 6 for e in exp)
     # EAP 重放 duplicate=true；手工重放无 duplicate
     for s in st:
@@ -641,3 +643,15 @@ def test_marking_draft_mk0003_track_out_before_scrap():
     assert out.args["expect"]["status"] == 200
     # 报废前未对 MK0003 出站过（出站只出现在 scrap 前一步）
     assert not any(s.kind == "track_out" and s.args.get("lot") == "MK0003" for s in st[: i - 1])
+
+
+def test_reticle_report_386c4e0_tightened():
+    """386c4e0：未挂载下机 409 invalid_transition；incident 早于 mounted_at 409 time_out_of_order + latest_event_at。"""
+    from sim.scenario import load
+
+    st = {
+        s.args.get("idem"): s.args for s in load("scenarios/p3-draft/reticle-report.yaml").steps if s.args.get("idem")
+    }
+    assert st["ret-rep-bt10b"]["expect"] == {"status": 409, "code": "invalid_transition"}
+    e = st["ret-rep-c7"]["expect"]
+    assert e["code"] == "time_out_of_order" and e["body"] == {"detail.latest_event_at": "$m11.mounted_at"}

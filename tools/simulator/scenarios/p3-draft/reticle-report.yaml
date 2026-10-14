@@ -1,4 +1,4 @@
-# P3-E2 光罩（eap/p3/docs/p3-e2-reticle-prereview.md）。ret-report-08 对 be/p3 f9e9dda 真实接口联调：75 ok / 29 未实现 / 0 失败。
+# P3-E2 光罩（eap/p3/docs/p3-e2-reticle-prereview.md）。ret-report-09 对 be/p3 386c4e0 真实接口联调（08 对 f9e9dda：76 ok / 29 未实现 / 0 失败）。
 # 去掉 draft；EAP 光罩上报步骤（reticle_report）及依赖它的断言用 needs: 记「未实现」，不算失败：
 # B11 还没有光罩 event_type（D67：P3 不开放 EAP 光罩写入），reticle_report 是以后 reticle_mount/reticle_unmount/reticle_usage 的形状。
 # 表已支持（不改表）：mount_log / usage / incident 带 source、external_event_id，部分唯一 (tenant_id, source, external_event_id)。
@@ -17,7 +17,7 @@
 #     incident 顺带下机用 occurred_at（无则当前时间）；occurred_at < 当前 mounted_at → 整体 409，不 Hold、不下机、不写事件
 #   - D80 G5：mounted / unmounted / life_reached 带 source、external_event_id（手工为 null）；G6：source ∈ manual/eap/simulator/system
 name: reticle-report
-run_id: ret-report-08
+run_id: ret-report-09
 target: http://127.0.0.1:8013
 equipment: [{code: EAP-LT01, type: LITHO}]
 steps:
@@ -140,8 +140,8 @@ steps:
   - reticle_unmount: {idem: ret-rep-bt9, reticle: R-SIM-07, unmounted_at: "$now-1h", expect: {status: 409, code: time_out_of_order}}
   - reticle_unmount: {idem: ret-rep-bt10, reticle: R-SIM-07, unmounted_at: $bm7.mounted_at, expect: {status: 200}}   # 相等合法
   - expect_reticle_history: {reticle: R-SIM-07, latest_of: mount, fields: {mounted_at: $bm7.mounted_at, unmounted_at: $bm7.mounted_at}}
-  # 已知差异（后端已定）：未挂载光罩补录下机 → 下个小提交先返回 409 invalid_transition；f9e9dda 先返回 409 time_out_of_order。只断言 409，两者都接受
-  - reticle_unmount: {idem: ret-rep-bt10b, reticle: R-SIM-07, unmounted_at: "$now-1h", expect: {status: 409}}
+  # D82 补充一（386c4e0 起）：未挂载光罩补录下机 → 先判状态 409 invalid_transition，不再判 time_out_of_order
+  - reticle_unmount: {idem: ret-rep-bt10b, reticle: R-SIM-07, unmounted_at: "$now-1h", expect: {status: 409, code: invalid_transition}}
   # 再上机早于最近一次下机 → 409
   - reticle_mount: {idem: ret-rep-bt11, eq: EAP-LT01, reticle: R-SIM-07, slot: S7, mounted_at: "$now-1h", expect: {status: 409, code: time_out_of_order}}
   # incident：occurred_at 三类边界（R-SIM-08 最近事件为 4:59 上机）
@@ -168,7 +168,7 @@ steps:
   # 4. occurred_at 早于当前这次 mounted_at → 整体 409：不 Hold、不下机、不写事件
   - reticle_mount: {idem: ret-rep-c6, eq: EAP-LT01, reticle: R-SIM-11, slot: S2, mounted_at: "$now-2h", save_as: m11, expect: {status: 200}}
   - reticle_incident: {idem: ret-rep-c7, eq: EAP-LT01, reticle: R-SIM-11, kind: collision, occurred_at: "$now-3h",
-                       expect: {status: 409, code: time_out_of_order}}
+                       expect: {status: 409, code: time_out_of_order, body: {detail.latest_event_at: $m11.mounted_at}}}   # 386c4e0：基准为本次上机时间（detail 顶层，同 status_code/field）
   - expect_reticle: {reticle: R-SIM-11, fields: {status_code: in_use, hold_reason: null}}
   - expect_reticle_history: {reticle: R-SIM-11, count_of: {incident: 0}, latest_of: mount, fields: {mounted_at: $m11.mounted_at, unmounted_at: null}}
   - expect_reticle_events: {reticle: R-SIM-11, count: {reticle.incident_recorded: 0, reticle.held: 0, reticle.unmounted: 0}}
