@@ -71,8 +71,8 @@ export default function SubscriptionsPage() {
     t('notify.sub.created')
   )
   const update = useApiMutation(
-    (b: SubscriptionIn & { id: string }) =>
-      api.notifications.updateSubscription(b.id, b),
+    ({ id, ...b }: SubscriptionIn & { id: string }) =>
+      api.notifications.updateSubscription(id, b),
     keys,
     t('notify.sub.updated')
   )

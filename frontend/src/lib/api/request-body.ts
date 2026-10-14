@@ -131,6 +131,15 @@ export const BODY_KEYS = {
   /** ImportIn / MapImportIn */
   binSetImport: ['content', 'file_name'],
   mapImport: ['content', 'file_name', 'lot_id', 'equipment_id', 'operation_id'],
+  /** SubscriptionIn（通知订阅新建 / 更新，be/p2 56474fe platform/notification/router.py） */
+  subscription: [
+    'name',
+    'event_type',
+    'role_ids',
+    'user_ids',
+    'channels',
+    'is_active',
+  ],
 } as const
 
 /** StageIn（含 dc / scrap / rework_units 子项）。 */

@@ -5,6 +5,7 @@ import {
   permLabel,
   roleLabel,
   permDesc,
+  pickLangSegment,
   roleDesc,
 } from './rbac-labels'
 
@@ -50,5 +51,30 @@ describe('内置权限 / 角色名称', () => {
     expect(roleLabel({ name: 'qa', title: '质检' })).toBe('质检')
     await i18n.changeLanguage('ja')
     expect(roleLabel({ name: 'member', title: null })).toBe('一般ユーザー')
+  })
+})
+
+describe('三语权限说明（en|zh|ja）', () => {
+  const raw = 'View users|查看用户|ユーザーを表示'
+  it('有前端文案时用文案，不显示原始串', async () => {
+    await i18n.changeLanguage('zh-CN')
+    const v = permDesc('members:read', raw)
+    expect(v).toBe(i18n.t('permDesc.members__read'))
+    expect(v).not.toContain('|')
+  })
+  it('无文案时按语言取段，缺失回退 en', async () => {
+    await i18n.changeLanguage('zh-CN')
+    expect(permDesc('x.unknown:perm', raw)).toBe('查看用户')
+    await i18n.changeLanguage('ja')
+    expect(permDesc('x.unknown:perm', raw)).toBe('ユーザーを表示')
+    expect(permDesc('x.unknown:perm', 'Only en|中文')).toBe('Only en')
+    await i18n.changeLanguage('en')
+    expect(permDesc('x.unknown:perm', raw)).toBe('View users')
+    await i18n.changeLanguage('zh-CN')
+  })
+  it('pickLangSegment 显式语言', () => {
+    expect(pickLangSegment(raw, 'zh-CN')).toBe('查看用户')
+    expect(pickLangSegment(raw, 'fr')).toBe('View users')
+    expect(pickLangSegment('a||', 'ja')).toBe('a')
   })
 })
