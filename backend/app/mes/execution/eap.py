@@ -97,20 +97,31 @@ PAYLOADS: dict[str, type[_P]] = {
 }
 
 
+def _err(e: Any) -> Row:
+    """D71-2 / O-2（D72 R-1）：保留 ``ctx``（如 ``max_places=6``）与 ``input``。"""
+    out: Row = {
+        "loc": ["body", "payload", *e["loc"]],
+        "msg": e["msg"],
+        "type": e["type"],
+        "input": jsonable_encoder(e.get("input"), custom_encoder={Decimal: str}),
+    }
+    ctx = {
+        k: v
+        for k, v in (e.get("ctx") or {}).items()
+        if isinstance(v, str | int | float | bool)
+    }
+    if ctx:
+        out["ctx"] = ctx
+    return out
+
+
 def _payload(event_type: str, merged: Row) -> Row:
     try:
         return PAYLOADS[event_type].model_validate(merged).model_dump()
     except ValidationError as ex:
         raise HTTPException(
             status_code=422,
-            detail=[
-                {
-                    "loc": ["body", "payload", *e["loc"]],
-                    "msg": e["msg"],
-                    "type": e["type"],
-                }
-                for e in ex.errors(include_url=False, include_context=False)
-            ],
+            detail=[_err(e) for e in ex.errors(include_url=False)],
         ) from None
 
 

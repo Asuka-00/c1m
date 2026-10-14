@@ -183,7 +183,11 @@ def test_eap_events_state_and_tool_usage(client: TestClient, db: Session) -> Non
     )
     d = _ev(f, svc, "U-1", "tool_usage", 422, tool_id=t["id"], delta="3")["detail"]
     assert d["code"] == "idempotency_key_reused"
-    _ev(f, svc, "U-2", "tool_usage", 422, tool_id=t["id"], delta="0.0000001")
+    # D72 R-1（D71-2 / O-2）：7 位小数 422 value_error，带 ctx.max_places=6 与 input
+    d = _ev(f, svc, "U-2", "tool_usage", 422, tool_id=t["id"], delta="0.0000001")
+    (e,) = [x for x in d["detail"] if x["loc"][-1] == "delta"]
+    assert e["type"] == "value_error" and e["ctx"]["max_places"] == 6, d
+    assert e["input"] == "0.0000001", d
     # B10 手工接口：同事件号不同内容也 422（D57）
     url = f"{API}/eqp/tools/{t['id']}/usage"
     f.post(url, {"delta": "1", "external_event_id": "M-1"})

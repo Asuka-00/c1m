@@ -1,4 +1,4 @@
-"""D60：定点字段（scale）超出小数位一律 too_many_decimals，不舍入。"""
+"""D60 / D72：定点字段（scale）超出小数位一律 422 value_error（ctx.max_places），不舍入。"""
 
 from decimal import Decimal
 
@@ -12,7 +12,8 @@ from app.core.spec.serialize import TooManyDecimals, coerce
 def test_scale6_too_many_decimals(v: object) -> None:
     with pytest.raises(TooManyDecimals) as ex:
         coerce(F("q", "float", "Q", scale=6), v)
-    assert ex.value.code == "too_many_decimals"
+    assert ex.value.code == "value_error"
+    assert ex.value.ctx == {"max_places": 6}
 
 
 @pytest.mark.parametrize(

@@ -37,7 +37,7 @@ def test_bom_payload_rejects_unwritable_fields(client: TestClient, db: Session) 
     for k, val in (("confirmed_by", "x"), ("id", v["id"]), ("status", "active")):
         assert _locs(m.patch("bom", v["id"], {k: val}, 422)) == {k}
     # 只传可写字段：正常
-    assert m.patch("bom_line", ln["id"], {"qty": 3})["qty"] == 3
+    assert m.patch("bom_line", ln["id"], {"qty": 3})["qty"] == "3"
 
 
 def test_existing_entity_full_row_patch_rejected(

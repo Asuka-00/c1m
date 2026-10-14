@@ -28,14 +28,19 @@ USER = F("username", "str", "User|用户|ユーザー", max_length=255, search=T
 CMT = F("comment", "str", "Comment|备注|コメント", max_length=300, list=False)
 
 
-def _rt() -> F:
+def _rt(cascade: bool = False) -> F:
+    """光罩引用。
+
+    D72：5 张履历表 ON DELETE RESTRICT（有履历的光罩不能删，只能 scrap）；
+    适用关系表仍随光罩级联删除。
+    """
     return F(
         "reticle",
         "ref",
         "Reticle|光罩|レチクル",
         ref="reticle",
         required=True,
-        cascade=True,
+        cascade=cascade,
     )
 
 
@@ -122,7 +127,7 @@ register(
         "product",
         "Reticle applicability|光罩适用关系|レチクル適用",
         [
-            _rt(),
+            _rt(cascade=True),
             F("product", "ref", ref="product", required=True),
             F("layer", "str", "Layer|层|レイヤー", max_length=40, required=True),
             F(

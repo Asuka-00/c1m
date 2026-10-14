@@ -213,17 +213,17 @@ def test_bom_line_rules(client: TestClient, db: Session) -> None:
     assert "whole number" in err["detail"][0]["msg"]
     # 质量单位允许小数，最多 6 位（D49：超出 422，不静默舍入）
     err = b.line(v, 10, 422, qty="0.0000005", uom_id=b.g)
-    assert err["detail"][0]["type"] == "too_many_decimals"  # D60 通用 CRUD
+    assert err["detail"][0]["type"] == "value_error"  # D60 通用 CRUD
     b.line(v, 10, 422, qty="1.1234567", uom_id=b.g)
     ok = b.line(v, 14, qty="1.1000000", uom_id=b.g)  # 去尾零后 1 位，允许
-    assert ok["qty"] == 1.1
+    assert ok["qty"] == "1.1"
     ln = b.line(v, 10, qty="0.000001", uom_id=b.g)
-    assert ln["qty"] == 0.000001
+    assert ln["qty"] == "0.000001"
     b.line(v, 11, 422, qty=0)
     b.line(v, 12, 422, qty="abc")
     b.line(v, 13, 422, scrap_rate=1.5)
     b.line(v, 13, 422, scrap_rate=-0.01)
-    assert b.line(v, 13, scrap_rate=1)["scrap_rate"] == 1
+    assert b.line(v, 13, scrap_rate=1)["scrap_rate"] == "1"
     # consume_mode 没有默认值
     r = m.c.post(
         f"{API}/bom-line",
@@ -882,23 +882,24 @@ def test_bom_d48(client: TestClient, db: Session) -> None:
 
 
 def test_bom_line_decimals_d49(client: TestClient, db: Session) -> None:
-    """D49：qty ≤ 6 位小数、scrap_rate ≤ 4 位，超出 422 too_many_decimals，不静默舍入。"""
+    """D49：qty ≤ 6 位小数、scrap_rate ≤ 4 位，超出 422 value_error，不静默舍入。"""
     m = Mes(client, db)
     b = B(m)
     v = b.bom(b.product("FG"))
-    assert b.line(v, 10, uom_id=b.g, qty=1.123456)["qty"] == 1.123456
+    assert b.line(v, 10, uom_id=b.g, qty=1.123456)["qty"] == "1.123456"
     err = b.line(v, 20, 422, uom_id=b.g, qty=1.1234567)
     assert [(d["loc"], d["type"]) for d in err["detail"]] == [
-        (["body", "qty"], "too_many_decimals")
+        (["body", "qty"], "value_error")
     ]
-    assert b.line(v, 30, uom_id=b.g, qty="1.5")["qty"] == 1.5
-    assert b.line(v, 40, scrap_rate=0.0125)["scrap_rate"] == 0.0125
+    assert b.line(v, 30, uom_id=b.g, qty="1.5")["qty"] == "1.5"
+    assert b.line(v, 40, scrap_rate=0.0125)["scrap_rate"] == "0.0125"
     err = b.line(v, 50, 422, scrap_rate=0.01255)
     assert err["detail"][0]["loc"] == ["body", "scrap_rate"]
-    assert err["detail"][0]["code"] == "too_many_decimals"
+    assert err["detail"][0]["code"] == "value_error"
+    assert err["detail"][0]["ctx"] == {"max_places": 4}  # D72
     ln = b.line(v, 60)
     r = m.c.patch(f"{API}/bom-line/{ln['id']}", headers=m.h, json={"qty": 2.0000001})
-    assert r.status_code == 422 and r.json()["detail"][0]["type"] == "too_many_decimals"
+    assert r.status_code == 422 and r.json()["detail"][0]["type"] == "value_error"
     err = _put(
         m,
         v,
@@ -906,7 +907,7 @@ def test_bom_line_decimals_d49(client: TestClient, db: Session) -> None:
         422,
     )
     assert _locs(err) == [["body", "lines", 1, "scrap_rate"]]
-    assert err["detail"][0]["type"] == "too_many_decimals"
+    assert err["detail"][0]["type"] == "value_error"
     err = _put(m, v, {"lines": [_ml(b, 10, uom_id=b.g, qty="1.1234567")]}, 422)
     assert _locs(err) == [["body", "lines", 0, "qty"]]
     out = _put(m, v, {"lines": [_ml(b, 10, uom_id=b.g, qty="1.123456")]}, 200)
@@ -927,15 +928,15 @@ def test_bom_line_decimals_d49_edges(client: TestClient, db: Session) -> None:
         err = b.line(v, next(n), 422, uom_id=b.g, **kw)
         assert err["detail"][0]["type"] == t, err
 
-    assert ok(qty="1.5000000")["qty"] == 1.5
-    assert ok(qty=1.50000000)["qty"] == 1.5
-    assert ok(scrap_rate="0.01250000")["scrap_rate"] == 0.0125
-    assert ok(qty="1e-6")["qty"] == 0.000001
-    assert ok(qty=1e-6)["qty"] == 0.000001
-    bad("too_many_decimals", qty="1e-7")
-    bad("too_many_decimals", qty=1e-7)
-    bad("too_many_decimals", qty="1.2E-7")
-    bad("too_many_decimals", scrap_rate="1.5e-5")
+    assert ok(qty="1.5000000")["qty"] == "1.5"
+    assert ok(qty=1.50000000)["qty"] == "1.5"
+    assert ok(scrap_rate="0.01250000")["scrap_rate"] == "0.0125"
+    assert ok(qty="1e-6")["qty"] == "0.000001"
+    assert ok(qty=1e-6)["qty"] == "0.000001"
+    bad("value_error", qty="1e-7")
+    bad("value_error", qty=1e-7)
+    bad("value_error", qty="1.2E-7")
+    bad("value_error", scrap_rate="1.5e-5")
     for sr in (0, "0", 1, "1", "1.0000"):
         ok(scrap_rate=sr)
     bad("value_error", scrap_rate=-0.0001)
@@ -960,33 +961,33 @@ def test_bom_put_lines_string_decimals(client: TestClient, db: Session) -> None:
     for k, val in (("qty", "1e-7"), ("qty", 1e-7), ("scrap_rate", "0.01255")):
         err = _put(m, v, {"lines": [_ml(b, 10, uom_id=b.g, **{k: val})]}, 422)
         assert _locs(err) == [["body", "lines", 0, k]]
-        assert err["detail"][0]["type"] == "too_many_decimals"
+        assert err["detail"][0]["type"] == "value_error"
     err = _put(m, v, {"lines": [_ml(b, 10, qty="abc")]}, 422)
     assert _locs(err) == [["body", "lines", 0, "qty"]]
 
 
 def test_bom_d49_qa_findings(client: TestClient, db: Session) -> None:
-    """QA：scrap_rate=1 合法；qty=0.0000001 先报 too_many_decimals（不先舍入成 0）。"""
+    """QA：scrap_rate=1 合法；qty=0.0000001 先报 value_error（不先舍入成 0）。"""
     m = Mes(client, db)
     b = B(m)
     v = b.bom(b.product("FG"))
-    assert b.line(v, 10, scrap_rate=1)["scrap_rate"] == 1
-    assert b.line(v, 20, scrap_rate="1")["scrap_rate"] == 1
+    assert b.line(v, 10, scrap_rate=1)["scrap_rate"] == "1"
+    assert b.line(v, 20, scrap_rate="1")["scrap_rate"] == "1"
     for i, q in enumerate(("0.0000001", 0.0000001)):
         err = b.line(v, 30 + i, 422, uom_id=b.g, qty=q)
         assert [(d["loc"], d["type"]) for d in err["detail"]] == [
-            (["body", "qty"], "too_many_decimals")
+            (["body", "qty"], "value_error")
         ]
         err = _put(m, v, {"lines": [_ml(b, 10, uom_id=b.g, qty=q)]}, 422)
         assert [(d["loc"], d["type"]) for d in err["detail"]] == [
-            (["body", "lines", 0, "qty"], "too_many_decimals")
+            (["body", "lines", 0, "qty"], "value_error")
         ]
     out = _put(m, v, {"lines": [_ml(b, 10, scrap_rate=1)]}, 200)
     assert out["lines"][0]["scrap_rate"] == "1"
 
 
 def test_bom_d50_decimal_strings(client: TestClient, db: Session) -> None:
-    """D50：P1 新接口（整单 PUT、两级树）小数字段输出定点字符串；通用接口不变。"""
+    """D50：P1 新接口（整单 PUT、两级树）小数字段输出定点字符串；D72 起通用接口也是字符串。"""
     from app.core.spec.serialize import dec_str
 
     assert [dec_str(x) for x in ("1E-6", 1e-6, "2.000", 100, "-0.0", "1.50")] == [
@@ -1012,9 +1013,9 @@ def test_bom_d50_decimal_strings(client: TestClient, db: Session) -> None:
     assert got == [("123456789012.123456", "0.015"), ("0.000001", "0"), ("2", "0")]
     t = b.tree(bom_id=v["id"])
     assert [(x["qty"], x["scrap_rate"]) for x in t["lines"]] == got
-    # 通用接口（旧格式）仍是数字
+    # D72：通用接口的定点数也输出字符串（D50）
     lst = m.c.get(f"{API}/bom-line", headers=m.h, params={"bom_id": v["id"]}).json()
-    assert isinstance(lst["data"][0]["qty"], float)
+    assert {x["qty"] for x in lst["data"]} == {"123456789012.123456", "0.000001", "2"}
 
 
 def test_bom_put_lines_extra_field_unknown_field(

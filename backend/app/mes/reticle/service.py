@@ -685,6 +685,8 @@ def _count(
 def usage(s: Session, tid: uuid.UUID, rid: Any, body: Row, user: Any) -> Row:
     """人工计数：delta>0 report，<0 adjust（必须 reason_id），source=manual（D66 Q16 / D68 Q22）。"""
     rt = lock(s, tid, rid)
+    if rt["status_code"] == "scrapped":  # D72：报废后不计数、不发 life_reached
+        raise _invalid(rt, "usage")
     delta = Decimal(str(body["delta"]))
     if delta == 0:
         raise http_422([("delta", "delta: must not be 0", "value_error")])
@@ -809,6 +811,8 @@ def _exposed(
 def inspection(s: Session, tid: uuid.UUID, rid: Any, body: Row, user: Any) -> Row:
     """检查记录：pass inspecting→available；fail → on_hold(inspection_failed)（已 on_hold 按严格度升级）。"""
     rt = lock(s, tid, rid)
+    if rt["status_code"] == "scrapped":  # D72
+        raise _invalid(rt, "inspection")
     res = body["result"]
     ok_from = ("inspecting",) if res == "pass" else ("inspecting", "on_hold")
     if rt["status_code"] not in ok_from:

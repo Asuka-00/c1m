@@ -2,7 +2,9 @@
 
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, text
 
 from app.core.db import admin_engine
@@ -435,4 +437,78 @@ def test_inspection_idempotent_and_schema_d71(client: TestClient, db: Session) -
     assert cols["disposition"][0] == "NO" and "none" in (cols["disposition"][1] or "")
     assert not r.sql(
         "SELECT 1 FROM pg_indexes WHERE indexname = 'uq_mes_reticle_inspection_event'"
+    )
+
+
+def test_scrapped_usage_and_inspection_409_no_life_reached(
+    client: TestClient, db: Session
+) -> None:
+    """D72：scrapped 后 usage / 检查录入一律 409 invalid_transition，不发 life_reached。"""
+    r = R(client, db, max_shots="10")
+    r.act("scrap", {"reason": "crack"})
+    before = r.events()
+    d = r.act("usage", {"delta": "100"}, 409)["detail"]
+    assert d["code"] == "invalid_transition" and d["status_code"] == "scrapped"
+    for res in ("pass", "fail"):
+        d = r.act("inspection", {"kind": "haze", "result": res}, 409)["detail"]
+        assert d["code"] == "invalid_transition" and d["status_code"] == "scrapped"
+    assert r.events() == before and "reticle.life_reached" not in before
+    assert r.get()["shot_count"] == "0"
+    assert not r.sql("SELECT 1 FROM mes_reticle_usage WHERE reticle_id = :r")
+    assert not r.sql("SELECT 1 FROM mes_reticle_inspection WHERE reticle_id = :r")
+
+
+def test_generic_crud_numeric_strings_and_value_error(
+    client: TestClient, db: Session
+) -> None:
+    """D72 / D50：通用 CRUD 定点数输出字符串；超 6 位小数 422 value_error + ctx。"""
+    r = R(client, db, max_shots="1000.5")
+    g = r.get()
+    assert g["max_shots"] == "1000.5" and g["shot_count"] == "0"
+    r.act("usage", {"delta": "1.25"})
+    assert r.get()["shot_count"] == "1.25"
+    lst = client.get(f"{API}/reticle", headers=r.m.h).json()["data"]
+    assert [x["shot_count"] for x in lst] == ["1.25"]
+    resp = client.patch(
+        f"{API}/reticle/{r.id}", headers=r.m.h, json={"max_shots": "1.1234567"}
+    )
+    assert resp.status_code == 422, resp.text
+    d = resp.json()["detail"][0]
+    assert d["type"] == d["code"] == "value_error" and d["loc"] == ["body", "max_shots"]
+    assert d["ctx"] == {"max_places": 6}
+
+
+def test_delete_reticle_with_history_409_referenced(
+    client: TestClient, db: Session
+) -> None:
+    """D72：5 张履历表 ON DELETE RESTRICT；有履历删光罩 409 referenced + tables[]。"""
+    r = R(client, db)
+    r.act("usage", {"delta": "5"})
+    r.act("hold", {"reason": "x"})
+    resp = client.delete(f"{API}/reticle/{r.id}", headers=r.m.h)
+    assert resp.status_code == 409, resp.text
+    d = resp.json()["detail"]
+    assert d["code"] == "referenced"
+    assert set(d["tables"]) == {"mes_reticle_usage", "mes_reticle_status_log"}
+    assert r.get()["id"] == r.id
+    rules = {
+        x[0]: x[1]
+        for x in r.sql(
+            "SELECT tc.table_name, rc.delete_rule FROM information_schema.referential_constraints rc"
+            " JOIN information_schema.table_constraints tc ON tc.constraint_name = rc.constraint_name"
+            " JOIN information_schema.constraint_column_usage cu ON cu.constraint_name = rc.constraint_name"
+            " WHERE cu.table_name = 'mes_reticle' AND tc.table_name LIKE 'mes_reticle_%'"
+        )
+    }
+    for t in ("incident", "mount_log", "usage", "inspection", "status_log"):
+        assert rules[f"mes_reticle_{t}"] == "RESTRICT", rules
+    assert rules["mes_reticle_applicability"] == "CASCADE"
+    # 外键兜底：绕过接口直接删也被数据库拦下
+    with pytest.raises(IntegrityError):
+        r.sql("DELETE FROM mes_reticle WHERE id = :r")
+    # 没有履历的光罩可以删
+    fresh = r.m.post("reticle", {"code": "RT2", "name": "rt2"})
+    assert client.delete(f"{API}/reticle/{fresh['id']}", headers=r.m.h).status_code in (
+        200,
+        204,
     )

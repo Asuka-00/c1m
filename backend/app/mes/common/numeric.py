@@ -8,6 +8,7 @@ from decimal import Decimal
 from pydantic_core import PydanticCustomError
 
 MAX_PLACES = 6
+PLACES_MSG = "Value error, at most {max_places} decimal places"
 
 
 def six(v: Decimal) -> Decimal:
@@ -17,7 +18,7 @@ def six(v: Decimal) -> Decimal:
     if v.as_tuple().exponent < -MAX_PLACES:  # type: ignore[operator]
         raise PydanticCustomError(
             "value_error",
-            "Value error, at most {max_places} decimal places",
+            PLACES_MSG,
             {"max_places": MAX_PLACES},
         )
     if abs(v) >= Decimal(10) ** 12:

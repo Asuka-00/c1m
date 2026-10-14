@@ -646,7 +646,7 @@ def test_material_sufficiency_and_consumption(client: TestClient, db: Session) -
             ),  # 与应用时钟（UTC）一致,
         },
     )
-    assert ml1["initial_qty"] == 3
+    assert ml1["initial_qty"] == "3"  # D72：通用 CRUD 定点数输出字符串
     f.bind("track_in", ("material_sufficient", "block", {}))
     (lot,) = f.start(2)  # needs 2 x 2 = 4, only 3 usable (ML2 expired)
     cx = f.ctx(lot)
@@ -667,7 +667,7 @@ def test_material_sufficiency_and_consumption(client: TestClient, db: Session) -
     m.patch("material_lot", ml1["id"], {"qty_remaining": 5})
     r = f.stage(lot, "track_out")
     assert r["consumed"] == [{"material_lot": "ML1", "qty": 4.0, "left": 1.0}]
-    assert m.list("material_lot", q="ML2")["data"][0]["qty_remaining"] == 10
+    assert m.list("material_lot", q="ML2")["data"][0]["qty_remaining"] == "10"
     assert ml2["ml_status"] == "available"
 
 
