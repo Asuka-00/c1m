@@ -18,7 +18,8 @@
 #     取 GET /mes/marking/config 的生效值，save_as: cfg，用 $cfg.trace_code_max_length / $cfg.trace_code_pattern 引用）；
 #     EAP 上报 422 先于业务：不 409、不写 audit、不发事件；事件 payload 按 domain-events.md 断言
 #   - 补充四：lot.marked 始终带 reason_id（seq=1 为 null）；空串/纯空白只报一条 missing；小写、首尾空格报 pattern
-#     （不规范化，原值提交；本地预校验 sim/marking.check_trace_code 用 config 正则全串匹配）
+#     （不规范化，原值提交；本地预校验 sim/marking.check_trace_code 用 config 正则全串匹配；
+#       补充五：纯空白按 re.fullmatch(r"[ \t\r\n\u3000]*") 判断，不用 strip()，U+FEFF / \x1f 报 pattern）
 # 打标记录没有 numeric 列（D78），不测超位小数。
 name: marking-report
 run_id: marking-05
