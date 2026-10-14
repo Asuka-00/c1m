@@ -123,10 +123,12 @@ def test_track_out_bom_comparison(client: TestClient, db: Session) -> None:
     (w,) = out["warnings"]
     assert w["code"] == "bom_over_consumption"
     assert [(x["line_no"], x["planned"], x["actual"]) for x in w["lines"]] == [
-        (10, 2, 3)
+        (10, "2", "3")
     ]
     h = m.list("lot_history", lot=lot["id"], action="bom_over_consumption")["data"]
     assert len(h) == 1 and h[0]["details"]["lines"][0]["material"] == f.mat["code"]
+    assert h[0]["details"]["lines"][0]["excess"] == 1  # 履历仍存数值
+    assert w["lines"][0]["excess"] == "1" and w["lines"][0]["basis"] == "2"
     f.stage(lot, "move_out")
     # OP1：4 g = 0.004 kg ≤ 2 × 0.002 × 1.1 = 0.0044 kg → 无提示
     f.stage(lot, "move_in", equipment_id=f.eq["id"])
@@ -134,7 +136,7 @@ def test_track_out_bom_comparison(client: TestClient, db: Session) -> None:
     out = f.stage(lot, "track_out")
     assert out["warnings"] == []
     assert [(x["planned"], x["actual"], x["over"]) for x in out["bom_usage"]] == [
-        (0.0044, 0.004, False)
+        ("0.0044", "0.004", False)
     ]
     # 返工后回到同一工步重做：用量记为 rework，不参与比对
     f.stage(lot, "move_out", rework=True)
@@ -142,7 +144,7 @@ def test_track_out_bom_comparison(client: TestClient, db: Session) -> None:
     f.stage(lot, "move_in", equipment_id=f.eq["id"])
     f.stage(lot, "track_in", equipment_id=f.eq["id"])
     out = f.stage(lot, "track_out")
-    assert out["warnings"] == [] and out["bom_usage"][0]["actual"] == 0.004
+    assert out["warnings"] == [] and out["bom_usage"][0]["actual"] == "0.004"
     recs = m.list("material_consumption", lot=lot["id"])["data"]
     assert sorted((float(x["qty"]), x["usage_type"], x["source"]) for x in recs) == [
         (3.0, "normal", "step_resource"),
@@ -151,7 +153,7 @@ def test_track_out_bom_comparison(client: TestClient, db: Session) -> None:
     ]
     # 用量总览：全部 issue 明细的累计正常用量
     u = _get(f, f"{EXEC}/lots/{lot['id']}/bom-usage")
-    assert u["bom_version"] == 1 and u["basis"] == 2
+    assert u["bom_version"] == 1 and u["basis"] == "2"
     assert [(x["line_no"], x["actual"], x["over"]) for x in u["lines"]] == [
         (10, "3", True),
         (20, "0.004", False),
@@ -316,7 +318,7 @@ def test_consumption_float_error_and_bom_usage_scope(
     f.stage(lot, "track_in", equipment_id=f.eq["id"])
     out = f.stage(lot, "track_out")  # 3 片 × 0.1 g
     assert out["consumed"] == [{"material_lot": "MLG", "qty": 0.3, "left": 0.7}]
-    assert out["warnings"] == [] and out["bom_usage"][0]["actual"] == 0.3
+    assert out["warnings"] == [] and out["bom_usage"][0]["actual"] == "0.3"
     raw = f.sql(
         "SELECT qty::text FROM mes_material_consumption WHERE lot_id = :l", l=lot["id"]
     )
@@ -395,14 +397,14 @@ def test_over_alert_only_when_excess_grows(client: TestClient, db: Session) -> N
         )
 
     r = out()  # 3 g / 计划 2 g：超 1 → 报
-    assert r["warnings"][0]["lines"][0]["excess"] == 1 and alerts() == 1
+    assert r["warnings"][0]["lines"][0]["excess"] == "1" and alerts() == 1
     f.stage(lot, "move_out")
     r = out()  # 累计 5 g：超 3 > 1 → 再报
-    assert r["warnings"][0]["lines"][0]["excess"] == 3 and alerts() == 2
+    assert r["warnings"][0]["lines"][0]["excess"] == "3" and alerts() == 2
     f.stage(lot, "move_out", rework=True)
     f.run_step(lot)
     r = out()  # 返工重做：用量记 rework，正常累计不变 → 两边都不报
-    assert r["warnings"] == [] and r["bom_usage"][0]["excess"] == 3
+    assert r["warnings"] == [] and r["bom_usage"][0]["excess"] == "3"
     assert alerts() == 2
 
 
@@ -421,7 +423,7 @@ def test_same_material_two_lines_allocation(client: TestClient, db: Session) -> 
     f.stage(lot, "move_in", equipment_id=f.eq["id"])
     f.stage(lot, "track_in", equipment_id=f.eq["id"])
     r = f.stage(lot, "track_out")
-    assert [(x["line_no"], x["actual"]) for x in r["bom_usage"]] == [(10, 3)]
+    assert [(x["line_no"], x["actual"]) for x in r["bom_usage"]] == [(10, "3")]
     assert r["warnings"][0]["lines"][0]["line_no"] == 10
     f.stage(lot, "move_out")
     for _ in range(2):  # 20、SUB#10
@@ -430,7 +432,7 @@ def test_same_material_two_lines_allocation(client: TestClient, db: Session) -> 
     f.stage(lot, "track_in", equipment_id=f.eq["id"])
     r = f.stage(lot, "track_out")  # 最后一步只比未绑工序明细：1 g ≤ 2 g，不报
     assert [(x["line_no"], x["actual"], x["over"]) for x in r["bom_usage"]] == [
-        (20, 1, False)
+        (20, "1", False)
     ]
     assert r["warnings"] == []
     u = _get(f, f"{EXEC}/lots/{lot['id']}/bom-usage")
@@ -439,3 +441,17 @@ def test_same_material_two_lines_allocation(client: TestClient, db: Session) -> 
         (10, "3", "1"),
         (20, "1", "0"),
     ]
+
+
+def test_d50_track_out_and_basis_strings() -> None:
+    """D50 扩展：bom-usage 顶层 basis、出站 bom_usage 与 warnings 的数量为定点字符串；
+    履历 details 仍存数值（内部比较用）。"""
+    from app.mes.execution.bom_usage import as_strings, warning_out
+
+    rows = [{"basis": 2.0, "planned": 0.0044, "actual": 1e-06, "excess": 0.0, "x": 1}]
+    assert as_strings(rows) == [
+        {"basis": "2", "planned": "0.0044", "actual": "0.000001", "excess": "0", "x": 1}
+    ]
+    assert rows[0]["basis"] == 2.0  # 不改原行
+    w = warning_out({"code": "c", "message": "m", "lines": rows})
+    assert w["lines"][0]["planned"] == "0.0044" and w["message"] == "m"

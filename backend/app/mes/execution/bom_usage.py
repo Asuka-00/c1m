@@ -195,13 +195,20 @@ def lot_bom_usage(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
         "an operation. Excess stays on the line it was counted to.",
         "bom_id": bom and str(bom["id"]),
         "bom_version": bom and bom["version"],
-        "basis": lot["qty"],
-        "lines": [
-            {
-                **ln,
-                # D50：数量字段输出定点字符串
-                **{k: dec_str(ln[k]) for k in ("basis", "planned", "actual", "excess")},
-            }
-            for ln in compare(s, tid, lot, lot["qty"] or 0, all_lines=True)
-        ],
+        "basis": dec_str(lot["qty"] or 0),  # D50
+        "lines": as_strings(compare(s, tid, lot, lot["qty"] or 0, all_lines=True)),
     }
+
+
+# D50：比对结果里的数量字段（接口输出为定点字符串；内部计算与履历仍用数值）
+QTY_KEYS = ("basis", "planned", "actual", "excess")
+
+
+def as_strings(rows: list[Row]) -> list[Row]:
+    """比对行的数量字段转定点字符串（不改原行）。"""
+    return [{**r, **{k: dec_str(r[k]) for k in QTY_KEYS if k in r}} for r in rows]
+
+
+def warning_out(w: Row) -> Row:
+    """出站提示的接口输出：``lines`` 的数量字段转定点字符串。"""
+    return {**w, "lines": as_strings(w.get("lines") or [])}

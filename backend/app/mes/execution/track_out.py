@@ -426,6 +426,6 @@ def track_out(
         oos_action=worst,
         consumed=consumed,
         tools=tools,
-        bom_usage=bom_rows,
-        warnings=[bom_warn] if bom_warn else [],
+        bom_usage=bom_usage.as_strings(bom_rows),  # D50
+        warnings=[bom_usage.warning_out(bom_warn)] if bom_warn else [],
     )
