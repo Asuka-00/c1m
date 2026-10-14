@@ -74,12 +74,37 @@ export function queryErrorText(msg: string): string | null {
 }
 
 /** 一条查询 / 路径参数 422（loc 以 query 或 path 开头）的文案：已知消息本地化，否则「参数: 原消息」。 */
-export function queryItemText(x: { loc?: unknown[]; msg?: string }): string {
+export function queryItemText(x: ParamItem): string {
+  const known = queryErrorText(String(x.msg ?? ''))
+  if (known) return known
+  const name = paramName(x)
+  const m = paramMessage(x)
+  return name ? `${name}: ${m}` : m
+}
+
+type ParamItem = {
+  loc?: unknown[]
+  msg?: string
+  code?: string
+  type?: string
+  ctx?: Record<string, unknown>
+}
+
+/** 参数类 422 的参数名（loc[1..] 用 . 连接）。 */
+export const paramName = (x: ParamItem) =>
+  (x.loc ?? []).slice(1).map(String).join('.')
+
+/** 参数类 422 的文案（不含参数名）：先 code 再 type 取固定码文案，否则去掉「参数名:」前缀的原消息。 */
+export function paramMessage(x: ParamItem): string {
+  const c = codeItemText(x)
+  if (c) return c
   const msg = String(x.msg ?? '')
   const known = queryErrorText(msg)
   if (known) return known
-  const name = String(x.loc?.[1] ?? '')
-  return name && !msg.startsWith(name) ? `${name}: ${msg}` : msg
+  const name = paramName(x)
+  return name && msg.startsWith(`${name}:`)
+    ? msg.slice(name.length + 1).trim()
+    : msg
 }
 
 /** loc 第一段为 query / path（D65 补充 2）：参数错误，不映射到表单字段。 */
@@ -92,12 +117,31 @@ export function codeItemText(x: {
   type?: string
   ctx?: Record<string, unknown>
 }): string | null {
+  const ctx = ctxVars(x?.ctx)
   for (const c of [x?.code, x?.type]) {
     if (!c) continue
-    for (const k of [`errors.code.${c}`, `mes.err.code.${c}`])
-      if (i18n.exists(k)) return t(k, { ...(x.ctx ?? {}) })
+    // date_range_too_large：有 ctx.max_days 用带天数的文案，否则用不带天数的
+    const name =
+      c === 'date_range_too_large' && ctx.max_days == null
+        ? 'date_range_too_large_nolimit'
+        : c
+    for (const k of [`errors.code.${name}`, `mes.err.code.${name}`])
+      if (i18n.exists(k)) return t(k, ctx)
   }
   return null
+}
+
+/** ctx 插值变量：数组用「、」/「, 」连接，entity 换成实体名（mes.entity.*，没有时原样）。 */
+function ctxVars(ctx: Record<string, unknown> | undefined) {
+  const sep = currentLanguage() === 'en' ? ', ' : '、'
+  const out: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(ctx ?? {}))
+    out[k] = Array.isArray(v) ? v.map(String).join(sep) : v
+  if (typeof out.entity === 'string') {
+    const key = `mes.entity.${out.entity}`
+    if (i18n.exists(key)) out.entity = t(key)
+  }
+  return out
 }
 
 export function errorMessage(e: unknown): string {

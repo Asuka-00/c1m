@@ -9,7 +9,7 @@
  * 时间字段为带 Z 的 UTC，显示时用 `fmtDateTime` 转本地时区。
  */
 import { AxiosError } from 'axios'
-import { http } from '../client'
+import { http, isParamLoc, paramMessage, paramName } from '../client'
 
 /** 坐标图请求体上限（后端 D39：超过 413 payload_too_large）。 */
 export const MAP_MAX_BYTES = 10 * 1024 * 1024
@@ -136,10 +136,15 @@ export function mapApiError(e: unknown): MapApiError {
   if (Array.isArray(detail))
     return {
       kind: 'fields',
-      fields: detail.map((d: { loc?: unknown[]; msg?: string }) => ({
-        field: (d.loc ?? []).filter((x) => x !== 'body').join('.'),
-        msg: d.msg ?? '',
-      })),
+      // query / path 开头的是参数错误，不当导入字段：字段名取参数名，文案按 code 再 type
+      fields: detail.map((d: { loc?: unknown[]; msg?: string }) =>
+        isParamLoc(d)
+          ? { field: paramName(d), msg: paramMessage(d) }
+          : {
+              field: (d.loc ?? []).filter((x) => x !== 'body').join('.'),
+              msg: d.msg ?? '',
+            }
+      ),
     }
   if (detail && typeof detail === 'object' && 'code' in detail) {
     const d = detail as { code: string; errors?: MapRowError[] }

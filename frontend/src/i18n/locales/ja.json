@@ -507,7 +507,16 @@
         "date_range_too_large": "期間は最大 92 日です。範囲を狭めてください。",
         "read_only_field": "この項目は読み取り専用です",
         "unknown_field": "不明な項目が含まれています",
-        "timezone_required": "時刻にはタイムゾーンが必要です（例：2026-10-14T08:00:00+08:00）"
+        "timezone_required": "時刻にはタイムゾーンが必要です（例：2026-10-14T08:00:00+08:00）",
+        "date_range_too_large": "期間は最大 {{max_days}} 日です。範囲を狭めてください。",
+        "date_range_too_large_nolimit": "期間が長すぎます。範囲を狭めてください。",
+        "date_range_invalid": "開始日は終了日より後にできません。",
+        "unknown_columns": "取込ファイルに認識できない列があります：{{columns}}",
+        "no_conversion_path": "{{from_uom}} から {{to_uom}} への換算がありません。",
+        "ref_not_found": "{{entity}}が見つかりません。",
+        "enum": "値が無効です。指定可能：{{expected}}",
+        "step_ids_mismatch": "工程リストが現在のルートと一致しません。更新して再試行してください。",
+        "not_text_filter": "{{field}} はフィルタ可能なテキスト項目ではありません"
       },
       "tooManyDecimals": "小数は最大 {{n}} 桁です",
       "onlyWhen": "{{cond}}が「{{value}}」のときのみ入力できます",
