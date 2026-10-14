@@ -4,7 +4,8 @@
  * 后端 86ca4a1：`POST /mes/exec/transform/{id}/undo`（mes.exec:transform，体 reason_id / comment），
  * 子批都未动过才可撤销，否则 409 `transform_undo_blocked`，`lots` 逐批给出原因；成功后母批写履历
  * `transform_undo`（details 为转换快照，含 transform_id、children）。
- * D54（后端在做）：保留转换记录并加 `undone_at` / `undone_by` / `undo_reason`；两种形态都识别。
+ * D54（a7f7c9b）：保留转换记录并加 `undone_at` / `undone_by` / `undo_reason`；再次撤销 409（`lots` 为空）；
+ * 撤销履历 details 带 `carrier_restored=false`（载具不恢复）。两种形态都识别。
  */
 import { AxiosError } from 'axios'
 import { fmtDateTime, t } from '@/i18n'
@@ -63,7 +64,12 @@ export function undoErrorLines(e: unknown): string[] {
       | undefined
     if (d && d.code === 'transform_undo_blocked') {
       const lots = (d.lots as { lot_code?: string; reason?: string }[]) ?? []
-      if (!lots.length) return [t('mes.tundo.blockedRef')]
+      if (!lots.length)
+        return [
+          /already undone/.test(String(d.message ?? ''))
+            ? t('mes.tundo.already')
+            : t('mes.tundo.blockedRef'),
+        ]
       return lots.map((l) =>
         t('mes.tundo.blocked', {
           lot: l.lot_code ?? '',
@@ -77,4 +83,21 @@ export function undoErrorLines(e: unknown): string[] {
   if (e instanceof AxiosError && e.response?.status === 404)
     return [t('mes.tundo.notFound')]
   return [mesErrorMessage(e, undefined)]
+}
+
+/** 撤销履历行（transform_undo）：撤销时间 / 撤销人 / 撤销原因，及载具未恢复说明。 */
+export function undoRowInfo(
+  r: MesRow
+): { info: string; carrier: boolean } | null {
+  if (r.action !== 'transform_undo') return null
+  const d = det(r)
+  const at = str(d.undone_at ?? r.at)
+  return {
+    info: t('mes.tundo.info', {
+      at: at ? fmtDateTime(at) : '—',
+      by: str(d.undone_by ?? r.username) ?? '—',
+      reason: str(d.undo_reason ?? r.reason_label ?? r.comment) ?? '—',
+    }),
+    carrier: d.carrier_restored === false,
+  }
 }

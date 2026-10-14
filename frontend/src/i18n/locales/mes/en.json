@@ -972,6 +972,11 @@
         "source": "Source",
         "external_event_id": "External event ID",
         "username": "User"
+      },
+      "unit_transform": {
+        "undone_at": "Undone at",
+        "undone_by": "Undone by",
+        "undo_reason": "Undo reason"
       }
     },
     "help": {

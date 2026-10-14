@@ -94,6 +94,16 @@ describe('F4-02 撤销转换', () => {
     expect(
       undoErrorLines(err(409, { code: 'transform_undo_blocked', lots: [] }))
     ).toEqual([t('mes.tundo.blockedRef')])
+    // D54：第二次撤销 409，lots 为空
+    expect(
+      undoErrorLines(
+        err(409, {
+          code: 'transform_undo_blocked',
+          message: 'transform already undone',
+          lots: [],
+        })
+      )
+    ).toEqual([t('mes.tundo.already')])
     expect(undoErrorLines(err(404, 'Record not found'))).toEqual([
       t('mes.tundo.notFound'),
     ])
@@ -146,5 +156,35 @@ describe('F4-02 撤销转换', () => {
     await expect
       .element(box.getByText('撤销单位转换', { exact: true }))
       .toBeVisible()
+  })
+
+  it('D54 撤销履历：显示撤销时间 / 撤销人 / 撤销原因，载具未恢复时注明', async () => {
+    const row: MesRow = {
+      ...UNDO,
+      details: {
+        ...(UNDO.details as object),
+        carrier_restored: false,
+        undo_reason: 'RC9: 分错产品',
+      },
+    }
+    const s = await render(
+      wrap(
+        <div data-testid='d54'>
+          <HistoryTimeline rows={[row]} canUndo />
+        </div>
+      )
+    )
+    const info = s.getByTestId('d54').getByTestId('undo-info')
+    await expect
+      .element(info)
+      .toHaveTextContent(/撤销时间 .+ · 撤销人 kai · 撤销原因 RC9: 分错产品/)
+    await expect
+      .element(info.getByTestId('undo-carrier'))
+      .toHaveTextContent(t('mes.tundo.carrier'))
+    // 老形态（无 carrier_restored）不显示载具说明
+    await render(wrap(<HistoryTimeline rows={[UNDO]} canUndo />))
+    expect(document.querySelectorAll('[data-testid=undo-carrier]').length).toBe(
+      1
+    )
   })
 })

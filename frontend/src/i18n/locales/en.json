@@ -915,7 +915,8 @@
         "parent_lot": "Parent lot",
         "parent_wafer": "Parent wafer",
         "die_row": "Die row",
-        "die_col": "Die col"
+        "die_col": "Die col",
+        "transform_id": "Transform record"
       },
       "origins": "Source wafers & die coordinates",
       "dies": "Where this wafer's dies went",
@@ -1595,7 +1596,10 @@
         "has_transactions": "child lot has later transactions",
         "has_descendants": "child lot has been split further",
         "parent_status": "parent lot status has changed"
-      }
+      },
+      "already": "This transform was already undone",
+      "info": "Undone at {{at}} · by {{by}} · reason {{reason}}",
+      "carrier": "Carrier not restored; rebind if needed"
     },
     "mapList": {
       "title": "Imported maps",

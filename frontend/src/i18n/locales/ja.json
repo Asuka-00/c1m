@@ -915,7 +915,8 @@
         "parent_lot": "親ロット",
         "parent_wafer": "親ウェーハ",
         "die_row": "ダイ行",
-        "die_col": "ダイ列"
+        "die_col": "ダイ列",
+        "transform_id": "変換記録"
       },
       "origins": "元ウェーハとダイ座標",
       "dies": "このウェーハのダイの行き先",
@@ -1595,7 +1596,10 @@
         "has_transactions": "子ロットに後続作業があります",
         "has_descendants": "子ロットが再分割されています",
         "parent_status": "親ロットの状態が変わっています"
-      }
+      },
+      "already": "この変換は取り消し済みです",
+      "info": "取消日時 {{at}} · 取消者 {{by}} · 取消理由 {{reason}}",
+      "carrier": "キャリアは復元されません。必要に応じて再割当してください"
     },
     "mapList": {
       "title": "取り込み済みマップ",

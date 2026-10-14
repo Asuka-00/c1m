@@ -972,6 +972,11 @@
         "source": "来源",
         "external_event_id": "外部事件号",
         "username": "用户"
+      },
+      "unit_transform": {
+        "undone_at": "撤销时间",
+        "undone_by": "撤销人",
+        "undo_reason": "撤销原因"
       }
     },
     "help": {

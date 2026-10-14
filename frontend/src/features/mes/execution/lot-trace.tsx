@@ -48,7 +48,12 @@ import { ResultBadge } from './exec-parts'
 import { type OverLine, overLineText } from './over-consumption'
 import { qtimeWarnedText } from './qtime-warned'
 import { GenealogyList } from './split-merge'
-import { transformIdOf, undoneInfo, undoneText } from './transform-undo'
+import {
+  transformIdOf,
+  undoneInfo,
+  undoneText,
+  undoRowInfo,
+} from './transform-undo'
 import { TransformUndoDialog } from './transform-undo-dialog'
 
 const ICON: Record<string, [LucideIcon, string]> = {
@@ -231,6 +236,7 @@ export function HistoryTimeline({
           ]
           const tid = h.action === 'transform' ? transformIdOf(h) : null
           const undone = undoneInfo(h, rows)
+          const undoRow = undoRowInfo(h)
           const d = (h.details ?? {}) as Record<string, unknown>
           return (
             <li key={h.id} className='relative'>
@@ -308,6 +314,19 @@ export function HistoryTimeline({
                   </span>
                 )}
               </div>
+              {undoRow && (
+                <div className='text-sm' data-testid='undo-info'>
+                  <span>{undoRow.info}</span>
+                  {undoRow.carrier && (
+                    <span
+                      className='ms-2 text-amber-700 dark:text-amber-400'
+                      data-testid='undo-carrier'
+                    >
+                      {t('mes.tundo.carrier')}
+                    </span>
+                  )}
+                </div>
+              )}
               {!!h.details && (
                 <Details d={h.details as Record<string, unknown>} />
               )}

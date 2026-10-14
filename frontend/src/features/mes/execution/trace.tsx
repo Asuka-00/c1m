@@ -59,6 +59,7 @@ const LOT_COLS = [
   'via',
   'level',
   'at',
+  'transform_id',
 ]
 
 /** 单元格显示：时间格式化、数组（消耗 / 下游）压缩成文本。 */
@@ -68,6 +69,13 @@ function cell(col: string, v: unknown, row: TraceRow): React.ReactNode {
   if (v === null || v === undefined || v === '') return '—'
   if (col === 'at') return fmtDateTime(String(v))
   if (col === 'relation') return enumLabel('genealogy_relation', String(v))
+  // D54：转换谱系带转换记录 id（撤销后记录仍保留），显示前 8 位，悬停看全文
+  if (col === 'transform_id')
+    return (
+      <span className='font-mono text-xs' title={String(v)}>
+        {String(v).slice(0, 8)}
+      </span>
+    )
   if (Array.isArray(v))
     return v.length
       ? v

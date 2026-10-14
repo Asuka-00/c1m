@@ -209,4 +209,43 @@ describe('F6 追溯显示客户批号和归属', () => {
     await expect.poll(() => labels().length).toBe(5)
     expect(new Set(labels())).toEqual(new Set(['客户来料 · C1 · Cust 1']))
   })
+
+  it('D54：转换谱系的批次带 transform_id，追溯表显示转换记录列', async () => {
+    const { s } = await show({
+      kind: 'lot',
+      target: { id: 'L1', code: 'LOT-T', ownership: 'own', customer: null },
+      backward: empty,
+      forward: {
+        lots: [
+          {
+            id: 'C1',
+            code: 'LOT-T-1',
+            relation: 'transform',
+            qty: 10,
+            via: 'LOT-T',
+            level: 1,
+            at: null,
+            transform_id: '1234abcd-0000-4000-8000-000000000001',
+          },
+          {
+            id: 'C2',
+            code: 'LOT-T-2',
+            relation: 'split',
+            qty: 5,
+            via: 'LOT-T',
+            level: 1,
+            at: null,
+            transform_id: null,
+          },
+        ],
+      },
+    } as never)
+    await s.getByLabelText(t('mes.traceq.code')).fill('LOT-T')
+    await userEvent.click(s.getByTestId('trace-search'))
+    await expect
+      .element(s.getByText(t('mes.traceq.c.transform_id')).first())
+      .toBeVisible()
+    const cell = s.getByTitle('1234abcd-0000-4000-8000-000000000001')
+    await expect.element(cell).toHaveTextContent('1234abcd')
+  })
 })

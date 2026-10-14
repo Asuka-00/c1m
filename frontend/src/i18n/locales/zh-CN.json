@@ -915,7 +915,8 @@
         "parent_lot": "母批",
         "parent_wafer": "母晶圆",
         "die_row": "die 行",
-        "die_col": "die 列"
+        "die_col": "die 列",
+        "transform_id": "转换记录"
       },
       "origins": "来源晶圆与 die 坐标",
       "dies": "该晶圆的 die 去向",
@@ -1595,7 +1596,10 @@
         "has_transactions": "子批已有后续作业",
         "has_descendants": "子批已再分出下游批次",
         "parent_status": "母批状态已变化"
-      }
+      },
+      "already": "该转换已撤销，不能重复撤销",
+      "info": "撤销时间 {{at}} · 撤销人 {{by}} · 撤销原因 {{reason}}",
+      "carrier": "载具未恢复，请按需重新绑定"
     },
     "mapList": {
       "title": "已导入的坐标图",
