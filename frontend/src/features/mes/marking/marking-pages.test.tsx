@@ -143,4 +143,31 @@ describe('打标作业页', () => {
     await expect.element(s.getByTestId('mk-act-inspect')).toBeDisabled()
     await expect.element(s.getByTestId('mk-act-reprint')).toBeDisabled()
   })
+  it('只有 exec 没有 void 时不显示作废', async () => {
+    await mockMarkingApi.mark({ lot_id: 'lot1' }, 'seed')
+    const s = await render(
+      wrap(<JobPage />, [MARKING_PERM.read, MARKING_PERM.exec])
+    )
+    await s.getByTestId('mk-row-LOT-A001').click()
+    await expect.element(s.getByTestId('mk-act-inspect')).toBeVisible()
+    await expect.element(s.getByTestId('mk-act-void')).not.toBeInTheDocument()
+  })
+  it('读回码违反两条规则逐条显示', async () => {
+    await mockMarkingApi.mark({ lot_id: 'lot1' }, 'seed')
+    const s = await render(wrap(<JobPage />, ALL))
+    await s.getByTestId('mk-row-LOT-A001').click()
+    await s.getByTestId('mk-act-inspect').click()
+    await userEvent.fill(
+      s.getByTestId('mk-read-code').element(),
+      'a'.repeat(33)
+    )
+    await s.getByTestId('mk-act-ok').click()
+    const err = s.getByTestId('mk-err-read_code')
+    await expect
+      .element(err)
+      .toHaveTextContent(t('mes.marking.err.trace_max_length', { n: 32 }))
+    await expect
+      .element(err)
+      .toHaveTextContent(t('mes.marking.err.trace_pattern'))
+  })
 })

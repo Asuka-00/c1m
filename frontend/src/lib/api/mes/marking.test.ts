@@ -262,3 +262,58 @@ describe('打标作业 mock（D78）', () => {
     expect(await api.records({ marked_at_to: at })).toHaveLength(0)
   })
 })
+
+describe('追溯码 mock（B3）', () => {
+  it('按追溯码反查批次和晶圆；格式不符 422；作废后查不到', async () => {
+    const { mockTraceByCode } = await import('./marking')
+    const r = await api.mark({ lot_id: 'lot1' }, 'k1')
+    const tr = await mockTraceByCode(r.trace_code)
+    expect(tr.target.code).toBe('LOT-A001')
+    expect(tr.wafers).toHaveLength(25)
+    expect(await detail(mockTraceByCode('ab'))).toMatchObject({
+      status: 422,
+      detail: [{ ctx: { reason: 'pattern' } }],
+    })
+    await api.void(r.id, { reason_id: 'V', comment: 'x' }, 'kv')
+    expect(await detail(mockTraceByCode(r.trace_code))).toMatchObject({
+      status: 404,
+    })
+  })
+})
+
+describe('D78 补充三', () => {
+  it('追溯码违反两条规则返回两条 422', async () => {
+    const { traceCodeErrors, mockTraceByCode } = await import('./marking')
+    expect(traceCodeErrors('a'.repeat(33))).toEqual(['max_length', 'pattern'])
+    expect(await detail(mockTraceByCode('a'.repeat(33)))).toMatchObject({
+      status: 422,
+      detail: [
+        { ctx: { reason: 'max_length', max_length: 32 } },
+        { ctx: { reason: 'pattern', pattern: '^[A-Z0-9-]+$' } },
+      ],
+    })
+  })
+  it('config：mock 返回默认；缺失或非法时退回默认', async () => {
+    const { ruleFromConfig } = await import('./marking')
+    expect(await api.config()).toEqual({
+      trace_code_max_length: 32,
+      trace_code_pattern: '^[A-Z0-9-]+$',
+    })
+    expect(ruleFromConfig(null).maxLength).toBe(32)
+    const r = ruleFromConfig({
+      trace_code_max_length: 8,
+      trace_code_pattern: '(',
+    })
+    expect(r.maxLength).toBe(8)
+    expect(r.pattern.source).toBe('^[A-Z0-9-]+$')
+  })
+  it('void 缺 Idempotency-Key 422', async () => {
+    const r = await api.mark({ lot_id: 'lot1' }, 'k1')
+    expect(
+      await detail(api.void(r.id, { reason_id: 'V', comment: 'x' }))
+    ).toMatchObject({
+      status: 422,
+      detail: [{ loc: ['header', 'Idempotency-Key'] }],
+    })
+  })
+})

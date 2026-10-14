@@ -1,7 +1,15 @@
 /** 打标页面公用：错误提示、幂等键绑定、权限码。 */
 import { useRef } from 'react'
 import { AxiosError } from 'axios'
+import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
+import {
+  markingApi,
+  ruleFromConfig,
+  traceCodeErrors,
+  type TraceCodeReason,
+  type TraceRule,
+} from '@/lib/api/mes/marking'
 import { newEventId } from '@/features/mes/common/event-id'
 import { mesErrorMessage } from '@/features/mes/common/required'
 
@@ -11,6 +19,8 @@ export const MARKING_PERM = {
   write: 'mes.marking:write',
   approve: 'mes.marking:approve',
   exec: 'mes.marking:exec',
+  /** 作废（D78 补充三，与 exec 分开） */
+  void: 'mes.marking:void',
 } as const
 
 /** 409 业务码（mock 与后端同名；self_approval / template_readonly / draft_exists / already_marked 待后端确认）。 */
@@ -60,6 +70,11 @@ export function markingErrorMessage(err: unknown): string {
           (field === 'reason_id' || field === 'comment')
         )
           return t(`mes.marking.err.${field}Required`)
+        if (
+          type === 'value_error' &&
+          (x.ctx?.reason === 'max_length' || x.ctx?.reason === 'pattern')
+        )
+          return traceReasonText(x.ctx.reason, Number(x.ctx.max_length))
         if (type === 'value_error' && x.ctx?.max_places != null)
           return t('mes.marking.err.maxPlaces', {
             n: String(x.ctx.max_places),
@@ -83,4 +98,23 @@ export function useIdemKey() {
       ref.current = { sig, key: newEventId() }
     return ref.current.key
   }
+}
+
+/** 追溯码单条错误文案。 */
+export const traceReasonText = (r: TraceCodeReason, n: number) =>
+  t(`mes.marking.err.trace_${r}`, { n: Number.isFinite(n) ? n : 32 })
+
+/** 追溯码逐条错误文案（违反几条显示几条）。 */
+export const traceErrorTexts = (v: string, rule: TraceRule) =>
+  traceCodeErrors(v, rule).map((r) => traceReasonText(r, rule.maxLength))
+
+/** 追溯码校验规则：以 GET /mes/marking/config 为准，取不到用默认（≤32、^[A-Z0-9-]+$）。 */
+export function useTraceRule(): TraceRule {
+  const q = useQuery({
+    queryKey: ['mes', 'marking', 'config'],
+    queryFn: markingApi.config,
+    retry: false,
+    staleTime: 5 * 60_000,
+  })
+  return ruleFromConfig(q.data)
 }

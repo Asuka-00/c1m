@@ -11,8 +11,6 @@ import {
   markingApi,
   markingSignature,
   reprintErrors,
-  TRACE_CODE_RULE,
-  traceCodeError,
   type InspectResult,
   type MarkingRecord,
 } from '@/lib/api/mes/marking'
@@ -43,7 +41,13 @@ import { Textarea } from '@/components/ui/textarea'
 import { Page } from '@/components/crud'
 import { rangeParam } from '@/components/crud/filter-defs'
 import { useMesCan } from '@/features/mes/common/mes-perm'
-import { MARKING_PERM, markingErrorMessage, useIdemKey } from './marking-rules'
+import {
+  MARKING_PERM,
+  markingErrorMessage,
+  traceErrorTexts,
+  useIdemKey,
+  useTraceRule,
+} from './marking-rules'
 
 const REC_KEY = ['mes', 'marking', 'records']
 const dash = (v: unknown) => (v == null || v === '' ? '—' : String(v))
@@ -264,9 +268,11 @@ export default function MarkingJobPage() {
 
 function FieldErr({ k, msg }: { k: string; msg?: string }) {
   return msg ? (
-    <p className='text-sm text-destructive' data-testid={`mk-err-${k}`}>
-      {msg}
-    </p>
+    <div className='text-sm text-destructive' data-testid={`mk-err-${k}`}>
+      {msg.split('\n').map((m) => (
+        <p key={m}>{m}</p>
+      ))}
+    </div>
   ) : null
 }
 
@@ -310,6 +316,10 @@ function RecordDetail({ rec }: { rec: MarkingRecord }) {
             >
               {t('mes.marking.reprint')}
             </Button>
+          </div>
+        )}
+        {can(MARKING_PERM.void) && (
+          <div className='flex gap-2'>
             <Button
               variant='destructive'
               disabled={locked}
@@ -404,6 +414,7 @@ function ActDialog({
 }) {
   const qc = useQueryClient()
   const keyOf = useIdemKey()
+  const rule = useTraceRule()
   const [result, setResult] = useState<InspectResult>('pass')
   const [readCode, setReadCode] = useState('')
   const [reasonId, setReasonId] = useState('')
@@ -450,11 +461,8 @@ function ActDialog({
   const submit = () => {
     const e: Record<string, string> = {}
     if (act === 'inspect' && readCode.trim()) {
-      const bad = traceCodeError(readCode.trim())
-      if (bad)
-        e.read_code = t(`mes.marking.err.trace_${bad}`, {
-          n: TRACE_CODE_RULE.maxLength,
-        })
+      const bad = traceErrorTexts(readCode.trim(), rule)
+      if (bad.length) e.read_code = bad.join('\n')
     }
     if (act !== 'inspect') {
       for (const k of reprintErrors({ reason_id: reasonId, comment }))

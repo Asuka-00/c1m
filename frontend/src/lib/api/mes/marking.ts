@@ -10,6 +10,7 @@ import { decimalText, parseDecimal } from '@/lib/decimal'
 import { siteDate } from '@/lib/site-tz'
 import { http } from '../client'
 import { pickBody } from '../request-body'
+import type { TraceResult } from './execution'
 import { apiError } from './reticle'
 
 /** 模板状态：draft → approved → retired。 */
@@ -120,15 +121,72 @@ export const MAX_PLACES = 6
 /** 追溯码规则（D78 Q7：待工艺专家确认，暂按 ≤32、[A-Z0-9-]，可配置）。 */
 export const TRACE_CODE_RULE = { maxLength: 32, pattern: /^[A-Z0-9-]+$/ }
 
-/** 追溯码校验：不通过返回 ctx.reason（max_length / pattern，同后端 422 value_error）。 */
-export function traceCodeError(
+export type TraceRule = { maxLength: number; pattern: RegExp }
+export type TraceCodeReason = 'max_length' | 'pattern'
+
+/** 追溯码逐条校验：违反几条返回几条（D78 补充三，同后端 422 value_error 逐条 ctx.reason）。 */
+export function traceCodeErrors(
   v: string,
-  rule: { maxLength: number; pattern: RegExp } = TRACE_CODE_RULE
-): 'max_length' | 'pattern' | null {
-  if (v.length > rule.maxLength) return 'max_length'
-  if (!rule.pattern.test(v)) return 'pattern'
-  return null
+  rule: TraceRule = TRACE_CODE_RULE
+): TraceCodeReason[] {
+  const out: TraceCodeReason[] = []
+  if (v.length > rule.maxLength) out.push('max_length')
+  if (!rule.pattern.test(v)) out.push('pattern')
+  return out
 }
+/** 第一条错误（兼容单条提示场景）。 */
+export const traceCodeError = (v: string, rule: TraceRule = TRACE_CODE_RULE) =>
+  traceCodeErrors(v, rule)[0] ?? null
+
+/** GET /mes/marking/config（mes.marking:exec）。 */
+export interface MarkingConfig {
+  trace_code_max_length: number
+  trace_code_pattern: string
+}
+export const DEFAULT_MARKING_CONFIG: MarkingConfig = {
+  trace_code_max_length: 32,
+  trace_code_pattern: '^[A-Z0-9-]+$',
+}
+/** 配置转校验规则；字段缺失或正则非法时退回默认（≤32、^[A-Z0-9-]+$）。 */
+export function ruleFromConfig(
+  c: Partial<MarkingConfig> | null | undefined
+): TraceRule {
+  const n = Number(c?.trace_code_max_length)
+  let pattern = TRACE_CODE_RULE.pattern
+  try {
+    if (c?.trace_code_pattern) pattern = new RegExp(c.trace_code_pattern)
+  } catch {
+    pattern = TRACE_CODE_RULE.pattern
+  }
+  return {
+    maxLength: Number.isInteger(n) && n > 0 ? n : TRACE_CODE_RULE.maxLength,
+    pattern,
+  }
+}
+
+/** 追溯码 422：每条违反规则一条 value_error。 */
+function traceCode422(
+  loc: string,
+  v: string,
+  rule: TraceRule = TRACE_CODE_RULE
+) {
+  const bad = traceCodeErrors(v, rule)
+  if (!bad.length) return null
+  return apiError(
+    422,
+    bad.map((reason) => ({
+      loc: ['body', loc],
+      type: 'value_error',
+      code: 'value_error',
+      msg: `${loc}: ${reason}`,
+      ctx:
+        reason === 'max_length'
+          ? { reason, max_length: rule.maxLength }
+          : { reason, pattern: rule.pattern.source },
+    }))
+  )
+}
+
 /** 追溯码格式校验。 */
 export const isValidTraceCode = (
   v: string,
@@ -246,6 +304,7 @@ export interface MarkingApi {
     key?: string
   ) => Promise<MarkingRecord>
   void: (id: string, input: VoidInput, key?: string) => Promise<MarkingRecord>
+  config: () => Promise<MarkingConfig>
 }
 
 const idemHeaders = (key?: string) =>
@@ -326,6 +385,8 @@ export const httpMarkingApi: MarkingApi = {
         idemHeaders(key)
       )
       .then((r) => r.data),
+  config: () =>
+    http.get<MarkingConfig>('/mes/marking/config').then((r) => r.data),
 }
 
 // ───────────────────────── 规则（页面与 mock 共用） ─────────────────────────
@@ -895,12 +956,10 @@ function mockInspect(id: string, input: InspectInput) {
     throw err422('result', 'enum', 'result: pass or fail')
   if (r.latest_inspection_status !== 'pending')
     throw err409('invalid_transition', 'already inspected')
-  const bad = input.read_code ? traceCodeError(input.read_code) : null
-  if (bad)
-    throw err422('read_code', 'value_error', 'read_code: invalid', {
-      reason: bad,
-      max_length: TRACE_CODE_RULE.maxLength,
-    })
+  const bad = input.read_code
+    ? traceCode422('read_code', input.read_code)
+    : null
+  if (bad) throw bad
   const print = r.prints[r.prints.length - 1]
   const result = effectiveResult(input, r.trace_code)
   r.inspections.push({
@@ -989,6 +1048,7 @@ export const mockMarkingApi: MarkingApi = {
         () => mockVoid(id, input)
       )
     ),
+  config: () => later(() => ({ ...DEFAULT_MARKING_CONFIG })),
 }
 
 /**
@@ -1007,12 +1067,8 @@ export function mockEapPrintReport(
     const r = store.rec.find((x) => x.id === recordId)
     if (!r) throw apiError(404, 'not found')
     if (isLocked(r)) throw scrappedErr()
-    const bad = traceCodeError(report.trace_code)
-    if (bad)
-      throw err422('trace_code', 'value_error', 'trace_code: invalid', {
-        reason: bad,
-        max_length: TRACE_CODE_RULE.maxLength,
-      })
+    const bad = traceCode422('trace_code', report.trace_code)
+    if (bad) throw bad
     if (report.trace_code !== r.trace_code)
       throw err409('trace_code_mismatch', 'reported trace code differs', {
         ctx: { expected: r.trace_code, actual: report.trace_code },
@@ -1023,6 +1079,38 @@ export function mockEapPrintReport(
         p.source === src && p.external_event_id === report.external_event_id
     )
     return { record: r, duplicate: dup }
+  })
+}
+
+/** mock：kind=trace_code 追溯（B3 未就绪）。格式不符 422 value_error ctx.reason；查不到 404。 */
+export function mockTraceByCode(code: string): Promise<TraceResult> {
+  return later(() => {
+    const bad = traceCode422('code', code)
+    if (bad) throw bad
+    const r = store.rec.find((x) => x.trace_code === code && !x.voided)
+    if (!r) throw apiError(404, 'not found')
+    const n = Number(decimalText(r.qty ?? 0)) || 0
+    return {
+      kind: 'trace_code' as const,
+      target: { id: r.lot_id, code: r.lot, lot_id: r.lot_id },
+      marking: {
+        trace_code: r.trace_code,
+        content: r.content.join(' / '),
+        template: `${r.template_code} v${r.template_version}`,
+        date_code: r.date_code,
+        equipment: r.equipment,
+        user: r.operator,
+        marked_at: r.marked_at,
+        reprint_count: r.reprint_count,
+        latest_inspection_status: r.latest_inspection_status,
+      },
+      wafers: Array.from({ length: Math.min(n, 25) }, (_, i) => ({
+        wafer: `${r.lot}-W${String(i + 1).padStart(2, '0')}`,
+        slot: i + 1,
+      })),
+      backward: { lots: [], steps: [], materials: [] },
+      forward: { lots: [] },
+    }
   })
 }
 
