@@ -174,6 +174,10 @@ register(
             F("good_qty", "int", "Good|良品数|良品数"),
             F("excluded_qty", "int", "Excluded|排除数|除外数"),
             F("bin_counts", "json", "Bin counts|各 bin 数量|ビン別数量", list=False),
+            # D39：可选关联（批次未给时按晶圆号找晶圆记录所在批次自动关联）
+            F("lot", "ref", "Lot|批次|ロット", ref="lot"),
+            F("equipment", "ref", "Equipment|设备|設備", ref="equipment"),
+            F("operation", "ref", "Operation|工序|工程", ref="operation"),
         ],
         phase=6,
         has_name=False,

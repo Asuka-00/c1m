@@ -11,6 +11,7 @@ from sqlmodel import Session
 from app.core.models import actor_name
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, TABLES
+from app.core.spec.errors import http_422
 from app.core.spec.serialize import serialize
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins
@@ -128,8 +129,35 @@ def bin_set_import(s: Session, tid: uuid.UUID, body: Row, user: Any) -> Row:
 
 
 # ---------------- 坐标图 ----------------
+def _check_refs(s: Session, tid: uuid.UUID, body: Row) -> None:
+    """D39：给了 lot_id / equipment_id / operation_id 但记录不存在 → 422（loc 指向字段）。"""
+    errs = [
+        ((f"{ent}_id",), f"{ent} not found")
+        for ent in ("lot", "equipment", "operation")
+        if body.get(f"{ent}_id") and not one(s, tid, ent, body[f"{ent}_id"])
+    ]
+    if errs:
+        raise http_422(errs)
+
+
+def wafer_lot(s: Session, tid: uuid.UUID, code: str) -> Any:
+    """D39：按基板编号找晶圆记录，返回其当前所在批次（不匹配批次号）。
+
+    找不到，或多条晶圆记录分属不同批次（无法唯一确定）时返回 None。
+    """
+    w = TABLES["wafer"]
+    lots = {
+        r[0]
+        for r in conn(s).execute(
+            sa.select(w.c.lot_id).where(w.c.tenant_id == tid, w.c.code == code)
+        )
+    }
+    return lots.pop() if len(lots) == 1 else None
+
+
 def map_preview(s: Session, tid: uuid.UUID, body: Row) -> Row:
     """解析并校验坐标图；定义集不存在时 422 ``bin_set_not_found``。"""
+    _check_refs(s, tid, body)
     p = importer.parse(body["content"], importer.MAP_COLS)
     hset = p.header.get("bin_definition_set", "")
     hver = p.header.get("bin_definition_version", "")
@@ -253,6 +281,9 @@ def _map_import(s: Session, tid: uuid.UUID, body: Row, user: Any) -> Row:
             good_qty=x["good_qty"],
             excluded_qty=x["excluded_qty"],
             bin_counts=x["bin_counts"],
+            lot_id=body.get("lot_id") or wafer_lot(s, tid, x["code"]),
+            equipment_id=body.get("equipment_id"),
+            operation_id=body.get("operation_id"),
         )
         conn(s).execute(
             sa.insert(ct),

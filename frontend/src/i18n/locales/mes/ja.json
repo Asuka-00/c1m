@@ -662,6 +662,9 @@
         "good_qty": "良品数",
         "excluded_qty": "除外数",
         "bin_counts": "ビン別数量",
+        "lot": "ロット",
+        "equipment": "設備",
+        "operation": "工程",
         "description": "説明"
       },
       "map_cell": {

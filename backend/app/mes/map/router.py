@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.deps import SessionDep
-from app.mes.common.guard import need, perm_body
+from app.mes.common.guard import MB, need, perm_body
 from app.mes.common.query import one
 from app.mes.map import service as svc
 from app.platform.auth.deps import CurrentTenant
@@ -31,6 +31,17 @@ class ImportIn(BaseModel):
     file_name: str | None = Field(default=None, max_length=255)
 
 
+class MapImportIn(ImportIn):
+    """坐标图导入：可选关联批次 / 设备 / 工序（给了但不存在 422；批次不给时自动关联）。"""
+
+    lot_id: uuid.UUID | None = None
+    equipment_id: uuid.UUID | None = None
+    operation_id: uuid.UUID | None = None
+
+
+MAP_MAX_BYTES = 10 * MB
+
+
 class SplitCheckIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -38,6 +49,11 @@ class SplitCheckIn(BaseModel):
 
 
 ImportBody = Annotated[ImportIn, Depends(perm_body(IMPORT, ImportIn))]
+# D39：先查权限 → 请求体超过 10MB 413 → 再解析
+MapBody = Annotated[
+    MapImportIn,
+    Depends(perm_body(IMPORT, MapImportIn, max_bytes=MAP_MAX_BYTES)),
+]
 
 
 @router.post("/bin-sets/import/preview")
@@ -53,14 +69,14 @@ def bin_set_import(session: SessionDep, ctx: CurrentTenant, body: ImportBody) ->
 
 
 @router.post("/import/preview")
-def map_preview(session: SessionDep, ctx: CurrentTenant, body: ImportBody) -> Any:
+def map_preview(session: SessionDep, ctx: CurrentTenant, body: MapBody) -> Any:
     """Validate a substrate map CSV: per-row errors with row_no and file_line."""
     out = svc.map_preview(session, ctx.id, body.model_dump())
     return {k: v for k, v in out.items() if not k.startswith("_")}
 
 
 @router.post("/import")
-def map_import(session: SessionDep, ctx: CurrentTenant, body: ImportBody) -> Any:
+def map_import(session: SessionDep, ctx: CurrentTenant, body: MapBody) -> Any:
     """Import a substrate map CSV; re-importing a substrate creates a new version."""
     return svc.map_import(session, ctx.id, body.model_dump(), ctx.user)
 

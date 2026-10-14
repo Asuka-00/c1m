@@ -67,7 +67,11 @@ def parse(content: str, cols: tuple[str, ...]) -> Parsed:
             err("missing_columns", f"column line required: {','.join(cols)}")
         )
         return p
-    head = [c.strip() for c in next(csv.reader([lines[i]]))]
+    try:
+        head = [c.strip() for c in next(csv.reader([lines[i]]))]
+    except csv.Error as e:
+        p.errors.append(err("bad_csv", f"column line: {e}", None, i + 1))
+        return p
     miss = [c for c in cols if c not in head]
     if miss:
         p.errors.append(
@@ -84,7 +88,21 @@ def parse(content: str, cols: tuple[str, ...]) -> Parsed:
                 err("too_many_rows", f"at most {MAX_ROWS} data rows", no, j + 1)
             )
             break
-        vals = next(csv.reader([lines[j]]))
+        try:
+            vals = next(csv.reader([lines[j]]))
+        except csv.Error as e:  # 字段超长、引号不配对等：逐行报错而不是 500
+            p.errors.append(err("bad_csv", str(e), no, j + 1))
+            continue
+        if len(vals) > len(head):  # D-15e-1：比列名行多出列
+            p.errors.append(
+                err(
+                    "extra_columns",
+                    f"{len(vals)} values but {len(head)} columns",
+                    no,
+                    j + 1,
+                )
+            )
+            continue
         rec = {
             h: (vals[k].strip() if k < len(vals) else "") for k, h in enumerate(head)
         }

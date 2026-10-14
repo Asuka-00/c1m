@@ -662,6 +662,9 @@
         "good_qty": "Good",
         "excluded_qty": "Excluded",
         "bin_counts": "Bin counts",
+        "lot": "Lot",
+        "equipment": "Equipment",
+        "operation": "Operation",
         "description": "Description"
       },
       "map_cell": {
