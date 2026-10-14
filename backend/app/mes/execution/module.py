@@ -18,6 +18,7 @@ register(
         routers=(
             "app.mes.execution.router:router",
             "app.mes.execution.router_alarm:router",
+            "app.mes.execution.router_eap:router",
         ),
         menus=MENUS,
         tenant_seed="app.mes.execution.seed:seed_system_reasons",

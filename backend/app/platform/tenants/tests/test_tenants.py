@@ -257,7 +257,7 @@ def test_tenant_crud(
         r["name"]
         for r in client.get(f"{API}/tenants/{tid}/roles", headers=h).json()["data"]
     }
-    assert roles == {"owner", "admin", "member"}
+    assert roles == {"owner", "admin", "member", "eap_service"}
     # platform admin may suspend; members are then locked out
     assert (
         client.patch(

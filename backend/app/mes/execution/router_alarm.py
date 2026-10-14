@@ -69,6 +69,25 @@ def alarm_set(
     return svc.set_alarm(session, ctx.id, eq_id, body.model_dump(), ctx.user)
 
 
+class AlarmClearByAlidIn(AlarmClearIn):
+    equipment_id: uuid.UUID
+    alid: str = Field(min_length=1, max_length=32)
+
+
+@router.post("/alarms/clear")
+def alarm_clear_by_alid(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    body: Annotated[AlarmClearByAlidIn, Depends(perm_body(WRITE, AlarmClearByAlidIn))],
+) -> Any:
+    """Clear the active alarm of (equipment_id, alid), as EAP reports it. No active
+    alarm: 200 with data=null and cleared=false (D55)."""
+    d = body.model_dump()
+    return svc.clear_by_alid(
+        session, ctx.id, d.pop("equipment_id"), d.pop("alid"), d, ctx.user
+    )
+
+
 @router.post("/alarms/{alarm_id}/clear")
 def alarm_clear(
     session: SessionDep,

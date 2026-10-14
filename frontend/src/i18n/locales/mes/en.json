@@ -21,6 +21,7 @@
       "alarm_code": "Alarm code",
       "alarm_log": "Alarm log",
       "alarm_lot": "Alarm lot",
+      "eap_event": "EAP event",
       "dict_type": "Dictionary",
       "dict_item": "Dictionary item",
       "code_rule": "Code rule",
@@ -49,6 +50,7 @@
       "future_hold": "Future hold",
       "shift_log": "Shift handover",
       "operator_qual": "Operator qualification",
+      "idempotency_key": "Idempotency key",
       "site": "Factory / site",
       "area": "Area",
       "workcenter": "Bay / work center",
@@ -160,6 +162,17 @@
       "alarm_lot": {
         "alarm_log": "Alarm",
         "lot": "Lot"
+      },
+      "eap_event": {
+        "source": "Source",
+        "external_event_id": "External event ID",
+        "event_type": "Event type",
+        "equipment": "Equipment",
+        "payload": "Payload",
+        "request_hash": "Request hash",
+        "result": "Result",
+        "username": "User",
+        "received_at": "Received at"
       },
       "dict_type": {
         "code": "Code",
@@ -442,6 +455,14 @@
         "certified_on": "Certified on",
         "expires_on": "Expires on",
         "is_active": "Active"
+      },
+      "idempotency_key": {
+        "endpoint": "Endpoint",
+        "idem_key": "Key",
+        "request_hash": "Request hash",
+        "status_code": "Status",
+        "response": "Response",
+        "username": "User"
       },
       "site": {
         "code": "Code",
@@ -1264,6 +1285,12 @@
         "active": "Active",
         "cleared": "Cleared"
       },
+      "eap_event_type": {
+        "state": "E10 state",
+        "alarm_set": "Alarm set",
+        "alarm_clear": "Alarm clear",
+        "tool_usage": "Tool usage"
+      },
       "alarm_source": {
         "manual": "Manual",
         "eap": "EAP",
@@ -2046,6 +2073,7 @@
     "mes_quality__write": "Quality·Edit",
     "mes_wh__read": "Warehouse·View",
     "mes_wh__write": "Warehouse·Edit",
+    "mes_eap__write": "EAP events (service account)",
     "mes_equipment__e10": "Equipment·Change E10 state",
     "mes_equipment__pm": "Equipment·Record PM",
     "mes_equipment__mount": "Equipment·Mount / unmount material",
@@ -2070,7 +2098,8 @@
     "admin": "Administrator",
     "user": "User",
     "owner": "System admin",
-    "member": "Standard user"
+    "member": "Standard user",
+    "eap_service": "EAP service account"
   },
   "permDesc": {
     "users__read": "Allows: View platform users",
@@ -2120,6 +2149,7 @@
     "mes_quality__write": "Allows: Quality·Edit",
     "mes_wh__read": "Allows: Warehouse·View",
     "mes_wh__write": "Allows: Warehouse·Edit",
+    "mes_eap__write": "Allows: EAP events (service account)",
     "mes_equipment__e10": "Allows: Equipment·Change E10 state",
     "mes_equipment__pm": "Allows: Equipment·Record PM",
     "mes_equipment__mount": "Allows: Equipment·Mount / unmount material",
@@ -2145,6 +2175,7 @@
     "platform_user": "Regular user without platform permissions",
     "owner": "System administrator with all permissions",
     "admin": "Manages users, settings and all business data",
-    "member": "Read-only access to business data"
+    "member": "Read-only access to business data",
+    "eap_service": "Posts equipment events via /mes/eap/events only"
   }
 }

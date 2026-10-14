@@ -10,7 +10,7 @@ import uuid
 from datetime import date, datetime, time, timedelta
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.deps import SessionDep
@@ -18,6 +18,7 @@ from app.core.models import iso_utc
 from app.core.spec.engine import ENTITIES
 from app.core.spec.errors import http_422
 from app.core.spec.serialize import serialize
+from app.mes.common import idempotency as idem
 from app.mes.common.guard import perm_body
 from app.mes.common.query import one
 from app.mes.execution import bin_split as bin_split_svc
@@ -619,11 +620,23 @@ def lot_stage(
     lot_id: uuid.UUID,
     stage: Stage,
     body: StageIn,
+    idempotency_key: Annotated[str | None, Header(alias=idem.HEADER)] = None,
 ) -> Any:
+    """Lot stage step. Idempotency-Key (D57 / #IK01): same key + same body replays
+    the first response; different body 422 idempotency_key_reused."""
     _need(ctx, "mes.exec:write")
     if body.override:
         _need(ctx, "mes.exec:override")
-    return svc.run_stage(session, ctx.id, lot_id, stage, body.model_dump(), ctx.user)
+    data = body.model_dump()
+    return idem.run(
+        session,
+        ctx.id,
+        ctx.user,
+        "POST /mes/exec/lots/{lot_id}/{stage}",
+        idempotency_key,
+        {"lot_id": lot_id, "stage": stage, **data},
+        lambda: svc.run_stage(session, ctx.id, lot_id, stage, data, ctx.user),
+    )
 
 
 @router.get("/batch/{stage}/candidates")

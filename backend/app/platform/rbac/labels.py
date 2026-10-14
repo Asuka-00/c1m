@@ -5,6 +5,7 @@ from app.platform.rbac.permissions import DEFAULT_PERMISSIONS
 
 # 非 MES 权限的显示名称
 FIXED: dict[str, str] = {
+    "mes.eap:write": "EAP events (service account)|EAP 事件写入（服务账号）|EAP イベント書込（サービスアカウント）",
     "users:read": "View platform users|查看平台用户|プラットフォームユーザー閲覧",
     "users:write": "Edit platform users|编辑平台用户|プラットフォームユーザー編集",
     "users:delete": "Delete platform users|删除平台用户|プラットフォームユーザー削除",
@@ -53,6 +54,7 @@ ROLE_LABELS: dict[str, str] = {
     "user": "User|普通用户|一般ユーザー",
     "owner": "System admin|系统管理员|システム管理者",
     "member": "Standard user|普通用户|一般ユーザー",
+    "eap_service": "EAP service account|EAP 服务账号|EAP サービスアカウント",
 }
 
 
@@ -63,6 +65,7 @@ ROLE_DESCRIPTIONS: dict[str, str] = {
     "owner": "System administrator with all permissions|拥有全部权限的系统管理员|全権限を持つシステム管理者",
     "admin": "Manages users, settings and all business data|管理用户、系统设置与全部业务数据|ユーザー・設定・全業務データを管理",
     "member": "Read-only access to business data|只读访问业务数据|業務データの閲覧のみ",
+    "eap_service": "Posts equipment events via /mes/eap/events only|只能调用 /mes/eap/events 写设备事件|/mes/eap/events での設備イベント書込のみ",
 }
 # 内置权限说明的模板（{label} 为该语言的权限名称）
 PERM_DESC_TEMPLATE = "Allows: {label}|允许：{label}|許可：{label}"

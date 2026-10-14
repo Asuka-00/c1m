@@ -62,7 +62,12 @@ def e10_log(
 
 
 def e10_change(
-    s: Session, tid: uuid.UUID, eq_id: uuid.UUID, body: Row, user: Any
+    s: Session,
+    tid: uuid.UUID,
+    eq_id: uuid.UUID,
+    body: Row,
+    user: Any,
+    source: str = "manual",
 ) -> Row:
     """手动变更设备 E10 状态。
 
@@ -75,6 +80,7 @@ def e10_change(
         eq_id: 设备 id。
         body: ``{to_state_id, reason_id?, comment?}``。
         user: 操作人。
+        source: E10 履历来源（人工 ``manual``；EAP 事件 ``equipment``）。
 
     Returns:
         ``{equipment, from, to}``。
@@ -109,7 +115,7 @@ def e10_change(
         eq,
         cur,
         to,
-        "manual",
+        source,
         user,
         reason and reason["id"],
         body.get("comment"),

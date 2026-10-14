@@ -8,10 +8,11 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.deps import SessionDep
+from app.mes.common import idempotency as idem
 from app.mes.common.guard import perm_body
 from app.mes.common.query import one
 from app.mes.equipment import mount as mount_svc
@@ -42,11 +43,26 @@ class E10In(BaseModel):
 
 @router.post("/{eq_id}/e10")
 def change_e10(
-    session: SessionDep, ctx: CurrentTenant, eq_id: uuid.UUID, body: E10In
+    session: SessionDep,
+    ctx: CurrentTenant,
+    eq_id: uuid.UUID,
+    body: E10In,
+    idempotency_key: Annotated[str | None, Header(alias=idem.HEADER)] = None,
 ) -> Any:
-    """Change the equipment E10 state manually (transition table enforced)."""
+    """Change the equipment E10 state manually (transition table enforced).
+    Idempotency-Key (D57): same key + same body replays the first response; same
+    key + different body 422 idempotency_key_reused."""
     _need(ctx, "mes.equipment:e10")
-    return svc.e10_change(session, ctx.id, eq_id, body.model_dump(), ctx.user)
+    data = body.model_dump()
+    return idem.run(
+        session,
+        ctx.id,
+        ctx.user,
+        "POST /mes/eqp/{eq_id}/e10",
+        idempotency_key,
+        {"eq_id": eq_id, **data},
+        lambda: svc.e10_change(session, ctx.id, eq_id, data, ctx.user),
+    )
 
 
 @router.get("/{eq_id}/pm")

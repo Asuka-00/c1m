@@ -5,4 +5,7 @@ PERM_MODULES: dict[str, tuple[str, int]] = {
     "alarm": ("Equipment alarms|设备报警|設備アラーム", 22)
 }
 # 额外权限编码（read/write 以外）
-PERMISSIONS: dict[str, str] = {}
+PERMISSIONS: dict[str, str] = {
+    # D54-1：EAP 写入入口，只给服务账号（租户角色 eap_service），不进 owner / admin
+    "mes.eap:write": "MES EAP: post equipment events (service accounts only)",
+}

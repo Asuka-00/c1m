@@ -41,6 +41,9 @@ from app.mes.equipment.tools import (  # noqa: E402
     num as num,
 )
 from app.mes.equipment.tools import (  # noqa: E402
+    report_usage as report_usage,
+)
+from app.mes.equipment.tools import (  # noqa: E402
     tool_count as tool_count,
 )
 from app.mes.equipment.tools import (  # noqa: E402

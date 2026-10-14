@@ -256,6 +256,56 @@ register(
         sort_default="created_at",
         label_field="lot",
     ),
+    # P2-B11（D54-1）：EAP / 模拟器事件入口台账；幂等键 (tenant, source, external_event_id)，
+    # 存首次成功处理的响应，重放原样返回
+    Entity(
+        "eap_event",
+        "alarm",
+        "EAP event|EAP 事件|EAP イベント",
+        [
+            F(
+                "source",
+                "enum",
+                "Source|来源|ソース",
+                enum="alarm_source",
+                required=True,
+            ),
+            F(
+                "external_event_id",
+                "str",
+                "External event ID|外部事件号|外部イベント ID",
+                max_length=128,
+                required=True,
+                search=True,
+            ),
+            F(
+                "event_type",
+                "enum",
+                "Event type|事件类型|イベント種別",
+                enum="eap_event_type",
+                required=True,
+            ),
+            F("equipment", "ref", "Equipment|设备|設備", ref="equipment"),
+            F("payload", "json", "Payload|报文|ペイロード", list=False),
+            F(
+                "request_hash",
+                "str",
+                "Request hash|请求哈希|リクエストハッシュ",
+                max_length=64,
+                list=False,
+            ),
+            F("result", "json", "Result|处理结果|処理結果", list=False),
+            F("username", "str", "User|用户|ユーザー", max_length=255),
+            F("received_at", "datetime", "Received at|接收时间|受信日時"),
+        ],
+        phase=6,
+        has_code=False,
+        readonly=True,
+        menu=False,
+        unique=[("source", "external_event_id")],
+        sort_default="received_at",
+        label_field="external_event_id",
+    ),
 )
 
 ENUMS.update(
@@ -284,6 +334,12 @@ ENUMS.update(
         "alarm_status": [
             ("active", "Active|报警中|発生中"),
             ("cleared", "Cleared|已清除|解除済"),
+        ],
+        "eap_event_type": [
+            ("state", "E10 state|E10 状态|E10 状態"),
+            ("alarm_set", "Alarm set|报警发生|アラーム発生"),
+            ("alarm_clear", "Alarm clear|报警清除|アラーム解除"),
+            ("tool_usage", "Tool usage|工具计数|ツールカウント"),
         ],
         "alarm_source": [
             ("manual", "Manual|人工|手動"),

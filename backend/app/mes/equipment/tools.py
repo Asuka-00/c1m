@@ -207,6 +207,26 @@ def _by_event(s: Session, tid: uuid.UUID, source: str, ext: str | None) -> Row |
     return rows[0] if rows else None
 
 
+def _same_usage(dup: Row, body: Row) -> None:
+    """D57：同一事件号、内容不同 → 422 ``idempotency_key_reused``，不写入。"""
+    from app.mes.common.idempotency import reused
+
+    def u(v: Any) -> str | None:
+        return None if v is None else str(v)
+
+    same = (
+        Decimal(str(dup["delta"])) == Decimal(str(body["delta"]))
+        and u(dup.get("lot_id")) == u(body.get("lot_id"))
+        and u(dup.get("equipment_id")) == u(body.get("equipment_id"))
+        and u(dup.get("reason_id")) == u(body.get("reason_id"))
+    )
+    at = body.get("occurred_at")
+    if same and at is not None and dup.get("occurred_at") is not None:
+        same = at.astimezone(UTC) == dup["occurred_at"].astimezone(UTC)
+    if not same:
+        raise reused()
+
+
 def report_usage(
     s: Session,
     tid: uuid.UUID,
@@ -223,6 +243,7 @@ def report_usage(
     tool = _lock_tool(s, tid, tool_id)
     dup = _by_event(s, tid, source, ext)
     if dup:
+        _same_usage(dup, body)
         s.commit()
         return {
             "data": ser(s, tid, "tool_usage", [dup])[0],
@@ -278,6 +299,7 @@ def report_usage(
         dup = _by_event(s, tid, source, ext)
         if not dup:
             raise
+        _same_usage(dup, body)
         return {
             "data": ser(s, tid, "tool_usage", [dup])[0],
             "tool": tool_brief(s, tid, _lock_tool(s, tid, tool_id)),

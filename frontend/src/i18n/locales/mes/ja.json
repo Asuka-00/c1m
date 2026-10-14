@@ -21,6 +21,7 @@
       "alarm_code": "アラームコード",
       "alarm_log": "アラーム履歴",
       "alarm_lot": "アラーム関連ロット",
+      "eap_event": "EAP イベント",
       "dict_type": "データ辞書",
       "dict_item": "辞書項目",
       "code_rule": "採番ルール",
@@ -49,6 +50,7 @@
       "future_hold": "予約ホールド",
       "shift_log": "シフト引継ぎ",
       "operator_qual": "作業者資格",
+      "idempotency_key": "冪等キー",
       "site": "工場",
       "area": "エリア",
       "workcenter": "ベイ / ワークセンター",
@@ -160,6 +162,17 @@
       "alarm_lot": {
         "alarm_log": "アラーム",
         "lot": "ロット"
+      },
+      "eap_event": {
+        "source": "ソース",
+        "external_event_id": "外部イベント ID",
+        "event_type": "イベント種別",
+        "equipment": "設備",
+        "payload": "ペイロード",
+        "request_hash": "リクエストハッシュ",
+        "result": "処理結果",
+        "username": "ユーザー",
+        "received_at": "受信日時"
       },
       "dict_type": {
         "code": "コード",
@@ -442,6 +455,14 @@
         "certified_on": "認定日",
         "expires_on": "有効期限",
         "is_active": "有効"
+      },
+      "idempotency_key": {
+        "endpoint": "エンドポイント",
+        "idem_key": "キー",
+        "request_hash": "リクエストハッシュ",
+        "status_code": "ステータス",
+        "response": "レスポンス",
+        "username": "ユーザー"
       },
       "site": {
         "code": "コード",
@@ -1264,6 +1285,12 @@
         "active": "発生中",
         "cleared": "解除済"
       },
+      "eap_event_type": {
+        "state": "E10 状態",
+        "alarm_set": "アラーム発生",
+        "alarm_clear": "アラーム解除",
+        "tool_usage": "ツールカウント"
+      },
       "alarm_source": {
         "manual": "手動",
         "eap": "EAP",
@@ -2046,6 +2073,7 @@
     "mes_quality__write": "品質·編集",
     "mes_wh__read": "倉庫·閲覧",
     "mes_wh__write": "倉庫·編集",
+    "mes_eap__write": "EAP イベント書込（サービスアカウント）",
     "mes_equipment__e10": "設備·E10 状態変更",
     "mes_equipment__pm": "設備·PM 記録",
     "mes_equipment__mount": "設備·資材装着 / 取外し",
@@ -2070,7 +2098,8 @@
     "admin": "管理者",
     "user": "一般ユーザー",
     "owner": "システム管理者",
-    "member": "一般ユーザー"
+    "member": "一般ユーザー",
+    "eap_service": "EAP サービスアカウント"
   },
   "permDesc": {
     "users__read": "許可：プラットフォームユーザー閲覧",
@@ -2120,6 +2149,7 @@
     "mes_quality__write": "許可：品質·編集",
     "mes_wh__read": "許可：倉庫·閲覧",
     "mes_wh__write": "許可：倉庫·編集",
+    "mes_eap__write": "許可：EAP イベント書込（サービスアカウント）",
     "mes_equipment__e10": "許可：設備·E10 状態変更",
     "mes_equipment__pm": "許可：設備·PM 記録",
     "mes_equipment__mount": "許可：設備·資材装着 / 取外し",
@@ -2145,6 +2175,7 @@
     "platform_user": "プラットフォーム権限のない一般ユーザー",
     "owner": "全権限を持つシステム管理者",
     "admin": "ユーザー・設定・全業務データを管理",
-    "member": "業務データの閲覧のみ"
+    "member": "業務データの閲覧のみ",
+    "eap_service": "/mes/eap/events での設備イベント書込のみ"
   }
 }

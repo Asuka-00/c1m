@@ -21,6 +21,7 @@
       "alarm_code": "报警码",
       "alarm_log": "报警履历",
       "alarm_lot": "报警关联批次",
+      "eap_event": "EAP 事件",
       "dict_type": "数据字典",
       "dict_item": "字典项",
       "code_rule": "编码规则",
@@ -49,6 +50,7 @@
       "future_hold": "预约 Hold",
       "shift_log": "交接班日志",
       "operator_qual": "操作员资质",
+      "idempotency_key": "幂等键",
       "site": "工厂",
       "area": "区域",
       "workcenter": "Bay / 工作中心",
@@ -160,6 +162,17 @@
       "alarm_lot": {
         "alarm_log": "报警",
         "lot": "批次"
+      },
+      "eap_event": {
+        "source": "来源",
+        "external_event_id": "外部事件号",
+        "event_type": "事件类型",
+        "equipment": "设备",
+        "payload": "报文",
+        "request_hash": "请求哈希",
+        "result": "处理结果",
+        "username": "用户",
+        "received_at": "接收时间"
       },
       "dict_type": {
         "code": "编码",
@@ -442,6 +455,14 @@
         "certified_on": "认证日期",
         "expires_on": "有效期至",
         "is_active": "启用"
+      },
+      "idempotency_key": {
+        "endpoint": "接口",
+        "idem_key": "键",
+        "request_hash": "请求哈希",
+        "status_code": "状态码",
+        "response": "响应",
+        "username": "用户"
       },
       "site": {
         "code": "编码",
@@ -1264,6 +1285,12 @@
         "active": "报警中",
         "cleared": "已清除"
       },
+      "eap_event_type": {
+        "state": "E10 状态",
+        "alarm_set": "报警发生",
+        "alarm_clear": "报警清除",
+        "tool_usage": "工具计数"
+      },
       "alarm_source": {
         "manual": "人工",
         "eap": "EAP",
@@ -2046,6 +2073,7 @@
     "mes_quality__write": "质量·编辑",
     "mes_wh__read": "仓储·查看",
     "mes_wh__write": "仓储·编辑",
+    "mes_eap__write": "EAP 事件写入（服务账号）",
     "mes_equipment__e10": "设备·变更 E10 状态",
     "mes_equipment__pm": "设备·记录保养",
     "mes_equipment__mount": "设备·上料 / 卸料",
@@ -2070,7 +2098,8 @@
     "admin": "管理员",
     "user": "普通用户",
     "owner": "系统管理员",
-    "member": "普通用户"
+    "member": "普通用户",
+    "eap_service": "EAP 服务账号"
   },
   "permDesc": {
     "users__read": "允许：查看平台用户",
@@ -2120,6 +2149,7 @@
     "mes_quality__write": "允许：质量·编辑",
     "mes_wh__read": "允许：仓储·查看",
     "mes_wh__write": "允许：仓储·编辑",
+    "mes_eap__write": "允许：EAP 事件写入（服务账号）",
     "mes_equipment__e10": "允许：设备·变更 E10 状态",
     "mes_equipment__pm": "允许：设备·记录保养",
     "mes_equipment__mount": "允许：设备·上料 / 卸料",
@@ -2145,6 +2175,7 @@
     "platform_user": "无平台权限的普通用户",
     "owner": "拥有全部权限的系统管理员",
     "admin": "管理用户、系统设置与全部业务数据",
-    "member": "只读访问业务数据"
+    "member": "只读访问业务数据",
+    "eap_service": "只能调用 /mes/eap/events 写设备事件"
   }
 }

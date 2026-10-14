@@ -44,7 +44,10 @@ def test_seeded_roles(db: Session) -> None:
     user = db.exec(
         select(Role).where(Role.name == "user", col(Role.tenant_id).is_(None))
     ).one()
-    assert {p.code for p in admin.permissions} == set(DEFAULT_PERMISSIONS)
+    # 服务账号专用权限（mes.eap:write，D54-1）不进平台 admin
+    assert {p.code for p in admin.permissions} == set(DEFAULT_PERMISSIONS) - {
+        "mes.eap:write"
+    }
     # business access is tenant-level; the platform "user" role carries no perms
     assert {p.code for p in user.permissions} == set()
 

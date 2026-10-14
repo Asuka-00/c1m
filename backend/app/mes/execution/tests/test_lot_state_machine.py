@@ -366,15 +366,19 @@ def test_x03_duplicate_track_out_without_key(client: TestClient, db: Session) ->
     assert f.lot(lot)["lot_status"] == "tracked_out"
 
 
-@pytest.mark.xfail(strict=True, reason="待定 #IK01 Idempotency-Key 留到事件步骤")
 def test_ik01_same_key_returns_first_result(client: TestClient, db: Session) -> None:
+    """#IK01 / D57：同 key 同内容 → 原响应，不再校验、不写履历；不同内容 422。"""
     f = Line(client, db)
     (lot,) = f.start(1)
     f.stage(lot, "move_in", equipment_id=f.eq["id"])
     f.stage(lot, "track_in", equipment_id=f.eq["id"])
     h = {**f.m.h, "Idempotency-Key": "k1"}
     first = f.post(f"{EXEC}/lots/{lot['id']}/track_out", {}, 200, h)
+    n = f.m.list("lot_history", lot=lot["id"])["count"]
     assert f.post(f"{EXEC}/lots/{lot['id']}/track_out", {}, 200, h) == first
+    assert f.m.list("lot_history", lot=lot["id"])["count"] == n
+    d = f.post(f"{EXEC}/lots/{lot['id']}/track_out", {"branch": True}, 422, h)
+    assert d["detail"]["code"] == "idempotency_key_reused"
 
 
 def test_hold_list_excludes_terminal_by_default(

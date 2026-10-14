@@ -31,8 +31,8 @@ def seed_rbac(session: Session) -> None:
         if code not in perms:
             perms[code] = Permission(code=code, scope=scope)
             session.add(perms[code])
-            fill_names(perms[code])
             perms[code].description = perms[code].description or desc
+        fill_names(perms[code])  # 已有权限也补齐空名称（只填空值）
     for name, (desc, codes) in DEFAULT_ROLES.items():
         role = get_role(session, name)
         if not role:

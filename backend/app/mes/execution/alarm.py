@@ -360,6 +360,50 @@ def clear_alarm(
     return {"data": detail(s, tid, new), "duplicate": False, "cleared": True}
 
 
+def clear_by_alid(
+    s: Session,
+    tid: uuid.UUID,
+    eq_id: uuid.UUID,
+    alid: str,
+    body: Row,
+    user: Any,
+    source: str = "manual",
+) -> Row:
+    """按 (设备, ALID) 清除（EAP 上报只带 ALID）。
+
+    同一清除事件号重放 → 原记录、``duplicate=true``、``cleared=false``；该设备该 ALID 没有
+    active 报警 → 200、``data=null``、``cleared=false``，不建记录（D55 OQ-5）；否则同按 id 清除。
+    """
+    if not one(s, tid, "equipment", eq_id):
+        raise HTTPException(status_code=404, detail="equipment not found")
+    alid = str(alid).strip()
+    if not alid:
+        raise http_422([("alid", "alid: required")])
+    ext = (str(body.get("external_event_id") or "").strip()) or None
+    if ext:
+        done = find(
+            s,
+            tid,
+            LOG,
+            equipment_id=eq_id,
+            clear_source=source,
+            clear_event_id=ext,
+        )
+        if done:
+            s.commit()
+            return {
+                "data": detail(s, tid, done[0]),
+                "duplicate": True,
+                "cleared": False,
+            }
+    _time(body.get("cleared_at"), "cleared_at")
+    act = find(s, tid, LOG, equipment_id=eq_id, alid=alid, alarm_status="active")
+    if not act:
+        s.commit()
+        return {"data": None, "duplicate": False, "cleared": False}
+    return clear_alarm(s, tid, act[0]["id"], body, user, source)
+
+
 def get_alarm(s: Session, tid: uuid.UUID, alarm_id: uuid.UUID) -> Row:
     """报警详情；不存在 404 ``alarm_not_found``。"""
     row = one(s, tid, LOG, alarm_id)

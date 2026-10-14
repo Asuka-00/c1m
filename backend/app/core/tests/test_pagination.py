@@ -43,16 +43,16 @@ def test_default_page_size_and_sorting(client: TestClient, db: Session) -> None:
         )
     r = client.get(url, headers=h).json()
     assert (
-        r["count"] == 28 and len(r["data"]) == 20
-    )  # 25 + owner/admin/member; default page_size 20
-    assert len(client.get(url, headers=h, params={"page": 2}).json()["data"]) == 8
+        r["count"] == 29 and len(r["data"]) == 20
+    )  # 25 + owner/admin/member/eap_service; default page_size 20
+    assert len(client.get(url, headers=h, params={"page": 2}).json()["data"]) == 9
     asc = client.get(url, headers=h, params={"sort_by": "name", "page_size": 5}).json()
     assert [x["name"] for x in asc["data"]] == [
         "admin",
+        "eap_service",
         "member",
         "owner",
         "role-00",
-        "role-01",
     ]
     desc = client.get(
         url, headers=h, params={"sort_by": "name", "sort_order": "desc", "page_size": 3}
@@ -71,7 +71,7 @@ def test_pagination_keeps_tenant_isolation(client: TestClient, db: Session) -> N
     r = client.get(
         f"{API}/tenants/{tb}/roles", headers=hb, params={"page_size": 100}
     ).json()
-    assert r["count"] == 3 and "a-only" not in {x["name"] for x in r["data"]}
+    assert r["count"] == 4 and "a-only" not in {x["name"] for x in r["data"]}
     assert client.get(f"{API}/tenants/{tb}/members", headers=hb).json()["count"] == 1
 
 

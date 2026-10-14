@@ -501,4 +501,38 @@ register(
         label_field="username",
         unique=[("username", "operation", "equipment_type")],
     ),
+    # D57：Idempotency-Key 存档，作用域 (tenant, endpoint, key)，保留 24 小时；
+    # 存规范化请求体哈希 + 首次成功响应（状态码 + 响应体）
+    Entity(
+        "idempotency_key",
+        "exec",
+        "Idempotency key|幂等键|冪等キー",
+        [
+            F(
+                "endpoint",
+                "str",
+                "Endpoint|接口|エンドポイント",
+                max_length=200,
+                required=True,
+            ),
+            F("idem_key", "str", "Key|键|キー", max_length=128, required=True),
+            F(
+                "request_hash",
+                "str",
+                "Request hash|请求哈希|リクエストハッシュ",
+                max_length=64,
+                required=True,
+            ),
+            F("status_code", "int", "Status|状态码|ステータス", required=True),
+            F("response", "json", "Response|响应|レスポンス", list=False),
+            F("username", "str", "User|用户|ユーザー", max_length=255),
+        ],
+        phase=6,
+        has_code=False,
+        readonly=True,
+        menu=False,
+        unique=[("endpoint", "idem_key")],
+        sort_default="created_at",
+        label_field="idem_key",
+    ),
 )
