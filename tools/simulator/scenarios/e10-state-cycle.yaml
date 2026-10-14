@@ -8,6 +8,7 @@ steps:
   - precondition: {eq: EAP-DA01, e10: SBY}
   - state: {eq: EAP-DA01, to: PRD}
   - state: {eq: EAP-DA01, to: SBY}
-  # D65 补充 4：请求体未知字段一律 422 unknown_field（含自定义 EAP/执行接口）。to 填当前状态，后端不拦也不会改状态。
-  # 1a7c0fb 的 E10In 没有 extra=forbid（未知字段被忽略），后端下个提交修好前标 xfail；--strict-xfail / SIM_XFAIL=0 可强制判
-  - expect_body_422: {eq: EAP-DA01, to: SBY, extra: {bogus: 1}, code: unknown_field, loc: [body, bogus], xfail: "1a7c0fb E10In 未禁止未知字段，待后端下个提交"}
+  # D65 补充 4（后端 56474fe 已修）：请求体未知字段一律 422 unknown_field；to 填当前状态，不会改状态
+  - expect_body_422: {eq: EAP-DA01, to: SBY, extra: {bogus: 1}, code: unknown_field, loc: [body, bogus]}
+  # D54 例外：/mes/eap/events 信封顶层多出的字段并进 payload，照常接受（不 422）；ALID 1999 无 active 报警 -> cleared=false
+  - expect_eap_envelope_extra: {eq: EAP-DA01, alid: "1999", field: comment, cleared: false}

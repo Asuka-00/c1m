@@ -13,6 +13,7 @@ from sim.adapters import STEP_ADAPTERS, step_adapters
 EQ_STEPS = {
     "state",
     "expect_body_422",
+    "expect_eap_envelope_extra",
     "track_in",
     "move_in",
     "track_out",
@@ -102,7 +103,10 @@ def parse(data: dict, path: str | None = None) -> Scenario:
         if k == "seed_alarm_code":
             if not args.get("alid") or args.get("action") not in ("none", "set_state"):
                 raise ScenarioError(f"第 {i} 步 seed_alarm_code 需要 alid，action 只能是 none/set_state（D59）")
-        if k == "expect_body_422" and not args.get("to"):
+        if k == "expect_body_422" and args.get("endpoint") in ("move_in", "track_in"):
+            if not args.get("lot"):
+                raise ScenarioError(f"第 {i} 步 expect_body_422（{args['endpoint']}）需要 lot")
+        elif k == "expect_body_422" and not args.get("to"):
             raise ScenarioError(f"第 {i} 步 expect_body_422 需要 to（填设备当前状态，避免后端不拦时改状态）")
         if k == "expect_query_422" and not args.get("path"):
             raise ScenarioError(f"第 {i} 步 expect_query_422 需要 path")

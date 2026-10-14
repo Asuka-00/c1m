@@ -98,7 +98,8 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "tool_set": ["crud_item"],
     "expect_eap_read": ["crud", "crud_item"],
     "expect_query_422": [],
-    "expect_body_422": ["e10"],
+    "expect_body_422": ["e10"],  # move_in/track_in 时见 step_adapters
+    "expect_eap_envelope_extra": ["eap_events"],
     "expect_alarm_list": ["alarm_list"],
     "replay": [],
     "reuse": [],
@@ -114,6 +115,8 @@ MODES = ("manual", "b11")
 def step_adapters(kind: str, args: dict | None = None, mode: str = "manual") -> list[str]:
     if mode == "b11" and kind in B11_STEPS:
         return ["eap_events"]
+    if kind == "expect_body_422" and args and args.get("endpoint") in ("move_in", "track_in"):
+        return ["stage"]
     if kind == "alarm_clear" and args and args.get("alid") is not None:
         return ["alarm_clear_alid"]
     if kind == "expect_tool_log" and args and args.get("log") == "mounts":

@@ -108,3 +108,9 @@ B9（`0a74f8a`）、B10（`d27b700`/`23c502d`）、B11（`8294b63`）已对齐�
 - 新步骤 `expect_body_422`（目前 endpoint=e10）：`POST /mes/eqp/{id}/e10` 带未知字段期望 422 `unknown_field`、loc `[body, 字段]`；`to` 填设备当前状态，后端不拦时只会报原地迁移，不改状态。
 - 步骤可标 `xfail: 原因`：失败只记 xfail，不判场景失败；通过记 `xpass`（说明后端已修，可去掉 xfail）。`--strict-xfail` 或 `SIM_XFAIL=0` 时按普通步骤判。e10-state-cycle 的未知字段断言对 1a7c0fb 标了 xfail。
 - `tests/test_body_audit.py`：所有场景在两种模式下发出的请求体逐个对照后端请求模型字段表，有多余字段即失败。
+
+### 后端 56474fe（含 a888370）
+- e10 未知字段断言去掉 xfail，必须通过（xfail 机制保留，供以后用）。
+- `expect_body_422` 支持 `endpoint: move_in|track_in` + `lot`：未知字段期望 422 `unknown_field` `[body, 字段]`，前后比对批次行确认无副作用（tool-life-block 里用 move_in）。
+- 新步骤 `expect_eap_envelope_extra`：服务账号向 `/mes/eap/events` 发按 ALID 清除，`comment` 放信封顶层（D54 并进 payload），期望不 422（无 active 报警 -> cleared=false，无副作用）；没有服务账号时记 skip。
+- 请求体审计：`/mes/eap/events` 按“顶层多余字段并进 payload”后的 payload 审计。

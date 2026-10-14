@@ -1,4 +1,5 @@
-"""D65 补充 4 审计：模拟器发出的每个请求体只含后端 1a7c0fb 请求模型声明的字段（未知字段一律 422）。
+"""D65 补充 4 审计：模拟器发出的每个请求体只含后端 56474fe 请求模型声明的字段（未知字段一律 422）。
+E10In / StageIn 也已 forbid；/mes/eap/events 信封例外（D54 顶层并进 payload）。
 字段表照抄 eap/be-517 的 pydantic 模型 / 实体规格；故意的反例步骤（seed_alarm_code extra、expect_body_422）除外。"""
 
 import glob
@@ -85,6 +86,7 @@ PAYLOADS = {  # execution/eap.py，_P extra=forbid
     "alarm_clear": {"alid", "cleared_at", "comment"},
     "tool_usage": {"tool_id", "delta", "lot_id", "occurred_at", "reason_id", "comment"},
 }
+ENVELOPE = {"source", "external_event_id", "event_type", "equipment_id", "payload"}
 NEGATIVE = {"target_e10_state_id", "migration_note", "bogus"}  # 场景里故意的未知 / 只读字段反例
 
 
@@ -108,7 +110,10 @@ def test_bodies_have_no_extra_fields(f, mode):
             continue  # D65 服务账号写权限探测（空体，期望 403）
         assert ok is not None, f"{method} {path} 没有登记请求模型"
         extra = set(body) - ok - NEGATIVE
-        assert not extra, f"{method} {path} 多余字段 {extra}"
         if path.endswith("/mes/eap/events"):
-            pe = set(body["payload"]) - PAYLOADS[body["event_type"]] - NEGATIVE
+            extra = set()  # 信封例外（D54），见下
+        assert not extra, f"{method} {path} 多余字段 {extra}"
+        if path.endswith("/mes/eap/events"):  # D54：顶层多余字段并进 payload，按合并后的 payload 审计
+            merged = {**{k: v for k, v in body.items() if k not in ENVELOPE}, **body["payload"]}
+            pe = set(merged) - PAYLOADS[body["event_type"]] - NEGATIVE
             assert not pe, f"B11 {body['event_type']} payload 多余字段 {pe}"

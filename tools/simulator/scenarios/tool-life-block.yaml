@@ -25,6 +25,8 @@ steps:
   - replay: {eq: EAP-DA01, seq: 1, expect: {status: 200, body: {duplicate: true, tool.usage_count: "900"}}}
   - reuse: {eq: EAP-DA01, seq: 1, change: {delta: 50}}   # D57：同事件号换 delta -> 422 idempotency_key_reused
   - expect_tool_log: {tool: T-SIM-01, last: {kind: report, delta: "900", count_after: "900"}}   # 没写入
+  # D65 补充 4：执行接口带未知字段 -> 422 unknown_field [body, bogus]，批次不变
+  - expect_body_422: {eq: EAP-DA01, endpoint: move_in, lot: FX0001, extra: {bogus: 1}, code: unknown_field, loc: [body, bogus]}
   - move_in: {eq: EAP-DA01, lot: FX0001}
   - track_in: {eq: EAP-DA01, lot: FX0001, tools: [T-SIM-01]}     # 预警区间：可放行，200
   - tool_usage: {eq: EAP-DA01, tool: T-SIM-01, delta: 100, expect: {body: {life_reached: true, tool.tool_status: pending_maintenance}}}

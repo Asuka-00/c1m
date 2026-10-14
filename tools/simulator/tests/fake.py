@@ -109,7 +109,8 @@ class FakeClient(Client):
         self.alarms = {}
         self.alarm_rows = {}
         self.e10 = "SBY"
-        self.e10_forbid_extra = False  # 1a7c0fb：E10In 忽略未知字段；True 模拟 D65 补充 4 修好后
+        self.e10_forbid_extra = True  # 56474fe：E10In / StageIn 未知字段 422；False 模拟 1a7c0fb
+        self.stage_writes = 0
         self.usage = 0.0
         self.max_usage = 1000.0
         self.warn_ratio = 0.9
@@ -160,7 +161,12 @@ class FakeClient(Client):
             "alarm_clear": {"alid", "cleared_at", "comment"},
             "tool_usage": {"tool_id", "delta", "lot_id", "occurred_at", "reason_id", "comment"},
         }
-        typ, pl, eq = body["event_type"], body.get("payload") or {}, body["equipment_id"]
+        env = {"source", "external_event_id", "event_type", "equipment_id", "payload"}
+        flat = {k: v for k, v in body.items() if k not in env}  # D54：信封顶层多余字段并进 payload
+        both = sorted(set(flat) & set(body.get("payload") or {}))
+        if both:
+            return Resp(422, {"detail": [{"loc": ["body", k], "type": "duplicate_field"} for k in both]})
+        typ, pl, eq = body["event_type"], {**flat, **(body.get("payload") or {})}, body["equipment_id"]
         k = (body["source"], body["external_event_id"])
         h = repr((typ, eq, sorted(pl.items())))
         if k in self.events:
@@ -336,7 +342,7 @@ class FakeClient(Client):
                 200, {"data": {"id": path.split("/")[-1], "qual_state": self.qual, "equipment_type_id": "et-1"}}
             )
         if method == "GET" and path.startswith("/mes/lot/"):
-            return Resp(200, {"data": {"lot_status": "waiting"}})
+            return Resp(200, {"data": {"lot_status": "waiting", "stage_writes": self.stage_writes}})
         if path == "/mes/eqp/board":
             return Resp(200, {"data": [{"code": c, "state": {"code": self.e10}} for c in ("EQ1", "EAP-DA01")]})
         if path == "/mes/eap/events":
@@ -370,6 +376,30 @@ class FakeClient(Client):
             frm, self.e10 = self.e10, to
             self._hist(to, "manual" if self._src == "manual" else "equipment")
             return Resp(200, {"data": {"id": f"log-{self.e10_writes}"}, "from": frm, "to": to})
+        if "/mes/exec/lots/" in path and self.e10_forbid_extra:
+            stage_ok = {
+                "equipment_id",
+                "recipe_id",
+                "eqp_recipe",
+                "reticle_id",
+                "carrier_id",
+                "tool_ids",
+                "chamber_ids",
+                "material_lot_ids",
+                "dc",
+                "scrap",
+                "rework_units",
+                "branch",
+                "rework",
+                "override",
+                "override_reason",
+            }
+            extra = sorted(set(json_body) - stage_ok)
+            if extra:
+                d = [{"loc": ["body", f], "msg": f"{f}: unknown field", "type": "unknown_field"} for f in extra]
+                return Resp(422, {"detail": d})
+        if "/mes/exec/lots/" in path:
+            self.stage_writes += 1
         if path.endswith("/move_in") or path.endswith("/track_in"):
             # B10：tool_life 只在 track_in 判断，用量 >= 上限硬拦（overridable=false）；预警区间不拦
             blk = self._tool_block() if path.endswith("/track_in") and json_body.get("tool_ids") else None

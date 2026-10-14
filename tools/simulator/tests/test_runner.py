@@ -938,7 +938,9 @@ E10_UNKNOWN = {
 
 
 def test_e10_unknown_field_xfail_against_1a7c0fb():
-    c, rep = run(E10_UNKNOWN)  # 假后端默认像 1a7c0fb：忽略未知字段 -> 原地迁移 422 value_error
+    c = FakeClient()
+    c.e10_forbid_extra = False  # 像 1a7c0fb：忽略未知字段 -> 原地迁移 422 value_error
+    rep = Runner(c).run(parse(E10_UNKNOWN))
     assert rep["status"] == PASSED and rep["xfail"] == [1], rep
     assert rep["steps"][0]["xfail"] is True and c.e10 == "SBY"
     body = [x for x in c.calls if x[0] == "POST"][0][2]
@@ -947,9 +949,9 @@ def test_e10_unknown_field_xfail_against_1a7c0fb():
 
 def test_e10_unknown_field_strict_fails_and_fixed_backend_xpasses():
     c = FakeClient()
+    c.e10_forbid_extra = False
     assert Runner(c, xfail=False).run(parse(E10_UNKNOWN))["status"] == FAILED
-    c = FakeClient()
-    c.e10_forbid_extra = True  # 模拟后端修好
+    c = FakeClient()  # 默认像 56474fe：已修
     rep = Runner(c).run(parse(E10_UNKNOWN))
     assert rep["status"] == PASSED and rep["xpass"] == [1] and not rep.get("xfail")
     c = FakeClient()
@@ -970,3 +972,41 @@ def test_cli_strict_xfail_flag(monkeypatch):
     with pytest.raises(SystemExit):
         cli.main(["run", "scenarios/e10-state-cycle.yaml", "--target", "http://127.0.0.1:8013", "--strict-xfail"])
     assert seen["xfail"] is False
+
+
+def test_e10_unknown_field_must_pass_without_xfail():
+    sc = {"run_id": "u2", "steps": [{"expect_body_422": {"eq": "EQ1", "to": "SBY", "extra": {"bogus": 1}}}]}
+    c, rep = run(sc)
+    assert rep["status"] == PASSED and not rep.get("xfail")
+    c = FakeClient()
+    c.e10_forbid_extra = False
+    assert Runner(c).run(parse(sc))["status"] == FAILED  # 不再是 xfail：后端回退就失败
+
+
+def test_move_in_unknown_field_422_no_side_effect():
+    sc = {
+        "run_id": "m",
+        "steps": [{"expect_body_422": {"eq": "EQ1", "endpoint": "move_in", "lot": "L1", "extra": {"bogus": 1}}}],
+    }
+    c, rep = run(sc)
+    assert rep["status"] == PASSED, rep
+    assert c.stage_writes == 0
+    post = [x for x in c.calls if x[0] == "POST"][0]
+    assert post[1].endswith("/move_in") and post[2] == {"equipment_id": "e-1", "bogus": 1}
+    c = FakeClient()
+    c.e10_forbid_extra = False  # 后端不拦：200 且写了批次 -> 失败（状态码 + 副作用）
+    rep = Runner(c).run(parse(sc))
+    assert rep["status"] == FAILED and "批次" in rep["reason"] and "422" in rep["reason"]
+
+
+def test_eap_envelope_extra_top_level_accepted():
+    sc = {"run_id": "e", "steps": [{"expect_eap_envelope_extra": {"eq": "EQ1", "alid": "1999", "cleared": False}}]}
+    c = FakeClient(paths=BASE_PATHS | B11)
+    c.service = True
+    rep = Runner(c, svc=c).run(parse(sc))
+    assert rep["status"] == PASSED, rep
+    body = [x for x in c.calls if x[1] == "/mes/eap/events"][0][2]
+    assert body["comment"] and "comment" not in body["payload"]
+    c2 = FakeClient(paths=BASE_PATHS | B11)
+    rep = Runner(c2).run(parse(sc))  # 没有服务账号 -> 记 skip，不失败
+    assert rep["status"] == PASSED and rep["steps"][0]["ok"] is None

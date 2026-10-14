@@ -298,6 +298,8 @@ class Runner:
             return self._tool_set(a, entry)
         if k == "expect_eap_read":
             return self._expect_eap_read(a, entry)
+        if k == "expect_eap_envelope_extra":
+            return self._expect_eap_envelope_extra(dict(a, run_id=sc.run_id), entry)
         if k == "expect_body_422":
             return self._expect_body_422(a, entry)
         if k == "expect_query_422":
@@ -739,31 +741,72 @@ class Runner:
                     raise StepFailed("；".join(errs))
 
     def _expect_body_422(self, a: dict, entry: dict) -> None:
-        """D65 补充 4：请求体带未知字段 -> 422 unknown_field（loc [body, 字段]）。走主账号的手工接口。
-        目前支持 endpoint=e10：to 用设备当前状态，这样后端若不拦未知字段只会报原地迁移 422，不会改状态。"""
-        if a.get("endpoint", "e10") != "e10":
-            raise StepFailed(f"expect_body_422 不支持 endpoint={a.get('endpoint')}")
+        """D65 补充 4（后端 56474fe）：请求体带未知字段 -> 422 unknown_field（loc [body, 字段]），且没有副作用。
+        走主账号的手工接口。endpoint=e10：to 填设备当前状态（就算后端不拦也只会报原地迁移，不改状态）；
+        endpoint=move_in/track_in：要 lot，前后比对批次行，确认没写入。"""
+        ep = a.get("endpoint", "e10")
+        extra = a.get("extra") or {"bogus": 1}
+        field = next(iter(extra))
         eq_id = self.rid("equipment", a["eq"])
-        body = {"to_state_id": self.rid("e10_state", a["to"]), **(a.get("extra") or {"bogus": 1})}
-        field = next(iter(a.get("extra") or {"bogus": 1}))
-        want = {"status": 422, "code": a.get("code", "unknown_field"), "loc": a.get("loc") or ["body", field]}
-        r = self.c.request("POST", fill(self._ad("e10"), eq_id=eq_id), body)
-        entry.update(
-            method="POST", path=fill(self._ad("e10"), eq_id=eq_id), request=redact(body), status=r.status, code=r.code
-        )
+        if ep == "e10":
+            path = fill(self._ad("e10"), eq_id=eq_id)
+            body = {"to_state_id": self.rid("e10_state", a["to"]), **extra}
+            before = None
+        elif ep in ("move_in", "track_in"):
+            path = fill(self._ad("stage"), lot_id=self.rid("lot", a["lot"]), stage=ep)
+            body = {"equipment_id": eq_id, **extra}
+            before = self.row("lot", a["lot"])
+        else:
+            raise StepFailed(f"expect_body_422 不支持 endpoint={ep}")
+        want_code, want_loc = a.get("code", "unknown_field"), a.get("loc") or ["body", field]
+        r = self.c.request("POST", path, body)
+        entry.update(method="POST", path=path, request=redact(body), status=r.status, code=r.code)
         errs = shape_422(r) if self.strict_422 else []
         det = r.body.get("detail") if isinstance(r.body, dict) else None
         hit = (
-            [x for x in det if isinstance(x, dict) and list(x.get("loc") or []) == want["loc"]]
+            [x for x in det if isinstance(x, dict) and list(x.get("loc") or []) == want_loc]
             if isinstance(det, list)
             else []
         )
         if r.status != 422:
             errs.append(f"带未知字段 {field} 期望 422，实际 HTTP {r.status}")
-        elif not hit or hit[0].get("code") != want["code"]:
-            errs.append(f"期望 loc {want['loc']} code {want['code']}，实际 {det!r}"[:300])
+        elif not hit or hit[0].get("code") != want_code:
+            errs.append(f"期望 loc {want_loc} code {want_code}，实际 {det!r}"[:300])
+        if before is not None:
+            after = self.row("lot", a["lot"])
+            if after != before:
+                diff = sorted(k for k in set(before) | set(after) if before.get(k) != after.get(k))
+                errs.append(f"未知字段请求被拒后批次 {a['lot']} 仍有变化：{diff}")
         if errs:
             raise StepFailed("；".join(errs))
+
+    def _expect_eap_envelope_extra(self, a: dict, entry: dict) -> None:
+        """D54 例外：/mes/eap/events 信封顶层多出的字段并进 payload，不报 422。用服务账号发一条按 ALID 清除
+        （ALID 没有 active 报警 -> 200 cleared=false，无副作用），comment 放在顶层而不是 payload。"""
+        if self.svc is None:
+            entry.update(ok=None, message="没有服务账号（SIM_SVC_*），跳过")
+            return
+        ext = f"sim:{a.get('run_id', 'env')}:{a['eq']}:envx:{int(time.time() * 1000)}"
+        body = {
+            "source": "simulator",
+            "external_event_id": ext,
+            "event_type": "alarm_clear",
+            "equipment_id": self.rid("equipment", a["eq"]),
+            "payload": {"alid": str(a.get("alid", "1999"))},
+            a.get("field", "comment"): a.get("value", "sim envelope extra"),
+        }
+        path = self._ad("eap_events")
+        r = self.svc.request("POST", path, body)
+        entry.update(
+            method="POST", path=path, request=redact(body), status=r.status, code=r.code, account="eap_service"
+        )
+        if r.status == 422 or r.status >= 400:
+            raise StepFailed(
+                f"信封顶层多带 {a.get('field', 'comment')} 应被接受，实际 HTTP {r.status} {r.body!r}"[:300]
+            )
+        v = self.view(Call("POST", path, body), r).body or {}
+        if "cleared" in a and v.get("cleared") != a["cleared"]:
+            raise StepFailed(f"cleared={v.get('cleared')!r}，期望 {a['cleared']!r}")
 
     def _reuse(self, a: dict, entry: dict, sent) -> None:
         """D57 反例：同一个 key（manual 是 Idempotency-Key，b11 是 external_event_id）换请求内容重发，
