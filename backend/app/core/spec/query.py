@@ -1,7 +1,7 @@
 """通用租户范围查询：列表 / 筛选 / 搜索 / 排序、单行、全部行、树。"""
 
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any
 
 import sqlalchemy as sa
@@ -90,9 +90,12 @@ def apply_filters(
 
 
 def _range(e: Entity, stmt: sa.Select[Any], name: str, raw: str) -> sa.Select[Any]:
-    """时间 / 日期范围筛选：``<字段>_from`` 为下限（含），``<字段>_to`` 为上限（含）。
+    """时间 / 日期范围筛选（D77）。
 
-    支持 date / datetime 字段及 ``created_at``；其它名称忽略。
+    - datetime 字段（含 ``created_at``）：半开区间 ``[_from, _to)``，``_to`` 那一刻不含。
+    - date 字段：闭区间 ``[_from, _to]``，实现为 ``< _to + 1 天``。
+
+    其它名称忽略。
     """
     t = table(e)
     base, bound = name.rsplit("_", 1)
@@ -110,7 +113,9 @@ def _range(e: Entity, stmt: sa.Select[Any], name: str, raw: str) -> sa.Select[An
     except ValueError as ex:
         raise query_422([(name, f"{name}: invalid date")]) from ex
     c = t.c[col]
-    return stmt.where(c >= v if bound == "from" else c <= v)
+    if bound == "from":
+        return stmt.where(c >= v)
+    return stmt.where(c < (v + timedelta(days=1) if kind == "date" else v))
 
 
 def search(e: Entity, stmt: sa.Select[Any], q: str | None) -> sa.Select[Any]:

@@ -132,3 +132,51 @@ def test_export_import_datetime_roundtrip(client: TestClient, db: Session) -> No
     m.import_rows("downtime", rows)
     got = [x["start_at"] for x in m.list("downtime")["data"]]
     assert got == ["2026-04-01T00:30:00Z", "2026-04-01T00:30:00Z"], got
+
+
+def test_range_boundaries_d77(client: TestClient, db: Session) -> None:
+    """D77：datetime 的 _to 半开（恰在边界的记录不含）；date 的 _to 闭区间（含当天）。"""
+    m = Mes(client, db)
+    eq = m.post("equipment", {"code": "EQ-B", "name": "eq"})
+    rc = m.post("reason_code", {"code": "DT", "name": "d", "reason_type": "downtime"})
+    m.post(
+        "downtime",
+        {
+            "equipment_id": eq["id"],
+            "start_at": "2026-03-10T00:00:00+08:00",
+            "reason_id": rc["id"],
+        },
+    )
+
+    def dt(**kw: str) -> int:
+        return int(m.list("downtime", **kw)["count"])
+
+    assert dt(start_at_to="2026-03-10T00:00:00+08:00") == 0  # 边界不含
+    assert dt(start_at_to="2026-03-09T16:00:00Z") == 0  # 同一时刻（UTC 写法）
+    assert dt(start_at_to="2026-03-10T00:00:00.000001+08:00") == 1
+    assert dt(start_at_from="2026-03-10T00:00:00+08:00") == 1  # 下限含
+    assert (
+        dt(
+            start_at_from="2026-03-09T16:00:00Z",
+            start_at_to="2026-03-10T00:00:01+08:00",
+        )
+        == 1
+    )
+    # date 字段：qualified_until = 3/10，_to=3/10 含当天，_to=3/9 不含
+    op = m.post("operation", {"code": "OP-B", "name": "op"})
+    m.post(
+        "equipment_capability",
+        {
+            "equipment_id": eq["id"],
+            "operation_id": op["id"],
+            "qualified_until": "2026-03-10",
+        },
+    )
+
+    def cap(**kw: str) -> int:
+        return int(m.list("equipment_capability", **kw)["count"])
+
+    assert cap(qualified_until_to="2026-03-10") == 1
+    assert cap(qualified_until_to="2026-03-09") == 0
+    assert cap(qualified_until_from="2026-03-10", qualified_until_to="2026-03-10") == 1
+    assert cap(qualified_until_from="2026-03-11") == 0
