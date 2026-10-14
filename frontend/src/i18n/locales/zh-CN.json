@@ -571,7 +571,20 @@
       "done": "已投产 {{count}} 个批次",
       "again": "继续投产",
       "searchWo": "搜索工单号 / 产品 / 流程 / 客户",
-      "woMore": "共 {{n}} 条，显示前 {{show}} 条，请输入关键字缩小范围"
+      "woMore": "共 {{n}} 条，显示前 {{show}} 条，请输入关键字缩小范围",
+      "fe": {
+        "banner": "开批未成功：请按标出的字段修改后再提交",
+        "notAllowed": "不允许的字段",
+        "customerRequired": "客户来料须选择客户",
+        "customerNotFound": "客户不存在",
+        "customerOwnOnly": "自有物料不能指定客户",
+        "customerLotOwnOnly": "自有物料不能填写客户批号",
+        "qty": "数量超出范围",
+        "carrier": "载具不可用",
+        "slots": "槽位不正确",
+        "tooLong": "内容过长",
+        "invalid": "输入有误"
+      }
     },
     "exec": {
       "stage": {

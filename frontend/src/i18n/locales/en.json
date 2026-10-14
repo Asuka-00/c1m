@@ -571,7 +571,20 @@
       "done": "{{count}} lot(s) started",
       "again": "Start more",
       "searchWo": "Search work order / product / route / customer",
-      "woMore": "{{n}} matches, showing first {{show}}; refine the search"
+      "woMore": "{{n}} matches, showing first {{show}}; refine the search",
+      "fe": {
+        "banner": "Lots were not started. Fix the marked fields and submit again",
+        "notAllowed": "Field not allowed",
+        "customerRequired": "Select a customer for customer-owned material",
+        "customerNotFound": "Customer not found",
+        "customerOwnOnly": "Own material cannot have a customer",
+        "customerLotOwnOnly": "Own material cannot have a customer lot no.",
+        "qty": "Quantity out of range",
+        "carrier": "Carrier not available",
+        "slots": "Invalid slots",
+        "tooLong": "Too long",
+        "invalid": "Invalid value"
+      }
     },
     "exec": {
       "stage": {

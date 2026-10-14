@@ -38,33 +38,45 @@ export function CustomerBadges({ info }: { info: CustomerInfo }) {
 export function CustomerFields({
   value,
   onChange,
+  errors = {},
 }: {
   value: CustomerDraft
   onChange: (patch: Partial<CustomerDraft>) => void
+  /** 后端 422 定位到本行的字段错误（ownership / customer_id / customer_lot_no） */
+  errors?: Record<string, string | undefined>
 }) {
   const own = value.ownership === 'own'
   return (
-    <div className='flex min-w-[22rem] flex-wrap items-center gap-2'>
-      <select
-        aria-label={t('mes.cust.ownership')}
-        className='h-9 rounded-md border bg-transparent px-2 text-sm'
-        value={value.ownership}
-        onChange={(e) => {
-          const o = e.target.value as Ownership
-          // 切回自有时清掉客户字段（后端不允许自有批次带客户）
-          onChange(
-            o === 'own'
-              ? { ...emptyCustomer() }
-              : { ownership: 'customer' as const }
-          )
-        }}
-      >
-        <option value='own'>{enumLabel('ownership', 'own')}</option>
-        <option value='customer'>{enumLabel('ownership', 'customer')}</option>
-      </select>
+    <div className='flex min-w-[22rem] flex-wrap items-start gap-2'>
+      <div className='grid gap-1'>
+        <select
+          aria-label={t('mes.cust.ownership')}
+          aria-invalid={!!errors.ownership}
+          className='h-9 rounded-md border bg-transparent px-2 text-sm'
+          value={value.ownership}
+          onChange={(e) => {
+            const o = e.target.value as Ownership
+            // 切回自有时清掉客户字段（后端不允许自有批次带客户）
+            onChange(
+              o === 'own'
+                ? { ...emptyCustomer() }
+                : { ownership: 'customer' as const }
+            )
+          }}
+        >
+          <option value='own'>{enumLabel('ownership', 'own')}</option>
+          <option value='customer'>{enumLabel('ownership', 'customer')}</option>
+        </select>
+        <FieldMsg
+          msg={
+            errors.ownership ??
+            (own ? (errors.customer_id ?? errors.customer_lot_no) : undefined)
+          }
+        />
+      </div>
       {!own && (
         <>
-          <div className='w-44' aria-label={t('mes.cust.customer')}>
+          <div className='grid w-44 gap-1' aria-label={t('mes.cust.customer')}>
             <RefSelect
               target='customer'
               value={value.customer_id}
@@ -73,17 +85,32 @@ export function CustomerFields({
                 onChange({ customer_id: id, customer_label: label })
               }
             />
+            <FieldMsg msg={errors.customer_id} />
           </div>
-          <Input
-            aria-label={t('mes.cust.lotNo')}
-            placeholder={t('mes.cust.lotNo')}
-            className='w-36'
-            maxLength={100}
-            value={value.customer_lot_no}
-            onChange={(e) => onChange({ customer_lot_no: e.target.value })}
-          />
+          <div className='grid gap-1'>
+            <Input
+              aria-invalid={!!errors.customer_lot_no}
+              aria-label={t('mes.cust.lotNo')}
+              placeholder={t('mes.cust.lotNo')}
+              className='w-36'
+              maxLength={100}
+              value={value.customer_lot_no}
+              onChange={(e) => onChange({ customer_lot_no: e.target.value })}
+            />
+            <FieldMsg msg={errors.customer_lot_no} />
+          </div>
         </>
       )}
     </div>
+  )
+}
+
+/** 字段下方的错误提示。 */
+export function FieldMsg({ msg }: { msg?: string }) {
+  if (!msg) return null
+  return (
+    <p className='text-xs text-destructive' data-testid='lot-field-error'>
+      {msg}
+    </p>
   )
 }

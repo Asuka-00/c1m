@@ -25,7 +25,7 @@ import { Label } from '@/components/ui/label'
 import { Page } from '@/components/crud'
 import { IconButton } from '@/components/icon-button'
 import { cellValue } from '@/features/mes/common/cells'
-import { CustomerFields } from '@/features/mes/common/customer'
+import { CustomerFields, FieldMsg } from '@/features/mes/common/customer'
 import {
   customerBody,
   type CustomerDraft,
@@ -36,6 +36,7 @@ import {
 import { RefSelect } from '@/features/mes/common/ref-select'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
+import { type LotFieldErrors, startFieldErrors } from './start-errors'
 import { WoProgress } from './wo-actions'
 
 type LotDraft = {
@@ -101,6 +102,8 @@ export default function LotStartPage() {
   const [lotSize, setLotSize] = useState('')
   const [qty, setQty] = useState('')
   const [created, setCreated] = useState<MesRow[] | null>(null)
+  // 开批接口 422 定位到批次行的字段错误（行下标从 0 开始）
+  const [lotErrs, setLotErrs] = useState<LotFieldErrors>({})
 
   const wos = useQuery({
     queryKey: ['mes', 'work_order', 'startable', tk],
@@ -172,12 +175,22 @@ export default function LotStartPage() {
           ...customerBody(l),
         }))
       ),
+    onMutate: () => setLotErrs({}),
     onSuccess: (r) => {
       setCreated(r.data)
       qc.invalidateQueries({ queryKey: ['mes'] })
       toast.success(t('mes.start.done', { count: r.data.length }))
     },
-    onError: (e) => toast.error(mesErrorMessage(e, lotE ?? woE)),
+    onError: (e) => {
+      const fe = startFieldErrors(e)
+      if (fe) {
+        // 标到对应批次行的字段下，并带回「拆分批次」这一步改正
+        setLotErrs(fe)
+        setStep(2)
+        return
+      }
+      toast.error(mesErrorMessage(e, lotE ?? woE))
+    },
   })
 
   const total = lots.reduce((s, l) => s + (Number(l.qty) || 0), 0)
@@ -199,8 +212,26 @@ export default function LotStartPage() {
     out.push(...customerErrors(lots))
     return out
   }, [plan, lots, total])
-  const set = (i: number, patch: Partial<LotDraft>) =>
+  const set = (i: number, patch: Partial<LotDraft>) => {
     setLots((ls) => ls.map((l, k) => (k === i ? { ...l, ...patch } : l)))
+    // 改过的字段清掉对应的后端错误（改归属时客户字段一起清）
+    setLotErrs((all) => {
+      const row = all[i]
+      if (!row) return all
+      const keys = Object.keys(patch).flatMap((k) =>
+        k === 'ownership'
+          ? ['ownership', 'customer_id', 'customer_lot_no']
+          : k === 'customer_label'
+            ? []
+            : [k]
+      )
+      const next = { ...row }
+      for (const k of keys) delete next[k]
+      return { ...all, [i]: next }
+    })
+  }
+  const errOf = (i: number, f: string) => lotErrs[i]?.[f]
+  const hasLotErrs = Object.values(lotErrs).some((r) => Object.keys(r).length)
 
   const summary = wo && woE && (
     <Card>
@@ -409,6 +440,7 @@ export default function LotStartPage() {
                                   })
                                 }
                               />
+                              <FieldMsg msg={errOf(i, 'qty')} />
                             </td>
                             <td className='w-56 p-2'>
                               <RefSelect
@@ -423,6 +455,7 @@ export default function LotStartPage() {
                                   })
                                 }
                               />
+                              <FieldMsg msg={errOf(i, 'carrier_id')} />
                             </td>
                             <td className='p-2'>
                               <Input
@@ -433,6 +466,7 @@ export default function LotStartPage() {
                                   set(i, { slots: e.target.value })
                                 }
                               />
+                              <FieldMsg msg={errOf(i, 'slots')} />
                             </td>
                             <td className='p-2'>
                               <Input
@@ -443,11 +477,18 @@ export default function LotStartPage() {
                                   set(i, { source_ref: e.target.value })
                                 }
                               />
+                              <FieldMsg
+                                msg={
+                                  errOf(i, 'source_ref') ??
+                                  errOf(i, 'wafer_sources')
+                                }
+                              />
                             </td>
                             <td className='p-2' data-testid={`lot-cust-${i}`}>
                               <CustomerFields
                                 value={l}
                                 onChange={(patch) => set(i, patch)}
+                                errors={lotErrs[i]}
                               />
                             </td>
                             <td className='p-2'>
@@ -491,6 +532,15 @@ export default function LotStartPage() {
                       {t('mes.start.total', { total, max: plan.remaining })}
                     </span>
                   </div>
+                  {hasLotErrs && (
+                    <p
+                      className='text-sm text-destructive'
+                      role='alert'
+                      data-testid='start-server-errors'
+                    >
+                      {t('mes.start.fe.banner')}
+                    </p>
+                  )}
                   {errors.length > 0 && (
                     <ul
                       className='list-disc ps-5 text-sm text-destructive'
