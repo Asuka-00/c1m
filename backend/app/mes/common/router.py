@@ -11,10 +11,11 @@ from typing import Annotated, Any, Literal
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from app.core.deps import SessionDep
 from app.core.pagination import ListParamsDep
+from app.core.schemas import StrictBody
 from app.core.spec.base import get_entity
 from app.core.spec.engine import ENTITIES, EXTRA_PERMISSIONS, MODULES, Entity, perm
 from app.core.spec.errors import query_422
@@ -125,7 +126,7 @@ def mes_attr_defs(session: SessionDep, ctx: CurrentTenant, entity: str) -> Any:
     ]
 
 
-class CodeGenIn(BaseModel):
+class CodeGenIn(StrictBody):
     count: int = Field(default=1, ge=1, le=100)
     context: dict[str, Any] = Field(default_factory=dict)
 
@@ -294,7 +295,7 @@ def mes_delete(
     return {"message": "Deleted"}
 
 
-class StatusIn(BaseModel):
+class StatusIn(StrictBody):
     status: str
 
 

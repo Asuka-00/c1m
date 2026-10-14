@@ -9,17 +9,20 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+# pydantic 原生 type -> 固定码（type 保留原值）
+TYPE_CODES = {"extra_forbidden": "unknown_field"}
+
+
+def _code(x: dict[str, Any]) -> str:
+    t = x.get("type") or "value_error"
+    return x.get("code") or TYPE_CODES.get(t, t)
+
 
 def with_code(items: Any) -> Any:
-    """给 422 列表的每一项补上 ``code``（已有则保留）。"""
+    """给 422 列表的每一项补上 ``code``（已有则保留；extra_forbidden → unknown_field）。"""
     if not isinstance(items, list):
         return items
-    return [
-        {**x, "code": x.get("code") or x.get("type") or "value_error"}
-        if isinstance(x, dict)
-        else x
-        for x in items
-    ]
+    return [{**x, "code": _code(x)} if isinstance(x, dict) else x for x in items]
 
 
 async def _validation(_r: Request, exc: Exception) -> Response:

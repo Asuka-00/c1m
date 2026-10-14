@@ -1015,3 +1015,16 @@ def test_bom_d50_decimal_strings(client: TestClient, db: Session) -> None:
     # 通用接口（旧格式）仍是数字
     lst = m.c.get(f"{API}/bom-line", headers=m.h, params={"bom_id": v["id"]}).json()
     assert isinstance(lst["data"][0]["qty"], float)
+
+
+def test_bom_put_lines_extra_field_unknown_field(
+    client: TestClient, db: Session
+) -> None:
+    """D65：行里多余字段（pydantic extra_forbidden）→ code unknown_field，type 保留。"""
+    m = Mes(client, db)
+    b = B(m)
+    v = b.bom(b.product("FGX"))
+    err = _put(m, v, {"lines": [_ml(b, 10, foo=1)]}, 422)
+    d = next(x for x in err["detail"] if x["loc"][-1] == "foo")
+    assert d["loc"] == ["body", "lines", 0, "foo"]
+    assert d["type"] == "extra_forbidden" and d["code"] == "unknown_field"

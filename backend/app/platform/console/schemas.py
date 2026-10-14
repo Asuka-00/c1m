@@ -6,6 +6,7 @@ from typing import Any
 from sqlmodel import Field, SQLModel
 
 from app.core.models import UtcDateTime
+from app.core.schemas import StrictSQLModel
 
 
 class PlatformTenant(SQLModel):
@@ -27,7 +28,7 @@ class PlatformTenants(SQLModel):
     count: int
 
 
-class PlatformTenantCreate(SQLModel):
+class PlatformTenantCreate(StrictSQLModel):
     """创建租户；``owner`` 按用户名（或邮箱）指定已有用户为 owner（为空则不设 owner）。"""
 
     name: str = Field(min_length=1, max_length=255)
@@ -41,7 +42,7 @@ class PlatformTenantCreate(SQLModel):
     owner: str | None = Field(default=None, max_length=255)
 
 
-class PlatformTenantUpdate(SQLModel):
+class PlatformTenantUpdate(StrictSQLModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     status: str | None = Field(
         default=None, schema_extra={"pattern": r"^(active|suspended)$"}
@@ -114,5 +115,5 @@ class ChannelsPublic(SQLModel):
     count: int
 
 
-class ChannelUpdate(SQLModel):
+class ChannelUpdate(StrictSQLModel):
     enabled: bool

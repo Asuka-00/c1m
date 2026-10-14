@@ -6,6 +6,7 @@ from pydantic import EmailStr
 from sqlmodel import Field, SQLModel
 
 from app.core.models import UtcDateTime
+from app.core.schemas import StrictSQLModel
 from app.platform.tenants.models import TenantBase
 from app.platform.users.schemas import Username
 
@@ -18,7 +19,7 @@ class TenantCreate(TenantBase):
     )
 
 
-class TenantUpdate(SQLModel):
+class TenantUpdate(StrictSQLModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     status: str | None = Field(
         default=None, schema_extra={"pattern": r"^(active|suspended)$"}
@@ -38,14 +39,14 @@ class TenantsPublic(SQLModel):
     count: int
 
 
-class MemberAdd(SQLModel):
+class MemberAdd(StrictSQLModel):
     """按用户名（或邮箱）添加已有用户为成员。"""
 
     username: str = Field(min_length=1, max_length=255)
     roles: list[str] = ["member"]
 
 
-class MemberCreate(SQLModel):
+class MemberCreate(StrictSQLModel):
     """租户管理员在租户内直接创建新用户（不能创建超级用户，不创建个人工作区）。"""
 
     username: Username = Field(max_length=50)
@@ -56,7 +57,7 @@ class MemberCreate(SQLModel):
     is_active: bool = True
 
 
-class MemberUserUpdate(SQLModel):
+class MemberUserUpdate(StrictSQLModel):
     """租户管理员修改成员账号（显示名 / 邮箱 / 状态 / 重置密码）：仅限只属于本租户的用户。"""
 
     full_name: str | None = Field(default=None, max_length=255)
@@ -65,7 +66,7 @@ class MemberUserUpdate(SQLModel):
     password: str | None = Field(default=None, min_length=8, max_length=128)
 
 
-class UserTenantRoles(SQLModel):
+class UserTenantRoles(StrictSQLModel):
     """用户在某租户的成员身份（平台创建 / 编辑用户时直接分配）。"""
 
     tenant_id: uuid.UUID
@@ -73,11 +74,11 @@ class UserTenantRoles(SQLModel):
     roles: list[str] = ["member"]
 
 
-class UserTenantsUpdate(SQLModel):
+class UserTenantsUpdate(StrictSQLModel):
     items: list[UserTenantRoles]
 
 
-class MemberRolesUpdate(SQLModel):
+class MemberRolesUpdate(StrictSQLModel):
     roles: list[str]
 
 
@@ -108,7 +109,7 @@ class MyTenantsPublic(SQLModel):
     count: int
 
 
-class OwnerAssign(SQLModel):
+class OwnerAssign(StrictSQLModel):
     """平台指定租户 owner：按用户名（或邮箱）选择已有用户。"""
 
     username: str = Field(min_length=1, max_length=255)

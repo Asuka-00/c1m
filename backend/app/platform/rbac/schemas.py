@@ -2,9 +2,11 @@
 
 import uuid
 
+from pydantic import ConfigDict
 from sqlmodel import Field, SQLModel
 
 from app.core.models import UtcDateTime
+from app.core.schemas import StrictSQLModel
 from app.platform.rbac.models import PermissionBase, RoleBase
 
 
@@ -37,10 +39,12 @@ class PermissionsPublic(SQLModel):
 
 
 class RoleCreate(RoleBase):
+    model_config = ConfigDict(extra="forbid")  # type: ignore[assignment]  # D65
+
     permission_codes: list[str] = []
 
 
-class RoleUpdate(SQLModel):
+class RoleUpdate(StrictSQLModel):
     name: str | None = Field(default=None, max_length=100)
     title: str | None = Field(default=None, max_length=100)
     description: str | None = Field(default=None, max_length=255)
@@ -71,5 +75,5 @@ class RoleIds(SQLModel):
     role_ids: list[uuid.UUID]
 
 
-class PermissionCodes(SQLModel):
+class PermissionCodes(StrictSQLModel):
     codes: list[str]

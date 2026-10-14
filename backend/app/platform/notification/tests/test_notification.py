@@ -90,8 +90,13 @@ def test_subscription_crud_validation_permission(
         },
     ).json()
     assert s["is_active"] and s["channels"] == ["in_app"]
+    # D65 补充 4：整行回写（带 id / created_at 等）422 unknown_field，只提交可写字段
+    r = client.put(f"{url}/{s['id']}", headers=h, json={**s, "name": "OOS2"})
+    assert r.status_code == 422 and r.json()["detail"][0]["code"] == "unknown_field"
+    keys = ("name", "event_type", "role_ids", "user_ids", "channels", "is_active")
+    body = {k: s[k] for k in keys if k in s}
     r = client.put(
-        f"{url}/{s['id']}", headers=h, json={**s, "name": "OOS2", "is_active": False}
+        f"{url}/{s['id']}", headers=h, json={**body, "name": "OOS2", "is_active": False}
     )
     assert r.status_code == 200 and r.json()["name"] == "OOS2"
     lst = client.get(url, headers=h, params={"q": "OOS2"}).json()

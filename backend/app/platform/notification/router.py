@@ -7,12 +7,13 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import Field
 from sqlmodel import col, select
 
 from app.core.deps import SessionDep
 from app.core.models import get_datetime_utc
 from app.core.pagination import ListParamsDep, paginate
+from app.core.schemas import StrictBody
 from app.core.spec.errors import http_422
 from app.platform.auth.deps import CurrentTenant
 from app.platform.notification import service as svc
@@ -50,7 +51,7 @@ def notification_summary(session: SessionDep, ctx: CurrentTenant) -> Any:
     return svc.summary(session, ctx.id, ctx.user.id)
 
 
-class ReadIn(BaseModel):
+class ReadIn(StrictBody):
     ids: list[uuid.UUID] | None = Field(default=None, max_length=500)
 
 
@@ -71,7 +72,7 @@ def notification_meta(_ctx: CurrentTenant) -> Any:
 
 
 # ---------------- subscriptions ----------------
-class SubscriptionIn(BaseModel):
+class SubscriptionIn(StrictBody):
     name: str = Field(min_length=1, max_length=200)
     event_type: str = Field(max_length=64)
     role_ids: list[uuid.UUID] = Field(default_factory=list)

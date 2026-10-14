@@ -7,6 +7,7 @@ from pydantic import AfterValidator, EmailStr, StringConstraints
 from sqlmodel import Field, SQLModel
 
 from app.core.models import UtcDateTime
+from app.core.schemas import StrictSQLModel
 from app.platform.users.models import USERNAME_RE, UserBase
 
 # 以小写存储，使唯一索引实际上不区分大小写
@@ -30,13 +31,13 @@ class UserUpdate(SQLModel):
     password: str | None = Field(default=None, min_length=8, max_length=128)
 
 
-class UserUpdateMe(SQLModel):
+class UserUpdateMe(StrictSQLModel):
     full_name: str | None = Field(default=None, max_length=255)
     username: Username | None = Field(default=None, max_length=50)
     email: EmailStr | None = Field(default=None, max_length=255)
 
 
-class UpdatePassword(SQLModel):
+class UpdatePassword(StrictSQLModel):
     current_password: str = Field(min_length=8, max_length=128)
     new_password: str = Field(min_length=8, max_length=128)
 
@@ -56,6 +57,6 @@ class UsersPublic(SQLModel):
     count: int
 
 
-class NewPassword(SQLModel):
+class NewPassword(StrictSQLModel):
     token: str
     new_password: str = Field(min_length=8, max_length=128)

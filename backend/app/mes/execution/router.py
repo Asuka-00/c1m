@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.deps import SessionDep
 from app.core.models import iso_utc
+from app.core.schemas import NoBody
 from app.core.spec.engine import ENTITIES
 from app.core.spec.errors import err_422, http_422, query_422
 from app.core.spec.serialize import serialize
@@ -41,6 +42,7 @@ def _need(ctx: TenantContext, p: str) -> None:
 
 
 class DcIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # D65：多余字段 422 unknown_field
     measurement_item_id: uuid.UUID
     unit_id: uuid.UUID | None = None
     site_no: int = Field(default=1, ge=1)
@@ -48,17 +50,20 @@ class DcIn(BaseModel):
 
 
 class ScrapIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # D65：多余字段 422 unknown_field
     reason_id: uuid.UUID
     unit_id: uuid.UUID | None = None
     qty: int | None = Field(default=None, ge=1)
 
 
 class ReworkUnitIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # D65：多余字段 422 unknown_field
     reason_id: uuid.UUID
     unit_id: uuid.UUID
 
 
 class StageIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # D65：多余字段 422 unknown_field
     equipment_id: uuid.UUID | None = None
     recipe_id: uuid.UUID | None = None
     eqp_recipe: str | None = Field(default=None, max_length=200)
@@ -77,11 +82,13 @@ class StageIn(BaseModel):
 
 
 class HoldIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # D65：多余字段 422 unknown_field
     reason_id: uuid.UUID
     comment: str | None = Field(default=None, max_length=300)
 
 
 class ReleaseIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # D65：多余字段 422 unknown_field
     reason_id: uuid.UUID | None = None
     comment: str | None = Field(default=None, max_length=300)
 
@@ -193,6 +200,7 @@ def hold_detail(session: SessionDep, ctx: CurrentTenant, hold_id: uuid.UUID) -> 
 
 
 class BatchReleaseIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # D65：多余字段 422 unknown_field
     hold_ids: list[uuid.UUID] = Field(min_length=1, max_length=500)
     reason_id: uuid.UUID
     comment: str | None = Field(default=None, max_length=300)
@@ -226,12 +234,14 @@ def hold_release(
 
 
 class SplitChildIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # D65：多余字段 422 unknown_field
     unit_ids: list[uuid.UUID] = Field(default_factory=list)
     qty: int | None = None
     carrier_id: uuid.UUID | None = None
 
 
 class SplitIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # D65：多余字段 422 unknown_field
     children: list[SplitChildIn] = Field(default_factory=list, max_length=50)
     comment: str | None = Field(default=None, max_length=300)
     override: bool = False
@@ -240,6 +250,7 @@ class SplitIn(BaseModel):
 
 
 class MergeIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # D65：多余字段 422 unknown_field
     source_lot_ids: list[uuid.UUID] = Field(default_factory=list, max_length=50)
     comment: str | None = Field(default=None, max_length=300)
     override: bool = False
@@ -270,6 +281,7 @@ def lot_merge(
 
 
 class JumpIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # D65：多余字段 422 unknown_field
     to_step_id: uuid.UUID
     reason_id: uuid.UUID
     comment: str | None = Field(default=None, max_length=300)
@@ -469,7 +481,9 @@ def home_summary(session: SessionDep, ctx: CurrentTenant) -> Any:
 
 
 @router.post("/qtime/sweep")
-def qtime_sweep(session: SessionDep, ctx: CurrentTenant) -> Any:
+def qtime_sweep(
+    session: SessionDep, ctx: CurrentTenant, _body: NoBody | None = None
+) -> Any:
     """Apply Q-Time violation actions (auto hold, ...) to waiting lots now."""
     _need(ctx, "mes.exec:hold")
     return svc.sweep_qtime(session, ctx.id, ctx.user)
@@ -487,6 +501,7 @@ def lot_jump(
 
 
 class AdjustIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # D65：多余字段 422 unknown_field
     kind: Literal["scrap", "bonus"]
     qty: int | None = Field(default=None, ge=1)
     unit_ids: list[uuid.UUID] | None = Field(default=None, max_length=1000)
@@ -508,6 +523,7 @@ def lot_adjust(
 
 
 class ShiftLogIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # D65：多余字段 422 unknown_field
     shift_date: date
     shift_id: uuid.UUID
     area_id: uuid.UUID | None = None
@@ -516,6 +532,7 @@ class ShiftLogIn(BaseModel):
 
 
 class AckIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # D65：多余字段 422 unknown_field
     comment: str | None = Field(default=None, max_length=300)
 
 
@@ -548,6 +565,7 @@ def shift_log_ack(
 
 
 class PriorityIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # D65：多余字段 422 unknown_field
     priority_id: uuid.UUID
     comment: str | None = Field(default=None, max_length=300)
     override: bool = False
@@ -566,11 +584,13 @@ def lot_priority(
 
 
 class CarrierChangeIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # D65：多余字段 422 unknown_field
     carrier_id: uuid.UUID
     comment: str | None = Field(default=None, max_length=300)
 
 
 class CommentIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # D65：多余字段 422 unknown_field
     comment: str | None = Field(default=None, max_length=300)
 
 
@@ -591,11 +611,13 @@ def carrier_clean(
 
 
 class SortSlotIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # D65：多余字段 422 unknown_field
     wafer_id: uuid.UUID
     slot: int = Field(ge=1)
 
 
 class SortIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # D65：多余字段 422 unknown_field
     slots: list[SortSlotIn] = Field(min_length=1, max_length=50)
     carrier_id: uuid.UUID | None = None
     comment: str | None = Field(default=None, max_length=300)

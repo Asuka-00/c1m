@@ -8,9 +8,9 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 
 from app.core.deps import SessionDep
+from app.core.schemas import StrictBody
 from app.core.spec.serialize import serialize
 from app.mes.warehouse import service as svc
 from app.platform.auth.deps import CurrentTenant
@@ -32,7 +32,7 @@ def _need(ctx: TenantContext, p: str) -> None:
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
 
-class TransitionIn(BaseModel):
+class TransitionIn(StrictBody):
     action: str
 
 

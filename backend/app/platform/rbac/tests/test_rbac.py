@@ -237,3 +237,32 @@ def test_superuser_bypass_without_roles() -> None:
     )
     assert u.roles == []
     assert has_permissions(u, "anything:at_all")
+
+
+def test_seed_syncs_old_permission_description(db: Session) -> None:
+    """旧库重跑 initial_data：内置权限的旧说明同步为当前三语说明；手工说明保留。"""
+    from app.platform.rbac.labels import permission_description
+    from app.platform.rbac.models import Permission
+    from app.platform.rbac.service import seed_rbac
+
+    p = db.exec(
+        select(Permission).where(Permission.code == "mes.eap:read_master")
+    ).one()
+    q = db.exec(select(Permission).where(Permission.code == "members:read")).one()
+    old_p, old_q = p.description, q.description
+    p.description = "Allows: EAP master data read (service account)"
+    q.description = "custom text"
+    db.add(p)
+    db.add(q)
+    db.commit()
+    seed_rbac(db)
+    seed_rbac(db)  # 幂等
+    db.refresh(p)
+    db.refresh(q)
+    assert p.description == permission_description("mes.eap:read_master")
+    assert "|" in p.description and "EAP" in p.description
+    assert q.description == "custom text"
+    q.description = old_q
+    db.add(q)
+    db.commit()
+    assert old_p is not None

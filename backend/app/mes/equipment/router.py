@@ -37,6 +37,7 @@ def board(session: SessionDep, ctx: CurrentTenant) -> Any:
 
 
 class E10In(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # D65：多余字段 422 unknown_field
     to_state_id: uuid.UUID
     reason_id: uuid.UUID | None = None
     comment: str | None = Field(default=None, max_length=300)
@@ -77,6 +78,7 @@ def pm(session: SessionDep, ctx: CurrentTenant, eq_id: uuid.UUID) -> Any:
 
 
 class PmIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # D65：多余字段 422 unknown_field
     equipment_id: uuid.UUID
     result: Literal["ok", "ng"] = "ok"
     comment: str | None = Field(default=None, max_length=300)

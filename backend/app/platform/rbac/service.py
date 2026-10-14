@@ -6,6 +6,7 @@ from sqlmodel import Session, col, select
 
 from app.core.models import actor_name, get_datetime_utc
 from app.platform.rbac.labels import (
+    PERM_DESC_TEMPLATE,
     ROLE_DESCRIPTIONS,
     ROLE_LABELS,
     permission_description,
@@ -32,8 +33,7 @@ def seed_rbac(session: Session) -> None:
             perms[code] = Permission(code=code, scope=scope)
             session.add(perms[code])
         fill_names(perms[code])  # 已有权限也补齐空名称（只填空值）
-        # 新库也用三语说明（b4dcced），没有三语说明时才回退到代码里的英文说明（P2-D7）
-        perms[code].description = perms[code].description or desc
+        sync_description(perms[code], desc)
     for name, (desc, codes) in DEFAULT_ROLES.items():
         role = get_role(session, name)
         if not role:
@@ -48,13 +48,27 @@ def seed_rbac(session: Session) -> None:
     session.commit()
 
 
+def sync_description(p: Permission, fallback: str) -> None:
+    """内置权限说明同步为当前三语说明（幂等）。
+
+    只覆盖空值或系统生成过的旧说明（代码里的英文说明、``Allows: …`` / 旧三语模板），
+    用户手工改过的说明保留。没有三语说明时回退到代码里的英文说明。
+    """
+    cur = permission_description(p.code)
+    if not cur:
+        p.description = p.description or fallback
+        return
+    d = p.description or ""
+    prefixes = tuple(t.split("{")[0] for t in PERM_DESC_TEMPLATE.split("|"))
+    if not d or d == fallback or d.startswith(prefixes):
+        p.description = cur
+
+
 def fill_names(obj: Permission | Role) -> None:
     """为内置权限 / 角色补齐英文显示名称与说明（仅在为空时填充；前端按 i18n 翻译内置值）。"""
     if isinstance(obj, Permission):
         if not obj.name and (lbl := permission_label(obj.code)):
             obj.name = lbl.split("|")[0]
-        if desc := permission_description(obj.code):
-            obj.description = obj.description or desc.split("|")[0]
         return
     if not obj.title and obj.name in ROLE_LABELS:
         obj.title = ROLE_LABELS[obj.name].split("|")[0]

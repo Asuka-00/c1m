@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from app.core.deps import SessionDep
+from app.core.schemas import StrictBody
 from app.core.spec.serialize import serialize
 from app.mes.common.guard import perm_body
 from app.mes.planning import board
@@ -26,11 +27,11 @@ def _need(ctx: TenantContext, p: str) -> None:
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
 
-class TransitionIn(BaseModel):
+class TransitionIn(StrictBody):
     action: str
 
 
-class PlanIn(BaseModel):
+class PlanIn(StrictBody):
     lot_size: int | None = Field(default=None, ge=1)
     qty: int | None = Field(default=None, ge=0)
 
@@ -61,7 +62,7 @@ class StartIn(BaseModel):
     lots: list[LotIn] = Field(min_length=1, max_length=50)
 
 
-class UndoIn(BaseModel):
+class UndoIn(StrictBody):
     lot_ids: list[uuid.UUID] | None = None
 
 

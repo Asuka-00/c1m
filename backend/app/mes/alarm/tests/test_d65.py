@@ -121,3 +121,45 @@ def test_duplicate_alarm_returns_original_state(
     assert dup["duplicate"] is True
     assert dup["state_changed"] is True
     assert dup["state_skip_reason"] == first["state_skip_reason"]
+
+
+def test_exec_bodies_forbid_extra(client: TestClient, db: Session) -> None:
+    """D65：E10 / 过站等自定义请求体多余字段 → 422 unknown_field，不写入。"""
+    f, lot, _ = _setup(client, db)
+    before = client.get(f"{MES}/equipment/{f.eq['id']}", headers=f.m.h).json()
+    d = f.post(
+        f"{MES}/eqp/{f.eq['id']}/e10",
+        {"to_state_id": f.st["DOWN"]["id"], "bogus": 1},
+        422,
+    )["detail"][0]
+    assert d["loc"] == ["body", "bogus"] and d["code"] == "unknown_field"
+    assert d["type"] == "extra_forbidden"
+    after = client.get(f"{MES}/equipment/{f.eq['id']}", headers=f.m.h).json()
+    assert after.get("e10_state_id") == before.get("e10_state_id")
+    d = f.stage(lot, "track_in", 422, equipment_id=f.eq["id"], bogus=1)["detail"][0]
+    assert d["loc"] == ["body", "bogus"] and d["code"] == "unknown_field"
+    d = f.post(
+        f"{MES}/exec/lots/{lot['id']}/hold", {"reason_id": f.eq["id"], "x": 1}, 422
+    )["detail"]
+    assert any(x["loc"] == ["body", "x"] and x["code"] == "unknown_field" for x in d)
+
+
+def test_action_endpoints_empty_body(client: TestClient, db: Session) -> None:
+    """D65 补充 4：无字段的动作接口接受空 / {}，多余字段 422 unknown_field。"""
+    import uuid
+
+    f = _line(client, db)
+    h = f.m.h
+    sweep = f"{MES}/exec/qtime/sweep"
+    assert client.post(sweep, headers=h).status_code == 200
+    assert client.post(sweep, headers=h, json={}).status_code == 200
+    r = client.post(sweep, headers=h, json={"x": 1})
+    assert r.status_code == 422 and r.json()["detail"][0]["code"] == "unknown_field"
+    for act in ("release", "cancel"):
+        u = f"{MES}/change-order/{uuid.uuid4()}/{act}"
+        assert client.post(u, headers=h).status_code == 404
+        assert client.post(u, headers=h, json={}).status_code == 404
+        r = client.post(u, headers=h, json={"x": 1})
+        assert r.status_code == 422
+        assert r.json()["detail"][0]["loc"] == ["body", "x"]
+        assert r.json()["detail"][0]["code"] == "unknown_field"

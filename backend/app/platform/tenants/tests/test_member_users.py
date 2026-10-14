@@ -38,11 +38,19 @@ def test_tenant_owner_creates_and_manages_user(client: TestClient, db: Session) 
     )
     assert dup.status_code == 409
     assert dup.json()["detail"] == "User with this username already exists"
-    # 不能创建超级用户（字段被忽略）
+    # 不能创建超级用户（D65 补充 4：多余字段 422 unknown_field）
     r2 = client.post(
         f"{API}/tenants/{t}/members/new",
         headers=ho,
         json={**body, "username": name + "x", "is_superuser": True},
+    )
+    assert r2.status_code == 422
+    assert r2.json()["detail"][0]["loc"] == ["body", "is_superuser"]
+    assert r2.json()["detail"][0]["code"] == "unknown_field"
+    r2 = client.post(
+        f"{API}/tenants/{t}/members/new",
+        headers=ho,
+        json={**body, "username": name + "x"},
     )
     assert r2.status_code == 200
     assert _login(client, name + "x", pw) == 200
