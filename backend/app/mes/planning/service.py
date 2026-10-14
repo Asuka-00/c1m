@@ -295,7 +295,9 @@ def transition(
                 .where(
                     t.c.tenant_id == tid,
                     t.c.work_order_id == wo["id"],
-                    t.c.lot_status.notin_(["stored", "scrapped", "merged"]),
+                    t.c.lot_status.notin_(
+                        ["stored", "scrapped", "merged", "converted"]
+                    ),
                 )
                 .order_by(t.c.code)
                 .limit(5)
@@ -374,7 +376,9 @@ def _carrier_busy(s: Session, tid: uuid.UUID, carrier_id: Any) -> bool:
             sa.select(t.c.id).where(
                 t.c.tenant_id == tid,
                 t.c.carrier_id == carrier_id,
-                t.c.lot_status.notin_(["completed", "stored", "scrapped", "merged"]),
+                t.c.lot_status.notin_(
+                    ["completed", "stored", "scrapped", "merged", "converted"]
+                ),
             )
         )
         .first()

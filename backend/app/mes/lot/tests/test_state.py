@@ -303,8 +303,8 @@ def _lot(status: str, on_hold: bool = False) -> dict[str, Any]:
 
 
 def test_rules_cover_matrix_actions() -> None:
-    # ship（D13 规则层）、auto_hold（D17）不在清单矩阵中；qtime_scrap 按 D12 删除
-    assert set(RULES) - {"ship", "auto_hold"} == {
+    # ship（D13 规则层）、auto_hold（D17）、transform（B5）不在清单矩阵中；qtime_scrap 按 D12 删除
+    assert set(RULES) - {"ship", "auto_hold", "transform"} == {
         ACTION.get(r[1], r[1]) for r in MATRIX
     }
     assert "qtime_scrap" not in RULES
@@ -355,12 +355,18 @@ def test_u03_no_abort_action() -> None:
 
 
 def test_u04_terminal() -> None:
-    assert {str(x) for x in TERMINAL} == {"completed", "stored", "scrapped", "merged"}
+    assert {str(x) for x in TERMINAL} == {
+        "completed",
+        "stored",
+        "scrapped",
+        "merged",
+        "converted",  # B5 单位转换后的母批
+    }
     assert set(TERMINAL) == set(LOTS_TERMINAL)
 
 
 def test_u05_lot_status_matches_spec_enum() -> None:
-    assert len(LotStatus) == 8
+    assert len(LotStatus) == 9  # B5 加 converted
     assert [str(x) for x in LotStatus] == list(lot_status_enum())
 
 

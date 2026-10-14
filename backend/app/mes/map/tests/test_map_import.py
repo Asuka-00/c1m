@@ -201,3 +201,29 @@ def test_migration_0021_up_down() -> None:
         return tuple(n in have for n in names) + (idx,)
 
     _migration_roundtrip("0020_lot_customer_lot_index", "b4", check, names)
+
+
+def test_map_version_conflict_409(
+    client: TestClient, db: Session, monkeypatch: Any
+) -> None:
+    """并发撞上 uq_mes_substrate_map_0：回滚并返回 409 map_version_conflict（不是 500）。"""
+    from app.mes.map import service as svc
+
+    m = Mes(client, db)
+    _bins(m)
+    _post(m, "/import", _fx("map_ok.csv"))
+    # 模拟另一并发导入已经拿走了版本 2：取版本号时仍返回已存在的 1
+    monkeypatch.setattr(svc, "next_version", lambda *_a, **_k: 1)
+    d = _post(m, "/import", _fx("map_ok.csv"), 409)["detail"]
+    assert d["code"] == "map_version_conflict"
+    monkeypatch.undo()
+    assert (
+        m.list("map_import")["count"] == 2
+    )  # bin 定义集 + 首次坐标图；冲突的那次已回滚
+    w = m.c.get(f"{MAP}/substrates/WF001-01", headers=m.h).json()
+    assert w["versions"] == [1]
+    _post(m, "/import", _fx("map_ok.csv"))  # 之后正常导入
+    assert m.c.get(f"{MAP}/substrates/WF001-01", headers=m.h).json()["versions"] == [
+        1,
+        2,
+    ]

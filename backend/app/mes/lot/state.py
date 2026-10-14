@@ -31,11 +31,12 @@ class LotStatus(StrEnum):
     STORED = "stored"
     SCRAPPED = "scrapped"
     MERGED = "merged"
+    CONVERTED = "converted"  # B5：单位转换后的母批（终态）
 
 
 S = LotStatus
 ALL = frozenset(S)
-TERMINAL = frozenset({S.COMPLETED, S.STORED, S.SCRAPPED, S.MERGED})
+TERMINAL = frozenset({S.COMPLETED, S.STORED, S.SCRAPPED, S.MERGED, S.CONVERTED})
 ACTIVE = ALL - TERMINAL
 
 # 可被 Hold 的状态（手动 + 自动，D4 经 M2 修订：completed/stored 允许）
@@ -43,7 +44,9 @@ HOLDABLE: frozenset[LotStatus] = ACTIVE | {S.COMPLETED, S.STORED}
 # 可被自动 Hold 的状态（D17）
 AUTO_HOLDABLE: frozenset[LotStatus] = ACTIVE
 # Hold 列表默认排除的批次状态（N6 经 M2 修订）；include_terminal=true 时显示全部
-HOLD_LIST_EXCLUDED: frozenset[LotStatus] = frozenset({S.SCRAPPED, S.MERGED})
+HOLD_LIST_EXCLUDED: frozenset[LotStatus] = frozenset(
+    {S.SCRAPPED, S.MERGED, S.CONVERTED}
+)
 
 
 @dataclass(frozen=True)
@@ -76,6 +79,8 @@ RULES: dict[str, Rule] = {
     "split": _r([S.WAITING, S.MOVED_IN], hold=True),
     "merge_source": _r([S.WAITING, S.MOVED_IN], [S.MERGED]),
     "merge_target": _r([S.WAITING, S.MOVED_IN]),
+    # B5：整批单位转换，Hold 中不行；母批转为已转换（终态）
+    "transform": _r([S.WAITING, S.MOVED_IN], [S.CONVERTED]),
     # 加工中不能报废（decisions.md #3）
     "scrap": _r(ACTIVE - {S.RUNNING}, [S.SCRAPPED], hold=True),
     "adjust": _r(ACTIVE, hold=True),

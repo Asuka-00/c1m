@@ -8,19 +8,21 @@ mes.exec:jump（跳站）、mes.exec:adjust（在制报废 / 补数）。
 
 import uuid
 from datetime import date, datetime, time, timedelta
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.deps import SessionDep
 from app.core.spec.engine import ENTITIES
 from app.core.spec.errors import http_422
 from app.core.spec.serialize import serialize
+from app.mes.common.guard import perm_body
 from app.mes.common.query import one
 from app.mes.execution import dispatch, shift_log
 from app.mes.execution import service as sm
 from app.mes.execution import service as svc
+from app.mes.execution import transform as transform_svc
 from app.mes.lot.service import lookup_customer_lots
 from app.platform.auth.deps import CurrentTenant
 from app.platform.tenants.service import TenantContext
@@ -642,3 +644,59 @@ def batch_stage(
     if body.override:
         _need(ctx, "mes.exec:override")
     return svc.batch_stage(session, ctx.id, stage, body.model_dump(), ctx.user)
+
+
+# ---------------- 单位转换（B5） ----------------
+class _Strict(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class TransformSourceIn(_Strict):
+    wafer_id: uuid.UUID
+    qty: int = Field(ge=1)
+
+
+class TransformOutputIn(_Strict):
+    product_id: uuid.UUID
+    route_id: uuid.UUID
+    track_unit_kind: Literal["die", "strip", "package", "unit"]
+    qty: int | None = Field(default=None, ge=1)
+    sources: list[TransformSourceIn] = Field(min_length=1, max_length=500)
+
+
+class ManualGoodIn(_Strict):
+    wafer_id: uuid.UUID
+    good_qty: int = Field(ge=0)
+    fail_qty: int = Field(default=0, ge=0)
+
+
+class TransformIn(_Strict):
+    """单位转换请求（严格载荷；source / external_event_id 等未知字段 422）。"""
+
+    transform_type: Literal["dicing", "die_attach", "singulation"]
+    input_lot_ids: list[uuid.UUID] = Field(min_length=1, max_length=50)
+    outputs: list[TransformOutputIn] = Field(min_length=1, max_length=50)
+    manual_good: list[ManualGoodIn] | None = Field(default=None, max_length=500)
+    reason_id: uuid.UUID | None = None
+    comment: str | None = Field(default=None, max_length=300)
+
+
+TransformBody = Annotated[
+    TransformIn, Depends(perm_body("mes.exec:transform", TransformIn))
+]
+
+
+@router.post("/transform/preview")
+def transform_preview(
+    session: SessionDep, ctx: CurrentTenant, body: TransformBody
+) -> Any:
+    """Validate a unit transform: per-wafer good qty (map / manual / gross die),
+    allocation and conservation; nothing is written."""
+    return transform_svc.preview(session, ctx.id, body.model_dump())
+
+
+@router.post("/transform")
+def transform(session: SessionDep, ctx: CurrentTenant, body: TransformBody) -> Any:
+    """Unit transform (dicing / die attach / singulation), whole lots, multi-in
+    multi-out; parents become converted, children start on their own route."""
+    return transform_svc.transform(session, ctx.id, body.model_dump(), ctx.user)

@@ -67,6 +67,35 @@ def _hist(s: Session, tid: uuid.UUID, lot_ids: list[Any], action: str) -> list[R
     return [dict(r) for r in rows]
 
 
+def _origins(s: Session, tid: uuid.UUID, where: Any, limit: int = 5000) -> list[Row]:
+    """单位转换的位置映射（B5）：子批位置 ← 母批 / 母晶圆 / die 坐标。"""
+    o = TABLES["unit_origin"]
+    rows = (
+        conn(s)
+        .execute(
+            sa.select(o)
+            .where(o.c.tenant_id == tid, where)
+            .order_by(o.c.child_lot_id, o.c.child_seq)
+            .limit(limit)
+        )
+        .mappings()
+        .all()
+    )
+    return [
+        {
+            "child_lot": _code(s, tid, "lot", r["child_lot_id"]),
+            "child_seq": r["child_seq"],
+            "child_unit": _code(s, tid, "wafer", r["child_unit_id"]),
+            "parent_lot": _code(s, tid, "lot", r["parent_lot_id"]),
+            "parent_wafer": _code(s, tid, "wafer", r["parent_wafer_id"]),
+            "die_row": r["die_row"],
+            "die_col": r["die_col"],
+            "qty": r["qty"],
+        }
+        for r in rows
+    ]
+
+
 def _lot_trace(s: Session, tid: uuid.UUID, lot: Row) -> Row:
     back = _walk(s, tid, lot["id"], True)
     fwd = _walk(s, tid, lot["id"], False)
@@ -95,9 +124,19 @@ def _lot_trace(s: Session, tid: uuid.UUID, lot: Row) -> Row:
         for r in _hist(s, tid, ids, "track_out")
         for c in ((r["details"] or {}).get("consumed") or [])
     ]
+    o = TABLES["unit_origin"]
+    fids = [lot["id"], *[uuid.UUID(x["id"]) for x in fwd]]
     return {
-        "backward": {"lots": back, "steps": steps, "materials": mats},
-        "forward": {"lots": fwd},
+        "backward": {
+            "lots": back,
+            "steps": steps,
+            "materials": mats,
+            "origins": _origins(s, tid, o.c.child_lot_id.in_(ids)),
+        },
+        "forward": {
+            "lots": fwd,
+            "origins": _origins(s, tid, o.c.parent_lot_id.in_(fids)),
+        },
     }
 
 
@@ -181,6 +220,9 @@ def trace(s: Session, tid: uuid.UUID, kind: str, code: str) -> Row:
         out["target"]["lot_id"] = str(lot["id"])
         out["target"] |= lot_svc.customer_info(s, tid, lot)
         out |= _lot_trace(s, tid, lot)
+        if kind == "wafer":  # 该晶圆的 die 去了哪些子批（含坐标）
+            o = TABLES["unit_origin"]
+            out["forward"]["dies"] = _origins(s, tid, o.c.parent_wafer_id == tgt["id"])
     elif kind == "equipment":
         out["lots"] = _lots_by(
             s, tid, sa.and_(h.c.equipment_id == tgt["id"], h.c.action == "track_in")

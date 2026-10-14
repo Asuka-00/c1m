@@ -61,6 +61,10 @@
       "lot_recipe_run": "配方执行记录",
       "lot_genealogy": "批次谱系",
       "material_consumption": "用料记录",
+      "unit_transform": "单位转换",
+      "unit_transform_input": "转换输入",
+      "unit_transform_output": "转换输出",
+      "unit_origin": "单元来源",
       "bin_set": "bin 定义集",
       "bin_definition": "bin 定义",
       "map_import": "坐标图导入记录",
@@ -580,6 +584,47 @@
         "external_event_id": "外部事件号",
         "username": "用户",
         "at": "时间"
+      },
+      "unit_transform": {
+        "transform_type": "类型",
+        "route_step": "流程步骤",
+        "reason": "原因",
+        "comment": "备注",
+        "warnings": "提示",
+        "username": "用户",
+        "at": "时间",
+        "source": "来源",
+        "external_event_id": "外部事件号"
+      },
+      "unit_transform_input": {
+        "unit_transform": "转换",
+        "lot": "批次",
+        "wafer": "晶圆",
+        "substrate_map": "坐标图",
+        "qty_before": "转换前数量",
+        "good_qty": "良品数",
+        "fail_qty": "不良数",
+        "excluded_qty": "排除数",
+        "good_source": "良品数来源"
+      },
+      "unit_transform_output": {
+        "unit_transform": "转换",
+        "lot": "批次",
+        "product": "产品",
+        "track_unit_kind": "单元类型",
+        "qty": "数量",
+        "die_qty": "颗数"
+      },
+      "unit_origin": {
+        "unit_transform": "转换",
+        "child_lot": "子批",
+        "child_unit": "子单元（条）",
+        "child_seq": "子位置 / 颗序号",
+        "parent_lot": "母批",
+        "parent_wafer": "母晶圆",
+        "die_row": "die 行",
+        "die_col": "die 列",
+        "qty": "数量"
       },
       "bin_set": {
         "code": "定义集",
@@ -1297,6 +1342,7 @@
         "oos": "超规",
         "split": "分批",
         "merge": "合批",
+        "transform": "单位转换",
         "jump": "跳站",
         "bonus": "补数",
         "carrier_change": "换载具",
@@ -1306,7 +1352,8 @@
       },
       "genealogy_relation": {
         "split": "分批",
-        "merge": "合批"
+        "merge": "合批",
+        "transform": "单位转换"
       },
       "ownership": {
         "own": "自有",
@@ -1329,14 +1376,16 @@
         "completed": "待入库",
         "stored": "已入库",
         "scrapped": "已报废",
-        "merged": "已合批（终止）"
+        "merged": "已合批（终止）",
+        "converted": "已转换（终止）"
       },
       "wafer_status": {
         "waiting": "等待",
         "processing": "加工中",
         "rework": "返工",
         "completed": "已完成",
-        "scrapped": "已报废"
+        "scrapped": "已报废",
+        "converted": "已转换"
       },
       "track_unit_kind": {
         "wafer": "晶圆",
@@ -1354,6 +1403,17 @@
         "normal": "正常",
         "rework": "返工",
         "scrap": "报废"
+      },
+      "transform_type": {
+        "dicing": "划片",
+        "die_attach": "粘片",
+        "singulation": "切单",
+        "bin_split": "按 bin 拆批"
+      },
+      "good_source": {
+        "map": "坐标图",
+        "gross_die": "产品总晶粒数",
+        "manual": "人工录入（原因码）"
       },
       "bin_type": {
         "good": "良品",
@@ -1814,6 +1874,7 @@
     "mes_exec__merge": "生产执行·合批",
     "mes_exec__jump": "生产执行·跳站",
     "mes_exec__adjust": "生产执行·报废 / 补数",
+    "mes_exec__transform": "生产执行·单位转换",
     "mes_map__import": "坐标图与 bin·导入坐标图 / bin 定义",
     "mes_wo__release": "工单·下达 / 关闭",
     "mes_lot__start": "批次与晶圆规则·投产",
@@ -1883,6 +1944,7 @@
     "mes_exec__merge": "允许：生产执行·合批",
     "mes_exec__jump": "允许：生产执行·跳站",
     "mes_exec__adjust": "允许：生产执行·报废 / 补数",
+    "mes_exec__transform": "允许：生产执行·单位转换",
     "mes_map__import": "允许：坐标图与 bin·导入坐标图 / bin 定义",
     "mes_wo__release": "允许：工单·下达 / 关闭",
     "mes_lot__start": "允许：批次与晶圆规则·投产",

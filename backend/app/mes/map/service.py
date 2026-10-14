@@ -5,6 +5,7 @@ from typing import Any
 
 import sqlalchemy as sa
 from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
 from app.core.models import actor_name
@@ -14,7 +15,7 @@ from app.core.spec.serialize import serialize
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins
 from app.mes.map import importer
-from app.mes.map.specs import EXCLUDED_BIN_TYPES
+from app.mes.map.specs import EXCLUDED_BIN_TYPES, GOOD_BIN_TYPES
 
 Row = dict[str, Any]
 
@@ -154,18 +155,8 @@ def map_preview(s: Session, tid: uuid.UUID, body: Row) -> Row:
             errs.append(
                 importer.err("qty_mismatch", f"{x['code']}: bin counts != total")
             )
-    t = TABLES["substrate_map"]
     for x in subs:
-        cur = (
-            conn(s)
-            .execute(
-                sa.select(sa.func.max(t.c.map_version)).where(
-                    t.c.tenant_id == tid, t.c.code == x["code"]
-                )
-            )
-            .scalar()
-        )
-        x["map_version"] = int(cur or 0) + 1
+        x["map_version"] = next_version(s, tid, x["code"])
     return {
         "ok": not errs,
         "header": head,
@@ -177,7 +168,58 @@ def map_preview(s: Session, tid: uuid.UUID, body: Row) -> Row:
     }
 
 
+def next_version(s: Session, tid: uuid.UUID, code: str) -> int:
+    """基板的下一个坐标图版本号（当前最大版本 + 1）。"""
+    t = TABLES["substrate_map"]
+    cur = (
+        conn(s)
+        .execute(
+            sa.select(sa.func.max(t.c.map_version)).where(
+                t.c.tenant_id == tid, t.c.code == code
+            )
+        )
+        .scalar()
+    )
+    return int(cur or 0) + 1
+
+
+def _lock_substrate(s: Session, tid: uuid.UUID, code: str) -> None:
+    """事务级 advisory lock：同一租户同一基板的并发导入串行取版本号。"""
+    conn(s).execute(
+        sa.select(
+            sa.func.pg_advisory_xact_lock(
+                sa.func.hashtextextended(f"mes_substrate_map:{tid}:{code}", 0)
+            )
+        )
+    )
+
+
+def _conflict(ex: IntegrityError) -> bool:
+    return "uq_mes_substrate_map_0" in str(ex.orig)
+
+
 def map_import(s: Session, tid: uuid.UUID, body: Row, user: Any) -> Row:
+    """导入坐标图并提交（失败时 422 / 409，见 :func:`_map_import`）。
+
+    并发：按基板加 advisory lock 后再取版本号；万一仍撞上
+    ``uq_mes_substrate_map_0``，回滚并返回 409 ``map_version_conflict``（不返回 500）。
+    """
+    try:
+        return _map_import(s, tid, body, user)
+    except IntegrityError as ex:
+        s.rollback()
+        if not _conflict(ex):
+            raise
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "map_version_conflict",
+                "message": "another import created the same substrate map version; retry",
+            },
+        ) from None
+
+
+def _map_import(s: Session, tid: uuid.UUID, body: Row, user: Any) -> Row:
     """导入坐标图；有错误时 422 ``map_invalid``；同一基板重复导入生成新版本。"""
     pv = map_preview(s, tid, body)
     if not pv["ok"]:
@@ -188,6 +230,9 @@ def map_import(s: Session, tid: uuid.UUID, body: Row, user: Any) -> Row:
     ids = []
     ct = TABLES["map_cell"]
     at = now()
+    for x in sorted(pv["_subs"], key=lambda r: r["code"]):  # 固定加锁顺序，避免死锁
+        _lock_substrate(s, tid, x["code"])
+        x["map_version"] = next_version(s, tid, x["code"])
     for x in pv["_subs"]:
         mid = _ins(
             s,
@@ -292,3 +337,21 @@ def check_split(m: Row, children_qty: int) -> None:
                 "total_qty": tot,
             },
         )
+
+
+def latest_map(s: Session, tid: uuid.UUID, substrate_id: str) -> Row | None:
+    """基板（晶圆 ID）的最新版本坐标图，没有时为 None（供 B5 单位转换使用）。"""
+    rows = _by_code(s, tid, "substrate_map", substrate_id)
+    return max(rows, key=lambda r: r["map_version"]) if rows else None
+
+
+def good_cells(s: Session, tid: uuid.UUID, m: Row) -> list[tuple[int, int]]:
+    """坐标图里良品 bin（bin_type=good）的坐标，按 (row, col) 排序。"""
+    types = bin_types(s, tid, m["bin_set_id"])
+    c = TABLES["map_cell"]
+    rs = conn(s).execute(
+        sa.select(c.c.row, c.c.col, c.c.bin_code)
+        .where(c.c.tenant_id == tid, c.c.substrate_map_id == m["id"])
+        .order_by(c.c.row, c.c.col)
+    )
+    return [(r, cc) for r, cc, b in rs if types.get(b) in GOOD_BIN_TYPES]

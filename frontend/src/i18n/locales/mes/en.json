@@ -61,6 +61,10 @@
       "lot_recipe_run": "Recipe run",
       "lot_genealogy": "Lot genealogy",
       "material_consumption": "Material consumption",
+      "unit_transform": "Unit transform",
+      "unit_transform_input": "Transform input",
+      "unit_transform_output": "Transform output",
+      "unit_origin": "Unit origin",
       "bin_set": "Bin definition set",
       "bin_definition": "Bin definition",
       "map_import": "Map import",
@@ -580,6 +584,47 @@
         "external_event_id": "External event ID",
         "username": "User",
         "at": "Time"
+      },
+      "unit_transform": {
+        "transform_type": "Type",
+        "route_step": "Route step",
+        "reason": "Reason",
+        "comment": "Comment",
+        "warnings": "Warnings",
+        "username": "User",
+        "at": "Time",
+        "source": "Source",
+        "external_event_id": "External event ID"
+      },
+      "unit_transform_input": {
+        "unit_transform": "Transform",
+        "lot": "Lot",
+        "wafer": "Wafer",
+        "substrate_map": "Map",
+        "qty_before": "Qty before",
+        "good_qty": "Good",
+        "fail_qty": "Fail",
+        "excluded_qty": "Excluded",
+        "good_source": "Good qty from"
+      },
+      "unit_transform_output": {
+        "unit_transform": "Transform",
+        "lot": "Lot",
+        "product": "Product",
+        "track_unit_kind": "Unit kind",
+        "qty": "Qty",
+        "die_qty": "Dies"
+      },
+      "unit_origin": {
+        "unit_transform": "Transform",
+        "child_lot": "Child lot",
+        "child_unit": "Child unit (strip)",
+        "child_seq": "Position / seq",
+        "parent_lot": "Parent lot",
+        "parent_wafer": "Parent wafer",
+        "die_row": "Die row",
+        "die_col": "Die col",
+        "qty": "Qty"
       },
       "bin_set": {
         "code": "Bin set",
@@ -1297,6 +1342,7 @@
         "oos": "Out of spec",
         "split": "Split",
         "merge": "Merge",
+        "transform": "Unit transform",
         "jump": "Jump step",
         "bonus": "Bonus",
         "carrier_change": "Carrier change",
@@ -1306,7 +1352,8 @@
       },
       "genealogy_relation": {
         "split": "Split",
-        "merge": "Merge"
+        "merge": "Merge",
+        "transform": "Unit transform"
       },
       "ownership": {
         "own": "Own",
@@ -1329,14 +1376,16 @@
         "completed": "Finished (to receive)",
         "stored": "Stored",
         "scrapped": "Scrapped",
-        "merged": "Merged (terminated)"
+        "merged": "Merged (terminated)",
+        "converted": "Converted (terminated)"
       },
       "wafer_status": {
         "waiting": "Waiting",
         "processing": "Processing",
         "rework": "Rework",
         "completed": "Completed",
-        "scrapped": "Scrapped"
+        "scrapped": "Scrapped",
+        "converted": "Converted"
       },
       "track_unit_kind": {
         "wafer": "Wafer",
@@ -1354,6 +1403,17 @@
         "normal": "Normal",
         "rework": "Rework",
         "scrap": "Scrap"
+      },
+      "transform_type": {
+        "dicing": "Dicing",
+        "die_attach": "Die attach",
+        "singulation": "Singulation",
+        "bin_split": "Bin split"
+      },
+      "good_source": {
+        "map": "Substrate map",
+        "gross_die": "Product gross die",
+        "manual": "Manual (reason)"
       },
       "bin_type": {
         "good": "Good",
@@ -1814,6 +1874,7 @@
     "mes_exec__merge": "Execution·Merge lots",
     "mes_exec__jump": "Execution·Jump step",
     "mes_exec__adjust": "Execution·Scrap / bonus",
+    "mes_exec__transform": "Execution·Unit transform",
     "mes_map__import": "Substrate map & bin·Import maps / bin sets",
     "mes_wo__release": "Work orders·Release / close",
     "mes_lot__start": "Lot & wafer rules·Start lots",
@@ -1883,6 +1944,7 @@
     "mes_exec__merge": "Allows: Execution·Merge lots",
     "mes_exec__jump": "Allows: Execution·Jump step",
     "mes_exec__adjust": "Allows: Execution·Scrap / bonus",
+    "mes_exec__transform": "Allows: Execution·Unit transform",
     "mes_map__import": "Allows: Substrate map & bin·Import maps / bin sets",
     "mes_wo__release": "Allows: Work orders·Release / close",
     "mes_lot__start": "Allows: Lot & wafer rules·Start lots",

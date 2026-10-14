@@ -42,6 +42,7 @@ ACTIONS: dict[str, str] = {
     "activate": "Activate / void|生效 / 作废|有効化 / 無効化",
     "mount": "Mount / unmount material|上料 / 卸料|資材装着 / 取外し",
     "qual": "Record Qual result|登记 Qual 结果|Qual 結果登録",
+    "transform": "Unit transform|单位转换|単位変換",
     "import": "Import maps / bin sets|导入坐标图 / bin 定义|マップ・ビン定義インポート",
 }
 # 内置角色（平台 + 租户默认角色）的显示名称；工作区不出现“租户”字样，owner 显示为系统管理员

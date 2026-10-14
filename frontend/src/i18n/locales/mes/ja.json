@@ -61,6 +61,10 @@
       "lot_recipe_run": "レシピ実行記録",
       "lot_genealogy": "ロット系譜",
       "material_consumption": "資材使用記録",
+      "unit_transform": "単位変換",
+      "unit_transform_input": "変換入力",
+      "unit_transform_output": "変換出力",
+      "unit_origin": "ユニット由来",
       "bin_set": "ビン定義セット",
       "bin_definition": "ビン定義",
       "map_import": "マップインポート",
@@ -580,6 +584,47 @@
         "external_event_id": "外部イベント ID",
         "username": "ユーザー",
         "at": "日時"
+      },
+      "unit_transform": {
+        "transform_type": "種別",
+        "route_step": "ルートステップ",
+        "reason": "理由",
+        "comment": "コメント",
+        "warnings": "警告",
+        "username": "ユーザー",
+        "at": "日時",
+        "source": "ソース",
+        "external_event_id": "外部イベント ID"
+      },
+      "unit_transform_input": {
+        "unit_transform": "変換",
+        "lot": "ロット",
+        "wafer": "ウェーハ",
+        "substrate_map": "座標マップ",
+        "qty_before": "変換前数量",
+        "good_qty": "良品数",
+        "fail_qty": "不良数",
+        "excluded_qty": "除外数",
+        "good_source": "良品数の出所"
+      },
+      "unit_transform_output": {
+        "unit_transform": "変換",
+        "lot": "ロット",
+        "product": "製品",
+        "track_unit_kind": "ユニット種別",
+        "qty": "数量",
+        "die_qty": "ダイ数"
+      },
+      "unit_origin": {
+        "unit_transform": "変換",
+        "child_lot": "子ロット",
+        "child_unit": "子ユニット（ストリップ）",
+        "child_seq": "位置・連番",
+        "parent_lot": "親ロット",
+        "parent_wafer": "親ウェーハ",
+        "die_row": "ダイ行",
+        "die_col": "ダイ列",
+        "qty": "数量"
       },
       "bin_set": {
         "code": "定義セット",
@@ -1297,6 +1342,7 @@
         "oos": "規格外",
         "split": "分割",
         "merge": "統合",
+        "transform": "単位変換",
         "jump": "ステップジャンプ",
         "bonus": "追加",
         "carrier_change": "キャリア変更",
@@ -1306,7 +1352,8 @@
       },
       "genealogy_relation": {
         "split": "分割",
-        "merge": "統合"
+        "merge": "統合",
+        "transform": "単位変換"
       },
       "ownership": {
         "own": "自社",
@@ -1329,14 +1376,16 @@
         "completed": "入庫待ち",
         "stored": "入庫済",
         "scrapped": "廃棄",
-        "merged": "統合済（終了）"
+        "merged": "統合済（終了）",
+        "converted": "変換済（終了）"
       },
       "wafer_status": {
         "waiting": "待機",
         "processing": "処理中",
         "rework": "リワーク",
         "completed": "完了",
-        "scrapped": "廃棄"
+        "scrapped": "廃棄",
+        "converted": "変換済"
       },
       "track_unit_kind": {
         "wafer": "ウェーハ",
@@ -1354,6 +1403,17 @@
         "normal": "通常",
         "rework": "リワーク",
         "scrap": "スクラップ"
+      },
+      "transform_type": {
+        "dicing": "ダイシング",
+        "die_attach": "ダイアタッチ",
+        "singulation": "個片化",
+        "bin_split": "ビン分割"
+      },
+      "good_source": {
+        "map": "座標マップ",
+        "gross_die": "製品総ダイ数",
+        "manual": "手入力（理由）"
       },
       "bin_type": {
         "good": "良品",
@@ -1814,6 +1874,7 @@
     "mes_exec__merge": "生産実行·ロット統合",
     "mes_exec__jump": "生産実行·工程ジャンプ",
     "mes_exec__adjust": "生産実行·廃棄 / 追加",
+    "mes_exec__transform": "生産実行·単位変換",
     "mes_map__import": "座標マップ・ビン·マップ・ビン定義インポート",
     "mes_wo__release": "作業指示·発行 / クローズ",
     "mes_lot__start": "ロット・ウェーハ規則·投入",
@@ -1883,6 +1944,7 @@
     "mes_exec__merge": "許可：生産実行·ロット統合",
     "mes_exec__jump": "許可：生産実行·工程ジャンプ",
     "mes_exec__adjust": "許可：生産実行·廃棄 / 追加",
+    "mes_exec__transform": "許可：生産実行·単位変換",
     "mes_map__import": "許可：座標マップ・ビン·マップ・ビン定義インポート",
     "mes_wo__release": "許可：作業指示·発行 / クローズ",
     "mes_lot__start": "許可：ロット・ウェーハ規則·投入",

@@ -82,7 +82,9 @@ def _carrier_busy(s: Session, tid: uuid.UUID, carrier_id: Any, but: Any = None) 
     q = sa.select(t.c.id).where(
         t.c.tenant_id == tid,
         t.c.carrier_id == carrier_id,
-        t.c.lot_status.notin_(["completed", "stored", "scrapped", "merged"]),
+        t.c.lot_status.notin_(
+            ["completed", "stored", "scrapped", "merged", "converted"]
+        ),
     )
     if but is not None:
         q = q.where(t.c.id != but)
