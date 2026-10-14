@@ -67,7 +67,7 @@ steps:
 | `e10-state-cycle.yaml` | 现在可跑：EAP-DA01 SBY→PRD→SBY（要求起始为 SBY） |
 | `wait-qual-block.yaml` | 现在可跑：待 Qual 的 EAP-DA02 开工被 409 `check_blocked`/`eqp_wait_qual`/`overridable=false` 拦（D43），被拦请求不改状态，可重复跑 |
 | `alarm-hold.yaml` | 等 B9：报警 → Hold（source=equipment）→ 重放不重复 Hold → 清除后 Hold 仍在 → clear 重放返回原记录；D55：无 active 报警 clear → 200 `cleared=false`；未登记 ALID → `unregistered=true`、写 `mes_alarm_lot`、不 Hold、不改 E10；事件时间超前 >5 分钟 → 422 `time_in_future` |
-| `tool-life-block.yaml` | 等 B10（D54 OQ-7）：用量到 `max_usage × warn_ratio`（默认 0.9）→ 409 `tool_life` `overridable=true`；用量 `>= max_usage` → 409 `check_blocked`/`tool_life`/`overridable=false`。前提 T-SIM-01 上限 1000、起始 0 |
+| `tool-life-block.yaml` | 等 B10（D54-5 修订版）：先 `reset` 清零；用量到 `max_usage × warn_ratio`（默认 0.9）进入预警区间，`track_in` 照常 200，警告只写进检查记录和批次履历，不需要放行；用量 `>= max_usage` 时 `track_in` 返回 409 `check_blocked`/`tool_life`/`overridable=false`（`move_in` 不判断）。前提 T-SIM-01 上限 1000、`warn_ratio` 0.9 |
 
 场景里的设备/批次编码对应 8013（租户 it-eap）的测试数据，换环境时改编码即可。
 
