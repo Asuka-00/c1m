@@ -1,7 +1,7 @@
 /**
  * KEYED_ENTITIES 通用 CRUD 的 mock（D87 补充二，先用于 alarm_code）：
  * - 缺 key → 422 missing（loc header，D81：先于请求体 / 404）；
- * - 同 key 不同请求体 → 422 value_error ctx.reason=reused；
+ * - 同 key 不同请求体 → 422 {code:'idempotency_key_reused'}（对象格式，D79 补充七 / D84）；
  * - 只缓存 2xx（D86），回放带 Idempotent-Replayed（D86 补充二）。
  */
 import { apiError, setMockReplayed } from './mock-utils'
@@ -26,15 +26,11 @@ export function createKeyedCrudMock(entity: string, seed: Row[] = []) {
     const hit = idem.get(key)
     if (hit) {
       if (hit.sig !== sig)
-        throw apiError(422, [
-          {
-            loc: ['header', 'Idempotency-Key'],
-            type: 'value_error',
-            code: 'value_error',
-            msg: 'Idempotency-Key reused with a different request',
-            ctx: { reason: 'reused' },
-          },
-        ])
+        // D79 补充七 / D84：本期 reused 仍是对象格式，等格式统一批次再改数组
+        throw apiError(422, {
+          code: 'idempotency_key_reused',
+          message: 'Idempotency-Key reused with a different request',
+        })
       setMockReplayed(true)
       return structuredClone(hit.out) as T
     }

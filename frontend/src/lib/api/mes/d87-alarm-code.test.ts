@@ -38,14 +38,14 @@ describe('D87 补充二 alarm_code', () => {
       ],
     })
   })
-  it('同 key 换请求体 → 422 ctx.reason=reused；同体回放带 Idempotent-Replayed', () => {
+  it('同 key 换请求体 → 422 对象格式 idempotency_key_reused；同体回放带 Idempotent-Replayed', () => {
     const a = m.create({ alid: '2001' }, 'K')
     expect(mockIdemHeaders()).toEqual({})
     expect(m.create({ alid: '2001' }, 'K')).toEqual(a)
     expect(mockIdemHeaders()).toEqual({ 'Idempotent-Replayed': 'true' })
     expect(st(() => m.create({ alid: '2002' }, 'K'))).toEqual({
       s: 422,
-      d: [expect.objectContaining({ ctx: { reason: 'reused' } })],
+      d: expect.objectContaining({ code: 'idempotency_key_reused' }),
     })
     expect(st(() => m.update('a1', { alid: 'x' }, 'K'))).toMatchObject({
       s: 422,
