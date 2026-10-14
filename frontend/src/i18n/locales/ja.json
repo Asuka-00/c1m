@@ -902,8 +902,18 @@
         "downstream": "下流産出",
         "customer_lot_no": "顧客ロット番号",
         "ownership": "所有区分",
-        "lot_status": "状態"
-      }
+        "lot_status": "状態",
+        "child_lot": "子ロット",
+        "child_seq": "位置",
+        "child_unit": "子ユニット",
+        "parent_lot": "親ロット",
+        "parent_wafer": "親ウェーハ",
+        "die_row": "ダイ行",
+        "die_col": "ダイ列"
+      },
+      "origins": "元ウェーハとダイ座標",
+      "dies": "このウェーハのダイの行き先",
+      "outOrigins": "下流子ロットの位置"
     },
     "holdrel": {
       "hint": "ホールド中のロットを確認・解除します。",
@@ -1431,6 +1441,13 @@
       "customer": "顧客",
       "lotNo": "顧客ロット番号",
       "errCustomer": "ロット {{n}}：顧客支給の場合は顧客を選択してください"
+    },
+    "over": {
+      "line": "{{material}} {{actual}} / {{planned}} {{uom}}（{{excess}} 超過）",
+      "toast": "BOM 使用量超過（トラックアウト済み・通知のみ）：{{lines}}",
+      "transformTo": "変換先：{{list}}",
+      "transformFrom": "変換元：{{list}}",
+      "dieQty": "ダイ数 {{n}}"
     }
   },
   "notify": {

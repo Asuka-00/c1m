@@ -1148,11 +1148,14 @@
         "bonus": "补数",
         "carrier_change": "换载具",
         "sort": "晶圆整理",
-        "priority": "优先级变更"
+        "priority": "优先级变更",
+        "transform": "单位转换",
+        "bom_over_consumption": "BOM 超量用料"
       },
       "genealogy_relation": {
         "split": "分批",
-        "merge": "合批"
+        "merge": "合批",
+        "transform": "单位转换"
       },
       "wo_status": {
         "draft": "草稿",

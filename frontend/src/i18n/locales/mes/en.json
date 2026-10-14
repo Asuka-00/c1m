@@ -1148,11 +1148,14 @@
         "bonus": "Bonus",
         "carrier_change": "Carrier change",
         "sort": "Wafer sort",
-        "priority": "Priority change"
+        "priority": "Priority change",
+        "transform": "Unit transform",
+        "bom_over_consumption": "BOM over-consumption"
       },
       "genealogy_relation": {
         "split": "Split",
-        "merge": "Merge"
+        "merge": "Merge",
+        "transform": "Unit transform"
       },
       "wo_status": {
         "draft": "Draft",

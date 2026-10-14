@@ -32,6 +32,45 @@ function setup() {
 afterEach(() => vi.restoreAllMocks())
 
 describe('useStageRun', () => {
+  it('F4 出站超量：出站成功 + 黄色提示，不拦截', async () => {
+    vi.spyOn(execApi, 'stage').mockResolvedValue({
+      auto: [],
+      lot: { on_hold: false },
+      results: [],
+      warnings: [
+        {
+          code: 'bom_over_consumption',
+          message: 'BOM over-consumption: AU 0.35/0.3 g',
+          lines: [
+            {
+              material: 'AU-WIRE',
+              actual: '0.35',
+              planned: 0.3,
+              uom: 'g',
+              excess: '0.05',
+            },
+          ],
+        },
+      ],
+    } as never)
+    const ok = vi.spyOn(toast, 'success')
+    const warn = vi.spyOn(toast, 'warning')
+    const { wrapper } = setup()
+    const { result } = await renderHook(
+      () => useStageRun(execCtx('running'), () => ({})),
+      { wrapper }
+    )
+    await act(async () => {
+      await result.current.run.mutateAsync({})
+    })
+    expect(ok).toHaveBeenCalled()
+    expect(warn).toHaveBeenCalledTimes(1)
+    const text = String(warn.mock.calls[0][0])
+    expect(text).toContain('AU-WIRE 0.35 / 0.3 g')
+    expect(text).toContain('0.05')
+    expect(text).not.toContain('BOM over-consumption:')
+  })
+
   it('成功：提示、失效 mes 查询，带强制放行原因时附 override', async () => {
     const stage = vi
       .spyOn(execApi, 'stage')

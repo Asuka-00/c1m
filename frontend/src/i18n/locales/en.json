@@ -902,8 +902,18 @@
         "downstream": "Downstream",
         "customer_lot_no": "Customer lot no.",
         "ownership": "Ownership",
-        "lot_status": "Status"
-      }
+        "lot_status": "Status",
+        "child_lot": "Child lot",
+        "child_seq": "Position",
+        "child_unit": "Child unit",
+        "parent_lot": "Parent lot",
+        "parent_wafer": "Parent wafer",
+        "die_row": "Die row",
+        "die_col": "Die col"
+      },
+      "origins": "Source wafers & die coordinates",
+      "dies": "Where this wafer's dies went",
+      "outOrigins": "Downstream child positions"
     },
     "holdrel": {
       "hint": "View and release held lots.",
@@ -1431,6 +1441,13 @@
       "customer": "Customer",
       "lotNo": "Customer lot no.",
       "errCustomer": "Lot {{n}}: select a customer for customer-owned material"
+    },
+    "over": {
+      "line": "{{material}} {{actual}} / {{planned}} {{uom}} (over by {{excess}})",
+      "toast": "BOM over-consumption (tracked out, notice only): {{lines}}",
+      "transformTo": "Converted to: {{list}}",
+      "transformFrom": "From: {{list}}",
+      "dieQty": "{{n}} dies"
     }
   },
   "notify": {

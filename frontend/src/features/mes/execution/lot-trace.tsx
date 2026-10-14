@@ -22,6 +22,7 @@ import {
   Trash2,
   TriangleAlert,
   Undo2,
+  Shuffle,
   type LucideIcon,
 } from 'lucide-react'
 import { useTenantKey } from '@/lib/api/hooks'
@@ -43,6 +44,7 @@ import { CustomerBadges } from '@/features/mes/common/customer'
 import { enumLabel, reasonLabel } from '@/features/mes/common/labels'
 import { RefSelect } from '@/features/mes/common/ref-select'
 import { ResultBadge } from './exec-parts'
+import { type OverLine, overLineText } from './over-consumption'
 import { GenealogyList } from './split-merge'
 
 const ICON: Record<string, [LucideIcon, string]> = {
@@ -64,6 +66,8 @@ const ICON: Record<string, [LucideIcon, string]> = {
   oos: [TriangleAlert, 'bg-amber-500'],
   split: [GitFork, 'bg-sky-600'],
   merge: [GitMerge, 'bg-violet-600'],
+  transform: [Shuffle, 'bg-cyan-600'],
+  bom_over_consumption: [TriangleAlert, 'bg-amber-400'],
 }
 
 type Check = {
@@ -108,6 +112,17 @@ function Details({ d }: { d: Record<string, unknown> }) {
   if (d.reason && typeof d.reason === 'string')
     facts.push(t('mes.trace.overrideReason', { r: d.reason }))
   if (d.sampling) facts.push(String(d.sampling))
+  // F4 单位转换：母批（role=input）去向子批；子批（role=output）来源母批与 die 数
+  if (d.transform_id) {
+    const to = d.to as string[] | undefined
+    const from = d.from as string[] | undefined
+    if (to?.length)
+      facts.push(t('mes.over.transformTo', { list: to.join(', ') }))
+    if (from?.length)
+      facts.push(t('mes.over.transformFrom', { list: from.join(', ') }))
+    if (d.die_qty != null)
+      facts.push(t('mes.over.dieQty', { n: String(d.die_qty) }))
+  }
   const kids = d.children as { code: string; qty: number }[] | undefined
   if (kids?.length)
     facts.push(
@@ -127,8 +142,19 @@ function Details({ d }: { d: Record<string, unknown> }) {
         list: srcs.map((c) => `${c.code} (${c.qty})`).join(', '),
       })
     )
+  const over = (d.lines as OverLine[] | undefined) ?? []
   return (
     <div className='space-y-1'>
+      {over.length > 0 && (
+        <ul
+          className='rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-100'
+          data-testid='over-lines'
+        >
+          {over.map((l, i) => (
+            <li key={i}>{overLineText(l)}</li>
+          ))}
+        </ul>
+      )}
       {facts.length > 0 && (
         <div className='flex flex-wrap gap-x-3 text-xs text-muted-foreground'>
           {facts.map((f, i) => (
@@ -155,7 +181,7 @@ function Details({ d }: { d: Record<string, unknown> }) {
 }
 
 /** 履历时间线（批次或晶圆）。 */
-function HistoryTimeline({ rows }: { rows: MesRow[] }) {
+export function HistoryTimeline({ rows }: { rows: MesRow[] }) {
   return (
     <ol className='relative space-y-4 border-s ps-6' data-testid='timeline'>
       {rows.map((h: MesRow) => {

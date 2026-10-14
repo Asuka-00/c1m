@@ -30,6 +30,18 @@ import { enumLabel } from '@/features/mes/common/labels'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { Pick } from './exec-parts'
 
+/** 单位转换位置映射的列（F4：从子批查回母晶圆和 die 坐标）。 */
+const ORIGIN_COLS = [
+  'child_lot',
+  'child_seq',
+  'child_unit',
+  'parent_lot',
+  'parent_wafer',
+  'die_row',
+  'die_col',
+  'qty',
+]
+
 const KINDS: TraceKind[] = [
   'lot',
   'wafer',
@@ -112,7 +124,18 @@ function TraceTable({
                 {cols.map((c) => (
                   <TableCell
                     key={c}
-                    className={c === 'code' || c === 'lot' ? 'font-mono' : ''}
+                    className={
+                      [
+                        'code',
+                        'lot',
+                        'child_lot',
+                        'parent_lot',
+                        'parent_wafer',
+                        'child_unit',
+                      ].includes(c)
+                        ? 'font-mono'
+                        : ''
+                    }
                   >
                     {c === 'code' && r.id ? (
                       <Link
@@ -261,12 +284,33 @@ function LotTraceBlock({
         rows={backward.materials}
         cols={['lot', 'step_seq', 'material_lot', 'qty', 'at']}
       />
+      {!!backward.origins?.length && (
+        <TraceTable
+          title={t('mes.traceq.origins')}
+          rows={backward.origins}
+          cols={ORIGIN_COLS}
+        />
+      )}
       <h3 className='font-semibold'>{t('mes.traceq.forward')}</h3>
       <TraceTable
         title={t('mes.traceq.outLots')}
         rows={forward?.lots ?? []}
         cols={LOT_COLS}
       />
+      {!!forward?.dies?.length && (
+        <TraceTable
+          title={t('mes.traceq.dies')}
+          rows={forward.dies}
+          cols={ORIGIN_COLS}
+        />
+      )}
+      {!!forward?.origins?.length && (
+        <TraceTable
+          title={t('mes.traceq.outOrigins')}
+          rows={forward.origins}
+          cols={ORIGIN_COLS}
+        />
+      )}
     </div>
   )
 }

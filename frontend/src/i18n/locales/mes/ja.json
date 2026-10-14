@@ -1148,11 +1148,14 @@
         "bonus": "追加",
         "carrier_change": "キャリア変更",
         "sort": "ウェーハソート",
-        "priority": "優先度変更"
+        "priority": "優先度変更",
+        "transform": "単位変換",
+        "bom_over_consumption": "BOM 使用量超過"
       },
       "genealogy_relation": {
         "split": "分割",
-        "merge": "統合"
+        "merge": "統合",
+        "transform": "単位変換"
       },
       "wo_status": {
         "draft": "下書き",

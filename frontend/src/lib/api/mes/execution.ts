@@ -1,4 +1,5 @@
 /** MES 批次执行：阶段作业、检查、Hold、拆合批。 */
+import type { StageWarning } from '@/features/mes/execution/over-consumption'
 import { http } from '../client'
 import type { MesRow } from './common'
 
@@ -162,8 +163,14 @@ export interface TraceResult {
     ownership?: string | null
     customer?: string | null
   }
-  backward?: { lots: TraceRow[]; steps: TraceRow[]; materials: TraceRow[] }
-  forward?: { lots: TraceRow[] }
+  backward?: {
+    lots: TraceRow[]
+    steps: TraceRow[]
+    materials: TraceRow[]
+    /** 单位转换的位置映射（B5）：子批位置 ← 母批 / 母晶圆 / die 坐标 */
+    origins?: TraceRow[]
+  }
+  forward?: { lots: TraceRow[]; origins?: TraceRow[]; dies?: TraceRow[] }
   lots?: TraceRow[]
 }
 /** 按客户批号追溯：每个匹配批次带客户信息和各自的正反向追溯（kind=customer_lot）。 */
@@ -470,6 +477,8 @@ export interface StageResult {
   oos_action?: string | null
   e10?: Record<string, unknown> | null
   next_step?: { id: string; seq: number } | null
+  /** 出站提示（F4：bom_over_consumption 只提示、不拦截） */
+  warnings?: StageWarning[]
 }
 
 /** 十进制数量：P1 新接口按定点字符串返回（D50），老接口为数字；只用 `lib/decimal` 显示。 */

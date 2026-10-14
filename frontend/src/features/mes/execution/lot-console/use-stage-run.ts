@@ -14,6 +14,7 @@ import {
 } from '@/lib/api/mes/execution'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
+import { overWarningText } from '../over-consumption'
 
 const detailOf = (e: unknown) =>
   e instanceof AxiosError
@@ -91,6 +92,9 @@ export function useStageRun(cx: ExecContext, body: () => StageBody) {
           .filter(Boolean)
           .join(' · ')
       )
+      // F4：BOM 超量只提示（黄色），出站已经完成、不拦截
+      const over = overWarningText(r.warnings)
+      if (over) toast.warning(over, { duration: 10_000 })
       qc.invalidateQueries({ queryKey: ['mes'] })
     },
     onError: (e) => {

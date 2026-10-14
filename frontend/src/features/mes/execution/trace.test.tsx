@@ -114,4 +114,39 @@ describe('F6 追溯显示客户批号和归属', () => {
       .toHaveTextContent('自有')
     expect(document.querySelector('[data-testid=lot-customer-lot]')).toBeNull()
   })
+
+  it('F4：从子批反查到母晶圆和 die 坐标（来源位置表）', async () => {
+    const { s } = await show({
+      kind: 'lot',
+      target: { id: 'S1', code: 'S1', ownership: 'own' },
+      backward: {
+        ...empty,
+        lots: [
+          { id: 'W', code: 'LOT-W', relation: 'transform', qty: 22, level: 1 },
+        ],
+        origins: [
+          {
+            child_lot: 'S1',
+            child_seq: 1,
+            child_unit: null,
+            parent_lot: 'LOT-W',
+            parent_wafer: 'WF001-01',
+            die_row: 3,
+            die_col: 7,
+            qty: 1,
+          },
+        ],
+      },
+      forward: { lots: [] },
+    })
+    await s.getByLabelText(t('mes.traceq.code')).fill('S1')
+    await userEvent.click(s.getByTestId('trace-search'))
+    await expect
+      .element(s.getByText(t('mes.traceq.origins'), { exact: false }))
+      .toBeInTheDocument()
+    await expect.element(s.getByText('WF001-01')).toBeInTheDocument()
+    await expect
+      .element(s.getByText(t('mes.enum.genealogy_relation.transform')))
+      .toBeInTheDocument()
+  })
 })

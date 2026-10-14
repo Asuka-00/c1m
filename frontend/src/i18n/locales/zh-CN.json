@@ -902,8 +902,18 @@
         "downstream": "下游产出",
         "customer_lot_no": "客户批号",
         "ownership": "物料归属",
-        "lot_status": "状态"
-      }
+        "lot_status": "状态",
+        "child_lot": "子批",
+        "child_seq": "子批位置",
+        "child_unit": "子单元",
+        "parent_lot": "母批",
+        "parent_wafer": "母晶圆",
+        "die_row": "die 行",
+        "die_col": "die 列"
+      },
+      "origins": "来源晶圆与 die 坐标",
+      "dies": "该晶圆的 die 去向",
+      "outOrigins": "下游子批位置"
     },
     "holdrel": {
       "hint": "查看并释放 Hold 中的批次。",
@@ -1431,6 +1441,13 @@
       "customer": "客户",
       "lotNo": "客户批号",
       "errCustomer": "第 {{n}} 批：客户来料须选择客户"
+    },
+    "over": {
+      "line": "{{material}} {{actual}} / {{planned}} {{uom}}（超 {{excess}}）",
+      "toast": "BOM 超量用料（已出站，仅提示）：{{lines}}",
+      "transformTo": "转换为：{{list}}",
+      "transformFrom": "来源：{{list}}",
+      "dieQty": "die 数 {{n}}"
     }
   },
   "notify": {
