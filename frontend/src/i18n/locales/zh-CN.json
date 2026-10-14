@@ -2059,6 +2059,37 @@
       "openRecord": "查看打标记录",
       "patternInvalidHint": "追溯码格式配置无效，格式以服务端校验为准",
       "leftStepHint": "批次已离开打标工步，不能再检验"
+    },
+    "qualHistory": {
+      "title": "履历",
+      "loading": "加载中…",
+      "empty": "暂无履历（旧数据不补履历）",
+      "more": "加载更多",
+      "system": "系统",
+      "col": {
+        "at": "时间",
+        "action": "动作",
+        "changes": "变更",
+        "reasonId": "原因",
+        "comment": "说明",
+        "approvedBy": "批准人",
+        "username": "操作人"
+      },
+      "action": {
+        "granted": "授予",
+        "renewed": "延期",
+        "changed": "变更",
+        "deactivated": "停用",
+        "reactivated": "恢复启用",
+        "expired": "已过期"
+      },
+      "field": {
+        "certified_on": "取证日期",
+        "expires_on": "到期日",
+        "is_active": "启用",
+        "operation_id": "工序",
+        "equipment_type_id": "设备类型"
+      }
     }
   },
   "notify": {

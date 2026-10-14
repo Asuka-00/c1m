@@ -2059,6 +2059,37 @@
       "openRecord": "Open marking record",
       "patternInvalidHint": "Trace code pattern config is invalid; the server will validate format",
       "leftStepHint": "The lot has left the marking step; inspection is no longer allowed"
+    },
+    "qualHistory": {
+      "title": "History",
+      "loading": "Loading…",
+      "empty": "No history yet (older records have none)",
+      "more": "Load more",
+      "system": "System",
+      "col": {
+        "at": "Time",
+        "action": "Action",
+        "changes": "Changes",
+        "reasonId": "Reason",
+        "comment": "Comment",
+        "approvedBy": "Approved by",
+        "username": "By"
+      },
+      "action": {
+        "granted": "Granted",
+        "renewed": "Renewed",
+        "changed": "Changed",
+        "deactivated": "Deactivated",
+        "reactivated": "Reactivated",
+        "expired": "Expired"
+      },
+      "field": {
+        "certified_on": "Certified on",
+        "expires_on": "Expires on",
+        "is_active": "Active",
+        "operation_id": "Operation",
+        "equipment_type_id": "Equipment type"
+      }
     }
   },
   "notify": {

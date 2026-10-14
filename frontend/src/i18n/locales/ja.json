@@ -2059,6 +2059,37 @@
       "openRecord": "マーキング記録を開く",
       "patternInvalidHint": "トレースコード形式の設定が無効です。形式はサーバーで検証します",
       "leftStepHint": "ロットは印字工程を通過済みのため、検査できません"
+    },
+    "qualHistory": {
+      "title": "履歴",
+      "loading": "読み込み中…",
+      "empty": "履歴はありません（既存データには履歴がありません）",
+      "more": "さらに読み込む",
+      "system": "システム",
+      "col": {
+        "at": "日時",
+        "action": "操作",
+        "changes": "変更内容",
+        "reasonId": "理由",
+        "comment": "コメント",
+        "approvedBy": "承認者",
+        "username": "操作者"
+      },
+      "action": {
+        "granted": "付与",
+        "renewed": "延長",
+        "changed": "変更",
+        "deactivated": "無効化",
+        "reactivated": "再有効化",
+        "expired": "期限切れ"
+      },
+      "field": {
+        "certified_on": "認定日",
+        "expires_on": "有効期限",
+        "is_active": "有効",
+        "operation_id": "工程",
+        "equipment_type_id": "設備タイプ"
+      }
     }
   },
   "notify": {
