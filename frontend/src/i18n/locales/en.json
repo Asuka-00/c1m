@@ -2167,6 +2167,7 @@
       "deactivateDesc": "Blocks track-in; needs a reason and comment. Change expiry separately.",
       "reactivateDesc": "After reactivation the expiry date decides track-in; no reason needed.",
       "expiresTip": "Empty means permanent; valid through the expiry date (site time zone)",
+      "expiresUnchanged": "Same as the current expiry; nothing to save",
       "reasonTip": "Reason code (category: operator qualification)",
       "approverTip": "The approver cannot be you or the holder"
     }

@@ -3,7 +3,7 @@ import { t } from '@/i18n'
 import { QUAL_COMMENT_MAX } from '@/lib/api/mes/qual-history'
 
 export type QualOp = 'deactivate' | 'renew' | 'reactivate'
-export interface QualActionValues {
+interface QualActionValues {
   expires_on: string
   reason_id: string
   comment: string
@@ -42,4 +42,9 @@ export function qualActionBody(
     ...base,
     approved_by: v.approved_by.trim(),
   }
+}
+
+/** QA P3-2：改有效期时新值与原值相同（含原本永久且仍留空）视为未修改，禁止保存 */
+export function qualExpiresUnchanged(original: unknown, next: string): boolean {
+  return String(original ?? '') === next
 }

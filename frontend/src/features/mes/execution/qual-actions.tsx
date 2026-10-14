@@ -30,6 +30,7 @@ import { useMesEntity } from '@/features/mes/common/use-mes-meta'
 import {
   qualActionErrors,
   qualActionBody,
+  qualExpiresUnchanged,
   type QualOp,
 } from './qual-action-rules'
 import { qualReasonMessage } from './qual-history-format'
@@ -106,6 +107,8 @@ function Body({
     enabled: op !== 'reactivate',
   })
   const errs = qualActionErrors(op, v)
+  const unchanged =
+    op === 'renew' && qualExpiresUnchanged(row.expires_on, v.expires_on)
   const m = useMutation({
     mutationFn: () => {
       const body = qualActionBody(op, v)
@@ -151,6 +154,14 @@ function Body({
                 title={t('mes.qualAction.expiresTip')}
                 onChange={(e) => setV({ ...v, expires_on: e.target.value })}
               />
+              {unchanged && (
+                <p
+                  className='text-sm text-muted-foreground'
+                  data-testid='qual-expires-unchanged'
+                >
+                  {t('mes.qualAction.expiresUnchanged')}
+                </p>
+              )}
             </div>
           )}
           <div className='flex flex-col gap-1'>
@@ -209,7 +220,8 @@ function Body({
           {t('common.cancel')}
         </Button>
         <Button
-          disabled={m.isPending}
+          disabled={m.isPending || unchanged}
+          title={unchanged ? t('mes.qualAction.expiresUnchanged') : undefined}
           data-testid='qual-action-submit'
           onClick={() => {
             setTried(true)

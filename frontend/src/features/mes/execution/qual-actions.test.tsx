@@ -4,7 +4,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
 import { mesApi } from '@/lib/api/mes/common'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { qualActionBody, qualActionErrors } from './qual-action-rules'
+import {
+  qualActionBody,
+  qualActionErrors,
+  qualExpiresUnchanged,
+} from './qual-action-rules'
 import { QualActions } from './qual-actions'
 
 const V = { expires_on: '', reason_id: '', comment: '', approved_by: '' }
@@ -68,6 +72,33 @@ const wrap = (row: Record<string, unknown>, canWrite = true) => {
   )
 }
 afterEach(() => vi.restoreAllMocks())
+
+describe('QA P3-2 有效期未改禁止保存', () => {
+  it('规则：相同日期 / 原永久仍留空 = 未改', () => {
+    expect(qualExpiresUnchanged('2026-12-31', '2026-12-31')).toBe(true)
+    expect(qualExpiresUnchanged(null, '')).toBe(true)
+    expect(qualExpiresUnchanged(undefined, '')).toBe(true)
+    expect(qualExpiresUnchanged(null, '2026-12-31')).toBe(false)
+    expect(qualExpiresUnchanged('2026-12-31', '')).toBe(false)
+  })
+  it.each([
+    ['定期', '2026-12-31', '2026-11-01'],
+    ['永久', null, '2026-11-01'],
+  ])('页面（原%s）：未改时保存禁用并提示，改后可用', async (_n, exp, next) => {
+    vi.spyOn(mesApi, 'list').mockResolvedValue({ data: [], count: 0 } as never)
+    const s = await render(wrap({ id: 'q1', is_active: true, expires_on: exp }))
+    await s.getByTestId('qual-act-renew').click()
+    await expect.element(s.getByTestId('qual-action-submit')).toBeDisabled()
+    await expect
+      .element(s.getByTestId('qual-expires-unchanged'))
+      .toHaveTextContent(t('mes.qualAction.expiresUnchanged'))
+    await s.getByLabelText(t('mes.qualHistory.field.expires_on')).fill(next)
+    await expect.element(s.getByTestId('qual-action-submit')).toBeEnabled()
+    await expect
+      .element(s.getByTestId('qual-expires-unchanged'))
+      .not.toBeInTheDocument()
+  })
+})
 
 describe('资质行操作页面', () => {
   it('改有效期（缩短）：带 key 与 approved_by 走 PATCH', async () => {
