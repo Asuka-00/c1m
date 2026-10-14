@@ -4,6 +4,7 @@
 （路由另按 ``router_priority`` 稳定排序）。新增模块需在此按依赖顺序导入其 ``module.py``。
 """
 
+from app.mes.alarm import module as _mes_alarm  # noqa: F401
 from app.mes.common import module as _mes_common  # noqa: F401
 from app.mes.equipment import module as _mes_equipment  # noqa: F401
 from app.mes.execution import module as _mes_execution  # noqa: F401

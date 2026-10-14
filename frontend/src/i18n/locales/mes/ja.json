@@ -1,6 +1,7 @@
 {
   "mes": {
     "module": {
+      "alarm": "設備アラーム",
       "common": "共通",
       "equipment": "設備",
       "exec": "生産実行",
@@ -17,6 +18,9 @@
       "wh": "倉庫"
     },
     "entity": {
+      "alarm_code": "アラームコード",
+      "alarm_log": "アラーム履歴",
+      "alarm_lot": "アラーム関連ロット",
       "dict_type": "データ辞書",
       "dict_item": "辞書項目",
       "code_rule": "採番ルール",
@@ -110,6 +114,51 @@
       "audit_log": "監査ログ"
     },
     "field": {
+      "alarm_code": {
+        "equipment_type": "設備タイプ",
+        "equipment": "設備（個別上書き）",
+        "alid": "ALID",
+        "alcd_category": "ALCD 分類",
+        "severity": "重大度",
+        "text_en": "テキスト（英）",
+        "text_zh": "テキスト（中）",
+        "text_ja": "テキスト（日）",
+        "category": "分類",
+        "action": "連動",
+        "target_e10_state": "遷移先 E10 状態",
+        "hold_reason": "ホールド理由",
+        "require_qual_on_clear": "解除後 Qual 必要",
+        "disposition": "処置",
+        "is_active": "有効"
+      },
+      "alarm_log": {
+        "equipment": "設備",
+        "sub_unit": "サブユニット",
+        "alarm_code": "アラームコード",
+        "unregistered": "未登録",
+        "alid": "ALID",
+        "alcd_raw": "ALCD（生値）",
+        "alarm_text": "テキスト",
+        "severity": "重大度",
+        "action": "連動",
+        "alarm_status": "状態",
+        "set_at": "発生日時",
+        "cleared_at": "解除日時",
+        "cleared_by": "解除者",
+        "clear_source": "解除ソース",
+        "clear_event_id": "解除イベント ID",
+        "hold_ids": "連動ホールド",
+        "e10_change": "E10 連動",
+        "raw": "生データ",
+        "comment": "コメント",
+        "source": "ソース",
+        "external_event_id": "外部イベント ID",
+        "username": "ユーザー"
+      },
+      "alarm_lot": {
+        "alarm_log": "アラーム",
+        "lot": "ロット"
+      },
       "dict_type": {
         "code": "コード",
         "name": "名称",
@@ -1068,6 +1117,9 @@
       }
     },
     "help": {
+      "alarm_code": {
+        "hold_reason": "空欄：システム理由 equipment_alarm"
+      },
       "code_rule": {
         "pattern": "トークン：{YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}"
       },
@@ -1138,6 +1190,36 @@
       }
     },
     "enum": {
+      "alarm_severity": {
+        "info": "情報",
+        "warning": "警告",
+        "minor": "軽度",
+        "major": "重度",
+        "critical": "致命的"
+      },
+      "alarm_category": {
+        "process": "プロセス",
+        "hardware": "ハードウェア",
+        "safety": "安全",
+        "material": "資材",
+        "communication": "通信",
+        "other": "その他"
+      },
+      "alarm_action": {
+        "none": "連動なし",
+        "hold_lot": "ロットホールド",
+        "hold_equipment": "設備状態変更",
+        "hold_both": "両方"
+      },
+      "alarm_status": {
+        "active": "発生中",
+        "cleared": "解除済"
+      },
+      "alarm_source": {
+        "manual": "手動",
+        "eap": "EAP",
+        "simulator": "シミュレータ"
+      },
       "status": {
         "draft": "下書き",
         "active": "有効",
@@ -1217,7 +1299,8 @@
       },
       "e10_source": {
         "manual": "手動",
-        "auto": "自動"
+        "auto": "自動",
+        "equipment": "設備"
       },
       "pm_result": {
         "ok": "合格",
@@ -1742,11 +1825,13 @@
     "mes-pm_plan": "PM 計画",
     "mes-downtime": "停止記録",
     "mes-e10_history": "E10 状態履歴",
+    "mes-alarm_log": "装置アラーム記録",
     "mes-tool": "消耗品・治具寿命",
     "mes-equipment_material_mount": "装置資材装着記録",
     "mes-equipment_qual": "Qual タスク",
     "mes-equipment-master": "装置マスタ",
     "mes-e10-model": "E10 状態設定",
+    "mes-alarm_code": "アラームコード",
     "mes-dc_result": "測定データ",
     "mes-dc-config": "データ収集設定",
     "mes-defect_code": "欠陥コード",
@@ -1847,6 +1932,8 @@
     "members__write": "ユーザー管理",
     "config__read": "システム設定閲覧",
     "config__write": "システム設定編集",
+    "mes_alarm__read": "設備アラーム·閲覧",
+    "mes_alarm__write": "設備アラーム·編集",
     "mes_common__read": "共通·閲覧",
     "mes_common__write": "共通·編集",
     "mes_equipment__read": "設備·閲覧",
@@ -1917,6 +2004,8 @@
     "members__write": "許可：ユーザー管理",
     "config__read": "許可：システム設定閲覧",
     "config__write": "許可：システム設定編集",
+    "mes_alarm__read": "許可：設備アラーム·閲覧",
+    "mes_alarm__write": "許可：設備アラーム·編集",
     "mes_common__read": "許可：共通·閲覧",
     "mes_common__write": "許可：共通·編集",
     "mes_equipment__read": "許可：設備·閲覧",

@@ -319,6 +319,8 @@ ENUMS.update(
         "e10_source": [
             ("manual", "Manual|手动|手動"),
             ("auto", "Automatic|自动|自動"),
+            # D53-3：报警等设备上报触发
+            ("equipment", "Equipment|设备|設備"),
         ],
         "pm_result": [
             ("ok", "OK|合格|合格"),

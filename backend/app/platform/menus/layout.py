@@ -79,6 +79,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-pm_plan", "PM Plan|PM 计划|PM 計画"),
         ("mes-downtime", "Downtime|停机记录|停止記録"),
         ("mes-e10_history", "E10 History|E10 状态履历|E10 状態履歴"),
+        ("mes-alarm_log", "Equipment Alarms|设备报警记录|装置アラーム記録"),
         ("mes-tool", "Consumable Life|耗材/治具寿命|消耗品・治具寿命"),
         (
             "mes-equipment_material_mount",
@@ -87,6 +88,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-equipment_qual", "Qual Task|Qual 任务|Qual タスク"),
         ("mes-equipment-master", "Equipment Master|机台主数据|装置マスタ"),
         ("mes-e10-model", "E10 State Configuration|E10 状态配置|E10 状態設定"),
+        ("mes-alarm_code", "Alarm Codes|报警代码|アラームコード"),
     ],
     "g-quality": [
         ("mes-dc_result", "Metrology / DC Data|量测数据|測定データ"),

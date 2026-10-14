@@ -126,7 +126,7 @@ def test_defect_and_reason_codes(client: TestClient, db: Session) -> None:
         "reason_code", {"code": "EQ-DOWN", "name": "dup", "reason_type": "hold"}, 409
     )
     hold = m.list("reason_code", reason_type="hold")["data"]
-    assert [x["code"] for x in hold if x["code"] != "qtime_expired"] == ["EQ-DOWN"]
+    assert [x["code"] for x in hold if x["code"] not in ("qtime_expired", "equipment_alarm")] == ["EQ-DOWN"]
     assert m.list("defect_code", is_killer="true")["count"] == 1
 
 

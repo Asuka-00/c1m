@@ -15,7 +15,10 @@ register(
             "app.mes.execution.checks.types",
             "app.mes.execution.events",
         ),
-        routers=("app.mes.execution.router:router",),
+        routers=(
+            "app.mes.execution.router:router",
+            "app.mes.execution.router_alarm:router",
+        ),
         menus=MENUS,
         tenant_seed="app.mes.execution.seed:seed_system_reasons",
     )

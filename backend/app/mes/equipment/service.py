@@ -7,6 +7,9 @@ from app.mes.equipment.maint import (
     e10_change as e10_change,
 )
 from app.mes.equipment.maint import (
+    e10_log as e10_log,
+)
+from app.mes.equipment.maint import (
     equipment_board as equipment_board,
 )
 from app.mes.equipment.maint import (
