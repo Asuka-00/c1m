@@ -50,6 +50,15 @@ def test_transform_undo_restores_and_retransform(
     _maps(f, [w["code"] for w in _wafers(f, lot)])
     r, src = _transform(f, lot)
     tid, (ch,) = r["transform"]["id"], r["children"]
+    # 追溯返回带转换 id（前端在追溯页提供撤销入口）
+    tr = f.c.get(
+        f"{EXEC}/trace", headers=f.m.h, params={"kind": "lot", "code": lot["code"]}
+    ).json()
+    assert [x["transform_id"] for x in tr["forward"]["lots"]] == [tid]
+    tr = f.c.get(
+        f"{EXEC}/trace", headers=f.m.h, params={"kind": "lot", "code": ch["code"]}
+    ).json()
+    assert [x["transform_id"] for x in tr["backward"]["lots"]] == [tid]
     # TRF-11：撤销（不带请求体也可以）
     res = f.c.post(f"{TF}/{tid}/undo", headers=f.m.h)
     assert res.status_code == 200, res.text
@@ -66,10 +75,31 @@ def test_transform_undo_restores_and_retransform(
     assert m.list("lot_genealogy", parent_lot=lot["id"])["count"] == 0
     hs = m.list("lot_history", lot=lot["id"], action="transform_undo")["data"]
     assert len(hs) == 1 and hs[0]["at"].endswith("Z")
-    # 再撤一次：转换已不存在
-    f.post(f"{TF}/{tid}/undo", {}, 404)
+    assert out["undone_at"].endswith("Z") and out["undone_by"]
+    assert out["carrier_restored"] is False
+    assert hs[0]["details"]["carrier_restored"] is False
+    # D54-2：转换记录保留并标记撤销，输出已删
+    trs = m.list("unit_transform", id=tid)["data"]
+    assert len(trs) == 1 and trs[0]["undone_at"].endswith("Z")
+    assert m.list("unit_transform_output", unit_transform=tid)["count"] == 0
+    # 再撤一次：已撤销 → 409，lots 为空
+    d = f.post(f"{TF}/{tid}/undo", {}, 409)["detail"]
+    assert d["code"] == "transform_undo_blocked" and d["lots"] == []
     # TRF-11c：撤销后可以再次转换，谱系无残留
     r2 = f.post(TF, _body(f, [lot], src))
     assert f.lot(lot)["lot_status"] == "converted"
     g = m.list("lot_genealogy", parent_lot=lot["id"])["data"]
     assert [x["child_lot_id"] for x in g] == [r2["children"][0]["id"]]
+
+
+def test_migration_0027_up_down() -> None:
+    """0027 可重复执行：mes_unit_transform 的三个撤销列。"""
+    from app.mes.equipment.tests.test_qual import _migration_roundtrip
+
+    cols = ("undone_at", "undone_by", "undo_reason")
+
+    def check(i: Any) -> tuple[frozenset[str], bool]:
+        have = {c["name"] for c in i.get_columns("mes_unit_transform")}
+        return frozenset(set(cols) & have), True
+
+    _migration_roundtrip("0026_tool_life", "b6", check, cols)

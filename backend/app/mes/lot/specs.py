@@ -841,6 +841,22 @@ register(
             F("warnings", "json", "Warnings|提示|警告", list=False),
             F("username", "str", "User|用户|ユーザー", max_length=255, search=True),
             F("at", "datetime", "Time|时间|日時"),
+            # D54-2：撤销后保留记录，标记撤销时间 / 人 / 原因
+            F("undone_at", "datetime", "Undone at|撤销时间|取消日時"),
+            F(
+                "undone_by",
+                "str",
+                "Undone by|撤销人|取消者",
+                max_length=255,
+                list=False,
+            ),
+            F(
+                "undo_reason",
+                "str",
+                "Undo reason|撤销原因|取消理由",
+                max_length=300,
+                list=False,
+            ),
             # 预留给 EAP 上报（本期人工接口固定 manual / 空）
             F(
                 "source",

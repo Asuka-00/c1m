@@ -681,6 +681,9 @@
         "warnings": "提示",
         "username": "用户",
         "at": "时间",
+        "undone_at": "撤销时间",
+        "undone_by": "撤销人",
+        "undo_reason": "撤销原因",
         "source": "来源",
         "external_event_id": "外部事件号"
       },

@@ -681,6 +681,9 @@
         "warnings": "Warnings",
         "username": "User",
         "at": "Time",
+        "undone_at": "Undone at",
+        "undone_by": "Undone by",
+        "undo_reason": "Undo reason",
         "source": "Source",
         "external_event_id": "External event ID"
       },

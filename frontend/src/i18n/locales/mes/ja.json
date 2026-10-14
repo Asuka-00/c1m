@@ -681,6 +681,9 @@
         "warnings": "警告",
         "username": "ユーザー",
         "at": "日時",
+        "undone_at": "取消日時",
+        "undone_by": "取消者",
+        "undo_reason": "取消理由",
         "source": "ソース",
         "external_event_id": "外部イベント ID"
       },

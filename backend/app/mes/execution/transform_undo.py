@@ -6,10 +6,13 @@
   下游批次（谱系里不是母批）；否则 409 ``transform_undo_blocked``，``lots`` 列出原因；
 - 所有母批仍是 converted（没被别的操作动过）。
 
-撤销在一个事务里完成：删除子批（及条单元、履历、谱系）、unit_origin、转换输出 / 输入和
-转换记录本身（坐标图引用随之释放），母批恢复到转换前状态（取转换时写的履历
-``from_status``），晶圆 converted → waiting；母批写履历 ``transform_undo``（details 留下
-转换快照），母批和子批都写审计。删除时若撞上未预料的外键引用，整体回滚并返回 409。
+撤销在一个事务里完成：删除子批（及条单元、履历、谱系）、unit_origin、转换输出 / 输入
+（坐标图引用随之释放）；转换记录本身保留（D54-2），写 ``undone_at`` / ``undone_by`` /
+``undo_reason``，追溯时看得到「曾转换、已撤销」；已撤销的再撤返回 409
+``transform_undo_blocked``（``lots`` 为空）。母批恢复到转换前状态（取转换时写的履历
+``from_status``），晶圆 converted → waiting；载具不恢复（D54-3），履历 details 里写
+``carrier_restored=false``；母批写履历 ``transform_undo``（details 留下转换快照），母批和
+子批都写审计。删除时若撞上未预料的外键引用，整体回滚并返回 409。
 """
 
 import uuid
@@ -64,6 +67,8 @@ def undo(
     if not found:
         raise HTTPException(status_code=404, detail="Record not found")
     tr = dict(found)
+    if tr.get("undone_at") is not None:
+        raise _blocked("transform already undone", [])
     ins = _rows(s, tid, "unit_transform_input", unit_transform_id=transform_id)
     outs = _rows(s, tid, "unit_transform_output", unit_transform_id=transform_id)
     parent_ids = list(dict.fromkeys(x["lot_id"] for x in ins))
@@ -147,7 +152,24 @@ def undo(
             }
             for x in ins
         ],
+        # D54-3：撤销不恢复载具，P3 再评估
+        "carrier_restored": False,
+        "note": "carrier not restored|载具未恢复|キャリアは復元されません",
     }
+    reason = body.get("comment")
+    if body.get("reason_id"):
+        rc = TABLES["reason_code"]
+        code = (
+            conn(s)
+            .execute(
+                sa.select(rc.c.code).where(
+                    rc.c.tenant_id == tid, rc.c.id == body["reason_id"]
+                )
+            )
+            .scalar()
+        )
+        if code:
+            reason = f"{code}: {reason}" if reason else code
     try:
         for c in children:
             audit(s, tid, LOT, "transform_undo", c, user, {"lot": (c["code"], None)})
@@ -177,7 +199,14 @@ def undo(
                 sa.delete(lt).where(lt.c.tenant_id == tid, lt.c.id.in_(child_ids))
             )
         conn(s).execute(
-            sa.delete(tt).where(tt.c.tenant_id == tid, tt.c.id == transform_id)
+            sa.update(tt)
+            .where(tt.c.tenant_id == tid, tt.c.id == transform_id)
+            .values(
+                undone_at=at,
+                undone_by=getattr(user, "username", None) or str(user.id),
+                undo_reason=(reason or "")[:300] or None,
+                updated_at=at,
+            )
         )
         wt = TABLES["wafer"]
         for p in parents:
@@ -233,4 +262,8 @@ def undo(
         "transform_type": tr["transform_type"],
         "parents": serialize(s, tid, LOT, rows),
         "removed_children": [c["code"] for c in children],
+        "undone_at": at.isoformat().replace("+00:00", "Z"),
+        "undone_by": getattr(user, "username", None) or str(user.id),
+        "undo_reason": (reason or "")[:300] or None,
+        "carrier_restored": False,
     }

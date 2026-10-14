@@ -21,6 +21,11 @@ def _code(s: Session, tid: uuid.UUID, ent: str, rid: Any) -> str | None:
     return r["code"] if r else None
 
 
+def _transform_id(s: Session, tid: uuid.UUID, child_id: Any) -> str | None:
+    rows = find(s, tid, "unit_transform_output", lot_id=child_id)
+    return str(rows[0]["unit_transform_id"]) if rows else None
+
+
 def _walk(s: Session, tid: uuid.UUID, start: Any, up: bool) -> list[Row]:
     """沿谱系递归：``up`` 为真找来源（母批），否则找产出（子批）。"""
     a, b = (
@@ -46,6 +51,10 @@ def _walk(s: Session, tid: uuid.UUID, start: Any, up: bool) -> list[Row]:
                     "via": _code(s, tid, "lot", lid),
                     "level": depth,
                     "at": g["at"],
+                    # 转换产生的谱系带转换 id，前端可在追溯页直接撤销（B6 / D54）
+                    "transform_id": _transform_id(s, tid, lid if up else o)
+                    if g["relation"] == "transform"
+                    else None,
                 }
                 nxt.append(o)
         todo = nxt
