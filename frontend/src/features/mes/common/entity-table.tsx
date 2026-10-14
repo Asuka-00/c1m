@@ -175,7 +175,7 @@ export function EntityTable({
             ? 'text-right tabular-nums'
             : undefined,
         cell: (r: MesRow) =>
-          CELLS[e.code]?.[f.name]?.(r) ?? cellValue(e, r, f.name),
+          CELLS[e.code]?.[f.name]?.(r, e) ?? cellValue(e, r, f.name),
       })),
     ...(e.versioned
       ? [

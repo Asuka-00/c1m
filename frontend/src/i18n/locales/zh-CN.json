@@ -1662,7 +1662,7 @@
       "timezone": "时区：{{tz}}",
       "rangeInvalid": "请选择有效的日期区间（开始不晚于结束）。",
       "reworkMoves": "返工 Move（批 / 片）",
-      "hold": "Hold 时长（小时）"
+      "hold": "平均 Hold 时长（小时）"
     },
     "qual": {
       "notQualified": "{{user}} 不具备工序 {{op}} 的有效资质，不能进站，且不可放行。请先取得或续期资质。",

@@ -1662,7 +1662,7 @@
       "timezone": "Time zone: {{tz}}",
       "rangeInvalid": "Select a valid date range (start no later than end).",
       "reworkMoves": "Rework moves (lots / wafers)",
-      "hold": "Hold time (h)"
+      "hold": "Avg hold time (h)"
     },
     "qual": {
       "notQualified": "{{user}} has no valid qualification for operation {{op}} and cannot track in. This cannot be overridden. Obtain or renew the qualification first.",

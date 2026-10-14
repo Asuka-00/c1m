@@ -1,12 +1,9 @@
 /** 实体专用的单元格渲染与行编辑 / 删除规则。 */
 import { t } from '@/i18n'
-import type { MesRow } from '@/lib/api/mes/common'
+import type { MesEntity, MesRow } from '@/lib/api/mes/common'
 import { Badge } from '@/components/ui/badge'
 import { ToolLife } from '@/features/mes/execution/exec-actions'
-import {
-  qualState,
-  QUAL_WARN_DAYS,
-} from '@/features/mes/execution/operator-qual'
+import { qualState, warnDaysOf } from '@/features/mes/execution/operator-qual'
 import { WoProgress } from '@/features/mes/planning/wo-actions'
 import { DowntimeEnd, DueCell, HeldAt } from './due-cells'
 import { enumLabel } from './labels'
@@ -15,7 +12,7 @@ import { RefLink } from './ref-link'
 /** 实体专用单元格渲染器：实体 -> 字段 -> 单元格。 */
 export const CELLS: Record<
   string,
-  Record<string, (r: MesRow) => React.ReactNode>
+  Record<string, (r: MesRow, e?: MesEntity) => React.ReactNode>
 > = {
   work_order: {
     started_qty: (r) => <WoProgress row={r} />,
@@ -40,13 +37,13 @@ export const CELLS: Record<
       />
     ),
   },
-  // 人员资质（P3 草案）：过期红色，30 天内到期黄色，停用不预警
+  // 人员资质（D62/D64）：过期红色，元数据 warn_days（缺省 30）天内到期黄色，停用不预警
   operator_qual: {
-    expires_on: (r) => (
+    expires_on: (r, e) => (
       <DueCell
         date={r.expires_on as string | null}
         done={qualState(r) === 'inactive'}
-        warnDays={QUAL_WARN_DAYS}
+        warnDays={warnDaysOf(e?.warn_days)}
         overLabel={t('mes.due.expired')}
         warnLabel={t('mes.due.expiring')}
       />

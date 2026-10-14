@@ -4,6 +4,7 @@ import { t } from '@/i18n'
 import { useTenantKey } from '@/lib/api/hooks'
 import {
   qualExpiringApi,
+  sortExpiring,
   type QualExpiringReport,
   type QualExpiringRow,
 } from '@/lib/api/mes/qual-expiring'
@@ -13,7 +14,7 @@ import { DataCard } from './report-parts'
 
 /** 汇总视图（无数据请求，便于测试）。 */
 export function QualExpiringView({ data }: { data?: QualExpiringReport }) {
-  const rows = [...(data?.rows ?? [])].sort((a, b) => a.days_left - b.days_left)
+  const rows = sortExpiring(data?.rows ?? [])
   return (
     <>
       <div className='flex flex-wrap items-center gap-3 text-sm text-muted-foreground'>

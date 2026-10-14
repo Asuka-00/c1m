@@ -37,7 +37,7 @@ export interface CtMoveMetrics {
   rework_move_qty: DecimalValue
   /** 平均工序 CT（小时），无数据 null */
   ct_avg_hours: DecimalValue | null
-  /** Hold 时长（小时，CT 内不扣除，单独列；前端假设字段名），无数据 null */
+  /** 平均 Hold 时长（按出站批次平均，同 ct_avg_hours；小时，CT 内不扣除，单独列；前端假设字段名），无数据 null */
   hold_hours: DecimalValue | null
 }
 

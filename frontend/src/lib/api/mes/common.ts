@@ -69,6 +69,8 @@ export interface MesEntity {
   can_read: boolean
   can_write: boolean
   fields: MesField[]
+  /** 预警天数（operator_qual 等实体元数据下发，可缺省） */
+  warn_days?: number | null
 }
 
 /** `GET /mes/_meta` 的返回：全部实体、枚举与当前用户的 MES 权限。 */
