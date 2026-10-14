@@ -6,15 +6,18 @@
 """
 
 import uuid
-from typing import Annotated, Any
+from datetime import datetime
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.deps import SessionDep
+from app.core.pagination import ListParamsDep
 from app.mes.common.guard import MB, need, perm_body
 from app.mes.common.query import one
 from app.mes.map import service as svc
+from app.mes.map.listing import MapListOut, list_maps
 from app.platform.auth.deps import CurrentTenant
 
 router = APIRouter(prefix="/mes/map", tags=["mes"])
@@ -79,6 +82,39 @@ def map_preview(session: SessionDep, ctx: CurrentTenant, body: MapBody) -> Any:
 def map_import(session: SessionDep, ctx: CurrentTenant, body: MapBody) -> Any:
     """Import a substrate map CSV; re-importing a substrate creates a new version."""
     return svc.map_import(session, ctx.id, body.model_dump(), ctx.user)
+
+
+@router.get("/maps", response_model=MapListOut)
+def map_list(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    params: ListParamsDep,
+    substrate_id: str | None = Query(None, max_length=100),
+    lot_id: uuid.UUID | None = None,
+    bin_set_id: uuid.UUID | None = None,
+    substrate_type: Literal["wafer", "strip"] | None = None,
+    imported_from: datetime | None = None,
+    imported_to: datetime | None = None,
+    latest_only: bool = False,
+) -> MapListOut:
+    """Imported substrate maps (no cells), paginated (page_size <= 100).
+
+    sort_by: imported_at (default, desc), substrate_id, map_version, total_qty,
+    good_qty; q searches substrate ID / file name; imported_from / imported_to is
+    a half-open range [from, to) and accepts any UTC offset."""
+    need(ctx, READ)
+    return list_maps(
+        session,
+        ctx.id,
+        params,
+        substrate_id=substrate_id,
+        lot_id=lot_id,
+        bin_set_id=bin_set_id,
+        substrate_type=substrate_type,
+        imported_from=imported_from,
+        imported_to=imported_to,
+        latest_only=latest_only,
+    )
 
 
 @router.get("/substrates/{substrate_id}")
