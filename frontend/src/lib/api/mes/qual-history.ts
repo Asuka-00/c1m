@@ -247,6 +247,20 @@ export function qualIntent(body: Partial<QualInput> & QualReason): QualIntent {
 
 /** 请求体 422（Q6-2）：停用 / 延期必填 reason_id、comment，延期另需 approved_by；comment ≤300。 */
 export function qualBodyCheck(body: Partial<QualInput> & QualReason) {
+  // D85 补充二：同时停用和改到期日 → 422 value_error conflicting_fields（请求体阶段，先于 404）
+  if (
+    body.is_active === false &&
+    body.expires_on != null &&
+    body.expires_on !== ''
+  )
+    throw valueErr(
+      'is_active',
+      'is_active=false cannot be combined with expires_on',
+      {
+        reason: 'conflicting_fields',
+        fields: ['is_active', 'expires_on'],
+      }
+    )
   const intent = qualIntent(body)
   if (intent !== 'other') {
     if (blank(body.reason_id)) throw missing('reason_id')
@@ -418,15 +432,15 @@ function mockUpdate(
   return x
 }
 
-function mockRemove(id: string) {
+function mockRemove(id: string): never {
   const x = findQ(id)
-  if (store.log.some((l) => l.qual_id === x.id))
-    throw apiError(409, {
-      code: 'referenced',
-      message: 'qualification has history; deactivate it instead',
-      tables: ['mes_operator_qual_log'],
-    })
-  store.q = store.q.filter((y) => y.id !== id)
+  // D84 / 架构师：资质只能停用；DELETE 通过 D81 校验后总是 409 referenced，顶层 ref_type / ref_count
+  throw apiError(409, {
+    code: 'referenced',
+    message: 'qualification cannot be deleted; deactivate it instead',
+    ref_type: 'operator_qual_log',
+    ref_count: store.log.filter((l) => l.qual_id === x.id).length,
+  })
 }
 
 function mockHistory(

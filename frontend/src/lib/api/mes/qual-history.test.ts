@@ -249,10 +249,14 @@ describe('B6 资质履历 mock', () => {
       },
       k()
     )
-    // granted 也写履历 → 409 referenced
+    // 通过 D81 校验后总是 409 referenced
     expect(await fail(api.remove(g.id, 'rm1'))).toMatchObject({
       status: 409,
-      detail: { code: 'referenced' },
+      detail: {
+        code: 'referenced',
+        ref_type: 'operator_qual_log',
+        ref_count: 1,
+      },
     })
   })
   it('授予 / PATCH（变更、停用、延期、恢复）缺 key 都 422 missing', async () => {
@@ -284,11 +288,23 @@ describe('B6 资质履历 mock', () => {
     ])
       expect(await fail(api.update('q1', b, noKey))).toMatchObject(hdr)
   })
-  it('有履历的资质删除 409 referenced', async () => {
-    expect(await fail(api.remove('q1', k()))).toMatchObject({
+  it('D84 有履历的资质删除 409 referenced：顶层 ref_type / ref_count，无 tables', async () => {
+    await api.update('q1', { is_active: false, ...R }, k())
+    const r = await fail(api.remove('q1', k()))
+    expect(r).toMatchObject({
       status: 409,
-      detail: { code: 'referenced', tables: ['mes_operator_qual_log'] },
+      detail: {
+        code: 'referenced',
+        ref_type: 'operator_qual_log',
+        ref_count: 2,
+      },
     })
+    expect(r.detail).not.toHaveProperty('tables')
+    expect(r.detail).not.toHaveProperty('ctx')
+    // 停用发 operator_qual.deactivated
+    expect(qualMockEvents().map((e) => e.type)).toContain(
+      'operator_qual.deactivated'
+    )
   })
 
   it('过期不自动停用：扫描写 expired 履历 + 事件，去重；进站 409 check_blocked 带 expires_on', async () => {
@@ -332,5 +348,58 @@ describe('B6 资质履历 mock', () => {
     expect(qualMockWarnDays()).toBe(30)
     setQualMockWarnDays(400)
     expect(qualMockWarnDays()).toBe(30)
+  })
+  it('D85 补充二：is_active=false + expires_on → 422 conflicting_fields，先于 404', async () => {
+    for (const id of ['q1', 'nope'])
+      expect(
+        await fail(
+          api.update(
+            id,
+            {
+              is_active: false,
+              expires_on: '2030-01-01',
+              ...R,
+              approved_by: 'lead',
+            },
+            k()
+          )
+        )
+      ).toMatchObject({
+        status: 422,
+        detail: [
+          { type: 'value_error', ctx: { reason: 'conflicting_fields' } },
+        ],
+      })
+  })
+  it('授予不要求原因 / 批准人，可直接建已过期资质；履历行带三列；进站 ctx 用 qual_id、YYYY-MM-DD', async () => {
+    const g = await api.grant(
+      {
+        username: 'op7',
+        operation_id: 'CP',
+        equipment_type_id: null,
+        certified_on: '2025-01-01',
+        expires_on: '2026-01-01',
+        is_active: true,
+      },
+      k()
+    )
+    const [row] = (await hist.history(g.id)).rows
+    expect(row).toMatchObject({
+      action: 'granted',
+      reason_id: null,
+      comment: null,
+      approved_by: null,
+    })
+    expect(Object.keys(row)).toEqual(
+      expect.arrayContaining(['comment', 'reason_id', 'approved_by'])
+    )
+    const e = mockTrackInQualCheck('op7', 'CP')!
+    const ctx = (
+      e.response!.data as {
+        detail: { results: { ctx: { qual_id: string; expires_on: string } }[] }
+      }
+    ).detail.results[0].ctx
+    expect(ctx.qual_id).toBe(g.id)
+    expect(ctx.expires_on).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 })

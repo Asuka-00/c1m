@@ -137,7 +137,15 @@ export const ROW_RULES: Record<
     edit: (r) => r.receipt_status === 'draft',
     remove: (r) => r.receipt_status === 'draft',
   },
+  // 架构师（删除问题）：资质只能停用，不能删除；后端 DELETE 总是 409 referenced
+  operator_qual: {
+    remove: () => false,
+  },
 }
+
+/** 行是否显示删除按钮（实体规则之上；没有规则默认可删）。 */
+export const canRemoveRow = (code: string, r: MesRow) =>
+  ROW_RULES[code]?.remove?.(r) ?? true
 
 /** 已完结的工单状态（不再计算逾期）。 */
 const WO_DONE = ['completed', 'closed', 'cancelled']

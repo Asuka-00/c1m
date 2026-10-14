@@ -79,5 +79,8 @@ describe('资质履历页签', () => {
       t('mes.qualHistory.err.holderApproval')
     )
     expect(t('mes.qualHistory.err.holderApproval')).not.toMatch(/mes\./)
+    expect(
+      qualErrorMessage(await run({ is_active: false, approved_by: 'lead' }))
+    ).toBe(t('mes.qualHistory.err.conflictingFields'))
   })
 })

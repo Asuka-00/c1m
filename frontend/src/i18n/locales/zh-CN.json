@@ -2099,7 +2099,8 @@
       },
       "err": {
         "selfApproval": "批准人不能是提交人本人",
-        "holderApproval": "批准人不能是该资质的持有人"
+        "holderApproval": "批准人不能是该资质的持有人",
+        "conflictingFields": "停用和修改到期日不能在同一次提交里，请分两次操作"
       }
     }
   },

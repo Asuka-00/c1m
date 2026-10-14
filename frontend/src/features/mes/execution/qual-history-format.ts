@@ -32,11 +32,14 @@ export function qualErrorMessage(e: unknown): string {
       const r = (d as { ctx?: { reason?: unknown } }[]).find(
         (x) =>
           x?.ctx?.reason === 'self_approval' ||
-          x?.ctx?.reason === 'holder_approval'
+          x?.ctx?.reason === 'holder_approval' ||
+          x?.ctx?.reason === 'conflicting_fields'
       )?.ctx?.reason
       if (r === 'self_approval') return t('mes.qualHistory.err.selfApproval')
       if (r === 'holder_approval')
         return t('mes.qualHistory.err.holderApproval')
+      if (r === 'conflicting_fields')
+        return t('mes.qualHistory.err.conflictingFields')
     }
   }
   return errorMessage(e)

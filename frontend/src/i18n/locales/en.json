@@ -2099,7 +2099,8 @@
       },
       "err": {
         "selfApproval": "The approver cannot be the person submitting the request",
-        "holderApproval": "The approver cannot be the holder of this qualification"
+        "holderApproval": "The approver cannot be the holder of this qualification",
+        "conflictingFields": "Deactivating and changing the expiry date cannot be done in one request; do them separately"
       }
     }
   },

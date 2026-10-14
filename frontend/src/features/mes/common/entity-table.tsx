@@ -44,7 +44,7 @@ import { EntityForm } from './entity-form'
 import { EntityTree } from './entity-tree'
 import { entityLabel, fieldLabel, rowLabel, statusLabel } from './labels'
 import { mesErrorMessage } from './required'
-import { CELLS, ROW_RULES } from './row-rules'
+import { CELLS, canRemoveRow, ROW_RULES } from './row-rules'
 import type { MesExtraColumn } from './types'
 import { useMesFilters } from './use-mes-filters'
 
@@ -242,7 +242,7 @@ export function EntityTable({
               : undefined
           }
           onDelete={
-            editable(r) && (ROW_RULES[e.code]?.remove?.(r) ?? true)
+            editable(r) && canRemoveRow(e.code, r)
               ? () => s.openDelete(r)
               : undefined
           }
