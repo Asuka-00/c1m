@@ -660,11 +660,17 @@ export function reprintErrors(
   input: Pick<PrintInput, 'reason_id' | 'comment'>
 ): ('reason_id' | 'comment' | 'comment_too_long')[] {
   const out: ('reason_id' | 'comment' | 'comment_too_long')[] = []
-  if (!input.reason_id?.trim()) out.push('reason_id')
-  if (!input.comment?.trim()) out.push('comment')
-  else if (input.comment.length > COMMENT_MAX) out.push('comment_too_long')
+  // D78 补充五：纯空白按正则判断，不用 trim；长度按码点（D79 补充二）
+  if (input.reason_id == null || isBlankTraceCode(input.reason_id))
+    out.push('reason_id')
+  if (input.comment == null || isBlankTraceCode(input.comment))
+    out.push('comment')
+  else if (commentTooLong(input.comment)) out.push('comment_too_long')
   return out
 }
+
+/** comment 是否超过 300 码点。 */
+export const commentTooLong = (v: string) => [...v].length > COMMENT_MAX
 
 /** 检验最终结果：读回码与系统号不一致时强制 fail（D78 Q3）。 */
 export const effectiveResult = (
@@ -711,6 +717,46 @@ export function trackOutBlock(
 /** 出站 check_blocked（marking_inspection）的 ctx.reason（D79 补充）。 */
 export const MARKING_BLOCK_REASONS = ['not_marked', 'pending', 'fail'] as const
 export type MarkingBlockReason = (typeof MARKING_BLOCK_REASONS)[number]
+
+/**
+ * mock：出站时的打标拦截（D78 Q5 / D79 补充 5、6 / D82）。不拦返回 null；拦截时返回 409 check_blocked：
+ * `ctx.check=marking_inspection`、`overridable=false`、`ctx.reason`，有未作废主记录（含未首打）时带 `marking_id`。
+ * results[] 同时带同样的 ctx，供出站面板逐项显示。
+ */
+export function mockTrackOutMarkingCheck(lotId: string) {
+  const lot = LOTS.find((l) => l.id === lotId || l.code === lotId)
+  if (!lot) return null
+  const hasTpl = store.t.some(
+    (y) =>
+      y.product_id === lot.product_id &&
+      y.customer_id === lot.customer_id &&
+      y.status === 'approved'
+  )
+  if (!hasTpl) return null
+  const live = liveRec(lot.id)
+  const reason = trackOutBlock(live ? [live] : [], true)
+  if (!reason) return null
+  const ctx: Record<string, unknown> = { check: INSPECT_BLOCK_CHECK, reason }
+  if (live) {
+    ctx.marking_id = live.id
+    ctx.trace_code = live.trace_code
+  }
+  return apiError(409, {
+    code: 'check_blocked',
+    message: `marking inspection ${reason}`,
+    overridable: false,
+    ctx,
+    results: [
+      {
+        check_type: INSPECT_BLOCK_CHECK,
+        result: 'block',
+        overridable: false,
+        message: `marking inspection ${reason}`,
+        ctx,
+      },
+    ],
+  })
+}
 
 /** 请求体签名（同 key 不同内容 → 422 idempotency_key_reused）。 */
 export const markingSignature = (op: string, body: object) =>
@@ -885,6 +931,12 @@ const err422 = (
   msg: string,
   ctx?: Record<string, unknown>
 ) => apiError(422, [{ loc: ['body', loc], type, code: type, msg, ctx }])
+/** D79 补充四：超长 value_error ctx={reason:max_length, max_length:N}。 */
+const commentLongErr = () =>
+  err422('comment', 'value_error', 'comment: at most 300 characters', {
+    reason: 'max_length',
+    max_length: COMMENT_MAX,
+  })
 const scrappedErr = () =>
   err409('invalid_transition', 'lot or marking record is scrapped or voided')
 
@@ -910,15 +962,12 @@ function withIdem<T>(
   pre?.()
   const hit = idem.get(key)
   if (hit) {
+    // D57 / D80 补充二：本期维持对象格式 {code, message}
     if (hit.sig !== sig)
-      throw apiError(422, [
-        {
-          loc: ['header', 'Idempotency-Key'],
-          type: 'idempotency_key_reused',
-          code: 'idempotency_key_reused',
-          msg: 'Idempotency-Key reused with a different body',
-        },
-      ])
+      throw apiError(422, {
+        code: 'idempotency_key_reused',
+        message: 'Idempotency-Key reused with a different body',
+      })
     return structuredClone(hit.out) as T
   }
   const out = f()
@@ -1040,10 +1089,11 @@ function mockNewVersion(id: string): MarkingTemplate {
 }
 
 function mockUpdate(id: string, input: Partial<TemplateInput>) {
+  // D81：请求体 422 → 404 → 409 template_readonly
+  validateTemplate(input, false)
   const tpl = findTpl(id)
   if (!isEditable(tpl))
     throw err409('template_readonly', 'approved template is read-only')
-  validateTemplate(input, false)
   Object.assign(tpl, pickBody(input, MARKING_BODY.template))
   return tpl
 }
@@ -1142,10 +1192,18 @@ function mockCreateRec(input: CreateInput): MarkingRecord {
   return rec
 }
 
-/** D79-3：打印（含首打），seq 后端分配；seq>1 必填 reason_id + comment，且上一次检验须为 fail。 */
+/** 打印请求体 422（与 seq 无关的部分）：comment 超长。 */
+function printBody(input: PrintInput) {
+  if (typeof input.comment === 'string' && commentTooLong(input.comment))
+    throw commentLongErr()
+}
+
+/**
+ * D79-3：打印（含首打），seq 后端分配；seq>1 必填 reason_id + comment（D78；D79 补充二 5：不要求上次检验为 fail）。
+ * 顺序：404 → 重打缺原因 422 missing（取决于 seq，只能查到主记录后判断）→ 已报废 / 作废 409。
+ */
 function mockPrint(id: string, input: PrintInput): MarkingRecord {
   const r = findRec(id)
-  if (isLocked(r) || lotOf(r)?.scrapped) throw scrappedErr()
   const seq = r.prints.length + 1
   if (seq > 1) {
     const miss = reprintErrors(input)
@@ -1153,11 +1211,8 @@ function mockPrint(id: string, input: PrintInput): MarkingRecord {
       throw err422('reason_id', 'missing', 'reason_id: field required')
     if (miss.includes('comment'))
       throw err422('comment', 'missing', 'comment: field required')
-    if (miss.includes('comment_too_long'))
-      throw err422('comment', 'string_too_long', 'comment: max 300', {
-        max_length: COMMENT_MAX,
-      })
   }
+  if (isLocked(r) || lotOf(r)?.scrapped) throw scrappedErr()
   const at = mockNow().toISOString()
   r.prints.push({
     id: `${r.id}-p${seq}`,
@@ -1245,20 +1300,17 @@ function mockInspect(id: string, input: InspectInput): InspectOut {
 
 /** 作废请求体 422（N-E2）。 */
 function voidBody(input: VoidInput) {
-  if (!input.reason_id?.trim())
+  const miss = reprintErrors(input)
+  if (miss.includes('reason_id'))
     throw err422('reason_id', 'missing', 'reason_id: field required')
-  if (!input.comment?.trim())
+  if (miss.includes('comment'))
     throw err422('comment', 'missing', 'comment: field required')
-  if (input.comment.length > COMMENT_MAX)
-    throw err422('comment', 'string_too_long', 'comment: max 300', {
-      max_length: COMMENT_MAX,
-    })
+  if (miss.includes('comment_too_long')) throw commentLongErr()
 }
 
 function mockVoid(id: string, input: VoidInput) {
   const r = findRec(id)
   if (isLocked(r) || lotOf(r)?.scrapped) throw scrappedErr()
-  voidBody(input)
   r.voided = true
   r.voided_at = mockNow().toISOString()
   r.voided_by = mockUser
@@ -1349,7 +1401,8 @@ export const mockMarkingApi: MarkingApi = {
       withIdem(
         key,
         sig(`print:${id}`, pickBody(input, MARKING_BODY.print)),
-        () => mockPrint(id, input)
+        () => mockPrint(id, input),
+        () => printBody(input)
       )
     ),
   inspect: (id, input, key) =>

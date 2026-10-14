@@ -267,7 +267,7 @@ describe('打标作业 mock（D78/D79）', () => {
       await detail(api.print(r.id, { equipment_id: 'X' }, 'p1'))
     ).toMatchObject({
       status: 422,
-      detail: [{ type: 'idempotency_key_reused' }],
+      detail: { code: 'idempotency_key_reused' },
     })
     expect(await detail(api.create({ lot_id: 'lot1' }, 'c2'))).toMatchObject({
       status: 409,
@@ -316,7 +316,14 @@ describe('打标作业 mock（D78/D79）', () => {
     expect(n.id).not.toBe(r.id)
     expect(n.trace_code).toBe('26420002')
     expect(n.prints.map((p) => p.seq)).toEqual([1])
+    // D81：重打缺原因 422 先于作废 409
     expect(await detail(api.print(r.id, {}, 'kx'))).toMatchObject({
+      status: 422,
+      detail: [{ type: 'missing', loc: ['body', 'reason_id'] }],
+    })
+    expect(
+      await detail(api.print(r.id, { reason_id: 'R1', comment: '重打' }, 'kx2'))
+    ).toMatchObject({
       status: 409,
       detail: { code: 'invalid_transition' },
     })

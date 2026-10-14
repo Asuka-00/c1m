@@ -53,8 +53,17 @@ export function markingErrorMessage(err: unknown): string {
     if (d && typeof d === 'object' && !Array.isArray(d)) {
       const o = d as { code?: string; ctx?: Record<string, unknown> }
       const ctx = o.ctx ?? {}
-      if (o.code === 'check_blocked' && ctx.check === 'marking_inspection')
+      // D79 补充 6：按 ctx.reason 区分未打标 / 待检 / 不合格
+      if (o.code === 'check_blocked' && ctx.check === 'marking_inspection') {
+        const v = { trace: String(ctx.trace_code ?? '—') }
+        if (ctx.reason === 'not_marked') return t('mes.marking.checkNotMarked')
+        if (ctx.reason === 'pending') return t('mes.marking.checkPending', v)
+        if (ctx.reason === 'fail') return t('mes.marking.checkBlocked', v)
         return t('mes.marking.code.inspect_blocked')
+      }
+      // D57 / D80 补充二：对象格式 reused
+      if (o.code === 'idempotency_key_reused')
+        return t('mes.marking.code.idempotency_key_reused')
       if (o.code && (MARKING_CODES as readonly string[]).includes(o.code))
         return t(`mes.marking.code.${o.code}`, {
           expected: String(ctx.expected ?? ''),
@@ -84,6 +93,15 @@ export function markingErrorMessage(err: unknown): string {
         if (type === 'value_error' && x.ctx?.reason === 'unknown_placeholder')
           return t('mes.marking.err.unknownPlaceholder', {
             name: `{${String(x.ctx.placeholder ?? '')}}`,
+          })
+        // comment 超长（value_error max_length，旧 string_too_long 兼容）
+        if (
+          field === 'comment' &&
+          (type === 'string_too_long' ||
+            (type === 'value_error' && x.ctx?.reason === 'max_length'))
+        )
+          return t('mes.marking.err.commentTooLong', {
+            n: Number(x.ctx?.max_length ?? 300),
           })
         // D79 补充四：超长 ctx={reason:max_length, max_length:N}；格式 ctx={reason:pattern, pattern}
         if (
