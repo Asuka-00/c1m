@@ -583,7 +583,8 @@
         "carrier": "载具不可用",
         "slots": "槽位不正确",
         "tooLong": "内容过长",
-        "invalid": "输入有误"
+        "invalid": "输入有误",
+        "customerLotRequired": "客户来料须填写客户批号"
       }
     },
     "exec": {
@@ -1440,7 +1441,8 @@
       "ownership": "物料归属",
       "customer": "客户",
       "lotNo": "客户批号",
-      "errCustomer": "第 {{n}} 批：客户来料须选择客户"
+      "errCustomer": "第 {{n}} 批：客户来料须选择客户",
+      "errLotNo": "第 {{n}} 批：客户来料须填写客户批号"
     },
     "over": {
       "line": "{{material}} {{actual}} / {{planned}} {{uom}}（超 {{excess}}）",

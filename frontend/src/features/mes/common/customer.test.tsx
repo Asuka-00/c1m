@@ -9,6 +9,7 @@ import {
   customerBody,
   type CustomerDraft,
   customerErrors,
+  customerRowErrors,
   emptyCustomer,
   ownershipText,
 } from './customer-fields'
@@ -49,7 +50,55 @@ describe('F6 客户来料字段', () => {
         emptyCustomer(),
         { ...emptyCustomer(), ownership: 'customer' },
       ])
-    ).toEqual([t('mes.cust.errCustomer', { n: 2 })])
+    ).toEqual([
+      t('mes.cust.errCustomer', { n: 2 }),
+      t('mes.cust.errLotNo', { n: 2 }),
+    ])
+  })
+
+  it('O-F6-1：有名称显示「编码 · 名称」，没名称只显示编码；历史空值按自有', () => {
+    expect(
+      ownershipText({
+        ownership: 'customer',
+        customer: 'C1',
+        customer_name: 'Acme',
+      })
+    ).toBe('客户来料 · C1 · Acme')
+    expect(
+      ownershipText({
+        ownership: 'customer',
+        customer: 'C1',
+        customer_name: null,
+      })
+    ).toBe('客户来料 · C1')
+    expect(
+      ownershipText({ ownership: 'customer', customer_label: 'C1 · Acme' })
+    ).toBe('客户来料 · C1 · Acme')
+    expect(ownershipText({})).toBe('自有')
+    expect(ownershipText({ ownership: 'customer' })).toBe('客户来料')
+  })
+
+  it('D52 行级校验：客户来料缺客户 / 客户批号（去空格），自有不校验', () => {
+    expect(
+      customerRowErrors([
+        { ...emptyCustomer(), customer_lot_no: '' },
+        {
+          ownership: 'customer',
+          customer_id: 'c1',
+          customer_label: 'C1',
+          customer_lot_no: '  ',
+        },
+        {
+          ownership: 'customer',
+          customer_id: null,
+          customer_label: null,
+          customer_lot_no: 'CL',
+        },
+      ])
+    ).toEqual({
+      1: { customer_lot_no: t('mes.start.fe.customerLotRequired') },
+      2: { customer_id: t('mes.start.fe.customerRequired') },
+    })
   })
 
   it('归属文本三语', async () => {

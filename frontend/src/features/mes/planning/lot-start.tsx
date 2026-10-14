@@ -25,13 +25,17 @@ import { Label } from '@/components/ui/label'
 import { Page } from '@/components/crud'
 import { IconButton } from '@/components/icon-button'
 import { cellValue } from '@/features/mes/common/cells'
-import { CustomerFields, FieldMsg } from '@/features/mes/common/customer'
+import {
+  CustomerFields,
+  FieldMsg,
+  OwnershipLabel,
+} from '@/features/mes/common/customer'
 import {
   customerBody,
   type CustomerDraft,
   customerErrors,
   emptyCustomer,
-  ownershipText,
+  customerRowErrors,
 } from '@/features/mes/common/customer-fields'
 import { RefSelect } from '@/features/mes/common/ref-select'
 import { mesErrorMessage } from '@/features/mes/common/required'
@@ -230,6 +234,8 @@ export default function LotStartPage() {
       return { ...all, [i]: next }
     })
   }
+  // 前端校验（D52 等）与后端 422 合并，按批次行标在字段下
+  const clientErrs = useMemo(() => customerRowErrors(lots), [lots])
   const errOf = (i: number, f: string) => lotErrs[i]?.[f]
   const hasLotErrs = Object.values(lotErrs).some((r) => Object.keys(r).length)
 
@@ -488,7 +494,7 @@ export default function LotStartPage() {
                               <CustomerFields
                                 value={l}
                                 onChange={(patch) => set(i, patch)}
-                                errors={lotErrs[i]}
+                                errors={{ ...clientErrs[i], ...lotErrs[i] }}
                               />
                             </td>
                             <td className='p-2'>
@@ -662,10 +668,12 @@ export default function LotStartPage() {
                                 : '—'}
                           </td>
                           <td className='p-2'>
-                            {ownershipText({
-                              ownership: lot.ownership,
-                              customer_label: lot.customer_label,
-                            })}
+                            <OwnershipLabel
+                              info={{
+                                ownership: lot.ownership,
+                                customer_label: lot.customer_label,
+                              }}
+                            />
                           </td>
                           <td className='p-2 font-mono'>
                             {String(lot.customer_lot_no || '—')}

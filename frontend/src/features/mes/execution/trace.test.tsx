@@ -58,6 +58,7 @@ describe('F6 追溯显示客户批号和归属', () => {
           ownership: 'customer',
           customer_id: 'c1',
           customer: 'C1',
+          customer_name: 'Acme',
           backward: empty,
           forward: {
             lots: [
@@ -87,6 +88,8 @@ describe('F6 追溯显示客户批号和归属', () => {
     const res = s.getByTestId('customer-lot-result')
     await expect.element(res).toHaveTextContent('LOT-A')
     await expect.element(res).toHaveTextContent('LOT-A.1')
+    await expect.element(res).toHaveTextContent('客户来料 · C1 · Acme')
+    // 下游子批没有名称：只显示编码
     await expect.element(res).toHaveTextContent('客户来料 · C1')
     await expect.element(res).toHaveTextContent('CL-001')
     await expect

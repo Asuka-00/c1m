@@ -14,10 +14,12 @@ interface Item {
   loc?: unknown[]
   msg?: string
   type?: string
+  code?: string
 }
 
 const RULES: [RegExp | string, string][] = [
   ['extra_forbidden', 'mes.start.fe.notAllowed'],
+  ['customer_lot_required', 'mes.start.fe.customerLotRequired'],
   [/customer required/, 'mes.start.fe.customerRequired'],
   [/customer not found/, 'mes.start.fe.customerNotFound'],
   [/customer only for ownership/, 'mes.start.fe.customerOwnOnly'],
@@ -31,7 +33,10 @@ const RULES: [RegExp | string, string][] = [
 function message(it: Item): string {
   const msg = it.msg ?? ''
   for (const [re, key] of RULES)
-    if (typeof re === 'string' ? it.type === re : re.test(msg)) return t(key)
+    if (
+      typeof re === 'string' ? it.type === re || it.code === re : re.test(msg)
+    )
+      return t(key)
   if (it.type === 'string_too_long') return t('mes.start.fe.tooLong')
   return t('mes.start.fe.invalid')
 }

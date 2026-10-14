@@ -24,8 +24,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Page } from '@/components/crud'
-import { CustomerBadges } from '@/features/mes/common/customer'
-import { ownershipText } from '@/features/mes/common/customer-fields'
+import { CustomerBadges, OwnershipLabel } from '@/features/mes/common/customer'
 import { enumLabel } from '@/features/mes/common/labels'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { Pick } from './exec-parts'
@@ -65,7 +64,7 @@ const LOT_COLS = [
 /** 单元格显示：时间格式化、数组（消耗 / 下游）压缩成文本。 */
 function cell(col: string, v: unknown, row: TraceRow): React.ReactNode {
   if (col === 'ownership')
-    return row.code || row.lot_no ? ownershipText(row as never) : '—'
+    return row.code || row.lot_no ? <OwnershipLabel info={row as never} /> : '—'
   if (v === null || v === undefined || v === '') return '—'
   if (col === 'at') return fmtDateTime(String(v))
   if (col === 'relation') return enumLabel('genealogy_relation', String(v))

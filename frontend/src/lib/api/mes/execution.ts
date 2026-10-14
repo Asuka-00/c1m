@@ -162,6 +162,7 @@ export interface TraceResult {
     customer_lot_no?: string | null
     ownership?: string | null
     customer?: string | null
+    customer_name?: string | null
   }
   backward?: {
     lots: TraceRow[]
@@ -181,6 +182,7 @@ export interface CustomerLotTrace {
   customer_lot_no: string | null
   ownership: string | null
   customer: string | null
+  customer_name?: string | null
   backward?: { lots: TraceRow[]; steps: TraceRow[]; materials: TraceRow[] }
   forward?: { lots: TraceRow[] }
 }

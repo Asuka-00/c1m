@@ -144,6 +144,7 @@ describe('开批向导：客户来料（F6）', () => {
     await row1.getByLabelText(t('mes.cust.ownership')).selectOptions('customer')
     await row1.getByText(t('common.select')).click()
     await s.getByRole('option', { name: 'C1 · Acme' }).click()
+    await row1.getByLabelText(t('mes.cust.lotNo')).fill('CL-9')
     await next(s).click()
     await s
       .getByRole('button', {
@@ -168,5 +169,59 @@ describe('开批向导：客户来料（F6）', () => {
           ).length
       )
       .toBe(0)
+  })
+
+  it('D52：客户来料客户批号为空（含只有空格）时前端拦住并标在该行；自有行不受影响', async () => {
+    const start = vi.spyOn(woApi, 'start')
+    const s = await show()
+    const row0 = s.getByTestId('lot-cust-0')
+    await row0.getByLabelText(t('mes.cust.ownership')).selectOptions('customer')
+    await row0.getByText(t('common.select')).click()
+    await s.getByRole('option', { name: 'C1 · Acme' }).click()
+    await row0.getByLabelText(t('mes.cust.lotNo')).fill('   ')
+    await expect
+      .element(row0.getByTestId('lot-field-error'))
+      .toHaveTextContent(t('mes.start.fe.customerLotRequired'))
+    await expect.element(next(s)).toBeDisabled()
+    expect(
+      document.querySelectorAll(
+        '[data-testid=lot-cust-1] [data-testid=lot-field-error]'
+      ).length
+    ).toBe(0)
+    await row0.getByLabelText(t('mes.cust.lotNo')).fill('CL-1')
+    await expect.element(next(s)).toBeEnabled()
+    expect(start).not.toHaveBeenCalled()
+  })
+
+  it('后端 422 customer_lot_required：三语提示标到对应批次行', async () => {
+    vi.spyOn(woApi, 'start').mockRejectedValue(
+      err422([
+        {
+          loc: ['body', 'lots', 0, 'customer_lot_no'],
+          msg: 'lots.0: customer lot no. required for customer-owned material',
+          type: 'customer_lot_required',
+          code: 'customer_lot_required',
+        },
+      ])
+    )
+    const s = await show()
+    const row0 = s.getByTestId('lot-cust-0')
+    await row0.getByLabelText(t('mes.cust.ownership')).selectOptions('customer')
+    await row0.getByText(t('common.select')).click()
+    await s.getByRole('option', { name: 'C1 · Acme' }).click()
+    await row0.getByLabelText(t('mes.cust.lotNo')).fill('X')
+    await next(s).click()
+    await s
+      .getByRole('button', {
+        name: t('mes.start.confirmStart', { count: 2, total: 50 }),
+      })
+      .click()
+    await expect
+      .element(s.getByTestId('lot-cust-0').getByTestId('lot-field-error'))
+      .toHaveTextContent(t('mes.start.fe.customerLotRequired'))
+    for (const lng of ['en', 'ja']) {
+      await i18n.changeLanguage(lng)
+      expect(t('mes.start.fe.customerLotRequired')).not.toContain('mes.start')
+    }
   })
 })

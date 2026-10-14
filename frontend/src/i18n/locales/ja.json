@@ -583,7 +583,8 @@
         "carrier": "キャリアが使用できません",
         "slots": "スロットが正しくありません",
         "tooLong": "長すぎます",
-        "invalid": "入力に誤りがあります"
+        "invalid": "入力に誤りがあります",
+        "customerLotRequired": "顧客支給の場合は顧客ロット番号が必須です"
       }
     },
     "exec": {
@@ -1440,7 +1441,8 @@
       "ownership": "所有区分",
       "customer": "顧客",
       "lotNo": "顧客ロット番号",
-      "errCustomer": "ロット {{n}}：顧客支給の場合は顧客を選択してください"
+      "errCustomer": "ロット {{n}}：顧客支給の場合は顧客を選択してください",
+      "errLotNo": "ロット {{n}}：顧客支給の場合は顧客ロット番号を入力してください"
     },
     "over": {
       "line": "{{material}} {{actual}} / {{planned}} {{uom}}（{{excess}} 超過）",

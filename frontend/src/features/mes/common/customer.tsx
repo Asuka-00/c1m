@@ -18,12 +18,17 @@ import {
   ownershipText,
 } from './customer-fields'
 
+/** 归属标签（全站统一用这一个组件，O-F6-1）。 */
+export function OwnershipLabel({ info }: { info: CustomerInfo }) {
+  return <span data-testid='ownership-label'>{ownershipText(info)}</span>
+}
+
 /** 批次头部的客户批号与归属标签。 */
 export function CustomerBadges({ info }: { info: CustomerInfo }) {
   return (
     <>
       <Badge variant='secondary' data-testid='lot-ownership'>
-        {ownershipText(info)}
+        <OwnershipLabel info={info} />
       </Badge>
       {info.customer_lot_no && (
         <Badge variant='outline' data-testid='lot-customer-lot'>

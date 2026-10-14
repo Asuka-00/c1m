@@ -583,7 +583,8 @@
         "carrier": "Carrier not available",
         "slots": "Invalid slots",
         "tooLong": "Too long",
-        "invalid": "Invalid value"
+        "invalid": "Invalid value",
+        "customerLotRequired": "Customer lot no. is required for customer-owned material"
       }
     },
     "exec": {
@@ -1440,7 +1441,8 @@
       "ownership": "Ownership",
       "customer": "Customer",
       "lotNo": "Customer lot no.",
-      "errCustomer": "Lot {{n}}: select a customer for customer-owned material"
+      "errCustomer": "Lot {{n}}: select a customer for customer-owned material",
+      "errLotNo": "Lot {{n}}: enter the customer lot no. for customer-owned material"
     },
     "over": {
       "line": "{{material}} {{actual}} / {{planned}} {{uom}} (over by {{excess}})",
