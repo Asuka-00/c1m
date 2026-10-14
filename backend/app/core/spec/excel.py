@@ -98,7 +98,9 @@ def export_xlsx(
                 )
             else:
                 v = r[f.column if f else c]
-                line.append(to_json(v) if f and f.type in ("date", "time") else v)
+                line.append(
+                    to_json(v) if f and f.type in ("date", "time", "datetime") else v
+                )
         ws.append(line)
     buf = io.BytesIO()
     wb.save(buf)

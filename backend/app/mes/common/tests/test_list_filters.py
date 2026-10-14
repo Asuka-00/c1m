@@ -71,3 +71,29 @@ def test_meta_conditional_scope_fields(client: TestClient, db: Session) -> None:
     assert f["trigger"]["only_when_required"] is False
     smr = next(x for x in meta["entities"] if x["code"] == "split_merge_rule")
     assert not any(x["filter"] for x in smr["fields"] if x["type"] == "bool")
+
+
+def test_export_datetime_fields_utc_z(client: TestClient, db: Session) -> None:
+    """带时区的 datetime 字段导出为 UTC Z 字符串（openpyxl 不接受带时区的 datetime）。"""
+    import io
+
+    from openpyxl import load_workbook
+
+    m = Mes(client, db)
+    eq = m.post("equipment", {"code": "EQ-XD", "name": "eq"})
+    rc = m.post("reason_code", {"code": "DT-X", "name": "d", "reason_type": "downtime"})
+    m.post(
+        "downtime",
+        {
+            "equipment_id": eq["id"],
+            "start_at": "2026-04-01T08:00:00+08:00",
+            "reason_id": rc["id"],
+        },
+    )
+    r = client.get(m.url("downtime", "export"), headers=m.h)
+    assert r.status_code == 200, r.text
+    ws = load_workbook(io.BytesIO(r.content)).active
+    assert ws is not None
+    rows = list(ws.iter_rows(values_only=True))
+    i = rows[0].index("start_at")
+    assert "2026-04-01T00:00:00Z" in [x[i] for x in rows[1:]]
