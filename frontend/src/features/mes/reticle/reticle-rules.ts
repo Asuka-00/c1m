@@ -1,6 +1,6 @@
 /** 光罩动作规则：权限、可用状态、表单校验与 409 错误码三语提示（v0.8.2 §3.2）。 */
 import { AxiosError } from 'axios'
-import { fmtDateTime, t } from '@/i18n'
+import i18n, { fmtDateTime, t } from '@/i18n'
 import {
   tooFarInFuture,
   type Reticle,
@@ -279,6 +279,14 @@ export function reticleErrorMessage(err: unknown, action?: ReticleAction) {
     // D82 补充三 / 386c4e0：time_out_of_order 的 latest_event_at 在 detail 顶层
     if (code === 'time_out_of_order') {
       const at = latestEventAt(err)
+      // QA P3：用顶层 field 指明是哪个时间字段（如 incident 的 occurred_at 早于上机时间）
+      const f = (d as { field?: unknown }).field
+      const fk = `mes.reticle.timeField.${String(f)}`
+      if (at && typeof f === 'string' && i18n.exists(fk))
+        return t('mes.reticle.err.timeOutOfOrderField', {
+          field: t(fk),
+          at: fmtDateTime(at),
+        })
       if (at)
         return t('mes.reticle.err.timeOutOfOrderAt', { at: fmtDateTime(at) })
     }

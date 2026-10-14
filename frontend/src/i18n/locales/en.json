@@ -1899,7 +1899,8 @@
         "maxPlaces": "Delta allows at most {{max}} decimal places",
         "futureTime": "The backfill time cannot be more than 5 minutes in the future",
         "timeOutOfOrderAt": "The time is earlier than this reticle’s latest event ({{at}}); use a later time",
-        "backfillInvalid": "Enter a valid backfill time"
+        "backfillInvalid": "Enter a valid backfill time",
+        "timeOutOfOrderField": "The {{field}} is earlier than this reticle’s latest event ({{at}}); use a later time"
       },
       "code": {
         "invalid_transition": "\"{{action}}\" is not allowed in the current status. Refresh and try again.",
@@ -1921,7 +1922,13 @@
         "drop": "Drop",
         "other": "Other"
       },
-      "backfillHint": "Optional; leave blank for now. Submitted in the site time zone"
+      "backfillHint": "Optional; leave blank for now. Submitted in the site time zone",
+      "timeField": {
+        "occurred_at": "occurrence time",
+        "mounted_at": "mount time",
+        "unmounted_at": "unmount time",
+        "inspected_at": "inspection time"
+      }
     },
     "marking": {
       "tplTitle": "Marking templates",

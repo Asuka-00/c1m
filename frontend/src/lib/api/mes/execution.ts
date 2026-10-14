@@ -11,7 +11,7 @@ import {
   transformBody,
 } from '../request-body'
 import type { MesRow } from './common'
-import { apiError } from './reticle'
+import { apiError } from './mock-utils'
 
 /** 执行阶段。 */
 export type ExecStage = 'move_in' | 'track_in' | 'track_out' | 'move_out'
@@ -680,10 +680,10 @@ export function mockReportDateCheck(p: {
       return apiError(422, [
         {
           loc: ['query', f],
-          type: 'pattern',
-          code: 'pattern',
-          msg: "String should match pattern '^\\d{4}-\\d{2}-\\d{2}$'",
-          ctx: { pattern: REPORT_DATE.source },
+          type: 'value_error',
+          code: 'value_error',
+          msg: `${f}: must be YYYY-MM-DD`,
+          ctx: { reason: 'pattern', pattern: REPORT_DATE.source },
         },
       ])
   }
@@ -698,6 +698,36 @@ export function mockReportDateCheck(p: {
       },
     ])
   return null
+}
+
+/** 四个报表的 mock（D77 补充二 / 三）：先 mockReportDateCheck，通过后返回空数据。 */
+export const mockReportApi = {
+  output: (p: { date_from?: string; date_to?: string }) =>
+    mockReport(p, (): DailyOutput[] => []),
+  oee: (p: { date_from?: string; date_to?: string }) =>
+    mockReport(p, (): OeeRow[] => []),
+  yieldReport: (p: {
+    date_from?: string
+    date_to?: string
+    group: YieldGroup
+  }) => mockReport(p, () => ({ rows: [] }) as unknown as YieldReport),
+  oeeTrend: (p: {
+    date_from?: string
+    date_to?: string
+    workcenter?: string
+  }) => mockReport(p, (): OeeTrendRow[] => []),
+}
+function mockReport<T>(
+  p: { date_from?: string; date_to?: string },
+  f: () => T
+): Promise<T> {
+  return new Promise((res, rej) =>
+    setTimeout(() => {
+      const e = mockReportDateCheck(p)
+      if (e) rej(e)
+      else res(f())
+    }, 0)
+  )
 }
 
 export const execApi = {

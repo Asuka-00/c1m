@@ -92,6 +92,16 @@ describe('latest_event_at 取 detail 顶层（D82 补充三）', () => {
     expect(d.latest_event_at).toBe('2026-10-14T01:00:00Z')
     expect(d.ctx?.latest_event_at).toBeUndefined()
     expect(latestEventAt(e)).toBe('2026-10-14T01:00:00Z')
+    // QA P3：用顶层 field 指明时间字段
+    expect(reticleErrorMessage(e, 'incident')).toBe(
+      t('mes.reticle.err.timeOutOfOrderField', {
+        field: t('mes.reticle.timeField.occurred_at'),
+        at: fmtDateTime('2026-10-14T01:00:00Z'),
+      })
+    )
+    const noField = structuredClone(e.response.data.detail)
+    delete noField.field
+    e.response.data.detail = noField
     expect(reticleErrorMessage(e, 'incident')).toBe(
       t('mes.reticle.err.timeOutOfOrderAt', {
         at: fmtDateTime('2026-10-14T01:00:00Z'),

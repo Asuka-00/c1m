@@ -18,7 +18,7 @@ import {
   warnDaysOf,
 } from '@/features/mes/execution/operator-qual'
 import { http } from '../client'
-import { apiError } from './reticle'
+import { apiError } from './mock-utils'
 
 export const QUAL_LOG_ACTIONS = [
   'granted',

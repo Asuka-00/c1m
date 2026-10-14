@@ -1899,7 +1899,8 @@
         "maxPlaces": "增减量最多 {{max}} 位小数",
         "futureTime": "补录时间不能晚于当前时间 5 分钟以上",
         "timeOutOfOrderAt": "时间早于这张光罩最近一次事件（{{at}}），请改到这个时间之后",
-        "backfillInvalid": "请输入有效的补录时间"
+        "backfillInvalid": "请输入有效的补录时间",
+        "timeOutOfOrderField": "{{field}}早于这张光罩最近一次事件（{{at}}），请改到这个时间之后"
       },
       "code": {
         "invalid_transition": "当前状态不允许「{{action}}」，请刷新后重试",
@@ -1921,7 +1922,13 @@
         "drop": "跌落",
         "other": "其他"
       },
-      "backfillHint": "可选；不填按当前时间，按站点时区提交"
+      "backfillHint": "可选；不填按当前时间，按站点时区提交",
+      "timeField": {
+        "occurred_at": "发生时间",
+        "mounted_at": "上机时间",
+        "unmounted_at": "下机时间",
+        "inspected_at": "检查时间"
+      }
     },
     "marking": {
       "tplTitle": "打标模板",

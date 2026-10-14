@@ -10,6 +10,7 @@ import { render } from 'vitest-browser-react'
 import { http, errorMessage } from '@/lib/api/client'
 import {
   execApi,
+  mockReportApi,
   mockReportDateCheck,
   reportDates,
 } from '@/lib/api/mes/execution'
@@ -74,10 +75,10 @@ describe('D77 补充二：四个报表 range_inverted', () => {
     detail = [
       {
         loc: ['query', 'date_from'],
-        type: 'pattern',
-        code: 'pattern',
-        msg: "String should match pattern '^\\d{4}-\\d{2}-\\d{2}$'",
-        ctx: { pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
+        type: 'value_error',
+        code: 'value_error',
+        msg: 'date_from: must be YYYY-MM-DD',
+        ctx: { reason: 'pattern', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
       },
     ]
     for (const lng of ['zh-CN', 'en', 'ja']) {
@@ -85,7 +86,7 @@ describe('D77 补充二：四个报表 range_inverted', () => {
       const e = await execApi.output(p).catch((x) => x)
       const m = errorMessage(e)
       expect(m).toBe(t('errors.query.pattern', { field: 'date_from' }))
-      expect(m).not.toMatch(/String should/)
+      expect(m).not.toMatch(/must be/)
     }
   })
   it('报表页日期区间显示后端错误', async () => {
@@ -146,15 +147,51 @@ describe('D77 补充三：报表日期严格 YYYY-MM-DD', () => {
           date_to: '2026-10-01',
         })
       )
-    ).toMatchObject({ type: 'pattern', loc: ['query', 'date_from'] })
+    ).toMatchObject({
+      type: 'value_error',
+      ctx: { reason: 'pattern' },
+      loc: ['query', 'date_from'],
+    })
     expect(
       d(mockReportDateCheck({ date_from: '2026-10-01', date_to: '2026/10/15' }))
-    ).toMatchObject({ type: 'pattern', loc: ['query', 'date_to'] })
+    ).toMatchObject({
+      type: 'value_error',
+      ctx: { reason: 'pattern' },
+      loc: ['query', 'date_to'],
+    })
     expect(
       d(mockReportDateCheck({ date_from: '2026-10-15', date_to: '2026-10-01' }))
     ).toMatchObject({ type: 'value_error', ctx: { reason: 'range_inverted' } })
     expect(
       mockReportDateCheck({ date_from: '2026-10-01', date_to: '2026-10-01' })
     ).toBeNull()
+  })
+})
+
+describe('QA P3：四个报表 mock 接入日期校验', () => {
+  it('pattern 先于 range_inverted，合法返回空数据，文案正确', async () => {
+    const calls = [
+      (q: object) => mockReportApi.output(q),
+      (q: object) => mockReportApi.oee(q),
+      (q: object) => mockReportApi.yieldReport({ ...q, group: 'operation' }),
+      (q: object) => mockReportApi.oeeTrend(q),
+    ]
+    for (const c of calls) {
+      const e1 = await c({
+        date_from: '2026-10-15T00:00:00Z',
+        date_to: '2026-10-01',
+      }).catch((x) => x)
+      expect(errorMessage(e1)).toBe(
+        t('errors.query.pattern', { field: 'date_from' })
+      )
+      const e2 = await c({
+        date_from: '2026-10-15',
+        date_to: '2026-10-01',
+      }).catch((x) => x)
+      expect(errorMessage(e2)).toBe(t('mes.err.code.range_inverted'))
+      await expect(
+        c({ date_from: '2026-10-01', date_to: '2026-10-15' })
+      ).resolves.toBeTruthy()
+    }
   })
 })

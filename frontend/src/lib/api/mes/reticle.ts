@@ -3,7 +3,6 @@
  * 后端 B4 未就绪前默认走前端 mock（`VITE_RETICLE_MOCK=0` 时改走真实接口）。
  * 请求体一律经 BODY_KEYS 白名单挑选；usage 带 Idempotency-Key（D57）。
  */
-import { AxiosError, AxiosHeaders } from 'axios'
 import {
   addDecimal,
   compareDecimal,
@@ -13,6 +12,7 @@ import {
 import { MES_PERM } from '@/features/mes/common/mes-perm'
 import { http } from '../client'
 import { BODY_KEYS, pickBody } from '../request-body'
+import { apiError } from './mock-utils'
 
 /** 光罩专用状态枚举 `reticle_status`（终态 scrapped）。 */
 export const RETICLE_STATUSES = [
@@ -549,15 +549,8 @@ export function resetReticleMock() {
 }
 
 /** 构造与后端同形的错误（409 对象 detail / 422 列表 detail）。 */
-export function apiError(status: number, detail: unknown) {
-  return new AxiosError('mock', 'ERR_BAD_REQUEST', undefined, undefined, {
-    status,
-    statusText: '',
-    headers: {},
-    config: { headers: new AxiosHeaders() },
-    data: { detail },
-  })
-}
+/** 兼容旧引用：已挪到 mock-utils。 */
+export { apiError }
 const find = (id: string) => {
   const x = store.r.find((y) => y.id === id)
   if (!x) throw apiError(404, 'not found')
