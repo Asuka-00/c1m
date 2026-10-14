@@ -56,6 +56,12 @@ def test_export_script(tmp_path: Path) -> None:
     assert json.loads(r.stdout)["count"] == menu_keys()["count"]
 
 
+def test_committed_menu_keys_up_to_date() -> None:
+    """仓库内 menu_keys.json 必须与代码一致（过期时运行 ``export_menu_keys --out``）。"""
+    assert export_menu_keys.COMMITTED.exists()
+    assert export_menu_keys.main(["--check"]) == 0
+
+
 def test_menu_keys_endpoint_superuser_only(
     client: TestClient,
     superuser_token_headers: dict[str, str],

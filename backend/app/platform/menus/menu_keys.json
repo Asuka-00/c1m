@@ -1,0 +1,1956 @@
+{
+  "version": 1,
+  "count": 130,
+  "items": [
+    {
+      "key": "g-workspace",
+      "space": "workspace",
+      "kind": "group",
+      "parent": null,
+      "path": null,
+      "component": null,
+      "permission": null,
+      "i18n_key": "menu.g-workspace",
+      "titles": {
+        "en": "Workspace",
+        "zh-CN": "工作台",
+        "ja": "ワークスペース"
+      }
+    },
+    {
+      "key": "g-execution",
+      "space": "workspace",
+      "kind": "group",
+      "parent": null,
+      "path": null,
+      "component": null,
+      "permission": null,
+      "i18n_key": "menu.g-execution",
+      "titles": {
+        "en": "Lot Operation",
+        "zh-CN": "批次作业",
+        "ja": "ロット作業"
+      }
+    },
+    {
+      "key": "g-exception",
+      "space": "workspace",
+      "kind": "group",
+      "parent": null,
+      "path": null,
+      "component": null,
+      "permission": null,
+      "i18n_key": "menu.g-exception",
+      "titles": {
+        "en": "Exception Handling",
+        "zh-CN": "异常处置",
+        "ja": "異常処置"
+      }
+    },
+    {
+      "key": "g-wip",
+      "space": "workspace",
+      "kind": "group",
+      "parent": null,
+      "path": null,
+      "component": null,
+      "permission": null,
+      "i18n_key": "menu.g-wip",
+      "titles": {
+        "en": "WIP & Inquiry",
+        "zh-CN": "在制与查询",
+        "ja": "仕掛・照会"
+      }
+    },
+    {
+      "key": "g-planning",
+      "space": "workspace",
+      "kind": "group",
+      "parent": null,
+      "path": null,
+      "component": null,
+      "permission": null,
+      "i18n_key": "menu.g-planning",
+      "titles": {
+        "en": "Production Planning",
+        "zh-CN": "生产计划",
+        "ja": "生産計画"
+      }
+    },
+    {
+      "key": "g-warehouse",
+      "space": "workspace",
+      "kind": "group",
+      "parent": null,
+      "path": null,
+      "component": null,
+      "permission": null,
+      "i18n_key": "menu.g-warehouse",
+      "titles": {
+        "en": "Warehouse Management",
+        "zh-CN": "仓储管理",
+        "ja": "倉庫管理"
+      }
+    },
+    {
+      "key": "g-equipment",
+      "space": "workspace",
+      "kind": "group",
+      "parent": null,
+      "path": null,
+      "component": null,
+      "permission": null,
+      "i18n_key": "menu.g-equipment",
+      "titles": {
+        "en": "Tool Management",
+        "zh-CN": "机台管理",
+        "ja": "装置管理"
+      }
+    },
+    {
+      "key": "g-quality",
+      "space": "workspace",
+      "kind": "group",
+      "parent": null,
+      "path": null,
+      "component": null,
+      "permission": null,
+      "i18n_key": "menu.g-quality",
+      "titles": {
+        "en": "Quality",
+        "zh-CN": "质量管理",
+        "ja": "品質管理"
+      }
+    },
+    {
+      "key": "g-process",
+      "space": "workspace",
+      "kind": "group",
+      "parent": null,
+      "path": null,
+      "component": null,
+      "permission": null,
+      "i18n_key": "menu.g-process",
+      "titles": {
+        "en": "Process Engineering",
+        "zh-CN": "工艺管理",
+        "ja": "工程管理"
+      }
+    },
+    {
+      "key": "g-product",
+      "space": "workspace",
+      "kind": "group",
+      "parent": null,
+      "path": null,
+      "component": null,
+      "permission": null,
+      "i18n_key": "menu.g-product",
+      "titles": {
+        "en": "Product & Material",
+        "zh-CN": "产品与物料",
+        "ja": "製品・資材"
+      }
+    },
+    {
+      "key": "g-factory",
+      "space": "workspace",
+      "kind": "group",
+      "parent": null,
+      "path": null,
+      "component": null,
+      "permission": null,
+      "i18n_key": "menu.g-factory",
+      "titles": {
+        "en": "Factory Modeling",
+        "zh-CN": "工厂建模",
+        "ja": "工場モデリング"
+      }
+    },
+    {
+      "key": "g-master",
+      "space": "workspace",
+      "kind": "group",
+      "parent": null,
+      "path": null,
+      "component": null,
+      "permission": null,
+      "i18n_key": "menu.g-master",
+      "titles": {
+        "en": "Master Data",
+        "zh-CN": "基础数据",
+        "ja": "基準データ"
+      }
+    },
+    {
+      "key": "g-system",
+      "space": "workspace",
+      "kind": "group",
+      "parent": null,
+      "path": null,
+      "component": null,
+      "permission": null,
+      "i18n_key": "menu.g-system",
+      "titles": {
+        "en": "System",
+        "zh-CN": "系统管理",
+        "ja": "システム管理"
+      }
+    },
+    {
+      "key": "dashboard",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-workspace",
+      "path": "/",
+      "component": "dashboard",
+      "permission": null,
+      "i18n_key": "menu.dashboard",
+      "titles": {
+        "en": "Dashboard",
+        "zh-CN": "仪表盘",
+        "ja": "ダッシュボード"
+      }
+    },
+    {
+      "key": "notifications",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-workspace",
+      "path": "/notifications",
+      "component": "notifications",
+      "permission": null,
+      "i18n_key": "menu.notifications",
+      "titles": {
+        "en": "Message Center",
+        "zh-CN": "消息中心",
+        "ja": "メッセージセンター"
+      }
+    },
+    {
+      "key": "settings",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-workspace",
+      "path": "/settings",
+      "component": "settings",
+      "permission": null,
+      "i18n_key": "menu.settings",
+      "titles": {
+        "en": "Profile",
+        "zh-CN": "个人设置",
+        "ja": "個人設定"
+      }
+    },
+    {
+      "key": "mes-lot-console",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-execution",
+      "path": "/mes/lot-console",
+      "component": "mes-page:lot-console",
+      "permission": "mes.exec:read",
+      "i18n_key": "menu.mes-lot-console",
+      "titles": {
+        "en": "Lot Operation (Track In/Out)",
+        "zh-CN": "批次作业（进出站）",
+        "ja": "ロット作業（着工・完了）"
+      }
+    },
+    {
+      "key": "mes-lot_hold",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-execution",
+      "path": "/mes/lot-hold",
+      "component": "mes-page:hold",
+      "permission": "mes.exec:read",
+      "i18n_key": "menu.mes-lot_hold",
+      "titles": {
+        "en": "Hold Management",
+        "zh-CN": "Hold 管理",
+        "ja": "ホールド管理"
+      }
+    },
+    {
+      "key": "mes-qtime-monitor",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-execution",
+      "path": "/mes/qtime-monitor",
+      "component": "mes-page:qtime-monitor",
+      "permission": "mes.exec:read",
+      "i18n_key": "menu.mes-qtime-monitor",
+      "titles": {
+        "en": "Q-Time Monitor",
+        "zh-CN": "Q-Time 监控",
+        "ja": "Q-Time 監視"
+      }
+    },
+    {
+      "key": "mes-batch-ops",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-execution",
+      "path": "/mes/batch-ops",
+      "component": "mes-page:batch-ops",
+      "permission": "mes.exec:read",
+      "i18n_key": "menu.mes-batch-ops",
+      "titles": {
+        "en": "Batch Operation",
+        "zh-CN": "批量作业",
+        "ja": "一括作業"
+      }
+    },
+    {
+      "key": "mes-carrier-ops",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-execution",
+      "path": "/mes/carrier-ops",
+      "component": "mes-page:carrier-ops",
+      "permission": "mes.exec:read",
+      "i18n_key": "menu.mes-carrier-ops",
+      "titles": {
+        "en": "Carrier Operation",
+        "zh-CN": "载具作业",
+        "ja": "キャリア作業"
+      }
+    },
+    {
+      "key": "mes-shift-handover",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-execution",
+      "path": "/mes/shift-handover",
+      "component": "mes-page:shift-handover",
+      "permission": "mes.exec:read",
+      "i18n_key": "menu.mes-shift-handover",
+      "titles": {
+        "en": "Shift Handover",
+        "zh-CN": "交接班日志",
+        "ja": "シフト引継ぎ"
+      }
+    },
+    {
+      "key": "mes-label-print",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-execution",
+      "path": "/mes/label-print",
+      "component": "mes-page:label-print",
+      "permission": "mes.exec:read",
+      "i18n_key": "menu.mes-label-print",
+      "titles": {
+        "en": "Label Printing",
+        "zh-CN": "标签打印",
+        "ja": "ラベル印刷"
+      }
+    },
+    {
+      "key": "mes-future_hold",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-exception",
+      "path": "/mes/future-hold",
+      "component": "mes:future_hold",
+      "permission": "mes.exec:read",
+      "i18n_key": "menu.mes-future_hold",
+      "titles": {
+        "en": "Future Hold",
+        "zh-CN": "Future Hold（预约 Hold）",
+        "ja": "予約ホールド"
+      }
+    },
+    {
+      "key": "mes-check_log",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-exception",
+      "path": "/mes/check-log",
+      "component": "mes:check_log",
+      "permission": "mes.check:read",
+      "i18n_key": "menu.mes-check_log",
+      "titles": {
+        "en": "Interlock Log",
+        "zh-CN": "卡控记录",
+        "ja": "インターロック記録"
+      }
+    },
+    {
+      "key": "mes-wip-dashboard",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-wip",
+      "path": "/mes/wip-dashboard",
+      "component": "mes-page:wip-dashboard",
+      "permission": "mes.exec:read",
+      "i18n_key": "menu.mes-wip-dashboard",
+      "titles": {
+        "en": "WIP Dashboard",
+        "zh-CN": "WIP 看板",
+        "ja": "WIP ダッシュボード"
+      }
+    },
+    {
+      "key": "mes-oee-report",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-wip",
+      "path": "/mes/oee-report",
+      "component": "mes-page:oee-report",
+      "permission": "mes.exec:read",
+      "i18n_key": "menu.mes-oee-report",
+      "titles": {
+        "en": "Equipment OEE",
+        "zh-CN": "设备 OEE",
+        "ja": "設備 OEE"
+      }
+    },
+    {
+      "key": "mes-yield-report",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-wip",
+      "path": "/mes/yield-report",
+      "component": "mes-page:yield-report",
+      "permission": "mes.exec:read",
+      "i18n_key": "menu.mes-yield-report",
+      "titles": {
+        "en": "Yield Report",
+        "zh-CN": "良率报表",
+        "ja": "歩留まりレポート"
+      }
+    },
+    {
+      "key": "mes-lot-history",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-wip",
+      "path": "/mes/lot-history",
+      "component": "tabs",
+      "permission": "mes.exec:read",
+      "i18n_key": "menu.mes-lot-history",
+      "titles": {
+        "en": "Lot History & Trace",
+        "zh-CN": "批次履历与追溯",
+        "ja": "ロット履歴・トレース"
+      }
+    },
+    {
+      "key": "mes-lot-trace",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-lot-history",
+      "path": "/mes/lot-history",
+      "component": "mes-page:lot-trace",
+      "permission": "mes.exec:read",
+      "i18n_key": "menu.mes-lot-trace",
+      "titles": {
+        "en": "Lot History",
+        "zh-CN": "批次履历",
+        "ja": "ロット履歴"
+      }
+    },
+    {
+      "key": "mes-trace",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-lot-history",
+      "path": "/mes/lot-history",
+      "component": "mes-page:trace",
+      "permission": "mes.exec:read",
+      "i18n_key": "menu.mes-trace",
+      "titles": {
+        "en": "Traceability",
+        "zh-CN": "追溯查询",
+        "ja": "トレーサビリティ"
+      }
+    },
+    {
+      "key": "mes-lot_recipe_run",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-wip",
+      "path": "/mes/lot-recipe-run",
+      "component": "mes:lot_recipe_run",
+      "permission": "mes.exec:read",
+      "i18n_key": "menu.mes-lot_recipe_run",
+      "titles": {
+        "en": "Recipe Run",
+        "zh-CN": "配方执行记录",
+        "ja": "レシピ実行記録"
+      }
+    },
+    {
+      "key": "mes-lot",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-wip",
+      "path": "/mes/lot",
+      "component": "mes:lot",
+      "permission": "mes.lot:read",
+      "i18n_key": "menu.mes-lot",
+      "titles": {
+        "en": "Lot Inquiry",
+        "zh-CN": "批次查询",
+        "ja": "ロット照会"
+      }
+    },
+    {
+      "key": "mes-wafer",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-wip",
+      "path": "/mes/wafer",
+      "component": "mes:wafer",
+      "permission": "mes.lot:read",
+      "i18n_key": "menu.mes-wafer",
+      "titles": {
+        "en": "Wafer Inquiry",
+        "zh-CN": "晶圆查询",
+        "ja": "ウェーハ照会"
+      }
+    },
+    {
+      "key": "mes-lot-start",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-planning",
+      "path": "/mes/lot-start",
+      "component": "mes-page:lot-start",
+      "permission": "mes.lot:start",
+      "i18n_key": "menu.mes-lot-start",
+      "titles": {
+        "en": "Lot Start",
+        "zh-CN": "投片/开批",
+        "ja": "ロット投入"
+      }
+    },
+    {
+      "key": "mes-wo-board",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-planning",
+      "path": "/mes/wo-board",
+      "component": "mes-page:wo-board",
+      "permission": "mes.wo:read",
+      "i18n_key": "menu.mes-wo-board",
+      "titles": {
+        "en": "WO Progress",
+        "zh-CN": "工单进度",
+        "ja": "作業指示進捗"
+      }
+    },
+    {
+      "key": "mes-work_order",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-planning",
+      "path": "/mes/work-order",
+      "component": "mes:work_order",
+      "permission": "mes.wo:read",
+      "i18n_key": "menu.mes-work_order",
+      "titles": {
+        "en": "Work Order",
+        "zh-CN": "工单",
+        "ja": "作業指示"
+      }
+    },
+    {
+      "key": "mes-receipt",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-warehouse",
+      "path": "/mes/receipt",
+      "component": "mes:receipt",
+      "permission": "mes.wh:read",
+      "i18n_key": "menu.mes-receipt",
+      "titles": {
+        "en": "Finished Goods Receipt",
+        "zh-CN": "完工入库",
+        "ja": "完成品入庫"
+      }
+    },
+    {
+      "key": "mes-material_lot",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-warehouse",
+      "path": "/mes/material-lot",
+      "component": "mes:material_lot",
+      "permission": "mes.inventory:read",
+      "i18n_key": "menu.mes-material_lot",
+      "titles": {
+        "en": "Line-side Material Lot",
+        "zh-CN": "线边物料批",
+        "ja": "ラインサイド資材ロット"
+      }
+    },
+    {
+      "key": "mes-warehouse-master",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-warehouse",
+      "path": "/mes/warehouse-master",
+      "component": "tree",
+      "permission": "mes.wh:read",
+      "i18n_key": "menu.mes-warehouse-master",
+      "titles": {
+        "en": "Warehouse Master",
+        "zh-CN": "仓库主数据",
+        "ja": "倉庫マスタ"
+      }
+    },
+    {
+      "key": "mes-warehouse",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-warehouse-master",
+      "path": "/mes/warehouse-master",
+      "component": "mes:warehouse",
+      "permission": "mes.wh:read",
+      "i18n_key": "menu.mes-warehouse",
+      "titles": {
+        "en": "Warehouse",
+        "zh-CN": "仓库",
+        "ja": "倉庫"
+      }
+    },
+    {
+      "key": "mes-storage_location",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-warehouse-master",
+      "path": "/mes/warehouse-master",
+      "component": "mes:storage_location",
+      "permission": "mes.wh:read",
+      "i18n_key": "menu.mes-storage_location",
+      "titles": {
+        "en": "Storage Location",
+        "zh-CN": "库位",
+        "ja": "ロケーション"
+      }
+    },
+    {
+      "key": "mes-eqp-board",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-equipment",
+      "path": "/mes/eqp-board",
+      "component": "mes-page:eqp-board",
+      "permission": "mes.equipment:read",
+      "i18n_key": "menu.mes-eqp-board",
+      "titles": {
+        "en": "Tool Status Board",
+        "zh-CN": "机台状态看板",
+        "ja": "装置状態ボード"
+      }
+    },
+    {
+      "key": "mes-pm_plan",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-equipment",
+      "path": "/mes/pm-plan",
+      "component": "mes:pm_plan",
+      "permission": "mes.equipment:read",
+      "i18n_key": "menu.mes-pm_plan",
+      "titles": {
+        "en": "PM Plan",
+        "zh-CN": "PM 计划",
+        "ja": "PM 計画"
+      }
+    },
+    {
+      "key": "mes-downtime",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-equipment",
+      "path": "/mes/downtime",
+      "component": "mes:downtime",
+      "permission": "mes.equipment:read",
+      "i18n_key": "menu.mes-downtime",
+      "titles": {
+        "en": "Downtime",
+        "zh-CN": "停机记录",
+        "ja": "停止記録"
+      }
+    },
+    {
+      "key": "mes-e10_history",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-equipment",
+      "path": "/mes/e10-history",
+      "component": "mes:e10_history",
+      "permission": "mes.equipment:read",
+      "i18n_key": "menu.mes-e10_history",
+      "titles": {
+        "en": "E10 History",
+        "zh-CN": "E10 状态履历",
+        "ja": "E10 状態履歴"
+      }
+    },
+    {
+      "key": "mes-alarm_log",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-equipment",
+      "path": "/mes/alarm-log",
+      "component": "mes:alarm_log",
+      "permission": "mes.alarm:read",
+      "i18n_key": "menu.mes-alarm_log",
+      "titles": {
+        "en": "Equipment Alarms",
+        "zh-CN": "设备报警记录",
+        "ja": "装置アラーム記録"
+      }
+    },
+    {
+      "key": "mes-tool",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-equipment",
+      "path": "/mes/tool",
+      "component": "mes:tool",
+      "permission": "mes.inventory:read",
+      "i18n_key": "menu.mes-tool",
+      "titles": {
+        "en": "Consumable Life",
+        "zh-CN": "耗材/治具寿命",
+        "ja": "消耗品・治具寿命"
+      }
+    },
+    {
+      "key": "mes-equipment_material_mount",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-equipment",
+      "path": "/mes/equipment-material-mount",
+      "component": "mes:equipment_material_mount",
+      "permission": "mes.equipment:read",
+      "i18n_key": "menu.mes-equipment_material_mount",
+      "titles": {
+        "en": "Equipment Material Mount",
+        "zh-CN": "机台上料记录",
+        "ja": "装置資材装着記録"
+      }
+    },
+    {
+      "key": "mes-equipment_qual",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-equipment",
+      "path": "/mes/equipment-qual",
+      "component": "mes:equipment_qual",
+      "permission": "mes.equipment:read",
+      "i18n_key": "menu.mes-equipment_qual",
+      "titles": {
+        "en": "Qual Task",
+        "zh-CN": "Qual 任务",
+        "ja": "Qual タスク"
+      }
+    },
+    {
+      "key": "mes-equipment-master",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-equipment",
+      "path": "/mes/equipment-master",
+      "component": "tabs",
+      "permission": "mes.equipment:read",
+      "i18n_key": "menu.mes-equipment-master",
+      "titles": {
+        "en": "Equipment Master",
+        "zh-CN": "机台主数据",
+        "ja": "装置マスタ"
+      }
+    },
+    {
+      "key": "mes-equipment",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-equipment-master",
+      "path": "/mes/equipment-master",
+      "component": "mes:equipment",
+      "permission": "mes.equipment:read",
+      "i18n_key": "menu.mes-equipment",
+      "titles": {
+        "en": "Equipment",
+        "zh-CN": "设备",
+        "ja": "設備"
+      }
+    },
+    {
+      "key": "mes-equipment_type",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-equipment-master",
+      "path": "/mes/equipment-master",
+      "component": "mes:equipment_type",
+      "permission": "mes.equipment:read",
+      "i18n_key": "menu.mes-equipment_type",
+      "titles": {
+        "en": "Equipment Type",
+        "zh-CN": "设备类型",
+        "ja": "設備タイプ"
+      }
+    },
+    {
+      "key": "mes-equipment_group",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-equipment-master",
+      "path": "/mes/equipment-master",
+      "component": "mes:equipment_group",
+      "permission": "mes.equipment:read",
+      "i18n_key": "menu.mes-equipment_group",
+      "titles": {
+        "en": "Equipment Group",
+        "zh-CN": "设备组",
+        "ja": "設備グループ"
+      }
+    },
+    {
+      "key": "mes-equipment_capability",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-equipment-master",
+      "path": "/mes/equipment-master",
+      "component": "mes:equipment_capability",
+      "permission": "mes.equipment:read",
+      "i18n_key": "menu.mes-equipment_capability",
+      "titles": {
+        "en": "Capability",
+        "zh-CN": "设备能力",
+        "ja": "設備能力"
+      }
+    },
+    {
+      "key": "mes-e10-model",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-equipment",
+      "path": "/mes/e10-model",
+      "component": "tabs",
+      "permission": "mes.equipment:read",
+      "i18n_key": "menu.mes-e10-model",
+      "titles": {
+        "en": "E10 State Configuration",
+        "zh-CN": "E10 状态配置",
+        "ja": "E10 状態設定"
+      }
+    },
+    {
+      "key": "mes-e10_state",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-e10-model",
+      "path": "/mes/e10-model",
+      "component": "mes:e10_state",
+      "permission": "mes.equipment:read",
+      "i18n_key": "menu.mes-e10_state",
+      "titles": {
+        "en": "E10 State Model",
+        "zh-CN": "E10 状态模型",
+        "ja": "E10 状態モデル"
+      }
+    },
+    {
+      "key": "mes-e10_auto_rule",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-e10-model",
+      "path": "/mes/e10-model",
+      "component": "mes:e10_auto_rule",
+      "permission": "mes.equipment:read",
+      "i18n_key": "menu.mes-e10_auto_rule",
+      "titles": {
+        "en": "E10 Auto Transition",
+        "zh-CN": "E10 自动迁移",
+        "ja": "E10 自動遷移"
+      }
+    },
+    {
+      "key": "mes-alarm_code",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-equipment",
+      "path": "/mes/alarm-code",
+      "component": "mes:alarm_code",
+      "permission": "mes.alarm:read",
+      "i18n_key": "menu.mes-alarm_code",
+      "titles": {
+        "en": "Alarm Codes",
+        "zh-CN": "报警代码",
+        "ja": "アラームコード"
+      }
+    },
+    {
+      "key": "mes-dc_result",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-quality",
+      "path": "/mes/dc-result",
+      "component": "mes:dc_result",
+      "permission": "mes.exec:read",
+      "i18n_key": "menu.mes-dc_result",
+      "titles": {
+        "en": "Metrology / DC Data",
+        "zh-CN": "量测数据",
+        "ja": "測定データ"
+      }
+    },
+    {
+      "key": "mes-dc-config",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-quality",
+      "path": "/mes/dc-config",
+      "component": "tabs",
+      "permission": "mes.quality:read",
+      "i18n_key": "menu.mes-dc-config",
+      "titles": {
+        "en": "DC Configuration",
+        "zh-CN": "数据收集配置",
+        "ja": "データ収集設定"
+      }
+    },
+    {
+      "key": "mes-dc_plan",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-dc-config",
+      "path": "/mes/dc-config",
+      "component": "mes:dc_plan",
+      "permission": "mes.quality:read",
+      "i18n_key": "menu.mes-dc_plan",
+      "titles": {
+        "en": "DC Plan",
+        "zh-CN": "数据收集计划",
+        "ja": "データ収集計画"
+      }
+    },
+    {
+      "key": "mes-measurement_item",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-dc-config",
+      "path": "/mes/dc-config",
+      "component": "mes:measurement_item",
+      "permission": "mes.quality:read",
+      "i18n_key": "menu.mes-measurement_item",
+      "titles": {
+        "en": "Measurement Item",
+        "zh-CN": "量测项目",
+        "ja": "測定項目"
+      }
+    },
+    {
+      "key": "mes-sampling_rule",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-dc-config",
+      "path": "/mes/dc-config",
+      "component": "mes:sampling_rule",
+      "permission": "mes.quality:read",
+      "i18n_key": "menu.mes-sampling_rule",
+      "titles": {
+        "en": "Sampling Rule",
+        "zh-CN": "抽样规则",
+        "ja": "サンプリング規則"
+      }
+    },
+    {
+      "key": "mes-defect_code",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-quality",
+      "path": "/mes/defect-code",
+      "component": "mes:defect_code",
+      "permission": "mes.quality:read",
+      "i18n_key": "menu.mes-defect_code",
+      "titles": {
+        "en": "Defect Code",
+        "zh-CN": "缺陷代码",
+        "ja": "欠陥コード"
+      }
+    },
+    {
+      "key": "mes-substrate_map",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-quality",
+      "path": "/mes/substrate-map",
+      "component": "mes:substrate_map",
+      "permission": "mes.map:read",
+      "i18n_key": "menu.mes-substrate_map",
+      "titles": {
+        "en": "Substrate Map",
+        "zh-CN": "坐标图",
+        "ja": "座標マップ"
+      }
+    },
+    {
+      "key": "mes-bin_set",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-quality",
+      "path": "/mes/bin-set",
+      "component": "mes:bin_set",
+      "permission": "mes.map:read",
+      "i18n_key": "menu.mes-bin_set",
+      "titles": {
+        "en": "Bin Definition Set",
+        "zh-CN": "bin 定义集",
+        "ja": "ビン定義セット"
+      }
+    },
+    {
+      "key": "mes-map-import",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-quality",
+      "path": "/mes/map-import",
+      "component": "mes-page:map-import",
+      "permission": "mes.map:import",
+      "i18n_key": "menu.mes-map-import",
+      "titles": {
+        "en": "Map Import",
+        "zh-CN": "坐标图导入",
+        "ja": "座標マップ取込"
+      }
+    },
+    {
+      "key": "mes-route-master",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-process",
+      "path": "/mes/route-master",
+      "component": "tabs",
+      "permission": "mes.process:read",
+      "i18n_key": "menu.mes-route-master",
+      "titles": {
+        "en": "Route Configuration",
+        "zh-CN": "工艺流程配置",
+        "ja": "ルート設定"
+      }
+    },
+    {
+      "key": "mes-route",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-route-master",
+      "path": "/mes/route-master",
+      "component": "mes:route",
+      "permission": "mes.process:read",
+      "i18n_key": "menu.mes-route",
+      "titles": {
+        "en": "Route",
+        "zh-CN": "工艺流程",
+        "ja": "ルート"
+      }
+    },
+    {
+      "key": "mes-operation",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-route-master",
+      "path": "/mes/route-master",
+      "component": "mes:operation",
+      "permission": "mes.process:read",
+      "i18n_key": "menu.mes-operation",
+      "titles": {
+        "en": "Operation",
+        "zh-CN": "工序",
+        "ja": "工程"
+      }
+    },
+    {
+      "key": "mes-product_route",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-route-master",
+      "path": "/mes/route-master",
+      "component": "mes:product_route",
+      "permission": "mes.process:read",
+      "i18n_key": "menu.mes-product_route",
+      "titles": {
+        "en": "Product Route",
+        "zh-CN": "产品流程",
+        "ja": "製品ルート"
+      }
+    },
+    {
+      "key": "mes-recipe-param",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-process",
+      "path": "/mes/recipe-param",
+      "component": "tabs",
+      "permission": "mes.process:read",
+      "i18n_key": "menu.mes-recipe-param",
+      "titles": {
+        "en": "Recipe & Parameters",
+        "zh-CN": "配方与参数",
+        "ja": "レシピ・パラメータ"
+      }
+    },
+    {
+      "key": "mes-recipe",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-recipe-param",
+      "path": "/mes/recipe-param",
+      "component": "mes:recipe",
+      "permission": "mes.process:read",
+      "i18n_key": "menu.mes-recipe",
+      "titles": {
+        "en": "Recipe",
+        "zh-CN": "配方",
+        "ja": "レシピ"
+      }
+    },
+    {
+      "key": "mes-param_spec",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-recipe-param",
+      "path": "/mes/recipe-param",
+      "component": "mes:param_spec",
+      "permission": "mes.process:read",
+      "i18n_key": "menu.mes-param_spec",
+      "titles": {
+        "en": "Parameter Spec",
+        "zh-CN": "参数规格",
+        "ja": "パラメータ規格"
+      }
+    },
+    {
+      "key": "mes-change_order",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-process",
+      "path": "/mes/change-order",
+      "component": "mes:change_order",
+      "permission": "mes.process:read",
+      "i18n_key": "menu.mes-change_order",
+      "titles": {
+        "en": "ECN",
+        "zh-CN": "工程变更（ECN）",
+        "ja": "設計変更（ECN）"
+      }
+    },
+    {
+      "key": "mes-qtime_rule",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-process",
+      "path": "/mes/qtime-rule",
+      "component": "mes:qtime_rule",
+      "permission": "mes.lot:read",
+      "i18n_key": "menu.mes-qtime_rule",
+      "titles": {
+        "en": "Q-Time Rule",
+        "zh-CN": "Q-Time 规则",
+        "ja": "Q-Time ルール"
+      }
+    },
+    {
+      "key": "mes-check-config",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-process",
+      "path": "/mes/check-config",
+      "component": "tabs",
+      "permission": "mes.check:read",
+      "i18n_key": "menu.mes-check-config",
+      "titles": {
+        "en": "Check Config",
+        "zh-CN": "卡控配置",
+        "ja": "チェック設定"
+      }
+    },
+    {
+      "key": "mes-check_rule",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-check-config",
+      "path": "/mes/check-config",
+      "component": "mes:check_rule",
+      "permission": "mes.check:read",
+      "i18n_key": "menu.mes-check_rule",
+      "titles": {
+        "en": "Check Rule",
+        "zh-CN": "卡控规则",
+        "ja": "チェックルール"
+      }
+    },
+    {
+      "key": "mes-check_plan",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-check-config",
+      "path": "/mes/check-config",
+      "component": "mes:check_plan",
+      "permission": "mes.check:read",
+      "i18n_key": "menu.mes-check_plan",
+      "titles": {
+        "en": "Check Plan",
+        "zh-CN": "卡控方案",
+        "ja": "チェックプラン"
+      }
+    },
+    {
+      "key": "mes-check_binding",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-check-config",
+      "path": "/mes/check-config",
+      "component": "mes:check_binding",
+      "permission": "mes.check:read",
+      "i18n_key": "menu.mes-check_binding",
+      "titles": {
+        "en": "Check Binding",
+        "zh-CN": "卡控绑定",
+        "ja": "チェック割当"
+      }
+    },
+    {
+      "key": "mes-lot-rules",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-process",
+      "path": "/mes/lot-rules",
+      "component": "tabs",
+      "permission": "mes.lot:read",
+      "i18n_key": "menu.mes-lot-rules",
+      "titles": {
+        "en": "Lot Rules",
+        "zh-CN": "批次规则",
+        "ja": "ロット規則"
+      }
+    },
+    {
+      "key": "mes-lot_type",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-lot-rules",
+      "path": "/mes/lot-rules",
+      "component": "mes:lot_type",
+      "permission": "mes.lot:read",
+      "i18n_key": "menu.mes-lot_type",
+      "titles": {
+        "en": "Lot Type",
+        "zh-CN": "批次类型",
+        "ja": "ロットタイプ"
+      }
+    },
+    {
+      "key": "mes-lot_priority",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-lot-rules",
+      "path": "/mes/lot-rules",
+      "component": "mes:lot_priority",
+      "permission": "mes.lot:read",
+      "i18n_key": "menu.mes-lot_priority",
+      "titles": {
+        "en": "Priority",
+        "zh-CN": "优先级",
+        "ja": "優先度"
+      }
+    },
+    {
+      "key": "mes-split_merge_rule",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-lot-rules",
+      "path": "/mes/lot-rules",
+      "component": "mes:split_merge_rule",
+      "permission": "mes.lot:read",
+      "i18n_key": "menu.mes-split_merge_rule",
+      "titles": {
+        "en": "Split / Merge Rule",
+        "zh-CN": "分批合批规则",
+        "ja": "分割・統合ルール"
+      }
+    },
+    {
+      "key": "mes-customer",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-lot-rules",
+      "path": "/mes/lot-rules",
+      "component": "mes:customer",
+      "permission": "mes.lot:read",
+      "i18n_key": "menu.mes-customer",
+      "titles": {
+        "en": "Customer",
+        "zh-CN": "客户",
+        "ja": "顧客"
+      }
+    },
+    {
+      "key": "mes-product-master",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-product",
+      "path": "/mes/product-master",
+      "component": "tabs",
+      "permission": "mes.product:read",
+      "i18n_key": "menu.mes-product-master",
+      "titles": {
+        "en": "Product Master",
+        "zh-CN": "产品主数据",
+        "ja": "製品マスタ"
+      }
+    },
+    {
+      "key": "mes-product",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-product-master",
+      "path": "/mes/product-master",
+      "component": "mes:product",
+      "permission": "mes.product:read",
+      "i18n_key": "menu.mes-product",
+      "titles": {
+        "en": "Product",
+        "zh-CN": "产品",
+        "ja": "製品"
+      }
+    },
+    {
+      "key": "mes-product_family",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-product-master",
+      "path": "/mes/product-master",
+      "component": "mes:product_family",
+      "permission": "mes.product:read",
+      "i18n_key": "menu.mes-product_family",
+      "titles": {
+        "en": "Product Family",
+        "zh-CN": "产品族",
+        "ja": "製品ファミリー"
+      }
+    },
+    {
+      "key": "mes-tech_node",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-product-master",
+      "path": "/mes/product-master",
+      "component": "mes:tech_node",
+      "permission": "mes.product:read",
+      "i18n_key": "menu.mes-tech_node",
+      "titles": {
+        "en": "Technology Node",
+        "zh-CN": "工艺节点",
+        "ja": "テクノロジーノード"
+      }
+    },
+    {
+      "key": "mes-material-master",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-product",
+      "path": "/mes/material-master",
+      "component": "tabs",
+      "permission": "mes.product:read",
+      "i18n_key": "menu.mes-material-master",
+      "titles": {
+        "en": "Material Master",
+        "zh-CN": "物料主数据",
+        "ja": "資材マスタ"
+      }
+    },
+    {
+      "key": "mes-material",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-material-master",
+      "path": "/mes/material-master",
+      "component": "mes:material",
+      "permission": "mes.product:read",
+      "i18n_key": "menu.mes-material",
+      "titles": {
+        "en": "Material",
+        "zh-CN": "物料",
+        "ja": "資材"
+      }
+    },
+    {
+      "key": "mes-material_type",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-material-master",
+      "path": "/mes/material-master",
+      "component": "mes:material_type",
+      "permission": "mes.product:read",
+      "i18n_key": "menu.mes-material_type",
+      "titles": {
+        "en": "Material Type",
+        "zh-CN": "物料类型",
+        "ja": "資材タイプ"
+      }
+    },
+    {
+      "key": "mes-carrier-master",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-product",
+      "path": "/mes/carrier-master",
+      "component": "tabs",
+      "permission": "mes.product:read",
+      "i18n_key": "menu.mes-carrier-master",
+      "titles": {
+        "en": "Carrier Master",
+        "zh-CN": "载具主数据",
+        "ja": "キャリアマスタ"
+      }
+    },
+    {
+      "key": "mes-carrier",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-carrier-master",
+      "path": "/mes/carrier-master",
+      "component": "mes:carrier",
+      "permission": "mes.product:read",
+      "i18n_key": "menu.mes-carrier",
+      "titles": {
+        "en": "Carrier",
+        "zh-CN": "载具",
+        "ja": "キャリア"
+      }
+    },
+    {
+      "key": "mes-carrier_type",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-carrier-master",
+      "path": "/mes/carrier-master",
+      "component": "mes:carrier_type",
+      "permission": "mes.product:read",
+      "i18n_key": "menu.mes-carrier_type",
+      "titles": {
+        "en": "Carrier Type",
+        "zh-CN": "载具类型",
+        "ja": "キャリアタイプ"
+      }
+    },
+    {
+      "key": "mes-reticle",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-product",
+      "path": "/mes/reticle",
+      "component": "mes:reticle",
+      "permission": "mes.product:read",
+      "i18n_key": "menu.mes-reticle",
+      "titles": {
+        "en": "Reticle",
+        "zh-CN": "光罩",
+        "ja": "レチクル"
+      }
+    },
+    {
+      "key": "mes-fixture",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-product",
+      "path": "/mes/fixture",
+      "component": "mes:fixture",
+      "permission": "mes.product:read",
+      "i18n_key": "menu.mes-fixture",
+      "titles": {
+        "en": "Fixture",
+        "zh-CN": "治具",
+        "ja": "治具"
+      }
+    },
+    {
+      "key": "mes-factory-model",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-factory",
+      "path": "/mes/factory-model",
+      "component": "tree",
+      "permission": "mes.org:read",
+      "i18n_key": "menu.mes-factory-model",
+      "titles": {
+        "en": "Factory Model",
+        "zh-CN": "工厂模型",
+        "ja": "工場モデル"
+      }
+    },
+    {
+      "key": "mes-site",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-factory-model",
+      "path": "/mes/factory-model",
+      "component": "mes:site",
+      "permission": "mes.org:read",
+      "i18n_key": "menu.mes-site",
+      "titles": {
+        "en": "Site",
+        "zh-CN": "工厂",
+        "ja": "工場"
+      }
+    },
+    {
+      "key": "mes-area",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-factory-model",
+      "path": "/mes/factory-model",
+      "component": "mes:area",
+      "permission": "mes.org:read",
+      "i18n_key": "menu.mes-area",
+      "titles": {
+        "en": "Area",
+        "zh-CN": "区域",
+        "ja": "エリア"
+      }
+    },
+    {
+      "key": "mes-workcenter",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-factory-model",
+      "path": "/mes/factory-model",
+      "component": "mes:workcenter",
+      "permission": "mes.org:read",
+      "i18n_key": "menu.mes-workcenter",
+      "titles": {
+        "en": "Work Center",
+        "zh-CN": "工作中心",
+        "ja": "ワークセンター"
+      }
+    },
+    {
+      "key": "mes-calendar",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-factory",
+      "path": "/mes/calendar",
+      "component": "tabs",
+      "permission": "mes.org:read",
+      "i18n_key": "menu.mes-calendar",
+      "titles": {
+        "en": "Calendar & Shifts",
+        "zh-CN": "日历与班次",
+        "ja": "カレンダー・シフト"
+      }
+    },
+    {
+      "key": "mes-work_calendar",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-calendar",
+      "path": "/mes/calendar",
+      "component": "mes:work_calendar",
+      "permission": "mes.org:read",
+      "i18n_key": "menu.mes-work_calendar",
+      "titles": {
+        "en": "Work Calendar",
+        "zh-CN": "工作日历",
+        "ja": "稼働カレンダー"
+      }
+    },
+    {
+      "key": "mes-shift",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "mes-calendar",
+      "path": "/mes/calendar",
+      "component": "mes:shift",
+      "permission": "mes.org:read",
+      "i18n_key": "menu.mes-shift",
+      "titles": {
+        "en": "Shift",
+        "zh-CN": "班次",
+        "ja": "シフト"
+      }
+    },
+    {
+      "key": "mes-operator_qual",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-factory",
+      "path": "/mes/operator-qual",
+      "component": "mes:operator_qual",
+      "permission": "mes.exec:read",
+      "i18n_key": "menu.mes-operator_qual",
+      "titles": {
+        "en": "Operator Qualification",
+        "zh-CN": "操作员资质",
+        "ja": "作業者資格"
+      }
+    },
+    {
+      "key": "mes-reason_code",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-master",
+      "path": "/mes/reason-code",
+      "component": "mes:reason_code",
+      "permission": "mes.quality:read",
+      "i18n_key": "menu.mes-reason_code",
+      "titles": {
+        "en": "Reason Code",
+        "zh-CN": "原因代码",
+        "ja": "理由コード"
+      }
+    },
+    {
+      "key": "mes-code_rule",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-master",
+      "path": "/mes/code-rule",
+      "component": "mes:code_rule",
+      "permission": "mes.common:read",
+      "i18n_key": "menu.mes-code_rule",
+      "titles": {
+        "en": "Code Rule",
+        "zh-CN": "编码规则",
+        "ja": "採番ルール"
+      }
+    },
+    {
+      "key": "mes-uom",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-master",
+      "path": "/mes/uom",
+      "component": "mes:uom",
+      "permission": "mes.product:read",
+      "i18n_key": "menu.mes-uom",
+      "titles": {
+        "en": "UOM",
+        "zh-CN": "计量单位",
+        "ja": "単位"
+      }
+    },
+    {
+      "key": "mes-dict_type",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-master",
+      "path": "/mes/dict-type",
+      "component": "mes:dict_type",
+      "permission": "mes.common:read",
+      "i18n_key": "menu.mes-dict_type",
+      "titles": {
+        "en": "Dictionary",
+        "zh-CN": "数据字典",
+        "ja": "データ辞書"
+      }
+    },
+    {
+      "key": "mes-attr_def",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-master",
+      "path": "/mes/attr-def",
+      "component": "mes:attr_def",
+      "permission": "mes.common:read",
+      "i18n_key": "menu.mes-attr_def",
+      "titles": {
+        "en": "Custom Attribute",
+        "zh-CN": "自定义属性",
+        "ja": "カスタム属性"
+      }
+    },
+    {
+      "key": "user-permissions",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-system",
+      "path": "/user-permissions",
+      "component": "tabs",
+      "permission": "members:write",
+      "i18n_key": "menu.user-permissions",
+      "titles": {
+        "en": "Users & Permissions",
+        "zh-CN": "用户与权限",
+        "ja": "ユーザーと権限"
+      }
+    },
+    {
+      "key": "members",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "user-permissions",
+      "path": "/user-permissions",
+      "component": "members",
+      "permission": "members:write",
+      "i18n_key": "menu.members",
+      "titles": {
+        "en": "Users",
+        "zh-CN": "用户",
+        "ja": "ユーザー"
+      }
+    },
+    {
+      "key": "user-roles",
+      "space": "workspace",
+      "kind": "tab",
+      "parent": "user-permissions",
+      "path": "/user-permissions",
+      "component": "tenant-roles",
+      "permission": "members:write",
+      "i18n_key": "menu.user-roles",
+      "titles": {
+        "en": "Roles",
+        "zh-CN": "角色",
+        "ja": "ロール"
+      }
+    },
+    {
+      "key": "notify-subscriptions",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-system",
+      "path": "/notify-subscriptions",
+      "component": "notify-subscriptions",
+      "permission": "notify:config",
+      "i18n_key": "menu.notify-subscriptions",
+      "titles": {
+        "en": "Notification Subscriptions",
+        "zh-CN": "通知订阅",
+        "ja": "通知購読"
+      }
+    },
+    {
+      "key": "config",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-system",
+      "path": "/config",
+      "component": "config",
+      "permission": "config:read",
+      "i18n_key": "menu.config",
+      "titles": {
+        "en": "System Settings",
+        "zh-CN": "系统设置",
+        "ja": "システム設定"
+      }
+    },
+    {
+      "key": "mes-audit_log",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-system",
+      "path": "/mes/audit-log",
+      "component": "mes:audit_log",
+      "permission": "mes.common:read",
+      "i18n_key": "menu.mes-audit_log",
+      "titles": {
+        "en": "Audit Log",
+        "zh-CN": "审计日志",
+        "ja": "監査ログ"
+      }
+    },
+    {
+      "key": "p-g-tenants",
+      "space": "platform",
+      "kind": "group",
+      "parent": null,
+      "path": null,
+      "component": null,
+      "permission": null,
+      "i18n_key": "menu.p-g-tenants",
+      "titles": {
+        "en": "Tenant Management",
+        "zh-CN": "租户管理",
+        "ja": "テナント管理"
+      }
+    },
+    {
+      "key": "p-g-rbac",
+      "space": "platform",
+      "kind": "group",
+      "parent": null,
+      "path": null,
+      "component": null,
+      "permission": null,
+      "i18n_key": "menu.p-g-rbac",
+      "titles": {
+        "en": "Platform Access",
+        "zh-CN": "平台权限",
+        "ja": "プラットフォーム権限"
+      }
+    },
+    {
+      "key": "p-g-settings",
+      "space": "platform",
+      "kind": "group",
+      "parent": null,
+      "path": null,
+      "component": null,
+      "permission": null,
+      "i18n_key": "menu.p-g-settings",
+      "titles": {
+        "en": "Platform Settings",
+        "zh-CN": "平台设置",
+        "ja": "プラットフォーム設定"
+      }
+    },
+    {
+      "key": "p-g-ops",
+      "space": "platform",
+      "kind": "group",
+      "parent": null,
+      "path": null,
+      "component": null,
+      "permission": null,
+      "i18n_key": "menu.p-g-ops",
+      "titles": {
+        "en": "Operations & Audit",
+        "zh-CN": "运维与审计",
+        "ja": "運用・監査"
+      }
+    },
+    {
+      "key": "p-tenants",
+      "space": "platform",
+      "kind": "item",
+      "parent": "p-g-tenants",
+      "path": "/platform/tenants",
+      "component": "platform-tenants",
+      "permission": "tenants:read",
+      "i18n_key": "menu.p-tenants",
+      "titles": {
+        "en": "Tenants",
+        "zh-CN": "租户列表",
+        "ja": "テナント一覧"
+      }
+    },
+    {
+      "key": "p-users",
+      "space": "platform",
+      "kind": "item",
+      "parent": "p-g-rbac",
+      "path": "/platform/users",
+      "component": "users",
+      "permission": "users:read",
+      "i18n_key": "menu.p-users",
+      "titles": {
+        "en": "Platform Users",
+        "zh-CN": "平台用户",
+        "ja": "プラットフォームユーザー"
+      }
+    },
+    {
+      "key": "p-roles",
+      "space": "platform",
+      "kind": "item",
+      "parent": "p-g-rbac",
+      "path": "/platform/roles",
+      "component": "roles",
+      "permission": "roles:read",
+      "i18n_key": "menu.p-roles",
+      "titles": {
+        "en": "Platform Roles",
+        "zh-CN": "平台角色",
+        "ja": "プラットフォームロール"
+      }
+    },
+    {
+      "key": "p-permissions",
+      "space": "platform",
+      "kind": "item",
+      "parent": "p-g-rbac",
+      "path": "/platform/permissions",
+      "component": "platform-permissions",
+      "permission": "roles:read",
+      "i18n_key": "menu.p-permissions",
+      "titles": {
+        "en": "Permission Tree",
+        "zh-CN": "权限树",
+        "ja": "権限ツリー"
+      }
+    },
+    {
+      "key": "p-config",
+      "space": "platform",
+      "kind": "item",
+      "parent": "p-g-settings",
+      "path": "/platform/config",
+      "component": "platform-config",
+      "permission": "platform.config:read",
+      "i18n_key": "menu.p-config",
+      "titles": {
+        "en": "Platform Defaults",
+        "zh-CN": "系统配置（平台默认）",
+        "ja": "システム設定（既定値）"
+      }
+    },
+    {
+      "key": "p-channels",
+      "space": "platform",
+      "kind": "item",
+      "parent": "p-g-settings",
+      "path": "/platform/notify-channels",
+      "component": "notify-channels",
+      "permission": "platform.notify:read",
+      "i18n_key": "menu.p-channels",
+      "titles": {
+        "en": "Notification Channels",
+        "zh-CN": "通知渠道",
+        "ja": "通知チャネル"
+      }
+    },
+    {
+      "key": "p-audit",
+      "space": "platform",
+      "kind": "item",
+      "parent": "p-g-ops",
+      "path": "/platform/audit",
+      "component": "platform-audit",
+      "permission": "platform.audit:read",
+      "i18n_key": "menu.p-audit",
+      "titles": {
+        "en": "Cross-tenant Audit Log",
+        "zh-CN": "跨租户审计日志",
+        "ja": "テナント横断監査ログ"
+      }
+    },
+    {
+      "key": "p-login-log",
+      "space": "platform",
+      "kind": "item",
+      "parent": "p-g-ops",
+      "path": "/platform/login-log",
+      "component": "login-log",
+      "permission": "platform.audit:read",
+      "i18n_key": "menu.p-login-log",
+      "titles": {
+        "en": "Login Log",
+        "zh-CN": "登录日志",
+        "ja": "ログイン履歴"
+      }
+    },
+    {
+      "key": "p-ops-log",
+      "space": "platform",
+      "kind": "item",
+      "parent": "p-g-ops",
+      "path": "/platform/ops-log",
+      "component": "platform-ops-log",
+      "permission": "platform.audit:read",
+      "i18n_key": "menu.p-ops-log",
+      "titles": {
+        "en": "Platform Operation Log",
+        "zh-CN": "平台操作日志",
+        "ja": "プラットフォーム操作ログ"
+      }
+    }
+  ]
+}
