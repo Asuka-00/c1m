@@ -1316,12 +1316,14 @@
         "copiedFrom": "复制自",
         "createdAt": "创建时间",
         "lineNo": "行号",
-        "component": "物料",
+        "component": "组件",
         "qty": "用量",
         "uom": "单位",
         "perBasis": "计量基准",
         "scrapRate": "损耗率",
-        "consumeMode": "扣料方式"
+        "consumeMode": "扣料方式",
+        "componentType": "组件类型",
+        "substitutes": "替代料"
       },
       "perBasis": {
         "wafer": "每晶圆",
@@ -1368,8 +1370,30 @@
         "alreadyVoid": "该版本已作废",
         "duplicateLine": "行号重复",
         "conflict": "数据已被修改或状态不允许此操作，请刷新后重试",
-        "notFound": "该 BOM 不存在或已被删除"
-      }
+        "notFound": "该 BOM 不存在或已被删除",
+        "ownProduct": "不能引用本产品自己",
+        "sameAsPrimary": "替代料不能与主料相同",
+        "subMaterialOnly": "只有物料行可以设置替代料",
+        "positive": "必须大于 0",
+        "dupSubPriority": "同一行的替代料优先级重复",
+        "dupSubMaterial": "同一行的替代物料重复"
+      },
+      "componentType": {
+        "material": "物料",
+        "product": "半成品"
+      },
+      "addSub": "添加替代料",
+      "removeSub": "删除替代料",
+      "subMaterial": "替代物料",
+      "subPriority": "优先级",
+      "subNone": "无替代料",
+      "subHint": "替代料随 BOM 版本一起生效；只有物料行可以设置",
+      "childActive": "当前生效 v{{version}}（只读）",
+      "childNone": "该半成品没有生效的 BOM",
+      "expand": "展开半成品 {{name}}",
+      "collapse": "收起半成品 {{name}}",
+      "maintain": "到该产品维护",
+      "subOf": "替代：{{list}}"
     }
   },
   "notify": {

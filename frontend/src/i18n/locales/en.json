@@ -1316,12 +1316,14 @@
         "copiedFrom": "Copied from",
         "createdAt": "Created at",
         "lineNo": "Line no.",
-        "component": "Material",
+        "component": "Component",
         "qty": "Qty",
         "uom": "Unit",
         "perBasis": "Per",
         "scrapRate": "Scrap rate",
-        "consumeMode": "Consume mode"
+        "consumeMode": "Consume mode",
+        "componentType": "Component type",
+        "substitutes": "Substitutes"
       },
       "perBasis": {
         "wafer": "Per wafer",
@@ -1368,8 +1370,30 @@
         "alreadyVoid": "This version is already void",
         "duplicateLine": "Duplicate line number",
         "conflict": "The data changed or its status does not allow this; refresh and try again",
-        "notFound": "This BOM does not exist or was deleted"
-      }
+        "notFound": "This BOM does not exist or was deleted",
+        "ownProduct": "A BOM cannot use its own product",
+        "sameAsPrimary": "Substitute cannot be the primary material",
+        "subMaterialOnly": "Only material lines can have substitutes",
+        "positive": "Must be greater than 0",
+        "dupSubPriority": "Duplicate substitute priority on this line",
+        "dupSubMaterial": "Duplicate substitute material on this line"
+      },
+      "componentType": {
+        "material": "Material",
+        "product": "Semi-finished product"
+      },
+      "addSub": "Add substitute",
+      "removeSub": "Remove substitute",
+      "subMaterial": "Substitute material",
+      "subPriority": "Priority",
+      "subNone": "No substitutes",
+      "subHint": "Substitutes take effect with the BOM version; material lines only",
+      "childActive": "Active v{{version}} (read-only)",
+      "childNone": "This semi-finished product has no active BOM",
+      "expand": "Expand semi-finished product {{name}}",
+      "collapse": "Collapse semi-finished product {{name}}",
+      "maintain": "Maintain in that product",
+      "subOf": "Substitutes: {{list}}"
     }
   },
   "notify": {

@@ -4,6 +4,8 @@
  * 版本列表（草稿 / 生效 / 已取代 / 作废）+ 选中版本的明细；新建草稿、编辑草稿、
  * 生效、作废、复制。只有草稿可编辑，其他状态只读，按钮置灰并在悬停 / 聚焦时说明原因（FE-02）。
  * 没有权限时按钮全部置灰；后端 403 只提示无权限（D34）。生效 / 作废 / 复制请求体为空（D32）。
+ * 明细按两级树展示：半成品行（component_type=product）可展开，只读显示该半成品当前生效的版本，
+ * 维护要到该产品自己的 BOM 页签（§7.1）。草稿里可编辑替代料（§7.2），保存见 `bom-save.ts`。
  * 用量比对（F4）和单位换算维护（F8）不在本页签。
  */
 import { type ReactNode, useMemo, useState } from 'react'
@@ -15,7 +17,7 @@ import {
   bomApi,
   type Bom,
   type BomLine,
-  type BomLineBody,
+  type BomNode,
   type BomStatus,
 } from '@/lib/api/mes/bom'
 import type { MesRow } from '@/lib/api/mes/common'
@@ -34,12 +36,21 @@ import { Label } from '@/components/ui/label'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { IconTooltip } from '@/components/icon-button'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
+import { RefLink } from '@/features/mes/common/ref-link'
 import { RefSelect } from '@/features/mes/common/ref-select'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
 import { bomError, type BomFieldError } from './bom-errors'
+import {
+  BomSaveError,
+  type LineDraft,
+  saveDraft,
+  type SubDraft,
+  toLineDraft,
+} from './bom-save'
 
 const PER_BASIS = ['wafer', 'strip', 'die', 'package', 'unit', 'lot'] as const
 const CONSUME = ['issue', 'mounted'] as const
+const COMPONENT_TYPES = ['material', 'product'] as const
 
 const STATUS_VARIANT: Record<
   BomStatus,
@@ -307,6 +318,8 @@ export function BomTab({ row }: { row: MesRow }) {
   )
 }
 
+const COLS = 7
+
 function LinesTable({
   lines,
   loading,
@@ -314,38 +327,182 @@ function LinesTable({
   lines: BomLine[]
   loading: boolean
 }) {
+  const [open, setOpen] = useState<Set<string>>(new Set())
   if (loading) return null
   if (!lines.length)
     return (
       <p className='text-sm text-muted-foreground'>{t('mes.bomTab.noLines')}</p>
     )
+  const toggle = (id: string) =>
+    setOpen((o) => {
+      const n = new Set(o)
+      if (n.has(id)) n.delete(id)
+      else n.add(id)
+      return n
+    })
   return (
     <table className='w-full text-sm' data-testid='bom-lines'>
-      <thead className='text-left text-muted-foreground'>
-        <tr>
-          <th className='py-1'>{t('mes.bomTab.col.lineNo')}</th>
-          <th>{t('mes.bomTab.col.component')}</th>
-          <th>{t('mes.bomTab.col.qty')}</th>
-          <th>{t('mes.bomTab.col.uom')}</th>
-          <th>{t('mes.bomTab.col.perBasis')}</th>
-          <th>{t('mes.bomTab.col.scrapRate')}</th>
-          <th>{t('mes.bomTab.col.consumeMode')}</th>
-        </tr>
-      </thead>
+      <LinesHead />
       <tbody>
         {lines.map((l) => (
-          <tr key={l.id} data-testid={`bom-line-${l.line_no}`}>
-            <td className='py-1'>{l.line_no}</td>
-            <td>{l.material_label ?? l.component_product_label ?? '—'}</td>
-            <td data-testid='bom-line-qty'>{qtyText(l.qty)}</td>
-            <td>{l.uom_label ?? '—'}</td>
-            <td>{t(`mes.bomTab.perBasis.${l.per_basis}`)}</td>
-            <td>{qtyText(l.scrap_rate)}</td>
-            <td>{t(`mes.bomTab.consume.${l.consume_mode}`)}</td>
-          </tr>
+          <LineRows
+            key={l.id}
+            line={l}
+            expanded={open.has(l.id)}
+            onToggle={() => toggle(l.id)}
+          />
         ))}
       </tbody>
     </table>
+  )
+}
+
+function LinesHead() {
+  return (
+    <thead className='text-left text-muted-foreground'>
+      <tr>
+        <th className='py-1'>{t('mes.bomTab.col.lineNo')}</th>
+        <th>{t('mes.bomTab.col.component')}</th>
+        <th>{t('mes.bomTab.col.qty')}</th>
+        <th>{t('mes.bomTab.col.uom')}</th>
+        <th>{t('mes.bomTab.col.perBasis')}</th>
+        <th>{t('mes.bomTab.col.scrapRate')}</th>
+        <th>{t('mes.bomTab.col.consumeMode')}</th>
+      </tr>
+    </thead>
+  )
+}
+
+/** 一行明细；半成品行可展开（只读）其当前生效版本。 */
+function LineRows({
+  line: l,
+  expanded,
+  onToggle,
+}: {
+  line: BomLine
+  /** undefined 表示不可展开（第二级） */
+  expanded?: boolean
+  onToggle?: () => void
+}) {
+  const product = l.component_type === 'product'
+  const name = l.component_product_label ?? l.component_product_id ?? '—'
+  const subs = l.substitutes ?? []
+  return (
+    <>
+      <tr data-testid={`bom-line-${l.line_no}`}>
+        <td className='py-1 align-top'>{l.line_no}</td>
+        <td className='align-top'>
+          {product ? (
+            <span className='inline-flex items-center gap-1'>
+              {onToggle && (
+                <Button
+                  size='sm'
+                  variant='ghost'
+                  className='h-6 px-1'
+                  aria-expanded={expanded}
+                  aria-label={t(
+                    expanded ? 'mes.bomTab.collapse' : 'mes.bomTab.expand',
+                    { name }
+                  )}
+                  onClick={onToggle}
+                >
+                  {expanded ? '▾' : '▸'}
+                </Button>
+              )}
+              <Badge variant='secondary'>
+                {t('mes.bomTab.componentType.product')}
+              </Badge>
+              {l.component_product_id ? (
+                <RefLink
+                  target='product'
+                  id={l.component_product_id}
+                  label={name}
+                />
+              ) : (
+                name
+              )}
+            </span>
+          ) : (
+            (l.material_label ?? '—')
+          )}
+          {subs.length > 0 && (
+            <div
+              className='text-xs text-muted-foreground'
+              data-testid='bom-line-subs'
+            >
+              {t('mes.bomTab.subOf', {
+                list: subs
+                  .map(
+                    (x) => `${x.priority}. ${x.material_label ?? x.material_id}`
+                  )
+                  .join('，'),
+              })}
+            </div>
+          )}
+        </td>
+        <td className='align-top' data-testid='bom-line-qty'>
+          {qtyText(l.qty)}
+        </td>
+        <td className='align-top'>{l.uom_label ?? '—'}</td>
+        <td className='align-top'>{t(`mes.bomTab.perBasis.${l.per_basis}`)}</td>
+        <td className='align-top'>{qtyText(l.scrap_rate)}</td>
+        <td className='align-top'>
+          {t(`mes.bomTab.consume.${l.consume_mode}`)}
+        </td>
+      </tr>
+      {product && expanded && (
+        <tr data-testid={`bom-child-${l.line_no}`}>
+          <td />
+          <td colSpan={COLS - 1} className='pb-2'>
+            <ChildNode
+              node={l.child ?? null}
+              productId={l.component_product_id}
+              name={name}
+            />
+          </td>
+        </tr>
+      )}
+    </>
+  )
+}
+
+/** 第二级：半成品当前生效版本，只读；维护请到该产品。 */
+function ChildNode({
+  node,
+  productId,
+  name,
+}: {
+  node: BomNode | null
+  productId: string | null
+  name: string
+}) {
+  return (
+    <div className='rounded border-l-2 pl-3' data-testid='bom-child'>
+      <div className='flex items-center gap-2 py-1 text-xs text-muted-foreground'>
+        <span>
+          {node?.bom
+            ? t('mes.bomTab.childActive', { version: node.bom.version })
+            : t('mes.bomTab.childNone')}
+        </span>
+        {productId && (
+          <RefLink
+            target='product'
+            id={productId}
+            label={`${t('mes.bomTab.maintain')}（${name}）`}
+          />
+        )}
+      </div>
+      {node?.bom && node.lines.length > 0 && (
+        <table className='w-full text-sm'>
+          <LinesHead />
+          <tbody>
+            {node.lines.map((c) => (
+              <LineRows key={c.id} line={c} />
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
   )
 }
 
@@ -400,55 +557,6 @@ function CreateDialog({
   )
 }
 
-/** 编辑中的一行明细。 */
-interface Draft {
-  key: string
-  id?: string
-  line_no: string
-  material_id: string | null
-  material_label: string | null
-  qty: string
-  uom_id: string
-  per_basis: string
-  scrap_rate: string
-  consume_mode: string
-  removed?: boolean
-}
-
-const toDraft = (l: BomLine): Draft => ({
-  key: l.id,
-  id: l.id,
-  line_no: String(l.line_no),
-  material_id: l.material_id,
-  material_label: l.material_label,
-  qty: qtyText(l.qty),
-  uom_id: l.uom_id,
-  per_basis: l.per_basis,
-  scrap_rate: l.scrap_rate == null ? '0' : String(l.scrap_rate),
-  consume_mode: l.consume_mode,
-})
-
-function body(d: Draft): BomLineBody {
-  return {
-    line_no: Number(d.line_no),
-    component_type: 'material',
-    material_id: d.material_id ?? undefined,
-    qty: d.qty.trim(),
-    uom_id: d.uom_id || undefined,
-    per_basis: d.per_basis,
-    scrap_rate: Number(d.scrap_rate || 0),
-    consume_mode: d.consume_mode,
-  }
-}
-
-/** 只传改过的字段。 */
-function diff(a: BomLineBody, b: BomLineBody): BomLineBody {
-  const out: Record<string, unknown> = {}
-  for (const [k, v] of Object.entries(b))
-    if (a[k as keyof BomLineBody] !== v) out[k] = v
-  return out as BomLineBody
-}
-
 /** 单位下拉选项：来自单位换算两端的单位（另加当前已选单位）。 */
 function useUomOptions(extra: { id: string; label: string | null }[]) {
   const tk = useTenantKey()
@@ -481,7 +589,7 @@ function EditDialog({
   onClose: () => void
 }) {
   const [desc, setDesc] = useState(bom.description ?? '')
-  const [rows, setRows] = useState<Draft[]>(() => lines.map(toDraft))
+  const [rows, setRows] = useState<LineDraft[]>(() => lines.map(toLineDraft))
   const [errs, setErrs] = useState<BomFieldError[]>([])
   const [banner, setBanner] = useState<string | null>(null)
   const extra = useMemo(
@@ -489,56 +597,55 @@ function EditDialog({
     [lines]
   )
   const uoms = useUomOptions(extra)
-  const orig = useMemo(
-    () => new Map(lines.map((l) => [l.id, toDraft(l)])),
-    [lines]
+  // 已保存状态：逐行保存中途失败后重试，不会重复提交已成功的部分
+  const [saved] = useState(
+    () => new Map(lines.map((l) => [l.id, toLineDraft(l)]))
   )
-  const set = (i: number, patch: Partial<Draft>) =>
+  const set = (i: number, patch: Partial<LineDraft>) =>
     setRows((r) => r.map((x, j) => (j === i ? { ...x, ...patch } : x)))
+  const setSub = (i: number, j: number, patch: Partial<SubDraft>) =>
+    setRows((r) =>
+      r.map((x, k) =>
+        k === i
+          ? {
+              ...x,
+              subs: x.subs.map((y, m) => (m === j ? { ...y, ...patch } : y)),
+            }
+          : x
+      )
+    )
   const errOf = (line: number | null, field: string) =>
     errs.find((e) => e.line === line && e.field === field)?.message
 
   const save = useMutation({
-    mutationFn: async () => {
+    mutationFn: () => {
       setErrs([])
       setBanner(null)
-      if (desc !== (bom.description ?? '')) {
-        try {
-          await bomApi.update(bom.id, desc.trim())
-        } catch (e) {
-          throw { e, line: null }
-        }
-      }
-      for (let i = 0; i < rows.length; i++) {
-        const r = rows[i]
-        try {
-          if (r.removed) {
-            if (r.id) await bomApi.removeLine(r.id)
-          } else if (!r.id) {
-            const created = await bomApi.addLine(bom.id, body(r))
-            set(i, { id: created.id })
-          } else if (orig.has(r.id)) {
-            const ch = diff(body(orig.get(r.id)!), body(r))
-            if (Object.keys(ch).length) await bomApi.updateLine(r.id, ch)
-          }
-        } catch (e) {
-          throw { e, line: i }
-        }
-      }
+      return saveDraft({
+        bom,
+        desc,
+        rows,
+        saved,
+        patchRow: set,
+      })
     },
     onSuccess: () => {
       toast.success(t('mes.bomTab.done.save', { version: bom.version }))
       onClose()
     },
     onError: (x: unknown) => {
-      const { e, line } = x as { e: unknown; line: number | null }
-      const be = bomError(e)
-      // 通用明细接口的 loc 是 ["body","qty"]，归到正在保存的那一行；
-      // 带 ["body","lines",i,...] 的直接按下标定位（D38，从 0 开始）
+      const se = x instanceof BomSaveError ? x : new BomSaveError(x, null)
+      const be = bomError(se.error)
+      // 整单接口：loc ["body","lines",k,...] 的 k 换回编辑框下标（D38，从 0 开始）；
+      // 通用接口：loc 是 ["body","qty"]，归到正在保存的那一行 / 那条替代料
       setErrs(
-        be.fields.map((f) =>
-          f.line == null && line != null ? { ...f, line } : f
-        )
+        be.fields.map((f) => {
+          if (f.line != null)
+            return { ...f, line: se.lineMap?.[f.line] ?? f.line }
+          if (se.line == null) return f
+          const field = se.sub == null ? f.field : `sub.${se.sub}.${f.field}`
+          return { ...f, line: se.line, field }
+        })
       )
       setBanner(be.message)
     },
@@ -594,20 +701,63 @@ function EditDialog({
                   />
                 </Field>
                 <Field
-                  id={`l${i}-mat`}
-                  label={t('mes.bomTab.col.component')}
-                  err={errOf(i, 'material_id') ?? errOf(i, 'material')}
+                  id={`l${i}-type`}
+                  label={t('mes.bomTab.col.componentType')}
+                  err={errOf(i, 'component_type')}
                 >
-                  <RefSelect
-                    id={`l${i}-mat`}
-                    target='material'
-                    value={r.material_id}
-                    label={r.material_label}
-                    onChange={(id, label) =>
-                      set(i, { material_id: id, material_label: label })
+                  <NativeSelect
+                    id={`l${i}-type`}
+                    value={r.component_type}
+                    onChange={(v) =>
+                      set(i, {
+                        component_type: v as LineDraft['component_type'],
+                      })
                     }
+                    options={COMPONENT_TYPES.map((x) => ({
+                      id: x,
+                      label: t(`mes.bomTab.componentType.${x}`),
+                    }))}
                   />
                 </Field>
+                {r.component_type === 'product' ? (
+                  <Field
+                    id={`l${i}-prod`}
+                    label={t('mes.bomTab.componentType.product')}
+                    err={
+                      errOf(i, 'component_product_id') ??
+                      errOf(i, 'component_product')
+                    }
+                  >
+                    <RefSelect
+                      id={`l${i}-prod`}
+                      target='product'
+                      value={r.component_product_id}
+                      label={r.component_product_label}
+                      onChange={(id, label) =>
+                        set(i, {
+                          component_product_id: id,
+                          component_product_label: label,
+                        })
+                      }
+                    />
+                  </Field>
+                ) : (
+                  <Field
+                    id={`l${i}-mat`}
+                    label={t('mes.bomTab.componentType.material')}
+                    err={errOf(i, 'material_id') ?? errOf(i, 'material')}
+                  >
+                    <RefSelect
+                      id={`l${i}-mat`}
+                      target='material'
+                      value={r.material_id}
+                      label={r.material_label}
+                      onChange={(id, label) =>
+                        set(i, { material_id: id, material_label: label })
+                      }
+                    />
+                  </Field>
+                )}
                 <Field
                   id={`l${i}-qty`}
                   label={t('mes.bomTab.col.qty')}
@@ -686,6 +836,35 @@ function EditDialog({
                     {t('mes.bomTab.removeLine')}
                   </Button>
                 </div>
+                {r.component_type === 'material' && (
+                  <SubEditor
+                    line={i}
+                    subs={r.subs}
+                    errOf={errOf}
+                    onChange={(j, patch) => setSub(i, j, patch)}
+                    onAdd={() =>
+                      set(i, {
+                        subs: [
+                          ...r.subs,
+                          {
+                            key: `new-sub-${i}-${r.subs.length}-${Date.now()}`,
+                            material_id: null,
+                            material_label: null,
+                            priority: String(
+                              Math.max(
+                                0,
+                                ...r.subs.map((x) => Number(x.priority) || 0)
+                              ) + 1
+                            ),
+                          },
+                        ],
+                      })
+                    }
+                    onRemove={(j) =>
+                      set(i, { subs: r.subs.filter((_, k) => k !== j) })
+                    }
+                  />
+                )}
               </fieldset>
             )
           )}
@@ -703,13 +882,17 @@ function EditDialog({
                 {
                   key: `new-${x.length}`,
                   line_no: String(max + 10),
+                  component_type: 'material',
                   material_id: null,
                   material_label: null,
+                  component_product_id: null,
+                  component_product_label: null,
                   qty: '',
                   uom_id: '',
                   per_basis: 'wafer',
                   scrap_rate: '0',
                   consume_mode: 'issue',
+                  subs: [],
                 },
               ])
             }}
@@ -787,5 +970,89 @@ function NativeSelect({
         </option>
       ))}
     </select>
+  )
+}
+
+/** 草稿里某一物料行的替代料：增删、设置优先级（随 BOM 版本一起生效，§7.2）。 */
+function SubEditor({
+  line: i,
+  subs,
+  errOf,
+  onChange,
+  onAdd,
+  onRemove,
+}: {
+  line: number
+  subs: SubDraft[]
+  errOf: (line: number | null, field: string) => string | undefined
+  onChange: (j: number, patch: Partial<SubDraft>) => void
+  onAdd: () => void
+  onRemove: (j: number) => void
+}) {
+  return (
+    <div
+      className='space-y-2 sm:col-span-4'
+      data-testid={`bom-edit-subs-${i}`}
+      role='group'
+      aria-label={t('mes.bomTab.col.substitutes')}
+    >
+      <div className='flex items-center gap-2 text-xs text-muted-foreground'>
+        <span className='font-medium text-foreground'>
+          {t('mes.bomTab.col.substitutes')}
+        </span>
+        <span>
+          {subs.length ? t('mes.bomTab.subHint') : t('mes.bomTab.subNone')}
+        </span>
+        <FieldErr
+          msg={errOf(i, 'priority') ?? errOf(i, 'bom_line')}
+          id={`l${i}-subs-err`}
+        />
+      </div>
+      {subs.map((s, j) => (
+        <div
+          key={s.key}
+          className='grid gap-2 sm:grid-cols-[1fr_8rem_auto]'
+          data-testid={`bom-edit-sub-${i}-${j}`}
+        >
+          <Field
+            id={`l${i}-s${j}-mat`}
+            label={t('mes.bomTab.subMaterial')}
+            err={
+              errOf(i, `sub.${j}.material`) ?? errOf(i, `sub.${j}.material_id`)
+            }
+          >
+            <RefSelect
+              id={`l${i}-s${j}-mat`}
+              target='material'
+              value={s.material_id}
+              label={s.material_label}
+              onChange={(id, label) =>
+                onChange(j, { material_id: id, material_label: label })
+              }
+            />
+          </Field>
+          <Field
+            id={`l${i}-s${j}-pri`}
+            label={t('mes.bomTab.subPriority')}
+            err={errOf(i, `sub.${j}.priority`)}
+          >
+            <Input
+              id={`l${i}-s${j}-pri`}
+              inputMode='numeric'
+              value={s.priority}
+              onChange={(e) => onChange(j, { priority: e.target.value })}
+            />
+          </Field>
+          <div className='flex items-end'>
+            <Button size='sm' variant='ghost' onClick={() => onRemove(j)}>
+              {t('mes.bomTab.removeSub')}
+            </Button>
+          </div>
+        </div>
+      ))}
+      <Button size='sm' variant='outline' onClick={onAdd}>
+        {t('mes.bomTab.addSub')}
+      </Button>
+    </div>
   )
 }

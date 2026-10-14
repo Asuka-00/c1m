@@ -32,17 +32,28 @@ function fieldMessage(it: Item): string {
   if (/at least one line/.test(msg)) return t('mes.bomTab.err.noLines')
   if (/circular/.test(msg)) return t('mes.bomTab.err.circular')
   if (/levels/.test(msg)) return t('mes.bomTab.err.tooDeep')
+  if (/its own product/.test(msg)) return t('mes.bomTab.err.ownProduct')
+  if (/same as the primary/.test(msg)) return t('mes.bomTab.err.sameAsPrimary')
+  if (/material lines only/.test(msg))
+    return t('mes.bomTab.err.subMaterialOnly')
+  if (/must be > 0/.test(msg)) return t('mes.bomTab.err.positive')
   return t('mes.bomTab.err.invalid')
 }
 
-/** 解析 422 的 loc：去掉开头的 body；`["lines", 0, "qty"]` 定位到第 0 行。 */
+/**
+ * 解析 422 的 loc：去掉开头的 body；`["lines", 0, "qty"]` 定位到第 0 行；
+ * `["lines", 0, "substitutes", 1, "priority"]` 定位到第 0 行的字段 `sub.1.priority`。
+ */
 export function parseLoc(loc: unknown[]): {
   line: number | null
   field: string
 } {
   const p = loc[0] === 'body' ? loc.slice(1) : loc
-  if (p[0] === 'lines' && typeof p[1] === 'number')
+  if (p[0] === 'lines' && typeof p[1] === 'number') {
+    if (p[2] === 'substitutes' && typeof p[3] === 'number')
+      return { line: p[1], field: `sub.${p[3]}.${String(p[4] ?? '')}` }
     return { line: p[1], field: String(p[2] ?? '') }
+  }
   return { line: null, field: String(p[0] ?? '') }
 }
 
@@ -79,6 +90,19 @@ export function bomError(e: unknown): BomError {
     }
   }
   if (status === 409) {
+    // 替代料唯一键冲突：{code: "duplicate", field: "priority" | "material"}
+    const o = d as { code?: string; field?: string } | null
+    if (o && typeof o === 'object' && o.code === 'duplicate') {
+      const message = t(
+        o.field === 'priority'
+          ? 'mes.bomTab.err.dupSubPriority'
+          : 'mes.bomTab.err.dupSubMaterial'
+      )
+      return {
+        message,
+        fields: o.field ? [{ line: null, field: o.field, message }] : [],
+      }
+    }
     const s = typeof d === 'string' ? d : ''
     const hit = CONFLICTS.find(([re]) => re.test(s))
     return { message: t(hit ? hit[1] : 'mes.bomTab.err.conflict'), fields: [] }

@@ -1316,12 +1316,14 @@
         "copiedFrom": "コピー元",
         "createdAt": "作成日時",
         "lineNo": "行番号",
-        "component": "資材",
+        "component": "構成品",
         "qty": "使用量",
         "uom": "単位",
         "perBasis": "基準",
         "scrapRate": "ロス率",
-        "consumeMode": "払出方式"
+        "consumeMode": "払出方式",
+        "componentType": "構成品種別",
+        "substitutes": "代替資材"
       },
       "perBasis": {
         "wafer": "ウェーハ当たり",
@@ -1368,8 +1370,30 @@
         "alreadyVoid": "このバージョンは既に無効です",
         "duplicateLine": "行番号が重複しています",
         "conflict": "データが変更されたか、状態がこの操作を許可していません。更新して再試行してください",
-        "notFound": "この BOM は存在しないか削除されました"
-      }
+        "notFound": "この BOM は存在しないか削除されました",
+        "ownProduct": "自身の製品は参照できません",
+        "sameAsPrimary": "代替資材は主資材と同じにできません",
+        "subMaterialOnly": "代替資材は資材行のみ設定できます",
+        "positive": "0 より大きい値が必要です",
+        "dupSubPriority": "同じ行で代替資材の優先度が重複しています",
+        "dupSubMaterial": "同じ行で代替資材が重複しています"
+      },
+      "componentType": {
+        "material": "資材",
+        "product": "半製品"
+      },
+      "addSub": "代替資材を追加",
+      "removeSub": "代替資材を削除",
+      "subMaterial": "代替資材",
+      "subPriority": "優先度",
+      "subNone": "代替資材なし",
+      "subHint": "代替資材は BOM 版と一緒に有効になります（資材行のみ）",
+      "childActive": "有効版 v{{version}}（読み取り専用）",
+      "childNone": "この半製品には有効な BOM がありません",
+      "expand": "半製品 {{name}} を展開",
+      "collapse": "半製品 {{name}} を折りたたむ",
+      "maintain": "その製品で編集",
+      "subOf": "代替：{{list}}"
     }
   },
   "notify": {

@@ -10,6 +10,23 @@ import { DETAIL_TABS } from '@/features/mes/registry'
 import { bomError, parseLoc } from './bom-errors'
 import { BomTab } from './bom-tab'
 
+// RefLink 依赖路由上下文；这里只验证链接目标
+vi.mock('@/features/mes/common/ref-link', () => ({
+  RefLink: ({
+    target,
+    id,
+    label,
+  }: {
+    target: string
+    id: string
+    label: string
+  }) => (
+    <a data-testid='ref-link' data-target={target} data-id={id}>
+      {label}
+    </a>
+  ),
+}))
+
 // 样例取自 fe-demo-examples.md §3（8011 种子 FED-FG）
 const PID = '184aeb65-5185-4ef6-a0d9-2fd2762e69cb'
 const bom = (v: number, status: Bom['status'], id: string): Bom => ({
@@ -310,7 +327,143 @@ describe('F3 BOM 页签', () => {
   })
 })
 
+describe('F3 v1.1 半成品与替代料', () => {
+  const prodLine: BomLine = {
+    ...line(30, 1, 'EA', 'FED-EA · 颗'),
+    id: 'l30',
+    component_type: 'product',
+    material_id: null,
+    material_label: null,
+    component_product_id: 'p-die',
+    component_product_label: 'FED-DIE',
+    child: {
+      bom: bom(3, 'active', 'cb3'),
+      level: 2,
+      lines: [
+        {
+          ...line(10, 2, KG, 'FED-KG · 千克'),
+          id: 'c10',
+          material_label: 'FED-WAFER',
+        },
+      ],
+    },
+  }
+  const subLine: BomLine = {
+    ...LINES[0],
+    substitutes: [
+      {
+        id: 's1',
+        bom_line_id: 'l10',
+        material_id: 'm2',
+        material_label: 'FED-WIRE-CU',
+        priority: 1,
+      },
+    ],
+  }
+  const mockTree = (lines: BomLine[]) =>
+    vi.spyOn(bomApi, 'tree').mockImplementation(async (id) => ({
+      bom: [V1, V2, V3, V4].find((b) => b.id === id)!,
+      level: 1,
+      lines,
+    }))
+
+  it('两级树：半成品行展开只读显示当前生效版本，带去该产品维护的入口（验收 11）', async () => {
+    mockApi()
+    mockTree([
+      subLine,
+      prodLine,
+      { ...prodLine, id: 'l40', line_no: 40, child: { bom: null, lines: [] } },
+    ])
+    const s = await setup(ALL)
+    await expect
+      .element(s.getByTestId('bom-line-subs'))
+      .toHaveTextContent('1. FED-WIRE-CU')
+    await s
+      .getByRole('button', {
+        name: t('mes.bomTab.expand', { name: 'FED-DIE' }),
+      })
+      .first()
+      .click()
+    const child = s.getByTestId('bom-child-30')
+    await expect
+      .element(child)
+      .toHaveTextContent(t('mes.bomTab.childActive', { version: 3 }))
+    await expect.element(child).toHaveTextContent('FED-WAFER')
+    const link = child.getByTestId('ref-link')
+    expect(link.element().getAttribute('data-id')).toBe('p-die')
+    expect(link.element().getAttribute('data-target')).toBe('product')
+    // 第二级只读：没有再展开或编辑的按钮
+    expect(child.element().querySelectorAll('button')).toHaveLength(0)
+    await s
+      .getByRole('button', {
+        name: t('mes.bomTab.expand', { name: 'FED-DIE' }),
+      })
+      .click()
+    await expect
+      .element(s.getByTestId('bom-child-40'))
+      .toHaveTextContent(t('mes.bomTab.childNone'))
+  })
+
+  it('草稿编辑：可切换组件类型；替代料增删改优先级（验收 11、12）', async () => {
+    mockApi()
+    mockTree([subLine])
+    vi.spyOn(bomApi, 'removeSubstitute').mockResolvedValue(undefined)
+    vi.spyOn(bomApi, 'addSubstitute').mockImplementation(async (lineId, b) => ({
+      id: 'sx',
+      bom_line_id: lineId,
+      material_id: b.material_id!,
+      material_label: null,
+      priority: b.priority,
+    }))
+    const s = await setup(ALL)
+    await s
+      .getByRole('button', { name: t('mes.bomTab.edit'), exact: true })
+      .click()
+    const type = s.getByLabelText(t('mes.bomTab.col.componentType')).first()
+    const opts = [...(type.element() as HTMLSelectElement).options].map(
+      (o) => o.value
+    )
+    expect(opts).toEqual(['material', 'product'])
+    const pri = s
+      .getByTestId('bom-edit-sub-0-0')
+      .getByLabelText(t('mes.bomTab.subPriority'))
+    await pri.fill('3')
+    await s.getByRole('button', { name: t('common.save') }).click()
+    await expect
+      .poll(() => vi.mocked(bomApi.addSubstitute).mock.calls.length)
+      .toBe(1)
+    expect(bomApi.removeSubstitute).toHaveBeenCalledWith('s1')
+    expect(bomApi.addSubstitute).toHaveBeenCalledWith('l10', {
+      material_id: 'm2',
+      priority: 3,
+    })
+  })
+
+  it('半成品行没有替代料编辑区（验收 12）', async () => {
+    mockApi()
+    mockTree([prodLine])
+    const s = await setup(ALL)
+    await s
+      .getByRole('button', { name: t('mes.bomTab.edit'), exact: true })
+      .click()
+    await expect.element(s.getByTestId('bom-edit-line-0')).toBeInTheDocument()
+    expect(document.querySelector('[data-testid=bom-edit-subs-0]')).toBeNull()
+  })
+})
+
 describe('bomError', () => {
+  it('替代料 422 路径与 409 重复', () => {
+    expect(
+      parseLoc(['body', 'lines', 2, 'substitutes', 1, 'priority'])
+    ).toEqual({
+      line: 2,
+      field: 'sub.1.priority',
+    })
+    const e = bomError(axiosErr(409, { code: 'duplicate', field: 'priority' }))
+    expect(e.message).toBe(t('mes.bomTab.err.dupSubPriority'))
+    expect(e.fields[0].field).toBe('priority')
+  })
+
   it('422 路径从 0 开始定位明细（D38）', () => {
     expect(parseLoc(['body', 'lines', 0, 'qty'])).toEqual({
       line: 0,

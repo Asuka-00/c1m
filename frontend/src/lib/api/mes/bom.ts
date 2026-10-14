@@ -1,8 +1,12 @@
 /**
  * BOM 接口（P1 / F3，bom.md v1.1）。
  *
- * - 主表 / 明细走通用接口：`/mes/bom`、`/mes/bom-line`（`mes.bom:read` / `mes.bom:write`）
- * - `GET /mes/bom/tree?bom_id=`：某版本的明细（含替代料）
+ * - 主表 / 明细 / 替代料走通用接口：`/mes/bom`、`/mes/bom-line`、`/mes/bom-line-substitute`
+ *   （`mes.bom:read` / `mes.bom:write`；替代料只能挂在物料行上，同一行内优先级、物料各自唯一，冲突 409）
+ * - `GET /mes/bom/tree?bom_id=`：某版本的明细（含替代料）；半成品行带 `child`，
+ *   为该半成品当前生效版本的明细（只读，§7.1 两级）
+ * - 草稿明细整单替换（`PUT /mes/bom/{id}/lines`，§7.2 / 验收 13）后端尚未提供，
+ *   见 `replaceLines` 与 `features/mes/product/bom-save.ts` 的 `BOM_REPLACE_LINES`。
  * - `POST /mes/bom/{id}/activate`、`/void`（`mes.bom:activate`）、`/copy`（`mes.bom:write`）：
  *   请求体必须为空（D32，带任何字段 422），这里不传 data。
  * - `GET /mes/uom-conversion`：单位换算，明细单位只能从中选择。
@@ -45,6 +49,25 @@ export interface BomLine {
   scrap_rate: number | null
   consume_mode: string
   remark: string | null
+  /** 替代料（按优先级升序；仅物料行） */
+  substitutes?: BomSubstitute[]
+  /** 半成品行：该产品当前生效版本（无生效版本时 bom 为 null） */
+  child?: BomNode | null
+}
+
+export interface BomSubstitute {
+  id: string
+  bom_line_id: string
+  material_id: string
+  material_label: string | null
+  priority: number
+}
+
+/** 树节点；半成品没有生效版本时 `bom` 为 null、`lines` 为空。 */
+export interface BomNode {
+  bom: Bom | null
+  level?: number
+  lines: BomLine[]
 }
 
 export interface BomTree {
@@ -65,14 +88,25 @@ export interface UomConversion {
 /** 新建 / 修改明细的请求体（数量以字符串传，避免浮点误差）。 */
 export interface BomLineBody {
   line_no?: number
-  component_type?: 'material'
-  material_id?: string
+  component_type?: 'material' | 'product'
+  material_id?: string | null
+  component_product_id?: string | null
   qty?: string
   uom_id?: string
   per_basis?: string
   scrap_rate?: number
   consume_mode?: string
   remark?: string | null
+}
+
+export interface BomSubstituteBody {
+  material_id: string | null
+  priority: number
+}
+
+/** 整单替换的一行：明细字段 + 替代料。 */
+export interface BomReplaceLine extends BomLineBody {
+  substitutes: BomSubstituteBody[]
 }
 
 export const bomApi = {
@@ -114,6 +148,21 @@ export const bomApi = {
     http.patch<BomLine>(`/mes/bom-line/${id}`, body).then((r) => r.data),
   removeLine: (id: string) =>
     http.delete(`/mes/bom-line/${id}`).then((r) => r.data),
+  addSubstitute: (lineId: string, body: BomSubstituteBody) =>
+    http
+      .post<BomSubstitute>('/mes/bom-line-substitute', {
+        bom_line_id: lineId,
+        ...body,
+      })
+      .then((r) => r.data),
+  removeSubstitute: (id: string) =>
+    http.delete(`/mes/bom-line-substitute/${id}`).then((r) => r.data),
+  /**
+   * 整单替换草稿明细（含替代料），后端一个事务完成；非草稿 409。
+   * 后端尚未提供该接口（架构师已提给后端），提供后把 `BOM_REPLACE_LINES` 置为 true 即可切换。
+   */
+  replaceLines: (bomId: string, lines: BomReplaceLine[]) =>
+    http.put<BomTree>(`/mes/bom/${bomId}/lines`, { lines }).then((r) => r.data),
   conversions: () =>
     http
       .get<Paged<UomConversion>>('/mes/uom-conversion', {
