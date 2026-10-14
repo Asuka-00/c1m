@@ -39,6 +39,8 @@ def field_meta(e: Entity) -> list[dict[str, Any]]:
                 "default": f.default,
                 "max_length": f.max_length if f.type == "str" else None,
                 "scale": f.scale,
+                # D60：定点字段最大小数位（超出 422 too_many_decimals）；非定点为 null
+                "decimal_places": f.scale if f.scale is not None else None,
                 "help": bool(f.help),
                 "depends": f.depends,
                 "ref_filter": f.ref_filter,

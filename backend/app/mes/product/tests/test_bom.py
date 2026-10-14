@@ -212,7 +212,11 @@ def test_bom_line_rules(client: TestClient, db: Session) -> None:
     err = b.line(v, 10, 422, qty="1.5")
     assert "whole number" in err["detail"][0]["msg"]
     # 质量单位允许小数，最多 6 位（D49：超出 422，不静默舍入）
-    b.line(v, 10, 422, qty="0.0000005", uom_id=b.g)
+    err = b.line(v, 10, 422, qty="0.0000005", uom_id=b.g)
+    assert err["detail"][0]["type"] == "too_many_decimals"  # D60 通用 CRUD
+    b.line(v, 10, 422, qty="1.1234567", uom_id=b.g)
+    ok = b.line(v, 14, qty="1.1000000", uom_id=b.g)  # 去尾零后 1 位，允许
+    assert ok["qty"] == 1.1
     ln = b.line(v, 10, qty="0.000001", uom_id=b.g)
     assert ln["qty"] == 0.000001
     b.line(v, 11, 422, qty=0)
@@ -381,6 +385,7 @@ def test_bom_permissions(client: TestClient, db: Session) -> None:
     assert ent["bom_line_substitute"]["read"] == "mes.bom:read"
     qty = next(f for f in ent["bom_line"]["fields"] if f["name"] == "qty")
     assert qty["scale"] == 6
+    assert qty["decimal_places"] == 6
 
 
 def _bom_for(f: Any, product: Any) -> Any:
