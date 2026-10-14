@@ -244,11 +244,25 @@ def test_marking_draft_follows_d78():
     codes = [e.get("code") for e in exp]
     assert codes.count("invalid_transition") == 7 and "trace_code_mismatch" in codes
     assert codes.count("check_blocked") == 3 and "idempotency_key_reused" in codes
-    assert sum(1 for e in exp if e.get("loc") == ["header", "Idempotency-Key"]) == 2
-    reasons = [(e.get("ctx") or {}).get("reason") for e in exp if e.get("type") == "value_error"]
-    assert sorted(reasons) == ["max_length", "max_length", "pattern", "pattern"]  # 手工 + EAP 两个入口
+    assert sum(1 for e in exp if e.get("loc") == ["header", "Idempotency-Key"]) == 3  # 打印、检验、作废
+    # 补充三 4：逐条列出，值取 config；手工和 EAP 两个入口各有单条和双条
+    errs = [e["errors"] for e in exp if "errors" in e]
+    assert len(errs) == 6 and sum(1 for x in errs if len(x) == 2) == 2
+    for x in errs:
+        for it in x:
+            want = {"max_length": "$cfg.trace_code_max_length", "pattern": "$cfg.trace_code_pattern"}[
+                it["ctx"]["reason"]
+            ]
+            assert it["type"] == "value_error" and it["ctx"][it["ctx"]["reason"]] == want
+    assert next(s for s in sc.steps if s.kind == "marking_config").args["save_as"] == "cfg"
+    bad = next(s for s in sc.steps if s.args.get("save_as") == "bad8")
+    nxt = sc.steps[sc.steps.index(bad) + 1]
+    assert nxt.kind == "expect_marking_events" and nxt.args["audit_count"] == {"trace_code_mismatch": 1}
     voids = [s for s in sc.steps if s.kind == "marking_void"]
-    assert [v.args["expect"]["status"] for v in voids] == [422, 422, 422, 200, 409]
+    assert [v.args["expect"]["status"] for v in voids] == [422, 403, 422, 422, 422, 200, 409]
+    assert voids[0].args["no_idem"] and voids[0].args["expect"]["loc"] == ["header", "Idempotency-Key"]
+    evs = [(s.args.get("latest") or {}).get("event") for s in sc.steps if s.kind == "expect_marking_events"]
+    assert {"lot.marked", "lot.marking_inspected", "lot.marking_voided", "lot.marking_mismatched"} <= set(evs)
     assert not any("qty" in (s.args.get("payload") or {}) for s in sc.steps)
     seqs = [s.args["seqs"] for s in sc.steps if s.kind == "expect_marking_prints" and "seqs" in s.args]
     assert all(q == list(range(1, len(q) + 1)) for q in seqs) and [1, 2] in seqs
@@ -270,7 +284,7 @@ def test_marking_draft_follows_d78():
             else:
                 assert "duplicate" in s.args["expect"]["absent"]
     text = open("scenarios/p3-draft/marking-report.yaml").read()
-    assert "lot.marking_mismatched" in text and "event: label_marking_mismatch" not in text
+    assert "lot.marking_mismatched" in text and "label_marking_mismatch" not in text and "待核对" not in text
     with pytest.raises(ScenarioError):
         parse({"run_id": "m", "steps": [{"marking_inspect": {"result": "pass"}}]})  # 缺 lot
     with pytest.raises(ScenarioError):

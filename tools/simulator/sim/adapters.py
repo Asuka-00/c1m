@@ -109,7 +109,9 @@ def default_adapters() -> dict[str, Adapter]:
         "marking_events": Adapter("打标领域事件（audit_log）", ["/mes/audit_log"], card="P3-B2"),
         # D78 补充二 3：作废（必填 reason_id + comment，reason_type=marking_void，不可恢复）
         "marking_void": Adapter("打标记录作废", ["/mes/marking/{marking_id}/void"], card="P3-B2"),
-        # 批次整批报废：沿用 P1 数量调整 kind=scrap（全部数量）；整批报废后 lot_status 是否为 scrapped 待 B2 核对
+        # D78 补充三 6：trace_code 生效配置（trace_code_max_length / trace_code_pattern），权限 mes.marking:exec
+        "marking_config": Adapter("打标配置", ["/mes/marking/config"], card="P3-B2"),
+        # 批次整批报废：P1 数量调整 kind=scrap 报废到 0 → lot_status=scrapped（后端确认 adjust.py:128）
         "lot_adjust": Adapter("批次数量调整（报废）", ["/mes/exec/lots/{lot_id}/adjust"], card="P1"),
     }
 
@@ -167,6 +169,7 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "marking_inspect": ["marking_inspect"],
     "marking_void": ["marking_void"],
     "lot_scrap": ["lot_adjust"],
+    "marking_config": ["marking_config"],
     "expect_marking": ["marking_get"],
     "expect_marking_prints": ["marking_prints"],
     "expect_marking_inspections": ["marking_inspections"],
