@@ -138,6 +138,7 @@ def holds_list(
     page_size: int = Query(default=20, ge=1, le=5000),
     sort_by: str = "held_at",
     sort_order: Literal["asc", "desc"] = "desc",
+    include_terminal: bool = False,
 ) -> Any:
     """Hold 管理页列表：服务端筛选、搜索、排序与分页，返回 ``{data, count}``。"""
     _need(ctx, "mes.exec:read")
@@ -150,6 +151,7 @@ def holds_list(
         product_id,
         date_from,
         date_to,
+        include_terminal=include_terminal,
     )
     if reason:
         rows = [r for r in rows if r["reason"] == reason]
@@ -169,6 +171,13 @@ def holds_list(
         )
     start = (page - 1) * page_size
     return {"data": rows[start : start + page_size], "count": len(rows)}
+
+
+@router.get("/holds/{hold_id}")
+def hold_detail(session: SessionDep, ctx: CurrentTenant, hold_id: uuid.UUID) -> Any:
+    """Hold 详情：字段同列表每条（含 Q-Time 附加字段，D20）。"""
+    _need(ctx, "mes.exec:read")
+    return svc.get_hold(session, ctx.id, hold_id)
 
 
 class BatchReleaseIn(BaseModel):

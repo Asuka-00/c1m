@@ -53,7 +53,7 @@ ENUMS.update(
             ("available", "Available|可用|使用可"),
             ("in_use", "In use|使用中|使用中"),
             ("dirty", "Needs cleaning|待清洗|要洗浄"),
-            ("hold", "On hold|冻结|保留"),
+            ("hold", "On hold|Hold|ホールド"),
             ("retired", "Retired|报废|廃棄"),
         ],
         "reticle_grade": [

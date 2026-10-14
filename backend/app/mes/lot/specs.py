@@ -162,7 +162,7 @@ register(
     Entity(
         "qtime_rule",
         "lot",
-        "Q-Time rule|Q-Time 规则|Q タイム規則",
+        "Q-Time rule|Q-Time 规则|Q-Time ルール",
         [
             F("route", "ref", required=True, ref="route"),
             F(
@@ -205,7 +205,19 @@ register(
                 "Reason code|原因代码|理由コード",
                 ref="reason_code",
                 list=False,
-                required_when={"action": ("hold", "scrap")},
+                # D25 / D26：原因码选填，hold 留空时用系统原因码 qtime_expired
+                help="Optional; for hold, blank uses system reason qtime_expired"
+                "|选填；处置为 hold 时留空使用系统原因码 qtime_expired"
+                "|任意。hold で空欄の場合はシステム理由 qtime_expired（Q-Time 超過）を使用",
+            ),
+            # D24/D25：被引用的规则不能删，改为停用（停用后不计时、不处置）
+            F("is_active", "bool", default=True),
+            F(
+                "active_since",
+                "datetime",
+                "Active since|启用时间|有効化日時",
+                list=False,
+                system=True,
             ),
         ],
         phase=4,
@@ -462,6 +474,37 @@ register(
             F("held_at", "datetime", "Held at|Hold 时间|ホールド日時"),
             F("held_by", "str", "Held by|Hold 人|ホールド者"),
             F("route_step", "ref", ref="route_step", list=False, filter=False),
+            # D20：Q-Time 自动 Hold 附加信息（手动 Hold / 旧记录为空）
+            F(
+                "qtime_rule",
+                "ref",
+                "Q-Time rule|Q-Time 规则|Q-Time ルール",
+                ref="qtime_rule",
+                list=False,
+                filter=False,
+            ),
+            F(
+                "qtime_from_step",
+                "ref",
+                "Q-Time from step|Q-Time 起始工步|Q-Time 開始ステップ",
+                ref="route_step",
+                list=False,
+                filter=False,
+            ),
+            F(
+                "qtime_to_step",
+                "ref",
+                "Q-Time to step|Q-Time 终点工步|Q-Time 終了ステップ",
+                ref="route_step",
+                list=False,
+                filter=False,
+            ),
+            F(
+                "qtime_overdue_seconds",
+                "int",
+                "Q-Time overdue (s)|Q-Time 超时秒数|Q-Time 超過秒",
+                list=False,
+            ),
             F("released_at", "datetime", "Released at|解除时间|解除日時"),
             F("released_by", "str", "Released by|解除人|解除者", list=False),
             F(

@@ -60,9 +60,11 @@ def init_db(session: Session) -> None:
         add_member(session, tenant, user, ["owner"])
         session.commit()
     # 让每个租户的默认角色同步新增的默认权限
+    from app.core.registry import seed_tenant
     from app.platform.tenants.models import Tenant
     from app.platform.tenants.service import seed_tenant_roles
 
     for t in session.exec(select(Tenant)).all():
         seed_tenant_roles(session, t)
+        seed_tenant(session, t.id)
     session.commit()

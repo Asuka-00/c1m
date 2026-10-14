@@ -67,10 +67,15 @@ def qtime_status(
     """
     out = []
     for r in find(s, tid, "qtime_rule", to_step_id=step["id"]):
+        if r.get("is_active") is False:  # 停用的规则不计时（D24 补充）
+            continue
         if r["product_id"] and r["product_id"] != lot["product_id"]:
             continue
         last = qtime_clock(s, tid, lot["id"], r["from_step_id"], None)
         if last is None:
+            continue
+        since = r.get("active_since")
+        if since and last < since:  # 重新启用前已开始计时：不追溯
             continue
         mins = (at - last).total_seconds() / 60
         out.append(

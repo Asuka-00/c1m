@@ -162,9 +162,9 @@ def test_qtime_sweep_and_switch(client: TestClient, db: Session) -> None:
     row = {r["lot"]: r for r in mon}
     assert row[a["code"]]["exceeded"] and not row[b["code"]]["exceeded"]
     assert row[b["code"]]["remaining"] > 0
-    # 开关关闭（工步级 off）：扫描不处置
+    # 开关关闭（工步级 off，D23 起在 Track In 时机）：扫描不处置
     f.bind(
-        "move_in",
+        "track_in",
         ("qtime", "off", {}),
         scope="route_step",
         route_step_id=f.steps[20]["id"],

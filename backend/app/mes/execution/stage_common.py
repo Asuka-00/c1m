@@ -8,12 +8,10 @@ from sqlmodel import Session
 from app.core.spec.audit import audit
 from app.core.spec.base import now
 from app.core.spec.engine import ENTITIES
-from app.core.spec.errors import http_422
 from app.core.spec.serialize import serialize
 from app.mes.common.query import one
 from app.mes.common.rows import _upd
-from app.mes.execution.constants import FROM_STATUS
-from app.mes.lot.service import TERMINAL, history, units
+from app.mes.lot.service import check_transition, history, units
 from app.mes.process.service import next_location
 
 Row = dict[str, Any]
@@ -22,14 +20,8 @@ LOT = ENTITIES["lot"]
 
 # ---------------- stages ----------------
 def _guard(lot: Row, stage: str) -> None:
-    if lot["lot_status"] in TERMINAL:
-        raise http_422([("lot_status", f"lot_status: lot is {lot['lot_status']}")])
-    if lot["on_hold"]:
-        raise http_422([("on_hold", "on_hold: lot is on hold; release it first")])
-    if lot["lot_status"] != FROM_STATUS[stage]:
-        raise http_422(
-            [("lot_status", f"lot_status: cannot {stage} a {lot['lot_status']} lot")]
-        )
+    # 合法转移集中在 lot.state.RULES（running 中被 Hold 允许 track_out）
+    check_transition(lot, stage)
 
 
 def _result(

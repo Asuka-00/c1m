@@ -2,8 +2,10 @@
 
 import uuid
 
+from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core.spec.base import now
 from app.core.spec.engine import Entity
 from app.core.spec.errors import MesError
 from app.core.spec.validate import validator
@@ -48,6 +50,22 @@ def _split_merge(
         raise MesError(errs)
 
 
+@validator("qtime_rule:payload")
+def _qtime_action(
+    _s: Session, _t: uuid.UUID, _e: Entity, data: Row, _old: Row | None
+) -> None:
+    """D26：Q-Time 处置不再支持 scrap → 422 qtime_action_invalid。"""
+    if data.get("action") == "scrap":
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "qtime_action_invalid",
+                "message": "Q-Time action 'scrap' is no longer supported; use hold or rework",
+                "action": "scrap",
+            },
+        )
+
+
 @validator("qtime_rule")
 def _qtime(s: Session, tid: uuid.UUID, _e: Entity, row: Row, _old: Row | None) -> None:
     errs: list[tuple[str, str]] = []
@@ -67,5 +85,8 @@ def _qtime(s: Session, tid: uuid.UUID, _e: Entity, row: Row, _old: Row | None) -
         errs.append(("max_minutes", "max_minutes: times must be positive"))
     if lo is not None and hi is not None and lo > hi:
         errs.append(("max_minutes", "max_minutes: must be >= min_minutes"))
+    # D24 补充：停用 → 启用时记启用时间，只对此后开始计时的批次生效（不追溯）
+    if _old is not None and _old.get("is_active") is False and row.get("is_active"):
+        row["active_since"] = now()
     if errs:
         raise MesError(errs)

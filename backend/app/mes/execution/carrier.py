@@ -187,6 +187,7 @@ def carrier_board(s: Session, tid: uuid.UUID) -> list[Row]:
                 "status": c["status_code"],
                 "lot_id": lot and str(lot["id"]),
                 "lot": lot and lot["code"],
+                "lot_status": lot and lot["lot_status"],
                 "wafers": len(units(s, tid, lot["id"])) if lot else 0,
                 "capacity": ct.get("capacity"),
                 "use_count": used,

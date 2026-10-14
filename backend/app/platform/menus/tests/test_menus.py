@@ -270,12 +270,22 @@ def test_menu_layout_complete_and_synced(
     top = [n["key"] for n in tree["menus"]]
     assert top == [g for g, *_ in GROUPS]  # ordered domain groups only
     by = {n["key"]: [c["key"] for c in n["children"]] for n in tree["menus"]}
-    assert by["g-planning"] == ["mes-wo-board", "mes-work_order", "mes-lot-start"]
+    assert by["g-planning"] == ["mes-lot-start", "mes-wo-board", "mes-work_order"]
     assert "mes-audit_log" in by["g-system"] and "mes-uom" in by["g-master"]
     # 业务流顺序：工作台 → 执行 → 在制报表 … 主数据 → 系统；组内日常作业在前
-    assert top[:3] == ["g-workspace", "g-execution", "g-wip"] and top[-1] == "g-system"
+    assert top[:4] == ["g-workspace", "g-execution", "g-exception", "g-wip"]
+    assert top[-1] == "g-system"
     assert by["g-workspace"][:2] == ["dashboard", "notifications"]
-    assert by["g-execution"][0] == "mes-lot-console"
+    # 方案 A：批次作业组前三项为进出站、Hold 管理、Q-Time 监控，只放作业项
+    assert by["g-execution"][:3] == [
+        "mes-lot-console",
+        "mes-lot_hold",
+        "mes-qtime-monitor",
+    ]
+    assert not {"mes-lot", "mes-wafer", "mes-operator_qual"} & set(by["g-execution"])
+    assert by["g-exception"] == ["mes-future_hold", "mes-check_log"]
+    assert {"mes-lot", "mes-wafer"} <= set(by["g-wip"])
+    assert "mes-operator_qual" in by["g-factory"]
     assert by["g-equipment"][0] == "mes-eqp-board"
     assert any("mes-equipment-master" in v for v in by.values())
     assert not {"general", "admin", "other", "tenant"} & set(top)
@@ -349,3 +359,90 @@ def test_merged_menu_permission_any_tab(db: Session) -> None:
         "mes-check_binding",
     ]
     assert "mes-product-master" not in flat  # 无产品权限
+
+
+def test_menu_titles_plan_a() -> None:
+    """方案 A 菜单标题：三语齐全、改名、日文 Q-Time 带空格、Hold 不叫冻结。"""
+    import re
+
+    from app.platform.menus import layout
+
+    en, zh, ja = (layout.titles(i) for i in range(3))
+    for items in layout.ITEMS.values():
+        for _, lbl in items:
+            parts = lbl.split("|")
+            assert len(parts) == 3 and all(p.strip() for p in parts), lbl
+    for _, lbl, _, _ in layout.GROUPS:
+        assert len(lbl.split("|")) == 3 and all(lbl.split("|")), lbl
+    assert zh["g-execution"] == "批次作业" and zh["g-equipment"] == "机台管理"
+    assert zh["g-exception"] == "异常处置" and zh["g-wip"] == "在制与查询"
+    assert ja["mes-qtime-monitor"] == "Q-Time 監視"
+    assert ja["mes-qtime_rule"] == "Q-Time ルール"
+    assert not any("Q タイム" in v for v in ja.values())
+    assert not any(re.search(r"Q-Time(?! )", v) for v in ja.values())
+    assert not any("冻结" in v for v in zh.values())
+    assert zh["mes-lot-start"] == "投片/开批"
+    assert (
+        zh["mes-carrier-ops"] == "载具作业" and en["mes-check_log"] == "Interlock Log"
+    )
+    assert zh["mes-tool"] == "耗材/治具寿命" and en["mes-change_order"] == "ECN"
+    # 8 个与首个页签重名的合并菜单已改名，页签名不变
+    assert {
+        k: zh[k]
+        for k in (
+            "mes-warehouse-master",
+            "mes-equipment-master",
+            "mes-product-master",
+            "mes-material-master",
+            "mes-carrier-master",
+            "mes-e10-model",
+            "mes-route-master",
+            "mes-calendar",
+        )
+    } == {
+        "mes-warehouse-master": "仓库主数据",
+        "mes-equipment-master": "机台主数据",
+        "mes-product-master": "产品主数据",
+        "mes-material-master": "物料主数据",
+        "mes-carrier-master": "载具主数据",
+        "mes-e10-model": "E10 状态配置",
+        "mes-route-master": "工艺流程配置",
+        "mes-calendar": "日历与班次",
+    }
+    for key, (*_, tabs) in layout.MERGED.items():
+        for lang in (en, zh, ja):
+            assert lang[key] != lang[tabs[0]], key
+    assert zh["mes-e10_state"] == "E10 状态模型"  # 页签名不变
+
+
+def test_admin_notify_config_and_member_user_permissions(
+    client: TestClient, db: Session
+) -> None:
+    """admin 有 notify:config 能看到通知订阅；member 看不到用户与权限但接口仍可调。"""
+    from app.platform.rbac.permissions import TENANT_ROLES
+
+    # admin 经 MES_PERMISSIONS（含模块注册的 EXTRA 权限）已有 notify:config
+    assert "notify:config" in TENANT_ROLES["admin"][1]
+    assert "notify:config" not in TENANT_ROLES["member"][1]
+    _, ho = _user(client, db)
+    tid = client.get(f"{API}/menus/me", headers=ho).json()["tenant_id"]
+    out = {}
+    for role in ("admin", "member"):
+        email, h = _user(client, db)
+        r = client.post(
+            f"{API}/tenants/{tid}/members",
+            headers=ho,
+            json={"username": username_for(email), "roles": [role]},
+        )
+        assert r.status_code in (200, 201), r.text
+        hh = {**h, "X-Tenant-ID": tid}
+        body = client.get(f"{API}/menus/me", headers=hh).json()
+        out[role] = (_keys(body["menus"]), body["forbidden_paths"], hh)
+    akeys = out["admin"][0]
+    assert {"notify-subscriptions", "user-permissions", "members"} <= akeys
+    mkeys, mforbidden, mh = out["member"]
+    assert not {"user-permissions", "members", "user-roles"} & mkeys
+    assert "notify-subscriptions" not in mkeys and "dashboard" in mkeys
+    assert "/user-permissions" in mforbidden
+    # 已知缺口（MENU-B4 关闭）：members:read 接口本期不收紧
+    assert client.get(f"{API}/tenants/{tid}/members", headers=mh).status_code == 200

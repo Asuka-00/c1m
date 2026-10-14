@@ -17,10 +17,12 @@ from app.platform.menus.schemas import MenuNode, MenuTab, PermNode
 from app.platform.rbac.models import Permission
 
 # 系统页面：key -> (路径, 图标, 组件, 权限)
+# 用户与权限（members / user-roles）菜单需 members:write 才显示；members:read 接口不收紧
+# （首页人数卡片、通知订阅选人仍在用），member 直接访问路径的缺口由 MENU-B4 关闭。
 SYSTEM_ITEMS: dict[str, tuple[str, str | None, str, str | None]] = {
     "dashboard": ("/", "LayoutDashboard", "dashboard", None),
-    "members": ("/members", "Users", "members", "members:read"),
-    "user-roles": ("/user-roles", "ShieldCheck", "tenant-roles", "members:read"),
+    "members": ("/members", "Users", "members", "members:write"),
+    "user-roles": ("/user-roles", "ShieldCheck", "tenant-roles", "members:write"),
     "config": ("/config", "SlidersHorizontal", "config", "config:read"),
     "settings": ("/settings", "Settings", "settings", None),
     "notifications": ("/notifications", "Bell", "notifications", None),
