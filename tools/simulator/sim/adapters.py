@@ -76,6 +76,11 @@ def default_adapters() -> dict[str, Adapter]:
         "reticle_incident": Adapter("光罩事故录入", ["/mes/reticle/{reticle_id}/incident"], card="P3-B4"),
         "reticle_get": Adapter("光罩详情", ["/mes/reticle/{reticle_id}"], card="P3-B4"),
         "reticle_history": Adapter("光罩履历", ["/mes/reticle/{reticle_id}/history"], card="P3-B4"),
+        # E1 v0.7 §3.2 / §5（D67）：动作接口与人工调整计数
+        "reticle_usage_manual": Adapter("光罩计数人工调整", ["/mes/reticle/{reticle_id}/usage"], card="P3-B4"),
+        "reticle_hold": Adapter("光罩 Hold", ["/mes/reticle/{reticle_id}/hold"], card="P3-B4"),
+        "reticle_release": Adapter("光罩解除 Hold", ["/mes/reticle/{reticle_id}/release"], card="P3-B4"),
+        "reticle_restore": Adapter("光罩人工恢复", ["/mes/reticle/{reticle_id}/restore"], card="P3-B4"),
     }
 
 
@@ -113,6 +118,10 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "reticle_incident": ["reticle_incident"],
     "expect_reticle": ["reticle_get"],
     "expect_reticle_history": ["reticle_history"],
+    "reticle_adjust": ["reticle_usage_manual"],
+    "reticle_hold": ["reticle_hold"],
+    "reticle_release": ["reticle_release"],
+    "reticle_restore": ["reticle_restore"],
     "reuse": [],
     "precondition": [],
 }

@@ -130,7 +130,17 @@ def nonlist_422(resp: Resp) -> str | None:
     return None
 
 
-P3_DRAFT_STEPS = {"reticle_mount", "reticle_usage", "reticle_incident", "expect_reticle", "expect_reticle_history"}
+P3_DRAFT_STEPS = {
+    "reticle_mount",
+    "reticle_usage",
+    "reticle_incident",
+    "expect_reticle",
+    "expect_reticle_history",
+    "reticle_adjust",
+    "reticle_hold",
+    "reticle_release",
+    "reticle_restore",
+}
 
 
 class Runner:

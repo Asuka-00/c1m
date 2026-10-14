@@ -116,6 +116,6 @@ B9（`0a74f8a`）、B10（`d27b700`/`23c502d`）、B11（`8294b63`）已对齐�
 - 请求体审计：`/mes/eap/events` 按“顶层多余字段并进 payload”后的 payload 审计。
 
 ### P3 草稿场景（分支 eap/p3-sim）
-- `scenarios/p3-draft/`：光罩曝光计数上报、碰撞 → Hold，依据 P3-E1 草案 v0.6。场景顶层 `draft: 原因` → 整体 skipped，不连后端。
-- 草稿步骤（`reticle_mount`、`reticle_usage`、`reticle_incident`、`expect_reticle`、`expect_reticle_history`）只做格式校验，P3-B4 落地前执行会失败；落地后按 openapi 校正路径与字段，再实现。
+- `scenarios/p3-draft/`：光罩曝光计数上报、碰撞 → Hold，依据 P3-E1 草案 v0.7（D66/D67）。场景顶层 `draft: 原因` → 整体 skipped，不连后端。
+- 草稿步骤（`reticle_mount`、`reticle_usage`、`reticle_incident`、`reticle_adjust`、`reticle_hold`、`reticle_release`、`reticle_restore`、`expect_reticle`、`expect_reticle_history`）只做格式校验，P3-B4 落地前执行会失败；落地后按 openapi 校正路径与字段，再实现。
 - `scenarios/*.yaml` 不含草稿目录，现有 5 个场景和请求体审计不受影响。

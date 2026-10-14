@@ -1,11 +1,13 @@
-# 草稿（P3-E1 v0.6 §3/§3.1）：光罩碰撞 → 自动 Hold。P3-B4 接口还没有，整体 skipped。
-# P3 碰撞只开人工录入（source=manual，D64）；以后划片机/光刻机上报事故走 B11（§9.1），这里先按人工接口写。
-# 覆盖：in_use 时录入碰撞 → hold（hold_reason=incident）、自动卸载（unmount_reason=incident）、inspection_required=true
-#       → 进站 409 check_blocked（not_mounted，不可放行）→ 同 Idempotency-Key 重放不重复写 → 带 source 422 unknown_field
-#       → 人工 hold 再录碰撞时 hold_reason 按 inspection_failed > incident > manual 取严格者（D64 补充 5）。
+# 草稿（P3-E1 v0.7 §3/§3.1/§3.2）：光罩碰撞 → 自动 Hold。P3-B4 接口还没有，整体 skipped。
+# P3 碰撞只开人工录入（source=manual，enum alarm_source，D66 Q13）；以后设备上报事故走 B11（§9.1）。
+# 覆盖：in_use 时录入碰撞 → hold（hold_reason=incident，status_before_hold=in_use）、自动卸载、inspection_required=true
+#       → 进站只报 not_mounted → 同 Idempotency-Key 重放：原状态码返回原记录、无 duplicate 字段（D67）
+#       → 带 source 422 unknown_field → 已 hold 再人工 hold 409 invalid_transition（D67）
+#       → 检查不合格类原因更严时升级（inspection_failed > incident > manual，status_before_hold 不变）
+#       → release 不带目标：incident → inspecting；status_code 不能经通用 CRUD 写（422 read_only_field）。
 name: reticle-collision-hold
-run_id: ret-incident-01
-draft: "等 P3-B4 光罩接口（POST /mes/reticle/{id}/incident 等）"
+run_id: ret-incident-02
+draft: "等 P3-B4 光罩接口（/mes/reticle/{id}/incident、/hold、/release 等）"
 target: http://127.0.0.1:8013
 equipment: [{code: EAP-LT01, type: LITHO}]
 steps:
@@ -13,19 +15,28 @@ steps:
   - reticle_mount: {eq: EAP-LT01, reticle: R-SIM-02, slot: S1, expect: {status: 200}}
   - reticle_incident: {eq: EAP-LT01, reticle: R-SIM-02, kind: collision, save_as: inc1,
                        expect: {status: 200, body: {data.source: manual}}}
-  - expect_reticle: {reticle: R-SIM-02, fields: {status_code: hold, hold_reason: incident, inspection_required: true, equipment_id: null}}
+  - expect_reticle: {reticle: R-SIM-02, fields: {status_code: hold, hold_reason: incident, status_before_hold: in_use,
+                                                 inspection_required: true, equipment_id: null}}
   - expect_reticle_history: {reticle: R-SIM-02, latest: {type: unmount, unmount_reason: incident}}
-  # 进站：光罩已被自动卸载 → 只报 not_mounted，overridable=false
   - track_in:
       eq: EAP-LT01
       lot: FX0001
       reticle: R-SIM-02
       expect: {status: 409, code: check_blocked, body: {detail.reason: not_mounted, detail.overridable: false}}
-  # D57：同 Idempotency-Key 同内容重放 → 200 duplicate=true 返回原记录，不重复写事故
-  - replay: {eq: EAP-LT01, seq: 2, expect: {status: 200, body: {duplicate: true}}}
-  # D30 + D65 补充 4：人工接口带 source → 422 unknown_field
+  # D57/D67：同 Idempotency-Key 同内容重放 → 原状态码 200、原记录，不带 duplicate 字段，不重复写事故
+  - replay: {eq: EAP-LT01, seq: 2, expect: {status: 200, absent: [duplicate], body: {data.id: $inc1}}}
+  # D30 + D65 补充 4：带 source → 422 unknown_field；hold_reason 只读（OQ-20 决定 D60 补充）
   - reticle_incident: {eq: EAP-LT01, reticle: R-SIM-02, kind: collision, extra: {source: eap},
                        expect: {status: 422, code: unknown_field, loc: [body, source]}}
-  # hold_reason 只读：请求体带 hold_reason → 422 read_only_field（E1 v0.6 §2）
-  - reticle_incident: {eq: EAP-LT01, reticle: R-SIM-02, kind: collision, extra: {hold_reason: manual},
-                       expect: {status: 422}}
+  # D67：已 hold 时人工再 hold → 409 invalid_transition
+  - reticle_hold: {reticle: R-SIM-02, reason: sim manual hold, expect: {status: 409, code: invalid_transition}}
+  # 同等严格的系统 hold（再录一次碰撞）：hold_reason 不变，只记事故
+  - reticle_incident: {eq: EAP-LT01, reticle: R-SIM-02, kind: drop, expect: {status: 200}}
+  - expect_reticle: {reticle: R-SIM-02, fields: {status_code: hold, hold_reason: incident, status_before_hold: in_use}}
+  # 通用 CRUD 不能写状态
+  - expect_reticle: {reticle: R-SIM-02, patch: {status_code: available}, expect: {status: 422, code: read_only_field}}
+  # release 不收目标：incident → inspecting；清空 hold_reason / status_before_hold
+  - reticle_release: {reticle: R-SIM-02, extra: {to: available}, expect: {status: 422, code: unknown_field, loc: [body, to]}}
+  - reticle_release: {reticle: R-SIM-02, expect: {status: 200}}
+  - expect_reticle: {reticle: R-SIM-02, fields: {status_code: inspecting, hold_reason: null, status_before_hold: null}}
+  - expect_reticle_history: {reticle: R-SIM-02, latest: {type: state, from: hold, to: inspecting, event: reticle.released}}
