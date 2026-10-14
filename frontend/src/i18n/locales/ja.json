@@ -2141,7 +2141,7 @@
       "action": {
         "granted": "付与",
         "renewed": "延長",
-        "changed": "変更",
+        "changed": "変更（期限短縮を含む）",
         "deactivated": "無効化",
         "reactivated": "再有効化",
         "expired": "期限切れ"
@@ -2158,6 +2158,17 @@
         "holderApproval": "承認者はこの資格の保有者本人にできません",
         "conflictingFields": "無効化と有効期限の変更は同時にできません。別々に操作してください"
       }
+    },
+    "qualAction": {
+      "renew": "有効期限の変更",
+      "deactivate": "資格の停止",
+      "reactivate": "再有効化",
+      "renewDesc": "延長・短縮・無期限化には理由・説明・承認者が必要。短縮は履歴で「変更」と記録。",
+      "deactivateDesc": "停止中は投入不可。理由と説明が必要。停止と期限変更は別々に送信。",
+      "reactivateDesc": "再有効化後は有効期限で投入可否を判定。理由は不要。",
+      "expiresTip": "空欄は無期限。期限日当日まで有効（サイト時刻）",
+      "reasonTip": "理由コード（区分：作業者資格）",
+      "approverTip": "承認者は本人・資格保有者以外"
     }
   },
   "notify": {

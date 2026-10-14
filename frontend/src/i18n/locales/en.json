@@ -2141,7 +2141,7 @@
       "action": {
         "granted": "Granted",
         "renewed": "Renewed",
-        "changed": "Changed",
+        "changed": "Changed (incl. shortened expiry)",
         "deactivated": "Deactivated",
         "reactivated": "Reactivated",
         "expired": "Expired"
@@ -2158,6 +2158,17 @@
         "holderApproval": "The approver cannot be the holder of this qualification",
         "conflictingFields": "Deactivating and changing the expiry date cannot be done in one request; do them separately"
       }
+    },
+    "qualAction": {
+      "renew": "Change expiry",
+      "deactivate": "Deactivate",
+      "reactivate": "Reactivate",
+      "renewDesc": "Any expiry change needs a reason, comment and approver; shortening is logged as \"Changed\".",
+      "deactivateDesc": "Blocks track-in; needs a reason and comment. Change expiry separately.",
+      "reactivateDesc": "After reactivation the expiry date decides track-in; no reason needed.",
+      "expiresTip": "Empty means permanent; valid through the expiry date (site time zone)",
+      "reasonTip": "Reason code (category: operator qualification)",
+      "approverTip": "The approver cannot be you or the holder"
     }
   },
   "notify": {

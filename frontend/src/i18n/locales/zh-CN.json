@@ -2141,7 +2141,7 @@
       "action": {
         "granted": "授予",
         "renewed": "延期",
-        "changed": "变更",
+        "changed": "变更（含缩短有效期）",
         "deactivated": "停用",
         "reactivated": "恢复启用",
         "expired": "已过期"
@@ -2158,6 +2158,17 @@
         "holderApproval": "批准人不能是该资质的持有人",
         "conflictingFields": "停用和修改到期日不能在同一次提交里，请分两次操作"
       }
+    },
+    "qualAction": {
+      "renew": "修改有效期",
+      "deactivate": "停用资质",
+      "reactivate": "恢复启用",
+      "renewDesc": "延长、缩短或改为永久都需要原因、说明和批准人；缩短在履历里记为“变更”。",
+      "deactivateDesc": "停用后不能进站；需要原因和说明。停用和改有效期请分开提交。",
+      "reactivateDesc": "恢复后按有效期判断是否可进站，不需要原因。",
+      "expiresTip": "留空表示永久有效；当天仍有效（站点时区）",
+      "reasonTip": "原因代码（类别：人员资质）",
+      "approverTip": "批准人不能是自己，也不能是资质持有人"
     }
   },
   "notify": {
