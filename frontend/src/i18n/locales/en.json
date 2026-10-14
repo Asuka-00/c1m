@@ -1641,6 +1641,22 @@
       "status": "Tool {{tool}} is {{status}}; track-in blocked",
       "logged": "Recorded in the check log and lot history",
       "unknownStatus": "unknown status"
+    },
+    "ctMove": {
+      "hint": "Cycle time and moves by date, operation and product.",
+      "ct": "Avg CT (h)",
+      "moves": "Moves",
+      "moveQty": "Out qty",
+      "ctAvg": "Avg CT (h)",
+      "ctP50": "CT P50 (h)",
+      "ctP90": "CT P90 (h)",
+      "wip": "WIP lots (end)",
+      "operation": "Operation",
+      "product": "Product",
+      "name": "Name",
+      "trend": "CT and move trend",
+      "byOperation": "By operation",
+      "mock": "Sample data (API not available)"
     }
   },
   "notify": {

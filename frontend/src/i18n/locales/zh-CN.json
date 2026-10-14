@@ -1641,6 +1641,22 @@
       "status": "工具 {{tool}} 当前状态为 {{status}}，不能进站",
       "logged": "已记入检查记录和批次履历",
       "unknownStatus": "状态未知"
+    },
+    "ctMove": {
+      "hint": "按日期、工序、产品查看工序周期时间和 Move 数。",
+      "ct": "平均 CT（小时）",
+      "moves": "Move 数",
+      "moveQty": "出站数量",
+      "ctAvg": "平均 CT（小时）",
+      "ctP50": "CT P50（小时）",
+      "ctP90": "CT P90（小时）",
+      "wip": "期末在制批",
+      "operation": "工序",
+      "product": "产品",
+      "name": "名称",
+      "trend": "CT 与 Move 趋势",
+      "byOperation": "按工序",
+      "mock": "示例数据（接口未上线）"
     }
   },
   "notify": {

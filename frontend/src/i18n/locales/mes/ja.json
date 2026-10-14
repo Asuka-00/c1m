@@ -1729,7 +1729,8 @@
     "mes-equipment_qual": "Qual タスク",
     "mes-substrate_map": "座標マップ",
     "mes-bin_set": "ビン定義セット",
-    "mes-map-import": "座標マップ取込"
+    "mes-map-import": "座標マップ取込",
+    "mes-ct-move-report": "CT / Move レポート"
   },
   "permName": {
     "users__read": "プラットフォームユーザー閲覧",

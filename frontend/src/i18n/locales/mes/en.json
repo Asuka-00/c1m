@@ -1729,7 +1729,8 @@
     "mes-equipment_qual": "Qual Task",
     "mes-substrate_map": "Substrate Map",
     "mes-bin_set": "Bin Definition Set",
-    "mes-map-import": "Map Import"
+    "mes-map-import": "Map Import",
+    "mes-ct-move-report": "CT / Move Report"
   },
   "permName": {
     "users__read": "View platform users",

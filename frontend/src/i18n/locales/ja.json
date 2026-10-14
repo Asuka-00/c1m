@@ -1641,6 +1641,22 @@
       "status": "工具 {{tool}} の状態は {{status}} です。トラックイン不可",
       "logged": "チェック記録とロット履歴に記録済み",
       "unknownStatus": "不明な状態"
+    },
+    "ctMove": {
+      "hint": "日付・工程・製品ごとのサイクルタイムと Move 数。",
+      "ct": "平均 CT（時間）",
+      "moves": "Move 数",
+      "moveQty": "払出数量",
+      "ctAvg": "平均 CT（時間）",
+      "ctP50": "CT P50（時間）",
+      "ctP90": "CT P90（時間）",
+      "wip": "期末仕掛ロット",
+      "operation": "工程",
+      "product": "製品",
+      "name": "名称",
+      "trend": "CT と Move の推移",
+      "byOperation": "工程別",
+      "mock": "サンプルデータ（API 未提供）"
     }
   },
   "notify": {
