@@ -243,13 +243,13 @@ def test_marking_draft_follows_d78():
     exp = [s.args.get("expect") or {} for s in sc.steps]
     codes = [e.get("code") for e in exp]
     assert (
-        codes.count("invalid_transition") == 6
+        codes.count("invalid_transition") == 7
     )  # 作废后上报改为 no_active_marking（D79 补充 2） and "trace_code_mismatch" in codes
-    assert codes.count("check_blocked") == 6 and "idempotency_key_reused" in codes
+    assert codes.count("check_blocked") == 7 and "idempotency_key_reused" in codes
     assert sum(1 for e in exp if e.get("loc") == ["header", "Idempotency-Key"]) == 3  # 打印、检验、作废
     # 补充三 4：逐条列出，值取 config；手工和 EAP 两个入口各有单条和双条
-    errs = [e["errors"] for e in exp if "errors" in e]
-    assert len(errs) == 14 and sum(1 for x in errs if len(x) == 2) == 2
+    errs = [e["errors"] for e in exp if "errors" in e and e["errors"][0]["loc"][-1] == "trace_code"]
+    assert len(errs) == 15 and sum(1 for x in errs if len(x) == 2) == 2
     miss = [x for x in errs if x[0]["type"] == "missing"]
     assert len(miss) == 3 and all(len(x) == 1 for x in miss)  # 空串 / 纯空白只一条
     for x in errs:
@@ -274,19 +274,14 @@ def test_marking_draft_follows_d78():
     assert all(q == list(range(1, len(q) + 1)) for q in seqs) and [1, 2] in seqs
     # 出站：pending / fail / 重打后 pending → 409，pass → 200
     outs = [s.args["expect"]["status"] for s in sc.steps if s.kind == "track_out" and s.args["lot"] == "MK0001"]
-    assert outs == [409, 409, 409, 200]
+    assert outs == [409, 409, 409, 409, 200]  # pending / fail / 重打后 pending / 复检 fail / pass
     lis = [
         s.args["fields"]["latest_inspection_status"]
         for s in sc.steps
         if s.kind == "expect_marking" and "latest_inspection_status" in s.args.get("fields", {})
     ]
-    assert lis == [
-        "fail",
-        "pass",
-        "fail",
-        "fail",
-        "fail",
-    ]  # 第 3 个是 pass 被强制成 fail（D79-4）；第 5 个是作废旧主记录保留
+    # 第 3 个是 pass 被强制成 fail（D79-4），第 4 个是出站前复检 pass；最后一个是作废旧主记录保留
+    assert lis == ["fail", "pass", "fail", "pass", "fail", "fail"]
     # 手工重放不带 duplicate；EAP 重发 duplicate=true
     for s in sc.steps:
         if s.kind == "marking_replay":
@@ -318,7 +313,7 @@ def test_marking_draft_supplement4_trace_code_cases_match_precheck():
             ]
             assert got == want, s.args["trace_code"]
             n += 1
-    assert n == 11
+    assert n == 12
     seq1 = next(
         s
         for s in sc.steps
@@ -351,7 +346,7 @@ def test_marking_draft_follows_d79():
     assert set(tr[1]["first"]) == {"marking_id", "lot_id", "trace_code", "voided", "prints"}
     assert set(tr[1]["first"]["prints"][0]) == {"print_id", "seq", "marked_at", "latest_inspection_result"}
     ls = [s.args for s in sc.steps if s.kind == "expect_marking_list"]
-    assert {"marked_at_from", "marked_at_to"} <= {k for a in ls for k in a} and [a["count"] for a in ls] == [1, 0]
+    assert {"marked_at_from", "marked_at_to"} <= {k for a in ls for k in a} and [a["count"] for a in ls] == [1, 0, 0, 1]
     ro = next(s for s in sc.steps if s.args.get("as") == "read_only")
     assert ro.kind == "marking_print" and ro.args["expect"]["status"] == 403
     assert "qty" not in open("scenarios/p3-draft/marking-report.yaml").read()
@@ -395,3 +390,60 @@ def test_marking_draft_follows_d79_supplement():
     cfg = {"trace_code_max_length": 32, "trace_code_pattern": "^[A-Z0-9-]+$"}
     assert check_trace_code(None, cfg) == [{"type": "missing"}]
     assert check_trace_code(123, cfg) == [{"type": "string_type"}]
+
+
+def test_marking_draft_follows_d79_supplement2():
+    from sim.marking import check_read_code
+    from sim.scenario import load
+
+    st = load("scenarios/p3-draft/marking-report.yaml").steps
+    mk1 = [(i, s) for i, s in enumerate(st) if s.args.get("lot") == "MK0001"]
+    out_ok = next(i for i, s in mk1 if s.kind == "track_out" and s.args["expect"]["status"] == 200)
+    insp = [(i, s) for i, s in mk1 if s.kind == "marking_inspect" and s.args.get("idem", "").startswith("mk-insp")]
+    # 复检都在出站前；出站后只有一次，且 409
+    after = [s for i, s in insp if i > out_ok]
+    assert len(after) == 1 and after[0].args["expect"] == {"status": 409, "code": "invalid_transition"}
+    ov = next(s for i, s in insp if s.args["idem"] == "mk-insp-ov")
+    ok = next(s for i, s in insp if s.args["idem"] == "mk-insp-ok")
+    assert st.index(ov) < st.index(ok) < out_ok
+    # 以最新为准：复检 fail 后出站 409 reason=fail，再 pass 后放行
+    between = [s for s in st[st.index(ov) : st.index(ok)] if s.kind == "track_out"]
+    assert len(between) == 1 and between[0].args["expect"]["ctx"]["reason"] == "fail"
+    # read_code：不校验格式、空 missing、>128 码点 max_length，与预校验一致
+    for s in st:
+        if s.kind == "marking_inspect" and "read_code" in s.args and not str(s.args["read_code"]).startswith("$"):
+            e = s.args["expect"]
+            got = check_read_code(s.args["read_code"])
+            if e["status"] == 200:
+                assert got == [] and e["body"]["data.result"] == "fail"
+            else:
+                assert [x["type"] for x in got] == [x["type"] for x in e["errors"]]
+    # emoji：31 个 A + 1 个 emoji 只报 pattern
+    emo = next(s for s in st if s.args.get("idem") == "mk-tc-12")
+    assert len(emo.args["trace_code"]) == 32 and [x["ctx"]["reason"] for x in emo.args["expect"]["errors"]] == [
+        "pattern"
+    ]
+    # 未检验就重打：MK0003 首打后、无检验，带原因 → 200 seq=2
+    rep = next(s for s in st if s.args.get("idem") == "mk-rep-3b")
+    i = st.index(rep)
+    assert not any(s.kind == "marking_inspect" and s.args.get("lot") == "MK0003" for s in st[:i])
+    assert rep.args["reason"] and rep.args["comment"] and rep.args["expect"]["body"]["data.seq"] == 2
+    text = open("scenarios/p3-draft/marking-report.yaml").read()
+    assert "待定" not in text and "PEND-MK" not in text
+
+
+def test_marking_draft_e7_marked_at_is_first_print():
+    from sim.scenario import load
+
+    st = load("scenarios/p3-draft/marking-report.yaml").steps
+    rep = next(i for i, s in enumerate(st) if s.args.get("idem") == "mk-rep-3b")
+    em = st[rep + 1]
+    assert em.kind == "expect_marking" and em.args["fields"] == {
+        "marked_at": "$print_seq_1.printed_at",
+        "last_printed_at": "$print_seq_2.printed_at",
+    }
+    after = [s.args for s in st[rep + 1 : rep + 4] if s.kind == "expect_marking_list"]
+    assert after == [
+        {"lot": "MK0003", "marked_at_from": "$print_seq_2.printed_at", "count": 0},
+        {"lot": "MK0003", "marked_at_to": "$print_seq_2.printed_at", "count": 1},
+    ]

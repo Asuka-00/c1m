@@ -54,3 +54,33 @@ def test_supplement5_cases():
     for v, want in cases.items():
         assert reasons(v) == want, repr(v)
     assert len(check_trace_code("A" * 32 + "a", CFG)) == 2
+
+
+def test_d79s2_codepoints_and_read_code():
+    from sim.marking import check_read_code
+
+    assert reasons("A" * 31 + "\U0001f600") == ["pattern"]  # 32 码点，不超长
+    assert reasons("A" * 32 + "\U0001f600") == ["max_length", "pattern"]
+    assert check_read_code("ab_1 ") == [] and check_read_code("\U0001f600" * 128) == []
+    assert check_read_code("") == [{"type": "missing"}] and check_read_code(None) == [{"type": "missing"}]
+    assert check_read_code("A" * 129)[0]["ctx"] == {"reason": "max_length", "max_length": 128}
+
+
+def test_d79s2_pattern_whitelist():
+    for ok in ("^[A-Z0-9-]+$", "^[A-Z]+$", "^[A-Z][0-9]+$", "^[0-9A-F-]+$", "^[ABC123]+$", "^[A-Z][-]+$"):
+        assert pattern_allowed(ok), ok
+    for bad in (
+        "^[^A-Z]+$",  # 否定类
+        "^[A-Z\\-]+$",  # 反斜杠
+        "^[-A-Z]+$",  # - 不在最后
+        "^[A-Z-0-9]+$",  # - 在中间
+        "^[a-z]+$",  # 小写
+        "^[A-Z_]+$",  # 其他字符
+        "^[Z-A]+$",  # 倒序区间
+        "^[A-9]+$",  # 跨类区间
+        "^[]+$",
+        "^[A-Z]*$",
+        "^[A-Z]{1,32}$",
+        "[A-Z]+",
+    ):
+        assert not pattern_allowed(bad), bad

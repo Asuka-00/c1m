@@ -1,4 +1,4 @@
-# 草稿（P3-E2 打标，按 D78、补充一至五、D79 及补充，eap/p3/docs/p3-e2-marking-prereview.md）。P3-B2 接口还没有，整体 skipped。
+# 草稿（P3-E2 打标，按 D78、补充一至五、D79 及补充一、二，eap/p3/docs/p3-e2-marking-prereview.md）。P3-B2 接口还没有，整体 skipped。
 # 表：mes_marking_record（主记录；只读 reprint_count、latest_inspection_status=pending|pass|fail）
 #     + mes_marking_print（每次打印一行，seq 后端分配，(marking_id, seq) 唯一）
 #     + mes_marking_inspection（挂 print_id，履历带 print_id 和 seq）。print/inspection 各带 source/external_event_id。
@@ -24,12 +24,14 @@
 #   - D79 补充：EAP 上报按批次当前未作废主记录定位，找不到（含只有已作废）409 no_active_marking，不写打印、不发事件；
 #     产品绑定已批准模板才检查出站：not_marked / pending / fail → 409 check_blocked（ctx.reason，有主记录时带 marking_id），
 #     未绑定不检查；check_blocked 只看未作废主记录（作废前 fail、重建后 pass → 放行）；result_overridden 始终带
-#   - 待定（PEND-MK-03 同一打印能否多次检验 / 出站后能否检验）：MK0001 出站后的两次检验步骤暂不动
+#   - D79 补充二：同一打印可多次检验、以最新为准；离开打标工步后检验 409 invalid_transition；长度按码点；
+#     E7：主记录 marked_at=首打（seq=1）时间、之后不变，只读 last_printed_at=最近一次打印；marked_at_from/_to 只按首打
+#     read_code 不校验格式（原值存、按不一致强制 fail），空 422 missing，>128 码点 422 max_length；未检验也可重打（须填原因）
 #     （不规范化，原值提交；本地预校验 sim/marking.check_trace_code 用 config 正则全串匹配；
 #       补充五：纯空白按 re.fullmatch(r"[ \t\r\n\u3000]*") 判断，不用 strip()，U+FEFF / \x1f 报 pattern）
 # 打标记录没有 numeric 列（D78），不测超位小数。
 name: marking-report
-run_id: marking-07
+run_id: marking-08
 draft: "等 P3-B2/B3 打标接口（POST /mes/marking 建主记录、/prints、/inspect、/void、/inspections、/config、/mes/exec/trace kind=trace_code，D78、D79；B11 event_type=marking 本期不做）"
 target: http://127.0.0.1:8013
 equipment: [{code: EAP-MK01, type: MARKER}]
@@ -84,6 +86,9 @@ steps:
                      expect: {status: 422, errors: [{type: value_error, loc: [body, trace_code], ctx: {reason: pattern, pattern: $cfg.trace_code_pattern}}]}}
   - marking_print: {lot: MK0001, eq: EAP-MK01, idem: mk-tc-11, trace_code: "\x1f",
                      expect: {status: 422, errors: [{type: value_error, loc: [body, trace_code], ctx: {reason: pattern, pattern: $cfg.trace_code_pattern}}]}}
+  # 长度按 Unicode 码点（D79 补充二 2）：31 个 A + 1 个 emoji = 32 码点 → 只报 pattern
+  - marking_print: {lot: MK0001, eq: EAP-MK01, idem: mk-tc-12, trace_code: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA😀",
+                     expect: {status: 422, errors: [{type: value_error, loc: [body, trace_code], ctx: {reason: pattern, pattern: $cfg.trace_code_pattern}}]}}
   - marking_print: {lot: MK0001, eq: EAP-MK01, idem: mk-man-1, save_as: man1,
                      expect: {status: 200, absent: [duplicate],
                               body: {data.source: manual, data.reprint_count: 0, data.latest_inspection_status: pending, data.trace_code: $nonempty}}}
@@ -123,16 +128,30 @@ steps:
   - marking_inspect: {lot: MK0001, result: pass, idem: mk-insp-2, expect: {status: 200}}
   - expect_marking: {lot: MK0001, fields: {latest_inspection_status: pass}}
   - expect_marking_inspections: {lot: MK0001, count: 2, last: {result: pass, seq: 2, print_id: $print_seq_2}}
-  # 最新打印的最新检验 pass → 放行
-  - track_out: {eq: EAP-MK01, lot: MK0001, expect: {status: 200}}
+  # 出站前复检（同一打印可检验多次，以最新一次为准，D79 补充二 1）
   # pass 但读回码不一致 → 强制 fail，不 422（D79-4）
   - marking_inspect: {lot: MK0001, result: pass, read_code: WRONG-1, idem: mk-insp-ov,
                       expect: {status: 200, body: {data.result: fail, data.expected_code: $issued, data.read_code: WRONG-1, data.result_overridden: true}}}
   - expect_marking: {lot: MK0001, fields: {latest_inspection_status: fail}}
+  # read_code 不校验格式：小写/下划线原值存，按不一致 fail（补充二 3）；空 422 missing；>128 码点 422 max_length
+  - marking_inspect: {lot: MK0001, result: pass, read_code: "ab_1 ", idem: mk-insp-rc1,
+                      expect: {status: 200, body: {data.result: fail, data.read_code: "ab_1 ", data.result_overridden: true}}}
+  - marking_inspect: {lot: MK0001, result: pass, read_code: "", idem: mk-insp-rc2,
+                      expect: {status: 422, errors: [{type: missing, loc: [body, read_code]}]}}
+  - marking_inspect: {lot: MK0001, result: pass, read_code: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", idem: mk-insp-rc3,
+                      expect: {status: 422, errors: [{type: value_error, loc: [body, read_code], ctx: {reason: max_length, max_length: 128}}]}}   # 129 码点
+  - expect_marking_inspections: {lot: MK0001, count: 4, last: {result: fail, seq: 2, read_code: "ab_1 "}}   # 422 不入库
+  # 最新一次 fail → 出站 409
+  - track_out: {eq: EAP-MK01, lot: MK0001,
+                expect: {status: 409, code: check_blocked, ctx: {check: marking_inspection, reason: fail, marking_id: $marking.MK0001}, overridable: false}}
   - marking_inspect: {lot: MK0001, result: pass, read_code: $issued, idem: mk-insp-ok, expect: {status: 200, body: {data.result: pass, data.result_overridden: false}}}
-  # 列表筛选 marked_at_from / marked_at_to 半开区间（D77）：_to 等于 marked_at 不含，_from 等于含
-  - expect_marking_list: {lot: MK0001, marked_at_from: $print_seq_1.marked_at, count: 1}
-  - expect_marking_list: {lot: MK0001, marked_at_to: $print_seq_1.marked_at, count: 0}
+  - expect_marking_inspections: {lot: MK0001, count: 5, last: {result: pass, seq: 2}}
+  - expect_marking: {lot: MK0001, fields: {latest_inspection_status: pass}}
+  # 最新打印的最新检验 pass → 放行
+  - track_out: {eq: EAP-MK01, lot: MK0001, expect: {status: 200}}
+  # 离开打标工步后再检验 → 409 invalid_transition，不入库
+  - marking_inspect: {lot: MK0001, result: pass, read_code: $issued, idem: mk-insp-after, expect: {status: 409, code: invalid_transition}}
+  - expect_marking_inspections: {lot: MK0001, count: 5}
   # ---- 批次 MK0002：EAP 上报（主记录先建；EAP 打印落到同一套 /prints 逻辑）
   - marking_create: {lot: MK0002, idem: mk-c-2, expect: {status: 200}}
   - marking_report: {eq: EAP-MK01, lot: MK0002, seq: 1, kind: print, payload: {trace_code: $issued}, save_as: rep1,
@@ -212,12 +231,24 @@ steps:
   # ---- 批次已报废（MK0003）：打印/检验/上报 409
   - marking_create: {lot: MK0003, idem: mk-c-3, expect: {status: 200}}
   - marking_print: {lot: MK0003, eq: EAP-MK01, idem: mk-man-3, expect: {status: 200}}
+  # 列表筛选 marked_at_from / marked_at_to 半开区间（D77）：_to 等于 marked_at 不含，_from 等于含。
+  # 放在只有一次打印时断言，E7 定稿：主记录 marked_at=首打时间、不再变，last_printed_at=最近一次打印
+  - expect_marking_list: {lot: MK0003, marked_at_from: $print_seq_1.printed_at, count: 1}
+  - expect_marking_list: {lot: MK0003, marked_at_to: $print_seq_1.printed_at, count: 0}
+  # 未检验就重打（D79 补充二 5）：不要求上次 fail，但必须填原因
+  - marking_print: {lot: MK0003, eq: EAP-MK01, idem: mk-rep-3a, expect: {status: 422, code: missing}}
+  - marking_print: {lot: MK0003, eq: EAP-MK01, reason: R-MKREPRINT, comment: "打印缺损，未检即重打", idem: mk-rep-3b,
+                    expect: {status: 200, body: {data.seq: 2, data.reprint_count: 1, data.latest_inspection_status: pending}}}
+  # E7：重打后 marked_at 不变（仍是首打），last_printed_at 更新为 seq=2；筛选只认首打时间
+  - expect_marking: {lot: MK0003, fields: {marked_at: $print_seq_1.printed_at, last_printed_at: $print_seq_2.printed_at}}
+  - expect_marking_list: {lot: MK0003, marked_at_from: $print_seq_2.printed_at, count: 0}   # 首打早于 seq=2
+  - expect_marking_list: {lot: MK0003, marked_at_to: $print_seq_2.printed_at, count: 1}
   - lot_scrap: {lot: MK0003, reason: R-scrap, comment: "整批报废到 0", save_as: scrap3, expect: {status: 200, body: {lot.lot_status: scrapped}}}
   - marking_print: {lot: MK0003, eq: EAP-MK01, reason: R-MKREPRINT, comment: "报废后", idem: mk-rep-30,
                       expect: {status: 409, code: invalid_transition}}
   - marking_inspect: {lot: MK0003, result: pass, idem: mk-insp-30, expect: {status: 409, code: invalid_transition}}
   - marking_report: {eq: EAP-MK01, lot: MK0003, seq: 7, kind: print, payload: {trace_code: $issued},
                      expect: {status: 409, code: invalid_transition}}
-  - expect_marking_prints: {lot: MK0003, seqs: [1]}
+  - expect_marking_prints: {lot: MK0003, seqs: [1, 2]}
   - expect_marking_inspections: {lot: MK0003, count: 0}
   - expect_marking_events: {lot: MK0003, absent_after: scrap3, events: [lot.marked, lot.marking_inspected, lot.marking_mismatched]}
