@@ -172,8 +172,10 @@ P3_DRAFT_STEPS = {
     "reticle_replay",
     # P3-B2 打标（未实现）
     "marking_report",
-    "marking_manual",
-    "marking_reprint",
+    "marking_create",
+    "marking_print",
+    "expect_marking_list",
+    "expect_marking_trace",
     "marking_inspect",
     "marking_void",
     "lot_scrap",

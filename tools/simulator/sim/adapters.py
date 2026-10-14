@@ -92,19 +92,26 @@ def default_adapters() -> dict[str, Adapter]:
         "alarm_code_get": Adapter("报警码详情", ["/mes/alarm_code/{rid}"], card="P3-B8"),
         # D70 补充：删除仍被单台行引用的类型行 409 referenced（通用 CRUD DELETE），B8 落地后核对
         "alarm_code_delete": Adapter("报警码删除", ["/mes/alarm_code/{rid}"], card="P3-B8"),
-        # P3-B2（打标，未实现，D78）：主记录 + mes_marking_print（每次打印一行，seq 后端分配）+ mes_marking_inspection。
-        # 路径取自 p3-tasks P3-B2；print/inspection 列表、报废为提议，B2 落地后以 openapi 为准
-        "marking_create": Adapter("打标 / 重打（新增 print 行）", ["/mes/marking"], card="P3-B2"),
+        # P3-B2（打标，未实现，D78/D79）：主记录 + mes_marking_print（每次打印一行，seq 后端分配）
+        #   + mes_marking_inspection。
+        # D79-3：POST /mes/marking 只建主记录；所有打印（含首打）走 POST /mes/marking/{id}/prints，EAP 上报同一套逻辑。
+        # 打印/检验列表 GET 路径与 EAP kind=print|inspection 是本组提议，D78 补充二定为后端先按提议实现
+        "marking_create": Adapter("打标主记录创建", ["/mes/marking"], card="P3-B2"),
+        "marking_print": Adapter(
+            "打印（首打/重打，新增 print 行）", ["/mes/marking/{marking_id}/prints"], card="P3-B2"
+        ),
+        # D79-6：筛选 marked_at_from / marked_at_to（D77 半开区间）
+        "marking_list": Adapter("打标记录列表", ["/mes/marking"], card="P3-B2"),
+        # D79-5/6 + P3-B3：追溯 kind=trace_code，默认不含已作废，include_voided=true 才含；沿用现有 /mes/exec/trace
+        "marking_trace": Adapter("追溯（kind=trace_code）", ["/mes/exec/trace"], card="P3-B3"),
         "marking_inspect": Adapter(
             "打标检验（新增 inspection 行）", ["/mes/marking/{marking_id}/inspect"], card="P3-B2"
         ),
         "marking_preview": Adapter("打标预览", ["/mes/marking/preview"], card="P3-B2"),
         "marking_get": Adapter("打标记录", ["/mes/marking/{marking_id}"], card="P3-B2"),
-        "marking_prints": Adapter(
-            "打印履历 mes_marking_print（提议）", ["/mes/marking/{marking_id}/prints"], card="P3-B2"
-        ),
+        "marking_prints": Adapter("打印履历 mes_marking_print", ["/mes/marking/{marking_id}/prints"], card="P3-B2"),
         "marking_inspections": Adapter(
-            "检验履历 mes_marking_inspection（提议）", ["/mes/marking/{marking_id}/inspections"], card="P3-B2"
+            "检验履历 mes_marking_inspection", ["/mes/marking/{marking_id}/inspections"], card="P3-B2"
         ),
         "marking_events": Adapter("打标领域事件（audit_log）", ["/mes/audit_log"], card="P3-B2"),
         # D78 补充二 3：作废（必填 reason_id + comment，reason_type=marking_void，不可恢复）
@@ -164,8 +171,10 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "reticle_replay": [],  # 重发 save_as 记下的草稿请求：同路径、同请求体、同 Idempotency-Key（或同 external_event_id）
     # P3-B2 打标草稿步骤（B2 前不执行）
     "marking_report": ["eap_events"],  # 以后 B11 event_type=marking（本期不做打标机通信）
-    "marking_manual": ["marking_preview", "marking_create"],
-    "marking_reprint": ["marking_create"],
+    "marking_create": ["marking_preview", "marking_create"],
+    "marking_print": ["marking_print"],  # seq=1 首打；seq>1 重打必填 reason + comment
+    "expect_marking_list": ["marking_list"],
+    "expect_marking_trace": ["marking_trace"],
     "marking_inspect": ["marking_inspect"],
     "marking_void": ["marking_void"],
     "lot_scrap": ["lot_adjust"],

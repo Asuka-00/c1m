@@ -278,7 +278,7 @@ def test_marking_draft_follows_d78():
         for s in sc.steps
         if s.kind == "expect_marking" and "latest_inspection_status" in s.args.get("fields", {})
     ]
-    assert lis == ["fail", "pass", "fail"]
+    assert lis == ["fail", "pass", "fail", "fail"]  # 第 3 个是 pass 被强制成 fail（D79-4）
     # 手工重放不带 duplicate；EAP 重发 duplicate=true
     for s in sc.steps:
         if s.kind == "marking_replay":
@@ -303,7 +303,7 @@ def test_marking_draft_supplement4_trace_code_cases_match_precheck():
     cfg = {"trace_code_max_length": 32, "trace_code_pattern": "^[A-Z0-9-]+$"}
     n = 0
     for s in sc.steps:
-        if s.kind == "marking_manual" and "trace_code" in s.args:
+        if s.kind == "marking_print" and "trace_code" in s.args:
             want = [(it["type"], (it.get("ctx") or {}).get("reason")) for it in s.args["expect"]["errors"]]
             got = [
                 (it["type"], (it.get("ctx") or {}).get("reason")) for it in check_trace_code(s.args["trace_code"], cfg)
@@ -317,3 +317,33 @@ def test_marking_draft_supplement4_trace_code_cases_match_precheck():
         if s.kind == "expect_marking_events" and (s.args.get("latest") or {}).get("payload.seq") == 1
     )
     assert "payload.reason_id" in seq1.args["latest"] and seq1.args["latest"]["payload.reason_id"] is None
+
+
+def test_marking_draft_follows_d79():
+    from sim.scenario import load
+
+    sc = load("scenarios/p3-draft/marking-report.yaml")
+    kinds = [s.kind for s in sc.steps]
+    assert "marking_manual" not in kinds and "marking_reprint" not in kinds
+    # 每个批次先建主记录再打印
+    for lot in ("MK0001", "MK0002", "MK0003"):
+        idx = [i for i, s in enumerate(sc.steps) if s.args.get("lot") == lot]
+        first = next(i for i in idx if sc.steps[i].kind in ("marking_create", "marking_print", "marking_report"))
+        assert sc.steps[first].kind == "marking_create", lot
+    exp = [s.args.get("expect") or {} for s in sc.steps]
+    assert sum(1 for e in exp if e.get("code") == "already_marked") == 2
+    ov = next(s for s in sc.steps if s.args.get("idem") == "mk-insp-ov")
+    assert ov.args["result"] == "pass" and ov.args["expect"]["status"] == 200
+    assert (
+        ov.args["expect"]["body"]["data.result"] == "fail"
+        and ov.args["expect"]["body"]["data.result_overridden"] is True
+    )
+    tr = [s.args for s in sc.steps if s.kind == "expect_marking_trace"]
+    assert [t.get("include_voided", False) for t in tr] == [False, True, False]
+    assert set(tr[1]["first"]) == {"marking_id", "lot_id", "trace_code", "voided", "prints"}
+    assert set(tr[1]["first"]["prints"][0]) == {"print_id", "seq", "marked_at", "latest_inspection_result"}
+    ls = [s.args for s in sc.steps if s.kind == "expect_marking_list"]
+    assert {"marked_at_from", "marked_at_to"} <= {k for a in ls for k in a} and [a["count"] for a in ls] == [1, 0]
+    ro = next(s for s in sc.steps if s.args.get("as") == "read_only")
+    assert ro.kind == "marking_print" and ro.args["expect"]["status"] == 403
+    assert "qty" not in open("scenarios/p3-draft/marking-report.yaml").read()
