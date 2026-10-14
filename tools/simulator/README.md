@@ -120,3 +120,8 @@ B9（`0a74f8a`）、B10（`d27b700`/`23c502d`）、B11（`8294b63`）已对齐�
 - 草稿步骤（`reticle_mount`、`reticle_usage`、`reticle_incident`、`reticle_adjust`、`reticle_hold`、`reticle_release`、`reticle_restore`、`reticle_scrap`、`reticle_unmount`、`expect_reticle`、`expect_reticle_history`）只做格式校验，P3-B4 落地前执行会失败；落地后按 openapi 校正路径与字段，再实现。
 - `scenarios/*.yaml` 不含草稿目录，现有 5 个场景和请求体审计不受影响。
 - **重放（G-3）**：现有 `replay: {eq, seq}` 只重发按设备序号记下的事件步骤（state/stage/alarm/tool_usage 等，带原 `Idempotency-Key` 或 `external_event_id`），草稿光罩步骤不进这个序号。光罩草稿改用 `reticle_replay: {of: <save_as 名>, change?: {...}}`：对 `save_as` 记下的那次请求**用同一个 `Idempotency-Key`（B11 为同一个 external_event_id）、同一路径**再发一次（如 `/mes/reticle/{id}/usage`、`/incident`）；给 `change` 时改请求体，期望 422 `idempotency_key_reused`。P3-B4 落地后在 runner 实现。
+
+### P3-B8 草稿：按报警等级拦进站（D58 + D70）
+- `scenarios/p3-draft/alarm-track-in-action.yaml`：off / warn / block 各一遍；warn+block 同时未清除取 block，清掉 block 变 warn；未登记 ALID 不拦；清除后立即放行；每次进站后 `expect_hold present=false`。复用 `seed_alarm_code`、`alarm_set`、`alarm_clear`、`track_in`、`expect_hold`。
+- 草稿步骤（**B8 落地后核对**）：`set_track_in_action {eq, alid, value}`（适配器 `alarm_track_in_action`，路径先按通用 CRUD `PATCH /mes/alarm_code/{rid}` 提议）、`expect_alarm_code {eq, alid, fields}`。
+- 待核对：warn 警告在 200 响应里的位置（场景里先写 `warning: {check_type, alid}` / `absent_warning`）、block 的 `results[]` 每项字段、工步检查项名（是否叫 `alarm_severity`）、一台机台多个报警时 details 是否列出全部 ALID。

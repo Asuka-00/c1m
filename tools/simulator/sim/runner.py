@@ -142,6 +142,8 @@ P3_DRAFT_STEPS = {
     "reticle_restore",
     "reticle_scrap",
     "reticle_unmount",
+    "set_track_in_action",
+    "expect_alarm_code",
     "reticle_replay",
 }
 

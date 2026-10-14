@@ -86,7 +86,7 @@ def test_p3_draft_scenarios_parse_and_skip_without_backend():
     from sim.scenario import load
 
     files = sorted(glob.glob("scenarios/p3-draft/*.yaml"))
-    assert len(files) == 2
+    assert len(files) == 3
     for f in files:
         sc = load(f)
         assert sc.draft
@@ -94,7 +94,8 @@ def test_p3_draft_scenarios_parse_and_skip_without_backend():
         rep = Runner(c).run(sc)
         assert rep["status"] == SKIPPED and rep["reason"].startswith("草稿场景"), rep
         assert c.calls == []  # 草稿不连后端
-        assert "reticle_mount" in sc.required_adapters() or "reticle_incident" in sc.required_adapters()
+        need = sc.required_adapters()
+        assert "reticle_mount" in need or "reticle_incident" in need or "alarm_track_in_action" in need
 
 
 def test_p3_draft_steps_not_runnable_even_if_paths_exist():
@@ -127,3 +128,18 @@ def test_reticle_replay_requires_saved_step():
         parse({"run_id": "r", "steps": [{"reticle_replay": {"of": "nope"}}]})
     with pytest.raises(ScenarioError):
         parse({"run_id": "r", "steps": [{"reticle_replay": {}}]})
+
+
+def test_b8_draft_reuses_alarm_and_track_in_steps():
+    from sim.scenario import load
+
+    sc = load("scenarios/p3-draft/alarm-track-in-action.yaml")
+    kinds = [s.kind for s in sc.steps]
+    for k in ("seed_alarm_code", "alarm_set", "alarm_clear", "track_in", "expect_hold", "set_track_in_action"):
+        assert k in kinds
+    tis = [s for s in sc.steps if s.kind == "track_in"]
+    # 每次进站前后都断言批次没有 Hold
+    for t in tis:
+        i = sc.steps.index(t)
+        assert sc.steps[i + 1].kind == "expect_hold" and sc.steps[i + 1].args["present"] is False
+    assert {"off", "warn", "block"} <= {s.args.get("value") for s in sc.steps if s.kind == "set_track_in_action"}
