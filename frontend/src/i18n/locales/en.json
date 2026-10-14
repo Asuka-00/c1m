@@ -1252,6 +1252,96 @@
       "overlap": "The mount time overlaps an earlier record on this port",
       "alreadyUnmounted": "This lot was already unmounted. Refreshed.",
       "duplicate": "Already recorded: port {{port}}, lot {{lot}}"
+    },
+    "bomTab": {
+      "title": "BOM",
+      "versions": "BOM versions",
+      "empty": "This product has no BOM yet",
+      "lines": "BOM lines",
+      "linesOf": "v{{version}} lines",
+      "noLines": "This version has no lines",
+      "lineN": "Line {{n}}",
+      "create": "New version",
+      "createTitle": "New BOM draft",
+      "createDesc": "The version number is assigned by the system; the new version is a draft you can add lines to.",
+      "edit": "Edit",
+      "editTitle": "Edit draft v{{version}}",
+      "editDesc": "Units can only be chosen from those defined in unit conversions.",
+      "activate": "Activate",
+      "void": "Void",
+      "copy": "Copy to new version",
+      "addLine": "Add line",
+      "removeLine": "Remove line",
+      "pickUom": "Select a unit",
+      "noPermission": "You do not have permission to do this",
+      "status": {
+        "draft": "Draft",
+        "active": "Active",
+        "superseded": "Superseded",
+        "void": "Void"
+      },
+      "col": {
+        "version": "Version",
+        "status": "Status",
+        "description": "Description",
+        "effectiveAt": "Effective at",
+        "copiedFrom": "Copied from",
+        "createdAt": "Created at",
+        "lineNo": "Line no.",
+        "component": "Material",
+        "qty": "Qty",
+        "uom": "Unit",
+        "perBasis": "Per",
+        "scrapRate": "Scrap rate",
+        "consumeMode": "Consume mode"
+      },
+      "perBasis": {
+        "wafer": "Per wafer",
+        "strip": "Per strip",
+        "die": "Per die",
+        "package": "Per package",
+        "unit": "Per unit",
+        "lot": "Per lot"
+      },
+      "consume": {
+        "issue": "Issue at track-out",
+        "mounted": "Mounted on equipment"
+      },
+      "reason": {
+        "noPermission": "No BOM permission",
+        "notDraft": "This version is {{status}} and read-only; only drafts can be edited or activated. Copy it to a new version to make changes",
+        "cannotVoid": "This version is {{status}} and cannot be voided"
+      },
+      "confirm": {
+        "activateTitle": "Activate v{{version}}?",
+        "activateDesc": "This version becomes read-only; the previous active version becomes superseded.",
+        "voidTitle": "Void v{{version}}?",
+        "voidDesc": "Voiding cannot be undone; voiding the active version leaves the product with no active BOM."
+      },
+      "done": {
+        "create": "Draft v{{version}} created",
+        "save": "Draft v{{version}} saved",
+        "activate": "v{{version}} activated",
+        "void": "v{{version}} voided",
+        "copy": "Copied to new draft v{{version}}"
+      },
+      "err": {
+        "validation": "Please fix the highlighted fields",
+        "required": "Required",
+        "notWritable": "This field cannot be set by the client",
+        "wholeNumber": "Quantity must be a whole number for a count unit",
+        "noLines": "A BOM needs at least one line before activation",
+        "circular": "The BOM has a circular reference",
+        "tooDeep": "The BOM expands beyond the allowed levels",
+        "invalid": "Invalid value",
+        "readOnly": "This version is no longer a draft and is read-only; copy it to a new version to make changes",
+        "notDraft": "Only drafts can be activated",
+        "superseded": "A superseded version cannot be voided",
+        "alreadyVoid": "This version is already void",
+        "duplicateLine": "Duplicate line number",
+        "conflict": "The data changed or its status does not allow this; refresh and try again",
+        "notFound": "This BOM does not exist or was deleted"
+      }
     }
   },
   "notify": {

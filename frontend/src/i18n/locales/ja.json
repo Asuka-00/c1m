@@ -1252,6 +1252,96 @@
       "overlap": "装着日時がこの投入口の以前の記録と重なっています",
       "alreadyUnmounted": "この資材はすでに取り外されています。更新しました",
       "duplicate": "記録済み：投入口 {{port}}、ロット {{lot}}"
+    },
+    "bomTab": {
+      "title": "BOM",
+      "versions": "BOM バージョン",
+      "empty": "この製品には BOM がありません",
+      "lines": "BOM 明細",
+      "linesOf": "v{{version}} の明細",
+      "noLines": "このバージョンには明細がありません",
+      "lineN": "行 {{n}}",
+      "create": "新規バージョン",
+      "createTitle": "BOM 下書きを作成",
+      "createDesc": "バージョン番号はシステムが採番します。作成後は下書きとなり、明細を追加できます。",
+      "edit": "編集",
+      "editTitle": "下書き v{{version}} を編集",
+      "editDesc": "単位は単位換算に登録された単位からのみ選択できます。",
+      "activate": "有効化",
+      "void": "無効化",
+      "copy": "新バージョンへコピー",
+      "addLine": "明細を追加",
+      "removeLine": "この行を削除",
+      "pickUom": "単位を選択",
+      "noPermission": "この操作を行う権限がありません",
+      "status": {
+        "draft": "下書き",
+        "active": "有効",
+        "superseded": "置換済",
+        "void": "無効"
+      },
+      "col": {
+        "version": "バージョン",
+        "status": "状態",
+        "description": "説明",
+        "effectiveAt": "有効日時",
+        "copiedFrom": "コピー元",
+        "createdAt": "作成日時",
+        "lineNo": "行番号",
+        "component": "資材",
+        "qty": "使用量",
+        "uom": "単位",
+        "perBasis": "基準",
+        "scrapRate": "ロス率",
+        "consumeMode": "払出方式"
+      },
+      "perBasis": {
+        "wafer": "ウェーハ当たり",
+        "strip": "ストリップ当たり",
+        "die": "ダイ当たり",
+        "package": "パッケージ当たり",
+        "unit": "ユニット当たり",
+        "lot": "ロット当たり"
+      },
+      "consume": {
+        "issue": "トラックアウト時払出",
+        "mounted": "装置装着"
+      },
+      "reason": {
+        "noPermission": "BOM の操作権限がありません",
+        "notDraft": "このバージョンは{{status}}のため読み取り専用です。編集・有効化できるのは下書きのみです。新バージョンにコピーして変更してください",
+        "cannotVoid": "このバージョンは{{status}}のため無効化できません"
+      },
+      "confirm": {
+        "activateTitle": "v{{version}} を有効化しますか？",
+        "activateDesc": "有効化後は読み取り専用になり、同じ製品の従来の有効バージョンは置換済になります。",
+        "voidTitle": "v{{version}} を無効化しますか？",
+        "voidDesc": "無効化は元に戻せません。有効バージョンを無効化すると、製品に有効な BOM がなくなります。"
+      },
+      "done": {
+        "create": "下書き v{{version}} を作成しました",
+        "save": "下書き v{{version}} を保存しました",
+        "activate": "v{{version}} を有効化しました",
+        "void": "v{{version}} を無効化しました",
+        "copy": "新しい下書き v{{version}} にコピーしました"
+      },
+      "err": {
+        "validation": "赤く表示された項目を修正してください",
+        "required": "必須",
+        "notWritable": "この項目はクライアントから設定できません",
+        "wholeNumber": "個数単位の使用量は整数である必要があります",
+        "noLines": "有効化するには明細が 1 行以上必要です",
+        "circular": "BOM に循環参照があります",
+        "tooDeep": "BOM の展開階層が上限を超えています",
+        "invalid": "値が不正です",
+        "readOnly": "このバージョンは下書きではないため読み取り専用です。新バージョンにコピーして変更してください",
+        "notDraft": "有効化できるのは下書きのみです",
+        "superseded": "置換済のバージョンは無効化できません",
+        "alreadyVoid": "このバージョンは既に無効です",
+        "duplicateLine": "行番号が重複しています",
+        "conflict": "データが変更されたか、状態がこの操作を許可していません。更新して再試行してください",
+        "notFound": "この BOM は存在しないか削除されました"
+      }
     }
   },
   "notify": {

@@ -1252,6 +1252,96 @@
       "overlap": "上料时间和这个上料口之前的记录重叠",
       "alreadyUnmounted": "这批料已经卸下了，已刷新",
       "duplicate": "已记录（重复提交）：上料口 {{port}}，物料批 {{lot}}"
+    },
+    "bomTab": {
+      "title": "BOM",
+      "versions": "BOM 版本",
+      "empty": "该产品还没有 BOM",
+      "lines": "BOM 明细",
+      "linesOf": "v{{version}} 明细",
+      "noLines": "该版本没有明细",
+      "lineN": "行 {{n}}",
+      "create": "新建版本",
+      "createTitle": "新建 BOM 草稿",
+      "createDesc": "版本号由系统生成，新建后为草稿，可再添加明细。",
+      "edit": "编辑",
+      "editTitle": "编辑草稿 v{{version}}",
+      "editDesc": "单位只能从单位换算里已有的单位中选择。",
+      "activate": "生效",
+      "void": "作废",
+      "copy": "复制为新版本",
+      "addLine": "添加明细",
+      "removeLine": "删除此行",
+      "pickUom": "请选择单位",
+      "noPermission": "没有权限执行此操作",
+      "status": {
+        "draft": "草稿",
+        "active": "生效",
+        "superseded": "已取代",
+        "void": "作废"
+      },
+      "col": {
+        "version": "版本",
+        "status": "状态",
+        "description": "说明",
+        "effectiveAt": "生效时间",
+        "copiedFrom": "复制自",
+        "createdAt": "创建时间",
+        "lineNo": "行号",
+        "component": "物料",
+        "qty": "用量",
+        "uom": "单位",
+        "perBasis": "计量基准",
+        "scrapRate": "损耗率",
+        "consumeMode": "扣料方式"
+      },
+      "perBasis": {
+        "wafer": "每晶圆",
+        "strip": "每条",
+        "die": "每晶粒",
+        "package": "每封装体",
+        "unit": "每单元",
+        "lot": "每批"
+      },
+      "consume": {
+        "issue": "出站扣料",
+        "mounted": "机台上料"
+      },
+      "reason": {
+        "noPermission": "没有 BOM 操作权限",
+        "notDraft": "当前版本为{{status}}，只读；只有草稿可以编辑或生效，可复制为新版本后修改",
+        "cannotVoid": "当前版本为{{status}}，不能作废"
+      },
+      "confirm": {
+        "activateTitle": "生效 v{{version}}？",
+        "activateDesc": "生效后该版本只读，同产品原来生效的版本会变为已取代。",
+        "voidTitle": "作废 v{{version}}？",
+        "voidDesc": "作废后不能恢复；如果作废的是生效版本，该产品将没有生效的 BOM。"
+      },
+      "done": {
+        "create": "已新建草稿 v{{version}}",
+        "save": "草稿 v{{version}} 已保存",
+        "activate": "v{{version}} 已生效",
+        "void": "v{{version}} 已作废",
+        "copy": "已复制为新草稿 v{{version}}"
+      },
+      "err": {
+        "validation": "请修正标红的字段",
+        "required": "必填",
+        "notWritable": "该字段不能由客户端填写",
+        "wholeNumber": "计件单位的用量必须是整数",
+        "noLines": "至少要有一行明细才能生效",
+        "circular": "BOM 存在循环引用",
+        "tooDeep": "BOM 展开层级超过限制",
+        "invalid": "取值不合法",
+        "readOnly": "该版本已不是草稿，只读；请复制为新版本后修改",
+        "notDraft": "只有草稿可以生效",
+        "superseded": "已取代的版本不能作废",
+        "alreadyVoid": "该版本已作废",
+        "duplicateLine": "行号重复",
+        "conflict": "数据已被修改或状态不允许此操作，请刷新后重试",
+        "notFound": "该 BOM 不存在或已被删除"
+      }
     }
   },
   "notify": {

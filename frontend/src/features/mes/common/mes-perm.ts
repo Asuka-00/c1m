@@ -36,6 +36,10 @@ export const MES_PERM = {
   mapImport: 'mes.map:import',
   /** 坐标图查询（P1 / B4） */
   mapRead: 'mes.map:read',
+  /** BOM 新建 / 编辑草稿 / 复制（P1 / F3） */
+  bomWrite: 'mes.bom:write',
+  /** BOM 生效 / 作废（P1 / F3） */
+  bomActivate: 'mes.bom:activate',
 } as const
 
 export type MesPerm = (typeof MES_PERM)[keyof typeof MES_PERM] | (string & {})
