@@ -72,6 +72,10 @@ export interface ReticleStatusLog {
   at: string
 }
 
+/** 光罩挂载 / 计数 / 事故的 `source`（D80 G6，迁移 0035 CHECK）。 */
+export const RETICLE_SOURCES = ['manual', 'eap', 'simulator', 'system'] as const
+export type ReticleSource = (typeof RETICLE_SOURCES)[number]
+
 /** `mes_reticle_usage`。 */
 export interface ReticleUsage {
   id: string
@@ -81,7 +85,7 @@ export interface ReticleUsage {
   reason_id: string | null
   reason_label?: string | null
   comment: string | null
-  source: string
+  source: ReticleSource
   counted: boolean
   estimated: boolean
   lot_id: string | null
@@ -90,9 +94,17 @@ export interface ReticleUsage {
   occurred_at: string
 }
 
-/** `mes_reticle_mount_log`。 */
+/**
+ * `mes_reticle_mount_log`。D80 G1（be/p3 f9e9dda）：上机一行 `event_type=mount`；下机单独一行
+ * `event_type=unmount`，`mount_log_id` 指向上机行（上机行同时回填 unmounted_at 等）。
+ */
 export interface ReticleMount {
   id: string
+  event_type: 'mount' | 'unmount'
+  /** 下机行指向的上机行；上机行为 null */
+  mount_log_id: string | null
+  source: ReticleSource
+  external_event_id?: string | null
   equipment_id: string
   equipment_label: string | null
   slot_code: string | null
@@ -160,6 +172,7 @@ export interface ReticleActionInput {
   lot_id?: string
   description?: string
   unmounted_at?: string
+  inspected_at?: string
   /** D82：对话框里的补录时间（站点墙上时间，不提交；提交前换成对应字段） */
   backfill_at?: string
 }
@@ -252,12 +265,17 @@ interface Api {
 
 /**
  * 动作响应（B4 335db8a）：多数动作 `{data: 光罩}`；usage / inspection 为
- * `{data: 记录, reticle: 光罩}`；life-reset `{data: 光罩, usage}`；unmount `{data: 挂载记录}`。
+ * `{data: 记录, reticle: 光罩}`；life-reset `{data: 光罩, usage}`；
+ * unmount `{data: 上机行, unmount_event: 下机事件行, duplicate?}`（D80 G1）。
  */
 export interface ReticleActionOut {
   data: Record<string, unknown>
   reticle?: Reticle
   usage?: ReticleUsage
+  /** unmount（D80 G1）：本次下机事件行；`data` 是对应的上机行 */
+  unmount_event?: ReticleMount | null
+  /** unmount 带 external_event_id（EAP / 模拟器）时才有；手工接口不带 */
+  duplicate?: boolean
 }
 
 /** 动作响应里的光罩当前行（unmount 不带，返回 null）。 */
@@ -271,14 +289,20 @@ export function actionReticle(
 
 type HistoryItem = Record<string, unknown> & { type: string }
 
-/** `GET /mes/reticle/{id}/history` 的合并列表（type + at）按类型分组。 */
+/**
+ * `GET /mes/reticle/{id}/history` 的合并列表（type + at）按类型分组。
+ * D80 G1：下机事件行 `type=unmount`（at = unmounted_at）不进挂载页签——上机行已回填下机时间、原因和计数，
+ * 一次挂载只显示一行。
+ */
 export function groupHistory(items: HistoryItem[]): ReticleHistory {
   const pick = <T>(type: string) =>
     items.filter((x) => x.type === type) as unknown as T[]
   return {
     status_log: pick<ReticleStatusLog>('status'),
     usage: pick<ReticleUsage>('usage'),
-    mounts: pick<ReticleMount>('mount'),
+    mounts: pick<ReticleMount>('mount').filter(
+      (m) => m.event_type !== 'unmount'
+    ),
     inspections: pick<ReticleInspection>('inspection'),
   }
 }
@@ -329,6 +353,11 @@ export const BACKFILL_FIELD: Partial<
   mount: 'mounted_at',
   unmount: 'unmounted_at',
   incident: 'occurred_at',
+}
+/** mock 校验的事件时间字段：补录三项 + inspection.inspected_at（f9e9dda 同样校验时区 / 超前 / 顺序）。 */
+const EVENT_FIELD: Partial<Record<ReticleAction, string>> = {
+  ...BACKFILL_FIELD,
+  inspection: 'inspected_at',
 }
 /** 时钟偏差容忍：比当前晚超过 5 分钟拒绝（正好 5:00 放行，D55/D82）。 */
 export const CLOCK_SKEW_MS = 5 * 60_000
@@ -410,6 +439,9 @@ function seed() {
     hist[x.id] = { status_log: [], usage: [], mounts: [], inspections: [] }
   hist.r2.mounts.push({
     id: 'm1',
+    event_type: 'mount',
+    mount_log_id: null,
+    source: 'manual',
     equipment_id: 'e1',
     equipment_label: 'LITHO-01',
     slot_code: 'S1',
@@ -437,6 +469,9 @@ function seed() {
   })
   hist.r3.mounts.push({
     id: 'm2',
+    event_type: 'mount',
+    mount_log_id: null,
+    source: 'manual',
     equipment_id: 'e1',
     equipment_label: 'LITHO-01',
     slot_code: 'S2',
@@ -579,7 +614,7 @@ const logAction = (a: ReticleAction) => a.replace('-', '_')
  */
 function bodyCheck(action: ReticleAction, body: ReticleActionInput) {
   // D82：补录时间 —— 无偏移 422 timezone_required；超前 >5 分钟 422 value_error future_time
-  const tf = BACKFILL_FIELD[action]
+  const tf = EVENT_FIELD[action] as keyof ReticleActionInput | undefined
   const tv = tf ? body[tf] : undefined
   if (tf && tv != null && tv !== '') {
     if (!hasOffset(String(tv)) || Number.isNaN(Date.parse(String(tv))))
@@ -702,7 +737,7 @@ function mockAct(
   const from = x.status_code
   const holdFrom = x.hold_reason
   // D82：补录时间；早于最近一次下机 / 事件 409 time_out_of_order；下机早于对应上机 409（相等合法）
-  const tf = BACKFILL_FIELD[action]
+  const tf = EVENT_FIELD[action] as keyof ReticleActionInput | undefined
   const given = tf && body[tf] ? String(body[tf]) : null
   const at = given
     ? new Date(Date.parse(given)).toISOString().replace(/\.\d{3}Z$/, 'Z')
@@ -780,6 +815,9 @@ function mockAct(
   } else if (action === 'mount') {
     const m: ReticleMount = {
       id: `m${Date.now()}`,
+      event_type: 'mount',
+      mount_log_id: null,
+      source: 'manual',
       equipment_id: body.equipment_id!,
       equipment_label: body.equipment_id!,
       slot_code: body.slot_code?.trim() || null,
@@ -821,7 +859,14 @@ function mockAct(
   } else if (action === 'unmount') {
     const m = closeMount('manual')!
     x.status_code = to
-    out = { data: { ...m } }
+    // D80 G1：data 为上机行，unmount_event 为下机事件行（手工接口不带 duplicate）
+    const ev: ReticleMount = {
+      ...m,
+      id: `${m.id}-u${Date.now()}`,
+      event_type: 'unmount',
+      mount_log_id: m.id,
+    }
+    out = { data: { ...m }, unmount_event: ev }
   } else {
     if (action === 'restore') {
       const max = num(x.max_shots)
