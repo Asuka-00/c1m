@@ -243,15 +243,25 @@ describe('打标作业 mock（D78/D79）', () => {
     expect(p.lines).toEqual(['FS3201', '2642 ••••'])
   })
   it('缺 Idempotency-Key 422 missing（loc=header）', async () => {
-    expect(await detail(api.create({ lot_id: 'lot1' }))).toMatchObject({
+    // QA P3：类型里 key 必填，漏传 tsc 报错
+    // @ts-expect-error key 必填
+    void api.create({ lot_id: 'lot1' }).catch(() => {})
+    // @ts-expect-error key 必填
+    void api.print('x', {}).catch(() => {})
+    // @ts-expect-error key 必填
+    void api.inspect('x', { result: 'pass', read_code: 'x' }).catch(() => {})
+    // @ts-expect-error key 必填
+    void api.void('x', { reason_id: 'V', comment: 'x' }).catch(() => {})
+    const noKey = undefined as unknown as string
+    expect(await detail(api.create({ lot_id: 'lot1' }, noKey))).toMatchObject({
       status: 422,
       detail: [{ type: 'missing', loc: ['header', 'Idempotency-Key'] }],
     })
     const r = await api.create({ lot_id: 'lot1' }, 'c')
     for (const p of [
-      api.print(r.id, {}),
-      api.inspect(r.id, { result: 'pass', read_code: r.trace_code }),
-      api.void(r.id, { reason_id: 'V', comment: 'x' }),
+      api.print(r.id, {}, noKey),
+      api.inspect(r.id, { result: 'pass', read_code: r.trace_code }, noKey),
+      api.void(r.id, { reason_id: 'V', comment: 'x' }, noKey),
     ])
       expect(await detail(p)).toMatchObject({
         status: 422,

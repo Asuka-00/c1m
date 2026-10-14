@@ -459,14 +459,10 @@ export interface MarkingApi {
   /** 单条主记录（出站拦截提示跳转用） */
   record: (id: string) => Promise<MarkingRecord>
   /** key：Idempotency-Key（D57） */
-  create: (input: CreateInput, key?: string) => Promise<MarkingRecord>
-  print: (id: string, input: PrintInput, key?: string) => Promise<MarkingRecord>
-  inspect: (
-    id: string,
-    input: InspectInput,
-    key?: string
-  ) => Promise<InspectOut>
-  void: (id: string, input: VoidInput, key?: string) => Promise<MarkingRecord>
+  create: (input: CreateInput, key: string) => Promise<MarkingRecord>
+  print: (id: string, input: PrintInput, key: string) => Promise<MarkingRecord>
+  inspect: (id: string, input: InspectInput, key: string) => Promise<InspectOut>
+  void: (id: string, input: VoidInput, key: string) => Promise<MarkingRecord>
   config: () => Promise<MarkingConfig>
   trace: (code: string, includeVoided?: boolean) => Promise<TraceCodeResult>
 }
