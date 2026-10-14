@@ -167,7 +167,7 @@ def pm_status(
 ) -> list[Row]:
     """设备各 PM 计划的到期状态。
 
-    起算点为该设备该计划的最近一次 PM 记录，无记录时为设备创建时间。
+    起算点为该设备该计划最近一次结果为 OK 的 PM 记录（NG 不重置周期），无记录时为设备创建时间。
     到期：天数周期已满，或自起算点 Track In 的批次数达到批次周期；
     预警：距天数到期不超过 ``warn_days`` 天。
 
@@ -179,7 +179,14 @@ def pm_status(
     out = []
     for p in _plans(s, tid, eq):
         recs = find(s, tid, "pm_record", pm_plan_id=p["id"], equipment_id=eq["id"])
-        last = max((r["done_at"] for r in recs if r["done_at"]), default=None)
+        last = max(
+            (
+                r["done_at"]
+                for r in recs
+                if r["done_at"] and (r["result"] or "ok") == "ok"
+            ),
+            default=None,
+        )
         base = last or eq.get("created_at") or at
         nxt = base + timedelta(days=p["interval_days"]) if p["interval_days"] else None
         days_left = (

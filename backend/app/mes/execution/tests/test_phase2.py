@@ -253,6 +253,24 @@ def test_pm_due_check_and_switch(client: TestClient, db: Session) -> None:
     )
 
 
+def test_pm_ng_does_not_reset_cycle(client: TestClient, db: Session) -> None:
+    """BUG-PM-01：NG 的 PM 记录不重置周期，仅最近一次 OK 起算。"""
+    f = Line(client, db)
+    plan = f.m.post(
+        "pm_plan",
+        {"code": "PM-N", "name": "pm", "equipment_id": f.eq["id"], "interval_days": 7},
+    )
+    url = f"{EQP}/pm/{plan['id']}/complete"
+    ok = f.post(url, {"equipment_id": f.eq["id"]})["pm"][0]
+    assert ok["last_done"] and not ok["due"]
+    f.sql("UPDATE mes_pm_record SET done_at = done_at - interval '10 day'")
+    ng = f.post(url, {"equipment_id": f.eq["id"], "result": "ng"})["pm"][0]
+    assert ng["due"]  # NG 后仍按 10 天前的 OK 起算
+    assert ng["days_left"] < 0
+    again = f.post(url, {"equipment_id": f.eq["id"], "result": "ok"})["pm"][0]
+    assert not again["due"] and again["days_left"] > 6
+
+
 # ---------------- phase 6: recipe ↔ equipment control ----------------
 def test_recipe_match_and_switch(client: TestClient, db: Session) -> None:
     f = Line(client, db)
