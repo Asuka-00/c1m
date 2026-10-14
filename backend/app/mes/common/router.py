@@ -15,6 +15,7 @@ from app.core.deps import SessionDep
 from app.core.pagination import ListParamsDep
 from app.core.spec.base import get_entity
 from app.core.spec.engine import ENTITIES, EXTRA_PERMISSIONS, MODULES, Entity, perm
+from app.core.spec.errors import http_422
 from app.core.spec.excel import export_xlsx, import_xlsx
 from app.core.spec.query import distinct_values, get_row, list_rows, tree
 from app.core.spec.serialize import serialize
@@ -28,7 +29,7 @@ from app.core.spec.write import (
 )
 from app.mes.common import coderule
 from app.mes.common.meta import all_meta
-from app.mes.common.uom import convert
+from app.mes.common.uom import convert, count_errors
 from app.platform.auth.deps import CurrentTenant
 from app.platform.tenants.service import TenantContext
 
@@ -122,7 +123,11 @@ def uom_convert(
 ) -> Any:
     """Convert `value` between units (direct, inverse or multi-hop conversions)."""
     require_entity(ctx, "uom", "read")
-    return convert(session, ctx.id, from_uom, to_uom, value)
+    res = convert(session, ctx.id, from_uom, to_uom, value)
+    errs = count_errors(session, ctx.id, to_uom, {"value": res["value"]})
+    if errs:
+        raise http_422(errs)
+    return res
 
 
 @router.get("/{entity}")

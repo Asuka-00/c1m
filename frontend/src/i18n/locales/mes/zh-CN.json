@@ -57,6 +57,7 @@
       "lot_history": "批次履历",
       "lot_recipe_run": "配方执行记录",
       "lot_genealogy": "批次谱系",
+      "material_consumption": "用料记录",
       "work_order": "工单",
       "bom": "物料清单（BOM）",
       "bom_line": "BOM 明细",
@@ -531,6 +532,19 @@
         "qty": "数量",
         "units": "晶圆 / 单元",
         "route_step": "流程步骤",
+        "username": "用户",
+        "at": "时间"
+      },
+      "material_consumption": {
+        "lot": "批次",
+        "route_step": "流程步骤",
+        "operation": "工序",
+        "material": "物料",
+        "material_lot": "物料批",
+        "qty": "用量",
+        "uom": "单位",
+        "source": "来源",
+        "usage_type": "用途",
         "username": "用户",
         "at": "时间"
       },
@@ -1196,7 +1210,8 @@
         "bonus": "补数",
         "carrier_change": "换载具",
         "sort": "晶圆整理",
-        "priority": "优先级变更"
+        "priority": "优先级变更",
+        "bom_over_consumption": "BOM 超量用料"
       },
       "genealogy_relation": {
         "split": "分批",
@@ -1234,6 +1249,16 @@
         "die": "晶粒",
         "package": "封装体",
         "unit": "单元"
+      },
+      "consumption_source": {
+        "step_resource": "工步资源",
+        "manual": "人工",
+        "eap": "EAP"
+      },
+      "usage_type": {
+        "normal": "正常",
+        "rework": "返工",
+        "scrap": "报废"
       },
       "bom_status": {
         "draft": "草稿",

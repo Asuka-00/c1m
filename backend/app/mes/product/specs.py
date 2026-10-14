@@ -490,8 +490,20 @@ register(
         "Material lot|线边物料批|ラインサイド資材ロット",
         [
             F("material", "ref", "Material|物料|資材", required=True, ref="material"),
-            F("qty_remaining", "float", "Qty remaining|剩余数量|残数量", required=True),
-            F("initial_qty", "float", "Received qty|收料数量|受入数量", list=False),
+            F(
+                "qty_remaining",
+                "float",
+                "Qty remaining|剩余数量|残数量",
+                required=True,
+                scale=6,
+            ),
+            F(
+                "initial_qty",
+                "float",
+                "Received qty|收料数量|受入数量",
+                list=False,
+                scale=6,
+            ),
             F("uom", "ref", ref="uom", required=True),
             F("expiry_date", "date", "Expiry|有效期|有効期限"),
             F(

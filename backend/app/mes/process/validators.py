@@ -10,6 +10,7 @@ from app.core.spec.base import conn
 from app.core.spec.engine import TABLES, Entity
 from app.core.spec.errors import MesError
 from app.core.spec.validate import validator
+from app.mes.common.uom import count_errors
 from app.mes.common.validators import Row, _get
 from app.mes.equipment.service import check_recipe_equipment_type
 
@@ -88,7 +89,7 @@ def _route_activate(
 
 @validator("step_resource")
 def _step_resource(
-    _s: Session, _t: uuid.UUID, _e: Entity, row: Row, _old: Row | None
+    s: Session, tid: uuid.UUID, _e: Entity, row: Row, _old: Row | None
 ) -> None:
     kind = row.get("resource_kind")
     errs = [
@@ -98,6 +99,8 @@ def _step_resource(
     ]
     if row.get("qty") is not None and row["qty"] <= 0:
         errs.append(("qty", "qty: must be > 0"))
+    else:
+        errs += count_errors(s, tid, row.get("uom_id"), {"qty": row.get("qty")})
     if errs:
         raise MesError(errs)
 

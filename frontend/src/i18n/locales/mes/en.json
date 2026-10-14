@@ -57,6 +57,7 @@
       "lot_history": "Lot history",
       "lot_recipe_run": "Recipe run",
       "lot_genealogy": "Lot genealogy",
+      "material_consumption": "Material consumption",
       "work_order": "Work order",
       "bom": "BOM",
       "bom_line": "BOM line",
@@ -531,6 +532,19 @@
         "qty": "Qty",
         "units": "Wafers / units",
         "route_step": "Route step",
+        "username": "User",
+        "at": "Time"
+      },
+      "material_consumption": {
+        "lot": "Lot",
+        "route_step": "Route step",
+        "operation": "Operation",
+        "material": "Material",
+        "material_lot": "Material lot",
+        "qty": "Qty",
+        "uom": "UOM",
+        "source": "Source",
+        "usage_type": "Usage type",
         "username": "User",
         "at": "Time"
       },
@@ -1196,7 +1210,8 @@
         "bonus": "Bonus",
         "carrier_change": "Carrier change",
         "sort": "Wafer sort",
-        "priority": "Priority change"
+        "priority": "Priority change",
+        "bom_over_consumption": "BOM over-consumption"
       },
       "genealogy_relation": {
         "split": "Split",
@@ -1234,6 +1249,16 @@
         "die": "Die",
         "package": "Package",
         "unit": "Unit"
+      },
+      "consumption_source": {
+        "step_resource": "Step resource",
+        "manual": "Manual",
+        "eap": "EAP"
+      },
+      "usage_type": {
+        "normal": "Normal",
+        "rework": "Rework",
+        "scrap": "Scrap"
       },
       "bom_status": {
         "draft": "Draft",

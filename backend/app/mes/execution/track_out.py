@@ -13,15 +13,17 @@ from app.core.spec.errors import http_422
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
 from app.mes.equipment.service import e10_apply
+from app.mes.execution import bom_usage
 from app.mes.execution.checks import service as ck
 from app.mes.execution.constants import OOS_RANK
-from app.mes.execution.consumption import _consume
+from app.mes.execution.consumption import _consume, usage_type
 from app.mes.execution.context import build_ctx
 from app.mes.execution.events import OOS, notify_lot
 from app.mes.execution.hold import default_reason, hold_lot
 from app.mes.execution.recipe_run import close_run
 from app.mes.execution.stage_common import _brief, _guard, _ov, _result
 from app.mes.lot.service import history, lock_lot, units
+from app.mes.process.service import step_after
 from app.mes.quality.service import out_of_spec
 
 Row = dict[str, Any]
@@ -188,7 +190,26 @@ def track_out(
             oos_action=d["oos_action"] if d["is_oos"] and oos_on else None,
             username=email,
         )
-    consumed = _consume(s, tid, ctx.material_needs, user)
+    consumed = _consume(
+        s,
+        tid,
+        ctx.material_needs,
+        user,
+        lot=lot,
+        step=ctx.step,
+        usage=usage_type(s, tid, lot, ctx.step),
+    )
+    # BOM 出站比对（只提示）：基准 = 本工步进站时的良品数（扣报废前的批次数量）
+    bom_rows = bom_usage.compare(
+        s,
+        tid,
+        lot,
+        lot["qty"],
+        operation_id=ctx.step["operation_id"],
+        is_last=step_after(s, tid, ctx.step) is None
+        and not (lot.get("route_stack") or []),
+    )
+    bom_warn = bom_usage.over_warning(bom_rows)
     tools = []
     for t in ctx.tools:
         mx, used = ck.tool_life(s, tid, t)
@@ -313,12 +334,24 @@ def track_out(
             "oos_action": worst,
             "scrap": n_scrap,
             "consumed": consumed,
+            "bom_usage": bom_rows,
             "tools": tools,
             "e10": e10,
             "sampling": smp.get("message"),
             **_ov(body, results),
         },
     )
+    if bom_warn:
+        history(
+            s,
+            tid,
+            lot,
+            "bom_over_consumption",
+            user,
+            step=ctx.step,
+            comment=bom_warn["message"][:300],
+            details={"lines": bom_warn["lines"]},
+        )
     if oos:
         history(
             s,
@@ -393,4 +426,6 @@ def track_out(
         oos_action=worst,
         consumed=consumed,
         tools=tools,
+        bom_usage=bom_rows,
+        warnings=[bom_warn] if bom_warn else [],
     )

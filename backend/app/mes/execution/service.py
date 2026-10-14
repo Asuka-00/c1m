@@ -3,6 +3,7 @@
 from app.mes.execution.adjust import adjust as adjust
 from app.mes.execution.batch import batch_candidates as batch_candidates
 from app.mes.execution.batch import batch_stage as batch_stage
+from app.mes.execution.bom_usage import lot_bom_usage as lot_bom_usage
 from app.mes.execution.carrier import carrier_board as carrier_board
 from app.mes.execution.carrier import change_carrier as change_carrier
 from app.mes.execution.carrier import clean_carrier as clean_carrier

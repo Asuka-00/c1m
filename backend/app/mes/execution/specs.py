@@ -153,6 +153,10 @@ ENUMS.update(
             ("carrier_change", "Carrier change|换载具|キャリア変更"),
             ("sort", "Wafer sort|晶圆整理|ウェーハソート"),
             ("priority", "Priority change|优先级变更|優先度変更"),
+            (
+                "bom_over_consumption",
+                "BOM over-consumption|BOM 超量用料|BOM 使用量超過",
+            ),
         ],
         "genealogy_relation": [
             ("split", "Split|分批|分割"),

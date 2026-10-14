@@ -8,6 +8,7 @@ from sqlmodel import Session
 from app.core.spec.engine import Entity
 from app.core.spec.errors import MesError
 from app.core.spec.validate import validator
+from app.mes.common.uom import count_errors
 from app.mes.execution.checks import service as ck
 
 Row = dict[str, Any]
@@ -29,12 +30,20 @@ def _tool(_s: Session, _t: uuid.UUID, _e: Entity, row: Row, _o: Row | None) -> N
 
 @validator("material_lot")
 def _material_lot(
-    _s: Session, _t: uuid.UUID, _e: Entity, row: Row, _o: Row | None
+    s: Session, tid: uuid.UUID, _e: Entity, row: Row, _o: Row | None
 ) -> None:
     if (row.get("qty_remaining") or 0) < 0:
         raise MesError([("qty_remaining", "qty_remaining: must be >= 0")])
     if row.get("initial_qty") is None:
         row["initial_qty"] = row.get("qty_remaining")
+    errs = count_errors(
+        s,
+        tid,
+        row.get("uom_id"),
+        {k: row.get(k) for k in ("qty_remaining", "initial_qty")},
+    )
+    if errs:
+        raise MesError(errs)
 
 
 @validator("check_rule")

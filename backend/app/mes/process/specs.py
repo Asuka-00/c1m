@@ -259,7 +259,7 @@ register(
             F("material", "ref", "Material|物料|資材", ref="material"),
             F("fixture", "ref", "Fixture / tool|治具 / 工具|治具・工具", ref="fixture"),
             F("recipe", "ref", ref="recipe"),
-            F("qty", "float", "Quantity|数量|数量"),
+            F("qty", "float", "Quantity|数量|数量", scale=6),
             F("uom", "ref", ref="uom", list=False, required_when={"qty": ("*",)}),
             F(
                 "qty_basis",

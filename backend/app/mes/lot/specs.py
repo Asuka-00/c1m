@@ -696,3 +696,67 @@ register(
         label_field="relation",
     ),
 )
+
+
+ENUMS.update(
+    {
+        "consumption_source": [
+            ("step_resource", "Step resource|工步资源|ステップ資源"),
+            ("manual", "Manual|人工|手動"),
+            ("eap", "EAP|EAP|EAP"),
+        ],
+        "usage_type": [
+            ("normal", "Normal|正常|通常"),
+            ("rework", "Rework|返工|リワーク"),
+            ("scrap", "Scrap|报废|スクラップ"),
+        ],
+    }
+)
+
+
+register(
+    # 用料记录（D28 / B2）：Track Out 扣料逐条记录；BOM 出站比对只累计 usage_type=normal
+    Entity(
+        "material_consumption",
+        "exec",
+        "Material consumption|用料记录|資材使用記録",
+        [
+            F("lot", "ref", "Lot|批次|ロット", required=True, ref="lot", cascade=True),
+            F("route_step", "ref", ref="route_step", list=False, filter=False),
+            F("operation", "ref", ref="operation"),
+            F("material", "ref", "Material|物料|資材", ref="material"),
+            F(
+                "material_lot",
+                "ref",
+                "Material lot|物料批|資材ロット",
+                ref="material_lot",
+            ),
+            F("qty", "float", "Qty|用量|使用量", scale=6),
+            F("uom", "ref", "UOM|单位|単位", ref="uom"),
+            F(
+                "source",
+                "enum",
+                "Source|来源|ソース",
+                enum="consumption_source",
+                default="step_resource",
+            ),
+            F(
+                "usage_type",
+                "enum",
+                "Usage type|用途|用途",
+                enum="usage_type",
+                default="normal",
+            ),
+            F("username", "str", "User|用户|ユーザー", max_length=255, search=True),
+            F("at", "datetime", "Time|时间|日時"),
+        ],
+        phase=6,
+        has_code=False,
+        readonly=True,
+        icon="PackageOpen",
+        order=4,
+        menu=False,
+        sort_default="at",
+        label_field="qty",
+    ),
+)

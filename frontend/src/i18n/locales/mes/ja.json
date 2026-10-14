@@ -57,6 +57,7 @@
       "lot_history": "ロット履歴",
       "lot_recipe_run": "レシピ実行記録",
       "lot_genealogy": "ロット系譜",
+      "material_consumption": "資材使用記録",
       "work_order": "作業指示",
       "bom": "部品表（BOM）",
       "bom_line": "BOM 明細",
@@ -531,6 +532,19 @@
         "qty": "数量",
         "units": "ウェーハ・ユニット",
         "route_step": "ルートステップ",
+        "username": "ユーザー",
+        "at": "日時"
+      },
+      "material_consumption": {
+        "lot": "ロット",
+        "route_step": "ルートステップ",
+        "operation": "工程",
+        "material": "資材",
+        "material_lot": "資材ロット",
+        "qty": "使用量",
+        "uom": "単位",
+        "source": "ソース",
+        "usage_type": "用途",
         "username": "ユーザー",
         "at": "日時"
       },
@@ -1196,7 +1210,8 @@
         "bonus": "追加",
         "carrier_change": "キャリア変更",
         "sort": "ウェーハソート",
-        "priority": "優先度変更"
+        "priority": "優先度変更",
+        "bom_over_consumption": "BOM 使用量超過"
       },
       "genealogy_relation": {
         "split": "分割",
@@ -1234,6 +1249,16 @@
         "die": "ダイ",
         "package": "パッケージ",
         "unit": "ユニット"
+      },
+      "consumption_source": {
+        "step_resource": "ステップ資源",
+        "manual": "手動",
+        "eap": "EAP"
+      },
+      "usage_type": {
+        "normal": "通常",
+        "rework": "リワーク",
+        "scrap": "スクラップ"
       },
       "bom_status": {
         "draft": "下書き",

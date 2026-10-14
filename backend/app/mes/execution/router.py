@@ -88,6 +88,13 @@ def lot_context(session: SessionDep, ctx: CurrentTenant, lot_id: uuid.UUID) -> A
     return out
 
 
+@router.get("/lots/{lot_id}/bom-usage")
+def lot_bom_usage(session: SessionDep, ctx: CurrentTenant, lot_id: uuid.UUID) -> Any:
+    """BOM usage of a lot: cumulative normal consumption vs plan per issue line."""
+    _need(ctx, "mes.exec:read")
+    return svc.lot_bom_usage(session, ctx.id, lot_id)
+
+
 @router.post("/lots/{lot_id}/preview/{stage}")
 def lot_preview(
     session: SessionDep,
