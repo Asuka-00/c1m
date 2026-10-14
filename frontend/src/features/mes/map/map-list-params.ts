@@ -1,6 +1,7 @@
 /** 坐标图列表筛选 → 请求参数（日期按站点时区 0 点带偏移发送，结束日含当天：to = 次日 0 点）。 */
 import type { MapListParams } from '@/lib/api/mes/map'
-import { addDays, getSiteTz, siteDayBoundary } from '@/lib/site-tz'
+import { addDays, getSiteTz } from '@/lib/site-tz'
+import { rangeParam } from '@/components/crud/filter-defs'
 
 export interface MapListFilter {
   q: string
@@ -24,6 +25,7 @@ export const emptyMapFilter = (): MapListFilter => ({
 
 /**
  * `YYYY-MM-DD`（站点日期）→ 当天站点 0 点（带偏移，D75）；`plusDays` 用于结束日（次日 0 点）。
+ * 与通用 CRUD 的 `rangeParam`（D77 半开区间）同一实现。
  */
 export function localDayStart(
   d: string,
@@ -31,7 +33,7 @@ export function localDayStart(
   tz: string = getSiteTz()
 ): string | undefined {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return undefined
-  return siteDayBoundary(addDays(d, plusDays), false, tz)
+  return rangeParam(addDays(d, plusDays - 1), true, 'datetime', tz)
 }
 
 export function mapListParams(f: MapListFilter): MapListParams {

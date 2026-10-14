@@ -1,4 +1,4 @@
-import { getSiteTz, siteDayBoundary } from '@/lib/site-tz'
+import { addDays, getSiteTz, siteDayBoundary } from '@/lib/site-tz'
 
 /** 文本筛选的防抖时长（毫秒）。 */
 export const SEARCH_DEBOUNCE_MS = 300
@@ -58,7 +58,7 @@ export function ymd(d: Date): string {
 
 /**
  * 日期范围参数转换为接口参数（D75）：
- * - datetime 字段：按站点时区算当天 00:00:00 / 23:59:59.999999，带偏移发送（后端不换算、两头都含）；
+ * - datetime 字段（D77 半开区间）：_from 发站点当天 0 点、_to 发站点次日 0 点，都带当时的实际偏移（后端 >= / <）；
  * - date 字段：只取前 10 位，直接传站点日期。
  *
  * @param v - YYYY-MM-DD
@@ -74,7 +74,7 @@ export function rangeParam(
 ): string {
   const ymd = v.trim().slice(0, 10)
   if (kind === 'date') return ymd
-  return siteDayBoundary(ymd, end, tz)
+  return siteDayBoundary(end ? addDays(ymd, 1) : ymd, false, tz)
 }
 
 /** 所有表格的默认筛选：一个绑定 ?q= 的关键字搜索框 */

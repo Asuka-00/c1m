@@ -1,5 +1,6 @@
 import { QueryClient } from '@tanstack/react-query'
 import { describe, expect, it } from 'vitest'
+import { DEFAULT_SITE_TZ, setSiteTz } from '@/lib/site-tz'
 import {
   filterKeys,
   filterOptionsKey,
@@ -44,19 +45,45 @@ describe('date range filters', () => {
     expect(filterKeys({ type: 'text', name: 'q' })).toEqual(['q'])
   })
 
-  it('datetime 字段按站点时区当天边界带偏移发送，date 字段只取前 10 位（D75）', () => {
+  it('D77 半开区间：datetime _from 当天 0 点、_to 次日 0 点（站点时区带偏移），date 两头都含', () => {
+    // 台北
     expect(rangeParam('2026-10-01', false)).toBe('2026-10-01T00:00:00+08:00')
-    expect(rangeParam('2026-10-01', true)).toBe(
-      '2026-10-01T23:59:59.999999+08:00'
-    )
+    expect(rangeParam('2026-10-01', true)).toBe('2026-10-02T00:00:00+08:00')
+    expect(rangeParam('2026-12-31', true)).toBe('2027-01-01T00:00:00+08:00')
+    // date 字段：站点日期原样，两头都含
     expect(rangeParam('2026-10-01', true, 'date')).toBe('2026-10-01')
     expect(rangeParam('2026-10-01T05:00:00Z', false, 'date')).toBe('2026-10-01')
-    // 浏览器时区（测试机台北）与站点不一致：按站点洛杉矶
-    expect(
-      rangeParam('2026-10-01', false, 'datetime', 'America/Los_Angeles')
-    ).toBe('2026-10-01T00:00:00-07:00')
-    expect(
-      rangeParam('2026-12-01', true, 'datetime', 'America/Los_Angeles')
-    ).toBe('2026-12-01T23:59:59.999999-08:00')
+  })
+
+  it('D77 洛杉矶夏令时切换：偏移按次日 0 点那一刻算', () => {
+    const la = (v: string, end: boolean) =>
+      rangeParam(v, end, 'datetime', 'America/Los_Angeles')
+    // 3-07 结束 → 3-08 0 点仍是 PST
+    expect(la('2026-03-07', false)).toBe('2026-03-07T00:00:00-08:00')
+    expect(la('2026-03-07', true)).toBe('2026-03-08T00:00:00-08:00')
+    // 3-08 当天切到 PDT：开始 -08:00，结束（3-09 0 点）-07:00
+    expect(la('2026-03-08', false)).toBe('2026-03-08T00:00:00-08:00')
+    expect(la('2026-03-08', true)).toBe('2026-03-09T00:00:00-07:00')
+    // 11-01 当天切回 PST：开始 -07:00，结束（11-02 0 点）-08:00
+    expect(la('2026-11-01', false)).toBe('2026-11-01T00:00:00-07:00')
+    expect(la('2026-11-01', true)).toBe('2026-11-02T00:00:00-08:00')
+    // 10-31 结束 → 11-01 0 点仍是 PDT
+    expect(la('2026-10-31', true)).toBe('2026-11-01T00:00:00-07:00')
+  })
+
+  it('浏览器时区与站点不一致：一律按站点时区', () => {
+    // 测试浏览器是台北，站点分别设成 UTC / Kolkata
+    expect(rangeParam('2026-10-15', true, 'datetime', 'UTC')).toBe(
+      '2026-10-16T00:00:00+00:00'
+    )
+    expect(rangeParam('2026-10-15', false, 'datetime', 'Asia/Kolkata')).toBe(
+      '2026-10-15T00:00:00+05:30'
+    )
+    setSiteTz('America/Los_Angeles')
+    try {
+      expect(rangeParam('2026-10-15', true)).toBe('2026-10-16T00:00:00-07:00')
+    } finally {
+      setSiteTz(DEFAULT_SITE_TZ)
+    }
   })
 })
