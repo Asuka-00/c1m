@@ -81,6 +81,7 @@ def default_adapters() -> dict[str, Adapter]:
         "reticle_hold": Adapter("光罩 Hold", ["/mes/reticle/{reticle_id}/hold"], card="P3-B4"),
         "reticle_release": Adapter("光罩解除 Hold", ["/mes/reticle/{reticle_id}/release"], card="P3-B4"),
         "reticle_restore": Adapter("光罩人工恢复", ["/mes/reticle/{reticle_id}/restore"], card="P3-B4"),
+        "reticle_scrap": Adapter("光罩报废", ["/mes/reticle/{reticle_id}/scrap"], card="P3-B4"),
     }
 
 
@@ -122,6 +123,7 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "reticle_hold": ["reticle_hold"],
     "reticle_release": ["reticle_release"],
     "reticle_restore": ["reticle_restore"],
+    "reticle_scrap": ["reticle_scrap"],
     "reuse": [],
     "precondition": [],
 }

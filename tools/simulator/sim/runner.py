@@ -140,6 +140,7 @@ P3_DRAFT_STEPS = {
     "reticle_hold",
     "reticle_release",
     "reticle_restore",
+    "reticle_scrap",
 }
 
 
