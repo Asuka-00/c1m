@@ -204,6 +204,8 @@ interface Api {
     input: ReticleActionInput,
     idempotencyKey?: string
   ) => Promise<ReticleActionOut>
+  /** 删除（D72：有履历 → 409 referenced；履历表外键 RESTRICT）。 */
+  remove: (id: string) => Promise<void>
 }
 
 /**
@@ -263,6 +265,7 @@ export const httpReticleApi: Api = {
           : undefined
       )
       .then((r) => r.data),
+  remove: (id) => http.delete(`/mes/reticle/${id}`).then(() => undefined),
 }
 
 /* ---------------- mock ---------------- */
@@ -519,6 +522,7 @@ function mockAct(
     return structuredClone(hit.out)
   }
   const x = find(id)
+  // D72：scrapped 终态拒绝 usage / 检查录入等全部动作 → 409 invalid_transition
   const conflict = (code: string) =>
     apiError(409, {
       code,
@@ -708,6 +712,29 @@ const later = <T>(f: () => T) =>
     }
   })
 
+/** 是否有任何履历（状态 / 计数 / 挂载 / 检查）。 */
+export function hasHistory(h: ReticleHistory) {
+  return (
+    h.status_log.length +
+      h.usage.length +
+      h.mounts.length +
+      h.inspections.length >
+    0
+  )
+}
+
+function mockRemove(id: string) {
+  find(id)
+  // D72：有履历的光罩不能删 → 409 referenced（履历表外键 RESTRICT）
+  if (hasHistory(store.hist[id]))
+    throw apiError(409, {
+      code: 'referenced',
+      message: 'reticle has history records',
+    })
+  store.r = store.r.filter((y) => y.id !== id)
+  delete store.hist[id]
+}
+
 /** 前端 mock 实现（同形数据与错误码）。 */
 export const mockReticleApi: Api = {
   list: () => later(() => store.r),
@@ -719,6 +746,7 @@ export const mockReticleApi: Api = {
     })
   },
   act: (id, action, input, key) => later(() => mockAct(id, action, input, key)),
+  remove: (id) => later(() => mockRemove(id)),
 }
 
 /** 是否使用 mock（后端 B4 就绪后设 VITE_RETICLE_MOCK=0）。 */

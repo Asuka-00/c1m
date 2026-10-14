@@ -1883,8 +1883,12 @@
         "still_mounted": "The reticle is still mounted. Unmount it before \"{{action}}\".",
         "reticle_unavailable": "The reticle cannot be mounted in its current status",
         "life_reached": "The reticle has reached its life limit and cannot be tracked in",
-        "idempotency_in_progress": "The previous submission is still being processed. Please try again shortly."
-      }
+        "idempotency_in_progress": "The previous submission is still being processed. Please try again shortly.",
+        "referenced": "The reticle has history records and can't be deleted. Scrap it instead."
+      },
+      "scrappedHint": "The reticle is scrapped; usage, inspection and other actions are not allowed",
+      "delete": "Delete",
+      "deleteConfirm": "Delete reticle {{code}}?"
     }
   },
   "notify": {

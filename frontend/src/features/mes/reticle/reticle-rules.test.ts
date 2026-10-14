@@ -8,6 +8,7 @@ import {
   bodySignature,
   actionReticle,
   apiError,
+  hasHistory,
   httpReticleApi,
   mockReticleApi,
   resetReticleMock,
@@ -17,6 +18,7 @@ import {
   ACTION_LIST,
   actionLabel,
   actionEnabled,
+  disabledHint,
   reticleErrorMessage,
   validateAction,
   validateLocation,
@@ -394,5 +396,68 @@ describe('mock', () => {
       status_code: 'on_hold',
       hold_reason: 'inspection_failed',
     })
+  })
+})
+
+describe('D72', () => {
+  beforeEach(() => resetReticleMock())
+  afterEach(() => vi.restoreAllMocks())
+  it('scrapped 拒绝 usage / 检查录入 → 409 invalid_transition，按钮禁用并有提示', async () => {
+    for (const [a, input] of [
+      ['usage', { delta: 1 }],
+      ['inspection', { kind: 'cd', result: 'fail' }],
+    ] as const) {
+      const err = await mockReticleApi
+        .act('r7', a, input, `k-${a}`)
+        .catch((e: unknown) => e)
+      expect(err).toMatchObject({
+        response: {
+          status: 409,
+          data: { detail: { code: 'invalid_transition' } },
+        },
+      })
+      expect(actionEnabled({ status_code: 'scrapped' }, a)).toBe(false)
+      expect(reticleErrorMessage(err, a)).toBe(
+        t('mes.reticle.code.invalid_transition', { action: actionLabel(a) })
+      )
+    }
+    expect(disabledHint({ status_code: 'scrapped' })).toBe(
+      t('mes.reticle.scrappedHint')
+    )
+    expect(disabledHint({ status_code: 'available' })).toBeUndefined()
+  })
+  it('有履历删除 → 409 referenced 三语；无履历可删', async () => {
+    const err = await mockReticleApi.remove('r6').catch((e: unknown) => e)
+    expect(err).toMatchObject({
+      response: { status: 409, data: { detail: { code: 'referenced' } } },
+    })
+    for (const l of ['zh-CN', 'en', 'ja']) {
+      await i18n.changeLanguage(l)
+      const m = reticleErrorMessage(err)
+      expect(m).toBe(t('mes.reticle.code.referenced'))
+      expect(m).not.toContain('referenced')
+    }
+    await i18n.changeLanguage('zh-CN')
+    const h = await mockReticleApi.history('r1')
+    expect(hasHistory(h)).toBe(false)
+    await mockReticleApi.remove('r1')
+    expect((await mockReticleApi.list()).some((x) => x.id === 'r1')).toBe(false)
+  })
+  it('http 删除走 DELETE /mes/reticle/{id}', async () => {
+    const spy = vi
+      .spyOn(http, 'delete')
+      .mockResolvedValue({ data: null, status: 204 })
+    await httpReticleApi.remove('r9')
+    expect(spy).toHaveBeenCalledWith('/mes/reticle/r9')
+  })
+  it('源码与三语里没有 idempotency_key_mismatch', async () => {
+    const files = import.meta.glob(
+      ['/src/**/*.{ts,tsx,json}', '!/src/**/*.test.*'],
+      { query: '?raw', import: 'default', eager: true }
+    ) as Record<string, string>
+    const bad = Object.entries(files)
+      .filter(([, c]) => c.includes('idempotency_key_' + 'mismatch'))
+      .map(([f]) => f)
+    expect(bad).toEqual([])
   })
 })

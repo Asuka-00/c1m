@@ -113,6 +113,13 @@ export function actionEnabled(
     : from.includes(r.status_code)
 }
 
+/** 禁用原因提示：scrapped 终态（D72 后端回 409 invalid_transition）。 */
+export function disabledHint(r: Pick<Reticle, 'status_code'>) {
+  return r.status_code === 'scrapped'
+    ? t('mes.reticle.scrappedHint')
+    : undefined
+}
+
 /** 表单校验，返回 字段 → 错误文案。 */
 export function validateAction(
   a: ReticleAction,
@@ -165,6 +172,8 @@ export const RETICLE_CODES = [
   'life_reached',
   // 409：上次同 key 请求仍在处理；重试时内容不变复用同一 key
   'idempotency_in_progress',
+  // D72：有履历的光罩删除 → 409 referenced
+  'referenced',
 ] as const
 // 422 idempotency_key_reused（D57/D72）走通用 mesErrorMessage（mes.err.code.idempotency_key_reused）
 

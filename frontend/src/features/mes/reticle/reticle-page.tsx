@@ -1,7 +1,8 @@
 /** 光罩管理页面（P3）：列表 + 详情（状态履历 / 计数 / 挂载 / 检查）+ 动作按钮。 */
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fmtDateTime, t } from '@/i18n'
+import { toast } from 'sonner'
 import {
   RETICLE_MOCK,
   RETICLE_STATUSES,
@@ -23,12 +24,14 @@ import {
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Page } from '@/components/crud'
-import { useMesCan } from '@/features/mes/common/mes-perm'
+import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { ReticleActionDialog } from './action-dialog'
 import {
   actionEnabled,
   actionLabel,
+  disabledHint,
   lifeRatio,
+  reticleErrorMessage,
   visibleActions,
 } from './reticle-rules'
 
@@ -117,6 +120,16 @@ export function ReticleDetail({ reticle }: { reticle: Reticle }) {
   })
   const ratio = lifeRatio(reticle)
   const acts = visibleActions(can)
+  const qc = useQueryClient()
+  const del = useMutation({
+    mutationFn: () => reticleApi.remove(reticle.id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['mes', 'reticle'] })
+    },
+    // D72：有履历 → 409 referenced
+    onError: (e) => toast.error(reticleErrorMessage(e)),
+  })
+  const hint = disabledHint(reticle)
   return (
     <div className='flex flex-col gap-3 rounded-md border p-4'>
       <div className='flex flex-wrap items-center gap-2'>
@@ -172,13 +185,37 @@ export function ReticleDetail({ reticle }: { reticle: Reticle }) {
               size='sm'
               variant={a === 'scrap' ? 'destructive' : 'outline'}
               disabled={!actionEnabled(reticle, a)}
+              title={hint}
               onClick={() => setAction(a)}
               data-testid={`reticle-act-${a}`}
             >
               {t(`mes.reticle.action.${a}`)}
             </Button>
           ))}
+          {can(MES_PERM.reticleOverride) && (
+            <Button
+              size='sm'
+              variant='destructive'
+              disabled={del.isPending}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    t('mes.reticle.deleteConfirm', { code: reticle.code })
+                  )
+                )
+                  del.mutate()
+              }}
+              data-testid='reticle-delete'
+            >
+              {t('mes.reticle.delete')}
+            </Button>
+          )}
         </div>
+      )}
+      {hint && (
+        <p className='text-sm text-muted-foreground' data-testid='reticle-hint'>
+          {hint}
+        </p>
       )}
       <Tabs defaultValue='status'>
         <TabsList>

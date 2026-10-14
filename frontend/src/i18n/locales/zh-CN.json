@@ -1883,8 +1883,12 @@
         "still_mounted": "光罩仍挂在机台上，请先卸载再执行「{{action}}」",
         "reticle_unavailable": "光罩当前状态不可挂载",
         "life_reached": "光罩已达寿命上限，不能进站",
-        "idempotency_in_progress": "上一次提交还在处理中，请稍后重试"
-      }
+        "idempotency_in_progress": "上一次提交还在处理中，请稍后重试",
+        "referenced": "光罩已有履历记录，不能删除；如不再使用请报废"
+      },
+      "scrappedHint": "光罩已报废，不能再计数、录入检查或执行其他动作",
+      "delete": "删除",
+      "deleteConfirm": "确定删除光罩 {{code}}？"
     }
   },
   "notify": {

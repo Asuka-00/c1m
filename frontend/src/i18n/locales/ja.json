@@ -1883,8 +1883,12 @@
         "still_mounted": "レチクルがまだ装着されています。取り外してから「{{action}}」を実行してください",
         "reticle_unavailable": "現在の状態ではレチクルを装着できません",
         "life_reached": "寿命上限に達しているためトラックインできません",
-        "idempotency_in_progress": "前回の送信をまだ処理中です。しばらくしてから再試行してください"
-      }
+        "idempotency_in_progress": "前回の送信をまだ処理中です。しばらくしてから再試行してください",
+        "referenced": "レチクルに履歴があるため削除できません。不要な場合は廃棄してください"
+      },
+      "scrappedHint": "レチクルは廃棄済みのため、カウント・検査登録などの操作はできません",
+      "delete": "削除",
+      "deleteConfirm": "レチクル {{code}} を削除しますか？"
     }
   },
   "notify": {
