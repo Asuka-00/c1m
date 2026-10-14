@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
 from fastapi import HTTPException
@@ -11,7 +12,7 @@ from app.core.models import actor_name
 from app.core.spec.base import now
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
-from app.mes.common.uom import convert, round_qty
+from app.mes.common.uom import convert, to_qty
 
 Row = dict[str, Any]
 
@@ -138,8 +139,8 @@ def _consume(
             q = a["qty"]
             if a["req_uom_id"] and m["uom_id"] != a["req_uom_id"]:
                 q = convert(s, tid, a["req_uom_id"], m["uom_id"], q)["value"]
-            q = round_qty(q)
-            left = max(0.0, round_qty(float(m["qty_remaining"]) - q))
+            q = to_qty(q)  # Decimal(18,6)，入库前定点化（D31）
+            left = max(Decimal(0), to_qty(m["qty_remaining"] or 0) - q)
             _upd(
                 s,
                 tid,
@@ -167,5 +168,7 @@ def _consume(
                     username=who,
                     at=at,
                 )
-            out.append({"material_lot": m["code"], "qty": q, "left": left})
+            out.append(
+                {"material_lot": m["code"], "qty": float(q), "left": float(left)}
+            )
     return out

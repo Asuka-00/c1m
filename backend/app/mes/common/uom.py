@@ -6,6 +6,7 @@
 
 import uuid
 from collections import deque
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 import sqlalchemy as sa
@@ -19,9 +20,21 @@ QTY_SCALE = 6
 Edge = tuple[float, float]  # 目标值 = 源值 * factor + offset
 
 
-def round_qty(v: float) -> float:
-    """数量四舍五入到 ``QTY_SCALE`` 位小数。"""
-    return round(float(v), QTY_SCALE)
+_Q = Decimal(1).scaleb(-QTY_SCALE)
+
+
+def to_qty(v: Any) -> Decimal:
+    """数量转 Decimal 并按 ROUND_HALF_UP 保留 6 位小数（D31：浮点误差不入库、不进比对）。
+
+    浮点数按其最短十进制表示（``repr``）转换，如 ``0.1 + 0.2`` → ``0.300000``。
+    """
+    d = v if isinstance(v, Decimal) else Decimal(repr(float(v)))
+    return d.quantize(_Q, rounding=ROUND_HALF_UP)
+
+
+def round_qty(v: Any) -> float:
+    """数量按 :func:`to_qty` 规则四舍五入后的浮点值（用于 JSON 输出与内部比较）。"""
+    return float(to_qty(v))
 
 
 def is_count(session: Session, tid: uuid.UUID, uom_id: Any) -> bool:

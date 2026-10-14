@@ -8,6 +8,7 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, ConfigDict
 
 from app.core.deps import SessionDep
 from app.core.spec.engine import ENTITIES
@@ -17,6 +18,12 @@ from app.platform.auth.deps import CurrentTenant
 from app.platform.tenants.service import TenantContext
 
 router = APIRouter(prefix="/mes/bom", tags=["mes"])
+
+
+class NoBody(BaseModel):
+    """动作接口不接受任何字段：不带请求体或 ``{}`` 放行，带任何字段 422（D4 / D32）。"""
+
+    model_config = ConfigDict(extra="forbid")
 
 
 def _need(ctx: TenantContext, p: str) -> None:
@@ -37,7 +44,12 @@ def bom_tree(
 
 
 @router.post("/{bom_id}/activate")
-def bom_activate(session: SessionDep, ctx: CurrentTenant, bom_id: uuid.UUID) -> Any:
+def bom_activate(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    bom_id: uuid.UUID,
+    _body: NoBody | None = None,
+) -> Any:
     """Draft → active; the previous active version becomes superseded.
 
     Any request body (e.g. confirmed_by / confirmed_at) is ignored: the confirmer is
@@ -49,7 +61,12 @@ def bom_activate(session: SessionDep, ctx: CurrentTenant, bom_id: uuid.UUID) -> 
 
 
 @router.post("/{bom_id}/void")
-def bom_void(session: SessionDep, ctx: CurrentTenant, bom_id: uuid.UUID) -> Any:
+def bom_void(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    bom_id: uuid.UUID,
+    _body: NoBody | None = None,
+) -> Any:
     """Draft / active → void (lots that locked it keep the reference)."""
     _need(ctx, "mes.bom:activate")
     row = svc.void(session, ctx.id, bom_id, ctx.user)
@@ -57,7 +74,12 @@ def bom_void(session: SessionDep, ctx: CurrentTenant, bom_id: uuid.UUID) -> Any:
 
 
 @router.post("/{bom_id}/copy")
-def bom_copy(session: SessionDep, ctx: CurrentTenant, bom_id: uuid.UUID) -> Any:
+def bom_copy(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    bom_id: uuid.UUID,
+    _body: NoBody | None = None,
+) -> Any:
     """Copy any version (lines + substitutes) to the next draft version."""
     _need(ctx, "mes.bom:write")
     row = svc.copy(session, ctx.id, bom_id, ctx.user)

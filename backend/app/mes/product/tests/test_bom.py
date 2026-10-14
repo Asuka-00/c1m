@@ -121,12 +121,14 @@ def test_bom_versions_lifecycle(client: TestClient, db: Session) -> None:
         "bom_line_substitute",
         {"bom_line_id": ln["id"], "material_id": b.mats[1]["id"], "priority": 1},
     )
-    # 客户端传的确认人 / 确认时间被忽略，一律用当前操作人和当前时间
+    # 客户端传确认人 / 确认时间：422（D4 / D32）；一律用当前操作人和当前时间
     r = m.c.post(
         f"{BOM}/{v1['id']}/activate",
         headers=m.h,
         json={"confirmed_by": "mallory", "confirmed_at": "2000-01-01T00:00:00Z"},
     )
+    assert r.status_code == 422, r.text
+    r = m.c.post(f"{BOM}/{v1['id']}/activate", headers=m.h)
     assert r.status_code == 200, r.text
     a1 = r.json()
     assert a1["confirmed_by"] != "mallory"

@@ -545,6 +545,7 @@
         "uom": "UOM",
         "source": "Source",
         "usage_type": "Usage type",
+        "external_event_id": "External event ID",
         "username": "User",
         "at": "Time"
       },

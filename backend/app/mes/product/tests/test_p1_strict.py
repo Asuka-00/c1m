@@ -115,3 +115,24 @@ def test_product_new_version_bom_copy_needs_bom_write(
     (w,) = p3["warnings"]
     assert w["code"] == "bom_copy_skipped"
     assert m.list("bom", product=p3["id"])["count"] == 0
+
+
+def test_bom_actions_reject_any_body_field(client: TestClient, db: Session) -> None:
+    """D4：activate / void / copy 不带请求体或 {} 放行，带任何字段 422。"""
+    m = Mes(client, db)
+    b = B(m)
+    v = b.bom(b.product("FG"))
+    b.line(v, 10)
+
+    def act(verb: str, status: int, **kw: Any) -> Any:
+        r = client.post(f"{API}/bom/{v['id']}/{verb}", headers=m.h, **kw)
+        assert r.status_code == status, (verb, kw, r.text)
+        return r.json()
+
+    for verb in ("activate", "void", "copy"):
+        act(verb, 422, json={"confirmed_by": "x"})
+        act(verb, 422, json={"comment": ""})
+    assert act("activate", 200, json={})["status"] == "active"
+    c = act("copy", 200)
+    assert c["status"] == "draft"
+    assert act("void", 200, json={})["status"] == "void"

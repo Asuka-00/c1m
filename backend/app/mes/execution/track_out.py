@@ -209,7 +209,7 @@ def track_out(
         is_last=step_after(s, tid, ctx.step) is None
         and not (lot.get("route_stack") or []),
     )
-    bom_warn = bom_usage.over_warning(bom_rows)
+    bom_warn = bom_usage.over_warning(bom_usage.new_overs(s, tid, lot, bom_rows))
     tools = []
     for t in ctx.tools:
         mx, used = ck.tool_life(s, tid, t)

@@ -10,16 +10,16 @@
 """
 
 import uuid
+from decimal import Decimal
 from typing import Any
 
 from fastapi import HTTPException
 from sqlmodel import Session
 
 from app.mes.common.query import find, one
-from app.mes.common.uom import convert, round_qty
+from app.mes.common.uom import convert, to_qty
 
 Row = dict[str, Any]
-EPS = 1e-9
 
 
 def _issue_lines(s: Session, tid: uuid.UUID, bom_id: Any) -> list[Row]:
@@ -93,21 +93,20 @@ def compare(
                 else (r["operation_id"], r["material_id"]) not in claimed
             )
         ]
-        actual, bad = 0.0, 0
+        # 全程 Decimal（6 位 ROUND_HALF_UP）累加与比较，换算结果先定点化（D31）
+        total, bad = Decimal(0), 0
         for r in mine:
-            q = float(r["qty"] or 0)
+            q: Any = r["qty"] or 0
             if r["uom_id"] != ln["uom_id"]:
                 try:
-                    q = convert(s, tid, r["uom_id"], ln["uom_id"], q)["value"]
+                    q = convert(s, tid, r["uom_id"], ln["uom_id"], float(q))["value"]
                 except HTTPException:
                     bad += 1
                     continue
-            actual += q
-        basis = 1.0 if ln["per_basis"] == "lot" else float(basis_qty)
-        planned = round_qty(
-            basis * float(ln["qty"]) * (1 + float(ln["scrap_rate"] or 0))
-        )
-        actual = round_qty(actual)
+            total += to_qty(q)
+        basis = Decimal(1) if ln["per_basis"] == "lot" else to_qty(basis_qty)
+        plan = to_qty(basis * to_qty(ln["qty"]) * (1 + to_qty(ln["scrap_rate"] or 0)))
+        actual, planned = to_qty(total), plan
         out.append(
             {
                 "bom_line_id": str(ln["id"]),
@@ -116,14 +115,36 @@ def compare(
                 "operation": _code(s, tid, "operation", op),
                 "uom": _code(s, tid, "uom", ln["uom_id"]),
                 "per_basis": ln["per_basis"],
-                "basis": basis,
-                "planned": planned,
-                "actual": actual,
-                "over": actual > planned + EPS,
+                "basis": float(basis),
+                "planned": float(planned),
+                "actual": float(actual),
+                "over": actual > planned,
+                "excess": float(max(Decimal(0), actual - planned)),
                 "unconverted": bad,
             }
         )
     return out
+
+
+def new_overs(s: Session, tid: uuid.UUID, lot: Row, rows: list[Row]) -> list[Row]:
+    """需要报警的超量明细（D32）：累计超出量比该明细上次报警时更大才再报。
+
+    上次报警的超出量取自本批次 ``bom_over_consumption`` 履历；出站响应 warnings 与
+    履历共用这一判断，返工重做后正常用量不变时两边都不报。
+    """
+    last: dict[str, Decimal] = {}
+    for h in find(
+        s, tid, "lot_history", lot_id=lot["id"], action="bom_over_consumption"
+    ):
+        for x in (h.get("details") or {}).get("lines") or []:
+            k = str(x.get("bom_line_id"))
+            ex = to_qty(x.get("excess") or 0)
+            last[k] = max(last.get(k, Decimal(0)), ex)
+    return [
+        r
+        for r in rows
+        if r["over"] and to_qty(r["excess"]) > last.get(r["bom_line_id"], Decimal(0))
+    ]
 
 
 def over_warning(rows: list[Row]) -> Row | None:
@@ -152,8 +173,25 @@ def lot_bom_usage(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
     if not lot:
         raise HTTPException(status_code=404, detail="Record not found")
     bom = one(s, tid, "bom", lot.get("bom_id")) if lot.get("bom_id") else None
+    parent = next(
+        (
+            g["parent_lot_id"]
+            for g in find(s, tid, "lot_genealogy", child_lot_id=lot["id"])
+            if g["relation"] == "split"
+        ),
+        None,
+    )
     return {
         "lot": lot["code"],
+        # 只累计本批次自己的用料记录；拆批子批不继承母批拆分前的用量（D31）
+        "scope": "lot_only",
+        "scope_note": "Actual usage counts this lot's own consumption only; a split "
+        "child does not inherit the parent's usage before the split.",
+        "parent_lot_id": parent and str(parent),
+        # 同一物料多条明细的记账规则（D32）
+        "allocation_rule": "Usage at an operation bound to a line for this material "
+        "counts to that line; usage at other operations counts to the line without "
+        "an operation. Excess stays on the line it was counted to.",
         "bom_id": bom and str(bom["id"]),
         "bom_version": bom and bom["version"],
         "basis": lot["qty"],

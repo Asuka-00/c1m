@@ -747,6 +747,13 @@ register(
                 enum="usage_type",
                 default="normal",
             ),
+            F(
+                "external_event_id",
+                "str",
+                "External event ID|外部事件号|外部イベント ID",
+                max_length=128,
+                list=False,
+            ),
             F("username", "str", "User|用户|ユーザー", max_length=255, search=True),
             F("at", "datetime", "Time|时间|日時"),
         ],
@@ -756,6 +763,14 @@ register(
         icon="PackageOpen",
         order=4,
         menu=False,
+        # 外部上报（EAP / 人工）去重：同一来源同一事件号只记一次
+        partial_unique=[
+            (
+                "uq_mes_mat_consumption_event",
+                ("source", "external_event_id"),
+                "external_event_id IS NOT NULL",
+            ),
+        ],
         sort_default="at",
         label_field="qty",
     ),

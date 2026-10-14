@@ -545,6 +545,7 @@
         "uom": "单位",
         "source": "来源",
         "usage_type": "用途",
+        "external_event_id": "外部事件号",
         "username": "用户",
         "at": "时间"
       },
