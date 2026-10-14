@@ -41,8 +41,16 @@ def test_uom_precision_and_count_units(client: TestClient, db: Session) -> None:
     m.post("uom_conversion", {"from_uom_id": kg, "to_uom_id": g, "factor": 1000})
     conv = f"{API}/_convert"
     # 6 位小数四舍五入
-    assert _get(f, conv, from_uom=g, to_uom=kg, value=1.2345678)["value"] == 0.001235
-    assert _get(f, conv, from_uom=box, to_uom=ea, value=2)["value"] == 6
+    assert _get(f, conv, from_uom=g, to_uom=kg, value=1.2345678)["value"] == "0.001235"
+    assert _get(f, conv, from_uom=box, to_uom=ea, value=2)["value"] == "6"
+    # D50：value 按十进制解析（字符串 / 数字 / 科学计数），结果为定点字符串、精确换算
+    assert _get(f, conv, from_uom=kg, to_uom=g, value="1.5")["value"] == "1500"
+    assert _get(f, conv, from_uom=g, to_uom=kg, value="1E-3")["value"] == "0.000001"
+    big = _get(f, conv, from_uom=g, to_uom=g, value="123456789012.123456")
+    assert big["value"] == "123456789012.123456"
+    big = _get(f, conv, from_uom=kg, to_uom=g, value="123456789.123456")
+    assert big["value"] == "123456789123.456"
+    _get(f, conv, 422, from_uom=g, to_uom=kg, value="abc")
     # 换算到计件单位不是整数 → 422
     r = _get(f, conv, 422, from_uom=ea, to_uom=box, value=4)
     assert "whole number" in str(r)
@@ -145,8 +153,8 @@ def test_track_out_bom_comparison(client: TestClient, db: Session) -> None:
     u = _get(f, f"{EXEC}/lots/{lot['id']}/bom-usage")
     assert u["bom_version"] == 1 and u["basis"] == 2
     assert [(x["line_no"], x["actual"], x["over"]) for x in u["lines"]] == [
-        (10, 3, True),
-        (20, 0.004, False),
+        (10, "3", True),
+        (20, "0.004", False),
     ]
     assert _get(f, f"{EXEC}/lots/{f.wo['id']}/bom-usage", 404)
 
@@ -317,9 +325,9 @@ def test_consumption_float_error_and_bom_usage_scope(
     assert left[0][0] == "0.700000"
     u = _get(f, f"{EXEC}/lots/{lot['id']}/bom-usage")
     assert u["scope"] == "lot_only" and u["scope_note"] and u["parent_lot_id"] is None
-    assert u["lines"][0]["actual"] == 0.3 and u["lines"][0]["planned"] == 0.3
+    assert u["lines"][0]["actual"] == "0.3" and u["lines"][0]["planned"] == "0.3"
     c = _get(f, f"{EXEC}/lots/{ch['id']}/bom-usage")
-    assert c["parent_lot_id"] == lot["id"] and c["lines"][0]["actual"] == 0
+    assert c["parent_lot_id"] == lot["id"] and c["lines"][0]["actual"] == "0"
 
 
 def _bom_lines(f: Line, *lines: dict[str, Any]) -> None:
@@ -428,6 +436,6 @@ def test_same_material_two_lines_allocation(client: TestClient, db: Session) -> 
     u = _get(f, f"{EXEC}/lots/{lot['id']}/bom-usage")
     assert "operation" in u["allocation_rule"]
     assert [(x["line_no"], x["actual"], x["excess"]) for x in u["lines"]] == [
-        (10, 3, 1),
-        (20, 1, 0),
+        (10, "3", "1"),
+        (20, "1", "0"),
     ]

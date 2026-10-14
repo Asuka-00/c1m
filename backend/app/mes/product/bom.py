@@ -19,7 +19,7 @@ from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, TABLES, Entity
 from app.core.spec.errors import http_422
-from app.core.spec.serialize import serialize
+from app.core.spec.serialize import dec_str, serialize
 from app.core.spec.validate import validator
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins
@@ -66,6 +66,16 @@ def bom_brief(s: Session, tid: uuid.UUID, bom_id: Any) -> Row | None:
 
 def _lines(s: Session, tid: uuid.UUID, bom_id: Any) -> list[Row]:
     return find(s, tid, "bom_line", order="line_no", bom_id=bom_id)
+
+
+DEC_FIELDS = ("qty", "scrap_rate")
+
+
+def _dec_line(ln: Row, js: Row) -> Row:
+    """D50：明细的用量 / 损耗率从数据库 Decimal 直接格式化为定点字符串。"""
+    for k in DEC_FIELDS:
+        js[k] = dec_str(ln[k])
+    return js
 
 
 # ---------------- depth / cycle ----------------
@@ -162,9 +172,30 @@ def _pref(s: Session, tid: uuid.UUID, pid: Any, bom: Row | None = None) -> Row:
     p = one(s, tid, "product", pid)
     out: Row = {"product_id": str(pid), "product": p and p["code"]}
     out["product_version"] = p and p["version"]
-    if bom:
-        out["bom_id"], out["bom_version"] = str(bom["id"]), bom["version"]
+    out["bom_id"] = str(bom["id"]) if bom else None
+    out["bom_version"] = bom["version"] if bom else None
     return out
+
+
+def _referrers(s: Session, tid: uuid.UUID, product_id: Any) -> list[Row]:
+    """引用该产品作半成品的其他产品的生效 BOM。"""
+    b, ln = TABLES["bom"], TABLES["bom_line"]
+    rows = (
+        conn(s)
+        .execute(
+            sa.select(b)
+            .join(ln, ln.c.bom_id == b.c.id)
+            .where(
+                b.c.tenant_id == tid,
+                b.c.status == "active",
+                b.c.product_id != product_id,
+                ln.c.component_product_id == product_id,
+            )
+        )
+        .mappings()
+        .all()
+    )
+    return list({r["id"]: dict(r) for r in rows}.values())
 
 
 def check_activate(s: Session, tid: uuid.UUID, bom: Row) -> None:
@@ -184,8 +215,12 @@ def check_activate(s: Session, tid: uuid.UUID, bom: Row) -> None:
         if k == own:
             raise _conflict("bom_cycle", "bom: references its own product", [me])
         act = active_bom(s, tid, k)
-        if not act:
-            continue
+        if not act:  # D48
+            raise _conflict(
+                "bom_component_no_active",
+                "bom: a referenced semi-finished product has no active BOM",
+                [me, _pref(s, tid, k)],
+            )
         sub = [
             ln["component_product_id"]
             for ln in _lines(s, tid, act["id"])
@@ -206,22 +241,7 @@ def check_activate(s: Session, tid: uuid.UUID, bom: Row) -> None:
             )
     if not kids:
         return
-    b, ln = TABLES["bom"], TABLES["bom_line"]
-    users = (
-        conn(s)
-        .execute(
-            sa.select(b)
-            .join(ln, ln.c.bom_id == b.c.id)
-            .where(
-                b.c.tenant_id == tid,
-                b.c.status == "active",
-                b.c.product_id != own,
-                ln.c.component_product_id == own,
-            )
-        )
-        .mappings()
-        .all()
-    )
+    users = _referrers(s, tid, own)
     if users:
         code = (
             "bom_cycle"
@@ -330,6 +350,13 @@ def void(s: Session, tid: uuid.UUID, bom_id: uuid.UUID, user: Any) -> Row:
     if bom["status"] not in ("draft", "active"):
         raise HTTPException(
             status_code=409, detail=f"BOM v{bom['version']} is already {bom['status']}"
+        )
+    if bom["status"] == "active" and (users := _referrers(s, tid, bom["product_id"])):
+        # D48：唯一生效版本被其他生效 BOM 引用时不能作废（被新版本替代不受影响）
+        raise _conflict(
+            "bom_referenced",
+            "bom: this product is used as a semi-finished component by active BOMs",
+            [_pref(s, tid, u["product_id"], u) for u in users],
         )
     t = TABLES["bom"]
     conn(s).execute(
@@ -469,6 +496,7 @@ def _node(s: Session, tid: uuid.UUID, bom: Row | None, level: int) -> Row:
     for ln, js in zip(
         lines, serialize(s, tid, ENTITIES["bom_line"], lines), strict=True
     ):
+        _dec_line(ln, js)
         js["substitutes"] = subs[ln["id"]]
         js["child"] = None
         if ln["component_type"] == "product" and level < MAX_BOM_DEPTH:
@@ -669,6 +697,7 @@ def with_lines(s: Session, tid: uuid.UUID, bom_id: Any) -> Row:
     lines = _lines(s, tid, bom_id)
     js = serialize(s, tid, ENTITIES["bom_line"], lines)
     for ln, j in zip(lines, js, strict=True):
+        _dec_line(ln, j)
         j["substitutes"] = serialize(
             s,
             tid,

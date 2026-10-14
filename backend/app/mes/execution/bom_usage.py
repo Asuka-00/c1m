@@ -16,6 +16,7 @@ from typing import Any
 from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core.spec.serialize import dec_str
 from app.mes.common.query import find, one
 from app.mes.common.uom import convert, to_qty
 
@@ -195,5 +196,12 @@ def lot_bom_usage(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
         "bom_id": bom and str(bom["id"]),
         "bom_version": bom and bom["version"],
         "basis": lot["qty"],
-        "lines": compare(s, tid, lot, lot["qty"] or 0, all_lines=True),
+        "lines": [
+            {
+                **ln,
+                # D50：数量字段输出定点字符串
+                **{k: dec_str(ln[k]) for k in ("basis", "planned", "actual", "excess")},
+            }
+            for ln in compare(s, tid, lot, lot["qty"] or 0, all_lines=True)
+        ],
     }

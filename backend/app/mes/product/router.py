@@ -5,6 +5,7 @@
 """
 
 import uuid
+from decimal import Decimal
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -110,10 +111,11 @@ class LineIn(BaseModel):
     component_type: Literal["material", "product"] | None = None
     material_id: uuid.UUID | None = None
     component_product_id: uuid.UUID | None = None
-    qty: float | None = None
+    # Decimal：保留原始字符串 / 数字的小数位，供 D49 位数校验（不经 float 转换）
+    qty: Decimal | None = None
     uom_id: uuid.UUID | None = None
     per_basis: str | None = None
-    scrap_rate: float | None = None
+    scrap_rate: Decimal | None = None
     consume_mode: str | None = None
     operation_id: uuid.UUID | None = None
     remark: str | None = None

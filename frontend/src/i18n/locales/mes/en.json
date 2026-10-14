@@ -1751,6 +1751,7 @@
     "mes-defect_code": "Defect Code",
     "mes-substrate_map": "Substrate Map",
     "mes-bin_set": "Bin Definition Set",
+    "mes-map-import": "Map Import",
     "mes-route-master": "Route Configuration",
     "mes-recipe-param": "Recipe & Parameters",
     "mes-change_order": "ECN",

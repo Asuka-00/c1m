@@ -1751,6 +1751,7 @@
     "mes-defect_code": "缺陷代码",
     "mes-substrate_map": "坐标图",
     "mes-bin_set": "bin 定义集",
+    "mes-map-import": "坐标图导入",
     "mes-route-master": "工艺流程配置",
     "mes-recipe-param": "配方与参数",
     "mes-change_order": "工程变更（ECN）",

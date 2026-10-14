@@ -10,7 +10,7 @@ from sqlmodel import Session
 
 from app.core.config import settings
 from app.mes.product.tests.test_bom import _member
-from app.testing.mes import Mes
+from app.testing.mes import API, Mes
 
 MAP = f"{settings.API_V1_STR}/mes/map"
 FX = Path(__file__).parent / "fixtures"
@@ -227,3 +227,23 @@ def test_map_version_conflict_409(
         1,
         2,
     ]
+
+
+def test_map_import_menu(client: TestClient, db: Session) -> None:
+    """导入页菜单在质量组；只有 mes.map:import 的用户在菜单里看到它。"""
+    m = Mes(client, db)
+    url = f"{API[:-4]}/menus/me"
+    tree = client.get(url, headers=m.h).json()["menus"]
+    by = {n["key"]: n["children"] for n in tree}
+    item = next(c for c in by["g-quality"] if c["key"] == "mes-map-import")
+    assert item["path"] == "/mes/map-import"
+    hm = _member(client, db, m)
+    keys = {
+        c["key"]
+        for n in client.get(url, headers=hm).json()["menus"]
+        for c in n["children"]
+    }
+    assert "mes-map-import" not in keys
+    from app.mes.common.meta import i18n_bundle
+
+    assert i18n_bundle("zh-CN")["menu"]["mes-map-import"] == "坐标图导入"

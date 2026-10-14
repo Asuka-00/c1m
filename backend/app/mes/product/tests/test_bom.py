@@ -174,7 +174,7 @@ def test_bom_copy_new_version(client: TestClient, db: Session) -> None:
     b = B(m)
     p = b.product("FG")
     v1 = b.bom(p)
-    l1 = b.line(v1, 10, qty="1.2345678", uom_id=b.g, per_basis="die", scrap_rate=0.02)
+    l1 = b.line(v1, 10, qty="1.234568", uom_id=b.g, per_basis="die", scrap_rate=0.02)
     b.line(v1, 20, material_id=b.mats[3]["id"], consume_mode="mounted")
     m.post(
         "bom_line_substitute",
@@ -190,13 +190,13 @@ def test_bom_copy_new_version(client: TestClient, db: Session) -> None:
     t = b.tree(bom_id=v2["id"])
     assert [x["line_no"] for x in t["lines"]] == [10, 20]
     first = t["lines"][0]
-    assert first["qty"] == 1.234568 and first["per_basis"] == "die"
-    assert first["scrap_rate"] == 0.02 and first["uom_id"] == b.g
+    assert first["qty"] == "1.234568" and first["per_basis"] == "die"
+    assert first["scrap_rate"] == "0.02" and first["uom_id"] == b.g
     assert [s["priority"] for s in first["substitutes"]] == [1, 2]
     assert t["lines"][1]["consume_mode"] == "mounted"
     # 复制出来的草稿可以改，原版本不变
     m.patch("bom_line", first["id"], {"qty": 3})
-    assert b.tree(bom_id=v1["id"])["lines"][0]["qty"] == 1.234568
+    assert b.tree(bom_id=v1["id"])["lines"][0]["qty"] == "1.234568"
     v3 = b.act(v2, "copy")
     assert v3["version"] == 3
 
@@ -211,12 +211,15 @@ def test_bom_line_rules(client: TestClient, db: Session) -> None:
     # 计件单位（count）用量必须是整数
     err = b.line(v, 10, 422, qty="1.5")
     assert "whole number" in err["detail"][0]["msg"]
-    # 质量单位允许小数，四舍五入到 6 位
-    ln = b.line(v, 10, qty="0.0000005", uom_id=b.g)
+    # 质量单位允许小数，最多 6 位（D49：超出 422，不静默舍入）
+    b.line(v, 10, 422, qty="0.0000005", uom_id=b.g)
+    ln = b.line(v, 10, qty="0.000001", uom_id=b.g)
     assert ln["qty"] == 0.000001
     b.line(v, 11, 422, qty=0)
     b.line(v, 12, 422, qty="abc")
-    b.line(v, 13, 422, scrap_rate=1)
+    b.line(v, 13, 422, scrap_rate=1.5)
+    b.line(v, 13, 422, scrap_rate=-0.01)
+    assert b.line(v, 13, scrap_rate=1)["scrap_rate"] == 1
     # consume_mode 没有默认值
     r = m.c.post(
         f"{API}/bom-line",
@@ -308,17 +311,20 @@ def test_bom_tree_depth_and_cycles(client: TestClient, db: Session) -> None:
     rb2 = b.act(rb, "copy")
     err = b.line(rb2, 20, 422, component_type="product", component_product_id=fg["id"])
     assert err["detail"][0]["type"] == "bom_depth_exceeded"
-    # 两个草稿互相引用（写入时对方都还没生效）：先生效 A，再生效 C → 409 bom_cycle
+    # 写入时对方还没指回来：C 先生效（只有物料）；A 草稿引用 C、C 新草稿引用 A（A 尚未生效）
     a, c = b.product("A"), b.product("C")
+    cb = b.bom(c)
+    b.line(cb, 10)
+    b.act(cb, "activate")
     ab = b.bom(a)
     b.line(ab, 10, component_type="product", component_product_id=c["id"])
-    cb = b.bom(c)
-    b.line(cb, 10, component_type="product", component_product_id=a["id"])
+    cb2 = b.act(cb, "copy")
+    b.line(cb2, 20, component_type="product", component_product_id=a["id"])
     b.act(ab, "activate")
-    err = b.act(cb, "activate", 409)["detail"]
+    err = b.act(cb2, "activate", 409)["detail"]
     assert err["code"] == "bom_cycle"
     assert {d["product"] for d in err["details"]} == {"A", "C"}
-    assert b.get(cb)["status"] == "draft"
+    assert b.get(cb2)["status"] == "draft"
 
 
 def test_bom_activate_d47(client: TestClient, db: Session) -> None:
@@ -554,7 +560,7 @@ def test_product_new_version_copies_active_bom(client: TestClient, db: Session) 
     assert (nb["version"], nb["status"], nb["copied_from_id"]) == (1, "draft", v1["id"])
     t = b.tree(bom_id=nb["id"])
     (line,) = t["lines"]
-    assert line["qty"] == 2.5 and line["operation_id"] == op["id"]
+    assert line["qty"] == "2.5" and line["operation_id"] == op["id"]
     assert [x["material_id"] for x in line["substitutes"]] == [b.mats[1]["id"]]
     # 旧产品版本的 BOM 不变
     assert b.get(v1)["status"] == "active"
@@ -625,7 +631,7 @@ def test_bom_put_lines_replace(client: TestClient, db: Session) -> None:
     assert out["id"] == v["id"] and out["status"] == "draft"
     assert [ln["line_no"] for ln in out["lines"]] == [10, 20]
     assert out["lines"][0]["id"] != old["id"]
-    assert out["lines"][0]["qty"] == 2.5
+    assert out["lines"][0]["qty"] == "2.5"
     assert [s["priority"] for s in out["lines"][0]["substitutes"]] == [1, 2]
     assert out["lines"][1]["material_id"] is None
     assert out["lines"][1]["substitutes"] == []
@@ -760,6 +766,9 @@ def test_bom_structure_rules(client: TestClient, db: Session) -> None:
     rb = b.bom(raw)
     b.line(rb, 10)
     b.act(rb, "activate")
+    a1 = b.bom(a)  # A 先有只含物料的生效版本（D48：被引用的半成品须有生效 BOM）
+    b.line(a1, 10)
+    b.act(a1, "activate")
     cb = b.bom(c)  # C 生效：C → A
     b.line(cb, 10, component_type="product", component_product_id=a["id"])
     b.act(cb, "activate")
@@ -796,3 +805,204 @@ def test_bom_structure_rules(client: TestClient, db: Session) -> None:
     # 合法：引用只有物料的半成品
     out = _put(m, db_, {"lines": [pl(raw)]}, 200)
     assert out["lines"][0]["component_product_id"] == raw["id"]
+
+
+def test_bom_d48(client: TestClient, db: Session) -> None:
+    """D48：引用无生效 BOM 的半成品不能生效；被引用的唯一生效版本不能作废（被替代可以）；
+    PATCH 只改用量时不重跑结构校验。"""
+    m = Mes(client, db)
+    b = B(m)
+    a, bp, x = b.product("A"), b.product("B"), b.product("X")
+    ab = b.bom(a)
+    ln = b.line(ab, 10, component_type="product", component_product_id=bp["id"])
+    err = b.act(ab, "activate", 409)["detail"]
+    assert err["code"] == "bom_component_no_active"
+    det = {d["product"]: d for d in err["details"]}
+    assert det["B"]["bom_id"] is None and det["B"]["bom_version"] is None
+    assert det["A"]["bom_id"] == ab["id"]
+    bb = b.bom(bp)
+    b.line(bb, 10)
+    b.act(bb, "activate")
+    b.act(ab, "activate")
+    # B v1 被 A 引用：不能作废
+    err = b.act(bb, "void", 409)["detail"]
+    assert err["code"] == "bom_referenced"
+    assert [(d["product"], d["bom_id"]) for d in err["details"]] == [("A", ab["id"])]
+    assert b.get(bb)["status"] == "active"
+    # 被新版本替代不受影响；新的唯一生效版本仍不能作废
+    bb2 = b.act(bb, "copy")
+    b.act(bb2, "activate")
+    assert b.get(bb)["status"] == "superseded"
+    assert b.act(bb2, "void", 409)["detail"]["code"] == "bom_referenced"
+    # 引用方作废后可以作废；草稿作废不受影响
+    b.act(ab, "void")
+    b.act(bb2, "void")
+    xd = b.bom(x)
+    b.act(xd, "void")
+    # PATCH：结构已失效（X 引用的 B 现在生效 BOM 有半成品行），只改 qty 不拦
+    bb3 = b.act(bb, "copy")
+    xb = b.bom(x)
+    b.line(xb, 10)
+    b.act(xb, "activate")
+    d = b.product("D")
+    db_ = b.bom(d)
+    dl = b.line(db_, 10, component_type="product", component_product_id=bp["id"])
+    b.line(bb3, 20, component_type="product", component_product_id=x["id"])
+    b.act(bb3, "activate")  # B 生效版本现在有半成品行 → D 草稿那行结构失效
+    r = m.c.patch(f"{API}/bom-line/{dl['id']}", headers=m.h, json={"qty": 3})
+    assert r.status_code == 200, r.text
+    r = m.c.patch(
+        f"{API}/bom-line/{dl['id']}",
+        headers=m.h,
+        json={"component_product_id": bp["id"], "component_type": "product"},
+    )
+    assert r.status_code == 200, r.text  # 值没变：视为未改动，不重跑
+    r = m.c.patch(
+        f"{API}/bom-line/{dl['id']}",
+        headers=m.h,
+        json={"component_type": "material", "material_id": b.mats[0]["id"]},
+    )
+    assert r.status_code == 200, r.text
+    r = m.c.patch(
+        f"{API}/bom-line/{dl['id']}",
+        headers=m.h,
+        json={"component_type": "product", "component_product_id": bp["id"]},
+    )
+    assert r.json()["detail"][0]["type"] == "bom_depth_exceeded"
+    assert ln["id"]
+
+
+def test_bom_line_decimals_d49(client: TestClient, db: Session) -> None:
+    """D49：qty ≤ 6 位小数、scrap_rate ≤ 4 位，超出 422 too_many_decimals，不静默舍入。"""
+    m = Mes(client, db)
+    b = B(m)
+    v = b.bom(b.product("FG"))
+    assert b.line(v, 10, uom_id=b.g, qty=1.123456)["qty"] == 1.123456
+    err = b.line(v, 20, 422, uom_id=b.g, qty=1.1234567)
+    assert [(d["loc"], d["type"]) for d in err["detail"]] == [
+        (["body", "qty"], "too_many_decimals")
+    ]
+    assert b.line(v, 30, uom_id=b.g, qty="1.5")["qty"] == 1.5
+    assert b.line(v, 40, scrap_rate=0.0125)["scrap_rate"] == 0.0125
+    err = b.line(v, 50, 422, scrap_rate=0.01255)
+    assert err["detail"][0]["loc"] == ["body", "scrap_rate"]
+    assert err["detail"][0]["code"] == "too_many_decimals"
+    ln = b.line(v, 60)
+    r = m.c.patch(f"{API}/bom-line/{ln['id']}", headers=m.h, json={"qty": 2.0000001})
+    assert r.status_code == 422 and r.json()["detail"][0]["type"] == "too_many_decimals"
+    err = _put(
+        m,
+        v,
+        {"lines": [_ml(b, 10, uom_id=b.g, qty=1.5), _ml(b, 20, scrap_rate=0.01255)]},
+        422,
+    )
+    assert _locs(err) == [["body", "lines", 1, "scrap_rate"]]
+    assert err["detail"][0]["type"] == "too_many_decimals"
+    err = _put(m, v, {"lines": [_ml(b, 10, uom_id=b.g, qty="1.1234567")]}, 422)
+    assert _locs(err) == [["body", "lines", 0, "qty"]]
+    out = _put(m, v, {"lines": [_ml(b, 10, uom_id=b.g, qty="1.123456")]}, 200)
+    assert out["lines"][0]["qty"] == "1.123456"
+
+
+def test_bom_line_decimals_d49_edges(client: TestClient, db: Session) -> None:
+    """D49 补充：尾随零不计位数；科学计数按数值计；scrap_rate 0..1；qty > 0。"""
+    m = Mes(client, db)
+    b = B(m)
+    v = b.bom(b.product("FG"))
+    n = iter(range(10, 1000, 10))
+
+    def ok(**kw: Any) -> Any:
+        return b.line(v, next(n), uom_id=b.g, **kw)
+
+    def bad(t: str, **kw: Any) -> None:
+        err = b.line(v, next(n), 422, uom_id=b.g, **kw)
+        assert err["detail"][0]["type"] == t, err
+
+    assert ok(qty="1.5000000")["qty"] == 1.5
+    assert ok(qty=1.50000000)["qty"] == 1.5
+    assert ok(scrap_rate="0.01250000")["scrap_rate"] == 0.0125
+    assert ok(qty="1e-6")["qty"] == 0.000001
+    assert ok(qty=1e-6)["qty"] == 0.000001
+    bad("too_many_decimals", qty="1e-7")
+    bad("too_many_decimals", qty=1e-7)
+    bad("too_many_decimals", qty="1.2E-7")
+    bad("too_many_decimals", scrap_rate="1.5e-5")
+    for sr in (0, "0", 1, "1", "1.0000"):
+        ok(scrap_rate=sr)
+    bad("value_error", scrap_rate=-0.0001)
+    bad("value_error", scrap_rate="1.0001")
+    bad("value_error", qty=0)
+    bad("value_error", qty="0.000000")
+    bad("value_error", qty=-1)
+    bad("value_error", qty="-0.5")
+
+
+def test_bom_put_lines_string_decimals(client: TestClient, db: Session) -> None:
+    """整单接口：qty / scrap_rate 以字符串提交；位数按原始字符串计。"""
+    m = Mes(client, db)
+    b = B(m)
+    v = b.bom(b.product("FG"))
+    out = _put(
+        m, v, {"lines": [_ml(b, 10, uom_id=b.g, qty="1.5000000", scrap_rate="0")]}, 200
+    )
+    assert (out["lines"][0]["qty"], out["lines"][0]["scrap_rate"]) == ("1.5", "0")
+    out = _put(m, v, {"lines": [_ml(b, 10, uom_id=b.g, qty="2", scrap_rate="1")]}, 200)
+    assert out["lines"][0]["scrap_rate"] == "1"
+    for k, val in (("qty", "1e-7"), ("qty", 1e-7), ("scrap_rate", "0.01255")):
+        err = _put(m, v, {"lines": [_ml(b, 10, uom_id=b.g, **{k: val})]}, 422)
+        assert _locs(err) == [["body", "lines", 0, k]]
+        assert err["detail"][0]["type"] == "too_many_decimals"
+    err = _put(m, v, {"lines": [_ml(b, 10, qty="abc")]}, 422)
+    assert _locs(err) == [["body", "lines", 0, "qty"]]
+
+
+def test_bom_d49_qa_findings(client: TestClient, db: Session) -> None:
+    """QA：scrap_rate=1 合法；qty=0.0000001 先报 too_many_decimals（不先舍入成 0）。"""
+    m = Mes(client, db)
+    b = B(m)
+    v = b.bom(b.product("FG"))
+    assert b.line(v, 10, scrap_rate=1)["scrap_rate"] == 1
+    assert b.line(v, 20, scrap_rate="1")["scrap_rate"] == 1
+    for i, q in enumerate(("0.0000001", 0.0000001)):
+        err = b.line(v, 30 + i, 422, uom_id=b.g, qty=q)
+        assert [(d["loc"], d["type"]) for d in err["detail"]] == [
+            (["body", "qty"], "too_many_decimals")
+        ]
+        err = _put(m, v, {"lines": [_ml(b, 10, uom_id=b.g, qty=q)]}, 422)
+        assert [(d["loc"], d["type"]) for d in err["detail"]] == [
+            (["body", "lines", 0, "qty"], "too_many_decimals")
+        ]
+    out = _put(m, v, {"lines": [_ml(b, 10, scrap_rate=1)]}, 200)
+    assert out["lines"][0]["scrap_rate"] == "1"
+
+
+def test_bom_d50_decimal_strings(client: TestClient, db: Session) -> None:
+    """D50：P1 新接口（整单 PUT、两级树）小数字段输出定点字符串；通用接口不变。"""
+    from app.core.spec.serialize import dec_str
+
+    assert [dec_str(x) for x in ("1E-6", 1e-6, "2.000", 100, "-0.0", "1.50")] == [
+        "0.000001",
+        "0.000001",
+        "2",
+        "100",
+        "0",
+        "1.5",
+    ]
+    m = Mes(client, db)
+    b = B(m)
+    v = b.bom(b.product("FG"))
+    body = {
+        "lines": [
+            _ml(b, 10, uom_id=b.g, qty="123456789012.123456", scrap_rate="0.0150"),
+            _ml(b, 20, 1, uom_id=b.g, qty=1e-6, scrap_rate=0),
+            _ml(b, 30, 2, qty=2),
+        ]
+    }
+    out = _put(m, v, body, 200)
+    got = [(x["qty"], x["scrap_rate"]) for x in out["lines"]]
+    assert got == [("123456789012.123456", "0.015"), ("0.000001", "0"), ("2", "0")]
+    t = b.tree(bom_id=v["id"])
+    assert [(x["qty"], x["scrap_rate"]) for x in t["lines"]] == got
+    # 通用接口（旧格式）仍是数字
+    lst = m.c.get(f"{API}/bom-line", headers=m.h, params={"bom_id": v["id"]}).json()
+    assert isinstance(lst["data"][0]["qty"], float)

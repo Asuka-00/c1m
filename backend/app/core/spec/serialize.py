@@ -35,6 +35,18 @@ def to_json(v: Any) -> Any:
     return v
 
 
+def dec_str(v: Any) -> str | None:
+    """D50：P1 新接口的小数字段输出为定点字符串（不用科学计数、去掉尾随零）。
+
+    ``Decimal`` 原样格式化；float 先经 ``str`` 取最短往返表示，避免二进制误差。
+    """
+    if v is None:
+        return None
+    d = v if isinstance(v, Decimal) else Decimal(str(v))
+    out = format(d.normalize(), "f")
+    return "0" if out in ("-0", "0") else out
+
+
 def coerce(f: F, v: Any) -> Any:
     """把原始 JSON / xlsx 值转换为字段对应的 Python 值。
 

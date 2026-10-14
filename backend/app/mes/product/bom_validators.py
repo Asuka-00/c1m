@@ -120,6 +120,42 @@ def _strict_payload(
 ) -> None:
     """明细 / 替代料：未知字段（如旧的 route_step_id）与系统字段返回 422。"""
     reject_unwritable(e, data)
+    if e.code == "bom_line":
+        _check_decimals(data)
+
+
+# D49：用户录入值不静默舍入（D31 的舍入只用于计算值）
+MAX_DECIMALS = {"qty": 6, "scrap_rate": 4}
+
+
+def _decimals(v: Any) -> int | None:
+    """原始输入的小数位数；不是数字时 None（交给类型校验）。"""
+    if isinstance(v, bool) or not isinstance(v, int | float | str | Decimal):
+        return None
+    try:
+        d = Decimal(str(v).strip()).normalize()
+    except ArithmeticError:
+        return None
+    if not d.is_finite():
+        return None
+    exp = d.as_tuple().exponent
+    return -exp if isinstance(exp, int) and exp < 0 else 0
+
+
+def _check_decimals(data: Row) -> None:
+    errs = []
+    for f, n in MAX_DECIMALS.items():
+        if f in data and (k := _decimals(data[f])) is not None and k > n:
+            errs.append(
+                {
+                    "loc": ["body", f],
+                    "msg": f"{f}: at most {n} decimal places (got {k})",
+                    "type": "too_many_decimals",
+                    "code": "too_many_decimals",
+                }
+            )
+    if errs:
+        raise HTTPException(status_code=422, detail=errs)
 
 
 @validator("bom")
@@ -160,8 +196,10 @@ def _bom_line(
         row["component_product_id"] = None
     else:
         row["material_id"] = None
-        hit = structure_error(s, tid, bom, row.get("component_product_id"))
-        if hit:
+        keys = ("component_type", "material_id", "component_product_id")
+        touched = old is None or any(row.get(k) != old.get(k) for k in keys)
+        hit = touched and structure_error(s, tid, bom, row.get("component_product_id"))
+        if hit:  # D48：PATCH 只改其他字段时不重跑结构校验
             raise StructureError(hit[0], hit[1], ("component_product_id",))
     qty = row.get("qty")
     if qty is not None and qty <= 0:
@@ -170,7 +208,7 @@ def _bom_line(
         if Decimal(qty) != Decimal(qty).to_integral_value():
             errs.append(("qty", "qty: must be a whole number for a count unit"))
     sr = row.get("scrap_rate")
-    if sr is not None and not 0 <= sr < 1:
+    if sr is not None and not 0 <= sr <= 1:
         errs.append(("scrap_rate", "scrap_rate: must be within 0..1 (e.g. 0.02 = 2%)"))
     if (row.get("line_no") or 0) <= 0:
         errs.append(("line_no", "line_no: must be > 0"))

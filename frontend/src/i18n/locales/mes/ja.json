@@ -1751,6 +1751,7 @@
     "mes-defect_code": "欠陥コード",
     "mes-substrate_map": "座標マップ",
     "mes-bin_set": "ビン定義セット",
+    "mes-map-import": "座標マップ取込",
     "mes-route-master": "ルート設定",
     "mes-recipe-param": "レシピ・パラメータ",
     "mes-change_order": "設計変更（ECN）",

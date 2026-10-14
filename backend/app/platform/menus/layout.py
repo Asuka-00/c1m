@@ -94,6 +94,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-defect_code", "Defect Code|缺陷代码|欠陥コード"),
         ("mes-substrate_map", "Substrate Map|坐标图|座標マップ"),
         ("mes-bin_set", "Bin Definition Set|bin 定义集|ビン定義セット"),
+        ("mes-map-import", "Map Import|坐标图导入|座標マップ取込"),
     ],
     "g-process": [
         ("mes-route-master", "Route Configuration|工艺流程配置|ルート設定"),

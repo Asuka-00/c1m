@@ -5,6 +5,7 @@
 """
 
 import uuid
+from decimal import Decimal
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
@@ -19,7 +20,7 @@ from app.core.spec.engine import ENTITIES, EXTRA_PERMISSIONS, MODULES, Entity, p
 from app.core.spec.errors import http_422
 from app.core.spec.excel import export_xlsx, import_xlsx
 from app.core.spec.query import distinct_values, get_row, list_rows, tree
-from app.core.spec.serialize import serialize
+from app.core.spec.serialize import dec_str, serialize
 from app.core.spec.validate import attr_defs, attr_options
 from app.core.spec.write import (
     create_row,
@@ -141,15 +142,20 @@ def uom_convert(
     ctx: CurrentTenant,
     from_uom: uuid.UUID,
     to_uom: uuid.UUID,
-    value: float = 1.0,
+    value: Decimal = Decimal(1),
 ) -> Any:
-    """Convert `value` between units (direct, inverse or multi-hop conversions)."""
+    """Convert `value` between units (direct, inverse or multi-hop conversions).
+
+    D50: `value` is parsed as a decimal (e.g. `1.5`, `1e-6`), computed in Decimal and
+    returned as a fixed-point string.
+    """
     require_entity(ctx, "uom", "read")
     res = convert(session, ctx.id, from_uom, to_uom, value)
     errs = count_errors(session, ctx.id, to_uom, {"value": res["value"]})
     if errs:
         raise http_422(errs)
-    return res
+    qty = res.pop("qty")
+    return {**res, "value": dec_str(qty)}  # D50
 
 
 @router.get("/{entity}")

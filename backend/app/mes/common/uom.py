@@ -17,7 +17,7 @@ from app.core.spec.base import conn
 from app.core.spec.engine import TABLES
 
 QTY_SCALE = 6
-Edge = tuple[float, float]  # 目标值 = 源值 * factor + offset
+Edge = tuple[Decimal, Decimal]  # 目标值 = 源值 * factor + offset
 
 
 _Q = Decimal(1).scaleb(-QTY_SCALE)
@@ -70,7 +70,7 @@ def count_errors(
 
 
 def convert(
-    session: Session, tid: uuid.UUID, src: uuid.UUID, dst: uuid.UUID, value: float
+    session: Session, tid: uuid.UUID, src: uuid.UUID, dst: uuid.UUID, value: Any
 ) -> dict[str, Any]:
     """单位换算。
 
@@ -82,20 +82,22 @@ def convert(
         value: 数值。
 
     Returns:
-        ``{"value": 换算结果, "path": 换算路径}``。
+        ``{"value": 换算结果（float）, "path": 换算路径, "qty": 换算结果（Decimal，
+        6 位）}``。运算全程用 Decimal（D50），避免大数 / 多位小数经 float 失真。
 
     Raises:
         HTTPException: 无可用换算路径（422）。
     """
+    value = value if isinstance(value, Decimal) else Decimal(repr(float(value)))
     if src == dst:
-        return {"value": round_qty(value), "path": [str(src)]}
+        return {"value": round_qty(value), "path": [str(src)], "qty": to_qty(value)}
     t = TABLES["uom_conversion"]
     graph: dict[Any, list[tuple[Any, Edge]]] = {}
     for r in conn(session).execute(sa.select(t).where(t.c.tenant_id == tid)).mappings():
-        f, o = float(r["factor"]), float(r["offset"] or 0)
+        f, o = Decimal(str(r["factor"])), Decimal(str(r["offset"] or 0))
         graph.setdefault(r["from_uom_id"], []).append((r["to_uom_id"], (f, o)))
         graph.setdefault(r["to_uom_id"], []).append((r["from_uom_id"], (1 / f, -o / f)))
-    q: deque[tuple[Any, float, list[Any]]] = deque([(src, value, [src])])
+    q: deque[tuple[Any, Decimal, list[Any]]] = deque([(src, value, [src])])
     seen = {src}
     while q:
         node, v, path = q.popleft()
@@ -104,7 +106,11 @@ def convert(
                 continue
             nv = v * f + o
             if nxt == dst:
-                return {"value": round_qty(nv), "path": [str(p) for p in [*path, nxt]]}
+                return {
+                    "value": round_qty(nv),
+                    "path": [str(p) for p in [*path, nxt]],
+                    "qty": to_qty(nv),
+                }
             seen.add(nxt)
             q.append((nxt, nv, [*path, nxt]))
     raise HTTPException(
