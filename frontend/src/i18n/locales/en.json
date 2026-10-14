@@ -138,8 +138,8 @@
     "passwordRequired": "Please enter your password.",
     "welcome": "Welcome back, {{name}}!",
     "loginLabel": "Username",
-    "loginPlaceholder": "e.g. admin",
-    "loginRequired": "Please enter your username or email",
+    "loginPlaceholder": "Username",
+    "loginRequired": "Please enter your username",
     "loginInvalid": "Enter a valid username (3–50 letters, digits, . _ -)"
   },
   "errors": {

@@ -138,8 +138,8 @@
     "passwordRequired": "请输入密码。",
     "welcome": "欢迎回来，{{name}}！",
     "loginLabel": "用户名",
-    "loginPlaceholder": "例如 admin",
-    "loginRequired": "请输入用户名或邮箱",
+    "loginPlaceholder": "用户名",
+    "loginRequired": "请输入用户名",
     "loginInvalid": "请输入有效的用户名（3–50 位字母、数字、. _ -）"
   },
   "errors": {
