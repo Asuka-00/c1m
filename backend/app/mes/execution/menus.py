@@ -76,4 +76,10 @@ MENUS: dict[str, MenuItem] = {
         "mes-page:oee-report",
         "mes.exec:read",
     ),
+    "mes-ct-move-report": (
+        "/mes/ct-move-report",
+        "Timer",
+        "mes-page:ct-move-report",
+        "mes.exec:read",
+    ),
 }

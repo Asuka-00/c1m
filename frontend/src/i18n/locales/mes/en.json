@@ -2106,6 +2106,7 @@
     "mes-wip-dashboard": "WIP Dashboard",
     "mes-oee-report": "Equipment OEE",
     "mes-yield-report": "Yield Report",
+    "mes-ct-move-report": "CT / Move Report",
     "mes-lot-history": "Lot History & Trace",
     "mes-lot_recipe_run": "Recipe Run",
     "mes-lot": "Lot Inquiry",

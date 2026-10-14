@@ -6,6 +6,7 @@ mes.exec:jump（跳站）、mes.exec:adjust（在制报废 / 补数）。
 阶段被阻断时返回 409 ``{"detail": {"code": "check_blocked", "results": [...]}}``。
 """
 
+import re
 import uuid
 from datetime import date, datetime, time, timedelta
 from typing import Annotated, Any, Literal
@@ -26,6 +27,7 @@ from app.mes.common.guard import perm_body
 from app.mes.common.query import one
 from app.mes.common.sitedate import site_today
 from app.mes.execution import bin_split as bin_split_svc
+from app.mes.execution import ct_move as ct_move_svc
 from app.mes.execution import dispatch, shift_log, transform_undo
 from app.mes.execution import service as sm
 from app.mes.execution import service as svc
@@ -409,6 +411,63 @@ def report_oee_trend(
             {"max_days": 92},
         )
     return {"data": svc.oee_trend(session, ctx.id, a, b, workcenter)}
+
+
+_ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
+def _req_date(name: str, v: str | None) -> date:
+    if v is None or v == "":
+        raise err_422(["query", name], "Field required", "missing")
+    try:
+        if not _ISO_DATE.fullmatch(v):
+            raise ValueError(v)
+        return date.fromisoformat(v)
+    except ValueError:
+        raise err_422(
+            ["query", name], "must be a date YYYY-MM-DD", "value_error", input=v
+        ) from None
+
+
+def _opt_ref(s: Session, tid: uuid.UUID, name: str, code: str, v: str | None) -> Any:
+    if v is None or v == "":
+        return None
+    try:
+        rid = uuid.UUID(v)
+    except ValueError:
+        raise err_422(
+            ["query", name], "must be a uuid", "value_error", input=v
+        ) from None
+    if one(s, tid, code, rid) is None:
+        raise HTTPException(status_code=404, detail=f"{code} not found")
+    return rid
+
+
+@router.get("/reports/ct-move")
+def report_ct_move(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    operation_id: str | None = None,
+    product_id: str | None = None,
+) -> Any:
+    """CT / Move 报表（D73）：按站点日趋势、按工序明细与合计。"""
+    _need(ctx, "mes.exec:read")
+    a = _req_date("date_from", date_from)
+    b = _req_date("date_to", date_to)
+    if a > b:
+        raise err_422(["query", "date_from"], "date_from after date_to", "value_error")
+    if (b - a).days + 1 > ct_move_svc.MAX_DAYS:
+        raise err_422(
+            ["query", "date_to"],
+            f"range too long (max {ct_move_svc.MAX_DAYS} days)",
+            "date_range_too_large",
+            {"max_days": ct_move_svc.MAX_DAYS},
+        )
+    op = _opt_ref(session, ctx.id, "operation_id", "operation", operation_id)
+    prod = _opt_ref(session, ctx.id, "product_id", "product", product_id)
+    return ct_move_svc.ct_move(session, ctx.id, a, b, op, prod)
 
 
 @router.get("/trace")

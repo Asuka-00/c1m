@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 131,
+  "count": 132,
   "items": [
     {
       "key": "g-workspace",
@@ -420,6 +420,21 @@
         "en": "Yield Report",
         "zh-CN": "良率报表",
         "ja": "歩留まりレポート"
+      }
+    },
+    {
+      "key": "mes-ct-move-report",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-wip",
+      "path": "/mes/ct-move-report",
+      "component": "mes-page:ct-move-report",
+      "permission": "mes.exec:read",
+      "i18n_key": "menu.mes-ct-move-report",
+      "titles": {
+        "en": "CT / Move Report",
+        "zh-CN": "CT / Move 报表",
+        "ja": "CT・ムーブレポート"
       }
     },
     {

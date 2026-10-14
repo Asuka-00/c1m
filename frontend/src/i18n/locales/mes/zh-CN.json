@@ -2106,6 +2106,7 @@
     "mes-wip-dashboard": "WIP 看板",
     "mes-oee-report": "设备 OEE",
     "mes-yield-report": "良率报表",
+    "mes-ct-move-report": "CT / Move 报表",
     "mes-lot-history": "批次履历与追溯",
     "mes-lot_recipe_run": "配方执行记录",
     "mes-lot": "批次查询",

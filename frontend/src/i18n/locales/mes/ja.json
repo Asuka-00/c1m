@@ -2106,6 +2106,7 @@
     "mes-wip-dashboard": "WIP ダッシュボード",
     "mes-oee-report": "設備 OEE",
     "mes-yield-report": "歩留まりレポート",
+    "mes-ct-move-report": "CT・ムーブレポート",
     "mes-lot-history": "ロット履歴・トレース",
     "mes-lot_recipe_run": "レシピ実行記録",
     "mes-lot": "ロット照会",
