@@ -1060,7 +1060,9 @@
         "recipe_match": "レシピ・設備対応",
         "pm_due": "設備 PM 期限内",
         "rework_limit": "リワーク回数上限",
-        "qty_adjust_limit": "廃棄・追加数量上限"
+        "qty_adjust_limit": "廃棄・追加数量上限",
+        "eqp_wait_qual": "装置 Qual 待ち",
+        "bom_required": "有効 BOM あり"
       },
       "check_severity": {
         "block": "ブロック",
@@ -1395,6 +1397,11 @@
         "submitted": "提出済",
         "confirmed": "確認済",
         "cancelled": "取消"
+      },
+      "qual_status": {
+        "open": "未登録",
+        "passed": "合格",
+        "failed": "不合格"
       }
     }
   },
@@ -1524,7 +1531,8 @@
     "mes-equipment_material_mount": "装置資材装着記録",
     "mes-equipment_qual": "Qual タスク",
     "mes-substrate_map": "座標マップ",
-    "mes-bin_set": "ビン定義セット"
+    "mes-bin_set": "ビン定義セット",
+    "mes-map-import": "マップ取込"
   },
   "permName": {
     "users__read": "プラットフォームユーザー閲覧",

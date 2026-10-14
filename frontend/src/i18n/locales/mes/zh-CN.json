@@ -1060,7 +1060,9 @@
         "recipe_match": "配方设备映射",
         "pm_due": "设备 PM 未超期",
         "rework_limit": "返工次数上限",
-        "qty_adjust_limit": "报废 / 补数数量上限"
+        "qty_adjust_limit": "报废 / 补数数量上限",
+        "eqp_wait_qual": "设备待 Qual",
+        "bom_required": "BOM 已生效"
       },
       "check_severity": {
         "block": "拦截",
@@ -1395,6 +1397,11 @@
         "submitted": "已提交",
         "confirmed": "已确认",
         "cancelled": "已取消"
+      },
+      "qual_status": {
+        "open": "待登记",
+        "passed": "通过",
+        "failed": "不通过"
       }
     }
   },
@@ -1524,7 +1531,8 @@
     "mes-equipment_material_mount": "机台上料记录",
     "mes-equipment_qual": "Qual 任务",
     "mes-substrate_map": "坐标图",
-    "mes-bin_set": "bin 定义集"
+    "mes-bin_set": "bin 定义集",
+    "mes-map-import": "Map 导入"
   },
   "permName": {
     "users__read": "查看平台用户",

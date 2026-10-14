@@ -174,3 +174,33 @@ describe('F5 待 Qual', () => {
     expect(m).not.toMatch(/WAIT_QUAL/)
   })
 })
+
+describe('F5-1：Qual 状态与检查类型已翻译', () => {
+  it('409 qual_task_closed 显示翻译后的状态，中英日都没有原始代码', async () => {
+    const { qualError } = await import('./qual-rules')
+    const { enumLabel } = await import('@/features/mes/common/labels')
+    const i18n = (await import('@/i18n')).default
+    const e = new AxiosError('x')
+    e.response = {
+      status: 409,
+      data: { detail: { code: 'qual_task_closed', qual_status: 'failed' } },
+      statusText: '',
+      headers: {},
+      config: { headers: new AxiosHeaders() },
+    }
+    try {
+      for (const lng of ['zh-CN', 'en', 'ja']) {
+        await i18n.changeLanguage(lng)
+        expect(qualError(e)).not.toContain('failed')
+        for (const v of ['open', 'passed', 'failed'])
+          expect(enumLabel('qual_status', v)).not.toBe(v)
+        for (const c of ['eqp_wait_qual', 'bom_required'])
+          expect(enumLabel('check_type', c)).not.toBe(c)
+      }
+      await i18n.changeLanguage('zh-CN')
+      expect(qualError(e)).toContain('不通过')
+    } finally {
+      await i18n.changeLanguage('zh-CN')
+    }
+  })
+})

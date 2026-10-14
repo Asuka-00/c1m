@@ -211,3 +211,14 @@ describe('validateRows（D49）', () => {
     })
   })
 })
+
+describe('D50：十进制字段既能是数字也能是字符串', () => {
+  it('回填编辑框不经浮点：字符串原样（去末尾零），数字不出指数', () => {
+    const s = toLineDraft({ ...LINE, qty: '0.000125000', scrap_rate: '0.0200' })
+    expect([s.qty, s.scrap_rate]).toEqual(['0.000125', '0.02'])
+    const n = toLineDraft({ ...LINE, qty: 1e-6, scrap_rate: 0 })
+    expect([n.qty, n.scrap_rate]).toEqual(['0.000001', '0'])
+    const big = toLineDraft({ ...LINE, qty: '123456789012.123456' })
+    expect(big.qty).toBe('123456789012.123456')
+  })
+})

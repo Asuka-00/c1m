@@ -13,6 +13,7 @@
  *
  * 时间字段为带 Z 的 UTC，显示时用 `fmtDateTime`；数量是后端 Decimal(18,6)，原样显示不四舍五入。
  */
+import { fetchAllPages } from '@/lib/api/request'
 import { http } from '../client'
 import type { Paged } from '../types'
 
@@ -42,11 +43,12 @@ export interface BomLine {
   material_label: string | null
   component_product_id: string | null
   component_product_label: string | null
+  /** D50：新接口按定点字符串返回（去末尾零），老数据可能是数字；只用 decimal.ts 处理，不做浮点运算 */
   qty: number | string
   uom_id: string
   uom_label: string | null
   per_basis: string
-  scrap_rate: number | null
+  scrap_rate: number | string | null
   consume_mode: string
   remark: string | null
   /** 替代料（按优先级升序；仅物料行） */
@@ -82,7 +84,8 @@ export interface UomConversion {
   to_uom_id: string
   from_uom_label: string | null
   to_uom_label: string | null
-  factor: number
+  /** D50：定点字符串或数字 */
+  factor: number | string
 }
 
 export interface BomSubstituteBody {
@@ -141,10 +144,13 @@ export const bomApi = {
    */
   replaceLines: (bomId: string, lines: BomReplaceLine[]) =>
     http.put<BomTree>(`/mes/bom/${bomId}/lines`, { lines }).then((r) => r.data),
+  /** 单位换算全部记录：后端 page_size 上限 100，逐页拉全（FE-F3-1）。 */
   conversions: () =>
-    http
-      .get<Paged<UomConversion>>('/mes/uom-conversion', {
-        params: { page_size: 200 },
-      })
-      .then((r) => r.data.data),
+    fetchAllPages((page, page_size) =>
+      http
+        .get<Paged<UomConversion>>('/mes/uom-conversion', {
+          params: { page, page_size },
+        })
+        .then((r) => r.data)
+    ),
 }

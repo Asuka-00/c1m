@@ -1060,7 +1060,9 @@
         "recipe_match": "Recipe ↔ equipment mapping",
         "pm_due": "Equipment PM not overdue",
         "rework_limit": "Rework count limit",
-        "qty_adjust_limit": "Scrap / bonus qty limit"
+        "qty_adjust_limit": "Scrap / bonus qty limit",
+        "eqp_wait_qual": "Equipment waiting Qual",
+        "bom_required": "Active BOM required"
       },
       "check_severity": {
         "block": "Block",
@@ -1395,6 +1397,11 @@
         "submitted": "Submitted",
         "confirmed": "Confirmed",
         "cancelled": "Cancelled"
+      },
+      "qual_status": {
+        "open": "Open",
+        "passed": "Passed",
+        "failed": "Failed"
       }
     }
   },
@@ -1524,7 +1531,8 @@
     "mes-equipment_material_mount": "Equipment Material Mount",
     "mes-equipment_qual": "Qual Task",
     "mes-substrate_map": "Substrate Map",
-    "mes-bin_set": "Bin Definition Set"
+    "mes-bin_set": "Bin Definition Set",
+    "mes-map-import": "Map Import"
   },
   "permName": {
     "users__read": "View platform users",
