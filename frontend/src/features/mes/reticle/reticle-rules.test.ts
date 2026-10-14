@@ -264,7 +264,7 @@ describe('幂等键绑定请求体（H-1）', () => {
       bodySignature('usage', { delta: 1, note: 'n' })
     )
   })
-  it('mock 同 key 不同内容 422 idempotency_key_mismatch，三语提示', async () => {
+  it('mock 同 key 不同内容 422 idempotency_key_reused，复用通用三语文案', async () => {
     await mockReticleApi.act('r1', 'usage', { delta: 1 }, 'same')
     const err = await mockReticleApi
       .act('r1', 'usage', { delta: 2 }, 'same')
@@ -272,15 +272,27 @@ describe('幂等键绑定请求体（H-1）', () => {
     expect(err).toMatchObject({
       response: {
         status: 422,
-        data: { detail: { code: 'idempotency_key_mismatch' } },
+        data: { detail: { code: 'idempotency_key_reused' } },
       },
     })
     for (const l of ['zh-CN', 'en', 'ja']) {
       await i18n.changeLanguage(l)
-      const m = reticleErrorMessage(err, 'usage')
-      expect(m).toBe(t('mes.reticle.code.idempotency_key_mismatch'))
+      expect(reticleErrorMessage(err, 'usage')).toBe(
+        t('mes.err.code.idempotency_key_reused')
+      )
+    }
+  })
+  it('409 idempotency_in_progress 三语提示；内容不变重试复用同 key', async () => {
+    const err = apiError(409, { code: 'idempotency_in_progress' })
+    for (const l of ['zh-CN', 'en', 'ja']) {
+      await i18n.changeLanguage(l)
+      const m = reticleErrorMessage(err, 'inspection')
+      expect(m).toBe(t('mes.reticle.code.idempotency_in_progress'))
       expect(m).not.toContain('idempotency')
     }
+    const sig = bodySignature('inspection', { kind: 'cd', result: 'pass' })
+    const first = bindKey(null, sig, () => 'k1')
+    expect(bindKey(first, sig, () => 'k2').key).toBe('k1')
   })
 })
 

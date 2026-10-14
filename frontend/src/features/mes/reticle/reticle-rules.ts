@@ -163,8 +163,10 @@ export const RETICLE_CODES = [
   'still_mounted',
   'reticle_unavailable',
   'life_reached',
-  'idempotency_key_mismatch',
+  // 409：上次同 key 请求仍在处理；重试时内容不变复用同一 key
+  'idempotency_in_progress',
 ] as const
+// 422 idempotency_key_reused（D57/D72）走通用 mesErrorMessage（mes.err.code.idempotency_key_reused）
 
 /** 错误提示：光罩 409 码 → 三语；其他交给通用 MES 处理。 */
 export function reticleErrorMessage(err: unknown, action?: ReticleAction) {

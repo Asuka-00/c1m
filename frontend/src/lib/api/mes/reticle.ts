@@ -510,10 +510,10 @@ function mockAct(
   const sig = `${id}|${action}|${bodySignature(action, input)}`
   if (IDEMPOTENT.includes(action) && key && idem.has(key)) {
     const hit = idem.get(key)!
-    // H-1：同 key 不同内容 → 422 idempotency_key_mismatch
+    // D57/D72：同 key 不同内容 → 422 idempotency_key_reused
     if (hit.sig !== sig)
       throw apiError(422, {
-        code: 'idempotency_key_mismatch',
+        code: 'idempotency_key_reused',
         message: 'Idempotency-Key reused with a different body',
       })
     return structuredClone(hit.out)
