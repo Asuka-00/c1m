@@ -167,13 +167,13 @@ def test_b8_draft_reuses_alarm_and_track_in_steps():
     assert sc.run_id == "alarm-tia-05"
     # D82 补充四：check_blocked 用 results[]，alarm_severity 项 ctx.alarms[] 每条带 sub_unit_id
     blocks = [s.args["expect"] for s in tis if s.args["expect"].get("status") == 409 and "results" in s.args["expect"]]
-    assert len(blocks) == 2 and all("body" not in b for b in blocks)
+    assert len(blocks) == 5 and all("body" not in b for b in blocks)
+    # D84 Q1：result 只取 block / warn；所有被拦的进站 results[] 都是 block
     assert all(
-        "sub_unit_id" in al and set(r) == {"check_type", "result", "ctx"}
-        for b in blocks
-        for r in b["results"]
-        for al in r["ctx"]["alarms"]
+        set(r) == {"check_type", "result", "ctx"} and r["result"] == "block" for b in blocks for r in b["results"]
     )
+    detailed = [r for b in blocks for r in b["results"] if isinstance(r["ctx"], dict)]
+    assert len(detailed) == 2 and all("sub_unit_id" in al for r in detailed for al in r["ctx"]["alarms"])
     mc = [s for s in tis if s.args["eq"] == "EAP-MC01"]
     assert [t.args["expect"]["status"] for t in mc] == [409, 200]
     assert any(s.kind == "alarm_set" and s.args.get("sub_unit_id") == "EAP-MC01-CH1" for s in sc.steps)
@@ -242,9 +242,10 @@ def test_b8_draft_type_row_rules():
         (e.get("code") if isinstance(e, dict) else getattr(e, "code", None)) == "EAP-NT01" for e in sc.equipment
     )
     dels = [s.args for s in st if s.kind == "delete_alarm_code"]
-    assert dels == [
-        {"eq": "EAP-DA01", "alid": "2101", "level": "type", "expect": {"status": 409, "code": "referenced"}}
-    ]
+    # D84 Q5：referenced 顶层 ref_type / ref_count；Q6：删除缺 key 422 missing
+    assert [d["expect"]["status"] for d in dels] == [409, 422]
+    assert dels[0]["expect"]["body"] == {"detail.ref_type": "$nonempty", "detail.ref_count": 1} and dels[0]["idem"]
+    assert dels[1]["no_idem"] and dels[1]["expect"]["code"] == "missing"
 
 
 def test_marking_draft_follows_d78():
@@ -691,8 +692,9 @@ def test_b8_draft_d81_d82_refined():
     assert [a["occurred_at"] for a in fut] == ["$now+301s", "$now+300s"]
     assert fut[0]["expect"]["ctx"] == {"reason": "future_time"}
     assert "detail.ctx" not in text  # check_blocked 不再用 detail.ctx（D82 补充四）
-    qs = [ln for ln in text.splitlines() if ln.startswith("# B8-Q")]
-    assert len(qs) >= 6 and all(f"TODO(B8-Q{n})" in text for n in range(1, 7))
+    # D84 / D84 补充一：TODO 全部收掉，只剩 D84 未覆盖的 B8-Q10
+    assert "TODO" not in text
+    assert [ln[:8] for ln in text.splitlines() if ln.startswith("# B8-Q")] == ["# B8-Q10"]
 
 
 def test_marking_record_writes_require_idem():
@@ -731,5 +733,29 @@ def test_alarm_list_time_filters_need_tz():
     sc = load("scenarios/p3-draft/alarm-track-in-action.yaml")
     lists = [s.args for s in sc.steps if s.kind == "expect_alarm_list"]
     neg = [a for a in lists if a.get("raw_time")]
-    assert {e["type"] for a in neg for e in a["expect"]["errors"]} >= {"timezone_required", "pattern"}
+    # D84 Q8：value_error + ctx.reason（pattern / timezone_required），loc [query, from|to]
+    assert {e["type"] for a in neg for e in a["expect"]["errors"]} == {"value_error"}
+    assert {e["ctx"]["reason"] for a in neg for e in a["expect"]["errors"]} == {"pattern", "timezone_required"}
+    assert {tuple(e["loc"]) for a in neg for e in a["expect"]["errors"]} == {("query", "from"), ("query", "to")}
     assert all(not a.get("raw_time") and str(a["from"]).startswith("$now") for a in lists if "expect" not in a)
+
+
+def test_b8_draft_d84_contract():
+    """D84 / D84 补充一：报警码写接口都带 key、缺 key 422；404 not_found 按 rid；reused 对象；warn 仍 {code, ctx}。"""
+    from sim.scenario import load
+
+    sc = load("scenarios/p3-draft/alarm-track-in-action.yaml")
+    assert sc.draft
+    st = sc.steps
+    for k in ("seed_alarm_code", "set_track_in_action", "delete_alarm_code"):
+        rows = [s.args for s in st if s.kind == k]
+        assert all(a.get("idem") or a.get("no_idem") for a in rows), k
+        assert any(a.get("no_idem") and (a.get("expect") or {}).get("code") == "missing" for a in rows), k
+    sets = [s.args for s in st if s.kind == "set_track_in_action"]
+    nf = [a for a in sets if a["expect"]["status"] == 404]
+    assert len(nf) == 1 and nf[0]["expect"]["code"] == "not_found" and nf[0].get("rid")
+    assert all(a["expect"].get("detail_object") for a in sets if a["expect"].get("code") == "idempotency_key_reused")
+    warn = [s.args["expect"] for s in st if s.kind == "track_in" and "warning" in s.args["expect"]]
+    assert warn and all(set(w["warning"]) >= {"code"} and "check_type" not in w["warning"] for w in warn)
+    fut = [s.args["expect"] for s in st if s.kind == "alarm_set" and "occurred_at" in s.args]
+    assert fut[0]["type"] == "value_error" and fut[1]["status"] == 200
