@@ -148,7 +148,7 @@ register(
                 "float",
                 "Scrap rate|损耗率|ロス率",
                 default=0,
-                scale=QTY_SCALE,
+                scale=4,
                 help="Fraction, e.g. 0.02 = 2%|小数，如 0.02 表示 2%|小数（例：0.02 = 2%）",
             ),
             F(

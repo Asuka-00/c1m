@@ -14,6 +14,7 @@
 
 import math
 import uuid
+from decimal import Decimal
 from typing import Any
 
 import sqlalchemy as sa
@@ -132,13 +133,8 @@ def _wo_delete(
 # ---------------- helpers ----------------
 def cap(wo: Row) -> int:
     """可开批的最大晶圆数：计划数 ×（1 + 超投比例%），向下取整。"""
-    return int(
-        math.floor(
-            float(wo["planned_qty"])
-            * (1 + float(wo["over_start_limit_pct"] or 0) / 100)
-            + 1e-9
-        )
-    )
+    pct = Decimal(str(wo["over_start_limit_pct"] or 0))
+    return int(math.floor(Decimal(str(wo["planned_qty"])) * (1 + pct / 100)))
 
 
 def default_route(s: Session, tid: uuid.UUID, product_id: Any) -> Row | None:

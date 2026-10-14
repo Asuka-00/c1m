@@ -44,7 +44,9 @@ def material_needs(
         if r["resource_kind"] != "material" or not r["material_id"] or not r["qty"]:
             continue
         # per_unit：用量 × 批次数量；否则为每批固定用量
-        need = float(r["qty"]) * (lot["qty"] if r["qty_basis"] == "per_unit" else 1)
+        need = to_qty(
+            to_qty(r["qty"]) * (lot["qty"] if r["qty_basis"] == "per_unit" else 1)
+        )
         mat = one(s, tid, "material", r["material_id"])
         cands = [
             m
@@ -52,26 +54,27 @@ def material_needs(
             if m["material_id"] == r["material_id"]
             # 操作员指定的线边批次优先，否则按先到期先出（FEFO）自动分配
         ] or candidate_lots(s, tid, r["material_id"], at)
-        alloc, have, total = [], 0.0, 0.0
+        alloc: list[Row] = []
+        have, total = Decimal(0), Decimal(0)
         for m in cands:
             if m["ml_status"] != "available" or (
                 m["expiry_date"] and m["expiry_date"] < today
             ):
                 continue
-            q = float(m["qty_remaining"] or 0)
+            q = to_qty(m["qty_remaining"] or 0)
             if r["uom_id"] and m["uom_id"] != r["uom_id"]:
                 try:
-                    q = convert(s, tid, m["uom_id"], r["uom_id"], q)["value"]
+                    q = convert(s, tid, m["uom_id"], r["uom_id"], q)["qty"]
                 except HTTPException:
                     continue
             total += q
             take = min(q, need - have)
-            if take > 1e-12:
+            if take > 0:
                 alloc.append(
                     {
                         "material_lot_id": m["id"],
                         "code": m["code"],
-                        "qty": take,
+                        "qty": float(take),
                         "uom_id": m["uom_id"],
                         "req_uom_id": r["uom_id"],
                     }
@@ -82,10 +85,10 @@ def material_needs(
                 "resource_id": r["id"],
                 "material_id": r["material_id"],
                 "material_code": mat and mat["code"],
-                "need": need,
+                "need": float(need),
                 "uom_id": r["uom_id"],
                 "basis": r["qty_basis"],
-                "available": total,
+                "available": float(total),
                 "allocation": alloc,
             }
         )

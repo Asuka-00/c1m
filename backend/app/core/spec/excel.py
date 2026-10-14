@@ -27,7 +27,7 @@ from app.core.spec.base import conn, table
 from app.core.spec.engine import ENTITIES, Entity
 from app.core.spec.errors import err_422
 from app.core.spec.query import all_rows
-from app.core.spec.serialize import to_json
+from app.core.spec.serialize import TooManyDecimals, to_json
 from app.core.spec.validate import attr_defs
 from app.core.spec.write import create_row, update_row
 
@@ -297,9 +297,17 @@ def import_xlsx(
                 if isinstance(d, list)
                 else str(d)
             )
-            errors.append({"row": n, "msg": msg})
+            err: dict[str, Any] = {"row": n, "msg": msg}
+            first = d[0] if isinstance(d, list) and d else None
+            if isinstance(first, dict) and first.get("type"):
+                # D76：导入错误同样带首条的 loc / type / ctx（如 value_error max_places）
+                err.update({k: first[k] for k in ("loc", "type", "ctx") if k in first})
+            errors.append(err)
         except (ValueError, TypeError) as ex:
-            errors.append({"row": n, "msg": str(ex)})
+            err = {"row": n, "msg": str(ex)}
+            if isinstance(ex, TooManyDecimals):
+                err.update(type=ex.code, ctx=ex.ctx)
+            errors.append(err)
     if errors:
         nested.rollback()
         session.rollback()
