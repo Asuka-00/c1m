@@ -1616,6 +1616,12 @@
       "count": "{{count}} maps · page {{page}}/{{pages}}",
       "prev": "Previous",
       "next": "Next"
+    },
+    "alarm": {
+      "clear": "Clear alarm",
+      "clearDesc": "Holds and equipment state are not restored automatically.",
+      "cleared": "Alarm cleared",
+      "already": "Alarm was already cleared; nothing changed"
     }
   },
   "notify": {

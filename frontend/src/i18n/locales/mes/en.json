@@ -1,6 +1,7 @@
 {
   "mes": {
     "module": {
+      "alarm": "Equipment alarms",
       "common": "Common",
       "equipment": "Equipment",
       "exec": "Execution",
@@ -15,6 +16,9 @@
       "wh": "Warehouse"
     },
     "entity": {
+      "alarm_code": "Alarm code",
+      "alarm_log": "Alarm log",
+      "alarm_lot": "Alarm lot",
       "dict_type": "Dictionary",
       "dict_item": "Dictionary item",
       "code_rule": "Code rule",
@@ -93,6 +97,51 @@
       "customer": "Customer"
     },
     "field": {
+      "alarm_code": {
+        "equipment_type": "Equipment type",
+        "equipment": "Equipment (override)",
+        "alid": "ALID",
+        "alcd_category": "ALCD category",
+        "severity": "Severity",
+        "text_en": "Text (EN)",
+        "text_zh": "Text (ZH)",
+        "text_ja": "Text (JA)",
+        "category": "Category",
+        "action": "Action",
+        "target_e10_state": "Target E10 state",
+        "hold_reason": "Hold reason",
+        "require_qual_on_clear": "Qual after clear",
+        "disposition": "Disposition",
+        "is_active": "Active"
+      },
+      "alarm_log": {
+        "equipment": "Equipment",
+        "sub_unit": "Sub-unit",
+        "alarm_code": "Alarm code",
+        "unregistered": "Unregistered",
+        "alid": "ALID",
+        "alcd_raw": "ALCD (raw)",
+        "alarm_text": "Text",
+        "severity": "Severity",
+        "action": "Action",
+        "alarm_status": "Status",
+        "set_at": "Set at",
+        "cleared_at": "Cleared at",
+        "cleared_by": "Cleared by",
+        "clear_source": "Clear source",
+        "clear_event_id": "Clear event ID",
+        "hold_ids": "Holds",
+        "e10_change": "E10 change",
+        "raw": "Raw report",
+        "comment": "Comment",
+        "source": "Source",
+        "external_event_id": "External event ID",
+        "username": "User"
+      },
+      "alarm_lot": {
+        "alarm_log": "Alarm",
+        "lot": "Lot"
+      },
       "dict_type": {
         "code": "Code",
         "name": "Name",
@@ -883,6 +932,9 @@
       }
     },
     "help": {
+      "alarm_code": {
+        "hold_reason": "Blank: system reason equipment_alarm"
+      },
       "code_rule": {
         "pattern": "Tokens: {YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}"
       },
@@ -945,6 +997,36 @@
       }
     },
     "enum": {
+      "alarm_severity": {
+        "info": "Info",
+        "warning": "Warning",
+        "minor": "Minor",
+        "major": "Major",
+        "critical": "Critical"
+      },
+      "alarm_category": {
+        "process": "Process",
+        "hardware": "Hardware",
+        "safety": "Safety",
+        "material": "Material",
+        "communication": "Communication",
+        "other": "Other"
+      },
+      "alarm_action": {
+        "none": "None",
+        "hold_lot": "Hold lots",
+        "hold_equipment": "Equipment state",
+        "hold_both": "Both"
+      },
+      "alarm_status": {
+        "active": "Active",
+        "cleared": "Cleared"
+      },
+      "alarm_source": {
+        "manual": "Manual",
+        "eap": "EAP",
+        "simulator": "Simulator"
+      },
       "status": {
         "draft": "Draft",
         "active": "Active",
@@ -1023,7 +1105,8 @@
       },
       "e10_source": {
         "manual": "Manual",
-        "auto": "Automatic"
+        "auto": "Automatic",
+        "equipment": "Equipment"
       },
       "pm_result": {
         "ok": "OK",
@@ -1468,9 +1551,11 @@
     "mes-pm_plan": "PM Plan",
     "mes-downtime": "Downtime",
     "mes-e10_history": "E10 History",
+    "mes-alarm_log": "Equipment Alarms",
     "mes-tool": "Consumable Life",
     "mes-equipment-master": "Equipment Master",
     "mes-e10-model": "E10 State Configuration",
+    "mes-alarm_code": "Alarm Codes",
     "mes-dc_result": "Metrology / DC Data",
     "mes-dc-config": "DC Configuration",
     "mes-defect_code": "Defect Code",
@@ -1572,6 +1657,8 @@
     "members__write": "Manage users",
     "config__read": "View configuration",
     "config__write": "Edit configuration",
+    "mes_alarm__read": "Equipment alarms·View",
+    "mes_alarm__write": "Equipment alarms·Edit",
     "mes_common__read": "Common·View",
     "mes_common__write": "Common·Edit",
     "mes_equipment__read": "Equipment·View",
@@ -1633,6 +1720,8 @@
     "members__write": "Allows: Manage users",
     "config__read": "Allows: View configuration",
     "config__write": "Allows: Edit configuration",
+    "mes_alarm__read": "Allows: Equipment alarms·View",
+    "mes_alarm__write": "Allows: Equipment alarms·Edit",
     "mes_common__read": "Allows: Common·View",
     "mes_common__write": "Allows: Common·Edit",
     "mes_equipment__read": "Allows: Equipment·View",

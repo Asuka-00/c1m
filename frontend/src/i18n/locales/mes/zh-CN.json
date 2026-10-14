@@ -1,6 +1,7 @@
 {
   "mes": {
     "module": {
+      "alarm": "设备报警",
       "common": "通用",
       "equipment": "设备",
       "exec": "生产执行",
@@ -15,6 +16,9 @@
       "wh": "仓储"
     },
     "entity": {
+      "alarm_code": "报警码",
+      "alarm_log": "报警履历",
+      "alarm_lot": "报警关联批次",
       "dict_type": "数据字典",
       "dict_item": "字典项",
       "code_rule": "编码规则",
@@ -93,6 +97,51 @@
       "customer": "客户"
     },
     "field": {
+      "alarm_code": {
+        "equipment_type": "设备类型",
+        "equipment": "设备（单台覆盖）",
+        "alid": "ALID",
+        "alcd_category": "ALCD 分类",
+        "severity": "等级",
+        "text_en": "文本（英）",
+        "text_zh": "文本（中）",
+        "text_ja": "文本（日）",
+        "category": "分类",
+        "action": "联动",
+        "target_e10_state": "目标 E10 状态",
+        "hold_reason": "Hold 原因",
+        "require_qual_on_clear": "清除后需 Qual",
+        "disposition": "处置说明",
+        "is_active": "启用"
+      },
+      "alarm_log": {
+        "equipment": "设备",
+        "sub_unit": "子单元",
+        "alarm_code": "报警码",
+        "unregistered": "未登记",
+        "alid": "ALID",
+        "alcd_raw": "ALCD 原值",
+        "alarm_text": "报警文本",
+        "severity": "等级",
+        "action": "联动",
+        "alarm_status": "状态",
+        "set_at": "发生时间",
+        "cleared_at": "清除时间",
+        "cleared_by": "清除人",
+        "clear_source": "清除来源",
+        "clear_event_id": "清除事件号",
+        "hold_ids": "联动 Hold",
+        "e10_change": "E10 联动",
+        "raw": "原始上报",
+        "comment": "备注",
+        "source": "来源",
+        "external_event_id": "外部事件号",
+        "username": "用户"
+      },
+      "alarm_lot": {
+        "alarm_log": "报警",
+        "lot": "批次"
+      },
       "dict_type": {
         "code": "编码",
         "name": "名称",
@@ -883,6 +932,9 @@
       }
     },
     "help": {
+      "alarm_code": {
+        "hold_reason": "留空使用系统原因码 equipment_alarm"
+      },
       "code_rule": {
         "pattern": "占位符：{YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}"
       },
@@ -945,6 +997,36 @@
       }
     },
     "enum": {
+      "alarm_severity": {
+        "info": "提示",
+        "warning": "警告",
+        "minor": "轻微",
+        "major": "严重",
+        "critical": "致命"
+      },
+      "alarm_category": {
+        "process": "工艺",
+        "hardware": "硬件",
+        "safety": "安全",
+        "material": "物料",
+        "communication": "通信",
+        "other": "其他"
+      },
+      "alarm_action": {
+        "none": "不联动",
+        "hold_lot": "Hold 批次",
+        "hold_equipment": "切换设备状态",
+        "hold_both": "两者"
+      },
+      "alarm_status": {
+        "active": "报警中",
+        "cleared": "已清除"
+      },
+      "alarm_source": {
+        "manual": "人工",
+        "eap": "EAP",
+        "simulator": "模拟器"
+      },
       "status": {
         "draft": "草稿",
         "active": "生效",
@@ -1023,7 +1105,8 @@
       },
       "e10_source": {
         "manual": "手动",
-        "auto": "自动"
+        "auto": "自动",
+        "equipment": "设备"
       },
       "pm_result": {
         "ok": "合格",
@@ -1468,9 +1551,11 @@
     "mes-pm_plan": "PM 计划",
     "mes-downtime": "停机记录",
     "mes-e10_history": "E10 状态履历",
+    "mes-alarm_log": "设备报警记录",
     "mes-tool": "耗材/治具寿命",
     "mes-equipment-master": "机台主数据",
     "mes-e10-model": "E10 状态配置",
+    "mes-alarm_code": "报警代码",
     "mes-dc_result": "量测数据",
     "mes-dc-config": "数据收集配置",
     "mes-defect_code": "缺陷代码",
@@ -1572,6 +1657,8 @@
     "members__write": "管理用户",
     "config__read": "查看系统配置",
     "config__write": "编辑系统配置",
+    "mes_alarm__read": "设备报警·查看",
+    "mes_alarm__write": "设备报警·编辑",
     "mes_common__read": "通用·查看",
     "mes_common__write": "通用·编辑",
     "mes_equipment__read": "设备·查看",
@@ -1633,6 +1720,8 @@
     "members__write": "允许：管理用户",
     "config__read": "允许：查看系统配置",
     "config__write": "允许：编辑系统配置",
+    "mes_alarm__read": "允许：设备报警·查看",
+    "mes_alarm__write": "允许：设备报警·编辑",
     "mes_common__read": "允许：通用·查看",
     "mes_common__write": "允许：通用·编辑",
     "mes_equipment__read": "允许：设备·查看",

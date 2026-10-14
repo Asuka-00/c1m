@@ -44,6 +44,8 @@ export const MES_PERM = {
   bomWrite: 'mes.bom:write',
   /** BOM 生效 / 作废（P1 / F3） */
   bomActivate: 'mes.bom:activate',
+  /** 设备报警登记 / 清除（P2 / B9） */
+  alarmWrite: 'mes.alarm:write',
 } as const
 
 export type MesPerm = (typeof MES_PERM)[keyof typeof MES_PERM] | (string & {})

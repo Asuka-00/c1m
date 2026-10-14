@@ -1616,6 +1616,12 @@
       "count": "共 {{count}} 条 · 第 {{page}}/{{pages}} 页",
       "prev": "上一页",
       "next": "下一页"
+    },
+    "alarm": {
+      "clear": "清除报警",
+      "clearDesc": "清除后不会自动解除 Hold 或恢复设备状态。",
+      "cleared": "报警已清除",
+      "already": "该报警已清除，未做改动"
     }
   },
   "notify": {

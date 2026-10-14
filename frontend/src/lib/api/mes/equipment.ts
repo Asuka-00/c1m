@@ -66,6 +66,15 @@ export const eqpApi = {
     planId: string,
     body: { equipment_id: string; result: 'ok' | 'ng'; comment?: string }
   ) => http.post(`/mes/eqp/pm/${planId}/complete`, body).then((r) => r.data),
+  /** 清除报警（B9）：不自动恢复 Hold 与 E10；已清除时 `cleared=false`（D55）。 */
+  alarmClear: (id: string, body: { comment?: string }) =>
+    http
+      .post<{
+        data: Record<string, unknown>
+        duplicate: boolean
+        cleared: boolean
+      }>(`/mes/eqp/alarms/${id}/clear`, body)
+      .then((r) => r.data),
 }
 
 /** 机台上料记录（后端 B3：`/mes/eqp/{eq_id}/mount` 等）。时间为带 Z 的 UTC。 */
