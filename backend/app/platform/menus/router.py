@@ -12,6 +12,7 @@ from app.core.pagination import ListParamsDep, paginate
 from app.platform.auth.deps import (
     CurrentUser,
     TokenPayloadDep,
+    get_current_active_superuser,
     get_current_tenant,
     platform_api_router,
     platform_codes,
@@ -29,6 +30,7 @@ from app.platform.menus.schemas import (
 from app.platform.menus.service import (
     build_tree,
     forbidden_paths,
+    menu_keys,
     permission_tree,
 )
 from app.platform.rbac.service import user_permission_codes
@@ -36,6 +38,14 @@ from app.platform.rbac.service import user_permission_codes
 router = APIRouter(prefix="/menus", tags=["menus"])
 # 菜单管理（仅在平台空间 /platform/menus 下挂载）
 admin_router = APIRouter(prefix="/menus", tags=["menus"])
+
+
+@router.get("/keys", dependencies=[Depends(get_current_active_superuser)])
+def list_menu_keys() -> Any:
+    """All built-in menu keys (workspace + platform groups, items and merged tabs)
+    with route path, component, permission, i18n key (menu.<key>) and titles.
+    Superusers only; same output as ``python -m app.scripts.export_menu_keys``."""
+    return menu_keys()
 
 
 @router.get("/me", response_model=MyMenus)

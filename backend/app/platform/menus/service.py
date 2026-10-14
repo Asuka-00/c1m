@@ -341,3 +341,59 @@ def forbidden_paths(menus: list[Menu], tree: list[MenuNode]) -> list[str]:
     walk(tree)
     known = {m.path for m in menus if m.path}
     return sorted(known - allowed)
+
+
+def menu_keys() -> dict[str, object]:
+    """菜单 key 清单（FE-02 / F2，给前端做跳转 / 翻译回归检查）。
+
+    覆盖工作区、平台两个空间的分组 / 菜单项，以及合并菜单的页签（``kind=tab``，
+    ``parent`` 为合并菜单 key，``path`` 为合并页路径）。``i18n_key`` 是前端 ``t()`` 用的键
+    （``menu.<key>``），``titles`` 为三语标题。按 (space, 出现顺序) 排列，不依赖数据库。
+    """
+    langs = ("en", "zh-CN", "ja")
+    tt = [titles(i) for i in range(3)]
+    rows: list[dict[str, object]] = []
+
+    def add(
+        space: str,
+        kind: str,
+        key: str,
+        parent: str | None,
+        path: str | None,
+        comp: str | None,
+        perm: str | None,
+    ) -> None:
+        rows.append(
+            {
+                "key": key,
+                "space": space,
+                "kind": kind,
+                "parent": parent,
+                "path": path,
+                "component": comp,
+                "permission": perm,
+                "i18n_key": f"menu.{key}",
+                "titles": {lg: tt[i].get(key) for i, lg in enumerate(langs)},
+            }
+        )
+
+    for space, menus in (
+        ("workspace", registry_menus()),
+        ("platform", platform_menus()),
+    ):
+        for key, parent, _t, path, _icon, comp, _o, perm in menus:
+            add(
+                space,
+                "group" if path is None else "item",
+                key,
+                parent,
+                path,
+                comp,
+                perm,
+            )
+            for tab in merged_tabs(key):
+                add(space, "tab", tab.key, key, path, tab.component, tab.permission)
+    for key, (path, _icon, comp, perm) in SYSTEM_ITEMS.items():
+        if not any(r["key"] == key for r in rows):
+            add("workspace", "system", key, None, path, comp, perm)
+    return {"version": 1, "count": len(rows), "items": rows}
