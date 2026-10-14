@@ -506,7 +506,16 @@
         "too_many_decimals": "最多 6 位小数",
         "read_only_field": "该字段只读，不能修改",
         "unknown_field": "包含未知字段",
-        "timezone_required": "时间必须带时区（如 2026-10-14T08:00:00+08:00）"
+        "timezone_required": "时间必须带时区（如 2026-10-14T08:00:00+08:00）",
+        "date_range_too_large": "日期跨度最多 {{max_days}} 天，请缩小范围。",
+        "date_range_too_large_nolimit": "日期跨度过大，请缩小范围。",
+        "date_range_invalid": "开始日期不能晚于结束日期。",
+        "unknown_columns": "导入文件有无法识别的列：{{columns}}",
+        "no_conversion_path": "没有从 {{from_uom}} 到 {{to_uom}} 的换算关系。",
+        "ref_not_found": "找不到对应的{{entity}}。",
+        "enum": "取值无效，可选：{{expected}}",
+        "step_ids_mismatch": "工步列表与当前流程的工步不一致，请刷新后重试。",
+        "not_text_filter": "{{field}} 不是可筛选的文本字段"
       },
       "tooManyDecimals": "最多 {{n}} 位小数",
       "onlyWhen": "仅当{{cond}}为「{{value}}」时才能填写",

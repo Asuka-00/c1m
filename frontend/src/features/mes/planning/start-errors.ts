@@ -6,6 +6,7 @@
  */
 import { AxiosError } from 'axios'
 import { t } from '@/i18n'
+import { isParamLoc, queryItemText } from '@/lib/api/client'
 
 /** 第 i 行（从 0 开始）的字段错误：字段名 → 提示。 */
 export type LotFieldErrors = Record<number, Record<string, string>>
@@ -49,6 +50,7 @@ export function startFieldErrors(e: unknown): LotFieldErrors | null {
   const out: LotFieldErrors = {}
   for (const it of d as Item[]) {
     const loc = it.loc ?? []
+    if (isParamLoc(it)) continue
     const p = loc[0] === 'body' ? loc.slice(1) : loc
     if (p[0] !== 'lots' || typeof p[1] !== 'number') continue
     const field = String(p[2] ?? 'qty')
@@ -75,6 +77,10 @@ export function startTopErrors(e: unknown): string[] {
   const out: string[] = []
   for (const it of d as Item[]) {
     const loc = it.loc ?? []
+    if (isParamLoc(it)) {
+      out.push(queryItemText(it))
+      continue
+    }
     const p = loc[0] === 'body' ? loc.slice(1) : loc
     if (p[0] === 'lots' && typeof p[1] === 'number') continue
     const msg = it.msg ?? ''

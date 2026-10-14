@@ -9,6 +9,7 @@
  */
 import { AxiosError } from 'axios'
 import { t } from '@/i18n'
+import { isParamLoc, queryItemText } from '@/lib/api/client'
 import type {
   TrackUnitKind,
   TransformBody,
@@ -263,6 +264,7 @@ export function transformErrorText(e: unknown): string {
     if (Array.isArray(d)) {
       type Item = { msg?: string; type?: string; loc?: unknown[] }
       const msgs = (d as Item[]).map((it) => {
+        if (isParamLoc(it)) return queryItemText(it)
         const msg = String(it.msg ?? '')
         if (it.type === 'extra_forbidden') return t('mes.trf.be.extra')
         // pydantic：输出的 sources 为空（无图且没有 gross die、良品数留空）

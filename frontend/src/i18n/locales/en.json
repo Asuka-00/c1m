@@ -506,7 +506,16 @@
         "too_many_decimals": "At most 6 decimal places",
         "read_only_field": "This field is read-only",
         "unknown_field": "Contains an unknown field",
-        "timezone_required": "The time must include a time zone (e.g. 2026-10-14T08:00:00+08:00)"
+        "timezone_required": "The time must include a time zone (e.g. 2026-10-14T08:00:00+08:00)",
+        "date_range_too_large": "The date range can span at most {{max_days}} days; narrow it down.",
+        "date_range_too_large_nolimit": "The date range is too large; narrow it down.",
+        "date_range_invalid": "The start date cannot be later than the end date.",
+        "unknown_columns": "The import file has unrecognized columns: {{columns}}",
+        "no_conversion_path": "No conversion from {{from_uom}} to {{to_uom}}.",
+        "ref_not_found": "The {{entity}} was not found.",
+        "enum": "Invalid value; allowed: {{expected}}",
+        "step_ids_mismatch": "The step list does not match the current route; refresh and try again.",
+        "not_text_filter": "{{field}} is not a filterable text field"
       },
       "tooManyDecimals": "At most {{n}} decimal places",
       "onlyWhen": "Only allowed when {{cond}} is “{{value}}”",

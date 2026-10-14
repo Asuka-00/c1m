@@ -1,6 +1,7 @@
 /** BOM 接口错误 → 本地化提示（不展示后端原始英文，D34 / D38）。 */
 import { AxiosError } from 'axios'
 import { t } from '@/i18n'
+import { isParamLoc, queryItemText } from '@/lib/api/client'
 
 /** 字段级错误：`line` 为明细下标（从 0 开始，D38），主表字段为 null。 */
 export interface BomFieldError {
@@ -115,8 +116,11 @@ export function bomError(e: unknown): BomError {
     return { message: t('mes.bomTab.noPermission'), fields: [] }
   if (status === 422) {
     const items = (Array.isArray(d) ? d : []) as Item[]
+    const params = items.filter((x) => isParamLoc(x))
+    if (params.length && params.length === items.length)
+      return { message: params.map(queryItemText).join('；'), fields: [] }
     const fields = items
-      .filter((x) => Array.isArray(x.loc))
+      .filter((x) => Array.isArray(x.loc) && !isParamLoc(x))
       .map((x) => ({ ...parseLoc(x.loc!), message: fieldMessage(x) }))
     const first = fields[0]
     return {
