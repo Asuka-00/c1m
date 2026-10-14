@@ -23,7 +23,7 @@
 # 草稿步骤（B8 落地后核对）：set_track_in_action {eq, alid, level: type|equipment, value, as?}、
 #   expect_effective_track_in_action {eq, alid, value, source?}、delete_alarm_code {eq, alid, level: type|equipment}。
 # 报警码 action=none，不联动设备状态；设备全程 SBY。前提：EAP-DA01 SBY；EAP-NT01 没有设备类型（只用于 equipment_type_missing 反例）；FX0001～FX0006 waiting；EAP-MC01（两个腔体子单元）SBY；9999 未登记。
-# ---- 05:0x 细化（对照 D81 / D82 / D82 补充三、四）；05:15 按 D84 / D84 补充一收掉全部待定项（只剩 B8-Q10）
+# ---- 05:0x 细化（对照 D81 / D82 / D82 补充三、四）；05:15 按 D84 / D84 补充一收掉全部待定项；05:20 B8-Q10 已定、timezone_required 按 D77 补充一
 #   - D81 校验顺序：401/403 → 缺 key 422 missing → body 422（enum / null）→ 重放（换体 422 reused）→ 404 → 409
 #   - D82：写接口一律带 Idempotency-Key（set_track_in_action 写 idem；测缺失写 no_idem）；时间超前 >5:00 422 future_time，5:00 放行
 #   - D82 补充三：单一原因的 409（referenced 等）detail 只有 {code, message} + 顶层附加字段，不用 ctx
@@ -134,17 +134,17 @@ steps:
   - expect_hold: {lot: FX0002, present: false}
 
   # a72b85b：查报警列表 from / to 是 datetime，一律带时区；只给日期 / 无时区 → 422 timezone_required（loc [query, 字段]），
-  # 无法解析 → value_error reason=pattern（D84 Q8）；先查格式再查 range_inverted
+  # 只给日期 / 无时区 → type=timezone_required、无 ctx（D77 补充一）；无法解析 → value_error reason=pattern；先查格式再查 range_inverted
   - expect_alarm_list: {eq: EAP-DA01, from: "$now-1h", to: "$now+1m", rows: {"2103": {state_changed: false}}}
   - expect_alarm_list: {eq: EAP-DA01, from: "2026-10-15", raw_time: true,
-                        expect: {status: 422, errors: [{type: value_error, loc: [query, from], ctx: {reason: timezone_required}}]}}
+                        expect: {status: 422, errors: [{type: timezone_required, loc: [query, from]}]}}
   - expect_alarm_list: {eq: EAP-DA01, to: "2026-10-15T01:00:00", raw_time: true,
-                        expect: {status: 422, errors: [{type: value_error, loc: [query, to], ctx: {reason: timezone_required}}]}}
+                        expect: {status: 422, errors: [{type: timezone_required, loc: [query, to]}]}}
   - expect_alarm_list: {eq: EAP-DA01, from: "not-a-time", raw_time: true,
                         expect: {status: 422, errors: [{type: value_error, loc: [query, from], ctx: {reason: pattern}}]}}   # D84 Q8
   # 格式先于 range_inverted：from 无时区且 from>to → 只报 timezone_required
   - expect_alarm_list: {eq: EAP-DA01, from: "2026-10-16", to: "$now-1h", raw_time: true,
-                        expect: {status: 422, errors: [{type: value_error, loc: [query, from], ctx: {reason: timezone_required}}]}}
+                        expect: {status: 422, errors: [{type: timezone_required, loc: [query, from]}]}}
   # ③ 清掉 block → 只剩 warn → 立即 200 + warnings[{code: alarm_severity, ctx.alarms: [2102]}]
   #    已清除的报警（cleared_at 非空）即使配 block 也不再参与判断
   - alarm_clear: {eq: EAP-DA01, alid: "2103", expect: {body: {cleared: true}}}
@@ -223,5 +223,4 @@ steps:
   - expect_e10: {eq: EAP-DA01, state: SBY}
 
 # ---- 已定（D84 / D84 补充一，05:13–05:15）：原 Q1–Q7 与报警时间格式问题全部收掉，见各步注释
-# ---- 仍待确认
-# B8-Q10（原 Q8，D84 未覆盖）：进站本身（track_in）缺 key 的行为沿用 P1/P2；本场景不重复测，是否需要在 B8 验收里再覆盖
+# B8-Q10（已定，05:20）：进站本身（track_in）缺 key 不在本场景单独覆盖，沿用 P1/P2 的测试

@@ -694,7 +694,8 @@ def test_b8_draft_d81_d82_refined():
     assert "detail.ctx" not in text  # check_blocked 不再用 detail.ctx（D82 补充四）
     # D84 / D84 补充一：TODO 全部收掉，只剩 D84 未覆盖的 B8-Q10
     assert "TODO" not in text
-    assert [ln[:8] for ln in text.splitlines() if ln.startswith("# B8-Q")] == ["# B8-Q10"]
+    qs = [ln for ln in text.splitlines() if ln.startswith("# B8-Q")]
+    assert len(qs) == 1 and qs[0].startswith("# B8-Q10（已定")
 
 
 def test_marking_record_writes_require_idem():
@@ -733,9 +734,11 @@ def test_alarm_list_time_filters_need_tz():
     sc = load("scenarios/p3-draft/alarm-track-in-action.yaml")
     lists = [s.args for s in sc.steps if s.kind == "expect_alarm_list"]
     neg = [a for a in lists if a.get("raw_time")]
-    # D84 Q8：value_error + ctx.reason（pattern / timezone_required），loc [query, from|to]
-    assert {e["type"] for a in neg for e in a["expect"]["errors"]} == {"value_error"}
-    assert {e["ctx"]["reason"] for a in neg for e in a["expect"]["errors"]} == {"pattern", "timezone_required"}
+    # D77 补充一：只给日期 / 无时区 → type=timezone_required、无 ctx；无法解析 → value_error + ctx.reason=pattern
+    errs = [e for a in neg for e in a["expect"]["errors"]]
+    assert {e["type"] for e in errs} == {"timezone_required", "value_error"}
+    assert all("ctx" not in e for e in errs if e["type"] == "timezone_required")
+    assert [e["ctx"] for e in errs if e["type"] == "value_error"] == [{"reason": "pattern"}]
     assert {tuple(e["loc"]) for a in neg for e in a["expect"]["errors"]} == {("query", "from"), ("query", "to")}
     assert all(not a.get("raw_time") and str(a["from"]).startswith("$now") for a in lists if "expect" not in a)
 
