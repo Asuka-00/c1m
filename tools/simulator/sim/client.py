@@ -63,6 +63,10 @@ class Resp:
         return [x for x in res if isinstance(x, dict)]
 
 
+# 最近一次响应（runner 在步骤失败时取它的 detail 记进报告）
+LAST: dict[str, Resp | None] = {"resp": None}
+
+
 @dataclass
 class Client:
     base: str
@@ -112,7 +116,9 @@ class Client:
             body = json.loads(raw) if raw else None
         except ValueError:
             body = raw.decode(errors="replace")[:500]
-        return Resp(status, body, ms)
+        resp = Resp(status, body, ms)
+        LAST["resp"] = resp
+        return resp
 
     def get(self, path: str, **params) -> Resp:
         return self.request("GET", path, params=params)

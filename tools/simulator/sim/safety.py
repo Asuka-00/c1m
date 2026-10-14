@@ -62,6 +62,54 @@ def redact(obj):
     return obj
 
 
+# 失败时记录 response detail 用：键名按段匹配（snake/kebab/camel 拆段），避免误伤 monkey 之类
+DETAIL_SECRET_SEGMENTS = {
+    "pw",
+    "pwd",
+    "password",
+    "passwd",
+    "secret",
+    "token",
+    "key",
+    "authorization",
+    "auth",
+    "cookie",
+    "credential",
+    "credentials",
+    "apikey",
+}
+DETAIL_SECRET_SUBSTR = re.compile(r"(password|passwd|secret|token|authorization|cookie|credential)", re.I)
+MASK = "***"
+
+
+def is_secret_key(k) -> bool:
+    s = str(k)
+    if DETAIL_SECRET_SUBSTR.search(s):
+        return True
+    segs = re.split(r"[^0-9a-zA-Z]+|(?<=[a-z0-9])(?=[A-Z])", s)
+    return any(seg.lower() in DETAIL_SECRET_SEGMENTS for seg in segs if seg)
+
+
+def redact_detail(obj):
+    """遮掉 response detail 里的凭据类键（pw/password/secret/token/key/authorization/cookie/credential）。
+
+    FastAPI/pydantic 的错误项里，loc 末段是凭据字段时，input（原值回显）也一并遮掉。
+    """
+    if isinstance(obj, list):
+        return [redact_detail(x) for x in obj]
+    if not isinstance(obj, dict):
+        return obj
+    loc = obj.get("loc")
+    loc_secret = isinstance(loc, (list, tuple)) and bool(loc) and is_secret_key(loc[-1])
+    out = {}
+    for k, v in obj.items():
+        if is_secret_key(k) or (loc_secret and k == "input"):
+            out[k] = MASK
+        else:
+            out[k] = redact_detail(v)
+    return out
+
+
 def env(name: str, required: bool = False) -> str | None:
     v = os.environ.get(name) or None
     if required and not v:

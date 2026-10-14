@@ -8,11 +8,12 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
+from sim import client as client_mod
 from sim.adapters import B11_STEPS, MODES, STEP_ADAPTERS, Adapter, Call, default_adapters, fill
 from sim.client import Client, Resp
 from sim.ids import SeqCounter, event_id
 from sim.p3 import P3_EXEC_STEPS, P3Exec, Unimplemented, check_p3_expect
-from sim.safety import redact
+from sim.safety import redact, redact_detail
 from sim.scenario import Scenario, Step
 
 PASSED, FAILED, SKIPPED, ERROR = "passed", "failed", "skipped", "error"
@@ -312,6 +313,7 @@ class Runner:
                 rep.setdefault("pending", []).append(st.index)
                 continue
             t0 = time.monotonic()
+            client_mod.LAST["resp"] = None
             try:
                 self._step(sc, st, entry, seq, sent, saved)
                 entry.setdefault("ok", True)  # 步骤自己记了 ok=None（如没有服务账号）时保留
@@ -326,6 +328,10 @@ class Runner:
                 rep.update(status=SKIPPED, reason=f"第 {st.index} 步前置条件不满足：{e}")
                 break
             except StepFailed as e:
+                last = client_mod.LAST["resp"]
+                if "response_detail" not in entry and last is not None and isinstance(last.body, dict):
+                    # 失败时记录完整 response detail（loc/type/msg/ctx…），凭据类键遮掉
+                    entry["response_detail"] = redact_detail(last.body.get("detail"))
                 if st.args.get("xfail") and self.xfail:  # 预期失败：后端下个提交前不算失败
                     entry.update(ok=None, xfail=True, message=f"xfail（{st.args['xfail']}）：{e}")
                     rep.setdefault("xfail", []).append(st.index)

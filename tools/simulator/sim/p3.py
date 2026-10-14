@@ -360,6 +360,10 @@ class P3Exec:
             d = view.body.get("data", view.body) if isinstance(view.body, dict) else None
             self.saved[save_as] = d if isinstance(d, dict) else {}
         if errs:
+            from sim.safety import redact_detail
+
+            # 失败时把完整 detail（loc/type/msg/ctx…）记进报告，凭据类键遮掉
+            entry["response_detail"] = redact_detail(detail(r))
             raise StepFailed("；".join(errs))
         return r
 
