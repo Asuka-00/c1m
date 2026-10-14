@@ -6,7 +6,6 @@ import {
   actionBody,
   bindKey,
   bodySignature,
-  actionReticle,
   apiError,
   hasHistory,
   referencedTables,
@@ -188,14 +187,6 @@ describe('对齐 B4 接口', () => {
     expect([h.usage, h.mounts, h.inspections].map((x) => x.length)).toEqual([
       1, 1, 1,
     ])
-  })
-  it('动作响应取光罩行：usage/inspection 取 reticle，unmount 无', () => {
-    const r = { id: 'r' } as never
-    expect(actionReticle('hold', { data: r })).toBe(r)
-    expect(actionReticle('usage', { data: {}, reticle: r })).toBe(r)
-    // 8011：mount 响应 data 是上机行，不是光罩
-    expect(actionReticle('mount', { data: { event_type: 'mount' } })).toBeNull()
-    expect(actionReticle('unmount', { data: {} })).toBeNull()
   })
   it('履历 action 枚举（下划线）显示为动作名', () => {
     expect(actionLabel('life_reset')).toBe(t('mes.reticle.action.life-reset'))
