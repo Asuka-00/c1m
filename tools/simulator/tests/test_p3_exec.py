@@ -507,3 +507,108 @@ def test_needs_marks_dependent_step_unimplemented_and_events_unwrap():
     ex.path = lambda *a, **k: "/mes/audit_log"
     rows = ex._events("reticle", "x")
     assert seen["page_size"] == 100 and rows[0]["payload"] == {"source": "manual"}
+
+
+# ---------------------------------------------------------------- D79 补充七
+def test_template_call_idem_only_on_writes():
+    from sim.p3 import template_call
+
+    def path(adapter, **kw):
+        return f"{adapter}:{kw.get('id', '')}"
+
+    def idem(a):
+        return None if a.get("no_idem") else f"run:{a.get('idem')}"
+
+    def ident(v):
+        return v
+
+    for act in ("create", "update", "new_version", "approve"):
+        c = template_call({"action": act, "template": "t1", "idem": "k"}, ident, path, idem)
+        assert c.idem == "run:k", act
+        assert template_call({"action": act, "template": "t1", "no_idem": True}, ident, path, idem).idem is None
+    assert template_call({"action": "update", "template": "t1", "idem": "k"}, ident, path, idem).method == "PATCH"
+    for act in ("preview", "validate"):
+        c = template_call({"action": act, "idem": "k"}, ident, path, idem)
+        assert c.idem is None and c.method == "POST", act
+
+
+def test_scenario_template_key_rules():
+    from sim.scenario import ScenarioError, parse
+
+    def one(step):
+        return parse({"name": "t", "run_id": "r", "steps": [step]})
+
+    with pytest.raises(ScenarioError, match="Idempotency-Key"):
+        one({"marking_template": {"action": "approve", "template": "$t.id"}})
+    with pytest.raises(ScenarioError, match="只读"):
+        one({"marking_template": {"action": "preview", "idem": "x"}})
+    with pytest.raises(ScenarioError, match="action"):
+        one({"marking_template": {"action": "delete", "idem": "x"}})
+    with pytest.raises(ScenarioError, match="template"):
+        one({"marking_template": {"action": "update", "idem": "x"}})
+    one({"marking_template": {"action": "validate"}})
+
+
+def test_check_results_items_have_check_status_ctx():
+    from sim.client import Resp
+    from sim.p3 import check_p3_expect
+
+    body = {
+        "detail": {
+            "code": "check_blocked",
+            "ctx": {"check": "marking_inspection", "reason": "not_marked", "marking_id": "m1"},
+            "results": [
+                {
+                    "check": "marking_inspection",
+                    "status": "blocked",
+                    "ctx": {"reason": "not_marked", "marking_id": "m1", "trace_code": None},
+                },
+                {"check": "qtime", "status": "pass", "ctx": {}},
+            ],
+        }
+    }
+    r = Resp(409, body)
+    want = [{"check": "marking_inspection", "status": "$nonempty", "ctx": {"marking_id": "m1", "trace_code": None}}]
+    assert check_p3_expect(r, {"results": want}) == []
+    assert check_p3_expect(r, {"results": [{"check": "marking_inspection", "ctx": {"trace_code": "X"}}]})
+    assert check_p3_expect(r, {"results": [{"check": "marking_inspection", "absent_ctx": ["trace_code"]}]})
+    bad = Resp(409, {"detail": {"code": "check_blocked", "results": [{"check": "marking_inspection", "ctx": {}}]}})
+    assert any("缺" in e for e in check_p3_expect(bad, {"results": []}))
+    assert check_p3_expect(Resp(409, {"detail": {"code": "check_blocked"}}), {"results": []})
+
+
+def test_marking_scenario_d79_supp7():
+    sc = load("scenarios/p3-draft/marking-report.yaml")
+    assert sc.draft  # B1/B2 未合入
+    st = sc.steps
+    tpl = [s.args for s in st if s.kind == "marking_template"]
+    writes = [a for a in tpl if a["action"] in ("create", "update", "new_version", "approve")]
+    assert all(a.get("idem") or a.get("no_idem") for a in writes)
+    assert {a["action"] for a in tpl if a.get("no_idem")} == {"create", "update", "new_version", "approve"}
+    assert all(not a.get("idem") and not a.get("no_idem") for a in tpl if a["action"] in ("preview", "validate"))
+    appr = [
+        (a.get("as"), a["expect"]["status"], a["expect"].get("code"))
+        for a in tpl
+        if a["action"] == "approve" and a.get("idem")
+    ]
+    assert appr == [
+        (None, 422, "self_approval"),
+        ("approver", 200, None),
+        (None, 422, "self_approval"),
+        ("approver", 409, "invalid_transition"),
+    ]
+    exp = [s.args.get("expect") or {} for s in st]
+    assert any(e.get("code") == "idempotency_key_reused" and e.get("detail_object") for e in exp if e)
+    cl = [e for e in exp if any((x.get("loc") == ["body", "comment"]) for x in e.get("errors") or [])]
+    assert len(cl) == 2 and all(e["errors"][0]["ctx"] == {"reason": "max_length", "max_length": 300} for e in cl)
+    blocked = [e for e in exp if e.get("code") == "check_blocked"]
+    assert blocked and all(e.get("results") for e in blocked)
+    assert any(r["ctx"].get("trace_code", "x") is None for e in blocked for r in e["results"])
+    # 作废后重打：缺原因 422 在 409 之前
+    mk2 = [
+        (s.args.get("expect") or {}).get("code")
+        for s in st
+        if s.kind == "marking_print" and s.args.get("lot") == "MK0002"
+    ]
+    i = mk2.index("invalid_transition")
+    assert mk2[i - 3 : i - 1] == ["missing", "missing"]

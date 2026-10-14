@@ -83,6 +83,11 @@ RETICLE_IDEM_STEPS = {
 }
 
 # P3-B2 打标草稿步骤：都要 lot（批次键；EAP 上报另需 eq）
+# D79 补充七：模板写接口必须带 Idempotency-Key；只读的预览 / 校验 POST 不带
+TEMPLATE_WRITE = frozenset({"create", "update", "new_version", "approve"})
+TEMPLATE_READONLY = frozenset({"preview", "validate"})
+TEMPLATE_ACTIONS = TEMPLATE_WRITE | TEMPLATE_READONLY
+
 MARKING_LOT_STEPS = {
     "marking_report",
     "marking_create",
@@ -148,6 +153,18 @@ def parse(data: dict, path: str | None = None) -> Scenario:
             raise ScenarioError(f"第 {i} 步 reticle_report 需要 eq、reticle，kind 只能是 mount/unmount/usage")
         if k in RETICLE_IDEM_STEPS and not args.get("idem") and not args.get("no_idem"):
             raise ScenarioError(f"第 {i} 步 {k} 缺少 idem（D80：Idempotency-Key 必填；测缺失请写 no_idem: true）")
+        if k == "marking_template":
+            act = args.get("action")
+            if act not in TEMPLATE_ACTIONS:
+                raise ScenarioError(f"第 {i} 步 marking_template 的 action 只能是 {sorted(TEMPLATE_ACTIONS)}")
+            if act in TEMPLATE_WRITE and not args.get("idem") and not args.get("no_idem"):
+                raise ScenarioError(
+                    f"第 {i} 步 marking_template {act} 缺少 idem（D79 补充七：模板写接口必须带 Idempotency-Key）"
+                )
+            if act in TEMPLATE_READONLY and (args.get("idem") or args.get("no_idem")):
+                raise ScenarioError(f"第 {i} 步 marking_template {act} 是只读 POST，不带 Idempotency-Key（D79 补充七）")
+            if act not in ("create", "preview", "validate") and not args.get("template"):
+                raise ScenarioError(f"第 {i} 步 marking_template {act} 需要 template（$<save_as>.id）")
         if k in MARKING_LOT_STEPS and not args.get("lot"):
             raise ScenarioError(f"第 {i} 步 {k} 缺少 lot")
         if k == "expect_query_422" and not args.get("path"):

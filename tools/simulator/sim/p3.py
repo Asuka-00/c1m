@@ -69,6 +69,7 @@ MARKING_STEPS = {
     "marking_report",
     "marking_replay",
     "marking_template_ready",
+    "marking_template",
     "lot_scrap",
     "expect_marking",
     "expect_marking_prints",
@@ -85,6 +86,53 @@ RETICLE_STEPS = RETICLE_WRITE | {
     "expect_reticle_events",
 }
 P3_EXEC_STEPS = MARKING_STEPS | RETICLE_STEPS
+
+
+TEMPLATE_ROUTE = {
+    "create": ("POST", "marking_template"),
+    "update": ("PATCH", "marking_template_item"),
+    "new_version": ("POST", "marking_template_version"),
+    "approve": ("POST", "marking_template_approve"),
+    "preview": ("POST", "marking_template_preview"),
+    "validate": ("POST", "marking_template_validate"),
+}
+
+
+def template_call(a: dict, resolve: Any, path: Any, idem: Any) -> Call:
+    """组模板请求：写接口带 ``{run_id}:{idem}``（no_idem 测缺失），只读 POST 一律不带 key。"""
+    from sim.scenario import TEMPLATE_WRITE
+
+    method, adapter = TEMPLATE_ROUTE[a["action"]]
+    tid = resolve(a["template"]) if a.get("template") else ""
+    body = resolve(a.get("body") or {})
+    key = idem(a) if a["action"] in TEMPLATE_WRITE else None
+    return Call(method, path(adapter, id=str(tid)), body, key)
+
+
+def check_results(resp: Resp, want: list[dict]) -> list[str]:
+    """D79 补充七：check_blocked 的 results[] 每项含 check、status、ctx；按 check 找项，字段按子集匹配。"""
+    d = detail(resp)
+    rows = d.get("results") if isinstance(d, dict) else None
+    if not isinstance(rows, list):
+        return [f"detail.results 不是列表：{rows!r}"[:200]]
+    errs = []
+    for r in rows:
+        miss = [k for k in ("check", "status", "ctx") if not isinstance(r, dict) or k not in r]
+        if miss:
+            errs.append(f"results 项缺 {miss}：{r!r}"[:200])
+    for w in want:
+        hit = [r for r in rows if isinstance(r, dict) and r.get("check") == w.get("check")]
+        if not hit:
+            errs.append(f"results 里没有 check={w.get('check')!r}")
+            continue
+        ctx = hit[0].get("ctx") if isinstance(hit[0].get("ctx"), dict) else {}
+        for k in w.get("absent_ctx") or []:
+            if k in ctx:
+                errs.append(f"results[{w['check']}].ctx 不应带 {k}")
+        body = {k: v for k, v in w.items() if k != "absent_ctx"}
+        if not match(hit[0], body):
+            errs.append(f"results[{w['check']}] {hit[0]!r} != 期望 {body!r}"[:300])
+    return errs
 
 
 def now_utc() -> datetime:
@@ -176,6 +224,8 @@ def check_p3_expect(resp: Resp, expect: dict | None) -> list[str]:
         elif len(got) != len(want) or not all(match(g, w) for g, w in zip(got, want, strict=True)):
             slim = [{k: g.get(k) for k in ("type", "loc", "ctx")} for g in got]
             errs.append(f"errors {slim!r} != 期望 {want!r}"[:400])
+    if "results" in expect:
+        errs += check_results(resp, expect["results"])
     for k in expect.get("absent") or []:
         b = resp.body if isinstance(resp.body, dict) else {}
         if has_key(b, k) or has_key(b.get("data"), k):
@@ -698,6 +748,12 @@ class P3Exec:
         self.path("marking_template")
         self.path("marking_template_approve", id="x")
         entry.update(ok=None, message="B1 模板接口已出现，绑定方式待按 openapi 补执行（不算失败）")
+
+    def _marking_template(self, a: dict, entry: dict) -> None:
+        """模板接口（P3-B1）。D79 补充七：create / update / new_version / approve 带 Idempotency-Key，
+        preview / validate 是只读 POST、不带 key。``as:`` 换账号（测 self_approval 等）。"""
+        call = template_call(a, self.resolve, self.path, self._idem)
+        self._as(a, entry, call, "marking_template")
 
     def _lot_scrap(self, a: dict, entry: dict) -> None:
         """批次报废（POST /mes/exec/lots/{id}/adjust kind=scrap）。

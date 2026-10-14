@@ -139,6 +139,11 @@ def default_adapters() -> dict[str, Adapter]:
         # P3-B1 模板（D79-1/2）：建模板 + 审批；产品绑定已批准模板 = 要求打标（D79 补充 5）
         "marking_template": Adapter("打标模板", ["/mes/marking-template"], card="P3-B1"),
         "marking_template_approve": Adapter("打标模板审批", ["/mes/marking-template/{id}/approve"], card="P3-B1"),
+        # D79 补充七：模板写接口（创建 / 编辑 / 新版本 / 审批）必须带 Idempotency-Key；预览、校验是只读 POST，不带
+        "marking_template_item": Adapter("打标模板编辑", ["/mes/marking-template/{id}"], card="P3-B1"),
+        "marking_template_version": Adapter("打标模板新版本", ["/mes/marking-template/{id}/versions"], card="P3-B1"),
+        "marking_template_preview": Adapter("打标模板预览（只读）", ["/mes/marking-template/preview"], card="P3-B1"),
+        "marking_template_validate": Adapter("打标模板校验（只读）", ["/mes/marking-template/validate"], card="P3-B1"),
         # 批次整批报废：P1 数量调整 kind=scrap 报废到 0 → lot_status=scrapped（后端确认 adjust.py:128）
         "lot_adjust": Adapter("批次数量调整（报废）", ["/mes/exec/lots/{lot_id}/adjust"], card="P1"),
     }
@@ -209,6 +214,7 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "lot_scrap": ["lot_adjust"],
     "marking_config": ["marking_config"],
     "marking_template_ready": ["marking_template", "marking_template_approve"],
+    "marking_template": ["marking_template"],
     "expect_marking": ["marking_get"],
     "expect_marking_prints": ["marking_prints"],
     "expect_marking_inspections": ["marking_inspections"],

@@ -195,6 +195,7 @@ P3_DRAFT_STEPS = {
     "lot_scrap",
     "marking_config",
     "marking_template_ready",
+    "marking_template",
     "expect_marking",
     "expect_marking_prints",
     "expect_marking_inspections",

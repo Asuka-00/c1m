@@ -254,12 +254,12 @@ def test_marking_draft_follows_d78():
     exp = [s.args.get("expect") or {} for s in sc.steps]
     codes = [e.get("code") for e in exp]
     assert (
-        codes.count("invalid_transition") == 7
+        codes.count("invalid_transition") == 8  # +1 D79 补充七：他人再批已批准模板
     )  # 作废后上报改为 no_active_marking（D79 补充 2） and "trace_code_mismatch" in codes
-    assert codes.count("check_blocked") == 7 and "idempotency_key_reused" in codes
+    assert codes.count("check_blocked") == 8 and "idempotency_key_reused" in codes
     assert (
-        sum(1 for e in exp if e.get("loc") == ["header", "Idempotency-Key"]) == 4
-    )  # 打印、检验、作废，D81 不存在主记录作废
+        sum(1 for e in exp if e.get("loc") == ["header", "Idempotency-Key"]) == 8
+    )  # 打印、检验、作废，D81 不存在主记录作废；+4 D79 补充七 模板四个写接口缺 key
     # 补充三 4：逐条列出，值取 config；手工和 EAP 两个入口各有单条和双条
     errs = [e["errors"] for e in exp if "errors" in e and e["errors"][0]["loc"][-1] == "trace_code"]
     assert len(errs) == 15 and sum(1 for x in errs if len(x) == 2) == 2
@@ -287,7 +287,14 @@ def test_marking_draft_follows_d78():
     assert all(q == list(range(1, len(q) + 1)) for q in seqs) and [1, 2] in seqs
     # 出站：pending / fail / 重打后 pending → 409，pass → 200
     outs = [s.args["expect"]["status"] for s in sc.steps if s.kind == "track_out" and s.args["lot"] == "MK0001"]
-    assert outs == [409, 409, 409, 409, 200]  # pending / fail / 重打后 pending / 复检 fail / pass
+    assert outs == [
+        409,
+        409,
+        409,
+        409,
+        409,
+        200,
+    ]  # 未首打 not_marked（D79 补充七）/ pending / fail / 重打后 pending / 复检 fail / pass
     lis = [
         s.args["fields"]["latest_inspection_status"]
         for s in sc.steps
@@ -391,8 +398,10 @@ def test_marking_draft_follows_d79_supplement():
         if s.kind == "track_out" and s.args["expect"]["status"] == 409:
             ctx = s.args["expect"]["ctx"]
             assert ctx["check"] == "marking_inspection" and s.args["expect"]["overridable"] is False
-            if ctx["reason"] == "not_marked":
-                assert "marking_id" not in ctx and s.args["expect"]["absent_ctx"] == ["marking_id"]
+            if ctx["reason"] == "not_marked" and "marking_id" not in ctx:  # 无主记录
+                assert s.args["expect"]["absent_ctx"] == ["marking_id"]
+            elif ctx["reason"] == "not_marked":  # D82：主记录已建未首打，ctx 带 marking_id
+                assert "absent_ctx" not in s.args["expect"]
             else:
                 assert "marking_id" in ctx
     mk2 = [o for o in outs if o[0] == "MK0002"]
@@ -540,7 +549,7 @@ def test_marking_draft_d79_s4_s5():
     ctxs = [e["ctx"] for s in sc.steps for e in (s.args.get("expect") or {}).get("errors", []) if "ctx" in e]
     for c in ctxs:
         if c["reason"] == "max_length":
-            assert c["max_length"] in ("$cfg.trace_code_max_length", 128)
+            assert c["max_length"] in ("$cfg.trace_code_max_length", 128, 300)  # 300：comment（D79 补充七）
         if c["reason"] == "pattern":
             assert c["pattern"] == "$cfg.trace_code_pattern"
 
