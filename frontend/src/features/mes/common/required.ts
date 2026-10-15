@@ -213,7 +213,26 @@ function fieldCodeMessage(name: string, rest: string): string | null {
  *
  * @returns 本地化消息；不是已知错误码时为 null
  */
+/** 后端 spec.errors.integrity() 唯一键冲突原文（409，字符串 detail，无 code）。 */
+export const DUPLICATE_KEY_DETAIL = 'A record with the same key already exists'
+/**
+ * 通用重复键 409：现为字符串 detail；兼容将来统一成对象 `{code, message}`
+ * （message 为同一原文，或 code 为 duplicate / duplicate_key 且不带 field——带 field 的是 BOM 替代料专用格式）。
+ */
+export function isDuplicateKey(err: unknown): boolean {
+  if (!(err instanceof AxiosError) || err.response?.status !== 409) return false
+  const d = (err.response.data as { detail?: unknown })?.detail
+  if (typeof d === 'string') return d === DUPLICATE_KEY_DETAIL
+  if (!d || typeof d !== 'object' || Array.isArray(d)) return false
+  const o = d as Record<string, unknown>
+  if (o.message === DUPLICATE_KEY_DETAIL) return true
+  return (
+    (o.code === 'duplicate' || o.code === 'duplicate_key') && !('field' in o)
+  )
+}
+
 export function mesCodeMessage(err: unknown): string | null {
+  if (isDuplicateKey(err)) return t('mes.err.duplicateKey')
   if (!(err instanceof AxiosError) || !err.response) return null
   const d = (err.response.data as { detail?: unknown })?.detail
   if (!d || typeof d !== 'object' || Array.isArray(d)) return null

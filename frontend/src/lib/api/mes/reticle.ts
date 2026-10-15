@@ -1109,7 +1109,8 @@ function mockSave(id: string | null, body: ReticleMasterInput): Reticle {
         { loc: ['body', 'code'], type: 'missing', msg: 'code: field required' },
       ])
     if (store.r.some((x) => x.code === body.code))
-      throw apiError(409, { code: 'duplicate', message: 'code already exists' })
+      // 通用 CRUD 唯一键冲突走 spec.errors.integrity()：409 字符串 detail
+      throw apiError(409, 'A record with the same key already exists')
     const r = base({
       id: `r-${store.r.length + 1}-${Date.now()}`,
       code: body.code,

@@ -192,22 +192,75 @@ describe('D89 补充一', () => {
     setMarkingMockUser('qa1')
     await api.approve(v2.id, k())
     expect((await api.template(d.id)).status).toBe('retired')
-    for (const id of [d.id, v2.id])
-      expect(
-        await fail(api.updateTemplate(id, { lines: ['{lot_id}'] }, k()))
-      ).toMatchObject({ status: 409, detail: { code: 'template_readonly' } })
+    // D90-4：只编辑最新版本；最新为 approved 时 409（不再测编辑 retired）
+    expect(
+      await fail(api.updateTemplate(v2.id, { lines: ['{lot_id}'] }, k()))
+    ).toMatchObject({ status: 409, detail: { code: 'template_readonly' } })
+    // D90-3：详情 versions 倒序，未批准为 null
+    const det = await api.template(v2.id)
+    expect(det.versions?.map((x) => [x.version, x.status])).toEqual([
+      [2, 'approved'],
+      [1, 'retired'],
+    ])
+    const v3 = await api.newVersion(v2.id, k())
+    const det3 = await api.template(v3.id)
+    expect(det3.versions?.[0]).toEqual({
+      version: 3,
+      status: 'draft',
+      created_by: 'qa1',
+      created_at: expect.any(String),
+      approved_by: null,
+      approved_at: null,
+    })
+    expect(det3.versions?.[1].approved_by).toBe('qa1')
   })
 })
 
-describe('D89 补充二 重复键', () => {
+const DUP = 'A record with the same key already exists'
+describe('D89 补充二 重复键（同 spec.errors.integrity：409 字符串 detail）', () => {
+  it('code 大小写不敏感', async () => {
+    await api.createTemplate(IN, k())
+    expect(
+      await fail(
+        api.createTemplate({ ...IN, code: 'b1', product_id: 'p2' }, k())
+      )
+    ).toEqual({ status: 409, detail: DUP })
+  })
+  it('D90-1：product_id/customer_id 不可改，422 immutable；同值视为没改；404 先于它', async () => {
+    const a = await api.createTemplate(IN, k())
+    const r = await fail(
+      api.updateTemplate(a.id, { product_id: 'p2', customer_id: 'c2' }, k())
+    )
+    expect(r?.status).toBe(422)
+    expect(r?.detail).toEqual(
+      ['product_id', 'customer_id'].map((f) =>
+        expect.objectContaining({
+          loc: ['body', f],
+          type: 'value_error',
+          ctx: { reason: 'immutable' },
+        })
+      )
+    )
+    expect(
+      await api.updateTemplate(
+        a.id,
+        { product_id: a.product_id, customer_id: a.customer_id },
+        k()
+      )
+    ).toMatchObject({ product_id: a.product_id })
+    expect(
+      await fail(api.updateTemplate('nope', { product_id: 'p2' }, k()))
+    ).toMatchObject({ status: 404 })
+  })
+
   it('code 租户内唯一、同产品+客户只一个模板，都 409 duplicate；别的租户不冲突', async () => {
     await api.createTemplate(IN, k())
     expect(
       await fail(api.createTemplate({ ...IN, product_id: 'p2' }, k()))
-    ).toMatchObject({ status: 409, detail: { code: 'duplicate' } })
+    ).toMatchObject({ status: 409, detail: DUP })
     expect(
       await fail(api.createTemplate({ ...IN, code: 'B1-other' }, k()))
-    ).toMatchObject({ status: 409, detail: { code: 'duplicate' } })
+    ).toMatchObject({ status: 409, detail: DUP })
     setMarkingMockTenant('tenant-b')
     expect(await api.createTemplate(IN, k())).toBeTruthy()
   })

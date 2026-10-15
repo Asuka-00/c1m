@@ -489,6 +489,7 @@
       "defaultsFrom": "Leave blank to use {{field}}",
       "parentTypeMismatch": "must match the parent equipment's type (leave blank to inherit)",
       "duplicateDefaultRoute": "the product already has a default route",
+      "duplicateKey": "A record with the same key already exists",
       "productNeedsDefaultRoute": "an Active route must be bound as default before activation",
       "code": {
         "on_hold": "The lot is on hold; release it first",

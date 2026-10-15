@@ -47,6 +47,18 @@ export interface MarkingTemplate {
   created_at: string | null
   approved_by: string | null
   approved_at: string | null
+  /** D90-3：仅详情接口带 */
+  versions?: TemplateVersion[]
+}
+
+/** D90-3：模板详情 versions[]，version 倒序；未批准版本 approved_by/approved_at 为 null。 */
+export interface TemplateVersion {
+  version: number
+  status: TemplateStatus
+  created_by: string | null
+  created_at: string | null
+  approved_by: string | null
+  approved_at: string | null
 }
 
 /** 新建 / 修改模板的可写字段。 */
@@ -418,10 +430,11 @@ export interface TraceCodeResult {
  * B1 开工清单未定项（设备集成 07:44 提出，等架构师答复）。mock 暂按下列取值，测试不断言这些部分。
  * 后端定稿后只改这里。
  */
-/** D89 补充二：code 租户内唯一；同 product_id+customer_id 租户内只一个模板（版本挂其下）。
- * 两种重复都走通用重复键 409 {code:'duplicate'}（同 reticle / bom-errors）。 */
-const dupErr = (what: string) =>
-  apiError(409, { code: 'duplicate', message: `${what} already exists` })
+/** D89 补充二：code 租户内唯一（大小写不敏感，同 be/p3 test_marking_template）；同 product_id+customer_id
+ * 租户内只一个模板（版本挂其下）。两种重复都同 spec.errors.integrity()：409 字符串 detail、无 code。 */
+const dupErr = () => apiError(409, 'A record with the same key already exists')
+const sameCode = (a: string, b: unknown) =>
+  typeof b === 'string' && a.toLowerCase() === b.toLowerCase()
 
 /** 请求体白名单。 */
 export const MARKING_BODY = {
@@ -1136,9 +1149,9 @@ function mockCreate(input: TemplateInput): MarkingTemplate {
     (y) =>
       y.product_id === input.product_id && y.customer_id === input.customer_id
   )
-  if (tpls().some((y) => y.code === input.code)) throw dupErr('code')
+  if (tpls().some((y) => sameCode(y.code, input.code))) throw dupErr()
   // 同产品+客户已有模板：新版本走 /versions
-  if (same.length) throw dupErr('product_id+customer_id')
+  if (same.length) throw dupErr()
   const tpl = {
     ...pickBody(input, MARKING_BODY.template),
     // QA F4：不静默丢弃空行，原样保存（后端口径待对齐）
@@ -1186,19 +1199,50 @@ function mockNewVersion(id: string): MarkingTemplate {
 const sameGroup = (a: MarkingTemplate, b: MarkingTemplate) =>
   a.product_id === b.product_id && a.customer_id === b.customer_id
 
+/** D90-3：详情带同产品+客户的全部版本（倒序）。 */
+function mockDetail(id: string): MarkingTemplate {
+  const tpl = findTpl(id)
+  const versions = tpls()
+    .filter((y) => sameGroup(y, tpl))
+    .sort((a, b) => b.version - a.version)
+    .map((y) => ({
+      version: y.version,
+      status: y.status,
+      created_by: y.created_by,
+      created_at: y.created_at,
+      approved_by: y.status === 'draft' ? null : y.approved_by,
+      approved_at: y.status === 'draft' ? null : y.approved_at,
+    }))
+  return { ...structuredClone(tpl), versions }
+}
+
 function mockUpdate(id: string, input: Partial<TemplateInput>) {
   // D81：请求体 422 → 404 → 409 template_readonly
   validateTemplate(input, false)
   const tpl = findTpl(id)
+  // D90-1：product_id / customer_id 建好后不可改；相同值视为没改。需查到记录，排在 404 后、409 前
+  const changed = (['product_id', 'customer_id'] as const).filter(
+    (f) => input[f] !== undefined && input[f] !== tpl[f]
+  )
+  if (changed.length)
+    throw apiError(
+      422,
+      changed.map((f) => ({
+        loc: ['body', f],
+        type: 'value_error',
+        code: 'value_error',
+        msg: `${f}: cannot be changed`,
+        ctx: { reason: 'immutable' },
+      }))
+    )
+  // D90-4：编辑只针对最新版本；最新为 approved 时 409 template_readonly
   if (!isEditable(tpl))
     throw err409('template_readonly', 'approved template is read-only')
   if (
     input.code !== undefined &&
-    tpls().some(
-      (y) => y.code === input.code && y.id !== tpl.id && !sameGroup(y, tpl)
-    )
+    tpls().some((y) => sameCode(y.code, input.code) && !sameGroup(y, tpl))
   )
-    throw dupErr('code')
+    throw dupErr()
   Object.assign(tpl, pickBody(input, MARKING_BODY.template))
   return tpl
 }
@@ -1540,7 +1584,7 @@ export const mockMarkingApi: MarkingApi = {
   template: (id) =>
     later(() => {
       needTpl(TPL_PERM.read)
-      return findTpl(id)
+      return mockDetail(id)
     }),
   // D81/D82：模板写接口 Idempotency-Key 必填；顺序 缺 key 422 → 请求体 422 → 重放 → 404 → 422 → 409
   createTemplate: (input, key) =>

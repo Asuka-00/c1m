@@ -489,6 +489,7 @@
       "defaultsFrom": "空欄の場合は{{field}}を使用",
       "parentTypeMismatch": "親設備の設備タイプと一致する必要があります（空欄で継承）",
       "duplicateDefaultRoute": "この製品には既定ルートがあります",
+      "duplicateKey": "同じキーのレコードが既に存在します",
       "productNeedsDefaultRoute": "有効化の前に有効なルートを既定として割り当てる必要があります",
       "code": {
         "on_hold": "ロットはホールド中です。先にホールドを解除してください",
