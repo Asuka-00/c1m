@@ -10,7 +10,7 @@ import {
 } from './marking'
 
 // B1 打标模板验收要点（p3-tasks「B1→B2→B3 开工清单」）+ TODO-409 对象格式
-// 未定项（B1_PENDING：请求体字段名、unknown_placeholder loc、版本/状态字段名、草稿编辑、重打 missing 条数、check_blocked result）不断言
+// D89 补充一、补充二已定
 const fail = (p: Promise<unknown>) =>
   p.then(
     () => null,
@@ -104,13 +104,7 @@ describe('B1 409 一律对象格式 {code, message}', () => {
       status: 409,
       detail: { code: 'template_readonly', message: expect.any(String) },
     })
-    await api.createTemplate(IN, k())
-    expect(await fail(api.createTemplate({ ...IN, code: 'B1b' }, k()))).toEqual(
-      {
-        status: 409,
-        detail: { code: 'draft_exists', message: expect.any(String) },
-      }
-    )
+    // 同产品+客户再新建：D89 补充二改为 duplicate（见下）；draft_exists 只在建新版本时
     setMarkingMockUser('eng1')
     await api.newVersion('t2', k())
     expect(await fail(api.newVersion('t2', k()))).toEqual({
@@ -127,9 +121,8 @@ describe('B1 409 一律对象格式 {code, message}', () => {
     const results = d.detail.results as Record<string, unknown>[]
     expect(Array.isArray(results)).toBe(true)
     expect(results[0]).toMatchObject({
-      check_type: expect.any(String),
-      // result 取值未定（TODO B1-6），只断言字段存在
-      result: expect.anything(),
+      // D79 补五/七（D89 补充一）
+      check_type: 'marking_inspection',
       ctx: expect.objectContaining({
         reason: expect.stringMatching(/^(not_marked|pending|fail)$/),
       }),
@@ -152,9 +145,70 @@ describe('B1 跨租户 404', () => {
     expect(await fail(api.approve(mine.id, k()))).toMatchObject({ status: 404 })
     expect(await fail(api.newVersion('t2', k()))).toMatchObject({ status: 404 })
     // 同产品+客户在 B 租户另建草稿不受 A 的草稿影响
-    // 版本号字段名未定（TODO B1-3），只断言建成功
     const theirs = await api.createTemplate(IN, k())
+    expect(theirs).toMatchObject({ version: 1, status: 'draft' })
     setMarkingMockTenant('tenant-a')
     expect((await api.templates()).map((x) => x.id)).not.toContain(theirs.id)
+  })
+})
+
+describe('D89 补充一', () => {
+  it('unknown_placeholder 每个一条，loc [body,lines,i]，i 从 0', async () => {
+    const r = await fail(
+      api.createTemplate(
+        { ...IN, lines: ['{product_code}', '{a} {b}', '{c}'] },
+        k()
+      )
+    )
+    expect(r?.status).toBe(422)
+    expect(r?.detail).toEqual(
+      [
+        [1, 'a'],
+        [1, 'b'],
+        [2, 'c'],
+      ].map(([i, p]) =>
+        expect.objectContaining({
+          loc: ['body', 'lines', i],
+          type: 'value_error',
+          ctx: { reason: 'unknown_placeholder', placeholder: p },
+        })
+      )
+    )
+  })
+  it('草稿可改；批准新版本后旧 approved 自动 retired；approved/retired 改 409 template_readonly', async () => {
+    const d = await api.createTemplate(IN, k())
+    const u = await api.updateTemplate(d.id, { lines: ['{lot_id}'] }, k())
+    expect(u.lines).toEqual(['{lot_id}'])
+    setMarkingMockUser('qa1')
+    const a1 = await api.approve(d.id, k())
+    expect(a1.status).toBe('approved')
+    setMarkingMockUser('eng1')
+    const v2 = await api.newVersion(d.id, k())
+    expect(v2).toMatchObject({ version: 2, status: 'draft' })
+    expect(await fail(api.newVersion(d.id, k()))).toMatchObject({
+      status: 409,
+      detail: { code: 'draft_exists' },
+    })
+    setMarkingMockUser('qa1')
+    await api.approve(v2.id, k())
+    expect((await api.template(d.id)).status).toBe('retired')
+    for (const id of [d.id, v2.id])
+      expect(
+        await fail(api.updateTemplate(id, { lines: ['{lot_id}'] }, k()))
+      ).toMatchObject({ status: 409, detail: { code: 'template_readonly' } })
+  })
+})
+
+describe('D89 补充二 重复键', () => {
+  it('code 租户内唯一、同产品+客户只一个模板，都 409 duplicate；别的租户不冲突', async () => {
+    await api.createTemplate(IN, k())
+    expect(
+      await fail(api.createTemplate({ ...IN, product_id: 'p2' }, k()))
+    ).toMatchObject({ status: 409, detail: { code: 'duplicate' } })
+    expect(
+      await fail(api.createTemplate({ ...IN, code: 'B1-other' }, k()))
+    ).toMatchObject({ status: 409, detail: { code: 'duplicate' } })
+    setMarkingMockTenant('tenant-b')
+    expect(await api.createTemplate(IN, k())).toBeTruthy()
   })
 })

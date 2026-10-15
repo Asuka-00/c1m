@@ -418,31 +418,14 @@ export interface TraceCodeResult {
  * B1 开工清单未定项（设备集成 07:44 提出，等架构师答复）。mock 暂按下列取值，测试不断言这些部分。
  * 后端定稿后只改这里。
  */
-export const B1_PENDING = {
-  /** TODO(B1-1)：模板请求体除 lines 外的字段名（见 MARKING_BODY.template） */
-  templateBodyFields: [
-    'code',
-    'product_id',
-    'customer_id',
-    'date_code_basis',
-    'uses_bin',
-  ],
-  /** TODO(B1-2)：unknown_placeholder 的 loc */
-  unknownPlaceholderLoc: ['body', 'lines'],
-  /** TODO(B1-3)：版本号 / 状态字段名（MarkingTemplate.version / status） */
-  versionField: 'version',
-  statusField: 'status',
-  /** TODO(B1-4)：已有草稿时编辑模板——暂按「草稿可改，只有非草稿 409 template_readonly」 */
-  editWhenDraftExists: 'edit_draft' as 'edit_draft' | 'template_readonly',
-  /** TODO(B1-5)：重打 reason_id、comment 都缺时报一条还是两条（后端建议两条）；暂按一条（先 reason_id） */
-  reprintMissingAsOne: true,
-  /** TODO(B1-6)：打标 check_blocked 每项 result 的取值 */
-  checkBlockedResult: 'block',
-} as const
+/** D89 补充二：code 租户内唯一；同 product_id+customer_id 租户内只一个模板（版本挂其下）。
+ * 两种重复都走通用重复键 409 {code:'duplicate'}（同 reticle / bom-errors）。 */
+const dupErr = (what: string) =>
+  apiError(409, { code: 'duplicate', message: `${what} already exists` })
 
 /** 请求体白名单。 */
 export const MARKING_BODY = {
-  // TODO(B1-1)：除 lines 外的字段名未定，见 B1_PENDING.templateBodyFields
+  // D79 / D89 补充一：lines 为字符串数组，带 product_id、customer_id
   template: [
     'code',
     'product_id',
@@ -823,7 +806,7 @@ export function mockTrackOutMarkingCheck(lotId: string) {
     results: [
       {
         check_type: INSPECT_BLOCK_CHECK,
-        result: B1_PENDING.checkBlockedResult, // TODO(B1-6)
+        result: 'block',
         overridable: false,
         message: `marking inspection ${reason}`,
         ctx,
@@ -1133,13 +1116,16 @@ function validateTemplate(input: Partial<TemplateInput>, create: boolean) {
     if (bad.length)
       throw apiError(
         422,
-        bad.map((name) => ({
-          loc: [...B1_PENDING.unknownPlaceholderLoc], // TODO(B1-2)
-          type: 'value_error',
-          code: 'value_error',
-          msg: `lines: unknown placeholder {${name}}`,
-          ctx: { reason: 'unknown_placeholder', placeholder: name },
-        }))
+        // D89-2 / 补充一：每个一条，loc ['body','lines',i]，i 从 0
+        input.lines.flatMap((l, i) =>
+          unknownPlaceholders([l]).map((name) => ({
+            loc: ['body', 'lines', i],
+            type: 'value_error',
+            code: 'value_error',
+            msg: `lines: unknown placeholder {${name}}`,
+            ctx: { reason: 'unknown_placeholder', placeholder: name },
+          }))
+        )
       )
   }
 }
@@ -1150,8 +1136,9 @@ function mockCreate(input: TemplateInput): MarkingTemplate {
     (y) =>
       y.product_id === input.product_id && y.customer_id === input.customer_id
   )
-  if (same.some((y) => y.status === 'draft'))
-    throw err409('draft_exists', 'a draft already exists')
+  if (tpls().some((y) => y.code === input.code)) throw dupErr('code')
+  // 同产品+客户已有模板：新版本走 /versions
+  if (same.length) throw dupErr('product_id+customer_id')
   const tpl = {
     ...pickBody(input, MARKING_BODY.template),
     // QA F4：不静默丢弃空行，原样保存（后端口径待对齐）
@@ -1196,12 +1183,22 @@ function mockNewVersion(id: string): MarkingTemplate {
   return tpl
 }
 
+const sameGroup = (a: MarkingTemplate, b: MarkingTemplate) =>
+  a.product_id === b.product_id && a.customer_id === b.customer_id
+
 function mockUpdate(id: string, input: Partial<TemplateInput>) {
   // D81：请求体 422 → 404 → 409 template_readonly
   validateTemplate(input, false)
   const tpl = findTpl(id)
   if (!isEditable(tpl))
     throw err409('template_readonly', 'approved template is read-only')
+  if (
+    input.code !== undefined &&
+    tpls().some(
+      (y) => y.code === input.code && y.id !== tpl.id && !sameGroup(y, tpl)
+    )
+  )
+    throw dupErr('code')
   Object.assign(tpl, pickBody(input, MARKING_BODY.template))
   return tpl
 }
@@ -1353,9 +1350,7 @@ function mockPrint(id: string, input: PrintInput): MarkingRecord {
     const miss = reprintErrors(input).filter(
       (m): m is 'reason_id' | 'comment' => m !== 'comment_too_long'
     )
-    // TODO(B1-5)：都缺时一条还是两条未定（B1_PENDING.reprintMissingAsOne）
-    if (miss.length && B1_PENDING.reprintMissingAsOne)
-      throw err422(miss[0], 'missing', `${miss[0]}: field required`)
+    // D89-5：都缺时各报一条 missing
     if (miss.length)
       throw apiError(
         422,

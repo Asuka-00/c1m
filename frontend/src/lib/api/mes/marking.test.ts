@@ -308,7 +308,11 @@ describe('打标作业 mock（D78/D79）', () => {
     await api.inspect(r.id, { result: 'fail', read_code: r.trace_code }, 'ki')
     expect(await detail(api.print(r.id, {}, 'kr0'))).toMatchObject({
       status: 422,
-      detail: [{ type: 'missing', loc: ['body', 'reason_id'] }],
+      // D89-5：都缺各报一条
+      detail: [
+        { type: 'missing', loc: ['body', 'reason_id'] },
+        { type: 'missing', loc: ['body', 'comment'] },
+      ],
     })
     const re = { reason_id: 'R1', comment: '模糊' }
     const r2 = await api.print(r.id, re, 'kr1')
@@ -332,7 +336,10 @@ describe('打标作业 mock（D78/D79）', () => {
     // D81：重打缺原因 422 先于作废 409
     expect(await detail(api.print(r.id, {}, 'kx'))).toMatchObject({
       status: 422,
-      detail: [{ type: 'missing', loc: ['body', 'reason_id'] }],
+      detail: [
+        { type: 'missing', loc: ['body', 'reason_id'] },
+        { type: 'missing', loc: ['body', 'comment'] },
+      ],
     })
     expect(
       await detail(api.print(r.id, { reason_id: 'R1', comment: '重打' }, 'kx2'))
