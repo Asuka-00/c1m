@@ -11,6 +11,7 @@ from app.mes.execution import module as _mes_execution  # noqa: F401
 from app.mes.factory import module as _mes_factory  # noqa: F401
 from app.mes.lot import module as _mes_lot  # noqa: F401
 from app.mes.map import module as _mes_map  # noqa: F401
+from app.mes.marking import module as _mes_marking  # noqa: F401
 from app.mes.planning import module as _mes_planning  # noqa: F401
 from app.mes.process import module as _mes_process  # noqa: F401
 from app.mes.product import module as _mes_product  # noqa: F401

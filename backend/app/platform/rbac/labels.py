@@ -33,6 +33,7 @@ ACTIONS: dict[str, str] = {
     "e10": "Change E10 state|变更 E10 状态|E10 状態変更",
     "pm": "Record PM|记录保养|PM 記録",
     "override": "Override checks|强制放行|強制解除",
+    "approve": "Approve / retire|审批 / 停用|承認 / 廃止",
     "hold": "Hold / release|暂停 / 释放|保留 / 解除",
     "split": "Split lots|分批|ロット分割",
     "merge": "Merge lots|合批|ロット統合",

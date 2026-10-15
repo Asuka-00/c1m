@@ -40,6 +40,7 @@ MES_ALLOWED: dict[str, set[str]] = {
     "planning": {"common", "product", "process", "lot"},
     "warehouse": {"common", "lot"},
     "reticle": {"common", "product"},
+    "marking": {"common", "product"},
     "execution": {
         "common",
         "factory",
