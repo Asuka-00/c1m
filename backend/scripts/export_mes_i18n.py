@@ -24,6 +24,35 @@ FRONTEND_OWNED: tuple[tuple[str, ...], ...] = (
     ("mes", "field", "reticle_mount_log", "mount_log"),
 )
 
+# 前端独有、后端暂不生成的键（fe/p3 46f3236）：导出时从现有文件读出原样保留，--check 认可。
+# 后端登记对应元数据后（如 B2 菜单 key）应从这里移除。
+FRONTEND_PRESERVED: tuple[tuple[str, ...], ...] = (
+    ("menu", "mes-marking"),
+    ("menu", "mes-marking-template"),
+    ("menu", "mes-qual-expiring"),
+    ("mes", "enum", "check_type", "marking_inspection"),
+    ("mes", "enum", "history_action", "qtime_warned"),
+)
+
+
+def _get(bundle: Any, path: tuple[str, ...]) -> Any:
+    for k in path:
+        if not isinstance(bundle, dict) or k not in bundle:
+            return None
+        bundle = bundle[k]
+    return bundle
+
+
+def _keep(bundle: dict[str, Any], old: dict[str, Any]) -> None:
+    for path in FRONTEND_PRESERVED:
+        v = _get(old, path)
+        if v is None or _get(bundle, path) is not None:
+            continue
+        node = bundle
+        for k in path[:-1]:
+            node = node.setdefault(k, {})
+        node[path[-1]] = v
+
 
 def _drop(bundle: dict[str, Any], path: tuple[str, ...]) -> None:
     node: Any = bundle
@@ -40,6 +69,9 @@ def render(lang: str) -> str:
     bundle = {**i18n_bundle(lang), **labels_bundle(lang)}
     for path in FRONTEND_OWNED:
         _drop(bundle, path)
+    p = OUT / f"{lang}.json"
+    if p.exists():
+        _keep(bundle, json.loads(p.read_text()))
     return json.dumps(bundle, ensure_ascii=False, indent=2) + "\n"
 
 

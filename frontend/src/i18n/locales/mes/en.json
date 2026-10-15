@@ -161,7 +161,7 @@
         "cleared_by": "Cleared by",
         "clear_source": "Clear source",
         "clear_event_id": "Clear event ID",
-        "hold_ids": "Holds",
+        "hold_ids": "Linked holds (legacy)",
         "e10_change": "E10 change",
         "raw": "Raw report",
         "comment": "Comment",
@@ -537,8 +537,8 @@
         "note": "Note"
       },
       "customer": {
-        "code": "Code",
-        "name": "Name",
+        "code": "Customer code",
+        "name": "Customer name",
         "short_name": "Short name",
         "description": "Description"
       },
@@ -1306,13 +1306,13 @@
     },
     "help": {
       "alarm_code": {
-        "target_state": "E10 state code, required when action=set_state"
+        "target_state": "E10 state code (e.g. UDT); required when the action is “Set equipment state”"
       },
       "code_rule": {
         "pattern": "Tokens: {YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}"
       },
       "equipment": {
-        "qual_state": "WAIT_QUAL after an OK PM until a Qual passes",
+        "qual_state": "Waits for Qual after an OK PM until a Qual passes",
         "ideal_uph": "Optional; reserved for OEE performance rate"
       },
       "tool": {
@@ -1514,7 +1514,7 @@
       },
       "e10_history_trigger": {
         "manual": "Manual",
-        "equipment": "Equipment",
+        "equipment": "Equipment event",
         "system": "System"
       },
       "pm_result": {
@@ -1586,7 +1586,8 @@
         "recipe_match": "Recipe ↔ equipment mapping",
         "pm_due": "Equipment PM not overdue",
         "rework_limit": "Rework count limit",
-        "qty_adjust_limit": "Scrap / bonus qty limit"
+        "qty_adjust_limit": "Scrap / bonus qty limit",
+        "marking_inspection": "Marking inspection passed"
       },
       "check_severity": {
         "block": "Block",
@@ -1664,7 +1665,8 @@
         "carrier_change": "Carrier change",
         "sort": "Wafer sort",
         "priority": "Priority change",
-        "bom_over_consumption": "BOM over-consumption"
+        "bom_over_consumption": "BOM over-consumption",
+        "qtime_warned": "Q-Time warning"
       },
       "genealogy_relation": {
         "split": "Split",
@@ -2237,7 +2239,10 @@
     "p-channels": "Notification Channels",
     "p-audit": "Cross-tenant Audit Log",
     "p-login-log": "Login Log",
-    "p-ops-log": "Platform Operation Log"
+    "p-ops-log": "Platform Operation Log",
+    "mes-marking": "Marking",
+    "mes-marking-template": "Marking templates",
+    "mes-qual-expiring": "Expiring qualifications"
   },
   "permName": {
     "users__read": "View platform users",

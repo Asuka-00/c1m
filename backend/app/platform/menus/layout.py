@@ -55,7 +55,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-wip-dashboard", "WIP Dashboard|WIP 看板|WIP ダッシュボード"),
         ("mes-oee-report", "Equipment OEE|设备 OEE|設備 OEE"),
         ("mes-yield-report", "Yield Report|良率报表|歩留まりレポート"),
-        ("mes-ct-move-report", "CT / Move Report|CT / Move 报表|CT・ムーブレポート"),
+        ("mes-ct-move-report", "CT / Move Report|CT / Move 报表|CT / Move レポート"),
         ("mes-lot-history", "Lot History & Trace|批次履历与追溯|ロット履歴・トレース"),
         ("mes-lot_recipe_run", "Recipe Run|配方执行记录|レシピ実行記録"),
         ("mes-lot", "Lot Inquiry|批次查询|ロット照会"),

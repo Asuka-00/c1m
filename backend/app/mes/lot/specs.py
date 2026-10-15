@@ -12,6 +12,8 @@ register(
             F("short_name", "str", "Short name|简称|略称", max_length=50, search=True),
         ],
         phase=4,
+        code_label="Customer code|客户编码|顧客コード",
+        name_label="Customer name|客户名称|顧客名",
         icon="Building2",
         order=0,
     ),
