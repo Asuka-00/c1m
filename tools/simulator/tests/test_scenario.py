@@ -649,7 +649,7 @@ def test_marking_draft_mk0003_track_out_before_scrap():
     from sim.scenario import load
 
     sc = load("scenarios/p3-draft/marking-report.yaml")
-    assert sc.run_id == "marking-13" and sc.draft
+    assert sc.run_id == "marking-14" and sc.draft
     st = sc.steps
     scrap = next(s for s in st if s.kind == "lot_scrap" and s.args.get("lot") == "MK0003")
     assert scrap.args["units"] == "all" and scrap.args.get("override") is True
@@ -930,3 +930,29 @@ def test_trace_draft_b3_acceptance():
     assert any(a["expect"].get("code") == "label_marking_mismatch" for a in lb)
     assert any(a["expect"]["status"] == 200 and not a.get("pending") for a in lb)
     assert {s.kind for s in sc.steps} - {"precondition"} <= P3_EXEC_STEPS
+
+
+def test_d90_d91_drafts():
+    """D90-1/3/4（模板不可改绑定、versions 字段、删 retired 编辑）；D91（追溯 wafers、标签 ctx、租户 403、query 422）。"""
+    import inspect
+
+    from sim import opq
+    from sim.scenario import load
+
+    mk = load("scenarios/p3-draft/marking-report.yaml")
+    tpl = [s.args for s in mk.steps if s.kind == "marking_template"]
+    im = [a for a in tpl if a["expect"].get("errors") and a["expect"]["errors"][0].get("ctx", {}).get("reason") == "immutable"]
+    assert {e["expect"]["errors"][0]["loc"][1] for e in im} == {"product_id", "customer_id"}
+    get = next(a for a in tpl if a["action"] == "get")
+    assert {"data.versions.0.approved_at", "data.versions.0.created_at", "data.versions.1.status"} <= set(get["expect"]["body"])
+    assert "TODO-MK-B1-13" not in open("scenarios/p3-draft/marking-report.yaml").read()
+    tr = load("scenarios/p3-draft/trace-report.yaml")
+    assert tr.run_id == "trace-02" and not any(s.args.get("pending") for s in tr.steps)
+    lb = [s.args["expect"].get("ctx") for s in tr.steps if s.kind == "label_print" and s.args["expect"].get("ctx")]
+    assert {c["reason"] for c in lb} == {"mismatch", "not_marked"}
+    assert all(c["expected"] is None for c in lb if c["reason"] == "not_marked")
+    t = [s.args for s in tr.steps if s.kind == "expect_marking_trace"]
+    assert any(a.get("tenant") and a["expect"]["status"] == 403 for a in t)
+    assert any(a.get("kind") == "bogus" for a in t) and any(a["code"] == "$absent" for a in t)
+    src = inspect.getsource(opq)
+    assert "D90-5" in src and "imp_blank_keep" in src and "imp_active_use_api" in src

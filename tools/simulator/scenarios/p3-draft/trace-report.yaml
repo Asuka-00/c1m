@@ -10,19 +10,21 @@
 #   - D78 补充一 2：label_marking_mismatch 只作 B3 出货标签比对的 409 错误码（OCR 不一致事件是 lot.marking_mismatched）。
 #   - D88 补充一：8013 不补账号，as: other_tenant / read_only 无凭据时该步记 skip（由 QA 覆盖）。
 #   - D86：通用 404 只断言状态码。
-# 待架构师确认（标 pending，B3 落地后按回复改）：
-#   TR-Q1 B3 卡写「追溯码查到晶圆 ID」，D79-6 结果形状没有晶圆字段 —— 是否加 wafers[] / 谱系字段？
-#   TR-Q2 409 label_marking_mismatch 的 ctx 字段（暂按 {expected, actual} 参照 trace_code_mismatch）；比对对象是批次未作废主记录的最新打印 trace_code？
-#   TR-Q3 批次要求打标但未首打 / 只有已作废主记录时打标签：409 label_marking_mismatch 还是另起 code（如 not_marked）？
-#   TR-Q4 同一用户改 X-Tenant-ID 为别的租户：403 还是 404 / 空结果？跨租户追溯码：空列表 200 还是 404？（暂按 200 空列表，不泄露存在性）
-#   TR-Q5 code 缺失 / kind 非法的 422 形状（暂按 missing loc [query, code]、enum loc [query, kind]）。
+# D91（08:13，定稿 TR-Q1~Q5）：
+#   1. 404 按 D86 只断言状态码（D84 Q4 code=not_found 进格式统一批次）
+#   2. 追溯结果每条加 wafers[{wafer_id, slot}]，取批次当前晶圆，无则 []
+#   3. 标签比对对象 = 未作废主记录 seq 最大打印的 trace_code；不一致 409 label_marking_mismatch ctx {reason: mismatch, marking_id, expected, actual}
+#   4. 无未作废主记录或未首打：同 code，ctx.reason=not_marked，marking_id 按 D79（无主记录 null），expected=null
+#   5. X-Tenant-ID 为未加入的租户 403；本租户查别租户的码 200 空列表
+#   6. code 缺失/空/纯空白 422 missing loc [query, code]；kind 非法 422 value_error loc [query, kind] ctx {reason: invalid_choice, choices}
 name: trace-report
-run_id: trace-01
+run_id: trace-02
 draft: "等 P3-B3 落地（GET /mes/exec/trace?kind=trace_code、include_voided、出货标签比对 409 label_marking_mismatch；依赖 B1/B2 与 P2-B2 包装/标签）"
 target: http://127.0.0.1:8013
 equipment: [{code: EAP-MK01, type: MARKER}]
 steps:
   - precondition: {eq: EAP-MK01, e10: SBY}
+  # 种子（B3 落地时补进 seed-p3）：TR0001 片级批次 2 片（D91-2 wafers），TR0002 数量级（wafers []），TR0003 普通；TR0009 属 P-NOMK
   - marking_template_ready: {product: P-MK, customer: C-MK, approved: true, lots: [TR0001, TR0002, TR0003]}
 
   # ---- ① 作废前：TR0001 建主记录、首打、检验 pass → 默认追溯可查，voided=false
@@ -31,17 +33,22 @@ steps:
   - marking_inspect: {lot: TR0001, result: pass, read_code: $issued, idem: tr-i1, expect: {status: 200}}
   - expect_marking_trace: {code: $issued.TR0001, count: 1,
                            first: {marking_id: $marking.TR0001, lot_id: $lot.TR0001, trace_code: $issued.TR0001, voided: false,
+                                   wafers: $nonempty,
                                    prints: [{print_id: $print_seq_1, seq: 1, marked_at: $utc_z, latest_inspection_result: pass}]}}
   - expect_marking_trace: {code: $issued.TR0001, include_voided: true, count: 1, first: {voided: false}}   # include_voided 不影响未作废
-  # TR-Q1：追溯码查到晶圆 ID（B3 卡验收），字段名待定
-  - expect_marking_trace: {code: $issued.TR0001, count: 1, first: {wafers: $nonempty}, pending: "TR-Q1 D79-6 结果形状无晶圆字段，等架构师定"}
+  # D91-2：追溯码查到晶圆 ID（B3 卡验收）：wafers[{wafer_id, slot}] 取批次当前晶圆（TR0001 片级批次，2 片）
+  - expect_marking_trace: {code: $issued.TR0001, count: 1, first: {wafers: [{wafer_id: $nonempty, slot: $nonempty}, {wafer_id: $nonempty, slot: $nonempty}]}}
+  # D91-2：数量级批次（无晶圆）→ wafers: []（TR0002 见⑤）
   # 不存在的码 → 200 空列表
   - expect_marking_trace: {code: NOSUCH-TRACE-01, count: 0}
   - expect_marking_trace: {code: NOSUCH-TRACE-01, include_voided: true, count: 0}
   # 权限：mes.exec:read（D79 补充 1）；只读账号可查，无凭据记 skip
   - expect_marking_trace: {code: $issued.TR0001, as: read_only, expect: {status: 200}}
-  # TR-Q5：参数校验
-  - expect_marking_trace: {code: "", expect: {status: 422, code: missing}, pending: "TR-Q5 空 code 的 422 形状待定"}
+  # D91-6：参数校验
+  - expect_marking_trace: {code: $absent, expect: {status: 422, errors: [{type: missing, loc: [query, code]}]}}
+  - expect_marking_trace: {code: "", expect: {status: 422, errors: [{type: missing, loc: [query, code]}]}}
+  - expect_marking_trace: {code: "   ", expect: {status: 422, errors: [{type: missing, loc: [query, code]}]}}
+  - expect_marking_trace: {code: $issued.TR0001, kind: bogus, expect: {status: 422, errors: [{type: value_error, loc: [query, kind], ctx: {reason: invalid_choice, choices: $nonempty}}]}}
 
   # ---- ② 出货标签一致：TR0001 装箱打标签 → 一致 200；标签内容带 trace_code
   - pack_lot: {pack: PK-TR01, lot: TR0001, idem: tr-pk1, expect: {status: 200}}
@@ -54,37 +61,40 @@ steps:
   - expect_marking_trace: {code: $issued.TR0001, include_voided: true, count: 1,
                            first: {marking_id: $marking.TR0001, lot_id: $lot.TR0001, voided: true,
                                    prints: [{seq: 1, latest_inspection_result: pass}]}}   # D79 补充 4：作废后保留原检验结果
-  # 作废后（只有已作废主记录）打出货标签 → 不能打印（TR-Q3 code 待定）
-  - label_print: {pack: PK-TR01, idem: tr-lb2, expect: {status: 409, detail_object: true, code: label_marking_mismatch},
-                  pending: "TR-Q3 只有已作废主记录时打标签返回的 code 待定"}
+  # 作废后（只有已作废主记录）打出货标签 → 不能打印（D91-4）
+  # D91-4：只有已作废主记录 → not_marked，marking_id null（D79），expected null
+  - label_print: {pack: PK-TR01, idem: tr-lb2, expect: {status: 409, detail_object: true, code: label_marking_mismatch,
+                                                         ctx: {reason: not_marked, marking_id: null, expected: null, actual: $nonempty}}}
   # 重新首打：新主记录 seq 从 1，新码；旧码默认仍查不到，新码可查
   - marking_create: {lot: TR0001, idem: tr-c1b, save_as: tr1b, expect: {status: 200, body: {data.voided: false}}}
   - marking_print: {lot: TR0001, eq: EAP-MK01, idem: tr-p1b, expect: {status: 200, body: {data.seq: 1}}}
   - expect_marking_trace: {code: $issued.TR0001, count: 1, first: {marking_id: $marking.tr1b, voided: false, prints: [{seq: 1, latest_inspection_result: null}]}}
 
   # ---- ④ 标签与打标不一致 → 409 label_marking_mismatch，不能打印
-  # 包装 PK-TR01 里的标签数据仍是旧码（作废前），新主记录码已变 → 不一致
+  # D91-3：PK-TR01 标签仍是旧码，新主记录 seq 最大打印码已变 → mismatch；expected=新码，actual=标签码
   - label_print: {pack: PK-TR01, idem: tr-lb3, expect: {status: 409, detail_object: true, code: label_marking_mismatch,
-                                                         ctx: {expected: $nonempty, actual: $nonempty}},
-                  pending: "TR-Q2 label_marking_mismatch 的 ctx 与比对对象待定"}
+                                                         ctx: {reason: mismatch, marking_id: $marking.tr1b, expected: $issued.TR0001, actual: $nonempty}}}
   # D86：409 不缓存，同 key 重发重新校验，不带 Idempotent-Replayed
-  - label_print: {pack: PK-TR01, idem: tr-lb3, expect: {status: 409, code: label_marking_mismatch, absent_headers: [Idempotent-Replayed]},
-                  pending: "TR-Q2"}
+  - label_print: {pack: PK-TR01, idem: tr-lb3, expect: {status: 409, code: label_marking_mismatch, absent_headers: [Idempotent-Replayed]}}
   # 未绑定打标模板的产品不比对（D79 补充 5 口径延伸）—— TR0009 属 P-NOMK，不打标直接装箱
   - marking_template_ready: {product: P-NOMK, approved: false, lots: [TR0009]}
   - pack_lot: {pack: PK-TR09, lot: TR0009, idem: tr-pk9, expect: {status: 200}}
   - label_print: {pack: PK-TR09, idem: tr-lb9, expect: {status: 200}}
-  # 要求打标但未首打 → 不能打印（TR-Q3）
+  # 要求打标但未首打 → 不能打印（D91-4）
   - pack_lot: {pack: PK-TR03, lot: TR0003, idem: tr-pk3, expect: {status: 200}}
-  - label_print: {pack: PK-TR03, idem: tr-lb4, expect: {status: 409, detail_object: true, code: label_marking_mismatch},
-                  pending: "TR-Q3 未首打时 code 待定"}
+  - label_print: {pack: PK-TR03, idem: tr-lb4, expect: {status: 409, detail_object: true, code: label_marking_mismatch,
+                                                         ctx: {reason: not_marked, marking_id: null, expected: null}}}
+  # D91-4：建了主记录未首打 → not_marked，marking_id 为该主记录，expected null
+  - marking_create: {lot: TR0003, idem: tr-c3, save_as: tr3, expect: {status: 200}}
+  - label_print: {pack: PK-TR03, idem: tr-lb5, expect: {status: 409, detail_object: true, code: label_marking_mismatch,
+                                                         ctx: {reason: not_marked, marking_id: $marking.tr3, expected: null}}}
 
   # ---- ⑤ 跨租户隔离（X-Tenant-ID）：other_tenant 账号查本租户码 → 空；包装 / 标签 404。无凭据记 skip（D88 补充一，QA 覆盖）
   - marking_create: {lot: TR0002, idem: tr-c2, expect: {status: 200}}
   - marking_print: {lot: TR0002, eq: EAP-MK01, idem: tr-p2, expect: {status: 200, body: {data.seq: 1}}}
-  - expect_marking_trace: {code: $issued.TR0002, count: 1, first: {lot_id: $lot.TR0002}}
+  - expect_marking_trace: {code: $issued.TR0002, count: 1, first: {lot_id: $lot.TR0002, wafers: []}}   # D91-2：数量级批次无晶圆
   - expect_marking_trace: {code: $issued.TR0002, as: other_tenant, expect: {status: 200, body: {data: []}}}
   - expect_marking_trace: {code: $issued.TR0002, include_voided: true, as: other_tenant, expect: {status: 200, body: {data: []}}}
   - label_print: {pack: PK-TR01, idem: tr-lbx, as: other_tenant, expect: {status: 404}}
-  - expect_marking_trace: {code: $issued.TR0002, as: other_tenant_header, expect: {status: 403},
-                           pending: "TR-Q4 同账号改 X-Tenant-ID 到未加入的租户：403 还是 404 待定"}
+  # D91-5：同账号把 X-Tenant-ID 改成未加入的租户 → 403
+  - expect_marking_trace: {code: $issued.TR0002, tenant: NOT-A-MEMBER-TENANT, expect: {status: 403}}

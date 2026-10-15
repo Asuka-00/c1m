@@ -42,7 +42,7 @@
 #   ctx {reason, marking_id（无主记录 null）, trace_code（未首打 null）}。保留 D89-5：重打缺 reason_id+comment 两条 missing。
 # D89 补充二：code 租户内唯一；同租户 产品+客户 一个模板；重复走通用重复键错误
 name: marking-report
-run_id: marking-13
+run_id: marking-14
 draft: "等 B1/B2 落地（P3-B1 模板、P3-B2/B3 打标接口（POST /mes/marking 建主记录、/prints、/inspect、/void、/inspections、/config、/mes/exec/trace kind=trace_code，D78、D79；B11 event_type=marking 本期不做）"
 target: http://127.0.0.1:8013
 equipment: [{code: EAP-MK01, type: MARKER}]
@@ -121,12 +121,22 @@ steps:
   - marking_template: {action: new_version, template: $missing_uuid, idem: tpl2-v4, expect: {status: 404}}   # 404 先于 409
   # 草稿可编辑 → 有草稿 v2 时编辑改的是草稿，200（v2 仍 draft）
   - marking_template: {action: update, template: $tpl2.id, idem: tpl2-u2, body: {name: T-SIM-12V-v2, lines: ["{lot_id}", "{date_code}"]}, expect: {status: 200, body: {data.version: 2, data.status: draft}}}
+  # D90-1：product_id / customer_id 创建后不可改（在 v2 仍为草稿时测，避开 template_readonly）；不同值 422 value_error ctx.reason=immutable，同值视为未改
+  - marking_template: {action: update, template: $tpl2.id, idem: tpl2-im1, body: {product_id: $product.P-NOMK},
+                       expect: {status: 422, errors: [{type: value_error, loc: [body, product_id], ctx: {reason: immutable}}]}}
+  - marking_template: {action: update, template: $tpl2.id, idem: tpl2-im2, body: {customer_id: $customer.C-SIM-A},
+                       expect: {status: 422, errors: [{type: value_error, loc: [body, customer_id], ctx: {reason: immutable}}]}}
+  - marking_template: {action: update, template: $tpl2.id, idem: tpl2-im3, body: {product_id: $product.P-MK, customer_id: $customer.C-SIM-B},
+                       expect: {status: 200, body: {data.version: 2, data.status: draft}}}   # 同值视为未改
   # 批准 v2 → v2 approved，v1 自动 retired
   - marking_template: {action: approve, template: $tpl2.id, idem: tpl2-a3, as: approver, expect: {status: 200, body: {data.version: 2, data.status: approved}}}
-  # TODO-MK-B1-12：D79 未定义模板详情里历史版本列表的字段名（暂按 data.versions[{version, status}]），B1 落地后核对
-  - marking_template: {action: get, template: $tpl2.id, expect: {status: 200, body: {data.version: 2, data.status: approved, data.versions.0.version: 1, data.versions.0.status: retired}}}
+  # D90-3：详情 data.versions[{version, status, created_by, created_at, approved_by, approved_at}]，version 倒序，未批准为 null
+  - marking_template: {action: get, template: $tpl2.id, expect: {status: 200, body: {data.version: 2, data.status: approved,
+                       data.versions.0.version: 2, data.versions.0.status: approved, data.versions.0.created_by: $nonempty, data.versions.0.created_at: $utc_z,
+                       data.versions.0.approved_by: $nonempty, data.versions.0.approved_at: $utc_z,
+                       data.versions.1.version: 1, data.versions.1.status: retired, data.versions.1.created_by: $nonempty, data.versions.1.approved_by: $nonempty}}}
+  # D90-4：编辑只针对最新版本；最新为 approved → 409 template_readonly（「编辑 retired 409」用例已删除）
   - marking_template: {action: update, template: $tpl2.id, idem: tpl2-ro2, body: {name: T-SIM-12V-v2b}, expect: {status: 409, code: template_readonly, detail_object: true}}   # approved v2 只读
-  # TODO-MK-B1-13：retired 版本编辑 409 template_readonly——编辑接口按模板 id 只命中最新版本，没有按版本编辑的路径，暂无法单独构造
   # 跨租户：另一租户账号读 / 写本租户模板 → 404（不是 403）
   # 跨租户：8013 不补账号（D88 补充一），as: other_tenant 无凭据记 skip —— 由 QA 覆盖
   - marking_template: {action: update, template: $tpl2.id, idem: tpl2-x1, as: other_tenant, body: {name: X}, expect: {status: 404}}

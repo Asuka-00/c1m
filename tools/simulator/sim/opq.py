@@ -485,6 +485,46 @@ class Opq:
             assert not [z for z in n if z.get("username") == new_user], "整表应回滚，新行不应建"
         self.step("Excel 导入改已有资质 expires_on → 422 use_api，整表回滚（D88-3）", imp_use_api)
 
+        def imp_blank_keep(e):
+            # D90-5：更新已有记录时空单元格（None / "" / 纯空白）一律不改，不写履历、不发事件（覆盖 D88 留空 use_api）
+            et_row = c.get(f"/mes/equipment_type/{et}").body
+            et_code = (et_row.get("data", et_row) or {}).get("code")
+            hdr = ["username", "operation", "equipment_type", "expires_on", "is_active"]
+            before = c.get(qp).body
+            before = before.get("data", before)
+            nh, ne = len(self.hist(q)), len(self.events(q))
+            res = []
+            for label, row in (("留空", [me, "OP-MK", et_code, None, None]), ("纯空白", [me, "OP-MK", et_code, "  ", " "])):
+                r = upload(c, "/mes/operator_qual/import", xlsx_bytes([hdr, row]))
+                res.append(f"{label}:{r.status}")
+                assert r.status == 200, f"{label} HTTP {r.status} {json.dumps(r.body, ensure_ascii=False)[:300]}"
+            e["status"] = res
+            after = c.get(qp).body
+            after = after.get("data", after)
+            for k in ("expires_on", "is_active"):
+                assert after.get(k) == before.get(k), f"{k} 被改：{before.get(k)!r} → {after.get(k)!r}"
+            assert len(self.hist(q)) == nh, "留空不应写履历"
+            assert len(self.events(q)) == ne, "留空不应发事件"
+        self.step("Excel 导入已有资质 expires_on / is_active 留空或纯空白 → 不改、不写履历、不发事件（D90-5）", imp_blank_keep)
+
+        def imp_active_use_api(e):
+            # D91 注：只有实际改变 is_active / expires_on 的值才 use_api
+            et_row = c.get(f"/mes/equipment_type/{et}").body
+            et_code = (et_row.get("data", et_row) or {}).get("code")
+            before = c.get(qp).body
+            before = before.get("data", before)
+            flip = "false" if before.get("is_active") else "true"
+            rows = [["username", "operation", "equipment_type", "is_active"], [me, "OP-MK", et_code, flip]]
+            r = upload(c, "/mes/operator_qual/import", xlsx_bytes(rows))
+            e.update(status=r.status)
+            assert r.status == 422, f"HTTP {r.status}"
+            errs = ((r.body or {}).get("detail") or {}).get("errors") or []
+            assert errs and (errs[0].get("ctx") or {}).get("reason") == "use_api" and "is_active" in (errs[0].get("ctx") or {}).get("fields", []), errs
+            after = c.get(qp).body
+            after = after.get("data", after)
+            assert after.get("is_active") == before.get("is_active"), "is_active 被改"
+        self.step("Excel 导入真改已有资质 is_active → 422 use_api（D90-5 / D91 注）", imp_active_use_api)
+
         def expiring(e):
             r = c.get("/mes/exec/operator-qual/expiring", days=0)
             self.err422(r, "value_error", ["query", "days"], {"min": 1, "max": 365})

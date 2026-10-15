@@ -877,9 +877,21 @@ class P3Exec:
         self._fail_if([] if len(rows) == int(a["count"]) else [f"列表 {len(rows)} 条 != 期望 {a['count']}"])
 
     def _expect_marking_trace(self, a: dict, entry: dict) -> None:
-        params: dict[str, Any] = {"kind": "trace_code", "code": self.resolve(a["code"])}
+        params: dict[str, Any] = {"kind": a.get("kind", "trace_code")}
+        if a.get("code") != "$absent":  # D91-6：$absent = 不带 code 参数
+            params["code"] = self.resolve(a["code"])
         if a.get("include_voided"):
             params["include_voided"] = "true"
+        if a.get("tenant"):  # D91-5：同账号改 X-Tenant-ID（未加入的租户 → 403）
+            from urllib.parse import urlencode
+
+            call = Call("GET", self.path("marking_trace") + "?" + urlencode(params))
+            saved_t, self.r.c.tenant = self.r.c.tenant, str(uuid.uuid5(uuid.NAMESPACE_OID, a["tenant"]))
+            try:
+                self.send(entry, call, a.get("expect"), "expect_marking_trace")
+            finally:
+                self.r.c.tenant = saved_t
+            return
         if a.get("expect") or a.get("as"):
             # B3 草稿：权限 / 跨租户（as: other_tenant，无凭据记 skip）/ 422 断言，走 send 统一检查
             from urllib.parse import urlencode
