@@ -1,4 +1,5 @@
 /** 批次履历页面（时间线 + 谱系）。 */
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { fmtDateTime, t } from '@/i18n'
@@ -25,14 +26,20 @@ import {
 } from 'lucide-react'
 import { useTenantKey } from '@/lib/api/hooks'
 import { mesApi, type MesRow } from '@/lib/api/mes/common'
-import { execApi } from '@/lib/api/mes/execution'
+import { execApi, type WaferCell } from '@/lib/api/mes/execution'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Page } from '@/components/crud'
-import { enumLabel } from '@/features/mes/common/labels'
+import { enumLabel, reasonLabel } from '@/features/mes/common/labels'
 import { RefSelect } from '@/features/mes/common/ref-select'
 import { ResultBadge } from './exec-parts'
 import { GenealogyList } from './split-merge'
@@ -146,6 +153,166 @@ function Details({ d }: { d: Record<string, unknown> }) {
   )
 }
 
+/** 履历时间线（批次或晶圆）。 */
+function HistoryTimeline({ rows }: { rows: MesRow[] }) {
+  return (
+    <ol className='relative space-y-4 border-s ps-6' data-testid='timeline'>
+      {rows.map((h: MesRow) => {
+        const [Icon, color] = ICON[String(h.action)] ?? [
+          Square,
+          'bg-muted-foreground',
+        ]
+        return (
+          <li key={h.id} className='relative'>
+            <span
+              className={cn(
+                'absolute -start-[37px] flex size-6 items-center justify-center rounded-full text-white ring-4 ring-background',
+                color
+              )}
+            >
+              <Icon className='size-3.5' />
+            </span>
+            <div className='flex flex-wrap items-baseline gap-x-3 gap-y-0.5'>
+              <span className='font-medium'>
+                {enumLabel('history_action', String(h.action))}
+              </span>
+              <span className='text-xs text-muted-foreground'>
+                {fmtDateTime(String(h.at))}
+              </span>
+              <span className='text-xs text-muted-foreground'>
+                {String(h.username ?? '')}
+              </span>
+            </div>
+            <div className='flex flex-wrap gap-x-4 text-sm'>
+              {h.step_seq != null && (
+                <span>
+                  {String(h.step_seq)} ·{' '}
+                  {String(h.operation_label ?? '').split(' · ')[0]}
+                </span>
+              )}
+              {!!h.equipment_label && (
+                <span>{String(h.equipment_label).split(' · ')[0]}</span>
+              )}
+              {!!h.recipe_label && (
+                <span>{String(h.recipe_label).split(' · ')[0]}</span>
+              )}
+              {!!h.unit_label && (
+                <span className='font-mono text-xs'>
+                  {String(h.unit_label)}
+                </span>
+              )}
+              <span className='text-muted-foreground'>
+                {t('mes.exec.qty')} {String(h.qty ?? '')}
+              </span>
+              {!!h.to_status && (
+                <Badge variant='outline'>
+                  {enumLabel('lot_status', String(h.to_status))}
+                </Badge>
+              )}
+              {!!h.reason_label && <span>{reasonLabel(h.reason_label)}</span>}
+              {!!h.comment && (
+                <span className='text-muted-foreground'>
+                  “{String(h.comment)}”
+                </span>
+              )}
+            </div>
+            {!!h.details && (
+              <Details d={h.details as Record<string, unknown>} />
+            )}
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
+const WAFER_COLOR: Record<string, string> = {
+  waiting: 'bg-sky-100 border-sky-300 text-sky-900',
+  processing: 'bg-indigo-500 border-indigo-600 text-white',
+  rework: 'bg-amber-400 border-amber-500 text-amber-950',
+  completed: 'bg-emerald-500 border-emerald-600 text-white',
+  scrapped: 'bg-destructive border-destructive text-white',
+}
+
+/** 晶圆图：按槽位显示晶圆状态，点击晶圆查看晶圆履历。 */
+export function WaferMapCard({ lotId }: { lotId: string }) {
+  const tk = useTenantKey()
+  const [pick, setPick] = useState<WaferCell | null>(null)
+  const map = useQuery({
+    queryKey: ['mes', 'exec', tk, lotId, 'wafer-map'],
+    queryFn: () => execApi.waferMap(lotId),
+  })
+  const hist = useQuery({
+    queryKey: ['mes', 'exec', tk, pick?.id, 'wafer-history'],
+    queryFn: () => execApi.waferHistory(pick!.id),
+    enabled: !!pick,
+  })
+  const m = map.data
+  if (!m || (!m.slots.some((x) => x.wafer) && m.units.length === 0)) return null
+  const cell = (w: WaferCell | null, label: string, key: string | number) => (
+    <button
+      key={key}
+      type='button'
+      disabled={!w}
+      title={w ? `${w.code} · ${enumLabel('wafer_status', w.status)}` : label}
+      onClick={() => w && setPick(w)}
+      data-testid={w ? 'wafer-cell' : 'empty-slot'}
+      className={cn(
+        'flex h-9 flex-col items-center justify-center rounded border text-[10px] leading-tight',
+        w
+          ? (WAFER_COLOR[w.status] ?? 'bg-muted') +
+              ' hover:ring-2 hover:ring-ring'
+          : 'border-dashed text-muted-foreground'
+      )}
+    >
+      <span className='font-medium'>{label}</span>
+      {w && (
+        <span className='max-w-full truncate px-0.5'>{w.code.slice(-4)}</span>
+      )}
+    </button>
+  )
+  return (
+    <Card>
+      <CardHeader className='pb-2'>
+        <CardTitle className='flex flex-wrap items-center gap-2 text-base'>
+          {t('mes.wmap.title')}
+          {m.carrier && <Badge variant='outline'>{m.carrier}</Badge>}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className='space-y-3'>
+        <div
+          className='grid grid-cols-5 gap-1.5 sm:grid-cols-10 lg:grid-cols-13'
+          data-testid='wafer-map'
+        >
+          {m.slots.map((x) => cell(x.wafer, String(x.slot), x.slot))}
+          {m.units.map((w) => cell(w, '—', w.id))}
+        </div>
+        <div className='flex flex-wrap gap-3 text-xs text-muted-foreground'>
+          {Object.keys(WAFER_COLOR).map((k) => (
+            <span key={k} className='inline-flex items-center gap-1'>
+              <span className={cn('size-3 rounded border', WAFER_COLOR[k])} />
+              {enumLabel('wafer_status', k)}
+            </span>
+          ))}
+        </div>
+      </CardContent>
+      <Dialog open={!!pick} onOpenChange={(o) => !o && setPick(null)}>
+        <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-2xl'>
+          <DialogHeader>
+            <DialogTitle>
+              {t('mes.wmap.history', { code: pick?.code ?? '' })}
+            </DialogTitle>
+          </DialogHeader>
+          {hist.data && hist.data.length === 0 && (
+            <p className='text-muted-foreground'>{t('mes.trace.empty')}</p>
+          )}
+          <HistoryTimeline rows={hist.data ?? []} />
+        </DialogContent>
+      </Dialog>
+    </Card>
+  )
+}
+
 /** 批次履历时间线：每个动作的时间、操作人、工步、设备、
  *  配方、数量、原因与检查结果。 */
 export default function LotTracePage() {
@@ -203,8 +370,10 @@ export default function LotTracePage() {
           onChange={(id) =>
             nav({
               to: '/$',
-              params: { _splat: 'mes/lot-trace' },
-              search: (id ? { lot: id } : {}) as never,
+              params: { _splat: 'mes/lot-history' },
+              search: (id
+                ? { tab: 'mes-lot-trace', lot: id }
+                : { tab: 'mes-lot-trace' }) as never,
             })
           }
         />
@@ -235,84 +404,14 @@ export default function LotTracePage() {
           </CardContent>
         </Card>
       )}
+      {lotId && <WaferMapCard lotId={lotId} />}
       {lotId && (
         <Card>
           <CardContent className='pt-6'>
             {rows.length === 0 && !hist.isLoading && (
               <p className='text-muted-foreground'>{t('mes.trace.empty')}</p>
             )}
-            <ol
-              className='relative space-y-4 border-s ps-6'
-              data-testid='timeline'
-            >
-              {rows.map((h: MesRow) => {
-                const [Icon, color] = ICON[String(h.action)] ?? [
-                  Square,
-                  'bg-muted-foreground',
-                ]
-                return (
-                  <li key={h.id} className='relative'>
-                    <span
-                      className={cn(
-                        'absolute -start-[37px] flex size-6 items-center justify-center rounded-full text-white ring-4 ring-background',
-                        color
-                      )}
-                    >
-                      <Icon className='size-3.5' />
-                    </span>
-                    <div className='flex flex-wrap items-baseline gap-x-3 gap-y-0.5'>
-                      <span className='font-medium'>
-                        {enumLabel('history_action', String(h.action))}
-                      </span>
-                      <span className='text-xs text-muted-foreground'>
-                        {fmtDateTime(String(h.at))}
-                      </span>
-                      <span className='text-xs text-muted-foreground'>
-                        {String(h.user_email ?? '')}
-                      </span>
-                    </div>
-                    <div className='flex flex-wrap gap-x-4 text-sm'>
-                      {h.step_seq != null && (
-                        <span>
-                          {String(h.step_seq)} ·{' '}
-                          {String(h.operation_label ?? '').split(' · ')[0]}
-                        </span>
-                      )}
-                      {!!h.equipment_label && (
-                        <span>{String(h.equipment_label).split(' · ')[0]}</span>
-                      )}
-                      {!!h.recipe_label && (
-                        <span>{String(h.recipe_label).split(' · ')[0]}</span>
-                      )}
-                      {!!h.unit_label && (
-                        <span className='font-mono text-xs'>
-                          {String(h.unit_label)}
-                        </span>
-                      )}
-                      <span className='text-muted-foreground'>
-                        {t('mes.exec.qty')} {String(h.qty ?? '')}
-                      </span>
-                      {!!h.to_status && (
-                        <Badge variant='outline'>
-                          {enumLabel('lot_status', String(h.to_status))}
-                        </Badge>
-                      )}
-                      {!!h.reason_label && (
-                        <span>{String(h.reason_label)}</span>
-                      )}
-                      {!!h.comment && (
-                        <span className='text-muted-foreground'>
-                          “{String(h.comment)}”
-                        </span>
-                      )}
-                    </div>
-                    {!!h.details && (
-                      <Details d={h.details as Record<string, unknown>} />
-                    )}
-                  </li>
-                )
-              })}
-            </ol>
+            <HistoryTimeline rows={rows} />
           </CardContent>
         </Card>
       )}

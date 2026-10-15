@@ -1,7 +1,13 @@
 import { Link } from '@tanstack/react-router'
 import { t } from '@/i18n'
-import { ChevronsUpDown, LogOut, UserCog } from 'lucide-react'
-import { useMe } from '@/lib/api/hooks'
+import {
+  ArrowLeftToLine,
+  ChevronsUpDown,
+  LogOut,
+  ShieldCheck,
+  UserCog,
+} from 'lucide-react'
+import { useMe, usePlatformEntry, useSpace } from '@/lib/api/hooks'
 import useDialogState from '@/hooks/use-dialog-state'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -28,13 +34,16 @@ const initials = (s: string) =>
     .map((x) => x[0]!.toUpperCase())
     .join('')
 
-/** 侧栏底部用户信息（来自 /users/me）。 */
+/** 侧栏底部用户信息（来自 /users/me）。
+ *  超级用户或持有平台权限的用户在此进入"平台管理"控制台，或从控制台"返回工作区"。 */
 export function NavUser() {
   const { isMobile } = useSidebar()
+  const space = useSpace()
   const [open, setOpen] = useDialogState()
   const { data: me } = useMe()
-  const name = me?.full_name || me?.email.split('@')[0] || '…'
-  const email = me?.email ?? ''
+  const entry = usePlatformEntry()
+  const name = me?.full_name || me?.username || '…'
+  const email = me?.email ?? me?.username ?? ''
   const who = (
     <>
       <Avatar className='h-8 w-8 rounded-lg'>
@@ -86,6 +95,26 @@ export function NavUser() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+              {(space === 'platform' || entry) &&
+                (space === 'platform' ? (
+                  <DropdownMenuItem asChild>
+                    <Link to='/' data-testid='back-to-workspace'>
+                      <ArrowLeftToLine />
+                      {t('nav.backToWorkspace')}
+                    </Link>
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem asChild>
+                    <Link
+                      to='/$'
+                      params={{ _splat: (entry ?? '/platform').slice(1) }}
+                      data-testid='platform-entry'
+                    >
+                      <ShieldCheck />
+                      {t('nav.platformAdmin')}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
               <DropdownMenuItem asChild>
                 <Link to='/$' params={{ _splat: 'settings' }}>
                   <UserCog />

@@ -5,20 +5,26 @@ from typing import Any
 
 from sqlmodel import Session
 
+from app.core.models import actor_name
 from app.core.spec.audit import audit
 from app.core.spec.base import now
 from app.core.spec.engine import ENTITIES
 from app.core.spec.errors import http_422
-from app.mes.common.query import one
+from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
-from app.mes.equipment.service import e10_apply
+from app.mes.common.sitedate import site_today
+from app.mes.equipment.service import e10_apply, num, tool_count, tool_delta
+from app.mes.execution import bom_usage
 from app.mes.execution.checks import service as ck
 from app.mes.execution.constants import OOS_RANK
-from app.mes.execution.consumption import _consume
+from app.mes.execution.consumption import _consume, usage_type
 from app.mes.execution.context import build_ctx
+from app.mes.execution.events import OOS, notify_lot
 from app.mes.execution.hold import default_reason, hold_lot
+from app.mes.execution.recipe_run import close_run
 from app.mes.execution.stage_common import _brief, _guard, _ov, _result
 from app.mes.lot.service import history, lock_lot, units
+from app.mes.process.service import step_after
 from app.mes.quality.service import out_of_spec
 
 Row = dict[str, Any]
@@ -121,13 +127,18 @@ def track_out(
     if errs:
         raise http_422(errs)
     ctx.dc = dc
-    # 物料：硬性要求（不可强制放行）
+    # 内置管控开关（卡控规则 severity = off 时关闭，见 checks.enabled）
+    oos_on = ck.enabled(ctx, "oos")
+    if not oos_on:
+        for d in dc:
+            d["oos_action"] = None
+    # 物料：硬性要求（不可强制放行；material_sufficient 关闭时不拦截）
     short = [
         n
         for n in ctx.material_needs
         if sum(a["qty"] for a in n["allocation"]) + 1e-9 < n["need"]
     ]
-    if short:
+    if short and ck.enabled(ctx, "material_sufficient"):
         raise http_422(
             [
                 (
@@ -139,7 +150,7 @@ def track_out(
                 )
             ]
         )
-    oos = [d for d in dc if d["is_oos"]]
+    oos = [d for d in dc if d["is_oos"] and oos_on]
     worst = max(
         (d["oos_action"] for d in oos), key=lambda a: OOS_RANK.get(a, 0), default=None
     )
@@ -162,7 +173,7 @@ def track_out(
         override=body.get("override", False),
         reason=body.get("override_reason"),
     )
-    at, email = now(), getattr(user, "email", None)
+    at, email = now(), actor_name(user)
     for d in dc:
         _ins(
             s,
@@ -177,21 +188,58 @@ def track_out(
             site_no=d["site_no"],
             value=d["value"],
             is_oos=d["is_oos"],
-            oos_action=d["oos_action"] if d["is_oos"] else None,
-            user_email=email,
+            oos_action=d["oos_action"] if d["is_oos"] and oos_on else None,
+            username=email,
         )
-    consumed = _consume(s, tid, ctx.material_needs, user)
+    consumed = _consume(
+        s,
+        tid,
+        ctx.material_needs,
+        user,
+        lot=lot,
+        step=ctx.step,
+        usage=usage_type(s, tid, lot, ctx.step),
+    )
+    # BOM 出站比对（只提示）：基准 = 本工步进站时的良品数（扣报废前的批次数量）
+    bom_rows = bom_usage.compare(
+        s,
+        tid,
+        lot,
+        lot["qty"],
+        operation_id=ctx.step["operation_id"],
+        is_last=step_after(s, tid, ctx.step) is None
+        and not (lot.get("route_stack") or []),
+    )
+    bom_warn = bom_usage.over_warning(bom_usage.new_overs(s, tid, lot, bom_rows))
     tools = []
     for t in ctx.tools:
+        # P2-B10：按工具类型 count_basis 计数（Decimal），每次写 tool_usage 履历
+        delta = tool_delta(s, tid, t, lot)
+        if delta:
+            r = tool_count(
+                s,
+                tid,
+                t,
+                delta,
+                "track_out",
+                user,
+                at=at,
+                lot_id=lot["id"],
+                equipment_id=ctx.equipment["id"] if ctx.equipment else None,
+                operation_id=ctx.step["operation_id"],
+            )
+            t = r["tool"]
         mx, used = ck.tool_life(s, tid, t)
-        used += 1
-        st = "available"
-        if mx and used >= mx:
-            st = "pending_maintenance"
-        if t["expiry_date"] and t["expiry_date"] < at.date():
+        st = t["tool_status"]
+        if st == "in_use":
+            st = "available"
+        if t["expiry_date"] and t["expiry_date"] < site_today(s, tid, at):
             st = "expired"
-        _upd(s, tid, "tool", t["id"], user, usage_count=used, tool_status=st)
-        tools.append({"tool": t["code"], "usage": used, "max": mx, "status": st})
+        if st != t["tool_status"]:
+            _upd(s, tid, "tool", t["id"], user, tool_status=st)
+        tools.append(
+            {"tool": t["code"], "usage": num(used), "max": num(mx), "status": st}
+        )
     n_scrap = len(scrap_units) + sum(n for n, _ in scrap_qty)
     for u, r in scrap_units:
         _upd(
@@ -268,8 +316,26 @@ def track_out(
         pending_rework=pending and bool(ctx.step["rework_route_id"]),
     )
     lot.update(lot_status=status, qty=qty)
+    close_run(s, tid, lot, user)
     eq = one(s, tid, "equipment", lot["equipment_id"])
     e10 = e10_apply(s, tid, eq, "track_out", user, lot) if eq else None
+    # 腔体：同腔体仍有其他运行中批次时不迁移
+    busy = (
+        {
+            c
+            for o in find(
+                s, tid, "lot", equipment_id=lot["equipment_id"], lot_status="running"
+            )
+            if o["id"] != lot["id"]
+            for c in (o.get("exec_ctx") or {}).get("chamber_ids") or []
+        }
+        if lot["equipment_id"]
+        else set()
+    )
+    for cid in (lot.get("exec_ctx") or {}).get("chamber_ids") or []:
+        ch = one(s, tid, "equipment", uuid.UUID(cid))
+        if ch and cid not in busy:
+            e10_apply(s, tid, ch, "track_out", user, lot)
     history(
         s,
         tid,
@@ -287,12 +353,24 @@ def track_out(
             "oos_action": worst,
             "scrap": n_scrap,
             "consumed": consumed,
+            "bom_usage": bom_rows,
             "tools": tools,
             "e10": e10,
             "sampling": smp.get("message"),
             **_ov(body, results),
         },
     )
+    if bom_warn:
+        history(
+            s,
+            tid,
+            lot,
+            "bom_over_consumption",
+            user,
+            step=ctx.step,
+            comment=bom_warn["message"][:300],
+            details={"lines": bom_warn["lines"]},
+        )
     if oos:
         history(
             s,
@@ -305,6 +383,15 @@ def track_out(
                 "action": worst,
                 "values": [{"item": d["code"], "value": d["value"]} for d in oos],
             },
+        )
+        oos_items = ", ".join(f"{d['code']}={d['value']:g}" for d in oos[:5])
+        notify_lot(
+            s,
+            tid,
+            OOS,
+            lot,
+            f"OOS on {lot['code']} step {ctx.step['seq']}: {oos_items} ({worst})",
+            {"step": ctx.step["seq"], "items": oos_items, "action": worst or ""},
         )
     if worst == "auto_hold" and status != "scrapped":
         mi = one(
@@ -358,4 +445,6 @@ def track_out(
         oos_action=worst,
         consumed=consumed,
         tools=tools,
+        bom_usage=bom_usage.as_strings(bom_rows),  # D50
+        warnings=[bom_usage.warning_out(bom_warn)] if bom_warn else [],
     )

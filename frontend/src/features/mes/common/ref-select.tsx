@@ -1,5 +1,5 @@
 /** MES 引用字段选择器。 */
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
 import { Check, ChevronsUpDown, X } from 'lucide-react'
@@ -20,6 +20,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { FIELD_MIN_W, POPOVER_W } from '@/components/field-width'
+import { IconButton } from '@/components/icon-button'
 import { rowLabel } from './labels'
 
 /** 可搜索的引用选择器（在目标实体上做服务端搜索）。 */
@@ -45,6 +47,8 @@ export function RefSelect({
   disabled?: boolean
 }) {
   const [open, setOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const clearable = Boolean(value) && !disabled
   const [q, setQ] = useState('')
   const tk = useTenantKey()
   const { data, isFetching } = useQuery({
@@ -54,24 +58,32 @@ export function RefSelect({
     enabled: open,
   })
   return (
-    <div className='flex min-w-0 gap-1'>
+    <div className={cn('relative w-full', FIELD_MIN_W)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
+            ref={triggerRef}
             id={id}
             type='button'
             variant='outline'
             role='combobox'
             disabled={disabled}
-            className='min-w-0 flex-1 justify-between font-normal'
+            className='w-full min-w-0 justify-between font-normal'
           >
-            <span className={cn('truncate', !value && 'text-muted-foreground')}>
+            <span
+              className={cn(
+                'truncate',
+                !value && 'text-muted-foreground',
+                clearable && 'pe-6'
+              )}
+              title={value ? String(label ?? value) : undefined}
+            >
               {value ? (label ?? value) : t('common.select')}
             </span>
             <ChevronsUpDown className='opacity-50' />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className='w-(--radix-popover-trigger-width) p-0'>
+        <PopoverContent className={cn(POPOVER_W, 'p-0')} align='start'>
           <Command shouldFilter={false}>
             <CommandInput
               value={q}
@@ -98,7 +110,12 @@ export function RefSelect({
                         value === r.id ? 'opacity-100' : 'opacity-0'
                       )}
                     />
-                    {rowLabel(r, labelField)}
+                    <span
+                      className='break-words whitespace-normal'
+                      title={rowLabel(r, labelField)}
+                    >
+                      {rowLabel(r, labelField)}
+                    </span>
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -106,16 +123,20 @@ export function RefSelect({
           </Command>
         </PopoverContent>
       </Popover>
-      {value && !disabled && (
-        <Button
+      {clearable && (
+        <IconButton
+          label={t('mes.clear')}
           type='button'
-          size='icon'
           variant='ghost'
-          aria-label={t('mes.clear')}
-          onClick={() => onChange(null, null)}
+          size='icon'
+          className='absolute end-8 top-1/2 size-6 -translate-y-1/2'
+          onClick={() => {
+            onChange(null, null)
+            triggerRef.current?.focus()
+          }}
         >
           <X className='size-4' />
-        </Button>
+        </IconButton>
       )}
     </div>
   )

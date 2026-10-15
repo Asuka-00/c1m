@@ -43,10 +43,14 @@ def _no_err(m: Mes, e: str, body: dict[str, Any], field: str) -> None:
 def test_required_fields(
     client: TestClient, db: Session, entity: str, field: str
 ) -> None:
+    from app.core.spec.engine import ENTITIES
+
     m = Mes(client, db)
-    errs = _errs(
-        m, entity, {"code": "X", "name": "x", f"{field}_id": None, field: None}
-    )
+    f = ENTITIES[entity].field(field)
+    body = {"code": "X", "name": "x", field: None}
+    if f and f.type == "ref":
+        body[f"{field}_id"] = None  # D65 补充 4：只发存在的字段
+    errs = _errs(m, entity, body)
     assert errs[field] == f"{field}: required"
 
 
@@ -138,14 +142,14 @@ def test_measurement_uom_when_numeric(client: TestClient, db: Session) -> None:
 
 def test_qtime_reason_and_resource_uom(client: TestClient, db: Session) -> None:
     m = Mes(client, db)
-    for act in ("hold", "scrap"):
-        assert "reason" in _errs(
+    # D25 / D26：原因码对任何处置都选填（hold 留空用 qtime_expired）；scrap 已去掉
+    for act in ("warn", "hold", "rework"):
+        _no_err(
             m,
             "qtime_rule",
             {"code": "Q", "name": "q", "action": act, "reason_id": None},
+            "reason",
         )
-    for act in ("warn", "rework"):
-        _no_err(m, "qtime_rule", {"code": "Q", "name": "q", "action": act}, "reason")
     errs = _errs(m, "step_resource", {"resource_kind": "material", "qty": 2})
     assert errs["uom"] == "uom: required when qty = set"
     _no_err(m, "step_resource", {"resource_kind": "material"}, "uom")

@@ -3,6 +3,7 @@ import { fmtDateTime, t } from '@/i18n'
 import type { MesEntity, MesRow } from '@/lib/api/mes/common'
 import { Badge } from '@/components/ui/badge'
 import { enumLabel } from './labels'
+import { RefLink } from './ref-link'
 
 /**
  * 按字段类型渲染单元格（枚举标签、布尔、日期、引用标签、实体专用渲染器）。
@@ -23,7 +24,13 @@ export function cellValue(
     return <span className='text-muted-foreground'>—</span>
   switch (f.type) {
     case 'ref':
-      return String(row[`${f.name}_label`] ?? v)
+      return (
+        <RefLink
+          target={f.ref!}
+          id={String(v)}
+          label={String(row[`${f.name}_label`] ?? v)}
+        />
+      )
     case 'enum':
       return <Badge variant='outline'>{enumLabel(f.enum!, String(v))}</Badge>
     case 'bool':

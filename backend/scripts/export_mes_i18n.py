@@ -11,12 +11,15 @@ import sys
 from pathlib import Path
 
 from app.mes.common.meta import LANGS, i18n_bundle
+from app.platform.rbac.labels import labels_bundle
 
 OUT = Path(__file__).resolve().parents[2] / "frontend/src/i18n/locales/mes"
 
 
 def render(lang: str) -> str:
-    return json.dumps(i18n_bundle(lang), ensure_ascii=False, indent=2) + "\n"
+    """MES 标签 + 内置权限 / 角色显示名称（permName.* / roleName.*）。"""
+    bundle = {**i18n_bundle(lang), **labels_bundle(lang)}
+    return json.dumps(bundle, ensure_ascii=False, indent=2) + "\n"
 
 
 def main() -> None:

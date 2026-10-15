@@ -7,14 +7,22 @@ import sqlalchemy as sa
 from fastapi import HTTPException
 from sqlmodel import Session
 
-from app.core.spec.base import conn, now
+from app.core.models import actor_name
+from app.core.spec.base import now
 from app.core.spec.engine import TABLES
 from app.mes.common import coderule
 from app.mes.common.query import find, jsonable, one
 from app.mes.common.rows import _ins
+from app.mes.lot.state import locked
 
 Row = dict[str, Any]
-TERMINAL = ("completed", "scrapped", "merged")
+TERMINAL = (
+    "completed",
+    "stored",
+    "scrapped",
+    "merged",
+    "converted",
+)  # 与 state.TERMINAL 一致
 
 
 def history(
@@ -55,7 +63,7 @@ def history(
         user,
         lot_id=lot["id"],
         action=action,
-        user_email=getattr(user, "email", None),
+        username=actor_name(user),
         at=now(),
         **kw,
     )
@@ -65,20 +73,15 @@ def lock_lot(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
     """对批次加行锁（SELECT ... FOR UPDATE）并返回最新行，防止并发作业。
 
     Raises:
-        HTTPException: 批次不存在（404）。
+        HTTPException: 批次不存在（404）；锁等待超时（409 lot_busy）。
     """
     t = TABLES["lot"]
-    r = (
-        conn(s)
-        .execute(
-            sa.select(t).where(t.c.tenant_id == tid, t.c.id == lot_id).with_for_update()
-        )
-        .mappings()
-        .first()
+    rows = locked(
+        s, sa.select(t).where(t.c.tenant_id == tid, t.c.id == lot_id).with_for_update()
     )
-    if not r:
+    if not rows:
         raise HTTPException(status_code=404, detail="Record not found")
-    return dict(r)
+    return rows[0]
 
 
 def tracking_level(s: Session, tid: uuid.UUID, product: Row | None) -> str:
@@ -93,7 +96,11 @@ def units(s: Session, tid: uuid.UUID, lot_id: Any, active: bool = True) -> list[
     """批次的单元（active=True 时仅返回未报废 / 未移出的）。"""
     rows = find(s, tid, "wafer", order="code", lot_id=lot_id)
     rows.sort(key=lambda u: (u["slot"] or 0, u["code"]))
-    return [u for u in rows if not active or u["wafer_status"] not in ("scrapped",)]
+    return [
+        u
+        for u in rows
+        if not active or u["wafer_status"] not in ("scrapped", "converted")
+    ]
 
 
 # ---------------- lot start hook ----------------

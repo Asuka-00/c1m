@@ -1,6 +1,7 @@
 """通用租户范围查询：列表 / 筛选 / 搜索 / 排序、单行、全部行、树。"""
 
 import uuid
+from datetime import date, datetime
 from typing import Any
 
 import sqlalchemy as sa
@@ -11,7 +12,7 @@ from app.core.spec.base import Row, conn, table
 from app.core.spec.engine import (
     Entity,
 )
-from app.core.spec.errors import http_422
+from app.core.spec.errors import err_422, query_422
 from app.core.spec.serialize import coerce, serialize
 
 
@@ -30,6 +31,16 @@ def sortable(e: Entity) -> dict[str, Any]:
     return out
 
 
+def default_order(e: Entity, key: str) -> str:
+    """默认排序方向：时间 / 日期类字段（含 created_at）默认降序（最新在前），其它升序。"""
+    f = e.field(key)
+    return (
+        "desc"
+        if key == "created_at" or (f and f.type in ("date", "datetime"))
+        else "asc"
+    )
+
+
 def base_select(e: Entity, tenant_id: uuid.UUID) -> sa.Select[Any]:
     """租户范围内的基础查询。"""
     t = table(e)
@@ -46,6 +57,25 @@ def apply_filters(
             stmt = stmt.where(t.c.status == raw)
             continue
         f = e.field(name) or next((x for x in e.all_fields if x.column == name), None)
+        if not f and name == "id":
+            try:
+                ids = [uuid.UUID(x) for x in raw.split(",") if x]
+            except ValueError as ex:
+                raise query_422([("id", "id: invalid uuid")]) from ex
+            stmt = stmt.where(t.c.id.in_(ids))
+            continue
+        if not f and name.startswith("has_"):
+            # has_<字段>=true|false：非空 / 为空（如 alarm_code ?has_migration_note=true）
+            g = e.field(name[4:])
+            if g and raw.lower() in ("true", "false", "1", "0"):
+                col = t.c[g.column]
+                yes = raw.lower() in ("true", "1")
+                stmt = stmt.where(col.is_not(None) if yes else col.is_(None))
+                continue
+            raise query_422([(name, f"{name}: must be true or false")])
+        if not f and name.endswith(("_from", "_to")):
+            stmt = _range(e, stmt, name, raw)
+            continue
         if not f or f.type in ("json", "text"):
             continue
         if f.type == "ref" and raw == "null":
@@ -54,9 +84,33 @@ def apply_filters(
         try:
             v = coerce(f, raw)
         except ValueError as ex:
-            raise http_422([(name, f"{name} {ex}")]) from ex
+            raise query_422([(name, f"{name} {ex}")]) from ex
         stmt = stmt.where(t.c[f.column] == v)
     return stmt
+
+
+def _range(e: Entity, stmt: sa.Select[Any], name: str, raw: str) -> sa.Select[Any]:
+    """时间 / 日期范围筛选：``<字段>_from`` 为下限（含），``<字段>_to`` 为上限（含）。
+
+    支持 date / datetime 字段及 ``created_at``；其它名称忽略。
+    """
+    t = table(e)
+    base, bound = name.rsplit("_", 1)
+    f = e.field(base) or next((x for x in e.all_fields if x.column == base), None)
+    kind = f.type if f else ("datetime" if base == "created_at" else None)
+    col = base if f is None else f.column
+    if kind not in ("date", "datetime") or col not in t.c:
+        return stmt
+    try:
+        v: Any = (
+            date.fromisoformat(raw[:10])
+            if kind == "date"
+            else datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        )
+    except ValueError as ex:
+        raise query_422([(name, f"{name}: invalid date")]) from ex
+    c = t.c[col]
+    return stmt.where(c >= v if bound == "from" else c <= v)
 
 
 def search(e: Entity, stmt: sa.Select[Any], q: str | None) -> sa.Select[Any]:
@@ -66,9 +120,15 @@ def search(e: Entity, stmt: sa.Select[Any], q: str | None) -> sa.Select[Any]:
     t = table(e)
     esc = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     cols = [t.c[f.column] for f in e.all_fields if f.search]
-    if not cols:
+    exact = [t.c[f.column] for f in e.all_fields if f.search_exact]
+    if not cols and not exact:
         return stmt
-    return stmt.where(sa.or_(*(c.ilike(f"%{esc}%", escape="\\") for c in cols)))
+    return stmt.where(
+        sa.or_(
+            *(c.ilike(f"%{esc}%", escape="\\") for c in cols),
+            *(sa.func.upper(c) == sa.func.upper(sa.literal(q.strip())) for c in exact),
+        )
+    )
 
 
 def list_rows(
@@ -97,10 +157,10 @@ def list_rows(
     cols = sortable(e)
     key = sort_by or e.sort_default
     if key not in cols:
-        raise HTTPException(
-            status_code=422, detail=f"sort_by must be one of: {', '.join(sorted(cols))}"
+        raise query_422(
+            [("sort_by", f"sort_by must be one of: {', '.join(sorted(cols))}")]
         )
-    order = sort_order if sort_by else ("desc" if key in ("created_at",) else "asc")
+    order = sort_order if sort_by else default_order(e, key)
     col = cols[key]
     stmt = stmt.order_by(
         col.desc().nulls_last() if order == "desc" else col.asc().nulls_last(),
@@ -130,14 +190,51 @@ def get_row(session: Session, e: Entity, tenant_id: uuid.UUID, rid: uuid.UUID) -
 
 
 def all_rows(
-    session: Session, e: Entity, tenant_id: uuid.UUID, limit: int = 5000
+    session: Session,
+    e: Entity,
+    tenant_id: uuid.UUID,
+    limit: int = 5000,
+    *,
+    q: str | None = None,
+    filters: dict[str, str] | None = None,
 ) -> list[Row]:
-    """读取全部行（带上限，用于选项与导出）。"""
+    """读取全部行（带上限，用于选项与导出；可按关键字 / 筛选过滤，约定同列表）。"""
     t = table(e)
-    stmt = base_select(e, tenant_id).order_by(
-        t.c[sortable(e).get(e.sort_default, t.c.id).name], t.c.id
-    )
+    stmt = base_select(e, tenant_id)
+    if filters:
+        stmt = apply_filters(e, stmt, filters)
+    if q:
+        stmt = search(e, stmt, q)
+    stmt = stmt.order_by(t.c[sortable(e).get(e.sort_default, t.c.id).name], t.c.id)
     return [dict(r) for r in conn(session).execute(stmt.limit(limit)).mappings()]
+
+
+def distinct_values(
+    session: Session,
+    e: Entity,
+    tenant_id: uuid.UUID,
+    name: str,
+    q: str | None = None,
+    limit: int = 50,
+) -> list[str]:
+    """文本型筛选字段的去重取值（用于下拉筛选选项，可按关键字模糊匹配）。
+
+    仅允许声明了 ``filter=True`` 的 str 字段，其它字段返回 422。
+    """
+    f = e.field(name)
+    if not f or f.type != "str" or not f.filterable:
+        raise err_422(
+            ["path", "field"],
+            f"{name} is not a text filter",
+            "not_text_filter",
+            {"field": name},
+        )
+    sub = base_select(e, tenant_id).subquery()
+    stmt = sa.select(sub.c[f.column]).where(sub.c[f.column].is_not(None)).distinct()
+    if q:
+        stmt = stmt.where(sub.c[f.column].ilike(f"%{q}%"))
+    stmt = stmt.order_by(sub.c[f.column]).limit(limit)
+    return [r[0] for r in conn(session).execute(stmt)]
 
 
 def tree(session: Session, tenant_id: uuid.UUID, e: Entity) -> list[Row]:

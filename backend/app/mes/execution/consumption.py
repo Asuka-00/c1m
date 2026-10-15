@@ -2,14 +2,18 @@
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
 from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core.models import actor_name
+from app.core.spec.base import now
 from app.mes.common.query import find, one
-from app.mes.common.rows import _upd
-from app.mes.common.uom import convert
+from app.mes.common.rows import _ins, _upd
+from app.mes.common.sitedate import site_today
+from app.mes.common.uom import convert, to_qty
 
 Row = dict[str, Any]
 
@@ -35,6 +39,7 @@ def material_needs(
         每种物料的 ``{需求、可用、分配明细、是否足够}``。
     """
     out = []
+    today = site_today(s, tid, at)
     for r in find(s, tid, "step_resource", route_step_id=step["id"]):
         if r["resource_kind"] != "material" or not r["material_id"] or not r["qty"]:
             continue
@@ -50,7 +55,7 @@ def material_needs(
         alloc, have, total = [], 0.0, 0.0
         for m in cands:
             if m["ml_status"] != "available" or (
-                m["expiry_date"] and m["expiry_date"] < at.date()
+                m["expiry_date"] and m["expiry_date"] < today
             ):
                 continue
             q = float(m["qty_remaining"] or 0)
@@ -91,18 +96,45 @@ def candidate_lots(
     s: Session, tid: uuid.UUID, material_id: Any, at: datetime
 ) -> list[Row]:
     """物料的可用线边批次，按先到期先出（FEFO）排序。"""
+    today = site_today(s, tid, at)
     ls = [
         m
         for m in find(s, tid, "material_lot", material_id=material_id)
         if m["ml_status"] == "available"
         and (m["qty_remaining"] or 0) > 0
-        and not (m["expiry_date"] and m["expiry_date"] < at.date())
+        and not (m["expiry_date"] and m["expiry_date"] < today)
     ]
     return sorted(ls, key=lambda m: (m["expiry_date"] or date.max, m["code"]))
 
 
-def _consume(s: Session, tid: uuid.UUID, needs: list[Row], user: Any) -> list[Row]:
+def usage_type(s: Session, tid: uuid.UUID, lot: Row, step: Row) -> str:
+    """本次扣料的用途：在返工路线中、或返工后回到已扣过料的同一工步重做时为 rework。"""
+    if any(x.get("kind") == "rework" for x in lot.get("route_stack") or []):
+        return "rework"
+    done = find(
+        s,
+        tid,
+        "material_consumption",
+        lot_id=lot["id"],
+        route_step_id=step["id"],
+        usage_type="normal",
+    )
+    return "rework" if done else "normal"
+
+
+def _consume(
+    s: Session,
+    tid: uuid.UUID,
+    needs: list[Row],
+    user: Any,
+    *,
+    lot: Row | None = None,
+    step: Row | None = None,
+    usage: str = "normal",
+) -> list[Row]:
+    """按分配方案扣减线边批次；给定 ``lot`` 时逐条写用料记录（material_consumption）。"""
     out = []
+    at, who = now(), actor_name(user)
     for n in needs:
         for a in n["allocation"]:
             m = one(s, tid, "material_lot", a["material_lot_id"])
@@ -110,7 +142,8 @@ def _consume(s: Session, tid: uuid.UUID, needs: list[Row], user: Any) -> list[Ro
             q = a["qty"]
             if a["req_uom_id"] and m["uom_id"] != a["req_uom_id"]:
                 q = convert(s, tid, a["req_uom_id"], m["uom_id"], q)["value"]
-            left = max(0.0, round(float(m["qty_remaining"]) - q, 9))
+            q = to_qty(q)  # Decimal(18,6)，入库前定点化（D31）
+            left = max(Decimal(0), to_qty(m["qty_remaining"] or 0) - q)
             _upd(
                 s,
                 tid,
@@ -120,5 +153,25 @@ def _consume(s: Session, tid: uuid.UUID, needs: list[Row], user: Any) -> list[Ro
                 qty_remaining=left,
                 ml_status="empty" if left <= 0 else m["ml_status"],
             )
-            out.append({"material_lot": m["code"], "qty": round(q, 6), "left": left})
+            if lot is not None:
+                _ins(
+                    s,
+                    tid,
+                    "material_consumption",
+                    user,
+                    lot_id=lot["id"],
+                    route_step_id=step and step["id"],
+                    operation_id=step and step.get("operation_id"),
+                    material_id=m["material_id"],
+                    material_lot_id=m["id"],
+                    qty=q,
+                    uom_id=m["uom_id"],
+                    source="step_resource",
+                    usage_type=usage,
+                    username=who,
+                    at=at,
+                )
+            out.append(
+                {"material_lot": m["code"], "qty": float(q), "left": float(left)}
+            )
     return out

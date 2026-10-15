@@ -13,7 +13,20 @@ from sqlalchemy.engine import make_url
 from app.core.config import Settings
 
 _base = Settings()  # type: ignore[call-arg]
-_test_db = os.environ.get("TEST_DATABASE_NAME", "app_test")
+_test_db = os.environ.get("TEST_DATABASE_NAME", "").strip()
+if not _test_db:  # 不再默认 app_test：多人共用机器时静默落到同一个库会互相覆盖
+    raise SystemExit(
+        "pytest: TEST_DATABASE_NAME is not set. Export it explicitly, e.g. "
+        "TEST_DATABASE_NAME=app_test_<you> (the database is created and migrated "
+        "automatically and wiped after the run)."
+    )
+# 共用机器上的应用库 / 联调库：测试跑完会清空，绝不能拿来当测试库
+_PROTECTED = {"app", "app_it_be", "app_it_qa", "app_it_eap", "postgres"}
+if _test_db in _PROTECTED or _test_db.startswith("app_it_"):
+    raise SystemExit(
+        f"pytest: TEST_DATABASE_NAME={_test_db!r} is an application / integration "
+        "database; use a dedicated test database."
+    )
 _app_url = make_url(str(_base.DATABASE_URL)).set(database=_test_db)
 _admin_url = make_url(_base.migration_database_url).set(database=_test_db)
 os.environ["DATABASE_URL"] = _app_url.render_as_string(hide_password=False)
@@ -35,7 +48,7 @@ def _prepare_test_database() -> None:
             c.execute(text(f'CREATE DATABASE "{_test_db}"'))
     server.dispose()
     backend = Path(__file__).resolve().parent
-    env = {**os.environ}
+    env = {**os.environ, "POSTGRES_DB": _test_db}
     for cmd in (
         ["alembic", "upgrade", "head"],
         [sys.executable, "scripts/setup_db_roles.py"],

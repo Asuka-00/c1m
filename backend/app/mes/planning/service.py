@@ -6,7 +6,7 @@
     hold      released|in_progress -> on_hold
     resume    on_hold -> Hold 前的状态
     complete  in_progress -> completed
-    close     completed -> closed
+    close     completed -> closed            （手动结案；批次须已全部入库 / 报废 / 合批）
     cancel    draft|released（未开批）-> cancelled
 
 开批使工单 released → in_progress；撤销全部开批后回到 released。
@@ -20,6 +20,7 @@ import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
+from app.core.models import actor_name
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, TABLES, Entity
@@ -28,7 +29,9 @@ from app.core.spec.query import get_row
 from app.core.spec.validate import validator
 from app.mes.common import coderule
 from app.mes.lot import service as lot_svc
+from app.mes.planning.board import wo_due_notify as wo_due_notify
 from app.mes.process import service as process_svc
+from app.mes.product import service as bom_svc
 
 Row = dict[str, Any]
 WO, LOT, WAFER = (ENTITIES[c] for c in ("work_order", "lot", "wafer"))
@@ -277,12 +280,41 @@ def transition(
             "product_version": prod["version"],
             "route_version": route["version"],
             "released_at": now(),
-            "released_by": getattr(user, "email", None),
+            "released_by": actor_name(user),
         }
     elif action == "hold":
         extra = {"held_from": wo["wo_status"]}
     elif action == "resume":
         to, extra = wo["held_from"] or "released", {"held_from": None}
+    elif action == "close":
+        t = TABLES["lot"]
+        open_lots = (
+            conn(s)
+            .execute(
+                sa.select(t.c.code)
+                .where(
+                    t.c.tenant_id == tid,
+                    t.c.work_order_id == wo["id"],
+                    t.c.lot_status.notin_(
+                        ["stored", "scrapped", "merged", "converted"]
+                    ),
+                )
+                .order_by(t.c.code)
+                .limit(5)
+            )
+            .scalars()
+            .all()
+        )
+        if open_lots:
+            raise http_422(
+                [
+                    (
+                        "wo_status",
+                        "wo_status: lots still in process or awaiting receipt: "
+                        + ", ".join(open_lots),
+                    )
+                ]
+            )
     elif action == "cancel" and wo["started_qty"]:
         raise http_422([("wo_status", "wo_status: lots were started; undo them first")])
     new = _set(s, tid, wo, user, action, wo_status=to, **extra)
@@ -344,7 +376,9 @@ def _carrier_busy(s: Session, tid: uuid.UUID, carrier_id: Any) -> bool:
             sa.select(t.c.id).where(
                 t.c.tenant_id == tid,
                 t.c.carrier_id == carrier_id,
-                t.c.lot_status.notin_(["completed", "scrapped", "merged"]),
+                t.c.lot_status.notin_(
+                    ["completed", "stored", "scrapped", "merged", "converted"]
+                ),
             )
         )
         .first()
@@ -388,7 +422,7 @@ def start(
             ]
         )
     lt, lr, wr = _rules(s, tid, wo)
-    errs: list[tuple[str, str]] = []
+    errs: list[tuple[Any, str]] = []
     if not lots:
         errs.append(("lots", "lots: at least one lot"))
     total = sum(int(x.get("qty") or 0) for x in lots)
@@ -400,11 +434,11 @@ def start(
             )
         )
     seen: set[Any] = set()
-    for i, x in enumerate(lots, 1):
+    for i, x in enumerate(lots):
         n = int(x.get("qty") or 0)
         if not 1 <= n <= (lt["max_wafers"] or 25):
             errs.append(
-                (f"lots.{i}.qty", f"lot {i}: qty must be 1..{lt['max_wafers']}")
+                (("lots", i, "qty"), f"lots.{i}: qty must be 1..{lt['max_wafers']}")
             )
         slots = x.get("slots") or list(range(1, n + 1))
         x["slots"] = slots
@@ -415,21 +449,21 @@ def start(
             car = _one(s, tid, "carrier", cid)
             ct = car and _one(s, tid, "carrier_type", car["carrier_type_id"])
             if not car or not ct:
-                errs.append((f"lots.{i}.carrier", f"lot {i}: carrier not found"))
+                errs.append((("lots", i, "carrier_id"), f"lots.{i}: carrier not found"))
                 continue
             width = ct["capacity"]
             if car["status_code"] != "available":
                 errs.append(
                     (
-                        f"lots.{i}.carrier",
-                        f"lot {i}: carrier {car['code']} is not available",
+                        ("lots", i, "carrier_id"),
+                        f"lots.{i}: carrier {car['code']} is not available",
                     )
                 )
             if cid in seen or _carrier_busy(s, tid, cid):
                 errs.append(
                     (
-                        f"lots.{i}.carrier",
-                        f"lot {i}: carrier {car['code']} is already in use",
+                        ("lots", i, "carrier_id"),
+                        f"lots.{i}: carrier {car['code']} is already in use",
                     )
                 )
             seen.add(cid)
@@ -442,13 +476,16 @@ def start(
         ):
             errs.append(
                 (
-                    f"lots.{i}.slots",
-                    f"lot {i}: {n} distinct slots within 1..{width} required",
+                    ("lots", i, "slots"),
+                    f"lots.{i}: {n} distinct slots within 1..{width} required",
                 )
             )
+        errs += lot_svc.customer_start_errors(s, tid, i, x)
         srcs = x.get("wafer_sources") or []
         if srcs and len(srcs) != n:
-            errs.append((f"lots.{i}.wafer_sources", f"lot {i}: one source per wafer"))
+            errs.append(
+                (("lots", i, "wafer_sources"), f"lots.{i}: one source per wafer")
+            )
     if errs:
         raise http_422(errs)
     step, site = first_step(s, tid, wo["route_id"])
@@ -459,6 +496,8 @@ def start(
     if not step:
         raise http_422([("route", "route: has no operation steps")])
     prod = _one(s, tid, "product", wo["product_id"]) or {}
+    # D28：锁定当时生效的 BOM 版本（没有则为空；开关打开时拒绝）
+    bom = bom_svc.lock_for_start(s, tid, wo["product_id"])
     lot_nos = coderule.generate(s, tid, lr, len(lots), commit=False)
     at, c, out = now(), conn(s), []
     tag = {"_demo": True} if demo else {}
@@ -487,12 +526,17 @@ def start(
                 step_in_at=at,
                 on_hold=False,
                 scrapped_qty=0,
+                received_qty=0,
+                rework_count=0,
+                bonus_qty=0,
                 pending_rework=False,
                 lot_status="waiting",
                 carrier_id=x.get("carrier_id"),
                 source_ref=x.get("source_ref") or None,
                 started_at=at,
-                started_by=getattr(user, "email", None),
+                started_by=actor_name(user),
+                bom_id=bom and bom["id"],
+                **lot_svc.inherit_customer(x),
                 attrs=dict(tag),
                 **sysv,
             )
@@ -518,7 +562,16 @@ def start(
             {"work_order": (None, wo["code"]), "qty": (None, lot["qty"])},
         )
         lot_svc.history(
-            s, tid, lot, "start", user, step=step, details={"work_order": wo["code"]}
+            s,
+            tid,
+            lot,
+            "start",
+            user,
+            step=step,
+            details={
+                "work_order": wo["code"],
+                "bom_version": bom and bom["version"],
+            },
         )
         out.append(lot)
     _set(
@@ -557,9 +610,11 @@ def undo_start(
     stmt = sa.select(t).where(t.c.tenant_id == tid, t.c.work_order_id == wo["id"])
     if lot_ids:
         stmt = stmt.where(t.c.id.in_(lot_ids))
-    lots = [dict(r) for r in conn(s).execute(stmt).mappings()]
-    if not lots:
+    ids = list(conn(s).execute(stmt.with_only_columns(t.c.id)).scalars())
+    if not ids:
         raise http_422([("lots", "lots: nothing to undo")])
+    # 加锁后再判断状态，防止与 Move In / Hold 并发
+    lots = list(lot_svc.lock_lots(s, tid, ids).values())
     h = TABLES["lot_history"]
     acted = set(
         conn(s)

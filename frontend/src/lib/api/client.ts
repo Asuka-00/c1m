@@ -1,9 +1,11 @@
 import axios, { AxiosError } from 'axios'
 import i18n, { currentLanguage, t } from '@/i18n'
+import { TENANT_WORDING } from '@/i18n/workspace-wording'
 import { useAuthStore } from '@/stores/auth-store'
+import { isPlatformPath } from '@/lib/space'
 
-/** 后端 API 地址（VITE_API_URL，默认 http://localhost:8000）。 */
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+/** 后端 API 地址（VITE_API_URL；设为空字符串时使用同源，生产经 nginx 反代 /api；未设置时默认 http://localhost:8000）。 */
+export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 /** Axios 实例：附带 Bearer 令牌与 X-Tenant-ID；401 时登出。 */
 export const http = axios.create({ baseURL: `${API_URL}/api/v1` })
@@ -21,6 +23,17 @@ http.interceptors.response.use(
   (error: AxiosError) => {
     const status = error.response?.status
     const url = error.config?.url ?? ''
+    const detail = (error.response?.data as { detail?: string })?.detail
+    const st = useAuthStore.getState()
+    // 模拟令牌过期 / 失效：恢复原平台令牌并回到平台租户列表，而不是登出
+    if (
+      st.originalToken &&
+      (status === 401 || detail === 'Could not validate credentials')
+    ) {
+      st.endImpersonation()
+      window.location.assign('/platform/tenants')
+      return Promise.reject(error)
+    }
     if (status === 401 || (status === 403 && url.includes('/users/me'))) {
       useAuthStore.getState().reset()
       if (!window.location.pathname.startsWith('/sign-in')) {
@@ -44,6 +57,9 @@ http.interceptors.response.use(
 /** 把 API 错误转换为可读的多语言消息。已知的后端
  *  `detail` 字符串会被翻译（backend.<detail>）；否则回退为
  *  按状态码的翻译消息，最后才是原始 detail。 */
+/**
+ * 把接口错误转换为当前语言的提示文本。
+ */
 export function errorMessage(e: unknown): string {
   if (e instanceof AxiosError) {
     if (!e.response) return t('errors.network')
@@ -51,7 +67,11 @@ export function errorMessage(e: unknown): string {
     const d = (e.response.data as { detail?: unknown })?.detail
     if (typeof d === 'string') {
       const key = `backend.${d}`
-      return i18n.exists(key) ? t(key) : d
+      if (i18n.exists(key)) return t(key)
+      // 工作区不暴露多租户概念：未翻译且提到 tenant 的后端消息改为通用提示
+      if (TENANT_WORDING.test(d) && !isPlatformPath(window.location.pathname))
+        return status === 403 ? t('errors.forbidden') : t('errors.generic')
+      return d
     }
     if (status === 422) {
       if (Array.isArray(d)) {

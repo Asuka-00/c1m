@@ -1,5 +1,8 @@
 """工艺模块公开 API（路线导航、工步排序）。"""
 
+from app.mes.process.ecn import (
+    apply_due as apply_due,
+)
 from app.mes.process.navigation import (
     enter_route as enter_route,
 )

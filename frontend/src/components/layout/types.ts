@@ -12,9 +12,10 @@ type NavLink = BaseNavItem & {
 }
 
 type NavCollapsible = BaseNavItem & {
-  /** 用于持久化展开 / 折叠状态的稳定 id */
+  /** 分组的稳定 id（手风琴展开状态） */
   key?: string
-  items: (BaseNavItem & { url: LinkProps['to'] | (string & {}) })[]
+  /** 子项：链接或下级分组（支持多级） */
+  items: (NavLink | NavCollapsible)[]
   url?: never
 }
 

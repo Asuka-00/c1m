@@ -18,9 +18,8 @@
     "permissions": "Permissions",
     "active": "Active",
     "inactive": "inactive",
-    "activeBadge": "active",
     "superuser": "Superuser",
-    "owner": "Owner",
+    "owner": "System admin",
     "id": "ID",
     "select": "Select…",
     "none": "— none —",
@@ -36,7 +35,8 @@
     "backHome": "Back to Home",
     "close": "Close",
     "no": "no",
-    "username": "Username"
+    "username": "Username",
+    "loginName": "Login"
   },
   "table": {
     "rowsPerPage": "Rows per page",
@@ -53,19 +53,25 @@
     "clearSearch": "Clear search",
     "noMatch": "No results match “{{q}}”.",
     "searchUsers": "Search email or name…",
-    "searchRoles": "Search name or description…",
-    "searchPermissions": "Search code or description…",
     "searchTenants": "Search name or slug…",
-    "searchMenus": "Search key, title or path…",
     "allStatuses": "All statuses",
     "noMatchFilters": "No results match the current filters.",
     "resetFilters": "Reset filters",
     "allRoles": "All roles",
-    "allScopes": "All scopes",
-    "allParents": "All groups",
-    "allSuperuser": "Superuser: any",
-    "allVisibility": "Visible & hidden",
-    "visible": "Visible"
+    "visible": "Visible",
+    "moreFilters": "More filters",
+    "recordFilter": "Linked record",
+    "clearRecordFilter": "Show all records",
+    "searchOptions": "Search…",
+    "range": {
+      "today": "Today",
+      "last7": "Last 7 days",
+      "last30": "Last 30 days",
+      "thisMonth": "This month",
+      "from": "From",
+      "to": "To",
+      "clear": "Clear range"
+    }
   },
   "theme": {
     "toggle": "Toggle theme",
@@ -84,42 +90,63 @@
     "en": "English"
   },
   "nav": {
-    "selectTenant": "Select tenant",
-    "tenants": "Tenants",
-    "tenantsCount": "{{count}} tenants",
+    "searchMenu": "Search menus",
+    "searchMenuHint": "Type a menu name (zh / en / ja) or key",
+    "searchMenuEmpty": "No matching menus",
+    "breadcrumb": "Breadcrumb",
+    "selectTenant": "Select site",
+    "tenants": "Sites",
+    "tenantsCount": "{{count}} sites",
     "noRole": "no role",
     "profile": "Profile & password",
     "superuserTag": "(superuser)",
     "signOut": "Sign out",
     "signOutDesc": "Are you sure you want to sign out? You will need to sign in again to access your account.",
-    "sidebar": "Navigation"
+    "sidebar": "Navigation",
+    "platformAdmin": "Platform Admin",
+    "platformSubtitle": "Platform permissions required",
+    "backToWorkspace": "Back to workspace",
+    "impersonating": "Viewing as tenant \"{{name}}\"",
+    "impersonatingShort": "viewing as tenant",
+    "exitImpersonation": "Leave tenant view, back to Platform Admin",
+    "noTenant": "No site assigned"
   },
   "menu": {
     "dashboard": "Dashboard",
-    "members": "Members",
-    "tenant-roles": "Tenant roles",
+    "members": "Users",
+    "user-roles": "Roles",
     "users": "Users",
     "roles": "Roles",
     "permissions": "Permissions",
-    "tenants": "Tenants",
+    "tenants": "Sites",
     "menus": "Menus",
     "settings": "Settings",
-    "config": "System configuration"
+    "config": "System configuration",
+    "notifications": "Message Center",
+    "notify-subscriptions": "Notification Subscriptions",
+    "mes-wo-board": "WO Progress",
+    "mes-change_order": "ECN",
+    "mes-future_hold": "Future Hold",
+    "mes-shift-handover": "Shift Handover",
+    "mes-label-print": "Label Printing",
+    "mes-operator_qual": "Operator Qualification"
   },
   "auth": {
     "appName": "FastAPI Admin",
     "signIn": "Sign in",
-    "signInDesc": "Sign in with your account on the FastAPI backend.",
-    "emailRequired": "Please enter your email.",
-    "emailInvalid": "Please enter a valid email.",
+    "signInDesc": "Sign in with your account.",
     "passwordRequired": "Please enter your password.",
     "welcome": "Welcome back, {{name}}!",
-    "loginLabel": "Username or email",
-    "loginPlaceholder": "admin or name@example.com",
+    "loginLabel": "Username",
+    "loginPlaceholder": "e.g. admin",
     "loginRequired": "Please enter your username or email",
-    "loginInvalid": "Enter a valid email or username (3–50 letters, digits, . _ -)"
+    "loginInvalid": "Enter a valid username (3–50 letters, digits, . _ -)"
   },
   "errors": {
+    "401": {
+      "title": "Unauthorized Access",
+      "desc": "Please log in with the appropriate credentials to access this resource."
+    },
     "403": {
       "title": "Access Forbidden",
       "desc": "You don't have the necessary permission to view this resource."
@@ -132,10 +159,6 @@
       "title": "Oops! Something went wrong",
       "desc": "We apologize for the inconvenience. Please try again later."
     },
-    "401": {
-      "title": "Unauthorized Access",
-      "desc": "Please log in with the appropriate credentials to access this resource."
-    },
     "503": {
       "title": "Website is under maintenance!",
       "desc": "The site is not available at the moment. We'll be back online shortly."
@@ -143,7 +166,8 @@
     "server": "Internal Server Error!",
     "network": "Network error, the backend is unreachable.",
     "forbidden": "You don't have enough privileges.",
-    "validation": "Invalid input."
+    "validation": "Invalid input.",
+    "generic": "The request failed; please contact your administrator."
   },
   "backend": {
     "Incorrect email or password": "Incorrect email or password",
@@ -152,26 +176,26 @@
     "Not enough permissions": "Not enough permissions",
     "Could not validate credentials": "Could not validate credentials",
     "User not found": "User not found",
-    "Tenant not found": "Tenant not found",
+    "Tenant not found": "Site not found or not accessible",
     "Role not found": "Role not found",
-    "Member not found": "Member not found",
-    "Tenant is suspended": "Tenant is suspended",
+    "Member not found": "User not found",
+    "Tenant is suspended": "This site is suspended; contact your administrator",
     "The user with this email already exists in the system": "The user with this email already exists in the system",
     "User with this email already exists": "User with this email already exists",
     "Incorrect password": "Incorrect password",
     "New password cannot be the same as the current one": "New password cannot be the same as the current one",
     "Super users are not allowed to delete themselves": "Super users are not allowed to delete themselves",
-    "User is already a member": "User is already a member",
-    "A tenant must keep at least one owner": "A tenant must keep at least one owner",
-    "Only owners can grant the owner role": "Only owners can grant the owner role",
-    "Only owners can change owner roles": "Only owners can change owner roles",
-    "Only owners can remove owners": "Only owners can remove owners",
+    "User is already a member": "User already added",
+    "A tenant must keep at least one owner": "At least one system admin must remain",
+    "Only owners can grant the owner role": "Only system admins can grant the system admin role",
+    "Only owners can change owner roles": "Only system admins can change system admin roles",
+    "Only owners can remove owners": "Only system admins can remove system admins",
     "Tenant slug already exists": "Tenant slug already exists",
     "Role already exists": "Role already exists",
     "Permission already exists": "Permission already exists",
     "Menu key already exists": "Menu key already exists",
-    "The owner role permissions are fixed": "The owner role permissions are fixed",
-    "The owner role cannot be deleted": "The owner role cannot be deleted",
+    "The owner role permissions are fixed": "The system admin role permissions are fixed",
+    "The owner role cannot be deleted": "The system admin role cannot be deleted",
     "Only platform admins can change tenant status": "Only platform admins can change tenant status",
     "Incorrect username/email or password": "Incorrect username/email or password",
     "User with this username already exists": "User with this username already exists",
@@ -180,47 +204,57 @@
     "A record with the same key already exists": "A record with the same key already exists",
     "Record is referenced by other records": "Record is referenced by other records",
     "Read-only entity": "Read-only entity",
-    "step_ids must list every step of the route exactly once": "step_ids must list every step of the route exactly once"
+    "step_ids must list every step of the route exactly once": "step_ids must list every step of the route exactly once",
+    "Incorrect username or password": "Incorrect username or password",
+    "User belongs to other tenants; ask a platform admin": "This account is managed centrally; ask your administrator",
+    "Only owners can manage owners": "Only system admins can manage system admins",
+    "Tenant has expired": "This site has expired; contact your administrator",
+    "X-Tenant-ID header is required (user belongs to multiple or no tenants)": "Please select a site first"
   },
   "dashboard": {
     "title": "Dashboard",
     "signedInAs": "Signed in as {{email}}",
-    "currentTenant": "Current tenant",
+    "currentTenant": "Current site",
     "rolesHint": "roles: {{roles}}",
-    "selectTenant": "select a tenant",
-    "members": "Members",
-    "inTenant": "in current tenant",
-    "myTenants": "My tenants",
-    "superuserHint": "superuser: can access any tenant",
+    "selectTenant": "select a site",
+    "members": "Users",
+    "inTenant": "in current site",
+    "myTenants": "My sites",
+    "superuserHint": "superuser: can access every site",
     "effective": "Effective permissions",
-    "effectiveDesc": "Platform roles + your roles in the current tenant (from GET /menus/me)",
-    "bypass": "superuser (bypass)"
+    "effectiveDesc": "All permissions you currently have",
+    "bypass": "superuser (bypass)",
+    "showPerms": "Show",
+    "hidePerms": "Hide",
+    "noTenantTitle": "No site or permissions assigned",
+    "noTenantDesc": "No site or permissions assigned yet. Please contact your administrator."
   },
   "users": {
     "title": "Users",
     "desc": "All platform users",
     "new": "New user",
     "edit": "Edit user",
-    "editDesc": "Leave password empty to keep it.",
-    "newDesc": "New users get a personal tenant (owner).",
-    "passwordUnchanged": "unchanged",
+    "newDesc": "Create a platform user and assign tenants.",
     "passwordMin": "min. 8 characters",
-    "rolesTitle": "Platform roles of {{email}}",
-    "rolesDesc": "Tenant roles are managed per tenant on the Members page.",
-    "rolesAction": "Roles",
+    "rolesDesc": "Tenant roles are managed on each tenant's members page.",
     "delete": "Delete user",
     "deleteDesc": "Delete {{email}}? Their items are deleted too.",
     "created": "User created",
     "updated": "User updated",
     "deleted": "User deleted",
     "regular": "Regular users",
-    "usernameHint": "Optional; 3–50 letters, digits, . _ -"
+    "usernameHint": "Required; 3–50 letters, digits, . _ - (case-insensitive)",
+    "emailOptional": "Optional; must be unique if set",
+    "tenants": "Tenants",
+    "tenant": "Tenant",
+    "pickTenant": "Select tenant",
+    "addTenant": "Add tenant",
+    "removeTenant": "Remove this tenant"
   },
   "roles": {
-    "platformTitle": "Roles",
     "platformDesc": "Platform-wide roles (assigned to users).",
-    "tenantTitle": "Tenant roles",
-    "tenantDesc": "Roles inside tenant “{{tenant}}” (assigned to members). Edit permissions on the Permissions page.",
+    "tenantTitle": "Roles",
+    "tenantDesc": "Manage roles and their permissions.",
     "new": "New role",
     "edit": "Edit role",
     "delete": "Delete role",
@@ -231,13 +265,9 @@
   },
   "permissions": {
     "title": "Permissions",
-    "desc": "Assign permissions to roles with the permission tree (grouped by resource).",
-    "platformTab": "Platform roles",
-    "tenantTab": "Tenant roles",
+    "desc": "Assign permissions to roles.",
     "role": "Role: {{name}}",
-    "noRoles": "No roles.",
-    "tenantOnly": "Tenant roles can only hold tenant-scope permissions.",
-    "ownerFixed": "The owner role is fixed.",
+    "ownerFixed": "The system admin role is fixed.",
     "selected": "{{count}} selected",
     "count": "{{count}} permissions",
     "allOf": "All {{resource}} permissions",
@@ -256,7 +286,9 @@
     "saved": "Permissions saved",
     "created": "Permission created",
     "updated": "Permission updated",
-    "deleted": "Permission deleted"
+    "deleted": "Permission deleted",
+    "tenantTitle": "Role permissions",
+    "tenantDesc": "Assign permissions to the roles of tenant \"{{name}}\"."
   },
   "tenants": {
     "title": "Tenants",
@@ -276,44 +308,26 @@
     "deleted": "Tenant deleted"
   },
   "members": {
-    "title": "Members",
-    "desc": "Members of tenant “{{tenant}}”",
-    "add": "Add member",
-    "addDesc": "The user must already have an account.",
+    "title": "Users",
+    "desc": "Users who can sign in, with their roles and status",
+    "add": "Add user",
+    "addDesc": "Add a registered user by username.",
     "rolesOf": "Roles of {{email}}",
-    "tenantRoles": "Tenant roles",
-    "leave": "Leave tenant",
-    "remove": "Remove member",
-    "removeDesc": "Remove {{email}} from {{tenant}}?",
-    "added": "Member added",
+    "tenantRoles": "Roles",
+    "leave": "Remove my access",
+    "remove": "Remove user",
+    "removeDesc": "Remove access for {{email}}?",
+    "added": "User added",
     "rolesUpdated": "Roles updated",
-    "removed": "Member removed"
-  },
-  "menus": {
-    "title": "Menus",
-    "desc": "Backend menu / route registry. The sidebar and routes are built from this.",
-    "new": "New menu",
-    "edit": "Edit menu",
-    "key": "Key",
-    "parent": "Parent",
-    "parentGroup": "Parent group",
-    "topLevel": "— top level —",
-    "path": "Path",
-    "pathLabel": "Path (empty = group)",
-    "group": "(group)",
-    "component": "Component",
-    "componentKey": "Component key",
-    "icon": "Icon",
-    "permission": "Permission",
-    "requiredPermission": "Required permission",
-    "order": "Order",
-    "hidden": "Hidden",
-    "delete": "Delete menu",
-    "deleteDesc": "Delete {{title}}?",
-    "deleteGroupDesc": "Delete {{title}} and all its children?",
-    "created": "Menu created",
-    "updated": "Menu updated",
-    "deleted": "Menu deleted"
+    "removed": "User removed",
+    "edit": "Edit user",
+    "addExisting": "Add existing user",
+    "createUser": "New user",
+    "createDesc": "Create a new sign-in account.",
+    "created": "User created",
+    "initialPassword": "Initial password",
+    "usernameHint": "Username of an existing user",
+    "sharedUser": "This account is managed centrally; only its roles can be changed here. Contact your administrator for account details and password."
   },
   "settings": {
     "title": "Settings",
@@ -331,17 +345,15 @@
     "profileUpdated": "Profile updated",
     "passwordChanged": "Password changed",
     "language": "Language",
-    "languageDesc": "Interface language (saved in this browser)."
+    "languageDesc": "Choose the interface language."
   },
   "sidebar": {
     "toggle": "Toggle sidebar"
   },
   "config": {
     "title": "System configuration",
-    "tenantDesc": "Settings of tenant “{{tenant}}”. Items without an override inherit the platform value.",
-    "platformDesc": "Platform defaults, inherited by every tenant unless overridden.",
-    "tenantTab": "Tenant: {{tenant}}",
-    "platformTab": "Platform defaults",
+    "tenantDesc": "System settings. Items you have not changed use the default value.",
+    "platformDesc": "Default settings for all tenants.",
     "itemCount": "{{count}} items",
     "inherited": "Inherited from platform",
     "overridden": "Overridden",
@@ -361,11 +373,13 @@
     "support": "Support",
     "groups": {
       "branding": "Branding",
-      "security": "Security"
+      "security": "Security",
+      "notification": "Notification channels"
     },
     "groupDescs": {
       "branding": "Product name, logo and footer shown on the login page, sidebar and browser tab.",
-      "security": "Platform sign-in policies (stored settings; platform admins only)."
+      "security": "Platform sign-in policies (stored settings; platform admins only).",
+      "notification": "Platform-wide switches for notification channels (platform admins only)."
     },
     "items": {
       "branding": {
@@ -380,9 +394,11 @@
       },
       "security": {
         "session_minutes": "Session length (minutes)",
-        "allow_signup": "Allow self sign-up",
         "password_policy": "Password policy",
         "extra": "Advanced (JSON)"
+      },
+      "notification": {
+        "in_app_enabled": "In-app channel enabled"
       }
     },
     "itemDescs": {
@@ -395,6 +411,9 @@
         "primary_color": "Brand accent color.",
         "footer_copyright": "Shown in the footer of the login page and the app.",
         "support_url": "Optional help / support link in the footer."
+      },
+      "notification": {
+        "in_app_enabled": "Deliver notifications to the in-app inbox."
       }
     }
   },
@@ -455,7 +474,7 @@
     "edgeCall": "call",
     "edgeReturn": "return",
     "edgeRework": "rework",
-    "flowDraftHint": "Draft: drag from a step's right handle to another step (branch) or a rework route; select an edge and press Delete to remove it; click a step to edit or reorder.",
+    "flowDraftHint": "Drag a step's handle to add a branch; click a step to edit it.",
     "branchDialog": "Branch from step {{from}} to step {{to}}",
     "err": {
       "required": "Required",
@@ -464,7 +483,23 @@
       "defaultsFrom": "Leave blank to use {{field}}",
       "parentTypeMismatch": "must match the parent equipment's type (leave blank to inherit)",
       "duplicateDefaultRoute": "the product already has a default route",
-      "productNeedsDefaultRoute": "an Active route must be bound as default before activation"
+      "productNeedsDefaultRoute": "an Active route must be bound as default before activation",
+      "code": {
+        "on_hold": "The lot is on hold; release it first",
+        "lot_status": "The lot status does not allow this action",
+        "lot_status_is": "The lot is {{status}}; this action is not allowed",
+        "lot_status_stage": "A {{status}} lot cannot {{stage}}",
+        "lot_busy": "The lot is being used by another operation; try again shortly",
+        "batch_blocked": "The batch was blocked by checks; review each lot's check results",
+        "idempotency_in_progress": "The same request is still being processed; refresh shortly to see the result",
+        "idempotency_key_mismatch": "The resubmitted request differs from the original; refresh and try again",
+        "idempotency_key_reused": "This request key was already used for another operation; refresh and try again",
+        "merge_source_invalid": "The source lots contain duplicates or include the target lot",
+        "rework_route_missing": "No rework route is configured for this step",
+        "qtime_rule_in_use": "Q-Time rule {{qtime_rule_code}} is referenced by {{hold_count}} hold record(s) and cannot be deleted. Deactivate it instead.",
+        "qtime_action_invalid": "The Q-Time action must be Warn, Hold or Rework",
+        "hold_not_found": "The hold record does not exist or was deleted; refresh the list"
+      }
     },
     "autoHint": "Leave blank to generate automatically",
     "currentStep": "Current",
@@ -498,7 +533,7 @@
         "hold": "Put {{code}} on hold? No lots can be started while on hold.",
         "resume": "Resume {{code}}?",
         "complete": "Mark {{code}} as completed? No further lots can be started.",
-        "close": "Close {{code}}? This is final.",
+        "close": "Close {{code}}? All of its lots must be stored, scrapped or merged. This cannot be undone.",
         "cancel": "Cancel {{code}}? This is final.",
         "undo": "Undo every lot started on {{code}}? Only possible while all lots still wait at the first step; lots and wafers are deleted."
       }
@@ -534,7 +569,9 @@
       "previewNote": "Lot numbers are previews; the final numbers are assigned on confirmation.",
       "confirmStart": "Start {{count}} lot(s) / {{total}} wafers",
       "done": "{{count}} lot(s) started",
-      "again": "Start more"
+      "again": "Start more",
+      "searchWo": "Search work order / product / route / customer",
+      "woMore": "{{n}} matches, showing first {{show}}; refine the search"
     },
     "exec": {
       "stage": {
@@ -582,10 +619,10 @@
       "takeBranch": "Take branch to seq. {{seq}} (condition: {{cond}})",
       "toRework": "Send to rework route {{route}}",
       "preview": "Preview checks",
-      "holdBlocks": "The lot is on hold: release every hold before the next stage.",
+      "holdBlocks": "The lot is on hold: a running lot can still Track Out, but Move In, Track In and Move Out require every hold to be released.",
       "terminal": "Lot is {{status}} — no further stages.",
       "checks": "Check results",
-      "checksHint": "Run a stage or preview to see the bound checks.",
+      "checksHint": "Check results appear after running or previewing.",
       "noChecks": "No applicable checks.",
       "overrideReason": "Override reason",
       "override": "Force override and run",
@@ -605,7 +642,6 @@
       "noDc": "No data collection required at this step.",
       "item": "Item",
       "unit": "Wafer / unit",
-      "limits": "Limits · OOS action",
       "values": "Values (sites)",
       "lotLevel": "Lot",
       "scrapQty": "Scrap quantity by reason",
@@ -620,10 +656,16 @@
       "nextAction": "Next action",
       "slot": "Slot",
       "disposition": "Disposition",
-      "oosAction": "OOS action"
+      "oosAction": "OOS action",
+      "eqpRecipe": "Equipment recipe",
+      "eqpRecipeHint": "Reported / scanned (optional)",
+      "chambers": "Chambers",
+      "futureHold": "Future hold at this step, lot held: {{reason}}",
+      "qtimeHandled": "Q-Time exceeded and handled",
+      "qtimeStageSkipped": "{{stage}} was not performed; check the lot status"
     },
     "trace": {
-      "hint": "Every action on the lot and its units with time, user, step, equipment, recipe, qty and check results.",
+      "hint": "All operations on the lot and its units.",
       "empty": "No history yet.",
       "dc": "DC {{n}} values, {{oos}} OOS",
       "scrap": "scrapped {{n}}",
@@ -632,6 +674,8 @@
       "overrideReason": "override reason: {{r}}"
     },
     "sm": {
+      "childMinus": "Fewer child lots",
+      "childPlus": "More child lots",
       "title": "Split / merge",
       "split": "Split",
       "merge": "Merge",
@@ -647,16 +691,17 @@
       "mergedInto": "merged into",
       "mergedFrom": "merged from",
       "splitQtyHint": "Enter the quantity for each child lot; the parent keeps the rest.",
-      "splitUnitHint": "Assign wafers / units to child lots; unassigned ones stay in the parent. Children inherit step, stage, holds and Q-Time clocks.",
+      "splitUnitHint": "Assign wafers / units to child lots; the rest stay in the parent.",
       "childCount": "Child lots",
       "remain": "Parent keeps {{n}} / {{total}}",
+      "tooMany": "Child lots must total less than the parent qty {{total}} (cannot split everything)",
       "child": "Child {{n}}",
       "childShort": "C{{n}}",
       "keep": "Keep",
       "goesTo": "Goes to",
       "splitDone": "Split done: {{codes}}",
       "mergeDone": "Merged: {{codes}}",
-      "mergeHint": "Lots at the same product, route version, step and stage. Merged lots end as Merged.",
+      "mergeHint": "Lots of the same product and step that can be merged.",
       "noCandidates": "No lot can be merged here.",
       "mergedQty": "Qty after merge: {{n}}",
       "qtimeNote": "Q-Time uses the earliest (strictest) start.",
@@ -672,6 +717,706 @@
       "maxLots": "Max lots",
       "usedLots": "{{n}} used",
       "minQty": "Min qty / lot"
+    },
+    "receipt": {
+      "actions": "Receipt actions",
+      "noActions": "No actions available",
+      "confirmBtn": "Confirm",
+      "action": {
+        "submit": "Submit",
+        "reject": "Reject",
+        "confirm": "Confirm receipt",
+        "cancel": "Cancel receipt"
+      },
+      "done": {
+        "submit": "Receipt submitted",
+        "reject": "Receipt returned to draft",
+        "confirm": "Receipt confirmed",
+        "cancel": "Receipt cancelled"
+      },
+      "confirm": {
+        "submit": "Submit {{code}}? Lines can no longer be changed and the quantities are reserved.",
+        "reject": "Return {{code}} to draft?",
+        "confirm": "Confirm receipt {{code}}? Lot received quantities and work-order completed quantities are increased; fully received lots are closed.",
+        "cancel": "Cancel {{code}}? This cannot be undone."
+      }
+    },
+    "wip": {
+      "title": "WIP adjustments",
+      "hint": "Jump, scrap or bonus adjustments for WIP lots.",
+      "jump": "Jump step",
+      "jumpDesc": "Move a waiting lot to another operation step of the same route.",
+      "toStep": "Target step",
+      "jumped": "Lot jumped",
+      "override": "Override blocking checks (enter a reason)",
+      "adjust": "Scrap/Bonus",
+      "adjustDesc": "Scrap or add WIP quantity.",
+      "scrap": "Scrap",
+      "bonus": "Bonus",
+      "qty": "Quantity",
+      "adjusted": "Adjusted",
+      "runningScrapAll": "A running lot cannot be scrapped down to 0; handle it after Track Out"
+    },
+    "qtime": {
+      "hint": "Remaining Q-Time and violations of waiting lots.",
+      "refresh": "Refresh",
+      "sweep": "Sweep violations now",
+      "swept": "Checked {{checked}} lot(s), acted on {{acted}}",
+      "lot": "Lot",
+      "step": "Step",
+      "rule": "Rule",
+      "since": "Since",
+      "elapsed": "Elapsed (min)",
+      "max": "Max (min)",
+      "remaining": "Remaining (min)",
+      "action": "Violation action",
+      "state": "State",
+      "held": "On hold",
+      "exceeded": "Exceeded",
+      "ok": "Running",
+      "act": {
+        "warn": "Warn",
+        "hold": "Hold",
+        "rework": "Rework",
+        "scrap": "Scrap"
+      },
+      "warnAt": "Warn (min)",
+      "warn": "Expiring soon",
+      "search": "Search lot / rule",
+      "allStates": "All states",
+      "allProducts": "All products",
+      "allRoutes": "All routes",
+      "product": "Product",
+      "route": "Route",
+      "autoRefresh": "Auto refresh",
+      "sweepConfirm": "Scan all waiting lots now and apply the configured action (hold / rework / scrap) to those that exceeded Q-Time?"
+    },
+    "eqp": {
+      "hint": "State and PM due status of main equipment.",
+      "refresh": "Refresh",
+      "code": "Equipment",
+      "name": "Name",
+      "state": "E10 state",
+      "pm": "PM plan",
+      "actions": "Actions",
+      "down": "Down",
+      "nextDue": "Next due",
+      "pmDue": "overdue",
+      "daysLeft": "{{n}} d left",
+      "changeState": "Change state",
+      "pmDone": "PM done",
+      "changed": "State changed",
+      "current": "Current state",
+      "toState": "To state",
+      "pmRecorded": "PM recorded",
+      "pmDesc": "Record a completed PM.",
+      "result": "Result",
+      "search": "Search equipment code / name",
+      "allWorkcenters": "All work centers",
+      "allStates": "All E10 states",
+      "allPm": "All PM",
+      "pmWarn": "PM due soon",
+      "allDown": "All (down or not)",
+      "notDown": "Not down",
+      "workcenter": "Work center",
+      "chambers": "Chambers",
+      "chamberCount": "{{n}} chambers",
+      "chambersOf": "{{code}} chambers"
+    },
+    "traceq": {
+      "hint": "Trace upstream and downstream by lot, wafer, equipment or material lot.",
+      "kind": "Object",
+      "code": "Code",
+      "search": "Search",
+      "backward": "Backward trace",
+      "forward": "Forward trace",
+      "srcLots": "Source lots",
+      "steps": "Processing (track in)",
+      "materials": "Consumed materials",
+      "outLots": "Output lots",
+      "lots": "Related lots",
+      "k": {
+        "lot": "Lot",
+        "wafer": "Wafer",
+        "equipment": "Equipment",
+        "material_lot": "Material lot"
+      },
+      "c": {
+        "code": "Lot",
+        "lot": "Lot",
+        "relation": "Relation",
+        "qty": "Qty",
+        "via": "Via",
+        "level": "Level",
+        "at": "Time",
+        "step_seq": "Step",
+        "operation": "Operation",
+        "equipment": "Equipment",
+        "recipe": "Recipe",
+        "user": "User",
+        "material_lot": "Material lot",
+        "product": "Product",
+        "consumed": "Consumed",
+        "downstream": "Downstream"
+      }
+    },
+    "holdrel": {
+      "hint": "View and release held lots.",
+      "reason": "Hold reason",
+      "source": "Source",
+      "product": "Product",
+      "all": "All",
+      "release": "Release selected",
+      "selected": "{{n}} selected",
+      "released": "Released {{ok}}, failed {{bad}}",
+      "lot": "Lot",
+      "step": "Step",
+      "heldAt": "Held at",
+      "heldBy": "Held by",
+      "hours": "Held (h)",
+      "comment": "Comment",
+      "src": {
+        "manual": "Manual",
+        "qtime": "Q-Time",
+        "oos": "Out of spec",
+        "split": "Split (inherited)",
+        "equipment": "Equipment"
+      },
+      "search": "Search lot / product / reason / comment",
+      "allStatus": "All (incl. history)",
+      "status": {
+        "active": "Active",
+        "released": "Released"
+      },
+      "allReasons": "All reasons",
+      "allSources": "All sources",
+      "allProducts": "All products",
+      "selectAll": "Select all",
+      "state": "State",
+      "releasedAt": "Released at",
+      "releasedBy": "Released by",
+      "releaseReason": "Release reason",
+      "releaseComment": "Release comment",
+      "showTerminal": "Show scrapped / merged lots",
+      "lotStatus": "Lot status"
+    },
+    "report": {
+      "hint": "WIP distribution, waiting lots and daily output.",
+      "lots": "WIP lots",
+      "qty": "WIP qty",
+      "onHold": "Lots on hold",
+      "byStatus": "By status",
+      "byStep": "By step",
+      "byProduct": "By product",
+      "aging": "Aging top 20",
+      "output": "Daily output",
+      "status": "Status",
+      "route": "Route",
+      "step": "Step",
+      "operation": "Operation",
+      "product": "Product",
+      "lot": "Lot",
+      "hours": "Idle (h)",
+      "since": "Last event",
+      "day": "Day",
+      "moves": "Moves",
+      "moveQty": "Move qty",
+      "scrapQty": "Scrap qty",
+      "completed": "Lots finished",
+      "to": "To",
+      "oeeHint": "OEE = availability × performance × quality.",
+      "equipment": "Equipment",
+      "loading": "Loading (h)",
+      "prd": "PRD (h)",
+      "availability": "Availability",
+      "performance": "Performance",
+      "quality": "Quality",
+      "oee": "OEE",
+      "good": "Good",
+      "scrap": "Scrap",
+      "uphMissing": "No UPH",
+      "from": "From",
+      "oeeTrend": "Daily trend",
+      "allLotTypes": "All lot types"
+    },
+    "queue": {
+      "scan": "Scan / enter lot ID, Enter",
+      "notFound": "Lot {{code}} not found",
+      "search": "Search lot / product",
+      "allStatuses": "All statuses",
+      "allProducts": "All products",
+      "allOperations": "All operations",
+      "allHold": "Hold: all",
+      "notHeld": "Not on hold",
+      "held": "On hold",
+      "empty": "No lots in WIP",
+      "lot": "Lot",
+      "priority": "Priority",
+      "product": "Product",
+      "step": "Step · operation",
+      "status": "Status",
+      "qty": "Qty",
+      "qtime": "Q-Time left (min)",
+      "hours": "Since last move (h)",
+      "open": "Operate",
+      "hot": "Hot lot",
+      "allPriorities": "All lots",
+      "hotOnly": "Hot lots only",
+      "notHot": "Not hot"
+    },
+    "due": {
+      "overdue": "Overdue",
+      "expired": "Expired",
+      "expiring": "Expiring",
+      "ongoing": "Ongoing",
+      "hours": "{{n}} h"
+    },
+    "exportHint": "Export rows matching the current search and filters",
+    "pmStatus": {
+      "title": "Due status",
+      "due": "{{n}} overdue",
+      "warn": "{{n}} due soon",
+      "ok": "OK",
+      "next": "Next {{d}}"
+    },
+    "fieldIs": "{{field}}: {{value}}",
+    "treeToggle": "Expand / collapse",
+    "tree": {
+      "all": "All {{name}}",
+      "expand": "Expand",
+      "collapse": "Collapse"
+    },
+    "wmap": {
+      "title": "Wafer map",
+      "history": "Wafer history: {{code}}"
+    },
+    "batch": {
+      "hint": "Track several lots in or out together on one tool.",
+      "search": "Search lot / carrier",
+      "allProducts": "All products",
+      "allOps": "All operations",
+      "lot": "Lot",
+      "product": "Product",
+      "step": "Step",
+      "carrier": "Carrier",
+      "qty": "Qty",
+      "selectAll": "Select all",
+      "run": "Batch {{stage}} ({{n}})",
+      "done": "{{ok}} / {{total}} lots done",
+      "blocked": "Some lots are blocked; nothing was run",
+      "ok": "OK",
+      "failed": "Failed"
+    },
+    "carrier": {
+      "hint": "Carrier status, cleaning and carrier change.",
+      "search": "Search carrier / lot",
+      "allTypes": "All types",
+      "allStatus": "All statuses",
+      "allDue": "All cleaning states",
+      "due": {
+        "ok": "OK",
+        "warn": "Due soon",
+        "overdue": "Needs cleaning"
+      },
+      "code": "Carrier",
+      "type": "Type",
+      "status": "Status",
+      "lot": "Lot",
+      "fill": "Wafers / capacity",
+      "usage": "Uses",
+      "cleanDue": "Cleaning due",
+      "clean": "Clean",
+      "cleanConfirm": "Mark carrier {{code}} as cleaned?",
+      "cleaned": "Cleaning recorded",
+      "change": "Change carrier",
+      "changeDesc": "Move lot {{lot}} from {{code}} to:",
+      "target": "Target carrier",
+      "moved": "Carrier changed",
+      "splitMerge": "Split / merge"
+    },
+    "sorter": {
+      "action": "Sort",
+      "title": "Wafer sort: {{lot}} ({{code}})",
+      "target": "Move to carrier (optional)",
+      "wafer": "Wafer",
+      "from": "From slot",
+      "to": "To slot",
+      "pack": "Pack in order",
+      "run": "Sort",
+      "done": "Wafer sort done"
+    },
+    "yield": {
+      "hint": "Yield by operation, product or lot, with scrap reasons.",
+      "search": "Search code / name",
+      "allBands": "All yields",
+      "band": {
+        "low": "Below 90%",
+        "mid": "90%–98%",
+        "high": "98% and above"
+      },
+      "by": {
+        "operation": "Operation",
+        "product": "Product",
+        "lot": "Lot"
+      },
+      "total": "Good {{good}}, scrap {{scrap}}, yield {{y}}",
+      "pareto": "Scrap reason Pareto",
+      "noScrap": "No scrap in this period.",
+      "qty": "Qty",
+      "cum": "Cumulative %",
+      "name": "Name",
+      "good": "Good",
+      "scrap": "Scrap",
+      "yield": "Yield"
+    },
+    "woBoard": {
+      "hint": "Work order progress, WIP spread and due-date warnings.",
+      "search": "Search WO / product",
+      "allRisks": "All due states",
+      "risk": {
+        "overdue": "Overdue",
+        "at_risk": "Due soon",
+        "ok": "On track",
+        "none": "No due date",
+        "done": "Done"
+      },
+      "warnDays": "Warn days",
+      "code": "Work order",
+      "product": "Product",
+      "status": "Status",
+      "qty": "Done/WIP/Scrap/Plan",
+      "progress": "Progress",
+      "wipByOp": "WIP by operation",
+      "due": "Due date",
+      "daysLeft": "{{n}} d left",
+      "riskCol": "Due state",
+      "ruleDefault": "Rule"
+    },
+    "ecn": {
+      "release": "Release",
+      "cancel": "Cancel change",
+      "confirm": {
+        "release": "Release {{code}}? It takes effect now if its time has come.",
+        "cancel": "Cancel {{code}}?"
+      },
+      "done": {
+        "released": "Released, pending",
+        "applied": "Applied",
+        "cancelled": "Cancelled"
+      },
+      "result": "New version v{{v}}, {{n}} references updated",
+      "switched": "Lots switched",
+      "kept": "Lots on old version"
+    },
+    "prio": {
+      "title": "Change priority",
+      "desc": "Hot lots dispatch first and are highlighted.",
+      "new": "New priority",
+      "done": "Priority changed"
+    },
+    "shiftLog": {
+      "hint": "Record shift handover notes and open items; the next shift confirms.",
+      "search": "Search notes / handed by",
+      "allStatus": "All statuses",
+      "allShifts": "All shifts",
+      "status": {
+        "open": "Awaiting",
+        "acknowledged": "Acknowledged"
+      },
+      "statusCol": "Handover",
+      "date": "Date / shift",
+      "shift": "Shift",
+      "area": "Area",
+      "summary": "Handover notes",
+      "openItems": "Open items",
+      "handedBy": "Handed over by",
+      "new": "Hand over",
+      "newDesc": "Record this shift's notes and open items.",
+      "submit": "Submit",
+      "created": "Handed over",
+      "ack": "Acknowledge",
+      "ackDesc": "Confirm you have read the notes and open items.",
+      "ackComment": "Note (optional)",
+      "acked": "Acknowledged"
+    },
+    "label": {
+      "hint": "Pick lots or carriers and print barcode / QR labels.",
+      "search": "Search code / product",
+      "allStatus": "All statuses",
+      "kind": {
+        "lot": "Lot labels",
+        "carrier": "Carrier labels"
+      },
+      "code": {
+        "both": "Barcode + QR",
+        "barcode": "Barcode only",
+        "qr": "QR only"
+      },
+      "print": "Print {{n}}",
+      "pickAll": "Select page",
+      "codeCol": "Code",
+      "info": "Details",
+      "status": "Status",
+      "qty": "Qty"
+    },
+    "reasonCode": {
+      "qtime_expired": "Q-Time expired"
+    },
+    "qtimeHold": {
+      "overdue": "Overdue by {{time}}",
+      "steps": "Steps {{from}} → {{to}}",
+      "rule": "Q-Time rule",
+      "minutes": "{{m}} min",
+      "hours": "{{h}} h",
+      "hoursMinutes": "{{h}} h {{m}} min"
     }
+  },
+  "notify": {
+    "bell": "Notifications",
+    "title": "Notifications",
+    "unreadCount": "{{count}} unread",
+    "markAllRead": "Mark all read",
+    "empty": "No notifications",
+    "viewAll": "View all in Message Center",
+    "center": "Message Center",
+    "centerDesc": "Your notifications from subscribed events",
+    "search": "Search title or object…",
+    "allTypes": "All types",
+    "allRead": "Read & unread",
+    "allSeverities": "All severities",
+    "unread": "Unread",
+    "read": "Read",
+    "time": "Time",
+    "severityCol": "Severity",
+    "type": "Event type",
+    "content": "Content",
+    "object": "Related object",
+    "open": "Open",
+    "readAt": "Read at",
+    "severity": {
+      "info": "Info",
+      "warning": "Warning",
+      "critical": "Critical"
+    },
+    "sub": {
+      "title": "Notification Subscriptions",
+      "desc": "Choose which roles / users receive each event",
+      "new": "New subscription",
+      "edit": "Edit subscription",
+      "delete": "Delete subscription",
+      "deleteDesc": "Delete subscription \"{{name}}\"?",
+      "created": "Subscription created",
+      "updated": "Subscription updated",
+      "deleted": "Subscription deleted",
+      "search": "Search name…",
+      "allStatus": "All status",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "name": "Name",
+      "roles": "Roles",
+      "users": "Users",
+      "channels": "Channels",
+      "status": "Status"
+    },
+    "channel": {
+      "in_app": "In-app"
+    },
+    "event": {
+      "mes": {
+        "qtime_warn": {
+          "label": "Q-Time warning",
+          "title": "Q-Time {{rule}} on lot {{lot}} expires in {{left}} min"
+        },
+        "qtime_exceeded": {
+          "label": "Q-Time exceeded",
+          "title": "Q-Time {{rule}} exceeded on lot {{lot}}: {{minutes}} > {{max}} min ({{action}})"
+        },
+        "lot_hold": {
+          "label": "Lot auto hold",
+          "title": "Lot {{lot}} auto hold ({{source}}): {{reason}}"
+        },
+        "oos": {
+          "label": "Out of spec",
+          "title": "OOS on lot {{lot}} at step {{step}}: {{items}} ({{action}})"
+        },
+        "pm_due": {
+          "label": "PM due soon",
+          "title": "PM {{plan}} on {{equipment}} is due soon"
+        },
+        "pm_overdue": {
+          "label": "PM overdue",
+          "title": "PM {{plan}} on {{equipment}} is overdue"
+        },
+        "eqp_down": {
+          "label": "Equipment down",
+          "title": "Equipment {{equipment}} down: {{state}} {{state_name}}"
+        },
+        "downtime": {
+          "label": "Downtime recorded",
+          "title": "Downtime recorded on {{equipment}}: {{reason}}"
+        },
+        "wo_due": {
+          "label": "WO due soon",
+          "title": "Work order {{wo}} due {{due}} ({{progress}}% done)"
+        },
+        "wo_overdue": {
+          "label": "WO overdue",
+          "title": "Work order {{wo}} overdue by {{days}} d (due {{due}})"
+        },
+        "qual_expiring": {
+          "label": "Qualification expiring",
+          "title": "{{user}}'s {{operation}} qualification expires {{date}}"
+        },
+        "qual_expired": {
+          "label": "Qualification expired",
+          "title": "{{user}}'s {{operation}} qualification expired {{date}}"
+        }
+      }
+    }
+  },
+  "home": {
+    "wip": "WIP lots",
+    "wipQty": "Total qty {{n}}",
+    "hold": "Lots on hold",
+    "holdHint": "Go to hold release",
+    "qtime": "Q-Time exceeded / warning",
+    "qtimeHint": "Waiting lots at current step",
+    "equipment": "Equipment E10 states",
+    "pm": "PM overdue / due soon",
+    "pmHint": "Main equipment PM plans",
+    "trackOuts": "Track-outs today",
+    "trackOutsHint": "Lot track-out operations"
+  },
+  "platform": {
+    "plans": {
+      "trial": "Trial",
+      "standard": "Standard",
+      "enterprise": "Enterprise"
+    },
+    "allPlans": "All plans",
+    "tenantsDesc": "Manage all tenants.",
+    "plan": "Plan",
+    "expiresAt": "Expires",
+    "expired": "expired",
+    "never": "Never",
+    "owners": "Owners",
+    "memberCount": "Members",
+    "members": "Members",
+    "branding": "Branding",
+    "enter": "Enter as tenant",
+    "expiresHint": "YYYY-MM-DD, empty = never",
+    "ownerAssigned": "Owner assigned",
+    "membersOf": "Members of \"{{name}}\"",
+    "membersDesc": "Manage tenant members and roles.",
+    "assignOwner": "Make owner",
+    "brandingOf": "Branding of \"{{name}}\"",
+    "brandingDesc": "Branding of this tenant.",
+    "channelSaved": "Notification channel updated",
+    "channelsDesc": "Manage notification channels.",
+    "channel": "Channel",
+    "code": "Code",
+    "enabled": "Enabled",
+    "searchLogin": "Search email / IP",
+    "allResults": "All results",
+    "success": "Success",
+    "failure": "Failed",
+    "loginLogDesc": "Every sign-in attempt (successful and failed) for security auditing.",
+    "time": "Time",
+    "result": "Result",
+    "reason": "Reason",
+    "reasons": {
+      "bad_credentials": "Wrong username or password",
+      "inactive": "Inactive user"
+    },
+    "userAgent": "Client",
+    "searchOps": "Search actor / action / target",
+    "allActions": "All actions",
+    "actions": {
+      "tenant.create": "Create tenant",
+      "tenant.update": "Update tenant",
+      "tenant.delete": "Delete tenant",
+      "tenant.enter": "Enter as tenant",
+      "tenant.exit": "Exit tenant",
+      "tenant.owner": "Assign owner",
+      "tenant.branding": "Change tenant branding",
+      "member.add": "Add member",
+      "member.roles": "Change member roles",
+      "member.remove": "Remove member",
+      "config.update": "Change platform config",
+      "channel.update": "Change notification channel",
+      "audit.cross_tenant_read": "Cross-tenant audit read"
+    },
+    "opsLogDesc": "Actions of platform administrators.",
+    "actor": "Actor",
+    "action": "Action",
+    "target": "Target",
+    "detail": "Detail",
+    "searchAudit": "Search record / user",
+    "allTenants": "All tenants",
+    "auditDesc": "Business audit logs of all tenants.",
+    "tenant": "Tenant",
+    "entity": "Entity",
+    "record": "Record",
+    "spaces": {
+      "workspace": "Workspace",
+      "platform": "Platform Admin"
+    },
+    "allSpaces": "All spaces",
+    "space": "Space",
+    "ownerUsername": "Owner username (existing user)"
+  },
+  "rbac": {
+    "actions": "Actions",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "displayName": "Display name",
+    "updatedBy": "Updated by",
+    "updatedAt": "Updated at",
+    "saved": "Saved",
+    "deleted": "Deleted",
+    "resetPassword": "Reset password",
+    "resetPasswordDesc": "Set a new password for {{name}}.",
+    "newPassword": "New password",
+    "passwordReset": "Password reset",
+    "pickRoles": "Select roles…",
+    "roleCode": "Role code",
+    "roleName": "Role name",
+    "permCount": "Permissions",
+    "permTree": "Permissions",
+    "searchTree": "Search name / code / path",
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "selectedOf": "{{n}} / {{total}} selected",
+    "treeTitle": "Permission tree",
+    "treeDesc": "Manage menus and permissions.",
+    "newRoot": "New root",
+    "child": "Child",
+    "childMenu": "Sub-menu",
+    "childPerm": "Permission / button",
+    "newChildMenu": "New sub-menu of \"{{parent}}\"",
+    "newChildPerm": "New permission under \"{{parent}}\"",
+    "editMenu": "Edit menu",
+    "code": "Code",
+    "type": "Type",
+    "path": "Path",
+    "sort": "Sort",
+    "visible": "Visible",
+    "shown": "Shown",
+    "hidden": "Hidden",
+    "space": "Space",
+    "allSpaces": "All spaces",
+    "allTypes": "All types",
+    "spaces": {
+      "workspace": "Workspace",
+      "platform": "Platform"
+    },
+    "menuKey": "Menu key",
+    "icon": "Icon",
+    "component": "Component",
+    "menuPerm": "Access permission code",
+    "otherPerms": "Other permissions",
+    "deleteNode": "Delete node",
+    "deleteMenuDesc": "Delete menu \"{{name}}\" and its sub-menus?",
+    "search": "Search…"
   }
 }

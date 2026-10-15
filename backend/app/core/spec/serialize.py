@@ -2,11 +2,13 @@
 
 import uuid
 from datetime import date, datetime, time
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 
 import sqlalchemy as sa
 from sqlmodel import Session
 
+from app.core.models import iso_utc
 from app.core.spec.base import Row, conn, table
 from app.core.spec.engine import (
     ENTITIES,
@@ -18,12 +20,37 @@ from app.core.spec.engine import (
 
 # ---------------- (de)serialization ----------------
 def to_json(v: Any) -> Any:
-    """把数据库值转换为 JSON 可序列化值（UUID / 日期 / Decimal）。"""
+    """把数据库值转换为 JSON 可序列化值（UUID / 日期 / Decimal）。
+
+    带时区的 datetime 一律输出 UTC（``Z``，bom.md §12 / D2），与数据库会话时区无关。
+    """
     if isinstance(v, uuid.UUID):
         return str(v)
-    if isinstance(v, datetime | date | time):
+    if isinstance(v, datetime):
+        return iso_utc(v)
+    if isinstance(v, date | time):
         return v.isoformat()
+    if isinstance(v, Decimal):
+        return float(v)
     return v
+
+
+def dec_str(v: Any) -> str | None:
+    """D50：P1 新接口的小数字段输出为定点字符串（不用科学计数、去掉尾随零）。
+
+    ``Decimal`` 原样格式化；float 先经 ``str`` 取最短往返表示，避免二进制误差。
+    """
+    if v is None:
+        return None
+    d = v if isinstance(v, Decimal) else Decimal(str(v))
+    out = format(d.normalize(), "f")
+    return "0" if out in ("-0", "0") else out
+
+
+class TooManyDecimals(ValueError):
+    """定点字段小数位超过 scale（D60，错误码 ``too_many_decimals``）。"""
+
+    code = "too_many_decimals"
 
 
 def coerce(f: F, v: Any) -> Any:
@@ -47,7 +74,22 @@ def coerce(f: F, v: Any) -> Any:
         case "float":
             if isinstance(v, bool):
                 raise ValueError("must be a number")
-            return float(v)
+            if f.scale is None:
+                return float(v)
+            try:
+                d = Decimal(str(v).strip())
+            except InvalidOperation as ex:
+                raise ValueError("must be a number") from ex
+            if not d.is_finite():
+                raise ValueError("must be a number")
+            # D60：超出小数位一律 422 too_many_decimals，不静默舍入
+            exp = d.normalize().as_tuple().exponent
+            if isinstance(exp, int) and exp < -f.scale:
+                raise TooManyDecimals(f"too_many_decimals (max {f.scale})")
+            q = d.quantize(Decimal(1).scaleb(-f.scale), rounding=ROUND_HALF_UP)
+            if abs(q) >= Decimal(10) ** (18 - f.scale):
+                raise ValueError("out of range")
+            return q
         case "bool":
             if isinstance(v, bool):
                 return v
@@ -123,6 +165,10 @@ def ref_labels(
     return out
 
 
+# 按实体名追加计算字段：hook(session, tenant_id, rows, out) 原地修改 out（通用列表 / 详情共用）
+SERIALIZE_HOOKS: dict[str, Any] = {}
+
+
 def serialize(
     session: Session, tenant_id: uuid.UUID, e: Entity, rows: list[Row]
 ) -> list[Row]:
@@ -137,4 +183,7 @@ def serialize(
         )
         for src, dst in zip(rows, out, strict=True):
             dst[f"{f.name}_label"] = labels.get(src[f.column])
+    hook = SERIALIZE_HOOKS.get(e.code)
+    if hook and rows:
+        hook(session, tenant_id, rows, out)
     return out

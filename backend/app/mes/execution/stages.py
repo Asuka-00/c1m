@@ -17,9 +17,13 @@ from app.mes.equipment.service import e10_apply
 from app.mes.execution.checks import service as ck
 from app.mes.execution.constants import NEXT_STAGE
 from app.mes.execution.context import build_ctx
+from app.mes.execution.future_hold import trigger
 from app.mes.execution.qtime_actions import _qtime_actions
+from app.mes.execution.recipe_run import open_run
+from app.mes.execution.rework import rework_limit_result
 from app.mes.execution.stage_common import _brief, _guard, _ov, _relocate, _result
 from app.mes.execution.track_out import track_out
+from app.mes.execution.usage import count_use
 from app.mes.lot.service import history, lock_lot, units
 
 Row = dict[str, Any]
@@ -27,7 +31,7 @@ LOT = ENTITIES["lot"]
 
 
 def move_in(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -> Row:
-    """Move In：进站到当前工步（Q-Time 超时处置、move_in 检查）。
+    """Move In：进站到当前工步（Q-Time 超时处置、预约 Hold、move_in 检查）。
 
     Args:
         s: 数据库会话。
@@ -43,11 +47,13 @@ def move_in(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any)
     _guard(lot, "move_in")
     step = one(s, tid, "route_step", lot["current_step_id"])
     assert step
-    q = _qtime_actions(s, tid, lot, step, user)
-    if q:
-        s.commit()
-        return _result(s, tid, lot_id, [], qtime=q)
+    # D19：Move In 不再停表，也不做 Q-Time 超时处置（改在 Track In / 定时扫描）
     ctx = build_ctx(s, tid, lot, "move_in", body)
+    if ck.enabled(ctx, "future_hold"):
+        fired = trigger(s, tid, lot, step, user)
+        if fired:
+            s.commit()
+            return _result(s, tid, lot_id, [], future_hold=fired)
     if ctx.equipment and ctx.equipment["unit_kind"] != "main":
         raise http_422([("equipment_id", "equipment_id: select a main equipment unit")])
     results = ck.evaluate(
@@ -90,6 +96,13 @@ def track_in(
     """Track In：选定设备 / 配方 / 工具开始加工（track_in 检查、E10 迁移），批次进入 Running。"""
     lot = lock_lot(s, tid, lot_id)
     _guard(lot, "track_in")
+    step = one(s, tid, "route_step", lot["current_step_id"])
+    assert step
+    # D19 停表点：已超时则处置；D22 转 Hold 后提交并返回 200（qtime="hold"，未进站）
+    q = _qtime_actions(s, tid, lot, step, user)
+    if q:
+        s.commit()
+        return _result(s, tid, lot_id, [], qtime=q)
     ctx = build_ctx(s, tid, lot, "track_in", body)
     eq = ctx.equipment
     errs: list[tuple[str, str]] = []
@@ -99,6 +112,16 @@ def track_in(
         errs.append(
             ("equipment_id", "equipment_id: select an active main equipment unit")
         )
+    for c in ctx.chambers:
+        if not eq or c["parent_id"] != eq["id"] or c["unit_kind"] != "chamber":
+            errs.append(
+                (
+                    "chamber_ids",
+                    f"chamber_ids: {c['code']} is not a chamber of the equipment",
+                )
+            )
+        elif not c["is_active"]:
+            errs.append(("chamber_ids", f"chamber_ids: {c['code']} is inactive"))
     if not ctx.recipe and any(r["recipe_id"] for r in ctx.resources()):
         errs.append(("recipe_id", "recipe_id: required at this step"))
     for fid in {r["fixture_id"] for r in ctx.resources("fixture") if r["fixture_id"]}:
@@ -120,6 +143,7 @@ def track_in(
         "reticle_id": ctx.reticle and str(ctx.reticle["id"]),
         "tool_ids": [str(t["id"]) for t in ctx.tools],
         "material_lot_ids": [str(m["id"]) for m in ctx.material_lots],
+        "chamber_ids": [str(c["id"]) for c in ctx.chambers],
     }
     for t in ctx.tools:
         _upd(s, tid, "tool", t["id"], user, tool_status="in_use", equipment_id=eid)
@@ -140,7 +164,11 @@ def track_in(
         stage_at=now(),
     )
     lot.update(lot_status="running", equipment_id=eid)
+    open_run(ctx, user)
+    count_use(s, tid, (ctx.carrier or {}).get("id") or lot["carrier_id"], user)
     e10 = e10_apply(s, tid, eq, "track_in", user, lot) if eq else None
+    for c in ctx.chambers:
+        e10_apply(s, tid, c, "track_in", user, lot)
     history(
         s,
         tid,
@@ -156,6 +184,7 @@ def track_in(
             "tools": [t["code"] for t in ctx.tools],
             "reticle": ctx.reticle and ctx.reticle["code"],
             "carrier": ctx.carrier and ctx.carrier["code"],
+            "chambers": [c["code"] for c in ctx.chambers],
             "e10": e10,
             **_ov(body, results),
         },
@@ -181,9 +210,11 @@ def move_out(
     _guard(lot, "move_out")
     ctx = build_ctx(s, tid, lot, "move_out", body)
     rework = bool(body.get("rework")) or bool(lot["pending_rework"])
+    lim = rework_limit_result(ctx) if rework else None
     results = ck.evaluate(
         ctx,
         user,
+        extra=[lim] if lim else None,
         override=body.get("override", False),
         reason=body.get("override_reason"),
     )
@@ -196,6 +227,10 @@ def move_out(
         branch=bool(body.get("branch")) and not rework,
         rework=rework,
     )
+    if rework:
+        n = (lot.get("rework_count") or 0) + 1
+        _upd(s, tid, "lot", lot["id"], user, rework_count=n)
+        lot["rework_count"] = n
     audit(
         s,
         tid,

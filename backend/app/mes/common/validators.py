@@ -8,7 +8,7 @@ from sqlmodel import Session
 
 from app.core.spec.base import conn
 from app.core.spec.engine import TABLES, Entity
-from app.core.spec.errors import MesError
+from app.core.spec.errors import MesError, http_422
 from app.core.spec.validate import validator
 from app.mes.common.coderule import check_pattern
 
@@ -51,3 +51,27 @@ def _get(session: Session, tid: uuid.UUID, code: str, rid: Any) -> Row | None:
         .first()
     )
     return dict(r) if r else None
+
+
+# 只读（仅迁移 / 系统写入）的字段：客户端写入 422 read_only_field，而非 unknown_field
+READ_ONLY_FIELDS: dict[str, set[str]] = {"alarm_code": {"migration_note"}}
+
+
+def reject_unwritable(e: Entity, data: Row) -> None:
+    """P1 新增接口的严格载荷（bom.md §12）：系统字段 / 未知字段一律 422 ``unknown_field``（D65），不再静默忽略。
+
+    可写键：非系统字段的字段名、列名（``<ref>_id``）及 ``attrs``。只用于 P1 新增实体，
+    已有实体的通用增删改查保持原行为。
+    """
+    ok = {"attrs", *(("version",) if e.versioned else ())}
+    for f in e.all_fields:
+        if not f.system:
+            ok |= {f.name, f.column}
+    ro = READ_ONLY_FIELDS.get(e.code, set()) & set(data)
+    if ro:
+        raise http_422(
+            [(k, f"{k}: read-only field", "read_only_field") for k in sorted(ro)]
+        )
+    bad = sorted(k for k in data if k not in ok)
+    if bad:
+        raise http_422([(k, f"{k}: unknown field", "unknown_field") for k in bad])

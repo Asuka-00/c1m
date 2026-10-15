@@ -1,8 +1,6 @@
-"""MES Alembic 迁移辅助：启用/关闭租户 RLS、增删权限并下发到默认角色。"""
+"""Alembic 迁移辅助：启用 / 关闭租户 RLS。"""
 
 from typing import Any
-
-import sqlalchemy as sa
 
 from app.core.rls import disable_tenant_rls_sql, enable_tenant_rls_sql
 
@@ -26,52 +24,27 @@ def disable_rls(op: Any, tables: list[str]) -> None:
             op.execute(stmt)
 
 
-def add_permissions(
-    op: Any, modules: list[str], extra: list[str] | None = None
-) -> None:
-    """新增 MES 权限并下发到默认角色。
+def check_db_target(url: str, env: dict[str, str] | None = None) -> None:
+    """防误迁移：设置了环境变量 ``POSTGRES_DB`` 而实际迁移连接的库名不同 → 报错退出。
 
-    为每个模块生成 ``mes.<module>:read/write``（外加 ``extra`` 编码，租户作用域），
-    授予平台 admin 与所有租户的 owner/admin；member 只获得 ``:read``。
-
-    Args:
-        op: Alembic ``op`` 对象。
-        modules: 权限模块编码列表。
-        extra: 额外权限 ``{编码: 描述}``。
+    配置读的是 ``MIGRATION_DATABASE_URL``（常来自 .env），只设 ``POSTGRES_DB`` 不会改变目标库，
+    曾因此误迁移了 ``app``。确需不一致时设 ``ALEMBIC_ALLOW_DB_MISMATCH=1`` 跳过。
     """
-    conn = op.get_bind()
-    codes = [f"mes.{m}:{a}" for m in modules for a in ("read", "write")]
-    codes += extra or []
-    for c in codes:
-        conn.execute(
-            sa.text(
-                "INSERT INTO permission (id, code, description, scope) VALUES "
-                "(gen_random_uuid(), :c, :d, 'tenant') ON CONFLICT (code) DO NOTHING"
-            ),
-            {"c": c, "d": f"MES {c}"},
+    import os
+    import sys
+
+    from sqlalchemy.engine import make_url
+
+    e = os.environ if env is None else env
+    got = make_url(url).database
+    sys.stderr.write(f"alembic: target database = {got!r}\n")
+    want = (e.get("POSTGRES_DB") or "").strip()
+    if not want or e.get("ALEMBIC_ALLOW_DB_MISMATCH") == "1":
+        return
+    if got != want:
+        raise SystemExit(
+            f"alembic: refusing to run: POSTGRES_DB={want!r} but the migration URL "
+            f"targets database {got!r}. Set MIGRATION_DATABASE_URL to the intended "
+            "database (POSTGRES_DB alone does not change it), or set "
+            "ALEMBIC_ALLOW_DB_MISMATCH=1 to bypass."
         )
-    conn.execute(
-        sa.text(
-            "INSERT INTO role_permission (role_id, permission_id) SELECT r.id, p.id "
-            "FROM role r, permission p WHERE p.code = ANY(:c) AND ("
-            "(r.tenant_id IS NULL AND r.name = 'admin') OR "
-            "(r.tenant_id IS NOT NULL AND r.name IN ('owner', 'admin')) OR "
-            "(r.tenant_id IS NOT NULL AND r.name = 'member' AND p.code LIKE '%\\:read'))"
-            " ON CONFLICT DO NOTHING"
-        ),
-        {"c": codes},
-    )
-
-
-def remove_permissions(
-    op: Any, modules: list[str], extra: list[str] | None = None
-) -> None:
-    """删除 :func:`add_permissions` 新增的权限（含角色关联）。"""
-    codes = [f"mes.{m}:{a}" for m in modules for a in ("read", "write")]
-    codes += extra or []
-    conn = op.get_bind()
-    conn.execute(sa.text("DELETE FROM permission WHERE code = ANY(:c)"), {"c": codes})
-    conn.execute(
-        sa.text("DELETE FROM menu WHERE key = ANY(:k)"),
-        {"k": [f"mes-g-{m}" for m in modules]},
-    )

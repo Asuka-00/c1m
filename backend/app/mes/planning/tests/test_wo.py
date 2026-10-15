@@ -13,7 +13,12 @@ from app.core.tenant import set_tenant
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
 from app.testing.mes import API, Mes
-from app.testing.utils import random_email, random_lower_string
+from app.testing.utils import (
+    login_name,
+    random_email,
+    random_lower_string,
+    username_for,
+)
 
 
 class Fab:
@@ -86,8 +91,27 @@ def test_create_defaults_and_validation(client: TestClient, db: Session) -> None
     assert w["code"] == "WO0001" and w["wo_status"] == "draft" and w["started_qty"] == 0
     assert w["priority_id"] == f.m.fx("default_priority")  # lot type default
     assert w["route_id"] is None
-    # system fields are ignored on input
-    w2 = f.wo(code="MY-WO", wo_status="closed", started_qty=99, route_id=f.route["id"])
+    # D65 补充 4：系统字段不再静默忽略，422 unknown_field
+    r = client.post(
+        f.m.url("work_order"),
+        headers=f.m.h,
+        json={
+            "product_id": f.product["id"],
+            "lot_type_id": f.lt,
+            "planned_qty": 10,
+            "wo_status": "closed",
+            "started_qty": 99,
+            "route_id": f.route["id"],
+        },
+    )
+    assert r.status_code == 422, r.text
+    assert {d["loc"][1] for d in r.json()["detail"]} == {
+        "wo_status",
+        "started_qty",
+        "route_id",
+    }
+    assert {d["code"] for d in r.json()["detail"]} == {"unknown_field"}
+    w2 = f.wo(code="MY-WO")
     assert (w2["code"], w2["wo_status"], w2["started_qty"], w2["route_id"]) == (
         "MY-WO",
         "draft",
@@ -155,7 +179,8 @@ def test_transitions(client: TestClient, db: Session) -> None:
     assert f.act(w, "resume")["wo_status"] == "in_progress"
     assert f.act(w, "complete")["wo_status"] == "completed"
     f.call(w, "start", {"lots": [{"qty": 1}]}, 422)
-    assert f.act(w, "close")["wo_status"] == "closed"
+    # 手动结案：批次未全部入库 / 报废 / 合批前不可关闭（入库流程见 mes/warehouse）
+    assert "awaiting receipt" in _msgs(f.act(w, "close", 422))
     f.act(w, "resume", 422)
     d = f.wo()
     assert f.act(d, "cancel")["wo_status"] == "cancelled"
@@ -255,6 +280,7 @@ def test_carrier_and_slots(client: TestClient, db: Session) -> None:
             {"qty": 2, "carrier_id": c1["id"]},
         ],  # twice
         [{"qty": 2, "wafer_sources": ["only-one"]}],
+        [{"qty": 2, "carrier": c1["id"]}],  # D40：旧字段 carrier
     ]
     for lots in bad:
         f.call(w, "start", {"lots": lots}, 422)
@@ -290,14 +316,18 @@ def test_permissions_rls_readonly(client: TestClient, db: Session) -> None:
     m = f.m
     w = f.wo()
     email, pw = random_email(), random_lower_string()
-    crud.create_user(session=db, user_create=UserCreate(email=email, password=pw))
+    crud.create_user(
+        session=db,
+        user_create=UserCreate(email=email, username=username_for(email), password=pw),
+    )
     client.post(
         f"{API[:-4]}/tenants/{m.tid}/members",
         headers=m.h,
-        json={"email": email, "roles": ["member"]},
+        json={"username": login_name(email), "roles": ["member"]},
     )
     tok = client.post(
-        f"{API[:-4]}/login/access-token", data={"username": email, "password": pw}
+        f"{API[:-4]}/login/access-token",
+        data={"username": login_name(email), "password": pw},
     ).json()["access_token"]
     hm = {"Authorization": f"Bearer {tok}", "X-Tenant-ID": m.tid}
     assert client.get(m.url("work_order"), headers=hm).json()["count"] == 1

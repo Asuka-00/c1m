@@ -1,6 +1,12 @@
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import type { ListQuery } from '@/lib/api'
-import { DEFAULT_FILTERS, type FilterDef } from './filter-defs'
+import {
+  ALL_VALUE,
+  DEFAULT_FILTERS,
+  filterKeys,
+  rangeParam,
+  type FilterDef,
+} from './filter-defs'
 
 /** 默认每页条数（与后端默认值一致）。 */
 export const DEFAULT_PAGE_SIZE = 20
@@ -22,8 +28,10 @@ export interface ListParams {
   q: string
   /** URL 中的当前筛选值，按筛选名索引（含 q） */
   filters: Record<string, string>
-  /** 设置一个筛选（回到第 1 页）；'' / undefined 表示移除 */
+  /** 设置一个筛选（回到第 1 页）；'' 表示“全部”，undefined 表示恢复默认值 */
   setFilter: (name: string, value: string | undefined) => void
+  /** 同时设置两个筛选（日期范围起止，回到第 1 页） */
+  setRange: (ka: string, a: string, kb: string, b: string) => void
   /** 传给 API 客户端的查询参数 */
   query: ListQuery
   set: (patch: Patch) => void
@@ -43,10 +51,19 @@ export function useListParams(
   const sortBy = typeof search.sortBy === 'string' ? search.sortBy : undefined
   const sortOrder = search.sortOrder === 'desc' ? 'desc' : 'asc'
   const filters: Record<string, string> = {}
-  for (const { name } of filterDefs) {
-    const v = search[name] == null ? '' : String(search[name]).trim()
-    if (v) filters[name] = v
+  // id：从关联对象链接跳转而来时按指定记录过滤（任何列表页通用）
+  const defaults = filterDefaults(filterDefs)
+  for (const name of ['id', ...filterDefs.flatMap(filterKeys)]) {
+    const raw = search[name] == null ? defaults[name] : search[name]
+    const v = raw == null ? '' : String(raw).trim()
+    if (v && v !== ALL_VALUE) filters[name] = v
   }
+  const query: Record<string, string> = { ...filters }
+  for (const d of filterDefs)
+    if (d.type === 'daterange')
+      filterKeys(d).forEach((k, i) => {
+        if (filters[k]) query[k] = rangeParam(filters[k], i === 1, d.kind)
+      })
   const update = (fn: (next: Record<string, unknown>) => void) =>
     navigate({
       to: '.',
@@ -73,18 +90,41 @@ export function useListParams(
     setFilter: (name, value) =>
       update((next) => {
         delete next.page
-        if (value == null || value === '') delete next[name]
+        // undefined：恢复默认；''：清除（有默认值时显式记录“全部”）
+        if (value == null) delete next[name]
+        else if (value === '')
+          if (defaults[name]) next[name] = ALL_VALUE
+          else delete next[name]
         // 布尔值按布尔存储，使 URL 为 ?is_active=false 而非 ?is_active=%22false%22
         else
           next[name] =
             value === 'true' ? true : value === 'false' ? false : value
       }),
+    setRange: (ka, a, kb, b) =>
+      update((next) => {
+        delete next.page
+        for (const [k, v] of [
+          [ka, a],
+          [kb, b],
+        ])
+          if (v) next[k] = v
+          else delete next[k]
+      }),
     query: {
       page,
       page_size: pageSize,
       ...(sortBy ? { sort_by: sortBy, sort_order: sortOrder } : {}),
-      ...filters,
+      ...query,
     },
     set: (patch) => update((next) => Object.assign(next, patch)),
   }
+}
+
+/** 各筛选的默认值（仅声明了 defaultValue 的下拉筛选）。 */
+export function filterDefaults(defs: FilterDef[]): Record<string, string> {
+  return Object.fromEntries(
+    defs.flatMap((d) =>
+      d.type === 'select' && d.defaultValue ? [[d.name, d.defaultValue]] : []
+    )
+  )
 }

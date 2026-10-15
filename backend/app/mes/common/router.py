@@ -5,19 +5,23 @@
 """
 
 import uuid
+from decimal import Decimal
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from app.core.deps import SessionDep
 from app.core.pagination import ListParamsDep
+from app.core.schemas import StrictBody
 from app.core.spec.base import get_entity
 from app.core.spec.engine import ENTITIES, EXTRA_PERMISSIONS, MODULES, Entity, perm
+from app.core.spec.errors import query_422
 from app.core.spec.excel import export_xlsx, import_xlsx
-from app.core.spec.query import get_row, list_rows, tree
-from app.core.spec.serialize import serialize
+from app.core.spec.query import distinct_values, get_row, list_rows, tree
+from app.core.spec.serialize import dec_str, serialize
 from app.core.spec.validate import attr_defs, attr_options
 from app.core.spec.write import (
     create_row,
@@ -27,17 +31,26 @@ from app.core.spec.write import (
     update_row,
 )
 from app.mes.common import coderule
+from app.mes.common.guard import raw_json
 from app.mes.common.meta import all_meta
-from app.mes.common.uom import convert
+from app.mes.common.uom import convert, count_errors
+from app.mes.common.validators import reject_unwritable
 from app.platform.auth.deps import CurrentTenant
 from app.platform.tenants.service import TenantContext
 
 router = APIRouter(prefix="/mes", tags=["mes"])
+# D65：mes.eap:read_master 只放开这三个实体的列表与详情（不含导出、树、去重等）
+EAP_READ_PERM = "mes.eap:read_master"
+EAP_READ_ENTITIES = frozenset({"equipment", "alarm_code", "e10_state"})
 RESERVED = {"page", "page_size", "skip", "limit", "sort_by", "sort_order", "q"}
 
 
 def require_entity(
-    ctx: TenantContext, code: str, action: Literal["read", "write"]
+    ctx: TenantContext,
+    code: str,
+    action: Literal["read", "write"],
+    *,
+    eap: bool = False,
 ) -> Entity:
     """获取实体并校验当前租户上下文是否具备其模块权限。
 
@@ -45,9 +58,38 @@ def require_entity(
         HTTPException: 实体不存在（404）或无权限（403）。
     """
     e = get_entity(code)
+    if (
+        eap
+        and action == "read"
+        and e.code in EAP_READ_ENTITIES
+        and ctx.can(EAP_READ_PERM)
+    ):
+        return e
     if not ctx.can(perm(e.pmod, action)):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     return e
+
+
+async def write_body(
+    ctx: CurrentTenant, entity: str, request: Request
+) -> dict[str, Any]:
+    """通用新建 / 修改的请求体：先查实体写权限，再解析 JSON 对象（D34）。"""
+    e = require_entity(ctx, entity, "write")
+    data = await raw_json(request)
+    if not isinstance(data, dict):
+        raise RequestValidationError(
+            [
+                {
+                    "type": "dict_type",
+                    "loc": ("body",),
+                    "msg": "Input should be a valid dictionary",
+                    "input": data,
+                }
+            ]
+        )
+    # D65 补充 4 / D38：通用增删改查对所有实体（含旧实体）严格载荷，未知 / 系统字段 422。
+    reject_unwritable(e, data)
+    return data
 
 
 def _one(
@@ -87,7 +129,7 @@ def mes_attr_defs(session: SessionDep, ctx: CurrentTenant, entity: str) -> Any:
     ]
 
 
-class CodeGenIn(BaseModel):
+class CodeGenIn(StrictBody):
     count: int = Field(default=1, ge=1, le=100)
     context: dict[str, Any] = Field(default_factory=dict)
 
@@ -118,11 +160,20 @@ def uom_convert(
     ctx: CurrentTenant,
     from_uom: uuid.UUID,
     to_uom: uuid.UUID,
-    value: float = 1.0,
+    value: Decimal = Decimal(1),
 ) -> Any:
-    """Convert `value` between units (direct, inverse or multi-hop conversions)."""
+    """Convert `value` between units (direct, inverse or multi-hop conversions).
+
+    D50: `value` is parsed as a decimal (e.g. `1.5`, `1e-6`), computed in Decimal and
+    returned as a fixed-point string.
+    """
     require_entity(ctx, "uom", "read")
-    return convert(session, ctx.id, from_uom, to_uom, value)
+    res = convert(session, ctx.id, from_uom, to_uom, value)
+    errs = count_errors(session, ctx.id, to_uom, {"value": res["value"]})
+    if errs:
+        raise query_422(errs)
+    qty = res.pop("qty")
+    return {**res, "value": dec_str(qty)}  # D50
 
 
 @router.get("/{entity}")
@@ -135,7 +186,7 @@ def mes_list(
 ) -> Any:
     """Paginated list (20/page default) with ?q= search, ?sort_by=, and filters
     on any enum/bool/ref field (`?site_id=<uuid>`, `?status=active`, ...)."""
-    e = require_entity(ctx, entity, "read")
+    e = require_entity(ctx, entity, "read", eap=True)
     filters = {
         k: v for k, v in request.query_params.items() if k not in RESERVED and v != ""
     }
@@ -153,6 +204,19 @@ def mes_list(
     return {"data": serialize(session, ctx.id, e, rows), "count": count}
 
 
+@router.get("/{entity}/distinct/{field}")
+def mes_distinct(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    entity: str,
+    field: str,
+    q: str | None = None,
+) -> Any:
+    """Distinct values of a text filter field (dropdown filter options)."""
+    e = require_entity(ctx, entity, "read")
+    return {"data": distinct_values(session, e, ctx.id, field, q)}
+
+
 @router.get("/{entity}/tree")
 def mes_tree(session: SessionDep, ctx: CurrentTenant, entity: str) -> Any:
     e = require_entity(ctx, entity, "read")
@@ -160,10 +224,20 @@ def mes_tree(session: SessionDep, ctx: CurrentTenant, entity: str) -> Any:
 
 
 @router.get("/{entity}/export")
-def mes_export(session: SessionDep, ctx: CurrentTenant, entity: str) -> Response:
+def mes_export(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    entity: str,
+    request: Request,
+    q: str | None = None,
+) -> Response:
+    """Export as xlsx, honouring the same ?q= and filters as the list."""
     e = require_entity(ctx, entity, "read")
+    filters = {
+        k: v for k, v in request.query_params.items() if k not in RESERVED and v != ""
+    }
     return Response(
-        export_xlsx(session, ctx.id, e),
+        export_xlsx(session, ctx.id, e, q=q, filters=filters),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{e.code}.xlsx"'},
     )
@@ -188,13 +262,16 @@ async def mes_import(
 def mes_get(
     session: SessionDep, ctx: CurrentTenant, entity: str, rid: uuid.UUID
 ) -> Any:
-    e = require_entity(ctx, entity, "read")
+    e = require_entity(ctx, entity, "read", eap=True)
     return _one(session, ctx, e, get_row(session, e, ctx.id, rid))
 
 
 @router.post("/{entity}")
 def mes_create(
-    session: SessionDep, ctx: CurrentTenant, entity: str, body: dict[str, Any]
+    session: SessionDep,
+    ctx: CurrentTenant,
+    entity: str,
+    body: Annotated[dict[str, Any], Depends(write_body)],
 ) -> Any:
     e = require_entity(ctx, entity, "write")
     return _one(session, ctx, e, create_row(session, ctx.id, e, body, ctx.user))
@@ -206,7 +283,7 @@ def mes_update(
     ctx: CurrentTenant,
     entity: str,
     rid: uuid.UUID,
-    body: dict[str, Any],
+    body: Annotated[dict[str, Any], Depends(write_body)],
 ) -> Any:
     e = require_entity(ctx, entity, "write")
     return _one(session, ctx, e, update_row(session, ctx.id, e, rid, body, ctx.user))
@@ -221,7 +298,7 @@ def mes_delete(
     return {"message": "Deleted"}
 
 
-class StatusIn(BaseModel):
+class StatusIn(StrictBody):
     status: str
 
 
@@ -243,7 +320,11 @@ def mes_new_version(
 ) -> Any:
     """Copy a version (incl. child rows such as route steps) as a new draft."""
     e = require_entity(ctx, entity, "write")
-    return _one(session, ctx, e, new_version(session, ctx.id, e, rid, ctx.user))
+    hook: dict[str, Any] = {"can": ctx.can, "warnings": []}
+    out = _one(session, ctx, e, new_version(session, ctx.id, e, rid, ctx.user, hook))
+    if e.code == "product":  # 自动复制 BOM 的结果提示（bom_copy_skipped，bom.md §12）
+        out["warnings"] = hook["warnings"]
+    return out
 
 
 __all__ = ["router", "ENTITIES", "Query"]
