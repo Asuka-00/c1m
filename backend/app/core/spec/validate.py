@@ -69,18 +69,28 @@ def validate(
     # 原始载荷校验器（在类型 / 枚举转换前，可直接抛 HTTPException 给出结构化错误）
     for fn in VALIDATORS.get(f"{e.code}:payload", []):
         fn(session, tenant_id, e, data, existing)
-    errors: list[tuple[str, ...]] = []
+    errors: list[tuple[Any, ...]] = []
     values: Row = {}
+    site_tz: list[Any] = []
     for f in e.all_fields:
         key = f.column if f.column in data else f.name if f.name in data else None
         if key is None or f.system:
             continue
         try:
-            values[f.column] = coerce(f, data[key])
+            if f.type == "date" and not site_tz:
+                from app.core.spec.excel import tenant_tz
+
+                site_tz.append(tenant_tz(session, tenant_id))
+            values[f.column] = coerce(
+                f, data[key], site_tz[0] if f.type == "date" else None
+            )
         except (ValueError, TypeError) as ex:
             code = getattr(ex, "code", None)
+            ctx = getattr(ex, "ctx", None)
             errors.append(
-                (f.name, f"{f.name}: {ex}", code)
+                (f.name, f"{f.name}: {ex}", code, ctx)
+                if ctx
+                else (f.name, f"{f.name}: {ex}", code)
                 if code
                 else (f.name, f"{f.name}: {ex}")
             )

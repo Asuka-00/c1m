@@ -39,6 +39,8 @@ MES_ALLOWED: dict[str, set[str]] = {
     "lot": {"common", "product", "process", "quality"},
     "planning": {"common", "product", "process", "lot"},
     "warehouse": {"common", "lot"},
+    "reticle": {"common", "product"},
+    "marking": {"common", "product"},
     "execution": {
         "common",
         "factory",
@@ -51,6 +53,7 @@ MES_ALLOWED: dict[str, set[str]] = {
         "warehouse",
         "map",
         "alarm",
+        "reticle",
     },
 }
 

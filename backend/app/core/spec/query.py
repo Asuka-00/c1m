@@ -1,7 +1,7 @@
 """通用租户范围查询：列表 / 筛选 / 搜索 / 排序、单行、全部行、树。"""
 
 import uuid
-from datetime import date, datetime
+from datetime import timedelta
 from typing import Any
 
 import sqlalchemy as sa
@@ -13,6 +13,7 @@ from app.core.spec.engine import (
     Entity,
 )
 from app.core.spec.errors import err_422, query_422
+from app.core.spec.qdates import parse_date, parse_datetime
 from app.core.spec.serialize import coerce, serialize
 
 
@@ -52,6 +53,7 @@ def apply_filters(
 ) -> sa.Select[Any]:
     """按字段等值 / 引用 id / 状态等条件过滤。"""
     t = table(e)
+    bounds: dict[str, dict[str, Any]] = {}
     for name, raw in filters.items():
         if name == "status" and e.versioned:
             stmt = stmt.where(t.c.status == raw)
@@ -74,25 +76,64 @@ def apply_filters(
                 continue
             raise query_422([(name, f"{name}: must be true or false")])
         if not f and name.endswith(("_from", "_to")):
-            stmt = _range(e, stmt, name, raw)
+            stmt = _range(e, stmt, name, raw, bounds)
+            continue
+        if not f and name in t.c and isinstance(t.c[name].type, sa.DateTime):
+            # 未声明为字段的时间列（created_at / updated_at 等）：同 D85 校验并筛选
+            dt = parse_datetime(name, raw)
+            if dt is not None:
+                stmt = stmt.where(t.c[name] == dt)
             continue
         if not f or f.type in ("json", "text"):
             continue
         if f.type == "ref" and raw == "null":
             stmt = stmt.where(t.c[f.column].is_(None))
             continue
+        if f.type == "date":  # D77 补充二：等值筛选同样只收严格 YYYY-MM-DD
+            d = parse_date(name, raw)
+            if d is not None:
+                stmt = stmt.where(t.c[f.column] == d)
+            continue
+        if f.type == "datetime":  # D85：等值筛选同 _from/_to，走 qdates
+            dt = parse_datetime(name, raw)
+            if dt is not None:
+                stmt = stmt.where(t.c[f.column] == dt)
+            continue
         try:
             v = coerce(f, raw)
         except ValueError as ex:
             raise query_422([(name, f"{name} {ex}")]) from ex
         stmt = stmt.where(t.c[f.column] == v)
+    for base, b in bounds.items():
+        if "from" in b and "to" in b and b["from"] > b["to"]:
+            raise err_422(
+                ["query", f"{base}_from"],
+                f"{base}_from is after {base}_to",
+                "value_error",
+                {"reason": "range_inverted"},
+            )
     return stmt
 
 
-def _range(e: Entity, stmt: sa.Select[Any], name: str, raw: str) -> sa.Select[Any]:
-    """时间 / 日期范围筛选：``<字段>_from`` 为下限（含），``<字段>_to`` 为上限（含）。
+def _range(
+    e: Entity,
+    stmt: sa.Select[Any],
+    name: str,
+    raw: str,
+    bounds: dict[str, dict[str, Any]] | None = None,
+) -> sa.Select[Any]:
+    """时间 / 日期范围筛选（D77）。
 
-    支持 date / datetime 字段及 ``created_at``；其它名称忽略。
+    - datetime 字段（含 ``created_at``）：半开区间 ``[_from, _to)``，``_to`` 那一刻不含。
+    - date 字段：闭区间 ``[_from, _to]``，实现为 ``< _to + 1 天``。
+    - datetime 取值必须带偏移（``Z`` 或 ``±hh:mm``），只给日期或无偏移
+      → 422 ``timezone_required``（D77 补充一）。
+    - 同一字段 ``_from`` 晚于 ``_to`` → 422 ``value_error``，``ctx.reason=range_inverted``
+      （由 :func:`apply_filters` 在两端都解析后判断）。
+    - date 取值必须严格为 ``YYYY-MM-DD``，其它任何写法 → 422 ``value_error``，
+      ``ctx.reason=pattern``；datetime 无法解析同样 ``pattern``（见 :mod:`qdates`）。
+
+    其它名称忽略。
     """
     t = table(e)
     base, bound = name.rsplit("_", 1)
@@ -101,16 +142,15 @@ def _range(e: Entity, stmt: sa.Select[Any], name: str, raw: str) -> sa.Select[An
     col = base if f is None else f.column
     if kind not in ("date", "datetime") or col not in t.c:
         return stmt
-    try:
-        v: Any = (
-            date.fromisoformat(raw[:10])
-            if kind == "date"
-            else datetime.fromisoformat(raw.replace("Z", "+00:00"))
-        )
-    except ValueError as ex:
-        raise query_422([(name, f"{name}: invalid date")]) from ex
+    v: Any = parse_date(name, raw) if kind == "date" else parse_datetime(name, raw)
+    if v is None:
+        return stmt
+    if bounds is not None:
+        bounds.setdefault(base, {})[bound] = v
     c = t.c[col]
-    return stmt.where(c >= v if bound == "from" else c <= v)
+    if bound == "from":
+        return stmt.where(c >= v)
+    return stmt.where(c < (v + timedelta(days=1) if kind == "date" else v))
 
 
 def search(e: Entity, stmt: sa.Select[Any], q: str | None) -> sa.Select[Any]:

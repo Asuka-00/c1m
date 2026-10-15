@@ -173,7 +173,7 @@ def test_tool_validators(client: TestClient, db: Session) -> None:
         json={"code": "X", "name": "x", "kind": "tool", "warn_ratio": 1.5},
     )
     assert r.status_code == 422, r.text
-    # D60: generic CRUD numeric(18,6) columns -> 422 too_many_decimals, no rounding
+    # D72: generic CRUD numeric(18,6) columns -> 422 value_error + ctx.max_places, no rounding
     for col in ("usage_count", "max_usage"):
         r = client.post(
             f"{API}/tool",
@@ -182,13 +182,14 @@ def test_tool_validators(client: TestClient, db: Session) -> None:
         )
         assert r.status_code == 422, r.text
         err = r.json()["detail"][0]
-        assert err["code"] == err["type"] == "too_many_decimals", err
+        assert err["code"] == err["type"] == "value_error", err
         assert err["loc"] == ["body", col]
+        assert err["ctx"] == {"max_places": 6}, err
     t = m.post(
         "tool",
         {"code": "X1", "fixture_id": f.fixture["id"], "usage_count": "1.123456"},
     )
-    assert t["usage_count"] == 1.123456
+    assert t["usage_count"] == "1.123456"
     t = m.post(
         "tool", {"code": "X2", "fixture_id": f.fixture["id"], "usage_count": "1.25"}
     )

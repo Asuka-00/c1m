@@ -1,6 +1,5 @@
 import os
 import subprocess
-import sys
 import tempfile
 from collections.abc import Generator
 from pathlib import Path
@@ -46,14 +45,27 @@ def _prepare_test_database() -> None:
             text("SELECT 1 FROM pg_database WHERE datname=:d"), {"d": _test_db}
         ).first():
             c.execute(text(f'CREATE DATABASE "{_test_db}"'))
+        # D83：只检查运行时角色存在，不建角色、不改密码（setup_db_roles.py 不再运行）
+        role = _app_url.username
+        if not c.execute(
+            text("SELECT 1 FROM pg_roles WHERE rolname = :r"), {"r": role}
+        ).first():
+            raise SystemExit(
+                f"pytest: runtime DB role {role!r} (DATABASE_URL user) does not exist. "
+                "Ask the DBA to create it (LOGIN, NOSUPERUSER, NOBYPASSRLS); tests do "
+                "not create roles. Grants come from `alembic upgrade head` (0036)."
+            )
     server.dispose()
     backend = Path(__file__).resolve().parent
     env = {**os.environ, "POSTGRES_DB": _test_db}
-    for cmd in (
+    # 测试库授权只靠迁移（0036 给运行时角色授权）
+    subprocess.run(
         ["alembic", "upgrade", "head"],
-        [sys.executable, "scripts/setup_db_roles.py"],
-    ):
-        subprocess.run(cmd, cwd=backend, env=env, check=True, capture_output=True)
+        cwd=backend,
+        env=env,
+        check=True,
+        capture_output=True,
+    )
 
 
 _prepare_test_database()

@@ -10,11 +10,14 @@
       "org": "Organization",
       "lot": "Lot & wafer rules",
       "map": "Substrate map & bin",
+      "marking": "Marking",
+      "marking_template": "Marking template",
       "wo": "Work orders",
       "process": "Process",
       "product": "Product & material",
       "bom": "BOM",
       "quality": "Quality",
+      "reticle": "Reticle",
       "wh": "Warehouse"
     },
     "entity": {
@@ -50,6 +53,7 @@
       "future_hold": "Future hold",
       "shift_log": "Shift handover",
       "operator_qual": "Operator qualification",
+      "operator_qual_log": "Operator qualification history",
       "idempotency_key": "Idempotency key",
       "site": "Factory / site",
       "area": "Area",
@@ -111,6 +115,12 @@
       "defect_code": "Defect code",
       "reason_code": "Reason code",
       "dc_result": "DC result",
+      "reticle_applicability": "Reticle applicability",
+      "reticle_incident": "Reticle incident",
+      "reticle_mount_log": "Reticle mount log",
+      "reticle_usage": "Reticle usage",
+      "reticle_inspection": "Reticle inspection",
+      "reticle_status_log": "Reticle status history",
       "warehouse": "Warehouse",
       "storage_location": "Storage location",
       "receipt": "Finished-goods receipt",
@@ -151,7 +161,7 @@
         "cleared_by": "Cleared by",
         "clear_source": "Clear source",
         "clear_event_id": "Clear event ID",
-        "hold_ids": "Holds",
+        "hold_ids": "Linked holds (legacy)",
         "e10_change": "E10 change",
         "raw": "Raw report",
         "comment": "Comment",
@@ -457,6 +467,17 @@
         "expires_on": "Expires on",
         "is_active": "Active"
       },
+      "operator_qual_log": {
+        "qual": "Qualification",
+        "action": "Action",
+        "before": "Before",
+        "after": "After",
+        "reason": "Reason",
+        "comment": "Comment",
+        "approved_by": "Approved by",
+        "username": "User",
+        "at": "Time"
+      },
       "idempotency_key": {
         "endpoint": "Endpoint",
         "idem_key": "Key",
@@ -516,8 +537,8 @@
         "note": "Note"
       },
       "customer": {
-        "code": "Code",
-        "name": "Name",
+        "code": "Customer code",
+        "name": "Customer name",
         "short_name": "Short name",
         "description": "Description"
       },
@@ -1031,11 +1052,31 @@
       "reticle": {
         "code": "Code",
         "name": "Name",
+        "revision": "Revision",
         "product": "Product",
         "layer": "Layer",
         "grade": "Grade",
         "max_shots": "Max shots",
         "status_code": "State",
+        "hold_reason": "Hold reason",
+        "status_before_hold": "Status before hold",
+        "inspection_required": "Inspection required",
+        "shot_count": "Shot count",
+        "warn_ratio": "Warn ratio",
+        "mount_count": "Mount count",
+        "life_reset_count": "Life resets",
+        "count_basis": "Count basis",
+        "shots_per_wafer_default": "Shots per wafer",
+        "received_at": "Received at",
+        "first_used_at": "First used at",
+        "storage_location": "Storage location",
+        "carrier": "Pod",
+        "equipment": "Mounted on",
+        "mounted_at": "Mounted at",
+        "last_inspected_at": "Last inspected",
+        "next_inspection_due_at": "Next inspection due",
+        "inspection_interval_shots": "Inspection interval (shots)",
+        "inspection_interval_days": "Inspection interval (days)",
         "description": "Description"
       },
       "fixture": {
@@ -1132,6 +1173,85 @@
         "oos_action": "OOS action",
         "username": "User"
       },
+      "reticle_applicability": {
+        "reticle": "Reticle",
+        "product": "Product",
+        "layer": "Layer",
+        "shots_per_wafer": "Shots per wafer",
+        "is_primary": "Primary",
+        "comment": "Comment"
+      },
+      "reticle_incident": {
+        "reticle": "Reticle",
+        "kind": "Kind",
+        "occurred_at": "Time",
+        "equipment": "Equipment",
+        "lot": "Lot",
+        "description": "Description",
+        "source": "Source",
+        "external_event_id": "External event ID",
+        "username": "User"
+      },
+      "reticle_mount_log": {
+        "reticle": "Reticle",
+        "equipment": "Equipment",
+        "sub_unit": "Sub-unit",
+        "slot_code": "Slot",
+        "mounted_at": "Mounted at",
+        "unmounted_at": "Unmounted at",
+        "unmount_reason": "Unmount reason",
+        "shots_at_mount": "Shots at mount",
+        "shots_at_unmount": "Shots at unmount",
+        "comment": "Comment",
+        "source": "Source",
+        "external_event_id": "External event ID",
+        "username": "User"
+      },
+      "reticle_usage": {
+        "reticle": "Reticle",
+        "equipment": "Equipment",
+        "lot": "Lot",
+        "operation": "Operation",
+        "delta": "Delta",
+        "count_after": "Count after",
+        "kind": "Kind",
+        "occurred_at": "Time",
+        "reason": "Reason",
+        "comment": "Comment",
+        "source": "Source",
+        "external_event_id": "External event ID",
+        "username": "User",
+        "counted": "Counted",
+        "estimated": "Estimated",
+        "corrected_at": "Corrected at",
+        "estimated_delta": "Estimated delta"
+      },
+      "reticle_inspection": {
+        "reticle": "Reticle",
+        "kind": "Kind",
+        "result": "Result",
+        "defect_count": "Defects",
+        "measured": "Measured data",
+        "equipment": "Inspection tool",
+        "inspected_at": "Inspected at",
+        "disposition": "Disposition",
+        "shots_at_inspection": "Shots",
+        "comment": "Comment",
+        "username": "User"
+      },
+      "reticle_status_log": {
+        "reticle": "Reticle",
+        "from_status": "From",
+        "to_status": "To",
+        "action": "Action",
+        "hold_reason_from": "Hold reason (from)",
+        "hold_reason_to": "Hold reason (to)",
+        "reason": "Reason",
+        "comment": "Comment",
+        "trigger": "Trigger",
+        "username": "User",
+        "at": "Time"
+      },
       "warehouse": {
         "code": "Code",
         "name": "Name",
@@ -1186,13 +1306,13 @@
     },
     "help": {
       "alarm_code": {
-        "target_state": "E10 state code, required when action=set_state"
+        "target_state": "E10 state code (e.g. UDT); required when the action is “Set equipment state”"
       },
       "code_rule": {
         "pattern": "Tokens: {YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}"
       },
       "equipment": {
-        "qual_state": "WAIT_QUAL after an OK PM until a Qual passes",
+        "qual_state": "Waits for Qual after an OK PM until a Qual passes",
         "ideal_uph": "Optional; reserved for OEE performance rate"
       },
       "tool": {
@@ -1394,7 +1514,7 @@
       },
       "e10_history_trigger": {
         "manual": "Manual",
-        "equipment": "Equipment",
+        "equipment": "Equipment event",
         "system": "System"
       },
       "pm_result": {
@@ -1413,6 +1533,14 @@
       "mount_source": {
         "manual": "Manual",
         "eap": "EAP"
+      },
+      "operator_qual_log_action": {
+        "granted": "Granted",
+        "renewed": "Renewed",
+        "changed": "Changed",
+        "deactivated": "Deactivated",
+        "reactivated": "Reactivated",
+        "expired": "Expired"
       },
       "exec_trigger": {
         "move_in": "Move in",
@@ -1458,7 +1586,8 @@
         "recipe_match": "Recipe ↔ equipment mapping",
         "pm_due": "Equipment PM not overdue",
         "rework_limit": "Rework count limit",
-        "qty_adjust_limit": "Scrap / bonus qty limit"
+        "qty_adjust_limit": "Scrap / bonus qty limit",
+        "marking_inspection": "Marking inspection passed"
       },
       "check_severity": {
         "block": "Block",
@@ -1536,7 +1665,8 @@
         "carrier_change": "Carrier change",
         "sort": "Wafer sort",
         "priority": "Priority change",
-        "bom_over_consumption": "BOM over-consumption"
+        "bom_over_consumption": "BOM over-consumption",
+        "qtime_warned": "Q-Time warning"
       },
       "genealogy_relation": {
         "split": "Split",
@@ -1630,6 +1760,11 @@
       "y_axis": {
         "down": "Down",
         "up": "Up"
+      },
+      "marking_template_status": {
+        "draft": "Draft",
+        "approved": "Approved",
+        "retired": "Retired"
       },
       "bom_status": {
         "draft": "Draft",
@@ -1757,6 +1892,24 @@
         "hold": "On hold",
         "retired": "Retired"
       },
+      "reticle_status": {
+        "available": "Available",
+        "in_use": "In use",
+        "dirty": "Cleaning",
+        "inspecting": "Inspecting",
+        "on_hold": "On hold",
+        "pending_maintenance": "Pending maintenance",
+        "scrapped": "Scrapped"
+      },
+      "reticle_hold_reason": {
+        "incident": "Incident",
+        "inspection_failed": "Inspection failed",
+        "manual": "Manual"
+      },
+      "reticle_count_basis": {
+        "track_out": "Track out",
+        "eap": "Equipment report"
+      },
       "reticle_grade": {
         "binary": "Binary",
         "psm": "Phase shift (PSM)",
@@ -1864,7 +2017,8 @@
         "downtime": "Equipment downtime",
         "release": "Release",
         "jump": "Jump step",
-        "bonus": "Bonus (qty added)"
+        "bonus": "Bonus (qty added)",
+        "operator_qual": "Operator qualification"
       },
       "oos_action": {
         "warn": "Warn",
@@ -1876,6 +2030,60 @@
         "warn": "Warn",
         "hold": "Hold lot",
         "rework": "Rework"
+      },
+      "reticle_usage_kind": {
+        "track_out": "Track out",
+        "report": "Reported",
+        "adjust": "Adjust",
+        "reset": "Life reset"
+      },
+      "reticle_incident_kind": {
+        "collision": "Collision",
+        "drop": "Drop",
+        "other": "Other"
+      },
+      "reticle_inspection_kind": {
+        "particle": "Particle",
+        "haze": "Haze",
+        "cd": "CD",
+        "other": "Other"
+      },
+      "reticle_inspection_result": {
+        "pass": "Pass",
+        "fail": "Fail"
+      },
+      "reticle_disposition": {
+        "none": "None",
+        "clean": "Clean",
+        "hold": "Hold",
+        "repair": "Repair",
+        "scrap": "Scrap"
+      },
+      "reticle_unmount_reason": {
+        "manual": "Manual",
+        "hold": "Hold",
+        "incident": "Incident",
+        "scrap": "Scrap"
+      },
+      "reticle_action": {
+        "mount": "Mount",
+        "unmount": "Unmount",
+        "hold": "Hold",
+        "release": "Release",
+        "restore": "Restore",
+        "life_reset": "Life reset",
+        "clean_start": "Start cleaning",
+        "clean_complete": "Cleaning complete",
+        "repair_complete": "Repair complete",
+        "inspect_start": "Start inspection",
+        "inspection": "Inspection",
+        "incident": "Incident",
+        "scrap": "Scrap",
+        "system": "System"
+      },
+      "reticle_trigger": {
+        "manual": "Manual",
+        "system": "System"
       },
       "warehouse_type": {
         "finished_goods": "Finished goods",
@@ -1928,6 +2136,7 @@
     "mes-wip-dashboard": "WIP Dashboard",
     "mes-oee-report": "Equipment OEE",
     "mes-yield-report": "Yield Report",
+    "mes-ct-move-report": "CT / Move Report",
     "mes-lot-history": "Lot History & Trace",
     "mes-lot_recipe_run": "Recipe Run",
     "mes-lot": "Lot Inquiry",
@@ -1965,6 +2174,7 @@
     "mes-material-master": "Material Master",
     "mes-carrier-master": "Carrier Master",
     "mes-reticle": "Reticle",
+    "mes-reticle-console": "Reticle Console",
     "mes-fixture": "Fixture",
     "mes-factory-model": "Factory Model",
     "mes-calendar": "Calendar & Shifts",
@@ -2029,7 +2239,10 @@
     "p-channels": "Notification Channels",
     "p-audit": "Cross-tenant Audit Log",
     "p-login-log": "Login Log",
-    "p-ops-log": "Platform Operation Log"
+    "p-ops-log": "Platform Operation Log",
+    "mes-marking": "Marking",
+    "mes-marking-template": "Marking templates",
+    "mes-qual-expiring": "Expiring qualifications"
   },
   "permName": {
     "users__read": "View platform users",
@@ -2067,6 +2280,10 @@
     "mes_lot__write": "Lot & wafer rules·Edit",
     "mes_map__read": "Substrate map & bin·View",
     "mes_map__write": "Substrate map & bin·Edit",
+    "mes_marking__read": "Marking·View",
+    "mes_marking__write": "Marking·Edit",
+    "mes_marking_template__read": "Marking template·View",
+    "mes_marking_template__write": "Marking template·Edit",
     "mes_wo__read": "Work orders·View",
     "mes_wo__write": "Work orders·Edit",
     "mes_process__read": "Process·View",
@@ -2077,6 +2294,8 @@
     "mes_bom__write": "BOM·Edit",
     "mes_quality__read": "Quality·View",
     "mes_quality__write": "Quality·Edit",
+    "mes_reticle__read": "Reticle·View",
+    "mes_reticle__write": "Reticle·Edit",
     "mes_wh__read": "Warehouse·View",
     "mes_wh__write": "Warehouse·Edit",
     "mes_eap__write": "EAP events (service account)",
@@ -2095,9 +2314,11 @@
     "mes_exec__adjust": "Execution·Scrap / bonus",
     "mes_exec__transform": "Execution·Unit transform",
     "mes_map__import": "Substrate map & bin·Import maps / bin sets",
+    "mes_marking_template__approve": "Marking template·Approve / retire",
     "mes_wo__release": "Work orders·Release / close",
     "mes_lot__start": "Lot & wafer rules·Start lots",
     "mes_bom__activate": "BOM·Activate / void",
+    "mes_reticle__override": "Reticle·Override checks",
     "mes_wh__confirm": "Warehouse·Confirm receipts",
     "notify__config": "Configure subscriptions"
   },
@@ -2144,6 +2365,10 @@
     "mes_lot__write": "Allows: Lot & wafer rules·Edit",
     "mes_map__read": "Allows: Substrate map & bin·View",
     "mes_map__write": "Allows: Substrate map & bin·Edit",
+    "mes_marking__read": "Allows: Marking·View",
+    "mes_marking__write": "Allows: Marking·Edit",
+    "mes_marking_template__read": "Allows: Marking template·View",
+    "mes_marking_template__write": "Allows: Marking template·Edit",
     "mes_wo__read": "Allows: Work orders·View",
     "mes_wo__write": "Allows: Work orders·Edit",
     "mes_process__read": "Allows: Process·View",
@@ -2154,6 +2379,8 @@
     "mes_bom__write": "Allows: BOM·Edit",
     "mes_quality__read": "Allows: Quality·View",
     "mes_quality__write": "Allows: Quality·Edit",
+    "mes_reticle__read": "Allows: Reticle·View",
+    "mes_reticle__write": "Allows: Reticle·Edit",
     "mes_wh__read": "Allows: Warehouse·View",
     "mes_wh__write": "Allows: Warehouse·Edit",
     "mes_eap__write": "Allows: EAP events (service account)",
@@ -2172,9 +2399,11 @@
     "mes_exec__adjust": "Allows: Execution·Scrap / bonus",
     "mes_exec__transform": "Allows: Execution·Unit transform",
     "mes_map__import": "Allows: Substrate map & bin·Import maps / bin sets",
+    "mes_marking_template__approve": "Allows: Marking template·Approve / retire",
     "mes_wo__release": "Allows: Work orders·Release / close",
     "mes_lot__start": "Allows: Lot & wafer rules·Start lots",
     "mes_bom__activate": "Allows: BOM·Activate / void",
+    "mes_reticle__override": "Allows: Reticle·Override checks",
     "mes_wh__confirm": "Allows: Warehouse·Confirm receipts",
     "notify__config": "Allows: Configure subscriptions"
   },

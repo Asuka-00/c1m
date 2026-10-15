@@ -21,7 +21,12 @@ class MesError(Exception):
 
 
 def _item(
-    f: Any, m: str, code: str | None = None, *, where: str = "body"
+    f: Any,
+    m: str,
+    code: str | None = None,
+    ctx: dict[str, Any] | None = None,
+    *,
+    where: str = "body",
 ) -> dict[str, Any]:
     d: dict[str, Any] = {
         "loc": [where, *f] if isinstance(f, tuple | list) else [where, f],
@@ -30,6 +35,8 @@ def _item(
     }
     if code:
         d["code"] = code
+    if ctx:
+        d["ctx"] = ctx
     return d
 
 
@@ -38,7 +45,8 @@ def http_422(errors: Sequence[tuple[Any, ...]]) -> HTTPException:
 
     字段可以是字符串（``loc = ["body", f]``），也可以是与 Pydantic 一致的路径元组
     （如 ``("lots", 0, "customer_id")`` → ``loc = ["body", "lots", 0, "customer_id"]``）。
-    可带第三项错误码 ``(字段, 消息, code)``：该项 ``type`` 与 ``code`` 都为错误码。
+    可带第三项错误码 ``(字段, 消息, code)``：该项 ``type`` 与 ``code`` 都为错误码；
+    第四项为 ``ctx``（如 D72 ``{"max_places": 6}``）。
     """
     return HTTPException(
         status_code=422,
@@ -54,8 +62,16 @@ def query_422(errors: Sequence[tuple[Any, ...]]) -> HTTPException:
     )
 
 
+_NO_INPUT: Any = object()
+
+
 def err_422(
-    loc: Sequence[Any], msg: str, code: str, ctx: dict[str, Any] | None = None
+    loc: Sequence[Any],
+    msg: str,
+    code: str,
+    ctx: dict[str, Any] | None = None,
+    *,
+    input: Any = _NO_INPUT,
 ) -> HTTPException:
     """单项 422（D65 补充：detail 一律为列表）：``loc`` 原样给出，``type`` 与 ``code`` 为错误码。"""
     return HTTPException(
@@ -67,6 +83,7 @@ def err_422(
                 "type": code,
                 "code": code,
                 **({"ctx": ctx} if ctx else {}),
+                **({} if input is _NO_INPUT else {"input": input}),
             }
         ],
     )

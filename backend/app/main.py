@@ -83,6 +83,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # 让浏览器跨域能读到幂等回放头（D81）
+    expose_headers=["Idempotent-Replayed"],
 )
 
 api_router = APIRouter()

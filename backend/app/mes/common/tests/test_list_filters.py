@@ -1,8 +1,13 @@
 """通用列表筛选：?id= 指定记录、日期 / 时间范围（_from / _to）、时间字段默认降序。"""
 
+import uuid
+from datetime import UTC
+from typing import Any
+
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from app.core.config import settings
 from app.testing.mes import API, Mes
 
 
@@ -132,3 +137,399 @@ def test_export_import_datetime_roundtrip(client: TestClient, db: Session) -> No
     m.import_rows("downtime", rows)
     got = [x["start_at"] for x in m.list("downtime")["data"]]
     assert got == ["2026-04-01T00:30:00Z", "2026-04-01T00:30:00Z"], got
+
+
+def test_range_boundaries_d77(client: TestClient, db: Session) -> None:
+    """D77：datetime 的 _to 半开（恰在边界的记录不含）；date 的 _to 闭区间（含当天）。"""
+    m = Mes(client, db)
+    eq = m.post("equipment", {"code": "EQ-B", "name": "eq"})
+    rc = m.post("reason_code", {"code": "DT", "name": "d", "reason_type": "downtime"})
+    m.post(
+        "downtime",
+        {
+            "equipment_id": eq["id"],
+            "start_at": "2026-03-10T00:00:00+08:00",
+            "reason_id": rc["id"],
+        },
+    )
+
+    def dt(**kw: str) -> int:
+        return int(m.list("downtime", **kw)["count"])
+
+    assert dt(start_at_to="2026-03-10T00:00:00+08:00") == 0  # 边界不含
+    assert dt(start_at_to="2026-03-09T16:00:00Z") == 0  # 同一时刻（UTC 写法）
+    assert dt(start_at_to="2026-03-10T00:00:00.000001+08:00") == 1
+    assert dt(start_at_from="2026-03-10T00:00:00+08:00") == 1  # 下限含
+    assert (
+        dt(
+            start_at_from="2026-03-09T16:00:00Z",
+            start_at_to="2026-03-10T00:00:01+08:00",
+        )
+        == 1
+    )
+    # date 字段：qualified_until = 3/10，_to=3/10 含当天，_to=3/9 不含
+    op = m.post("operation", {"code": "OP-B", "name": "op"})
+    m.post(
+        "equipment_capability",
+        {
+            "equipment_id": eq["id"],
+            "operation_id": op["id"],
+            "qualified_until": "2026-03-10",
+        },
+    )
+
+    def cap(**kw: str) -> int:
+        return int(m.list("equipment_capability", **kw)["count"])
+
+    assert cap(qualified_until_to="2026-03-10") == 1
+    assert cap(qualified_until_to="2026-03-09") == 0
+    assert cap(qualified_until_from="2026-03-10", qualified_until_to="2026-03-10") == 1
+    assert cap(qualified_until_from="2026-03-11") == 0
+
+
+def test_range_d77_supplement(client: TestClient, db: Session) -> None:
+    """D77 补充一：datetime 必须带偏移；from > to 统一 range_inverted；from == to 边界。"""
+    m = Mes(client, db)
+    eq = m.post("equipment", {"code": "EQ-S", "name": "eq"})
+    rc = m.post("reason_code", {"code": "DT", "name": "d", "reason_type": "downtime"})
+    m.post(
+        "downtime",
+        {
+            "equipment_id": eq["id"],
+            "start_at": "2026-03-10T00:00:00+08:00",
+            "reason_id": rc["id"],
+        },
+    )
+    op = m.post("operation", {"code": "OP-S", "name": "op"})
+    m.post(
+        "equipment_capability",
+        {
+            "equipment_id": eq["id"],
+            "operation_id": op["id"],
+            "qualified_until": "2026-03-10",
+        },
+    )
+
+    def get(ent: str, **kw: str) -> Any:
+        return client.get(m.url(ent), headers=m.h, params=kw)
+
+    # datetime：只给日期 / 无偏移 → timezone_required
+    for name in ("start_at_from", "start_at_to"):
+        for raw in ("2026-03-10", "2026-03-10T00:00:00"):
+            r = get("downtime", **{name: raw})
+            assert r.status_code == 422, (name, raw)
+            d = r.json()["detail"][0]
+            assert (d["type"], d["loc"]) == ("timezone_required", ["query", name])
+    r = get("audit_log", created_at_from="2026-03-10")
+    assert r.json()["detail"][0]["type"] == "timezone_required"
+    # date 字段只给日期照常
+    assert (
+        get("equipment_capability", qualified_until_to="2026-03-10").json()["count"]
+        == 1
+    )
+    # from > to：date 与 datetime 都是 value_error + range_inverted
+    for ent, kw in (
+        (
+            "downtime",
+            {
+                "start_at_from": "2026-03-10T00:00:01+08:00",
+                "start_at_to": "2026-03-10T00:00:00+08:00",
+            },
+        ),
+        (
+            "equipment_capability",
+            {"qualified_until_from": "2026-03-11", "qualified_until_to": "2026-03-10"},
+        ),
+    ):
+        r = get(ent, **kw)
+        assert r.status_code == 422, r.text
+        d = r.json()["detail"][0]
+        assert d["type"] == "value_error" and d["ctx"] == {"reason": "range_inverted"}
+        assert d["loc"] == ["query", next(iter(kw))]
+    # from == to：datetime 半开 → 200 空；date 闭区间 → 当天
+    same = "2026-03-10T00:00:00+08:00"
+    r = get("downtime", start_at_from=same, start_at_to=same)
+    assert r.status_code == 200 and r.json()["count"] == 0
+    r = get(
+        "equipment_capability",
+        qualified_until_from="2026-03-10",
+        qualified_until_to="2026-03-10",
+    )
+    assert r.status_code == 200 and r.json()["count"] == 1
+
+
+def test_date_field_from_offset_datetime_uses_site_tz(
+    client: TestClient, db: Session
+) -> None:
+    """D75：date 字段收到带时区的时间，先换算到站点时区（Asia/Taipei）再取日期。"""
+    m = Mes(client, db)
+    eq = m.post("equipment", {"code": "EQ-T", "name": "eq"})
+    op = m.post("operation", {"code": "OP-T", "name": "op"})
+    c = m.post(
+        "equipment_capability",
+        {
+            "equipment_id": eq["id"],
+            "operation_id": op["id"],
+            "qualified_until": "2026-03-09T20:00:00Z",  # 台北 03-10 04:00
+        },
+    )
+    assert c["qualified_until"] == "2026-03-10"
+
+
+def test_import_error_loc_points_to_cell(client: TestClient, db: Session) -> None:
+    """Excel 导入错误 loc 为 ["file", 行号, 列名]，并给 column / cell。"""
+    m = Mes(client, db)
+    m.post("equipment", {"code": "EQ-I", "name": "eq"})
+    rows = m.export("equipment_capability")
+    header = list(rows[0])
+    row: list[Any] = [None] * len(header)
+    row[header.index("equipment")] = "EQ-I"
+    row[header.index("operation")] = "NO-SUCH-OP"
+    err = m.import_rows("equipment_capability", [header, row], 422)
+    e0 = err["detail"]["errors"][0]
+    i = header.index("operation")
+    assert e0["row"] == 2 and e0["loc"] == ["file", 2, "operation"], err
+    assert e0["cell"] == f"{chr(65 + i)}2", err
+
+
+def test_date_filter_strict_pattern_d77_supp2(client: TestClient, db: Session) -> None:
+    """D77 补充二：date 筛选只收严格 YYYY-MM-DD，带时间 → value_error/pattern。"""
+    m = Mes(client, db)
+    for raw in (
+        "2026-03-10T00:00:00+08:00",
+        "2026-03-10T00:00:00",
+        "2026-03-10 00:00",
+        "2026-3-10",
+        "20260310",
+        "2026/10/01",
+        "2026-02-30",
+    ):
+        r = client.get(
+            m.url("equipment_capability"),
+            headers=m.h,
+            params={"qualified_until_to": raw},
+        )
+        assert r.status_code == 422, raw
+        d = r.json()["detail"][0]
+        assert d["type"] == "value_error", raw
+        assert d["ctx"] == {"reason": "pattern"}
+        assert d["loc"] == ["query", "qualified_until_to"]
+    r = client.get(
+        m.url("equipment_capability"),
+        headers=m.h,
+        params={"qualified_until_from": "2026-03-10"},
+    )
+    assert r.status_code == 200
+
+
+def test_report_window_range_inverted_d77_supp2(
+    client: TestClient, db: Session
+) -> None:
+    """D77 补充二：output/oee/yield/oee-trend 报表 from>to → range_inverted。"""
+    m = Mes(client, db)
+    for path in ("output", "oee", "yield", "oee-trend"):
+        r = client.get(
+            f"{settings.API_V1_STR}/mes/exec/reports/{path}",
+            headers=m.h,
+            params={"date_from": "2026-03-11", "date_to": "2026-03-10"},
+        )
+        assert r.status_code == 422, (path, r.text)
+        d = r.json()["detail"][0]
+        assert (d["type"], d["loc"], d["ctx"]) == (
+            "value_error",
+            ["query", "date_from"],
+            {"reason": "range_inverted"},
+        ), path
+
+
+def test_date_equality_and_datetime_garbage_pattern(
+    client: TestClient, db: Session
+) -> None:
+    """date 字段等值筛选同样 pattern；datetime 无法解析 → pattern，只给日期 → timezone_required。"""
+    m = Mes(client, db)
+
+    def err(ent: str, **kw: str) -> Any:
+        r = client.get(m.url(ent), headers=m.h, params=kw)
+        assert r.status_code == 422, (ent, kw, r.text)
+        return r.json()["detail"][0]
+
+    d = err("equipment_capability", qualified_until="2026/10/01")
+    assert (d["type"], d["loc"], d["ctx"]) == (
+        "value_error",
+        ["query", "qualified_until"],
+        {"reason": "pattern"},
+    )
+    for name in ("start_at_from", "start_at_to"):
+        d = err("downtime", **{name: "2026/10/01"})
+        assert (d["type"], d["ctx"]) == ("value_error", {"reason": "pattern"})
+        assert err("downtime", **{name: "2026-10-01"})["type"] == "timezone_required"
+    assert (
+        client.get(
+            m.url("equipment_capability"),
+            headers=m.h,
+            params={"qualified_until": "2026-10-01"},
+        ).status_code
+        == 200
+    )
+
+
+def test_custom_routes_dates_d77(client: TestClient, db: Session) -> None:
+    """自定义路由：shift-logs（date）pattern；holds / alarms / maps（datetime）D77 补充一。"""
+    m = Mes(client, db)
+    api = f"{settings.API_V1_STR}/mes"
+
+    def err(path: str, **kw: str) -> Any:
+        r = client.get(f"{api}/{path}", headers=m.h, params=kw)
+        assert r.status_code == 422, (path, kw, r.text)
+        return r.json()["detail"][0]
+
+    for raw in ("2026/10/01", "2026-10-01T00:00:00"):
+        d = err("exec/shift-logs", date_from=raw)
+        assert (d["type"], d["loc"], d["ctx"]) == (
+            "value_error",
+            ["query", "date_from"],
+            {"reason": "pattern"},
+        )
+    d = err("exec/shift-logs", date_from="2026-10-02", date_to="2026-10-01")
+    assert d["ctx"] == {"reason": "range_inverted"}
+    for path, f, t in (
+        ("exec/holds", "date_from", "date_to"),
+        ("eqp/alarms", "from", "to"),
+        ("map/maps", "imported_from", "imported_to"),
+    ):
+        d = err(path, **{f: "2026-10-01"})
+        assert (d["type"], d["loc"]) == ("timezone_required", ["query", f]), path
+        d = err(path, **{t: "2026-10-01T00:00:00"})
+        assert (d["type"], d["loc"]) == ("timezone_required", ["query", t]), path
+        d = err(path, **{f: "2026/10/01"})
+        assert d["ctx"] == {"reason": "pattern"}, path
+        d = err(path, **{f: "2026-10-02T00:00:00Z", t: "2026-10-01T00:00:00Z"})
+        assert (d["loc"], d["ctx"]) == (["query", f], {"reason": "range_inverted"})
+        ok = client.get(
+            f"{api}/{path}",
+            headers=m.h,
+            params={f: "2026-10-01T00:00:00+08:00", t: "2026-10-02T00:00:00Z"},
+        )
+        assert ok.status_code == 200, (path, ok.text)
+
+
+def test_report_window_strict_date_d77_supp3(client: TestClient, db: Session) -> None:
+    """D77 补充三：报表 date_from/date_to 只收严格 YYYY-MM-DD；格式先于 range_inverted。"""
+    m = Mes(client, db)
+    for path in ("output", "oee", "yield", "oee-trend"):
+        url = f"{settings.API_V1_STR}/mes/exec/reports/{path}"
+        for name in ("date_from", "date_to"):
+            for raw in (
+                "2026-03-10T00:00:00",
+                "2026-03-10T00:00:00+08:00",
+                "2026/03/10",
+            ):
+                r = client.get(url, headers=m.h, params={name: raw})
+                assert r.status_code == 422, (path, name, raw, r.text)
+                d = r.json()["detail"][0]
+                assert (d["type"], d["loc"], d["ctx"]) == (
+                    "value_error",
+                    ["query", name],
+                    {"reason": "pattern"},
+                ), (path, name, raw)
+        # 格式错误先于 range_inverted（from 合法但晚于 to，to 带时间）
+        r = client.get(
+            url,
+            headers=m.h,
+            params={"date_from": "2026-03-11", "date_to": "2026-03-10T00:00:00"},
+        )
+        d = r.json()["detail"][0]
+        assert (d["loc"], d["ctx"]) == (["query", "date_to"], {"reason": "pattern"})
+        r = client.get(
+            url,
+            headers=m.h,
+            params={"date_from": "2026-03-01", "date_to": "2026-03-10"},
+        )
+        assert r.status_code == 200, (path, r.text)
+
+
+def test_datetime_equality_filter_strict(client: TestClient, db: Session) -> None:
+    """D85：datetime 字段等值筛选同 _from/_to 走 qdates。"""
+    m = Mes(client, db)
+
+    def get(**kw: str) -> Any:
+        return client.get(m.url("lot"), headers=m.h, params=kw)
+
+    for raw in ("2026-10-01", "2026-10-01T00:00:00"):
+        r = get(started_at=raw)
+        assert r.status_code == 422, raw
+        d = r.json()["detail"][0]
+        assert (d["type"], d["loc"]) == ("timezone_required", ["query", "started_at"])
+    r = get(started_at="2026/10/01")
+    d = r.json()["detail"][0]
+    assert (r.status_code, d["type"], d["ctx"]) == (
+        422,
+        "value_error",
+        {"reason": "pattern"},
+    )
+    assert get(started_at="2026-10-01T00:00:00Z").status_code == 200
+
+
+def test_field_named_from_to_equality_validated(
+    client: TestClient, db: Session
+) -> None:
+    """字段名本身以 _from/_to 结尾：等值筛选按字段校验，不当作区间后缀剥掉跳过。"""
+    m = Mes(client, db)
+    ent = "product_route"
+
+    def get(**kw: str) -> Any:
+        return client.get(m.url(ent), headers=m.h, params=kw)
+
+    for name in ("effective_from", "effective_to"):
+        r = get(**{name: "2026/10/01"})
+        assert r.status_code == 422, (name, r.text)
+        d = r.json()["detail"][0]
+        assert (d["type"], d["loc"], d["ctx"]) == (
+            "value_error",
+            ["query", name],
+            {"reason": "pattern"},
+        )
+        assert get(**{name: "2026-10-01"}).status_code == 200
+        # 字段本身的区间筛选 <字段>_from 仍可用且同样校验
+        assert get(**{f"{name}_from": "2026-10-01"}).status_code == 200
+        assert get(**{f"{name}_to": "x"}).status_code == 422
+
+
+def test_undeclared_datetime_columns_equality(client: TestClient, db: Session) -> None:
+    """QA P2-1：created_at / updated_at 等未声明 datetime 列的等值筛选同样校验并真正筛选。"""
+    m = Mes(client, db)
+    for ent in ("alarm_log", "shift_log", "equipment"):
+        for col in ("created_at", "updated_at"):
+            r = client.get(m.url(ent), headers=m.h, params={col: "2026-10-01"})
+            assert r.status_code == 422, (ent, col, r.text)
+            d = r.json()["detail"][0]
+            assert (d["type"], d["loc"]) == ("timezone_required", ["query", col])
+            r = client.get(m.url(ent), headers=m.h, params={col: "2026/10/01"})
+            d = r.json()["detail"][0]
+            assert (d["type"], d["ctx"]) == ("value_error", {"reason": "pattern"})
+    eq = m.post("equipment", {"code": "EQ-CA-" + uuid.uuid4().hex[:5], "name": "e"})
+    rows = m.list("equipment", created_at=eq["created_at"])["data"]
+    assert [x["id"] for x in rows] == [eq["id"]]
+    assert m.list("equipment", created_at="2001-01-01T00:00:00Z")["data"] == []
+
+
+def test_datetime_equality_same_instant_any_offset(
+    client: TestClient, db: Session
+) -> None:
+    """D85：换算到 UTC 的同一时刻精确匹配（+08:00 与等价 Z 命中同一行）。"""
+    from datetime import datetime, timedelta, timezone
+
+    m = Mes(client, db)
+    eq = m.post("equipment", {"code": "EQ-TZ-" + uuid.uuid4().hex[:5], "name": "e"})
+    utc = datetime.fromisoformat(eq["created_at"].replace("Z", "+00:00"))
+    z = utc.astimezone(UTC).isoformat().replace("+00:00", "Z")
+    p8 = utc.astimezone(timezone(timedelta(hours=8))).isoformat()
+    for v in (z, p8):
+        assert [x["id"] for x in m.list("equipment", created_at=v)["data"]] == [
+            eq["id"]
+        ], v
+    assert utc.microsecond, "created_at should carry microseconds"
+    trunc = utc.replace(microsecond=0).isoformat()  # D85 补充四：不截断
+    assert m.list("equipment", created_at=trunc)["data"] == []
+    off = (utc + timedelta(microseconds=1)).isoformat()
+    assert m.list("equipment", created_at=off)["data"] == []

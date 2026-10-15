@@ -20,6 +20,22 @@ from app.core.spec.errors import MesError, err_422, http_422, integrity
 from app.core.spec.query import get_row
 from app.core.spec.validate import VALIDATORS, check_editable, locking_parent, validate
 
+#: 写入后钩子（同一事务，提交前）：``fn(session, tenant_id, e, old, new, user)``；
+#: 新建时 ``old`` 为 None。用于需要随业务写入留痕的实体（如 D74 资质履历）。
+AFTER_WRITE: dict[str, list[Any]] = {}
+
+
+def _after_write(
+    session: Session,
+    tenant_id: uuid.UUID,
+    e: Entity,
+    old: Row | None,
+    new: Row,
+    user: Any,
+) -> None:
+    for fn in AFTER_WRITE.get(e.code, []):
+        fn(session, tenant_id, e, old, new, user)
+
 
 # ---------------- writes ----------------
 def create_row(
@@ -83,6 +99,7 @@ def create_row(
         user,
         diff(None, {k: v for k, v in row.items() if k != "tenant_id"}),
     )
+    _after_write(session, tenant_id, e, None, row, user)
     if commit:
         session.commit()
     return row
@@ -134,6 +151,7 @@ def update_row(
     audit(
         session, tenant_id, e, action, new, user, diff(old, {k: new[k] for k in values})
     )
+    _after_write(session, tenant_id, e, old, new, user)
     if commit:
         session.commit()
     return new
@@ -335,4 +353,6 @@ def _parse_version(v: Any) -> int:
             return v
         if isinstance(v, str) and v.strip().lstrip("+-").isdigit():
             return int(v)
-    raise err_422(["body", "version"], "Input should be a valid integer", "int_parsing")
+    raise err_422(
+        ["body", "version"], "Input should be a valid integer", "int_parsing", input=v
+    )

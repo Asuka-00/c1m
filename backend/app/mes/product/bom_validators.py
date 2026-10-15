@@ -12,6 +12,7 @@ from app.core.spec.base import conn
 from app.core.spec.engine import TABLES, Entity
 from app.core.spec.errors import MesError, http_422
 from app.core.spec.validate import validator
+from app.mes.common.numeric import MAX_PLACES, PLACES_MSG
 from app.mes.common.query import find
 from app.mes.common.validators import Row, _get, reject_unwritable
 
@@ -125,7 +126,8 @@ def _strict_payload(
 
 
 # D49：用户录入值不静默舍入（D31 的舍入只用于计算值）
-MAX_DECIMALS = {"qty": 6, "scrap_rate": 4}
+# D72：超出小数位 422 value_error + ctx.max_places（同 app.mes.common.numeric）
+MAX_DECIMALS = {"qty": MAX_PLACES, "scrap_rate": 4}
 
 
 def _decimals(v: Any) -> int | None:
@@ -149,9 +151,10 @@ def _check_decimals(data: Row) -> None:
             errs.append(
                 {
                     "loc": ["body", f],
-                    "msg": f"{f}: at most {n} decimal places (got {k})",
-                    "type": "too_many_decimals",
-                    "code": "too_many_decimals",
+                    "msg": f"{f}: {PLACES_MSG.format(max_places=n)} (got {k})",
+                    "type": "value_error",
+                    "code": "value_error",
+                    "ctx": {"max_places": n},
                 }
             )
     if errs:

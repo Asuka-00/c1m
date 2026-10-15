@@ -21,13 +21,14 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import sqlalchemy as sa
 from fastapi import HTTPException
 from openpyxl import Workbook, load_workbook
+from openpyxl.utils import get_column_letter
 from sqlmodel import Session
 
 from app.core.spec.base import conn, table
 from app.core.spec.engine import ENTITIES, Entity
 from app.core.spec.errors import err_422
-from app.core.spec.query import all_rows
-from app.core.spec.serialize import to_json
+from app.core.spec.query import all_rows, get_row
+from app.core.spec.serialize import TooManyDecimals, to_json
 from app.core.spec.validate import attr_defs
 from app.core.spec.write import create_row, update_row
 
@@ -183,6 +184,34 @@ def _resolve(session: Session, tenant_id: uuid.UUID, target: Entity, raw: str) -
     return c.execute(stmt.limit(1)).scalar()
 
 
+def _cell(e: Entity, header: list[str], n: int, key: Any) -> dict[str, Any]:
+    """导入错误定位到单元格：``loc=["file", 行号, 列名]``，另给 ``column`` 与 ``cell``（如 ``C5``）。
+
+    ``key`` 为字段名 / 列名（取自校验错误 loc 末项）；对不上表头时只给到行。
+    """
+    if not isinstance(key, str):
+        return {}
+    for i, h in enumerate(header):
+        f = e.field(h) if h else None
+        if h and (h == key or (f and key in (f.name, f.column))):
+            return {
+                "loc": ["file", n, h],
+                "column": h,
+                "cell": f"{get_column_letter(i + 1)}{n}",
+            }
+    return {}
+
+
+#: 导入更新已有行前的校验：fn(旧行, 导入载荷)，不合规时抛 HTTPException 422（整行拒绝）。
+#: 如 operator_qual（D88-3）：改动 is_active / expires_on 必须走 API。
+IMPORT_GUARDS: dict[str, Any] = {}
+
+
+def _blank(v: Any) -> bool:
+    """导入单元格是否为空（None / 空串 / 纯空白）。"""
+    return v is None or (isinstance(v, str) and not v.strip())
+
+
 def import_xlsx(
     session: Session, tenant_id: uuid.UUID, e: Entity, data: bytes, user: Any
 ) -> dict[str, int]:
@@ -231,7 +260,13 @@ def import_xlsx(
     nested = session.begin_nested()
     for n, values in enumerate(it, start=2):
         if n > MAX_ROWS + 1:
-            errors.append({"row": n, "msg": f"too many rows (max {MAX_ROWS})"})
+            errors.append(
+                {
+                    "row": n,
+                    "msg": f"too many rows (max {MAX_ROWS})",
+                    "loc": ["file", n],
+                }
+            )
             break
         raw = dict(zip(header, values, strict=False))
         if all(v in (None, "") for v in raw.values()):
@@ -250,7 +285,9 @@ def import_xlsx(
                 if f and f.type == "ref" and v not in (None, ""):
                     rid = _resolve(session, tenant_id, ENTITIES[f.ref or ""], str(v))
                     if rid is None:
-                        raise ValueError(f"{k}: '{v}' not found")
+                        miss = ValueError(f"{k}: '{v}' not found")
+                        miss.field = k  # type: ignore[attr-defined]
+                        raise miss
                     payload[f.column] = rid
                 elif f and f.type == "json" and isinstance(v, str) and v.strip():
                     payload[k] = json.loads(v)
@@ -260,6 +297,9 @@ def import_xlsx(
                     payload[k] = v.date()
                 else:
                     payload[k] = v
+            # D90-1：空单元格（None / 空串 / 纯空白）= 未提供。更新已有行时不改该字段
+            # （不写履历不发事件）；新建时按默认值或 null，必填由 create_row 报 missing。
+            payload = {k: v for k, v in payload.items() if not _blank(v)}
             if attrs:
                 payload["attrs"] = attrs
             key_cols = [
@@ -269,13 +309,28 @@ def import_xlsx(
                 payload.get(c, payload.get(c.removesuffix("_id"))) for c in key_cols
             ]
             existing = None
-            if all(v not in (None, "") for v in key_vals):
+            # 可空的键字段（如 operator_qual.equipment_type）留空 = 匹配 NULL
+            optional = {
+                (fld.column if (fld := e.field(k)) else k)
+                for k in e.natural_key
+                if (fld := e.field(k)) is not None and not fld.required
+            }
+            if all(
+                v not in (None, "") or c in optional
+                for c, v in zip(key_cols, key_vals, strict=True)
+            ):
                 stmt = sa.select(t.c.id).where(t.c.tenant_id == tenant_id)
                 for c, v in zip(key_cols, key_vals, strict=True):
                     column: Any = t.c[c]
+                    if v in (None, ""):
+                        stmt = stmt.where(column.is_(None))
+                        continue
                     stmt = stmt.where(column == (int(str(v)) if c == "version" else v))
                 existing = conn(session).execute(stmt).scalar()
             if existing:
+                guard = IMPORT_GUARDS.get(e.code)
+                if guard:
+                    guard(get_row(session, e, tenant_id, existing), payload)
                 update_row(
                     session,
                     tenant_id,
@@ -297,9 +352,20 @@ def import_xlsx(
                 if isinstance(d, list)
                 else str(d)
             )
-            errors.append({"row": n, "msg": msg})
+            err: dict[str, Any] = {"row": n, "msg": msg, "loc": ["file", n]}
+            first = d[0] if isinstance(d, list) and d else None
+            if isinstance(first, dict) and first.get("type"):
+                # D76：导入错误同样带首条的 type / ctx（如 value_error max_places）
+                err.update({k: first[k] for k in ("type", "ctx") if k in first})
+                loc = first.get("loc") or []
+                err.update(_cell(e, header, n, loc[-1] if loc else None))
+            errors.append(err)
         except (ValueError, TypeError) as ex:
-            errors.append({"row": n, "msg": str(ex)})
+            err = {"row": n, "msg": str(ex), "loc": ["file", n]}
+            if isinstance(ex, TooManyDecimals):
+                err.update(type=ex.code, ctx=ex.ctx)
+            err.update(_cell(e, header, n, getattr(ex, "field", None)))
+            errors.append(err)
     if errors:
         nested.rollback()
         session.rollback()

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 130,
+  "count": 132,
   "items": [
     {
       "key": "g-workspace",
@@ -420,6 +420,21 @@
         "en": "Yield Report",
         "zh-CN": "良率报表",
         "ja": "歩留まりレポート"
+      }
+    },
+    {
+      "key": "mes-ct-move-report",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-wip",
+      "path": "/mes/ct-move-report",
+      "component": "mes-page:ct-move-report",
+      "permission": "mes.exec:read",
+      "i18n_key": "menu.mes-ct-move-report",
+      "titles": {
+        "en": "CT / Move Report",
+        "zh-CN": "CT / Move 报表",
+        "ja": "CT / Move レポート"
       }
     },
     {
@@ -1449,12 +1464,27 @@
       "parent": "g-product",
       "path": "/mes/reticle",
       "component": "mes:reticle",
-      "permission": "mes.product:read",
+      "permission": "mes.reticle:read",
       "i18n_key": "menu.mes-reticle",
       "titles": {
         "en": "Reticle",
         "zh-CN": "光罩",
         "ja": "レチクル"
+      }
+    },
+    {
+      "key": "mes-reticle-console",
+      "space": "workspace",
+      "kind": "item",
+      "parent": "g-product",
+      "path": "/mes/reticle-console",
+      "component": "mes-page:reticle",
+      "permission": "mes.reticle:read",
+      "i18n_key": "menu.mes-reticle-console",
+      "titles": {
+        "en": "Reticle Console",
+        "zh-CN": "光罩工作台",
+        "ja": "レチクルコンソール"
       }
     },
     {

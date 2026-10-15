@@ -31,7 +31,9 @@ from app.core.spec.write import (
     update_row,
 )
 from app.mes.common import coderule
-from app.mes.common.guard import raw_json
+from app.mes.common import idempotency as idem
+from app.mes.common.guard import need_key, raw_json
+from app.mes.common.keyed_write import KEYED, META_HOOKS, ROW_EXTRAS
 from app.mes.common.meta import all_meta
 from app.mes.common.uom import convert, count_errors
 from app.mes.common.validators import reject_unwritable
@@ -71,10 +73,17 @@ def require_entity(
 
 
 async def write_body(
-    ctx: CurrentTenant, entity: str, request: Request
+    session: SessionDep, ctx: CurrentTenant, entity: str, request: Request
 ) -> dict[str, Any]:
-    """通用新建 / 修改的请求体：先查实体写权限，再解析 JSON 对象（D34）。"""
+    """通用新建 / 修改的请求体：先查实体写权限，再解析 JSON 对象（D34）。
+
+    受控写实体（:data:`KEYED`，D74/D81）：权限后先查 Idempotency-Key，附加字段在
+    ``request.state.keyed_extra``。
+    """
     e = require_entity(ctx, entity, "write")
+    kw = KEYED.get(e.code)
+    if kw:
+        need_key(request)
     data = await raw_json(request)
     if not isinstance(data, dict):
         raise RequestValidationError(
@@ -88,18 +97,70 @@ async def write_body(
             ]
         )
     # D65 补充 4 / D38：通用增删改查对所有实体（含旧实体）严格载荷，未知 / 系统字段 422。
+    if kw:
+        extra = {k: data.pop(k) for k in kw.extra_fields if k in data}
+        reject_unwritable(e, data)
+        request.state.keyed_extra = kw.extras(
+            session, ctx.id, request.method, {**data, **extra}, ctx.user
+        )
+        request.state.keyed_body = {**data, **extra}
+        return data
     reject_unwritable(e, data)
     return data
+
+
+def _keyed(
+    session: Any,
+    ctx: TenantContext,
+    e: Entity,
+    request: Request,
+    endpoint: str,
+    body: Any,
+    fn: Any,
+) -> Any:
+    """受控写：幂等存档（重放先于 404，D81），附加字段经上下文变量传给写入钩子。"""
+    kw = KEYED[e.code]
+    extra = getattr(request.state, "keyed_extra", None) or {}
+
+    def go() -> Any:
+        token = kw.extra_var.set(extra)
+        try:
+            out = fn(kw, extra)
+            session.commit()
+            return out
+        finally:
+            kw.extra_var.reset(token)
+
+    return idem.run(
+        session,
+        ctx.id,
+        ctx.user,
+        endpoint,
+        request.headers.get(idem.HEADER),
+        body,
+        go,
+    )
 
 
 def _one(
     session: SessionDep, ctx: TenantContext, e: Entity, row: dict[str, Any]
 ) -> dict[str, Any]:
-    return serialize(session, ctx.id, e, [row])[0]
+    out: dict[str, Any] = _with_extras(
+        e.code, serialize(session, ctx.id, e, [row]), [row]
+    )[0]
+    return out
+
+
+def _with_extras(code: str, out: list[Any], rows: list[Any]) -> list[Any]:
+    fn = ROW_EXTRAS.get(code)
+    if fn:
+        for o, r in zip(out, rows, strict=True):
+            o.update(fn(r))
+    return out
 
 
 @router.get("/_meta")
-def mes_meta(ctx: CurrentTenant) -> Any:
+def mes_meta(session: SessionDep, ctx: CurrentTenant) -> Any:
     """Entity metadata (fields, enums, refs, flags) the frontend renders from;
     each entity carries `can_read` / `can_write` for the current user."""
     meta = all_meta()
@@ -110,6 +171,9 @@ def mes_meta(ctx: CurrentTenant) -> Any:
     for m in meta["entities"]:
         m["can_read"] = ctx.can(m["read"])
         m["can_write"] = ctx.can(m["write"])
+        hook = META_HOOKS.get(m["code"])
+        if hook:
+            m.update(hook(session, ctx.id))
     return meta
 
 
@@ -201,7 +265,8 @@ def mes_list(
         offset=params.offset,
         limit=params.limit,
     )
-    return {"data": serialize(session, ctx.id, e, rows), "count": count}
+    data = _with_extras(e.code, serialize(session, ctx.id, e, rows), rows)
+    return {"data": data, "count": count}
 
 
 @router.get("/{entity}/distinct/{field}")
@@ -272,8 +337,27 @@ def mes_create(
     ctx: CurrentTenant,
     entity: str,
     body: Annotated[dict[str, Any], Depends(write_body)],
+    request: Request,
 ) -> Any:
     e = require_entity(ctx, entity, "write")
+    if e.code in KEYED:
+        return _keyed(
+            session,
+            ctx,
+            e,
+            request,
+            f"POST /mes/{e.url}",
+            request.state.keyed_body,
+            lambda kw, x: (
+                kw.after_404(x, body),
+                _one(
+                    session,
+                    ctx,
+                    e,
+                    create_row(session, ctx.id, e, dict(body), ctx.user, commit=False),
+                ),
+            )[1],
+        )
     return _one(session, ctx, e, create_row(session, ctx.id, e, body, ctx.user))
 
 
@@ -284,16 +368,58 @@ def mes_update(
     entity: str,
     rid: uuid.UUID,
     body: Annotated[dict[str, Any], Depends(write_body)],
+    request: Request,
 ) -> Any:
     e = require_entity(ctx, entity, "write")
+    if e.code in KEYED:
+
+        def upd(kw: Any, extra: dict[str, Any]) -> Any:
+            cur = get_row(session, e, ctx.id, rid)  # 404
+            kw.after_404(extra, cur)  # 422（需查到记录后判断，D79 补充七）
+            row = update_row(
+                session, ctx.id, e, rid, dict(body), ctx.user, commit=False
+            )
+            return _one(session, ctx, e, row)
+
+        return _keyed(
+            session,
+            ctx,
+            e,
+            request,
+            f"PATCH /mes/{e.url}/{{rid}}",
+            {"rid": str(rid), **request.state.keyed_body},
+            upd,
+        )
     return _one(session, ctx, e, update_row(session, ctx.id, e, rid, body, ctx.user))
 
 
 @router.delete("/{entity}/{rid}")
 def mes_delete(
-    session: SessionDep, ctx: CurrentTenant, entity: str, rid: uuid.UUID
+    session: SessionDep,
+    ctx: CurrentTenant,
+    entity: str,
+    rid: uuid.UUID,
+    request: Request,
 ) -> Any:
     e = require_entity(ctx, entity, "write")
+    if e.code in KEYED:
+        need_key(request)
+
+        def rm(kw: Any, _x: Any) -> Any:
+            get_row(session, e, ctx.id, rid)  # 404
+            kw.before_delete(session, ctx.id, rid)  # 409 referenced（资质恒 409）
+            delete_row(session, ctx.id, e, rid, ctx.user)
+            return {"message": "Deleted"}
+
+        return _keyed(
+            session,
+            ctx,
+            e,
+            request,
+            f"DELETE /mes/{e.url}/{{rid}}",
+            {"rid": str(rid)},
+            rm,
+        )
     delete_row(session, ctx.id, e, rid, ctx.user)
     return {"message": "Deleted"}
 

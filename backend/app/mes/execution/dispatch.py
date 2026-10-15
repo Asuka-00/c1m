@@ -1,7 +1,7 @@
 """现场作业视图：派工队列（批次作业页）与首页概览。"""
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 import sqlalchemy as sa
@@ -10,6 +10,7 @@ from sqlmodel import Session
 from app.core.spec.base import conn, now
 from app.core.spec.engine import TABLES
 from app.mes.common.query import find, one
+from app.mes.common.sitedate import site_day_bounds, site_today
 from app.mes.equipment.service import e10_current, pm_status
 from app.mes.execution.checks import service as ck
 from app.mes.lot.service import TERMINAL
@@ -154,14 +155,13 @@ def home(s: Session, tid: uuid.UUID) -> Row:
             pm_due += int(bool(p["due"]))
             pm_warn += int(bool(p["warn"]) and not p["due"])
     h = TABLES["lot_history"]
-    tz = datetime.now().astimezone().tzinfo
-    day0 = datetime.now(tz).replace(hour=0, minute=0, second=0, microsecond=0)
+    day0, day1 = site_day_bounds(s, tid, site_today(s, tid))
     moves = c.execute(
         sa.select(sa.func.count()).where(
             h.c.tenant_id == tid,
             h.c.action == "track_out",
             h.c.at >= day0,
-            h.c.at < day0 + timedelta(days=1),
+            h.c.at < day1,
         )
     ).scalar_one()
     return {

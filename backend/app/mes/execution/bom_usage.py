@@ -100,7 +100,7 @@ def compare(
             q: Any = r["qty"] or 0
             if r["uom_id"] != ln["uom_id"]:
                 try:
-                    q = convert(s, tid, r["uom_id"], ln["uom_id"], float(q))["value"]
+                    q = convert(s, tid, r["uom_id"], ln["uom_id"], to_qty(q))["qty"]
                 except HTTPException:
                     bad += 1
                     continue

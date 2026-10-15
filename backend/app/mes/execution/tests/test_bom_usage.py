@@ -60,18 +60,18 @@ def test_uom_precision_and_count_units(client: TestClient, db: Session) -> None:
         "material_lot", {**base, "code": "X1", "qty_remaining": 1.5, "uom_id": ea}, 422
     )
     assert "qty_remaining" in str(r)
-    # D60: more than 6 decimals -> 422 too_many_decimals (no rounding)
+    # D60: more than 6 decimals -> 422 value_error (no rounding)
     r = m.post(
         "material_lot",
         {**base, "code": "X2", "qty_remaining": 1.23456789, "uom_id": g},
         422,
     )
-    assert [x["code"] for x in r["detail"]] == ["too_many_decimals"], r
+    assert [x["code"] for x in r["detail"]] == ["value_error"], r
     ok = m.post(
         "material_lot",
         {**base, "code": "X2", "qty_remaining": 1.234567, "uom_id": g},
     )
-    assert ok["qty_remaining"] == 1.234567 and ok["initial_qty"] == 1.234567
+    assert ok["qty_remaining"] == "1.234567" and ok["initial_qty"] == "1.234567"
     m.post("material_lot", {**base, "code": "X3", "qty_remaining": 2, "uom_id": ea})
 
 

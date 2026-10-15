@@ -151,7 +151,7 @@ def wip_summary(
 def daily_output(
     s: Session, tid: uuid.UUID, start: datetime, end: datetime
 ) -> list[Row]:
-    """产出日报：按日统计出站次数 / 数量、报废数、完工批次数（服务器时区日期）。"""
+    """产出日报：按日统计出站次数 / 数量、报废数、完工批次数（``start`` 所带站点时区的日期，D75）。"""
     h = TABLES["lot_history"]
     rows = _rows(
         s,

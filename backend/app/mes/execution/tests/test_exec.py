@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlmodel import Session
 
-from app.core.spec.base import now
+from app.mes.common.sitedate import site_today
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
 from app.testing.mes import API, Mes
@@ -556,9 +556,10 @@ def test_reticle_carrier_hold_wo_checks(client: TestClient, db: Session) -> None
             "name": "rt",
             "product_id": f.product["id"],
             "layer": "L1",
-            "status_code": "hold",
         },
     )
+    # P3-B4：status_code 只读（动作接口改），这里直接置 on_hold 构造数据
+    f.sql("UPDATE mes_reticle SET status_code = 'on_hold' WHERE id = :r", r=rt["id"])
     f.sql(
         "INSERT INTO mes_step_resource (id, tenant_id, route_step_id, resource_kind, reticle_id) VALUES (gen_random_uuid(), :t, :s, 'reticle', :r)",
         t=f.m.tid,
@@ -586,10 +587,10 @@ def test_reticle_carrier_hold_wo_checks(client: TestClient, db: Session) -> None
     )
     a, b = f.start(1, 1)
     assert "reticle required" in _ti_block(f, a)
-    assert "is hold" in _msgs(
+    assert "is on_hold" in _msgs(
         f.stage(a, "track_in", 409, equipment_id=f.eq["id"], reticle_id=rt["id"])
     )
-    f.m.patch("reticle", rt["id"], {"status_code": "available"})
+    f.sql("UPDATE mes_reticle SET status_code = 'available' WHERE id = :r", r=rt["id"])
     assert "carrier C1 is dirty" in _msgs(
         f.stage(
             a,
@@ -641,11 +642,11 @@ def test_material_sufficiency_and_consumption(client: TestClient, db: Session) -
             "qty_remaining": 10,
             "uom_id": m.fx("uom"),
             "expiry_date": str(
-                now().date() - timedelta(days=1)
-            ),  # 与应用时钟（UTC）一致,
+                site_today(db, uuid.UUID(str(m.tid))) - timedelta(days=1)
+            ),  # 站点日期（D75）
         },
     )
-    assert ml1["initial_qty"] == 3
+    assert ml1["initial_qty"] == "3"  # D72：通用 CRUD 定点数输出字符串
     f.bind("track_in", ("material_sufficient", "block", {}))
     (lot,) = f.start(2)  # needs 2 x 2 = 4, only 3 usable (ML2 expired)
     cx = f.ctx(lot)
@@ -666,7 +667,7 @@ def test_material_sufficiency_and_consumption(client: TestClient, db: Session) -
     m.patch("material_lot", ml1["id"], {"qty_remaining": 5})
     r = f.stage(lot, "track_out")
     assert r["consumed"] == [{"material_lot": "ML1", "qty": 4.0, "left": 1.0}]
-    assert m.list("material_lot", q="ML2")["data"][0]["qty_remaining"] == 10
+    assert m.list("material_lot", q="ML2")["data"][0]["qty_remaining"] == "10"
     assert ml2["ml_status"] == "available"
 
 
@@ -689,8 +690,8 @@ def test_tool_life(client: TestClient, db: Session) -> None:
             "code": "T2",
             "fixture_id": f.fixture["id"],
             "expiry_date": str(
-                now().date() - timedelta(days=1)
-            ),  # 与应用时钟（UTC）一致,
+                site_today(db, uuid.UUID(str(m.tid))) - timedelta(days=1)
+            ),  # 站点日期（D75）
         },
     )
     f.bind("track_in", ("tool_life", "block", {}))

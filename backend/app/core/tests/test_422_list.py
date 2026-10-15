@@ -64,7 +64,10 @@ def test_endpoints_return_list_detail(client: TestClient, db: Session) -> None:
         url, headers=h, params={"date_from": "2026-02-01", "date_to": "2026-01-01"}
     )
     assert r.status_code == 422
-    assert r.json()["detail"][0]["code"] == "date_range_invalid"
+    d = r.json()["detail"][0]
+    assert d["code"] == "value_error"
+    assert d["loc"] == ["query", "date_from"]
+    assert d["ctx"] == {"reason": "range_inverted"}
     r = client.get(
         f"{MES}/eqp/mount/at",
         headers=h,

@@ -14,6 +14,7 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 from app.core.deps import SessionDep
 from app.core.pagination import ListParamsDep
+from app.core.spec.qdates import check_range, datetime_query, parse_datetime
 from app.mes.common.guard import need, perm_body
 from app.mes.execution import alarm as svc
 from app.platform.auth.deps import CurrentTenant
@@ -113,12 +114,15 @@ def alarm_list(
     alid: str | None = Query(None, max_length=32),
     unregistered: bool | None = None,
     lot_id: uuid.UUID | None = None,
-    set_from: datetime | None = Query(None, alias="from"),
-    set_to: datetime | None = Query(None, alias="to"),
+    set_from: Annotated[str | None, datetime_query("from")] = None,
+    set_to: Annotated[str | None, datetime_query("to")] = None,
 ) -> Any:
     """Alarm log, newest first (page_size <= 100); lot_id finds alarms linked to a
     lot; from/to filter set_at as [from, to)."""
     need(ctx, READ)
+    sf = parse_datetime("from", set_from)
+    st = parse_datetime("to", set_to)
+    check_range("from", sf, st)
     return svc.list_alarms(
         session,
         ctx.id,
@@ -129,8 +133,8 @@ def alarm_list(
         alid=alid,
         unregistered=unregistered,
         lot_id=lot_id,
-        set_from=set_from,
-        set_to=set_to,
+        set_from=sf,
+        set_to=st,
     )
 
 

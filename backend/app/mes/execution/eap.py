@@ -32,6 +32,7 @@ from app.core.spec.base import now
 from app.core.spec.engine import ENTITIES
 from app.core.spec.serialize import serialize
 from app.mes.common.idempotency import body_hash, reused
+from app.mes.common.numeric import six
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins
 from app.mes.equipment import service as eqp_svc
@@ -40,17 +41,6 @@ from app.mes.execution import alarm as alarm_svc
 Row = dict[str, Any]
 EVT = "eap_event"
 EventType = Literal["state", "alarm_set", "alarm_clear", "tool_usage"]
-
-
-def six(v: Decimal) -> Decimal:
-    """numeric(18,6)：最多 6 位小数（同 B10 手工接口）。"""
-    if not v.is_finite():
-        raise ValueError("must be a finite number")
-    if v.as_tuple().exponent < -6:  # type: ignore[operator]
-        raise ValueError("too_many_decimals (max 6)")
-    if abs(v) >= Decimal(10) ** 12:
-        raise ValueError("out of range")
-    return v
 
 
 class _P(BaseModel):
@@ -107,20 +97,31 @@ PAYLOADS: dict[str, type[_P]] = {
 }
 
 
+def _err(e: Any) -> Row:
+    """D71-2 / O-2（D72 R-1）：保留 ``ctx``（如 ``max_places=6``）与 ``input``。"""
+    out: Row = {
+        "loc": ["body", "payload", *e["loc"]],
+        "msg": e["msg"],
+        "type": e["type"],
+        "input": jsonable_encoder(e.get("input"), custom_encoder={Decimal: str}),
+    }
+    ctx = {
+        k: v
+        for k, v in (e.get("ctx") or {}).items()
+        if isinstance(v, str | int | float | bool)
+    }
+    if ctx:
+        out["ctx"] = ctx
+    return out
+
+
 def _payload(event_type: str, merged: Row) -> Row:
     try:
         return PAYLOADS[event_type].model_validate(merged).model_dump()
     except ValidationError as ex:
         raise HTTPException(
             status_code=422,
-            detail=[
-                {
-                    "loc": ["body", "payload", *e["loc"]],
-                    "msg": e["msg"],
-                    "type": e["type"],
-                }
-                for e in ex.errors(include_url=False, include_context=False)
-            ],
+            detail=[_err(e) for e in ex.errors(include_url=False)],
         ) from None
 
 

@@ -26,9 +26,10 @@ _Q = Decimal(1).scaleb(-QTY_SCALE)
 def to_qty(v: Any) -> Decimal:
     """数量转 Decimal 并按 ROUND_HALF_UP 保留 6 位小数（D31：浮点误差不入库、不进比对）。
 
-    浮点数按其最短十进制表示（``repr``）转换，如 ``0.1 + 0.2`` → ``0.300000``。
+    非 Decimal 值按 ``Decimal(str(v))`` 转换（不经 float 运算；float 取其最短十进制表示），
+    如 ``0.1 + 0.2`` → ``0.300000``。
     """
-    d = v if isinstance(v, Decimal) else Decimal(repr(float(v)))
+    d = v if isinstance(v, Decimal) else Decimal(str(v))
     return d.quantize(_Q, rounding=ROUND_HALF_UP)
 
 
@@ -88,7 +89,7 @@ def convert(
     Raises:
         HTTPException: 无可用换算路径（422）。
     """
-    value = value if isinstance(value, Decimal) else Decimal(repr(float(value)))
+    value = value if isinstance(value, Decimal) else Decimal(str(value))
     if src == dst:
         return {"value": round_qty(value), "path": [str(src)], "qty": to_qty(value)}
     t = TABLES["uom_conversion"]

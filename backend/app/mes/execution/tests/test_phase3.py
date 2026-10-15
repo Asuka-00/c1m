@@ -322,13 +322,16 @@ def test_yield_report(client: TestClient, db: Session) -> None:
 
 
 def test_wo_board_due_warnings(client: TestClient, db: Session) -> None:
-    from datetime import date, timedelta
+    import uuid as _uuid
+    from datetime import timedelta
 
+    from app.mes.common.sitedate import site_today
     from app.mes.execution.tests.test_exec import Line
 
     f = Line(client, db)
     (a,) = f.start(2)
     wo = f.lot(a)["work_order_id"]
+    today = site_today(db, _uuid.UUID(str(f.m.tid)))  # D75：站点日期，不依赖墙钟
 
     def board() -> Any:
         r = client.get("/api/v1/mes/work-order/board", headers=f.m.h)
@@ -338,7 +341,7 @@ def test_wo_board_due_warnings(client: TestClient, db: Session) -> None:
     def due(days: int) -> None:
         f.sql(
             "UPDATE mes_work_order SET due_date = :d WHERE id = :w",
-            d=date.today() + timedelta(days=days),
+            d=today + timedelta(days=days),
             w=wo,
         )
 
@@ -355,8 +358,9 @@ def test_wo_board_due_warnings(client: TestClient, db: Session) -> None:
 
 def test_wo_due_notify_dedupe_and_switch(client: TestClient, db: Session) -> None:
     import uuid as _uuid
-    from datetime import date, timedelta
+    from datetime import timedelta
 
+    from app.mes.common.sitedate import site_today
     from app.mes.execution.service import sweep_all_tenants
     from app.mes.execution.tests.test_exec import Line
     from app.platform.notification.tests.test_notification import _sub_all, _types
@@ -366,9 +370,10 @@ def test_wo_due_notify_dedupe_and_switch(client: TestClient, db: Session) -> Non
     (a,) = f.start(2)
     wo = f.lot(a)["work_order_id"]
     tid = [_uuid.UUID(str(f.m.tid))]
+    today = site_today(db, tid[0])  # D75：站点日期，不依赖墙钟
     f.sql(
         "UPDATE mes_work_order SET due_date = :d WHERE id = :w",
-        d=date.today() + timedelta(days=1),
+        d=today + timedelta(days=1),
         w=wo,
     )
     sweep_all_tenants(tid)
@@ -376,7 +381,7 @@ def test_wo_due_notify_dedupe_and_switch(client: TestClient, db: Session) -> Non
     assert _types(f).count("mes.wo_due") == 1
     f.sql(
         "UPDATE mes_work_order SET due_date = :d WHERE id = :w",
-        d=date.today() - timedelta(days=1),
+        d=today - timedelta(days=1),
         w=wo,
     )
     f.m.post(
@@ -522,8 +527,9 @@ def test_hot_lot_priority_queue_and_limit(client: TestClient, db: Session) -> No
 
 # ---------------- 11: shift handover ----------------
 def test_shift_handover_ack_rule(client: TestClient, db: Session) -> None:
-    from datetime import date
+    import uuid
 
+    from app.mes.common.sitedate import site_today
     from app.mes.execution.tests.test_exec import Line
 
     f = Line(client, db)
@@ -540,13 +546,17 @@ def test_shift_handover_ack_rule(client: TestClient, db: Session) -> None:
     url = f"{EXEC}/shift-logs"
     f.post(
         url,
-        {"shift_date": str(date.today()), "shift_id": sh["id"], "summary": " "},
+        {
+            "shift_date": str(site_today(db, uuid.UUID(str(f.m.tid)))),
+            "shift_id": sh["id"],
+            "summary": " ",
+        },
         422,
     )
     log = f.post(
         url,
         {
-            "shift_date": str(date.today()),
+            "shift_date": str(site_today(db, uuid.UUID(str(f.m.tid)))),
             "shift_id": sh["id"],
             "summary": "ok",
             "open_items": "x",
@@ -599,7 +609,11 @@ def test_operator_qualified_and_expiry_notice(client: TestClient, db: Session) -
         },
     )
     f.stage(a, "track_in", 409, equipment_id=f.eq["id"])  # 已过期
-    f.m.patch("operator_qual", q["id"], {"expires_on": str(today + timedelta(days=3))})
+    f.m.patch(
+        "operator_qual",
+        q["id"],
+        {"expires_on": str(today + timedelta(days=3)), **f.m.qual_extra()},
+    )
     f.stage(a, "track_in", equipment_id=f.eq["id"])
     sweep_all_tenants([_uuid.UUID(str(f.m.tid))])
     sweep_all_tenants([_uuid.UUID(str(f.m.tid))])

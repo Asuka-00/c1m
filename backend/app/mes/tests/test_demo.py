@@ -32,6 +32,7 @@ def _count(s: Session) -> int:
             "lot_hold",
             "dc_result",
             "lot_genealogy",
+            "operator_qual_log",  # D74：资质写入自动追加的履历
         )
     )
 

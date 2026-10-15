@@ -59,6 +59,8 @@ def _relocate(
             from_status="tracked_out",
             to_status="waiting" if nxt else "completed",
             equipment_id=lot["equipment_id"],
+            # D73 补充二：带 rework 离开主路线的出站，报表计 move 但不进 CT 样本
+            **({"details": {"rework": True}} if rework else {}),
         )
     for e in ev:
         st = e.pop("step")

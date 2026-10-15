@@ -1,6 +1,7 @@
 """演示数据引擎：各模块 demo.py 通过 :func:`add` 收集行，由 app.mes.demo 统一写入。"""
 
 import uuid
+from datetime import date, timedelta
 from typing import Any
 
 import sqlalchemy as sa
@@ -20,6 +21,23 @@ ACTIVATE: list[Ref] = []
 def _rows(rows: list[Any]) -> list[Any]:
     """异构的字面量数据表（避免类型检查器推断数据结构）。"""
     return rows
+
+
+class SiteDay:
+    """延迟求值的站点日期（站点「今天」+ ``days`` 天）。
+
+    写入演示数据时才按租户站点时区求值，避免模块导入时取的日期在进程跨午夜后变旧。
+    """
+
+    def __init__(self, days: int = 0) -> None:
+        """记录相对今天的天数偏移。"""
+        self.days = days
+
+    def resolve(self, session: Session, tid: uuid.UUID) -> date:
+        """按 ``tid`` 的站点时区求出具体日期。"""
+        from app.mes.common.sitedate import site_today
+
+        return site_today(session, tid) + timedelta(days=self.days)
 
 
 def add(entity: str, **values: Any) -> None:

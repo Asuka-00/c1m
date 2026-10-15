@@ -8,6 +8,7 @@ from typing import Any
 from sqlmodel import Session
 
 from app.mes.common.query import find, one
+from app.mes.common.sitedate import site_today
 from app.mes.common.switch import switch
 from app.mes.lot.service import TERMINAL
 from app.platform.notification.service import notify, register_event
@@ -48,7 +49,7 @@ def wo_board(
     Returns:
         行：计划 / 投产 / 完工 / 在制 / 报废数量、进度、交期剩余天数、交期状态、在制工序分布。
     """
-    today = today or date.today()
+    today = today or site_today(s, tid)
     lots: dict[Any, list[Row]] = defaultdict(list)
     for x in find(s, tid, "lot"):
         if x["work_order_id"]:

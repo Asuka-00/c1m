@@ -12,18 +12,30 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
+from sqlmodel import Session
 
 from app.core.deps import SessionDep
 from app.core.models import iso_utc
 from app.core.schemas import NoBody
 from app.core.spec.engine import ENTITIES
 from app.core.spec.errors import err_422, http_422, query_422
+from app.core.spec.excel import tenant_tz
+from app.core.spec.qdates import (
+    DateQ,
+    DateTimeQ,
+    check_range,
+    parse_date,
+    parse_datetime,
+)
 from app.core.spec.serialize import serialize
 from app.mes.common import idempotency as idem
 from app.mes.common.guard import perm_body
 from app.mes.common.query import one
+from app.mes.common.sitedate import site_today
 from app.mes.execution import bin_split as bin_split_svc
+from app.mes.execution import ct_move as ct_move_svc
 from app.mes.execution import dispatch, shift_log, transform_undo
+from app.mes.execution import operator_qual as oq
 from app.mes.execution import service as sm
 from app.mes.execution import service as svc
 from app.mes.execution import transform as transform_svc
@@ -148,8 +160,8 @@ def holds_list(
     reason_id: uuid.UUID | None = None,
     source: str | None = None,
     product_id: uuid.UUID | None = None,
-    date_from: datetime | None = None,
-    date_to: datetime | None = None,
+    date_from: DateTimeQ = None,
+    date_to: DateTimeQ = None,
     reason: str | None = None,
     product: str | None = None,
     q: str | None = Query(default=None, max_length=100),
@@ -161,6 +173,9 @@ def holds_list(
 ) -> Any:
     """Hold 管理页列表：服务端筛选、搜索、排序与分页，返回 ``{data, count}``。"""
     _need(ctx, "mes.exec:read")
+    df = parse_datetime("date_from", date_from)
+    dt = parse_datetime("date_to", date_to)
+    check_range("date_from", df, dt)
     rows = svc.list_holds(
         session,
         ctx.id,
@@ -168,8 +183,8 @@ def holds_list(
         reason_id,
         source,
         product_id,
-        date_from,
-        date_to,
+        df,
+        dt,
         include_terminal=include_terminal,
     )
     if reason:
@@ -290,15 +305,28 @@ class JumpIn(BaseModel):
 
 
 def _window(
-    date_from: date | None, date_to: date | None, days: int
+    s: Session,
+    tid: uuid.UUID,
+    date_from_raw: str | None,
+    date_to_raw: str | None,
+    days: int,
 ) -> tuple[datetime, datetime]:
-    """统计区间 [起始日 00:00, 结束日次日 00:00)（服务器时区），默认最近 ``days`` 天。"""
-    tz = datetime.now().astimezone().tzinfo
-    end_d = date_to or datetime.now(tz).date()
+    """统计区间 [起始日 00:00, 结束日次日 00:00)（站点时区，D75），默认最近 ``days`` 天。
+
+    返回带站点时区的时间（与 UTC 为同一时刻），报表按该时区分日。
+    """
+    # D77 补充三：先查格式（严格 YYYY-MM-DD → 否则 value_error/pattern），再查 range_inverted
+    date_from = parse_date("date_from", date_from_raw)
+    date_to = parse_date("date_to", date_to_raw)
+    tz = tenant_tz(s, tid)
+    end_d = date_to or site_today(s, tid)
     start_d = date_from or end_d - timedelta(days=days - 1)
     if start_d > end_d:
         raise err_422(
-            ["query", "date_from"], "date_from after date_to", "date_range_invalid"
+            ["query", "date_from"],
+            "date_from after date_to",
+            "value_error",
+            {"reason": "range_inverted"},
         )
     if (end_d - start_d).days > 366:
         raise err_422(
@@ -336,12 +364,12 @@ def report_wip(
 def report_output(
     session: SessionDep,
     ctx: CurrentTenant,
-    date_from: date | None = None,
-    date_to: date | None = None,
+    date_from: DateQ = None,
+    date_to: DateQ = None,
 ) -> Any:
     """Daily moves / output / scrap."""
     _need(ctx, "mes.exec:read")
-    a, b = _window(date_from, date_to, 7)
+    a, b = _window(session, ctx.id, date_from, date_to, 7)
     return {"data": svc.daily_output(session, ctx.id, a, b)}
 
 
@@ -349,12 +377,12 @@ def report_output(
 def report_oee(
     session: SessionDep,
     ctx: CurrentTenant,
-    date_from: date | None = None,
-    date_to: date | None = None,
+    date_from: DateQ = None,
+    date_to: DateQ = None,
 ) -> Any:
     """Equipment OEE (availability × performance × quality) over the window."""
     _need(ctx, "mes.exec:read")
-    a, b = _window(date_from, date_to, 7)
+    a, b = _window(session, ctx.id, date_from, date_to, 7)
     return {
         "data": svc.oee(session, ctx.id, a, b),
         "from": iso_utc(a),
@@ -366,13 +394,13 @@ def report_oee(
 def report_yield(
     session: SessionDep,
     ctx: CurrentTenant,
-    date_from: date | None = None,
-    date_to: date | None = None,
+    date_from: DateQ = None,
+    date_to: DateQ = None,
     group: Literal["operation", "product", "lot"] = "operation",
 ) -> Any:
     """Yield by operation / product / lot and scrap reason Pareto."""
     _need(ctx, "mes.exec:read")
-    a, b = _window(date_from, date_to, 30)
+    a, b = _window(session, ctx.id, date_from, date_to, 30)
     return {
         **svc.yield_report(session, ctx.id, a, b, group),
         "from": iso_utc(a),
@@ -384,13 +412,13 @@ def report_yield(
 def report_oee_trend(
     session: SessionDep,
     ctx: CurrentTenant,
-    date_from: date | None = None,
-    date_to: date | None = None,
+    date_from: DateQ = None,
+    date_to: DateQ = None,
     workcenter: str | None = None,
 ) -> Any:
     """Daily OEE trend (availability, quality, loading-weighted OEE)."""
     _need(ctx, "mes.exec:read")
-    a, b = _window(date_from, date_to, 7)
+    a, b = _window(session, ctx.id, date_from, date_to, 7)
     if (b - a).days > 92:
         raise err_422(
             ["query", "date_to"],
@@ -399,6 +427,63 @@ def report_oee_trend(
             {"max_days": 92},
         )
     return {"data": svc.oee_trend(session, ctx.id, a, b, workcenter)}
+
+
+def _req_date(name: str, v: str | None) -> date:
+    """必填日期（D77 补充三）：严格 YYYY-MM-DD，错误 ctx.reason=pattern。"""
+    d = parse_date(name, v)
+    if d is None:
+        raise err_422(["query", name], "Field required", "missing")
+    return d
+
+
+def _opt_ref(s: Session, tid: uuid.UUID, name: str, code: str, v: str | None) -> Any:
+    if v is None or v == "":
+        return None
+    try:
+        rid = uuid.UUID(v)
+    except ValueError:
+        raise err_422(
+            ["query", name], "must be a uuid", "value_error", input=v
+        ) from None
+    if one(s, tid, code, rid) is None:  # 不存在或跨租户
+        raise HTTPException(
+            status_code=404,
+            detail={"code": f"{code}_not_found", "message": f"{code} not found"},
+        )
+    return rid
+
+
+@router.get("/reports/ct-move")
+def report_ct_move(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    date_from: DateQ = None,
+    date_to: DateQ = None,
+    operation_id: str | None = None,
+    product_id: str | None = None,
+) -> Any:
+    """CT / Move 报表（D73）：按站点日趋势、按工序明细与合计。"""
+    _need(ctx, "mes.exec:read")
+    a = _req_date("date_from", date_from)
+    b = _req_date("date_to", date_to)
+    if a > b:
+        raise err_422(
+            ["query", "date_from"],
+            "date_from after date_to",
+            "value_error",
+            {"reason": "range_inverted"},
+        )
+    if (b - a).days + 1 > ct_move_svc.MAX_DAYS:
+        raise err_422(
+            ["query", "date_to"],
+            f"range too long (max {ct_move_svc.MAX_DAYS} days)",
+            "date_range_too_large",
+            {"max_days": ct_move_svc.MAX_DAYS},
+        )
+    op = _opt_ref(session, ctx.id, "operation_id", "operation", operation_id)
+    prod = _opt_ref(session, ctx.id, "product_id", "product", product_id)
+    return ct_move_svc.ct_move(session, ctx.id, a, b, op, prod)
 
 
 @router.get("/trace")
@@ -540,12 +625,15 @@ class AckIn(BaseModel):
 def shift_logs(
     session: SessionDep,
     ctx: CurrentTenant,
-    date_from: date | None = None,
-    date_to: date | None = None,
+    date_from: DateQ = None,
+    date_to: DateQ = None,
 ) -> Any:
     """Shift handover logs in a date range."""
     _need(ctx, "mes.exec:read")
-    return {"data": shift_log.list_logs(session, ctx.id, date_from, date_to)}
+    df = parse_date("date_from", date_from)
+    dt = parse_date("date_to", date_to)
+    check_range("date_from", df, dt)
+    return {"data": shift_log.list_logs(session, ctx.id, df, dt)}
 
 
 @router.post("/shift-logs")
@@ -830,3 +918,54 @@ def bin_split_preview(
 def bin_split(session: SessionDep, ctx: CurrentTenant, body: BinSplitBody) -> Any:
     """Split whole lots into child lots by bin code (unit transform bin_split)."""
     return bin_split_svc.bin_split(session, ctx.id, body.model_dump(), ctx.user)
+
+
+# ---------------- P3-B6 人员资质（D74） ----------------
+def _int_q(name: str, raw: str | None, lo: int, hi: int) -> int | None:
+    """可选整数查询参数：非整数或越界 → 422 value_error（ctx 带 min / max）。"""
+    if raw is None or raw == "":
+        return None
+    v = raw.strip()
+    if not v.lstrip("-").isdigit() or not lo <= int(v) <= hi:
+        raise err_422(
+            ["query", name],
+            f"{name}: integer {lo}-{hi}",
+            "value_error",
+            {"min": lo, "max": hi},
+            input=raw,
+        )
+    return int(v)
+
+
+@router.get("/operator-qual/expiring")
+def operator_qual_expiring(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    days: str | None = Query(
+        None, json_schema_extra={"type": "integer", "minimum": 1, "maximum": 365}
+    ),
+) -> Any:
+    """Qualifications expiring within ``days`` (default: warn_days setting), active
+    and not permanent only; sorted by days_left, then username (D64/D74)."""
+    _need(ctx, "mes.exec:read")
+    return oq.expiring(session, ctx.id, _int_q("days", days, 1, 365))
+
+
+@router.get("/operator-qual/{qual_id}/history")
+def operator_qual_history(
+    session: SessionDep,
+    ctx: CurrentTenant,
+    qual_id: uuid.UUID,
+    limit: str | None = Query(None, json_schema_extra={"type": "integer"}),
+    offset: str | None = Query(None, json_schema_extra={"type": "integer"}),
+) -> Any:
+    """Qualification change history, newest first (D74). 403 before 404."""
+    _need(ctx, "mes.exec:read")
+    lim = _int_q("limit", limit, 1, 200) or 50
+    off = _int_q("offset", offset, 0, 10**9) or 0
+    if not one(session, ctx.id, "operator_qual", qual_id):
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "not_found", "message": "operator qualification not found"},
+        )
+    return oq.history(session, ctx.id, qual_id, lim, off)

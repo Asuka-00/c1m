@@ -55,6 +55,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-wip-dashboard", "WIP Dashboard|WIP 看板|WIP ダッシュボード"),
         ("mes-oee-report", "Equipment OEE|设备 OEE|設備 OEE"),
         ("mes-yield-report", "Yield Report|良率报表|歩留まりレポート"),
+        ("mes-ct-move-report", "CT / Move Report|CT / Move 报表|CT / Move レポート"),
         ("mes-lot-history", "Lot History & Trace|批次履历与追溯|ロット履歴・トレース"),
         ("mes-lot_recipe_run", "Recipe Run|配方执行记录|レシピ実行記録"),
         ("mes-lot", "Lot Inquiry|批次查询|ロット照会"),
@@ -111,6 +112,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-material-master", "Material Master|物料主数据|資材マスタ"),
         ("mes-carrier-master", "Carrier Master|载具主数据|キャリアマスタ"),
         ("mes-reticle", "Reticle|光罩|レチクル"),
+        ("mes-reticle-console", "Reticle Console|光罩工作台|レチクルコンソール"),
         ("mes-fixture", "Fixture|治具|治具"),
     ],
     "g-factory": [

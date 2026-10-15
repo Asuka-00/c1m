@@ -142,6 +142,7 @@ class Entity:
     parent_required_when: dict[str, tuple[Any, ...]] | None = None
     has_name: bool = True
     code_label: str | None = None
+    name_label: str | None = None
     code_auto: bool = False  # code 为空时按编码规则生成
     perm_module: str | None = None  # 使用其他模块的权限
     menu: bool = True  # 独立菜单项（False：从其他页面进入）
@@ -181,7 +182,15 @@ class Entity:
                 )
             )
             if self.has_name:
-                out.append(F("name", required=True, search=True, max_length=200))
+                out.append(
+                    F(
+                        "name",
+                        label=self.name_label,
+                        required=True,
+                        search=True,
+                        max_length=200,
+                    )
+                )
         if self.tree:
             out.append(
                 F(

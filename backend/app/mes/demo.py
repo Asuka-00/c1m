@@ -23,7 +23,14 @@ from app.mes.lot import demo as _lot  # noqa: F401  # isort: skip
 from app.mes.planning import demo as _planning  # noqa: F401  # isort: skip
 from app.mes.execution import demo as _execution  # noqa: F401  # isort: skip
 from app.mes.warehouse import demo as _warehouse  # noqa: F401  # isort: skip
-from app.mes.common.demo import ACTIVATE, DEMO, _exists, _resolve, default_tenant
+from app.mes.common.demo import (
+    ACTIVATE,
+    DEMO,
+    SiteDay,
+    _exists,
+    _resolve,
+    default_tenant,
+)
 from app.mes.execution.demo import _post_demo, _run_exec
 from app.mes.planning.demo import STARTS
 
@@ -80,7 +87,9 @@ def seed(session: Session) -> int:
     for ent, raw in DEMO:
         values: dict[str, Any] = {}
         for k, v in raw.items():
-            if isinstance(v, tuple):
+            if isinstance(v, SiteDay):
+                values[k] = v.resolve(session, tid)
+            elif isinstance(v, tuple):
                 rid = _resolve(session, tid, v)
                 assert rid, f"{ent}.{k}: {v} not found"
                 values[f"{k}_id"] = rid
@@ -148,6 +157,15 @@ def remove(session: Session) -> int:
     c = conn(session)
     total = 0
     pending = [e for e in ENTITIES.values() if e.code != "audit_log" and not e.internal]
+    # D74：资质履历由写入钩子追加（不带 _demo 标记），随演示资质一起删
+    q, lg = TABLES["operator_qual"], TABLES["operator_qual_log"]
+    qd = sa.cast(q.c.attrs, JSONB)["_demo"].astext == "true"
+    total += c.execute(
+        sa.delete(lg).where(
+            lg.c.tenant_id == tid,
+            lg.c.qual_id.in_(sa.select(q.c.id).where(q.c.tenant_id == tid, qd)),
+        )
+    ).rowcount
     for _ in range(len(pending) + 1):
         progress = False
         for e in reversed(pending):

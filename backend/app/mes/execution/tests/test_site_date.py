@@ -79,7 +79,9 @@ def test_operator_qualified_site_date(
     chk = CHECKS["operator_qualified"]
     with _session(str(f.m.tid)) as s:
         assert chk(_ctx(f, s, at, operator=user), {})[0] == "fail"  # 昨天过期：拦
-    f.m.patch("operator_qual", q["id"], {"expires_on": str(SITE_DAY)})
+    f.m.patch(
+        "operator_qual", q["id"], {"expires_on": str(SITE_DAY), **f.m.qual_extra()}
+    )
     with _session(str(f.m.tid)) as s:
         assert chk(_ctx(f, s, at, operator=user), {})[0] == "pass"  # 今天到期：放行
 
@@ -133,3 +135,114 @@ def test_material_lot_mount_expiry_site_date(
             _material_lot(s, tid, {"material_lot_code": "MLY"}, utc)
         assert e.value.status_code == 422 and "expired" in str(e.value.detail)
         assert _material_lot(s, tid, {"material_lot_code": "MLT"}, utc)["code"] == "MLT"
+
+
+# ---------------- D75 补充：固定时钟扩展 ----------------
+def _fixed(monkeypatch: pytest.MonkeyPatch, at: datetime, *mods: Any) -> None:
+    """让模块里的 ``site_today`` 一律按固定时钟 ``at`` 取站点日期。"""
+    from app.mes.common import sitedate
+
+    real = sitedate.site_today
+
+    def fake(s: Session, tid: uuid.UUID, _when: datetime | None = None) -> date:
+        return real(s, tid, at)
+
+    for m in mods:
+        monkeypatch.setattr(m, "site_today", fake)
+
+
+@pytest.mark.parametrize("at", CLOCKS, ids=["0030", "0759"])
+def test_tool_life_expiry_site_date(
+    client: TestClient, db: Session, at: datetime
+) -> None:
+    from app.mes.equipment.status import tool_block
+
+    f = Line(client, db)
+    t = f.m.post("tool", {"code": "T", "fixture_id": f.fixture["id"]})
+    with _session(str(f.m.tid)) as s:
+        tid = uuid.UUID(str(f.m.tid))
+        today = _ctx(f, s, at).today
+        row = one(s, tid, "tool", t["id"])
+        assert row
+        for d, blocked in ((YESTERDAY, True), (SITE_DAY, False)):
+            tool = {**row, "expiry_date": d}
+            r = tool_block(s, tid, tool, today)
+            assert (r is not None and "expired" in r) == blocked, (d, r)
+
+
+@pytest.mark.parametrize("at", CLOCKS, ids=["0030", "0759"])
+def test_qual_notify_site_date(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, at: datetime
+) -> None:
+    from app.mes.execution import qual
+    from app.platform.notification.tests.test_notification import _sub_all, _types
+
+    _fixed(monkeypatch, at, qual)
+    f = Line(client, db)
+    _sub_all(f)
+    me = client.get("/api/v1/users/me", headers=f.m.h).json()
+    user = me.get("username") or me["email"]
+    ops = [x["id"] for x in f.ops[:2]]
+    for op, d in zip(ops, (YESTERDAY, SITE_DAY), strict=True):
+        f.m.post(
+            "operator_qual",
+            {"username": user, "operation_id": op, "expires_on": str(d)},
+        )
+    with _session(str(f.m.tid)) as s:
+        assert qual.qual_notify(s, uuid.UUID(str(f.m.tid))) == 2
+        s.commit()
+    t = _types(f)
+    # 昨天到期：已过期；今天到期：仍是「即将到期」（UTC 日期还是前一天也不影响）
+    assert t.count("mes.qual_expired") == 1 and t.count("mes.qual_expiring") == 1
+
+
+@pytest.mark.parametrize("at", CLOCKS, ids=["0030", "0759"])
+def test_fefo_candidates_site_date(
+    client: TestClient, db: Session, at: datetime
+) -> None:
+    from app.mes.execution.consumption import candidate_lots
+
+    f = Line(client, db)
+    for code, d in (("FY", YESTERDAY), ("FT", SITE_DAY)):
+        f.m.post(
+            "material_lot",
+            {
+                "code": code,
+                "material_id": f.mat["id"],
+                "qty_remaining": 10,
+                "uom_id": f.m.fx("uom"),
+                "expiry_date": str(d),
+            },
+        )
+    utc = at.astimezone(ZoneInfo("UTC"))
+    with _session(str(f.m.tid)) as s:
+        got = candidate_lots(s, uuid.UUID(str(f.m.tid)), f.mat["id"], utc)
+    assert [m["code"] for m in got] == ["FT"]  # 昨天过期排除，今天到期可用
+
+
+@pytest.mark.parametrize("at", CLOCKS, ids=["0030", "0759"])
+def test_track_out_marks_tool_expired_site_date(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch, at: datetime
+) -> None:
+    from app.mes.execution import track_out
+
+    f = Line(client, db)
+    m = f.m
+    f.sql(
+        "INSERT INTO mes_step_resource (id, tenant_id, route_step_id, resource_kind, "
+        "fixture_id) VALUES (gen_random_uuid(), :t, :s, 'fixture', :f)",
+        t=m.tid,
+        s=f.steps[10]["id"],
+        f=f.fixture["id"],
+    )
+    tools = [m.post("tool", {"code": c, "fixture_id": f.fixture["id"]}) for c in "YT"]
+    lots = f.start(1, 1)
+    for lot, tl in zip(lots, tools, strict=True):
+        f.stage(lot, "move_in", equipment_id=f.eq["id"])
+        f.stage(lot, "track_in", equipment_id=f.eq["id"], tool_ids=[tl["id"]])
+    for tl, d in zip(tools, (YESTERDAY, SITE_DAY), strict=True):
+        f.sql("UPDATE mes_tool SET expiry_date = :d WHERE id = :i", d=d, i=tl["id"])
+    _fixed(monkeypatch, at, track_out)
+    got = [f.stage(lot, "track_out")["tools"][0]["status"] for lot in lots]
+    assert got == ["expired", "available"]  # 昨天过期置 expired；今天到期仍可用
+    assert [m.list("tool", q=c)["data"][0]["tool_status"] for c in "YT"] == got
