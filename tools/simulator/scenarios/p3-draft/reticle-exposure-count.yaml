@@ -1,0 +1,78 @@
+# 草稿（P3-E1 v0.7 §5/§3.2/§9）：光罩曝光计数上报。P3-B4 接口和 B11 event_type=reticle_usage 都还没有，整体 skipped。
+# 后端落地后：去掉 draft，按 openapi 校正路径/字段，再补 runner 步骤实现。
+# 覆盖：count_basis=eap 出站先估算（estimated=true）→ EAP 实际 shot（kind=report）修正最早一条未修正估算记录
+#       → B11 同 external_event_id 同内容重放（信封 duplicate=true，不重复计）→ 不同内容 422 idempotency_key_reused（D57）
+#       → 人工调整 POST /mes/reticle/{id}/usage（D68：delta>0 report、否则 adjust，负数必带 reason_id；D57 重放无 duplicate）
+#       → 130+10−5+75=210 达上限 pending_maintenance（reticle.life_reached）→ 仍挂着进站 life_reached、restore 409 still_mounted
+#       → 卸载（不改状态，发 reticle.unmounted）→ restore 409 life_limit_reached
+#       → −10=200 仍在上限，不自动恢复，restore 仍 409 life_limit_reached。
+name: reticle-exposure-count
+run_id: ret-count-03
+draft: "等 P3-B4 光罩接口与 B11 reticle_usage（E1 v0.8：P3 不开放 EAP 计数，eap_service 无光罩写权限）"
+target: http://127.0.0.1:8013
+equipment: [{code: EAP-LT01, type: LITHO}]
+steps:
+  - precondition: {eq: EAP-LT01, e10: SBY}
+  # 335db8a 核对：mount 响应 data 是挂载记录（不是光罩），状态另读；slot → 请求体 slot_code
+  - reticle_mount: {idem: ret-count-03-k01, eq: EAP-LT01, reticle: R-SIM-01, slot: S1, expect: {status: 200, body: {data.slot_code: S1}}}
+  - expect_reticle: {reticle: R-SIM-01, fields: {status_code: in_use}}
+  # D71：先判 invalid_transition 再判 still_mounted → in_use 时 restore 409 invalid_transition（335db8a 仍回 still_mounted，等下个提交修）
+  - reticle_restore: {idem: ret-count-03-k02, reticle: R-SIM-01, reason: sim restore, expect: {status: 409, code: invalid_transition}}
+  - expect_reticle: {reticle: R-SIM-01, fields: {count_basis: eap, mount_count: 1, shot_count: "0"}}
+  - track_in: {eq: EAP-LT01, lot: FX0001, reticle: R-SIM-01}
+  # 出站前没有 EAP shot：按片折算 25 片 × shots_per_wafer 5 = 125，kind=track_out、estimated=true
+  - track_out: {eq: EAP-LT01, lot: FX0001}
+  - expect_reticle_history: {reticle: R-SIM-01, latest: {kind: track_out, estimated: true, counted: true, delta: "125"}}
+  # EAP 实际值 130：改写最早一条未修正估算记录（estimated=false），shot_count += 5，不新增记录
+  - reticle_usage: {eq: EAP-LT01, reticle: R-SIM-01, lot: FX0001, shots: "130", save_as: ev1,
+                    expect: {status: 200, body: {result.data.estimated: false, result.data.delta: "130", duplicate: false}}}
+  - expect_reticle: {reticle: R-SIM-01, fields: {shot_count: "130"}}
+  # D57（B11）：同 (source, external_event_id) 同内容再发一次 /mes/eap/events → 原状态码 200，信封 duplicate=true，不重复加差额
+  - reticle_replay: {of: ev1, expect: {status: 200, body: {duplicate: true}}}
+  - expect_reticle: {reticle: R-SIM-01, fields: {shot_count: "130"}}
+  - reticle_replay: {of: ev1, change: {shots: "140"}, expect: {status: 422, code: idempotency_key_reused, detail_object: true}}
+  # 没有可修正的估算记录 → 另记一条 kind=report、source=eap
+  - reticle_usage: {eq: EAP-LT01, reticle: R-SIM-01, lot: FX0002, shots: "10",
+                    expect: {status: 200, body: {result.data.kind: report, result.data.estimated: false}}}
+  # payload 未知字段 → 422 unknown_field
+  - reticle_usage: {eq: EAP-LT01, reticle: R-SIM-01, lot: FX0001, shots: "1", extra: {bogus: 1},
+                    expect: {status: 422, code: unknown_field, loc: [body, payload, bogus]}}
+  # 人工调整（D68 Q22）：kind 按 delta 正负（>0 report，否则 adjust），人工看 source=manual；
+  # 负数缺 reason_id → 422 missing [body, reason_id]；请求体带 kind → 422 unknown_field
+  - reticle_adjust: {idem: ret-count-03-k03, reticle: R-SIM-01, delta: "-5", expect: {status: 422, code: missing, loc: [body, reason_id]}}
+  - reticle_adjust: {idem: ret-count-03-k04, reticle: R-SIM-01, delta: "0", expect: {status: 422, code: value_error, loc: [body, delta]}}
+  # D71：超过 6 位小数 → 422 value_error，ctx.max_places=6（335db8a 的 ctx 还是 {error: {}}，等下个提交）
+  - reticle_adjust: {idem: ret-count-03-k05, reticle: R-SIM-01, delta: "1.1234567", expect: {status: 422, code: value_error, loc: [body, delta], ctx: {max_places: 6}}}
+  - reticle_adjust: {idem: ret-count-03-k06, reticle: R-SIM-01, delta: "5", extra: {kind: report}, expect: {status: 422, code: unknown_field, loc: [body, kind]}}
+  # 计数：130（修正后）+ 10（FX0002 report，count_basis=eap 累加）= 140
+  - expect_reticle: {reticle: R-SIM-01, fields: {shot_count: "140"}}
+  - reticle_adjust: {idem: ret-count-03-k07, reticle: R-SIM-01, delta: "-5", reason: RC-ADJ, note: sim, save_as: adj1,
+                     expect: {status: 200, absent: [duplicate], body: {data.kind: adjust, data.source: manual, data.count_after: "135"}}}
+  # D57（D68 补充，G-3）：带同一个 Idempotency-Key、同一请求体再 POST 一次 /mes/reticle/{id}/usage
+  # → 原状态码返回原记录，不带 duplicate，不重复扣
+  - reticle_replay: {of: adj1, expect: {status: 200, absent: [duplicate], body: {data.id: $adj1}}}
+  - expect_reticle: {reticle: R-SIM-01, fields: {shot_count: "135"}}
+  # +75 → 210 ≥ max_shots=200：kind=report，转 pending_maintenance，发 reticle.life_reached
+  - reticle_adjust: {idem: ret-count-03-k08, reticle: R-SIM-01, delta: "75", expect: {status: 200, body: {data.kind: report, data.count_after: "210"}}}
+  - expect_reticle: {reticle: R-SIM-01, fields: {status_code: pending_maintenance, shot_count: "210"}}
+  - expect_reticle_events: {reticle: R-SIM-01, latest: {event: reticle.life_reached, payload.shot_count: "210", payload.max_shots: "200"}}
+  # D69 补充：到上限仍挂着 → 状态 pending_maintenance，本机进站按已有阻断码 life_reached 拦（不可放行）
+  - track_in:
+      eq: EAP-LT01
+      lot: FX0003
+      reticle: R-SIM-01
+      expect: {status: 409, code: check_blocked, body: {detail.reason: life_reached, detail.overridable: false}}
+  # 还挂着 → restore / life-reset / repair-complete / inspect-start / clean-start 一律 409 still_mounted
+  - reticle_restore: {idem: ret-count-03-k09, reticle: R-SIM-01, reason: sim restore, expect: {status: 409, code: still_mounted}}
+  # 非 in_use 卸载：只关挂载记录、不改状态，照常发 reticle.unmounted
+  - reticle_unmount: {idem: ret-count-03-k10, reticle: R-SIM-01, expect: {status: 200}}
+  - expect_reticle: {reticle: R-SIM-01, fields: {status_code: pending_maintenance, equipment_id: null, mounted_at: null}}
+  - expect_reticle_events: {reticle: R-SIM-01, latest: {event: reticle.unmounted, payload.unmount_reason: manual}}
+  - reticle_restore: {idem: ret-count-03-k11, reticle: R-SIM-01, reason: sim restore, expect: {status: 409, code: life_limit_reached}}
+  # −10 → 200，仍 ≥ max_shots：不自动恢复；restore 仍 409 life_limit_reached
+  - reticle_adjust: {idem: ret-count-03-k12, reticle: R-SIM-01, delta: "-10", reason: RC-ADJ, expect: {status: 200, body: {data.kind: adjust, data.count_after: "200"}}}
+  - expect_reticle: {reticle: R-SIM-01, fields: {status_code: pending_maintenance, shot_count: "200"}}
+  - reticle_restore: {idem: ret-count-03-k13, reticle: R-SIM-01, reason: sim, extra: {inspection_required: false},
+                      expect: {status: 422, code: unknown_field, loc: [body, inspection_required]}}
+  - reticle_restore: {idem: ret-count-03-k14, reticle: R-SIM-01, reason: sim restore, expect: {status: 409, code: life_limit_reached}}
+  - expect_reticle: {reticle: R-SIM-01, fields: {status_code: pending_maintenance}}

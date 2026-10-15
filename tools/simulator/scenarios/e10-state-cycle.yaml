@@ -1,0 +1,14 @@
+# 现在就能跑：用现有 POST /mes/eqp/{id}/e10 做设备状态循环 SBY -> PRD -> SBY
+name: e10-state-cycle
+run_id: e10-cycle-01
+target: http://127.0.0.1:8013
+description: 设备状态变化（模式 A 冒烟）。E10 接口不收 external_event_id，ID 写进 comment 和 Idempotency-Key。
+equipment: [{code: EAP-DA01, type: DIEBOND}]
+steps:
+  - precondition: {eq: EAP-DA01, e10: SBY}
+  - state: {eq: EAP-DA01, to: PRD}
+  - state: {eq: EAP-DA01, to: SBY}
+  # D65 补充 4（后端 56474fe 已修）：请求体未知字段一律 422 unknown_field；to 填当前状态，不会改状态
+  - expect_body_422: {eq: EAP-DA01, to: SBY, extra: {bogus: 1}, code: unknown_field, loc: [body, bogus]}
+  # D54 例外：/mes/eap/events 信封顶层多出的字段并进 payload，照常接受（不 422）；ALID 1999 无 active 报警 -> cleared=false
+  - expect_eap_envelope_extra: {eq: EAP-DA01, alid: "1999", field: comment, cleared: false}
