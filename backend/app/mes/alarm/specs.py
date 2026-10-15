@@ -74,9 +74,9 @@ register(
                 "str",
                 "Target state|目标状态|遷移先状態",
                 max_length=40,
-                help="E10 state code, required when action=set_state"
-                "|E10 状态编码，联动为切换设备状态时必填"
-                "|E10 状態コード（設備状態変更のとき必須）",
+                help="E10 state code (e.g. UDT); required when the action is “Set equipment state”"
+                "|E10 状态编码（如 UDT），联动为「切换设备状态」时必填"
+                "|E10 状態コード（例：UDT）。連動が「設備状態変更」のとき必須",
             ),
             F(
                 "require_qual_on_clear",
@@ -192,7 +192,12 @@ register(
                 max_length=128,
                 list=False,
             ),
-            F("hold_ids", "json", "Holds|联动 Hold|連動ホールド", list=False),
+            F(
+                "hold_ids",
+                "json",
+                "Linked holds (legacy)|关联 Hold（历史数据）|関連ホールド（過去データ）",
+                list=False,
+            ),
             F("e10_change", "json", "E10 change|E10 联动|E10 連動", list=False),
             F("raw", "json", "Raw report|原始上报|生データ", list=False),
             F("comment", "str", "Comment|备注|コメント", max_length=300, list=False),

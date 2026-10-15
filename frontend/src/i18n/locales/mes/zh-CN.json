@@ -161,7 +161,7 @@
         "cleared_by": "清除人",
         "clear_source": "清除来源",
         "clear_event_id": "清除事件号",
-        "hold_ids": "联动 Hold",
+        "hold_ids": "关联 Hold（历史数据）",
         "e10_change": "E10 联动",
         "raw": "原始上报",
         "comment": "备注",
@@ -332,7 +332,7 @@
         "from_state": "源状态",
         "to_state": "目标状态",
         "source": "来源",
-        "trigger": "触发",
+        "trigger": "触发方式",
         "reason": "原因代码",
         "comment": "备注",
         "username": "用户",
@@ -537,8 +537,8 @@
         "note": "备注"
       },
       "customer": {
-        "code": "编码",
-        "name": "名称",
+        "code": "客户编码",
+        "name": "客户名称",
         "short_name": "简称",
         "description": "描述"
       },
@@ -1306,7 +1306,7 @@
     },
     "help": {
       "alarm_code": {
-        "target_state": "E10 状态编码，联动为切换设备状态时必填"
+        "target_state": "E10 状态编码（如 UDT），联动为「切换设备状态」时必填"
       },
       "code_rule": {
         "pattern": "占位符：{YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}"
@@ -1514,7 +1514,7 @@
       },
       "e10_history_trigger": {
         "manual": "人工",
-        "equipment": "设备",
+        "equipment": "设备事件",
         "system": "系统"
       },
       "pm_result": {
@@ -1586,7 +1586,8 @@
         "recipe_match": "配方设备映射",
         "pm_due": "设备 PM 未超期",
         "rework_limit": "返工次数上限",
-        "qty_adjust_limit": "报废 / 补数数量上限"
+        "qty_adjust_limit": "报废 / 补数数量上限",
+        "marking_inspection": "打标检验合格"
       },
       "check_severity": {
         "block": "拦截",
@@ -1664,7 +1665,8 @@
         "carrier_change": "换载具",
         "sort": "晶圆整理",
         "priority": "优先级变更",
-        "bom_over_consumption": "BOM 超量用料"
+        "bom_over_consumption": "BOM 超量用料",
+        "qtime_warned": "Q-Time 预警"
       },
       "genealogy_relation": {
         "split": "分批",
@@ -2237,7 +2239,10 @@
     "p-channels": "通知渠道",
     "p-audit": "跨租户审计日志",
     "p-login-log": "登录日志",
-    "p-ops-log": "平台操作日志"
+    "p-ops-log": "平台操作日志",
+    "mes-marking": "打标作业",
+    "mes-marking-template": "打标模板",
+    "mes-qual-expiring": "即将到期资质"
   },
   "permName": {
     "users__read": "查看平台用户",

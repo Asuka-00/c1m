@@ -163,7 +163,7 @@ register(
                 enum="qual_state",
                 default="ready",
                 system=True,
-                help="WAIT_QUAL after an OK PM until a Qual passes|PM 判 OK 后进入待 Qual，"
+                help="Waits for Qual after an OK PM until a Qual passes|PM 判 OK 后进入待 Qual，"
                 "Qual 通过才恢复|PM OK 後は Qual 合格まで Qual 待ち",
             ),
             F(
@@ -503,7 +503,7 @@ ENUMS.update(
         # D58：E10 变化的触发方式（人工 / 设备事件或报警 / 系统规则）
         "e10_history_trigger": [
             ("manual", "Manual|人工|手動"),
-            ("equipment", "Equipment|设备|設備"),
+            ("equipment", "Equipment event|设备事件|設備イベント"),
             ("system", "System|系统|システム"),
         ],
         "pm_result": [
@@ -535,7 +535,12 @@ register(
             F("from_state", "ref", "From state|源状态|遷移元", ref="e10_state"),
             F("to_state", "ref", "To state|目标状态|遷移先", ref="e10_state"),
             F("source", "enum", "Source|来源|ソース", enum="e10_source"),
-            F("trigger", "enum", "Trigger|触发|トリガー", enum="e10_history_trigger"),
+            F(
+                "trigger",
+                "enum",
+                "Trigger|触发方式|トリガー",
+                enum="e10_history_trigger",
+            ),
             F("reason", "ref", "Reason code|原因代码|理由コード", ref="reason_code"),
             F("comment", "str", "Comment|备注|コメント", max_length=300, search=True),
             F("username", "str", "User|用户|ユーザー", max_length=255, search=True),

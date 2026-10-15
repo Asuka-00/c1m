@@ -161,7 +161,7 @@
         "cleared_by": "解除者",
         "clear_source": "解除ソース",
         "clear_event_id": "解除イベント ID",
-        "hold_ids": "連動ホールド",
+        "hold_ids": "関連ホールド（過去データ）",
         "e10_change": "E10 連動",
         "raw": "生データ",
         "comment": "コメント",
@@ -537,8 +537,8 @@
         "note": "備考"
       },
       "customer": {
-        "code": "コード",
-        "name": "名称",
+        "code": "顧客コード",
+        "name": "顧客名",
         "short_name": "略称",
         "description": "説明"
       },
@@ -1306,7 +1306,7 @@
     },
     "help": {
       "alarm_code": {
-        "target_state": "E10 状態コード（設備状態変更のとき必須）"
+        "target_state": "E10 状態コード（例：UDT）。連動が「設備状態変更」のとき必須"
       },
       "code_rule": {
         "pattern": "トークン：{YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}"
@@ -1514,7 +1514,7 @@
       },
       "e10_history_trigger": {
         "manual": "手動",
-        "equipment": "設備",
+        "equipment": "設備イベント",
         "system": "システム"
       },
       "pm_result": {
@@ -1586,7 +1586,8 @@
         "recipe_match": "レシピ・設備対応",
         "pm_due": "設備 PM 期限内",
         "rework_limit": "リワーク回数上限",
-        "qty_adjust_limit": "廃棄・追加数量上限"
+        "qty_adjust_limit": "廃棄・追加数量上限",
+        "marking_inspection": "マーキング検査合格"
       },
       "check_severity": {
         "block": "ブロック",
@@ -1664,7 +1665,8 @@
         "carrier_change": "キャリア変更",
         "sort": "ウェーハソート",
         "priority": "優先度変更",
-        "bom_over_consumption": "BOM 使用量超過"
+        "bom_over_consumption": "BOM 使用量超過",
+        "qtime_warned": "Q-Time 警告"
       },
       "genealogy_relation": {
         "split": "分割",
@@ -2134,7 +2136,7 @@
     "mes-wip-dashboard": "WIP ダッシュボード",
     "mes-oee-report": "設備 OEE",
     "mes-yield-report": "歩留まりレポート",
-    "mes-ct-move-report": "CT・ムーブレポート",
+    "mes-ct-move-report": "CT / Move レポート",
     "mes-lot-history": "ロット履歴・トレース",
     "mes-lot_recipe_run": "レシピ実行記録",
     "mes-lot": "ロット照会",
@@ -2237,7 +2239,10 @@
     "p-channels": "通知チャネル",
     "p-audit": "テナント横断監査ログ",
     "p-login-log": "ログイン履歴",
-    "p-ops-log": "プラットフォーム操作ログ"
+    "p-ops-log": "プラットフォーム操作ログ",
+    "mes-marking": "マーキング作業",
+    "mes-marking-template": "マーキングテンプレート",
+    "mes-qual-expiring": "期限間近の資格"
   },
   "permName": {
     "users__read": "プラットフォームユーザー閲覧",
