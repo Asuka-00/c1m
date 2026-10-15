@@ -170,8 +170,10 @@
     "generic": "処理に失敗しました。管理者にお問い合わせください。",
     "query": {
       "sortBy": "この列では並べ替えできません（指定可能：{{list}}）",
-      "notTextFilter": "{{field}} はフィルタ可能なテキスト項目ではありません"
-    }
+      "notTextFilter": "{{field}} はフィルタ可能なテキスト項目ではありません",
+      "pattern": "{{field}} の形式が正しくありません。日付は YYYY-MM-DD で指定してください"
+    },
+    "rangeInverted": "開始日は終了日より後にできません"
   },
   "backend": {
     "Incorrect email or password": "メールアドレスまたはパスワードが正しくありません",
@@ -487,6 +489,7 @@
       "defaultsFrom": "空欄の場合は{{field}}を使用",
       "parentTypeMismatch": "親設備の設備タイプと一致する必要があります（空欄で継承）",
       "duplicateDefaultRoute": "この製品には既定ルートがあります",
+      "duplicateKey": "同じキーのレコードが既に存在します",
       "productNeedsDefaultRoute": "有効化の前に有効なルートを既定として割り当てる必要があります",
       "code": {
         "on_hold": "ロットはホールド中です。先にホールドを解除してください",
@@ -503,18 +506,19 @@
         "qtime_action_invalid": "Q-Time の違反時処置は警告・ホールド・リワークのみ指定できます",
         "hold_not_found": "ホールド記録が存在しないか削除されています。一覧を更新してください",
         "too_many_decimals": "小数は最大 6 桁です",
+        "referenced": "履歴があるため削除できません",
         "read_only_field": "この項目は読み取り専用です",
         "unknown_field": "不明な項目が含まれています",
         "timezone_required": "時刻にはタイムゾーンが必要です（例：2026-10-14T08:00:00+08:00）",
         "date_range_too_large": "期間は最大 {{max_days}} 日です。範囲を狭めてください。",
         "date_range_too_large_nolimit": "期間が長すぎます。範囲を狭めてください。",
-        "date_range_invalid": "開始日は終了日より後にできません。",
         "unknown_columns": "取込ファイルに認識できない列があります：{{columns}}",
         "no_conversion_path": "{{from_uom}} から {{to_uom}} への換算がありません。",
         "ref_not_found": "{{entity}}が見つかりません。",
         "enum": "値が無効です。指定可能：{{expected}}",
         "step_ids_mismatch": "工程リストが現在のルートと一致しません。更新して再試行してください。",
-        "not_text_filter": "{{field}} はフィルタ可能なテキスト項目ではありません"
+        "not_text_filter": "{{field}} はフィルタ可能なテキスト項目ではありません",
+        "range_inverted": "開始は終了より後にできません"
       },
       "tooManyDecimals": "小数は最大 {{n}} 桁です",
       "onlyWhen": "{{cond}}が「{{value}}」のときのみ入力できます",
@@ -702,7 +706,8 @@
       "qtimeStageSkipped": "今回の {{stage}} は実行されていません。ロット状態を確認してください",
       "checkMsg": {
         "eqp_wait_qual": "設備 {{equipment}} は PM 後の Qual 待ちです。Qual 合格まで着工できません（強制解除不可）"
-      }
+      },
+      "hardBlock": "強制解除できないチェックが含まれています。"
     },
     "trace": {
       "hint": "ロットとユニットの全操作履歴。",
@@ -907,7 +912,8 @@
         "wafer": "ウェーハ",
         "equipment": "設備",
         "material_lot": "資材ロット",
-        "customer_lot": "顧客ロット番号"
+        "customer_lot": "顧客ロット番号",
+        "trace_code": "トレースコード"
       },
       "c": {
         "code": "ロット",
@@ -936,11 +942,16 @@
         "parent_wafer": "親ウェーハ",
         "die_row": "ダイ行",
         "die_col": "ダイ列",
-        "transform_id": "変換記録"
+        "transform_id": "変換記録",
+        "latest_inspection_status": "検査",
+        "marked_at": "印字日時",
+        "seq": "印字番号"
       },
       "origins": "元ウェーハとダイ座標",
       "dies": "このウェーハのダイの行き先",
-      "outOrigins": "下流子ロットの位置"
+      "outOrigins": "下流子ロットの位置",
+      "marking": "マーキング記録",
+      "includeVoided": "無効化済みを含む"
     },
     "holdrel": {
       "hint": "ホールド中のロットを確認・解除します。",
@@ -1683,6 +1694,44 @@
       "logged": "チェック記録とロット履歴に記録済み",
       "unknownStatus": "不明な状態"
     },
+    "ctMove": {
+      "hint": "日付・工程・製品ごとのサイクルタイムと Move 数。",
+      "ct": "平均 CT（時間）",
+      "moves": "Move 数",
+      "moveQty": "払出数量",
+      "ctAvg": "平均 CT（時間）",
+      "ctP50": "CT P50（時間）",
+      "ctP90": "CT P90（時間）",
+      "wip": "期末仕掛ロット",
+      "operation": "工程",
+      "product": "製品",
+      "name": "名称",
+      "trend": "CT と Move の推移",
+      "byOperation": "工程別",
+      "mock": "サンプルデータ",
+      "timezone": "タイムゾーン：{{tz}}",
+      "rangeInvalid": "有効な期間を選択してください（開始日は終了日以前）。",
+      "reworkMoves": "リワーク Move（ロット / 枚）",
+      "hold": "平均 Hold 時間（時間）",
+      "notFound": "選択した工程または製品が存在しません。選び直してください",
+      "onHold": "期末ホールド（ロット / 数量）",
+      "operationNotFound": "選択した工程が存在しません。選び直してください",
+      "productNotFound": "選択した製品が存在しません。選び直してください"
+    },
+    "qual": {
+      "notQualified": "{{user}} は工程 {{op}} の有効な資格がないため投入できません。強制解除もできません。資格を取得または更新してください。",
+      "expiringSoon": "資格は {{date}} に期限切れになります。早めに更新してください。",
+      "warnDays": "予告日数：{{n}} 日",
+      "expiringTitle": "期限が近い作業者資格",
+      "user": "作業者",
+      "equipmentType": "設備タイプ",
+      "anyEquipment": "（工程のみ）",
+      "expiresOn": "有効期限",
+      "daysLeft": "残り日数",
+      "lastDay": "本日期限（当日有効）",
+      "hint": "期限間近の作業者資格（期限日当日は有効）。",
+      "expiredBlock": "{{user}} の工程 {{op}} の資格は {{date}} に期限切れのため投入できません。強制解除もできません。先に資格を更新してください。"
+    },
     "alarmCode": {
       "migration": {
         "col": "移行",
@@ -1691,6 +1740,437 @@
         "all": "すべての移行状態",
         "hint": "移行 0029 で連動がなしに変更されました。「設備状態の切替」を再設定してください"
       }
+    },
+    "reticle": {
+      "title": "レチクル管理",
+      "desc": "レチクルの状態、寿命カウント、装着と検査の記録",
+      "mockHint": "デモデータです。バックエンド準備後に切り替えます",
+      "searchCode": "コードで検索",
+      "allStatus": "すべての状態",
+      "emptyHint": "記録がありません",
+      "inspectionPending": "要検査",
+      "system": "システム",
+      "mounted": "装着中",
+      "notCounted": "未計上",
+      "done": "{{action}}が完了しました",
+      "status": {
+        "available": "使用可能",
+        "in_use": "使用中",
+        "dirty": "要洗浄",
+        "inspecting": "検査中",
+        "on_hold": "保留",
+        "pending_maintenance": "保守待ち",
+        "scrapped": "廃棄済み"
+      },
+      "holdReason": {
+        "incident": "衝突",
+        "inspection_failed": "検査不合格",
+        "manual": "手動保留"
+      },
+      "countBasis": {
+        "track_out": "トラックアウト",
+        "eap": "装置報告"
+      },
+      "usageKind": {
+        "track_out": "トラックアウト",
+        "report": "報告",
+        "adjust": "調整",
+        "reset": "寿命リセット"
+      },
+      "inspKind": {
+        "particle": "パーティクル",
+        "haze": "ヘイズ",
+        "cd": "CD",
+        "other": "その他"
+      },
+      "result": {
+        "pass": "合格",
+        "fail": "不合格"
+      },
+      "disposition": {
+        "none": "なし",
+        "clean": "洗浄",
+        "hold": "保留",
+        "repair": "修理",
+        "scrap": "廃棄"
+      },
+      "action": {
+        "usage": "カウント調整",
+        "hold": "保留",
+        "release": "保留解除",
+        "restore": "手動復帰",
+        "clean-start": "洗浄開始",
+        "clean-complete": "洗浄完了",
+        "repair-complete": "修理完了",
+        "inspect-start": "検査開始",
+        "scrap": "廃棄",
+        "life-reset": "寿命リセット",
+        "unmount": "取り外し",
+        "inspection": "検査登録",
+        "mount": "装着",
+        "incident": "事故"
+      },
+      "actionDesc": {
+        "usage": "ショット数を増減します。減らす場合は理由コードが必要です",
+        "hold": "保留にします。使用中なら同時に取り外します",
+        "release": "保留理由に応じた状態に戻ります",
+        "restore": "使用可能に戻します。先に取り外しが必要で、復帰後は要検査",
+        "clean-start": "洗浄を開始します。先に取り外しが必要です",
+        "clean-complete": "洗浄完了後に検査へ進みます",
+        "repair-complete": "修理・洗浄完了後に検査へ進みます。先に取り外しが必要です",
+        "inspect-start": "検査を開始します。先に取り外しが必要です",
+        "scrap": "元に戻せません。装着中なら同時に取り外します",
+        "life-reset": "カウントをゼロにして復帰します。先に取り外しが必要です",
+        "unmount": "装置から取り外します。使用中以外は装着記録のみ閉じます",
+        "inspection": "合格で使用可能、不合格で保留になります",
+        "mount": "装置に装着します。使用可能かつ未装着のときのみ",
+        "incident": "衝突・落下などの異常を登録します。レチクルはホールド（異常）となり検査が必要です"
+      },
+      "field": {
+        "delta": "増減量",
+        "reason_id": "理由コード",
+        "note": "備考",
+        "reason": "理由",
+        "comment": "コメント",
+        "revision": "リビジョン",
+        "layer": "レイヤー",
+        "hold_reason": "保留理由",
+        "status_before_hold": "保留前の状態",
+        "shots": "ショット数 / 上限",
+        "mount_count": "装着回数",
+        "life_reset_count": "リセット回数",
+        "count_basis": "カウント基準",
+        "equipment": "装着装置",
+        "mounted_at": "装着日時",
+        "storage_location": "保管場所",
+        "next_inspection_due_at": "次回検査",
+        "status": "状態",
+        "kind": "検査項目",
+        "result": "結果",
+        "disposition": "処置案",
+        "equipment_id": "装置",
+        "slot_code": "スロット",
+        "lot_id": "ロット ID",
+        "description": "異常内容",
+        "backfill_at": "補録時刻"
+      },
+      "tab": {
+        "status": "状態履歴",
+        "usage": "カウント記録",
+        "mounts": "装着記録",
+        "inspections": "検査記録"
+      },
+      "col": {
+        "code": "コード",
+        "status": "状態",
+        "layer": "レイヤー",
+        "shots": "ショット数",
+        "equipment": "装置",
+        "location": "保管場所",
+        "at": "日時",
+        "from": "変更前",
+        "to": "変更後",
+        "action": "操作",
+        "holdReason": "保留理由",
+        "reason": "理由",
+        "comment": "コメント",
+        "user": "操作者",
+        "kind": "種別",
+        "delta": "増減量",
+        "countAfter": "調整後",
+        "lot": "ロット",
+        "reasonId": "理由コード",
+        "slot": "スロット",
+        "mountedAt": "装着日時",
+        "unmountedAt": "取り外し日時",
+        "unmountReason": "取り外し理由",
+        "shotsAtMount": "装着時ショット",
+        "shotsAtUnmount": "取り外し時ショット",
+        "inspKind": "検査項目",
+        "result": "結果",
+        "defects": "欠陥数",
+        "disposition": "処置案"
+      },
+      "err": {
+        "keyMissing": "リクエストに冪等キー（Idempotency-Key）がありません。ページを更新して再試行してください",
+        "keyReused": "同じ操作キーで異なる内容が送信済みです。ダイアログを閉じてやり直してください",
+        "deltaNonZero": "増減量は 0 以外の数値で入力してください",
+        "reasonIdRequired": "カウントを減らす場合は理由コードが必要です",
+        "tooLong": "{{max}} 文字以内で入力してください",
+        "nonNegInt": "0 以上の整数で入力してください",
+        "maxPlaces": "増減量は小数点以下 {{max}} 桁までです",
+        "futureTime": "補録時刻は現在より 5 分以上先にできません",
+        "timeOutOfOrderAt": "このレチクルの直近のイベント（{{at}}）より前です。それ以降の時刻を指定してください",
+        "backfillInvalid": "有効な補録時刻を入力してください",
+        "timeOutOfOrderField": "{{field}}がこのレチクルの直近のイベント（{{at}}）より前です。それ以降の時刻を指定してください"
+      },
+      "code": {
+        "invalid_transition": "現在の状態では「{{action}}」を実行できません。更新して再試行してください",
+        "life_limit_reached": "寿命上限に達しているため復帰できません。寿命リセットを行ってください",
+        "already_mounted": "レチクルは別の装置に装着されています。先に取り外してください",
+        "still_mounted": "レチクルがまだ装着されています。取り外してから「{{action}}」を実行してください",
+        "reticle_unavailable": "現在の状態ではレチクルを装着できません",
+        "life_reached": "寿命上限に達しているためトラックインできません",
+        "idempotency_in_progress": "前回の送信をまだ処理中です。しばらくしてから再試行してください",
+        "referenced": "レチクルに履歴があるため削除できません。不要な場合は廃棄してください",
+        "slot_occupied": "装置のそのスロットには既にレチクルがあります",
+        "time_out_of_order": "このレチクルの直近の取り外し・イベントより前、または取り外しが装着より前です"
+      },
+      "scrappedHint": "レチクルは廃棄済みのため、カウント・検査登録などの操作はできません",
+      "delete": "削除",
+      "deleteConfirm": "レチクル {{code}} を削除しますか？",
+      "incidentKind": {
+        "collision": "衝突",
+        "drop": "落下",
+        "other": "その他"
+      },
+      "backfillHint": "任意。空欄なら現在時刻。拠点のタイムゾーンで送信します",
+      "timeField": {
+        "occurred_at": "発生時刻",
+        "mounted_at": "装着時刻",
+        "unmounted_at": "取り外し時刻",
+        "inspected_at": "検査時刻"
+      },
+      "life": {
+        "ok": "正常",
+        "warn": "上限間近",
+        "over": "上限到達",
+        "tip": "使用 {{used}} / 上限 {{max}}、警告ライン {{line}}（上限の {{pct}}%）",
+        "okTip": "警告ライン未満のため、トラックイン可能です",
+        "warnTip": "警告区間（黄）：トラックイン可、警告を記録。交換か寿命リセットを",
+        "overTip": "寿命上限（赤）：トラックイン不可。寿命リセットか廃棄が必要",
+        "noLimitTip": "寿命上限が未設定のため、寿命警告はありません"
+      },
+      "master": {
+        "create": "レチクル新規作成",
+        "edit": "マスタ編集",
+        "createTip": "レチクルのマスタを作成します。状態とカウントは操作で管理されます",
+        "editTip": "マスタ編集（コード不可）。状態・カウント・装着は操作ボタンで",
+        "createTitle": "レチクル新規作成",
+        "editTitle": "レチクル {{code}} の編集",
+        "desc": "状態、ショット数、装着情報は読み取り専用で、装着 / 取外し などの操作で更新されます。",
+        "errRequired": "必須です",
+        "errMaxShots": "正の整数を入力してください",
+        "errWarnRatio": "0〜1 の小数を入力してください（小数 4 桁まで、例 0.9）",
+        "field": {
+          "code": "コード",
+          "name": "名称",
+          "revision": "リビジョン",
+          "grade": "グレード",
+          "layer": "レイヤー",
+          "max_shots": "寿命上限（ショット）",
+          "warn_ratio": "警告比率",
+          "count_basis": "カウント元",
+          "storage_location": "保管場所"
+        },
+        "tip": {
+          "code": "レチクル固有のコード。作成後は変更できません",
+          "name": "表示名",
+          "revision": "レチクルのリビジョン",
+          "grade": "レチクルのグレード（binary、PSM など）",
+          "layer": "適用するプロセスレイヤー",
+          "max_shots": "ショット数がこの値に達するとトラックインをブロックします。空欄は無制限",
+          "warn_ratio": "上限 × 比率 で黄色警告。空欄は 0.9",
+          "count_basis": "トラックアウトで加算、または EAP から報告",
+          "storage_location": "未装着時の保管場所"
+        }
+      },
+      "deleteTip": "レチクルを削除します。履歴がある場合は削除できないため、廃棄してください",
+      "statusFilterTip": "レチクルの状態で絞り込み",
+      "colTip": {
+        "code": "レチクルコード",
+        "status": "現在の状態",
+        "layer": "適用レイヤー",
+        "shots": "使用ショット数 / 寿命上限。黄は警告、赤は上限到達",
+        "equipment": "装着中の装置",
+        "location": "保管場所"
+      },
+      "inspectStartFirst": "結果入力の前に「検査開始」が必要です（使用可 → 検査中）"
+    },
+    "marking": {
+      "tplTitle": "マーキングテンプレート",
+      "tplDesc": "製品・顧客ごとのテンプレート。承認後に有効",
+      "jobTitle": "マーキング作業",
+      "jobDesc": "プレビュー・印字・検査・再印字・無効化",
+      "mockHint": "デモデータ（バックエンド準備後に切替）",
+      "search": "コード・製品・顧客で検索",
+      "allStatus": "すべての状態",
+      "newTpl": "新規テンプレート",
+      "newVersion": "新バージョン",
+      "edit": "下書きを編集",
+      "approve": "承認",
+      "retire": "廃止",
+      "selfApprovalHint": "起案者は自分のテンプレートを承認できません",
+      "formHint": "プレースホルダーは下記参照",
+      "linesHint": "1 行ずつ。{trace_code} {date_code} {lot_id} {product_code} {customer_code}",
+      "compareWith": "比較対象",
+      "noOtherVersion": "他のバージョンはありません",
+      "noDiff": "差分はありません",
+      "diffField": "項目",
+      "lineN": "{{n}} 行目",
+      "preview": "プレビュー",
+      "print": "印字",
+      "inspect": "検査",
+      "reprint": "再印字",
+      "void": "無効化",
+      "firstPrint": "初回印字",
+      "voided": "無効",
+      "voidedHint": "無効化済み（{{by}}：{{comment}}）",
+      "scrappedHint": "ロットは廃棄済みです",
+      "traceAssignedHint": "トレースコードは印字時に採番",
+      "markedFrom": "初回印字日（開始）",
+      "markedTo": "初回印字日（終了）",
+      "printLog": "印字・検査履歴",
+      "readCode": "読取コード（OCR）",
+      "reasonId": "理由コード",
+      "comment": "コメント",
+      "ocrDiff": "不一致：期待 {{expected}}、読取 {{read}}",
+      "voidConfirm": "{{code}} の無効化は元に戻せません。もう一度押して確定",
+      "voidConfirmOk": "無効化を確定",
+      "ok": "OK",
+      "status": {
+        "draft": "下書き",
+        "approved": "承認済み",
+        "retired": "廃止"
+      },
+      "basis": {
+        "lot_start": "ロット開始日",
+        "marking": "印字日",
+        "assembly_done": "組立完了日"
+      },
+      "insp": {
+        "pending": "検査待ち",
+        "pass": "合格",
+        "fail": "不合格",
+        "none": "未印字"
+      },
+      "source": {
+        "manual": "手動",
+        "eap": "設備報告",
+        "simulator": "シミュレーター"
+      },
+      "col": {
+        "code": "コード",
+        "product": "製品",
+        "customer": "顧客",
+        "version": "バージョン",
+        "status": "状態",
+        "lines": "印字内容",
+        "dateCodeBasis": "日付コード基準",
+        "usesBin": "bin を含む",
+        "createdBy": "起案者",
+        "createdAt": "起案日時",
+        "approvedBy": "承認者",
+        "approvedAt": "承認日時",
+        "lot": "ロット",
+        "template": "テンプレート",
+        "dateCode": "日付コード",
+        "bin": "bin",
+        "equipment": "マーカー",
+        "traceCode": "トレースコード",
+        "reprints": "再印字回数",
+        "inspection": "検査",
+        "markedAt": "初回印字日時",
+        "lastPrintedAt": "最終印字日時"
+      },
+      "actHint": {
+        "inspect": "読取コード不一致は不合格",
+        "reprint": "同じコードで再印字。理由必須",
+        "void": "無効化は取り消せません。理由必須"
+      },
+      "done": {
+        "approve": "承認しました",
+        "retire": "廃止しました",
+        "save": "保存しました",
+        "print": "印字しました（{{code}}）",
+        "inspect": "検査を登録しました",
+        "reprint": "再印字しました",
+        "void": "無効化しました",
+        "newVersion": "下書き v{{v}} を作成しました"
+      },
+      "err": {
+        "reason_idRequired": "理由コードを入力してください",
+        "commentRequired": "コメントを入力してください",
+        "commentTooLong": "コメントは {{n}} 文字以内",
+        "maxPlaces": "小数は {{n}} 桁まで",
+        "trace_max_length": "トレースコードは {{n}} 文字以内",
+        "trace_pattern": "トレースコードは英大文字・数字・ハイフンのみ",
+        "trace_pattern_rule": "トレースコードが規則 {{pattern}} に一致しません",
+        "traceRequired": "トレースコードを入力してください",
+        "unknownPlaceholder": "未対応のプレースホルダー {{name}}",
+        "selfApproval": "起案者は自分のテンプレートを承認できません",
+        "readCodeTooLong": "読取コードは {{n}} 文字以内",
+        "readCodeRequired": "読取コードを入力してください"
+      },
+      "code": {
+        "template_readonly": "承認済みは読取専用です。新バージョンを作成してください",
+        "draft_exists": "この製品・顧客には下書きがあります",
+        "invalid_transition": "現在の状態では実行できません（無効・廃棄済み）",
+        "marking_template_missing": "承認済みテンプレートがありません",
+        "already_marked": "このロットには有効なマーキング記録があります",
+        "trace_code_mismatch": "報告コード {{actual}} が採番 {{expected}} と不一致",
+        "check_blocked": "チェック不合格",
+        "inspect_blocked": "マーキング検査不合格のため搬出できません（強制不可）",
+        "idempotency_key_reused": "内容の異なる同一リクエストです。再読込してください",
+        "key_missing": "冪等キーがありません。再読込してください",
+        "no_active_marking": "このロットには有効なマーキング記録がありません"
+      },
+      "checkBlocked": "マーキング検査不合格（{{trace}}）。処理前は搬出不可",
+      "overridden": "pass と入力されましたが fail として記録しました（期待 {{expected}}、読取 {{read}}）",
+      "overriddenTag": "システム判定",
+      "checkNotMarked": "このロットは未マーキングのため搬出できません",
+      "checkPending": "マーキング検査待ち（{{trace}}）。合格後に搬出可",
+      "openRecord": "マーキング記録を開く",
+      "patternInvalidHint": "トレースコード形式の設定が無効です。形式はサーバーで検証します",
+      "leftStepHint": "ロットは印字工程を通過済みのため、検査できません"
+    },
+    "qualHistory": {
+      "title": "履歴",
+      "loading": "読み込み中…",
+      "empty": "履歴はありません（既存データには履歴がありません）",
+      "more": "さらに読み込む",
+      "system": "システム",
+      "col": {
+        "at": "日時",
+        "action": "操作",
+        "changes": "変更内容",
+        "reasonId": "理由",
+        "comment": "コメント",
+        "approvedBy": "承認者",
+        "username": "操作者"
+      },
+      "action": {
+        "granted": "付与",
+        "renewed": "延長",
+        "changed": "変更（期限短縮を含む）",
+        "deactivated": "無効化",
+        "reactivated": "再有効化",
+        "expired": "期限切れ"
+      },
+      "field": {
+        "certified_on": "認定日",
+        "expires_on": "有効期限",
+        "is_active": "有効",
+        "operation_id": "工程",
+        "equipment_type_id": "設備タイプ"
+      },
+      "err": {
+        "selfApproval": "承認者は申請者本人にできません",
+        "holderApproval": "承認者はこの資格の保有者本人にできません",
+        "conflictingFields": "無効化と有効期限の変更は同時にできません。別々に操作してください"
+      }
+    },
+    "qualAction": {
+      "renew": "有効期限の変更",
+      "deactivate": "資格の停止",
+      "reactivate": "再有効化",
+      "renewDesc": "延長・短縮・無期限化には理由・説明・承認者が必要。短縮は履歴で「変更」と記録。",
+      "deactivateDesc": "停止中は投入不可。理由と説明が必要。停止と期限変更は別々に送信。",
+      "reactivateDesc": "再有効化後は有効期限で投入可否を判定。理由は不要。",
+      "expiresTip": "空欄は無期限。期限日当日まで有効（サイト時刻）",
+      "expiresUnchanged": "現在の有効期限と同じです",
+      "reasonTip": "理由コード（区分：作業者資格）",
+      "approverTip": "承認者は本人・資格保有者以外"
     }
   },
   "notify": {

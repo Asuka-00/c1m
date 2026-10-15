@@ -85,7 +85,7 @@ export function validateRequired(e: MesEntity, v: V, skip: Set<string>) {
   return errs
 }
 
-/** 定点数字段的最大小数位（D60：numeric(18,6)，超过 6 位后端 422 too_many_decimals）。 */
+/** 定点数字段的缺省最大小数位（D60 / D72：numeric(18,6)，超过后端 422 value_error，ctx.max_places）。 */
 export const MAX_DECIMALS = 6
 
 /**
@@ -142,9 +142,12 @@ export const MES_ERROR_CODES = [
   'idempotency_in_progress',
   'idempotency_key_reused',
   'too_many_decimals',
+  'date_range_too_large',
   'read_only_field',
   'unknown_field',
   'timezone_required',
+  // D72：有履历的记录不能删（目前只有光罩）；其他实体仍是 409 文本
+  'referenced',
 ] as const
 type MesErrorCode = (typeof MES_ERROR_CODES)[number]
 const isCode = (x: unknown): x is MesErrorCode =>
@@ -210,13 +213,40 @@ function fieldCodeMessage(name: string, rest: string): string | null {
  *
  * @returns 本地化消息；不是已知错误码时为 null
  */
+/** 后端 spec.errors.integrity() 唯一键冲突原文（409，字符串 detail，无 code）。 */
+export const DUPLICATE_KEY_DETAIL = 'A record with the same key already exists'
+/**
+ * 通用重复键 409：现为字符串 detail；兼容将来统一成对象 `{code, message}`
+ * （message 为同一原文，或 code 为 duplicate / duplicate_key 且不带 field——带 field 的是 BOM 替代料专用格式）。
+ */
+export function isDuplicateKey(err: unknown): boolean {
+  if (!(err instanceof AxiosError) || err.response?.status !== 409) return false
+  const d = (err.response.data as { detail?: unknown })?.detail
+  if (typeof d === 'string') return d === DUPLICATE_KEY_DETAIL
+  if (!d || typeof d !== 'object' || Array.isArray(d)) return false
+  const o = d as Record<string, unknown>
+  if (o.message === DUPLICATE_KEY_DETAIL) return true
+  return (
+    (o.code === 'duplicate' || o.code === 'duplicate_key') && !('field' in o)
+  )
+}
+
 export function mesCodeMessage(err: unknown): string | null {
+  if (isDuplicateKey(err)) return t('mes.err.duplicateKey')
   if (!(err instanceof AxiosError) || !err.response) return null
   const d = (err.response.data as { detail?: unknown })?.detail
   if (!d || typeof d !== 'object' || Array.isArray(d)) return null
   const { code, action, lot_status } = d as Record<string, unknown>
   if (!isCode(code)) return null
   if (code === 'lot_status') return lotStatusMessage(action, lot_status)
+  // 旧对象形式：max_days 可能在 ctx 或顶层；没有时用不带天数的文案
+  if (code === 'date_range_too_large') {
+    const o = d as { ctx?: Record<string, unknown>; max_days?: unknown }
+    return codeItemText({
+      code,
+      ctx: o.ctx ?? (o.max_days != null ? { max_days: o.max_days } : {}),
+    })
+  }
   return t(`mes.err.code.${code}`, codeParams(d as Record<string, unknown>))
 }
 
@@ -252,8 +282,16 @@ export function mesErrorMessage(err: unknown, e: MesEntity | undefined) {
     return { name, rest }
   }
   // 全部是业务错误码时直接给出本地化提示（不加“校验失败”前缀）
-  const tooMany = (x: { type?: string; code?: string }) =>
-    x.code === 'too_many_decimals' || x.type === 'too_many_decimals'
+  // D72：小数位超限为 422 value_error + ctx.max_places（旧码 too_many_decimals 兼容）
+  const tooMany = (x: {
+    type?: string
+    code?: string
+    ctx?: { max_places?: unknown }
+  }) =>
+    x.code === 'too_many_decimals' ||
+    x.type === 'too_many_decimals' ||
+    ((x.code === 'value_error' || x.type === 'value_error') &&
+      x.ctx?.max_places != null)
   // 通用字段级 422 码（OQ-20 read_only_field、unknown_field）→ 三语文案
   const FIELD_CODES: Record<string, string> = {
     read_only_field: 'mes.err.readOnlyField',
@@ -279,8 +317,11 @@ export function mesErrorMessage(err: unknown, e: MesEntity | undefined) {
     }
     if (tooMany(x)) {
       const f = e?.fields.find((y) => y.name === name)
+      const mp = Number(
+        (x as { ctx?: { max_places?: unknown } }).ctx?.max_places
+      )
       const msg = t('mes.err.tooManyDecimals', {
-        n: (f && decimalLimit(f)) ?? MAX_DECIMALS,
+        n: Number.isInteger(mp) ? mp : ((f && decimalLimit(f)) ?? MAX_DECIMALS),
       })
       return e && f ? `${fieldLabel(e, name)}: ${msg}` : msg
     }

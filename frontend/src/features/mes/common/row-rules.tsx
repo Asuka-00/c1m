@@ -1,8 +1,9 @@
 /** 实体专用的单元格渲染与行编辑 / 删除规则。 */
 import { t } from '@/i18n'
-import type { MesRow } from '@/lib/api/mes/common'
+import type { MesEntity, MesRow } from '@/lib/api/mes/common'
 import { Badge } from '@/components/ui/badge'
 import { ToolLife } from '@/features/mes/execution/exec-actions'
+import { qualState, warnDaysOf } from '@/features/mes/execution/operator-qual'
 import { WoProgress } from '@/features/mes/planning/wo-actions'
 import { DowntimeEnd, DueCell, HeldAt } from './due-cells'
 import { enumLabel } from './labels'
@@ -11,7 +12,7 @@ import { RefLink } from './ref-link'
 /** 实体专用单元格渲染器：实体 -> 字段 -> 单元格。 */
 export const CELLS: Record<
   string,
-  Record<string, (r: MesRow) => React.ReactNode>
+  Record<string, (r: MesRow, e?: MesEntity) => React.ReactNode>
 > = {
   work_order: {
     started_qty: (r) => <WoProgress row={r} />,
@@ -31,6 +32,18 @@ export const CELLS: Record<
       <DueCell
         date={r.expiry_date as string | null}
         warnDays={7}
+        overLabel={t('mes.due.expired')}
+        warnLabel={t('mes.due.expiring')}
+      />
+    ),
+  },
+  // 人员资质（D62/D64）：过期红色，元数据 warn_days（缺省 30）天内到期黄色，停用不预警
+  operator_qual: {
+    expires_on: (r, e) => (
+      <DueCell
+        date={r.expires_on as string | null}
+        done={qualState(r) === 'inactive'}
+        warnDays={warnDaysOf(e?.warn_days)}
         overLabel={t('mes.due.expired')}
         warnLabel={t('mes.due.expiring')}
       />
@@ -124,7 +137,15 @@ export const ROW_RULES: Record<
     edit: (r) => r.receipt_status === 'draft',
     remove: (r) => r.receipt_status === 'draft',
   },
+  // 架构师（删除问题）：资质只能停用，不能删除；后端 DELETE 总是 409 referenced
+  operator_qual: {
+    remove: () => false,
+  },
 }
+
+/** 行是否显示删除按钮（实体规则之上；没有规则默认可删）。 */
+export const canRemoveRow = (code: string, r: MesRow) =>
+  ROW_RULES[code]?.remove?.(r) ?? true
 
 /** 已完结的工单状态（不再计算逾期）。 */
 const WO_DONE = ['completed', 'closed', 'cancelled']

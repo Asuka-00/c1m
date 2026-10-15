@@ -1,6 +1,7 @@
 /** 物料批次勾选（Track In / Track Out 共用）。 */
 import { t } from '@/i18n'
 import type { ExecContext } from '@/lib/api/mes/execution'
+import { decimalText } from '@/lib/decimal'
 import { Checkbox } from '@/components/ui/checkbox'
 import { enumLabel } from '@/features/mes/common/labels'
 
@@ -20,7 +21,7 @@ export function MaterialPick({
       {cx.materials.map((m) => (
         <div key={m.material_id} className='rounded-md border p-2 text-sm'>
           <div className='font-medium'>
-            {m.material}: {m.need} {m.uom ?? ''}{' '}
+            {m.material}: {decimalText(m.need)} {m.uom ?? ''}{' '}
             <span className='text-xs text-muted-foreground'>
               ({enumLabel('qty_basis', m.basis)})
             </span>
@@ -36,7 +37,7 @@ export function MaterialPick({
                   setMats(v ? [...mats, o.id] : mats.filter((x) => x !== o.id))
                 }
               />
-              {o.code} · {o.qty} · {o.location ?? ''}{' '}
+              {o.code} · {decimalText(o.qty)} · {o.location ?? ''}{' '}
               {o.expiry && (
                 <span className='text-muted-foreground'>({o.expiry})</span>
               )}

@@ -342,3 +342,76 @@ describe('F6 追溯显示客户批号和归属', () => {
     ).toHaveLength(2)
   })
 })
+
+describe('P3-F4 追溯码（kind=trace_code）', () => {
+  it('D79-6：显示打印与检验；默认不含已作废，开关打开传 include_voided', async () => {
+    const m = await import('@/lib/api/mes/marking')
+    const tr = vi.spyOn(m.markingApi, 'trace').mockResolvedValue({
+      marking_id: 'm1',
+      lot_id: 'lot1',
+      trace_code: '26420001',
+      voided: true,
+      prints: [
+        {
+          print_id: 'p1',
+          seq: 1,
+          marked_at: '2026-10-14T17:00:00Z',
+          latest_inspection_result: 'pass',
+        },
+      ],
+    })
+    const { s, spy } = await show({ kind: 'lot', target: {} })
+    await s.getByLabelText(t('mes.traceq.kind')).click()
+    await s.getByRole('option', { name: t('mes.traceq.k.trace_code') }).click()
+    await userEvent.fill(
+      s.getByLabelText(t('mes.traceq.code')).element(),
+      '26420001'
+    )
+    await s.getByTestId('trace-search').click()
+    await expect.element(s.getByTestId('trace-code-result')).toBeVisible()
+    expect(tr).toHaveBeenLastCalledWith('26420001', false)
+    await expect.element(s.getByTestId('trace-code-voided')).toBeVisible()
+    await expect
+      .element(s.getByText(t('mes.marking.insp.pass'), { exact: true }))
+      .toBeVisible()
+    await s.getByTestId('trace-include-voided').click()
+    await expect.poll(() => tr.mock.lastCall).toEqual(['26420001', true])
+    expect(spy).not.toHaveBeenCalled()
+  })
+  it('追溯码格式不符前端逐条提示，不发请求', async () => {
+    const { s, spy } = await show({ kind: 'lot', target: {} })
+    await s.getByLabelText(t('mes.traceq.kind')).click()
+    await s.getByRole('option', { name: t('mes.traceq.k.trace_code') }).click()
+    await userEvent.fill(
+      s.getByLabelText(t('mes.traceq.code')).element(),
+      'a'.repeat(33)
+    )
+    await s.getByTestId('trace-search').click()
+    const err = s.getByTestId('trace-code-err')
+    await expect
+      .element(err)
+      .toHaveTextContent(t('mes.marking.err.trace_max_length', { n: 32 }))
+    await expect
+      .element(err)
+      .toHaveTextContent(t('mes.marking.err.trace_pattern'))
+    expect(spy).not.toHaveBeenCalled()
+  })
+  it('追溯码纯空白只提示必填一条', async () => {
+    const { s, spy } = await show({ kind: 'lot', target: {} })
+    await s.getByLabelText(t('mes.traceq.kind')).click()
+    await s.getByRole('option', { name: t('mes.traceq.k.trace_code') }).click()
+    await userEvent.fill(
+      s.getByLabelText(t('mes.traceq.code')).element(),
+      '   '
+    )
+    await s.getByTestId('trace-search').click()
+    const err = s.getByTestId('trace-code-err')
+    await expect
+      .element(err)
+      .toHaveTextContent(t('mes.marking.err.traceRequired'))
+    await expect
+      .element(err)
+      .not.toHaveTextContent(t('mes.marking.err.trace_pattern'))
+    expect(spy).not.toHaveBeenCalled()
+  })
+})

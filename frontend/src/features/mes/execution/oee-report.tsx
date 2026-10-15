@@ -75,7 +75,13 @@ export default function OeeReport() {
       description={t('mes.report.oeeHint')}
     >
       <div className='flex flex-wrap items-end gap-3'>
-        <DateRange from={from} to={to} setFrom={setFrom} setTo={setTo} />
+        <DateRange
+          from={from}
+          to={to}
+          setFrom={setFrom}
+          setTo={setTo}
+          error={q.error ?? trend.error}
+        />
         <Select value={wc} onValueChange={setWc}>
           <SelectTrigger className='max-w-72 min-w-44' data-testid='oee-wc'>
             <SelectValue />

@@ -2,6 +2,7 @@
 import { AxiosError } from 'axios'
 import { t } from '@/i18n'
 import { isParamLoc, queryItemText } from '@/lib/api/client'
+import { QTY_DECIMALS, SCRAP_DECIMALS } from './bom-save'
 
 /** 字段级错误：`line` 为明细下标（从 0 开始，D38），主表字段为 null。 */
 export interface BomFieldError {
@@ -22,6 +23,7 @@ interface Item {
   msg?: string
   type?: string
   code?: string
+  ctx?: { max_places?: unknown }
 }
 
 /** 两级结构 / 引用校验的 code（422 编辑时 / 409 生效、作废时，D47 / D48）。 */
@@ -57,10 +59,21 @@ function fieldMessage(it: Item): string {
   const msg = it.msg ?? ''
   const sc = STRUCT[it.code ?? it.type ?? '']
   if (sc) return t(`${sc}Field`)
-  if (it.code === 'too_many_decimals' || it.type === 'too_many_decimals') {
+  // D72：422 value_error + ctx.max_places（qty 6、scrap_rate 4）；旧码 too_many_decimals 兼容
+  const mp = Number(it.ctx?.max_places)
+  if (
+    it.code === 'too_many_decimals' ||
+    it.type === 'too_many_decimals' ||
+    ((it.code === 'value_error' || it.type === 'value_error') &&
+      Number.isInteger(mp))
+  ) {
     const f = it.loc?.[it.loc.length - 1]
     return t('mes.bomTab.err.tooManyDecimals', {
-      n: f === 'scrap_rate' ? 4 : 6,
+      n: Number.isInteger(mp)
+        ? mp
+        : f === 'scrap_rate'
+          ? SCRAP_DECIMALS
+          : QTY_DECIMALS,
     })
   }
   if (it.type === 'extra_forbidden' || /not writable|set by POST/.test(msg))

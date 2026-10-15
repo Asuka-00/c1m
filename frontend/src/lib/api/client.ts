@@ -78,6 +78,13 @@ export function queryItemText(x: ParamItem): string {
   const known = queryErrorText(String(x.msg ?? ''))
   if (known) return known
   const name = paramName(x)
+  // D77 补充二 / 三：无法解析的日期 → 422 value_error ctx.reason=pattern，loc=["query", 字段名]（旧 type=pattern 兼容）
+  if (
+    x.code === 'pattern' ||
+    x.type === 'pattern' ||
+    ([x.code, x.type].includes('value_error') && x.ctx?.reason === 'pattern')
+  )
+    return t('errors.query.pattern', { field: name })
   const m = paramMessage(x)
   return name ? `${name}: ${m}` : m
 }
@@ -113,11 +120,33 @@ export const isParamLoc = (x: { loc?: unknown[] }) =>
 
 /** 422 列表项带固定码（code / type）且有翻译时返回文案，否则 null。 */
 export function codeItemText(x: {
+  loc?: unknown[]
   code?: string
   type?: string
   ctx?: Record<string, unknown>
 }): string | null {
   const ctx = ctxVars(x?.ctx)
+  // D72：小数位超限 422 value_error + ctx.max_places（旧码 too_many_decimals 兼容）
+  const places = Number(ctx.max_places)
+  if (
+    [x?.code, x?.type].some(
+      (c) => c === 'value_error' || c === 'too_many_decimals'
+    ) &&
+    Number.isInteger(places)
+  )
+    return t('mes.err.tooManyDecimals', { n: places })
+  // D77 补充一：422 value_error + ctx.reason=range_inverted / timezone_required
+  const reason = typeof x?.ctx?.reason === 'string' ? x.ctx.reason : ''
+  if (
+    [x?.code, x?.type].includes('value_error') &&
+    (reason === 'range_inverted' || reason === 'timezone_required')
+  )
+    return t(`mes.err.code.${reason}`)
+  // D77 补充三：value_error + ctx.reason=pattern（无法解析的日期 / 时间）
+  if ([x?.code, x?.type].includes('value_error') && reason === 'pattern')
+    return t('errors.query.pattern', {
+      field: (x?.loc ?? []).slice(1).map(String).join('.'),
+    })
   for (const c of [x?.code, x?.type]) {
     if (!c) continue
     // date_range_too_large：有 ctx.max_days 用带天数的文案，否则用不带天数的

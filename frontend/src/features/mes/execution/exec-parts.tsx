@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { enumLabel } from '@/features/mes/common/labels'
-import { checkMessage } from './check-message'
+import { checkMessage, markingCheckInfo } from './check-message'
 
 const NONE = '__none'
 
@@ -219,6 +219,7 @@ export function CheckPanel({
               </div>
               <div className='break-words text-muted-foreground'>
                 {checkMessage(r)}
+                <MarkingRecordLink r={r} />
               </div>
             </div>
           </li>
@@ -246,9 +247,30 @@ export function CheckPanel({
           </Button>
         </div>
       )}
+      {blocked && canOverride && hard && (
+        <p className='text-sm text-destructive' data-testid='hard-block'>
+          {t('mes.exec.hardBlock')}
+        </p>
+      )}
       {blocked && !canOverride && (
         <p className='text-sm text-destructive'>{t('mes.exec.noOverride')}</p>
       )}
     </div>
+  )
+}
+
+/** 打标检验拦出站且带 marking_id 时，跳转到该打标记录（D79 补充）。 */
+export function MarkingRecordLink({ r }: { r: CheckResult }) {
+  if (r.check_type !== 'marking_inspection') return null
+  const id = markingCheckInfo(r).markingId
+  if (!id) return null
+  return (
+    <a
+      href={`/mes/marking?record=${encodeURIComponent(id)}`}
+      className='ms-2 text-primary underline-offset-2 hover:underline'
+      data-testid='marking-record-link'
+    >
+      {t('mes.marking.openRecord')}
+    </a>
   )
 }

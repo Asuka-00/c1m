@@ -140,6 +140,37 @@ export const BODY_KEYS = {
     'channels',
     'is_active',
   ],
+  /** 光罩动作（P3 v0.8.2 §3.2 / §5）：ReticleUsageIn / ReticleReasonIn / ReticleCommentIn */
+  reticleUsage: ['delta', 'reason_id', 'note'],
+  reticleReason: ['reason'],
+  reticleComment: ['comment'],
+  /** UnmountIn / InspectionIn（be/p3 335db8a reticle/router.py） */
+  reticleUnmount: ['unmounted_at', 'comment'],
+  /** MountIn / IncidentIn（be/p3 08a1380 reticle/router.py） */
+  reticleMount: [
+    'equipment_id',
+    'sub_unit_id',
+    'slot_code',
+    'mounted_at',
+    'comment',
+  ],
+  reticleIncident: [
+    'kind',
+    'occurred_at',
+    'equipment_id',
+    'lot_id',
+    'description',
+  ],
+  reticleInspection: [
+    'kind',
+    'result',
+    'defect_count',
+    'measured',
+    'equipment_id',
+    'inspected_at',
+    'disposition',
+    'comment',
+  ],
 } as const
 
 /** StageIn（含 dc / scrap / rework_units 子项）。 */

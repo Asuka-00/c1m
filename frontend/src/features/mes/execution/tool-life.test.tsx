@@ -40,9 +40,9 @@ describe('F9 刀具寿命（B10 / D54-5）', () => {
     expect(toolLifeLevel('10.000000', '10', 0.9)).toBe('over')
     expect(toolLifeLevel('12', '10', 0.9)).toBe('over')
     expect(toolLifeLevel('5', null, 0.9)).toBeNull()
-    expect(warnRatio({ warn_ratio: '0.800000', warn_pct: 90 })).toBe(0.8)
-    expect(warnRatio({ warn_ratio: null, warn_pct: 95 })).toBe(0.95)
-    expect(warnRatio({})).toBe(0.9)
+    expect(warnRatio({ warn_ratio: '0.800000', warn_pct: 90 })).toBe('0.8')
+    expect(warnRatio({ warn_ratio: null, warn_pct: 95 })).toBe('0.95')
+    expect(warnRatio({})).toBe('0.9')
   })
 
   it('寿命条按等级着色并去掉末尾零', async () => {
@@ -87,8 +87,8 @@ describe('F9 刀具寿命（B10 / D54-5）', () => {
   it('23c502d：优先用 effective_max_usage / effective_warn_ratio，缺失或 null 回退旧逻辑', async () => {
     expect(
       warnRatio({ effective_warn_ratio: '0.750000', warn_ratio: '0.9' })
-    ).toBe(0.75)
-    expect(warnRatio({ effective_warn_ratio: null, warn_pct: 80 })).toBe(0.8)
+    ).toBe('0.75')
+    expect(warnRatio({ effective_warn_ratio: null, warn_pct: 80 })).toBe('0.8')
     expect(
       maxUsage({ effective_max_usage: '500.000000', max_usage: null })
     ).toBe('500')

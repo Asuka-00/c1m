@@ -20,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { rangeInverted } from '@/components/crud/filter-defs'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mapErrorMessage } from './map-errors'
 import {
@@ -78,6 +79,7 @@ export function MapList() {
                 type='date'
                 className='w-40'
                 value={f.from}
+                max={f.to || undefined}
                 onChange={(e) => set({ from: e.target.value })}
               />
             </div>
@@ -90,9 +92,18 @@ export function MapList() {
                 type='date'
                 className='w-40'
                 value={f.to}
+                min={f.from || undefined}
                 onChange={(e) => set({ to: e.target.value })}
               />
             </div>
+            {rangeInverted(f.from, f.to) && (
+              <p
+                className='text-sm text-destructive'
+                data-testid='range-inverted'
+              >
+                {t('errors.rangeInverted')}
+              </p>
+            )}
             <Label className='flex h-9 items-center gap-2 font-normal'>
               <Checkbox
                 checked={f.latestOnly}

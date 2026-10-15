@@ -33,4 +33,11 @@ export const PLATFORM_MENU_KEYS = keys((i) => i.space === 'platform')
 export const TAB_ONLY_MENU_KEYS = keys((i) => i.kind === 'tab')
 
 /** 前端已用、后端 JSON 尚未落地的 key（手写，待与后端对齐）。 */
-export const PENDING_MENU_KEYS: readonly string[] = ['g-exception']
+export const PENDING_MENU_KEYS: readonly string[] = [
+  'g-exception',
+  'mes-ct-move-report',
+  // P3-F4 打标（后端菜单未导出）
+  'mes-marking',
+  'mes-marking-template',
+  'mes-qual-expiring',
+]

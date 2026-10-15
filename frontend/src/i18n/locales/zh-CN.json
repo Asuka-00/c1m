@@ -170,8 +170,10 @@
     "generic": "操作失败，请联系管理员。",
     "query": {
       "sortBy": "不支持按该列排序（可选：{{list}}）",
-      "notTextFilter": "{{field}} 不是可筛选的文本字段"
-    }
+      "notTextFilter": "{{field}} 不是可筛选的文本字段",
+      "pattern": "{{field}} 格式不正确，日期请用 YYYY-MM-DD"
+    },
+    "rangeInverted": "开始日期不能晚于结束日期"
   },
   "backend": {
     "Incorrect email or password": "邮箱或密码错误",
@@ -487,6 +489,7 @@
       "defaultsFrom": "留空则使用{{field}}",
       "parentTypeMismatch": "必须与上级设备的设备类型一致（留空则自动继承）",
       "duplicateDefaultRoute": "该产品已有默认流程",
+      "duplicateKey": "已存在相同编码/键的记录",
       "productNeedsDefaultRoute": "生效前须绑定一个已生效的默认流程",
       "code": {
         "on_hold": "批次处于 Hold 状态，请先解除 Hold",
@@ -503,18 +506,19 @@
         "qtime_action_invalid": "Q-Time 超时动作只能是警告、Hold 或返工",
         "hold_not_found": "Hold 记录不存在或已被删除，请刷新列表",
         "too_many_decimals": "最多 6 位小数",
+        "referenced": "该记录已有履历，不能删除",
         "read_only_field": "该字段只读，不能修改",
         "unknown_field": "包含未知字段",
         "timezone_required": "时间必须带时区（如 2026-10-14T08:00:00+08:00）",
         "date_range_too_large": "日期跨度最多 {{max_days}} 天，请缩小范围。",
         "date_range_too_large_nolimit": "日期跨度过大，请缩小范围。",
-        "date_range_invalid": "开始日期不能晚于结束日期。",
         "unknown_columns": "导入文件有无法识别的列：{{columns}}",
         "no_conversion_path": "没有从 {{from_uom}} 到 {{to_uom}} 的换算关系。",
         "ref_not_found": "找不到对应的{{entity}}。",
         "enum": "取值无效，可选：{{expected}}",
         "step_ids_mismatch": "工步列表与当前流程的工步不一致，请刷新后重试。",
-        "not_text_filter": "{{field}} 不是可筛选的文本字段"
+        "not_text_filter": "{{field}} 不是可筛选的文本字段",
+        "range_inverted": "开始时间不能晚于结束时间"
       },
       "tooManyDecimals": "最多 {{n}} 位小数",
       "onlyWhen": "仅当{{cond}}为「{{value}}」时才能填写",
@@ -702,7 +706,8 @@
       "qtimeStageSkipped": "本次 {{stage}} 未执行，请刷新后查看批次状态",
       "checkMsg": {
         "eqp_wait_qual": "设备 {{equipment}} PM 后待 Qual，登记 Qual 通过前不能开工（不可强制放行）"
-      }
+      },
+      "hardBlock": "存在不可放行的检查项，不能强制放行。"
     },
     "trace": {
       "hint": "查看批次及其单元的全部操作记录。",
@@ -907,7 +912,8 @@
         "wafer": "晶圆",
         "equipment": "设备",
         "material_lot": "物料批",
-        "customer_lot": "客户批号"
+        "customer_lot": "客户批号",
+        "trace_code": "追溯码"
       },
       "c": {
         "code": "批次",
@@ -936,11 +942,16 @@
         "parent_wafer": "母晶圆",
         "die_row": "die 行",
         "die_col": "die 列",
-        "transform_id": "转换记录"
+        "transform_id": "转换记录",
+        "latest_inspection_status": "检验",
+        "marked_at": "打标时间",
+        "seq": "打印序号"
       },
       "origins": "来源晶圆与 die 坐标",
       "dies": "该晶圆的 die 去向",
-      "outOrigins": "下游子批位置"
+      "outOrigins": "下游子批位置",
+      "marking": "打标记录",
+      "includeVoided": "含已作废"
     },
     "holdrel": {
       "hint": "查看并释放 Hold 中的批次。",
@@ -1683,6 +1694,44 @@
       "logged": "已记入检查记录和批次履历",
       "unknownStatus": "状态未知"
     },
+    "ctMove": {
+      "hint": "按日期、工序、产品查看工序周期时间和 Move 数。",
+      "ct": "平均 CT（小时）",
+      "moves": "Move 数",
+      "moveQty": "出站数量",
+      "ctAvg": "平均 CT（小时）",
+      "ctP50": "CT P50（小时）",
+      "ctP90": "CT P90（小时）",
+      "wip": "期末在制批",
+      "operation": "工序",
+      "product": "产品",
+      "name": "名称",
+      "trend": "CT 与 Move 趋势",
+      "byOperation": "按工序",
+      "mock": "示例数据",
+      "timezone": "时区：{{tz}}",
+      "rangeInvalid": "请选择有效的日期区间（开始不晚于结束）。",
+      "reworkMoves": "返工 Move（批 / 片）",
+      "hold": "平均 Hold 时长（小时）",
+      "notFound": "所选工序或产品不存在，请重新选择",
+      "onHold": "期末 Hold（批 / 片）",
+      "operationNotFound": "所选工序不存在，请重新选择",
+      "productNotFound": "所选产品不存在，请重新选择"
+    },
+    "qual": {
+      "notQualified": "{{user}} 不具备工序 {{op}} 的有效资质，不能进站，且不可放行。请先取得或续期资质。",
+      "expiringSoon": "资质将于 {{date}} 到期，请尽快续期。",
+      "warnDays": "预警天数：{{n}} 天",
+      "expiringTitle": "即将到期的人员资质",
+      "user": "人员",
+      "equipmentType": "设备类型",
+      "anyEquipment": "（只按工序）",
+      "expiresOn": "到期日",
+      "daysLeft": "剩余天数",
+      "lastDay": "今天到期（当天有效）",
+      "hint": "即将到期的人员资质，到期日当天仍有效。",
+      "expiredBlock": "{{user}} 的工序 {{op}} 资质已于 {{date}} 到期，不能进站，且不可放行。请先办理延期。"
+    },
     "alarmCode": {
       "migration": {
         "col": "迁移",
@@ -1691,6 +1740,437 @@
         "all": "全部迁移状态",
         "hint": "0029 迁移时联动被改为不联动，请补配“切换设备状态”"
       }
+    },
+    "reticle": {
+      "title": "光罩管理",
+      "desc": "光罩状态、寿命计数、挂载与检查记录",
+      "mockHint": "演示数据，后端接口就绪后切换",
+      "searchCode": "按编码搜索",
+      "allStatus": "全部状态",
+      "emptyHint": "暂无记录",
+      "inspectionPending": "待检",
+      "system": "系统",
+      "mounted": "挂载中",
+      "notCounted": "未计入",
+      "done": "{{action}}已完成",
+      "status": {
+        "available": "可用",
+        "in_use": "使用中",
+        "dirty": "待清洗",
+        "inspecting": "检查中",
+        "on_hold": "Hold",
+        "pending_maintenance": "待维护",
+        "scrapped": "已报废"
+      },
+      "holdReason": {
+        "incident": "碰撞",
+        "inspection_failed": "检查不合格",
+        "manual": "人工 Hold"
+      },
+      "countBasis": {
+        "track_out": "按出站",
+        "eap": "按设备上报"
+      },
+      "usageKind": {
+        "track_out": "出站",
+        "report": "上报",
+        "adjust": "调整",
+        "reset": "寿命复位"
+      },
+      "inspKind": {
+        "particle": "颗粒",
+        "haze": "雾化",
+        "cd": "CD",
+        "other": "其他"
+      },
+      "result": {
+        "pass": "合格",
+        "fail": "不合格"
+      },
+      "disposition": {
+        "none": "无",
+        "clean": "清洗",
+        "hold": "Hold",
+        "repair": "维修",
+        "scrap": "报废"
+      },
+      "action": {
+        "usage": "计数调整",
+        "hold": "Hold",
+        "release": "Release",
+        "restore": "人工恢复",
+        "clean-start": "开始清洗",
+        "clean-complete": "清洗完成",
+        "repair-complete": "维修完成",
+        "inspect-start": "开始检查",
+        "scrap": "报废",
+        "life-reset": "寿命复位",
+        "unmount": "卸载",
+        "inspection": "录入检查",
+        "mount": "挂载",
+        "incident": "事故"
+      },
+      "actionDesc": {
+        "usage": "人工增减 shot 数；减少时必须选原因",
+        "hold": "转为 Hold，使用中会同时卸载",
+        "release": "按 Hold 原因回到对应状态",
+        "restore": "待维护恢复为可用，需先卸载，恢复后待检",
+        "clean-start": "开始清洗，需先卸载",
+        "clean-complete": "清洗完成后进入检查",
+        "repair-complete": "维修或清洗完成后进入检查，需先卸载",
+        "inspect-start": "开始检查，需先卸载",
+        "scrap": "报废后不可恢复，挂载中会同时卸载",
+        "life-reset": "计数清零并恢复为可用，需先卸载",
+        "unmount": "从机台卸下；非使用中时只关闭挂载记录",
+        "inspection": "合格回到可用，不合格转 Hold",
+        "mount": "挂到机台上使用；仅可用且未挂载时可操作",
+        "incident": "登记碰撞、跌落等异常；光罩转为 Hold（异常）并需检查"
+      },
+      "field": {
+        "delta": "增减量",
+        "reason_id": "原因代码",
+        "note": "备注",
+        "reason": "原因",
+        "comment": "备注",
+        "revision": "版本",
+        "layer": "层次",
+        "hold_reason": "Hold 原因",
+        "status_before_hold": "Hold 前状态",
+        "shots": "shot 数 / 上限",
+        "mount_count": "挂载次数",
+        "life_reset_count": "复位次数",
+        "count_basis": "计数来源",
+        "equipment": "挂载机台",
+        "mounted_at": "挂载时间",
+        "storage_location": "库位",
+        "next_inspection_due_at": "下次检查",
+        "status": "状态",
+        "kind": "检查项",
+        "result": "结果",
+        "disposition": "处置建议",
+        "equipment_id": "机台",
+        "slot_code": "槽位",
+        "lot_id": "批次 ID",
+        "description": "异常描述",
+        "backfill_at": "补录时间"
+      },
+      "tab": {
+        "status": "状态履历",
+        "usage": "计数记录",
+        "mounts": "挂载记录",
+        "inspections": "检查记录"
+      },
+      "col": {
+        "code": "编码",
+        "status": "状态",
+        "layer": "层次",
+        "shots": "shot 数",
+        "equipment": "机台",
+        "location": "库位",
+        "at": "时间",
+        "from": "原状态",
+        "to": "新状态",
+        "action": "动作",
+        "holdReason": "Hold 原因",
+        "reason": "原因",
+        "comment": "备注",
+        "user": "操作人",
+        "kind": "类型",
+        "delta": "增减量",
+        "countAfter": "调整后",
+        "lot": "批次",
+        "reasonId": "原因代码",
+        "slot": "槽位",
+        "mountedAt": "挂载时间",
+        "unmountedAt": "卸载时间",
+        "unmountReason": "卸载原因",
+        "shotsAtMount": "挂载时 shot",
+        "shotsAtUnmount": "卸载时 shot",
+        "inspKind": "检查项",
+        "result": "结果",
+        "defects": "缺陷数",
+        "disposition": "处置建议"
+      },
+      "err": {
+        "keyMissing": "请求缺少幂等键（Idempotency-Key），请刷新页面后重试",
+        "keyReused": "该操作已用同一请求标识提交过不同内容，请关闭对话框后重新操作",
+        "deltaNonZero": "增减量须为非零数字",
+        "reasonIdRequired": "减少计数时必须填写原因代码",
+        "tooLong": "不能超过 {{max}} 个字符",
+        "nonNegInt": "须为非负整数",
+        "maxPlaces": "增减量最多 {{max}} 位小数",
+        "futureTime": "补录时间不能晚于当前时间 5 分钟以上",
+        "timeOutOfOrderAt": "时间早于这张光罩最近一次事件（{{at}}），请改到这个时间之后",
+        "backfillInvalid": "请输入有效的补录时间",
+        "timeOutOfOrderField": "{{field}}早于这张光罩最近一次事件（{{at}}），请改到这个时间之后"
+      },
+      "code": {
+        "invalid_transition": "当前状态不允许「{{action}}」，请刷新后重试",
+        "life_limit_reached": "光罩已达寿命上限，不能恢复，请做寿命复位",
+        "already_mounted": "光罩已挂在其他机台，请先卸载",
+        "still_mounted": "光罩仍挂在机台上，请先卸载再执行「{{action}}」",
+        "reticle_unavailable": "光罩当前状态不可挂载",
+        "life_reached": "光罩已达寿命上限，不能进站",
+        "idempotency_in_progress": "上一次提交还在处理中，请稍后重试",
+        "referenced": "光罩已有履历记录，不能删除；如不再使用请报废",
+        "slot_occupied": "该机台槽位已有光罩",
+        "time_out_of_order": "时间早于这张光罩最近一次下机或事件，或下机早于上机"
+      },
+      "scrappedHint": "光罩已报废，不能再计数、录入检查或执行其他动作",
+      "delete": "删除",
+      "deleteConfirm": "确定删除光罩 {{code}}？",
+      "incidentKind": {
+        "collision": "碰撞",
+        "drop": "跌落",
+        "other": "其他"
+      },
+      "backfillHint": "可选；不填按当前时间，按站点时区提交",
+      "timeField": {
+        "occurred_at": "发生时间",
+        "mounted_at": "上机时间",
+        "unmounted_at": "下机时间",
+        "inspected_at": "检查时间"
+      },
+      "life": {
+        "ok": "正常",
+        "warn": "接近上限",
+        "over": "已达上限",
+        "tip": "已用 {{used}} / 上限 {{max}}；预警线 {{line}}（上限的 {{pct}}%）",
+        "okTip": "低于预警线，可正常进站",
+        "warnTip": "已进入预警区间（黄）：进站放行但会记录警告，请安排更换或复位",
+        "overTip": "已达寿命上限（红）：进站被拦截且不可放行，需寿命复位或报废",
+        "noLimitTip": "未设置寿命上限，不做寿命预警"
+      },
+      "master": {
+        "create": "新建光罩",
+        "edit": "编辑主数据",
+        "createTip": "新建光罩主数据；状态和计数由动作维护",
+        "editTip": "修改光罩主数据（编码不可改）；状态、计数、挂载请用动作按钮",
+        "createTitle": "新建光罩",
+        "editTitle": "编辑光罩 {{code}}",
+        "desc": "状态、shot 数、挂载信息只读，由挂载 / 卸载等动作维护。",
+        "errRequired": "必填",
+        "errMaxShots": "请输入正整数",
+        "errWarnRatio": "请输入 0 到 1 之间的小数（最多 4 位，如 0.9）",
+        "field": {
+          "code": "编码",
+          "name": "名称",
+          "revision": "版本",
+          "grade": "等级",
+          "layer": "层次",
+          "max_shots": "寿命上限（shot）",
+          "warn_ratio": "预警比例",
+          "count_basis": "计数来源",
+          "storage_location": "库位"
+        },
+        "tip": {
+          "code": "光罩唯一编码，建立后不可修改",
+          "name": "显示名称",
+          "revision": "光罩版本号",
+          "grade": "光罩等级（如 binary、PSM）",
+          "layer": "适用工艺层次",
+          "max_shots": "累计 shot 数达到此值即拦截进站；留空表示不限",
+          "warn_ratio": "达到 上限 × 比例 时显示黄色预警；留空按 0.9",
+          "count_basis": "出站自动累加或由 EAP 上报",
+          "storage_location": "未挂载时的存放库位"
+        }
+      },
+      "deleteTip": "删除光罩；已有履历时不能删除，请改为报废",
+      "statusFilterTip": "按光罩状态筛选",
+      "colTip": {
+        "code": "光罩编码",
+        "status": "当前状态",
+        "layer": "适用层次",
+        "shots": "已用 shot 数 / 寿命上限；黄色为预警，红色为已达上限",
+        "equipment": "当前挂载的机台",
+        "location": "存放库位"
+      },
+      "inspectStartFirst": "检验需先「开始检验」（可用 → 检验中）后才能出结果"
+    },
+    "marking": {
+      "tplTitle": "打标模板",
+      "tplDesc": "按产品和客户维护打标模板，审批后生效",
+      "jobTitle": "打标作业",
+      "jobDesc": "打标预览、打印、检验、重打与作废",
+      "mockHint": "演示数据，后端接口就绪后切换",
+      "search": "按编码、产品或客户搜索",
+      "allStatus": "全部状态",
+      "newTpl": "新建模板",
+      "newVersion": "新建版本",
+      "edit": "编辑草稿",
+      "approve": "审批",
+      "retire": "退役",
+      "selfApprovalHint": "起草人不能审批自己的模板",
+      "formHint": "占位符见下方说明",
+      "linesHint": "每行一段，可用 {trace_code} {date_code} {lot_id} {product_code} {customer_code}",
+      "compareWith": "对比版本",
+      "noOtherVersion": "没有其他版本",
+      "noDiff": "两个版本内容相同",
+      "diffField": "字段",
+      "lineN": "第 {{n}} 行",
+      "preview": "预览",
+      "print": "打印",
+      "inspect": "检验",
+      "reprint": "重打",
+      "void": "作废",
+      "firstPrint": "首打",
+      "voided": "已作废",
+      "voidedHint": "已作废（{{by}}：{{comment}}），不能再操作",
+      "scrappedHint": "批次已报废，不能再操作",
+      "traceAssignedHint": "追溯码在打印时由系统发号",
+      "markedFrom": "首打日期从",
+      "markedTo": "首打日期至",
+      "printLog": "打印与检验履历",
+      "readCode": "读回码（OCR）",
+      "reasonId": "原因码",
+      "comment": "备注",
+      "ocrDiff": "读回不一致：应为 {{expected}}，读到 {{read}}",
+      "voidConfirm": "作废 {{code}} 后不可恢复，再点一次确认",
+      "voidConfirmOk": "确认作废",
+      "ok": "确定",
+      "status": {
+        "draft": "草稿",
+        "approved": "已批准",
+        "retired": "已退役"
+      },
+      "basis": {
+        "lot_start": "开批日期",
+        "marking": "打标日期",
+        "assembly_done": "封装完成日期"
+      },
+      "insp": {
+        "pending": "待检验",
+        "pass": "合格",
+        "fail": "不合格",
+        "none": "未打印"
+      },
+      "source": {
+        "manual": "手工",
+        "eap": "设备上报",
+        "simulator": "模拟器"
+      },
+      "col": {
+        "code": "编码",
+        "product": "产品",
+        "customer": "客户",
+        "version": "版本",
+        "status": "状态",
+        "lines": "打标内容",
+        "dateCodeBasis": "日期码取值",
+        "usesBin": "含 bin",
+        "createdBy": "起草人",
+        "createdAt": "起草时间",
+        "approvedBy": "审批人",
+        "approvedAt": "审批时间",
+        "lot": "批次",
+        "template": "模板",
+        "dateCode": "日期码",
+        "bin": "bin",
+        "equipment": "打标机",
+        "traceCode": "追溯码",
+        "reprints": "重打次数",
+        "inspection": "检验",
+        "markedAt": "首打时间",
+        "lastPrintedAt": "最近打印"
+      },
+      "actHint": {
+        "inspect": "读回码与系统号不一致时记为不合格",
+        "reprint": "沿用原追溯码，必须填写原因",
+        "void": "作废后不可恢复，必须填写原因"
+      },
+      "done": {
+        "approve": "已审批",
+        "retire": "已退役",
+        "save": "已保存",
+        "print": "已打印，追溯码 {{code}}",
+        "inspect": "已录入检验",
+        "reprint": "已重打",
+        "void": "已作废",
+        "newVersion": "已新建草稿 v{{v}}"
+      },
+      "err": {
+        "reason_idRequired": "请填写原因码",
+        "commentRequired": "请填写备注",
+        "commentTooLong": "备注不能超过 {{n}} 字",
+        "maxPlaces": "最多 {{n}} 位小数",
+        "trace_max_length": "追溯码不能超过 {{n}} 位",
+        "trace_pattern": "追溯码只能包含大写字母、数字和连字符",
+        "trace_pattern_rule": "追溯码格式不符合规则 {{pattern}}",
+        "traceRequired": "请填写追溯码",
+        "unknownPlaceholder": "不支持的占位符 {{name}}",
+        "selfApproval": "起草人不能审批自己的模板",
+        "readCodeTooLong": "读回码不能超过 {{n}} 个字符",
+        "readCodeRequired": "请填写读回码"
+      },
+      "code": {
+        "template_readonly": "已批准的版本只读，请新建版本",
+        "draft_exists": "该产品和客户已有草稿",
+        "invalid_transition": "当前状态不允许该操作（可能已作废或已报废）",
+        "marking_template_missing": "该批次的产品和客户没有已批准的打标模板",
+        "already_marked": "该批次已有未作废的打标记录",
+        "trace_code_mismatch": "设备回报的追溯码 {{actual}} 与系统发号 {{expected}} 不一致",
+        "check_blocked": "检查未通过",
+        "inspect_blocked": "打标检验不合格且未处理，不能出站，不可强制放行",
+        "idempotency_key_reused": "请求已提交过且内容不同，请刷新后重试",
+        "key_missing": "请求缺少幂等键，请刷新页面后重试",
+        "no_active_marking": "该批次没有未作废的打标记录"
+      },
+      "checkBlocked": "打标检验不合格（{{trace}}），处理前不能出站",
+      "overridden": "你填的是 pass，系统已记为 fail：应为 {{expected}}，读到 {{read}}",
+      "overriddenTag": "系统改判",
+      "checkNotMarked": "该批次尚未打标，不能出站",
+      "checkPending": "打标待检验（{{trace}}），检验合格后才能出站",
+      "openRecord": "查看打标记录",
+      "patternInvalidHint": "追溯码格式配置无效，格式以服务端校验为准",
+      "leftStepHint": "批次已离开打标工步，不能再检验"
+    },
+    "qualHistory": {
+      "title": "履历",
+      "loading": "加载中…",
+      "empty": "暂无履历（旧数据不补履历）",
+      "more": "加载更多",
+      "system": "系统",
+      "col": {
+        "at": "时间",
+        "action": "动作",
+        "changes": "变更",
+        "reasonId": "原因",
+        "comment": "说明",
+        "approvedBy": "批准人",
+        "username": "操作人"
+      },
+      "action": {
+        "granted": "授予",
+        "renewed": "延期",
+        "changed": "变更（含缩短有效期）",
+        "deactivated": "停用",
+        "reactivated": "恢复启用",
+        "expired": "已过期"
+      },
+      "field": {
+        "certified_on": "取证日期",
+        "expires_on": "到期日",
+        "is_active": "启用",
+        "operation_id": "工序",
+        "equipment_type_id": "设备类型"
+      },
+      "err": {
+        "selfApproval": "批准人不能是提交人本人",
+        "holderApproval": "批准人不能是该资质的持有人",
+        "conflictingFields": "停用和修改到期日不能在同一次提交里，请分两次操作"
+      }
+    },
+    "qualAction": {
+      "renew": "修改有效期",
+      "deactivate": "停用资质",
+      "reactivate": "恢复启用",
+      "renewDesc": "延长、缩短或改为永久都需要原因、说明和批准人；缩短在履历里记为“变更”。",
+      "deactivateDesc": "停用后不能进站；需要原因和说明。停用和改有效期请分开提交。",
+      "reactivateDesc": "恢复后按有效期判断是否可进站，不需要原因。",
+      "expiresTip": "留空表示永久有效；当天仍有效（站点时区）",
+      "expiresUnchanged": "有效期与原值相同，无需保存",
+      "reasonTip": "原因代码（类别：人员资质）",
+      "approverTip": "批准人不能是自己，也不能是资质持有人"
     }
   },
   "notify": {

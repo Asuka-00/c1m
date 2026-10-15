@@ -211,7 +211,13 @@ export default function WipDashboard() {
         />
         <div className='flex items-end justify-between'>
           <h3 className='font-semibold'>{t('mes.report.output')}</h3>
-          <DateRange from={from} to={to} setFrom={setFrom} setTo={setTo} />
+          <DateRange
+            from={from}
+            to={to}
+            setFrom={setFrom}
+            setTo={setTo}
+            error={o.error}
+          />
         </div>
         <DataCard
           title={t('mes.report.output')}

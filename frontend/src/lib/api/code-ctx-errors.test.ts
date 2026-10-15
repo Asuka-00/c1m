@@ -35,7 +35,6 @@ describe('1a7c0fb 固定码 + ctx 插值', () => {
     for (const c of [
       'date_range_too_large',
       'date_range_too_large_nolimit',
-      'date_range_invalid',
       'timezone_required',
       'unknown_columns',
       'no_conversion_path',
@@ -56,12 +55,9 @@ describe('1a7c0fb 固定码 + ctx 插值', () => {
     expect(none).not.toMatch(/\d/)
   })
 
-  it('date_range_invalid / timezone_required / step_ids_mismatch', () => {
-    for (const c of [
-      'date_range_invalid',
-      'timezone_required',
-      'step_ids_mismatch',
-    ])
+  it('timezone_required / step_ids_mismatch；date_range_invalid 已退役（D77 补充二）', () => {
+    expect(i18n.exists('mes.err.code.date_range_invalid')).toBe(false)
+    for (const c of ['timezone_required', 'step_ids_mismatch'])
       expect(errorMessage(ax([item(c)]))).toBe(t(`mes.err.code.${c}`))
   })
 

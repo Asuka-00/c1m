@@ -170,8 +170,10 @@
     "generic": "The request failed; please contact your administrator.",
     "query": {
       "sortBy": "Cannot sort by this column (allowed: {{list}})",
-      "notTextFilter": "{{field}} is not a filterable text field"
-    }
+      "notTextFilter": "{{field}} is not a filterable text field",
+      "pattern": "{{field}} has an invalid format; use YYYY-MM-DD for dates"
+    },
+    "rangeInverted": "The start date cannot be later than the end date"
   },
   "backend": {
     "Incorrect email or password": "Incorrect email or password",
@@ -487,6 +489,7 @@
       "defaultsFrom": "Leave blank to use {{field}}",
       "parentTypeMismatch": "must match the parent equipment's type (leave blank to inherit)",
       "duplicateDefaultRoute": "the product already has a default route",
+      "duplicateKey": "A record with the same key already exists",
       "productNeedsDefaultRoute": "an Active route must be bound as default before activation",
       "code": {
         "on_hold": "The lot is on hold; release it first",
@@ -503,18 +506,19 @@
         "qtime_action_invalid": "The Q-Time action must be Warn, Hold or Rework",
         "hold_not_found": "The hold record does not exist or was deleted; refresh the list",
         "too_many_decimals": "At most 6 decimal places",
+        "referenced": "This record has history records and can't be deleted",
         "read_only_field": "This field is read-only",
         "unknown_field": "Contains an unknown field",
         "timezone_required": "The time must include a time zone (e.g. 2026-10-14T08:00:00+08:00)",
         "date_range_too_large": "The date range can span at most {{max_days}} days; narrow it down.",
         "date_range_too_large_nolimit": "The date range is too large; narrow it down.",
-        "date_range_invalid": "The start date cannot be later than the end date.",
         "unknown_columns": "The import file has unrecognized columns: {{columns}}",
         "no_conversion_path": "No conversion from {{from_uom}} to {{to_uom}}.",
         "ref_not_found": "The {{entity}} was not found.",
         "enum": "Invalid value; allowed: {{expected}}",
         "step_ids_mismatch": "The step list does not match the current route; refresh and try again.",
-        "not_text_filter": "{{field}} is not a filterable text field"
+        "not_text_filter": "{{field}} is not a filterable text field",
+        "range_inverted": "The start cannot be later than the end"
       },
       "tooManyDecimals": "At most {{n}} decimal places",
       "onlyWhen": "Only allowed when {{cond}} is “{{value}}”",
@@ -702,7 +706,8 @@
       "qtimeStageSkipped": "{{stage}} was not performed; check the lot status",
       "checkMsg": {
         "eqp_wait_qual": "Equipment {{equipment}} is waiting for Qual after PM; it cannot start production until Qual passes (cannot be overridden)"
-      }
+      },
+      "hardBlock": "Some failed checks cannot be overridden."
     },
     "trace": {
       "hint": "All operations on the lot and its units.",
@@ -907,7 +912,8 @@
         "wafer": "Wafer",
         "equipment": "Equipment",
         "material_lot": "Material lot",
-        "customer_lot": "Customer lot no."
+        "customer_lot": "Customer lot no.",
+        "trace_code": "Trace code"
       },
       "c": {
         "code": "Lot",
@@ -936,11 +942,16 @@
         "parent_wafer": "Parent wafer",
         "die_row": "Die row",
         "die_col": "Die col",
-        "transform_id": "Transform record"
+        "transform_id": "Transform record",
+        "latest_inspection_status": "Inspection",
+        "marked_at": "Marked at",
+        "seq": "Print #"
       },
       "origins": "Source wafers & die coordinates",
       "dies": "Where this wafer's dies went",
-      "outOrigins": "Downstream child positions"
+      "outOrigins": "Downstream child positions",
+      "marking": "Marking record",
+      "includeVoided": "Include voided"
     },
     "holdrel": {
       "hint": "View and release held lots.",
@@ -1683,6 +1694,44 @@
       "logged": "Recorded in the check log and lot history",
       "unknownStatus": "unknown status"
     },
+    "ctMove": {
+      "hint": "Cycle time and moves by date, operation and product.",
+      "ct": "Avg CT (h)",
+      "moves": "Moves",
+      "moveQty": "Out qty",
+      "ctAvg": "Avg CT (h)",
+      "ctP50": "CT P50 (h)",
+      "ctP90": "CT P90 (h)",
+      "wip": "WIP lots (end)",
+      "operation": "Operation",
+      "product": "Product",
+      "name": "Name",
+      "trend": "CT and move trend",
+      "byOperation": "By operation",
+      "mock": "Sample data",
+      "timezone": "Time zone: {{tz}}",
+      "rangeInvalid": "Select a valid date range (start no later than end).",
+      "reworkMoves": "Rework moves (lots / wafers)",
+      "hold": "Avg hold time (h)",
+      "notFound": "The selected operation or product does not exist; choose again",
+      "onHold": "On hold at end (lots / qty)",
+      "operationNotFound": "The selected operation does not exist; choose again",
+      "productNotFound": "The selected product does not exist; choose again"
+    },
+    "qual": {
+      "notQualified": "{{user}} has no valid qualification for operation {{op}} and cannot track in. This cannot be overridden. Obtain or renew the qualification first.",
+      "expiringSoon": "Qualification expires on {{date}}. Please renew it soon.",
+      "warnDays": "Warning window: {{n}} days",
+      "expiringTitle": "Operator qualifications expiring soon",
+      "user": "Operator",
+      "equipmentType": "Equipment type",
+      "anyEquipment": "(operation only)",
+      "expiresOn": "Expires on",
+      "daysLeft": "Days left",
+      "lastDay": "Expires today (still valid)",
+      "hint": "Qualifications expiring soon; still valid on the expiry date.",
+      "expiredBlock": "{{user}}'s qualification for operation {{op}} expired on {{date}} and cannot track in. This cannot be overridden. Renew the qualification first."
+    },
     "alarmCode": {
       "migration": {
         "col": "Migration",
@@ -1691,6 +1740,437 @@
         "all": "All migration states",
         "hint": "Migration 0029 turned the linkage off; reconfigure \"Set equipment state\""
       }
+    },
+    "reticle": {
+      "title": "Reticles",
+      "desc": "Reticle status, life count, mounts and inspections",
+      "mockHint": "Demo data until the backend is ready",
+      "searchCode": "Search by code",
+      "allStatus": "All statuses",
+      "emptyHint": "No records",
+      "inspectionPending": "Inspection due",
+      "system": "System",
+      "mounted": "Mounted",
+      "notCounted": "not counted",
+      "done": "{{action}} completed",
+      "status": {
+        "available": "Available",
+        "in_use": "In use",
+        "dirty": "Dirty",
+        "inspecting": "Inspecting",
+        "on_hold": "On hold",
+        "pending_maintenance": "Pending maintenance",
+        "scrapped": "Scrapped"
+      },
+      "holdReason": {
+        "incident": "Incident",
+        "inspection_failed": "Inspection failed",
+        "manual": "Manual hold"
+      },
+      "countBasis": {
+        "track_out": "Track out",
+        "eap": "Equipment report"
+      },
+      "usageKind": {
+        "track_out": "Track out",
+        "report": "Reported",
+        "adjust": "Adjust",
+        "reset": "Life reset"
+      },
+      "inspKind": {
+        "particle": "Particle",
+        "haze": "Haze",
+        "cd": "CD",
+        "other": "Other"
+      },
+      "result": {
+        "pass": "Pass",
+        "fail": "Fail"
+      },
+      "disposition": {
+        "none": "None",
+        "clean": "Clean",
+        "hold": "Hold",
+        "repair": "Repair",
+        "scrap": "Scrap"
+      },
+      "action": {
+        "usage": "Adjust count",
+        "hold": "Hold",
+        "release": "Release",
+        "restore": "Restore",
+        "clean-start": "Start cleaning",
+        "clean-complete": "Cleaning complete",
+        "repair-complete": "Repair complete",
+        "inspect-start": "Start inspection",
+        "scrap": "Scrap",
+        "life-reset": "Life reset",
+        "unmount": "Unmount",
+        "inspection": "Record inspection",
+        "mount": "Mount",
+        "incident": "Incident"
+      },
+      "actionDesc": {
+        "usage": "Add or subtract shots; a reason code is required to subtract",
+        "hold": "Put on hold; unmounts if in use",
+        "release": "Returns to the state given by the hold reason",
+        "restore": "Restore to available; unmount first; inspection required after",
+        "clean-start": "Start cleaning; unmount first",
+        "clean-complete": "Moves to inspection after cleaning",
+        "repair-complete": "Moves to inspection after repair or cleaning; unmount first",
+        "inspect-start": "Start inspection; unmount first",
+        "scrap": "Cannot be undone; unmounts if mounted",
+        "life-reset": "Reset the count to zero and restore; unmount first",
+        "unmount": "Remove from the tool; if not in use only the mount record is closed",
+        "inspection": "Pass returns to available; fail puts it on hold",
+        "mount": "Mount on an equipment; only when available and not mounted",
+        "incident": "Record a collision, drop or other incident; the reticle goes on hold (incident) and needs inspection"
+      },
+      "field": {
+        "delta": "Delta",
+        "reason_id": "Reason code",
+        "note": "Note",
+        "reason": "Reason",
+        "comment": "Comment",
+        "revision": "Revision",
+        "layer": "Layer",
+        "hold_reason": "Hold reason",
+        "status_before_hold": "Status before hold",
+        "shots": "Shots / limit",
+        "mount_count": "Mount count",
+        "life_reset_count": "Reset count",
+        "count_basis": "Count basis",
+        "equipment": "Mounted on",
+        "mounted_at": "Mounted at",
+        "storage_location": "Storage location",
+        "next_inspection_due_at": "Next inspection",
+        "status": "Status",
+        "kind": "Inspection",
+        "result": "Result",
+        "disposition": "Disposition",
+        "equipment_id": "Equipment",
+        "slot_code": "Slot",
+        "lot_id": "Lot ID",
+        "description": "Description",
+        "backfill_at": "Backfill time"
+      },
+      "tab": {
+        "status": "Status history",
+        "usage": "Usage",
+        "mounts": "Mounts",
+        "inspections": "Inspections"
+      },
+      "col": {
+        "code": "Code",
+        "status": "Status",
+        "layer": "Layer",
+        "shots": "Shots",
+        "equipment": "Equipment",
+        "location": "Location",
+        "at": "Time",
+        "from": "From",
+        "to": "To",
+        "action": "Action",
+        "holdReason": "Hold reason",
+        "reason": "Reason",
+        "comment": "Comment",
+        "user": "User",
+        "kind": "Kind",
+        "delta": "Delta",
+        "countAfter": "Count after",
+        "lot": "Lot",
+        "reasonId": "Reason code",
+        "slot": "Slot",
+        "mountedAt": "Mounted at",
+        "unmountedAt": "Unmounted at",
+        "unmountReason": "Unmount reason",
+        "shotsAtMount": "Shots at mount",
+        "shotsAtUnmount": "Shots at unmount",
+        "inspKind": "Inspection",
+        "result": "Result",
+        "defects": "Defects",
+        "disposition": "Disposition"
+      },
+      "err": {
+        "keyMissing": "The request is missing its Idempotency-Key; refresh the page and try again",
+        "keyReused": "This operation key was already used with different content; close the dialog and start again",
+        "deltaNonZero": "Delta must be a non-zero number",
+        "reasonIdRequired": "A reason code is required to subtract shots",
+        "tooLong": "Must be at most {{max}} characters",
+        "nonNegInt": "Must be a non-negative integer",
+        "maxPlaces": "Delta allows at most {{max}} decimal places",
+        "futureTime": "The backfill time cannot be more than 5 minutes in the future",
+        "timeOutOfOrderAt": "The time is earlier than this reticle’s latest event ({{at}}); use a later time",
+        "backfillInvalid": "Enter a valid backfill time",
+        "timeOutOfOrderField": "The {{field}} is earlier than this reticle’s latest event ({{at}}); use a later time"
+      },
+      "code": {
+        "invalid_transition": "\"{{action}}\" is not allowed in the current status. Refresh and try again.",
+        "life_limit_reached": "The reticle has reached its life limit and cannot be restored. Use life reset.",
+        "already_mounted": "The reticle is mounted on another tool. Unmount it first.",
+        "still_mounted": "The reticle is still mounted. Unmount it before \"{{action}}\".",
+        "reticle_unavailable": "The reticle cannot be mounted in its current status",
+        "life_reached": "The reticle has reached its life limit and cannot be tracked in",
+        "idempotency_in_progress": "The previous submission is still being processed. Please try again shortly.",
+        "referenced": "The reticle has history records and can't be deleted. Scrap it instead.",
+        "slot_occupied": "That slot on the equipment already holds a reticle",
+        "time_out_of_order": "The time is earlier than this reticle’s latest unmount or event, or the unmount is earlier than the mount"
+      },
+      "scrappedHint": "The reticle is scrapped; usage, inspection and other actions are not allowed",
+      "delete": "Delete",
+      "deleteConfirm": "Delete reticle {{code}}?",
+      "incidentKind": {
+        "collision": "Collision",
+        "drop": "Drop",
+        "other": "Other"
+      },
+      "backfillHint": "Optional; leave blank for now. Submitted in the site time zone",
+      "timeField": {
+        "occurred_at": "occurrence time",
+        "mounted_at": "mount time",
+        "unmounted_at": "unmount time",
+        "inspected_at": "inspection time"
+      },
+      "life": {
+        "ok": "OK",
+        "warn": "Near limit",
+        "over": "Limit reached",
+        "tip": "Used {{used}} / limit {{max}}; warning line {{line}} ({{pct}}% of limit)",
+        "okTip": "Below the warning line; track-in allowed",
+        "warnTip": "In the warning zone (yellow): track-in passes with a warning; plan a replacement or life reset",
+        "overTip": "Life limit reached (red): track-in is blocked and cannot be overridden; reset life or scrap",
+        "noLimitTip": "No life limit set; no life warning"
+      },
+      "master": {
+        "create": "New reticle",
+        "edit": "Edit master data",
+        "createTip": "Create reticle master data; status and counts are maintained by actions",
+        "editTip": "Edit reticle master data (code is fixed); use the action buttons for status, counts and mounting",
+        "createTitle": "New reticle",
+        "editTitle": "Edit reticle {{code}}",
+        "desc": "Status, shot count and mount info are read-only and maintained by mount / unmount and other actions.",
+        "errRequired": "Required",
+        "errMaxShots": "Enter a positive integer",
+        "errWarnRatio": "Enter a decimal between 0 and 1 (up to 4 places, e.g. 0.9)",
+        "field": {
+          "code": "Code",
+          "name": "Name",
+          "revision": "Revision",
+          "grade": "Grade",
+          "layer": "Layer",
+          "max_shots": "Life limit (shots)",
+          "warn_ratio": "Warning ratio",
+          "count_basis": "Count source",
+          "storage_location": "Storage location"
+        },
+        "tip": {
+          "code": "Unique reticle code; cannot be changed after creation",
+          "name": "Display name",
+          "revision": "Reticle revision",
+          "grade": "Reticle grade (e.g. binary, PSM)",
+          "layer": "Process layer it applies to",
+          "max_shots": "Track-in is blocked once the shot count reaches this value; leave empty for no limit",
+          "warn_ratio": "Yellow warning at limit × ratio; empty means 0.9",
+          "count_basis": "Accumulated at track-out or reported by EAP",
+          "storage_location": "Where it is stored when not mounted"
+        }
+      },
+      "deleteTip": "Delete the reticle; not allowed once it has history, scrap it instead",
+      "statusFilterTip": "Filter by reticle status",
+      "colTip": {
+        "code": "Reticle code",
+        "status": "Current status",
+        "layer": "Applicable layer",
+        "shots": "Shots used / life limit; yellow = warning, red = limit reached",
+        "equipment": "Equipment it is mounted on",
+        "location": "Storage location"
+      },
+      "inspectStartFirst": "Start inspection first (available → inspecting) before entering a result"
+    },
+    "marking": {
+      "tplTitle": "Marking templates",
+      "tplDesc": "Marking templates per product and customer; effective after approval",
+      "jobTitle": "Marking",
+      "jobDesc": "Preview, print, inspect, reprint and void markings",
+      "mockHint": "Demo data until the backend is ready",
+      "search": "Search code, product or customer",
+      "allStatus": "All statuses",
+      "newTpl": "New template",
+      "newVersion": "New version",
+      "edit": "Edit draft",
+      "approve": "Approve",
+      "retire": "Retire",
+      "selfApprovalHint": "The drafter cannot approve their own template",
+      "formHint": "Placeholders are listed below",
+      "linesHint": "One per line; placeholders {trace_code} {date_code} {lot_id} {product_code} {customer_code}",
+      "compareWith": "Compare with",
+      "noOtherVersion": "No other versions",
+      "noDiff": "No differences",
+      "diffField": "Field",
+      "lineN": "Line {{n}}",
+      "preview": "Preview",
+      "print": "Print",
+      "inspect": "Inspect",
+      "reprint": "Reprint",
+      "void": "Void",
+      "firstPrint": "First print",
+      "voided": "Voided",
+      "voidedHint": "Voided ({{by}}: {{comment}}); no further actions",
+      "scrappedHint": "Lot is scrapped; no further actions",
+      "traceAssignedHint": "The trace code is assigned when printing",
+      "markedFrom": "First printed from",
+      "markedTo": "First printed to",
+      "printLog": "Print and inspection history",
+      "readCode": "Read-back code (OCR)",
+      "reasonId": "Reason code",
+      "comment": "Comment",
+      "ocrDiff": "Mismatch: expected {{expected}}, read {{read}}",
+      "voidConfirm": "Voiding {{code}} cannot be undone; click again to confirm",
+      "voidConfirmOk": "Confirm void",
+      "ok": "OK",
+      "status": {
+        "draft": "Draft",
+        "approved": "Approved",
+        "retired": "Retired"
+      },
+      "basis": {
+        "lot_start": "Lot start date",
+        "marking": "Marking date",
+        "assembly_done": "Assembly completion date"
+      },
+      "insp": {
+        "pending": "Pending",
+        "pass": "Pass",
+        "fail": "Fail",
+        "none": "Not printed"
+      },
+      "source": {
+        "manual": "Manual",
+        "eap": "Equipment",
+        "simulator": "Simulator"
+      },
+      "col": {
+        "code": "Code",
+        "product": "Product",
+        "customer": "Customer",
+        "version": "Version",
+        "status": "Status",
+        "lines": "Marking lines",
+        "dateCodeBasis": "Date code basis",
+        "usesBin": "Includes bin",
+        "createdBy": "Drafted by",
+        "createdAt": "Drafted at",
+        "approvedBy": "Approved by",
+        "approvedAt": "Approved at",
+        "lot": "Lot",
+        "template": "Template",
+        "dateCode": "Date code",
+        "bin": "Bin",
+        "equipment": "Marker",
+        "traceCode": "Trace code",
+        "reprints": "Reprints",
+        "inspection": "Inspection",
+        "markedAt": "First printed",
+        "lastPrintedAt": "Last printed"
+      },
+      "actHint": {
+        "inspect": "A read-back mismatch is recorded as fail",
+        "reprint": "Keeps the trace code; a reason is required",
+        "void": "Voiding is permanent; a reason is required"
+      },
+      "done": {
+        "approve": "Approved",
+        "retire": "Retired",
+        "save": "Saved",
+        "print": "Printed, trace code {{code}}",
+        "inspect": "Inspection recorded",
+        "reprint": "Reprinted",
+        "void": "Voided",
+        "newVersion": "Draft v{{v}} created"
+      },
+      "err": {
+        "reason_idRequired": "Reason code is required",
+        "commentRequired": "Comment is required",
+        "commentTooLong": "Comment must be at most {{n}} characters",
+        "maxPlaces": "At most {{n}} decimal places",
+        "trace_max_length": "Trace code must be at most {{n}} characters",
+        "trace_pattern": "Trace code may only contain A–Z, 0–9 and hyphens",
+        "trace_pattern_rule": "Trace code does not match the rule {{pattern}}",
+        "traceRequired": "Trace code is required",
+        "unknownPlaceholder": "Unknown placeholder {{name}}",
+        "selfApproval": "The drafter cannot approve their own template",
+        "readCodeTooLong": "Read-back code must be at most {{n}} characters",
+        "readCodeRequired": "Read-back code is required"
+      },
+      "code": {
+        "template_readonly": "Approved versions are read-only; create a new version",
+        "draft_exists": "A draft already exists for this product and customer",
+        "invalid_transition": "Not allowed in the current state (voided or scrapped?)",
+        "marking_template_missing": "No approved marking template for this lot's product and customer",
+        "already_marked": "This lot already has a live marking record",
+        "trace_code_mismatch": "Reported trace code {{actual}} differs from issued {{expected}}",
+        "check_blocked": "Check failed",
+        "inspect_blocked": "Marking inspection failed and is unresolved; cannot track out or override",
+        "idempotency_key_reused": "This request was already sent with different content; refresh and retry",
+        "key_missing": "Request is missing its idempotency key; refresh and retry",
+        "no_active_marking": "This lot has no live marking record"
+      },
+      "checkBlocked": "Marking inspection failed ({{trace}}); resolve before track-out",
+      "overridden": "You entered pass, but the system recorded fail: expected {{expected}}, read {{read}}",
+      "overriddenTag": "Overridden",
+      "checkNotMarked": "This lot has not been marked yet; cannot track out",
+      "checkPending": "Marking awaiting inspection ({{trace}}); pass inspection before track-out",
+      "openRecord": "Open marking record",
+      "patternInvalidHint": "Trace code pattern config is invalid; the server will validate format",
+      "leftStepHint": "The lot has left the marking step; inspection is no longer allowed"
+    },
+    "qualHistory": {
+      "title": "History",
+      "loading": "Loading…",
+      "empty": "No history yet (older records have none)",
+      "more": "Load more",
+      "system": "System",
+      "col": {
+        "at": "Time",
+        "action": "Action",
+        "changes": "Changes",
+        "reasonId": "Reason",
+        "comment": "Comment",
+        "approvedBy": "Approved by",
+        "username": "By"
+      },
+      "action": {
+        "granted": "Granted",
+        "renewed": "Renewed",
+        "changed": "Changed (incl. shortened expiry)",
+        "deactivated": "Deactivated",
+        "reactivated": "Reactivated",
+        "expired": "Expired"
+      },
+      "field": {
+        "certified_on": "Certified on",
+        "expires_on": "Expires on",
+        "is_active": "Active",
+        "operation_id": "Operation",
+        "equipment_type_id": "Equipment type"
+      },
+      "err": {
+        "selfApproval": "The approver cannot be the person submitting the request",
+        "holderApproval": "The approver cannot be the holder of this qualification",
+        "conflictingFields": "Deactivating and changing the expiry date cannot be done in one request; do them separately"
+      }
+    },
+    "qualAction": {
+      "renew": "Change expiry",
+      "deactivate": "Deactivate",
+      "reactivate": "Reactivate",
+      "renewDesc": "Any expiry change needs a reason, comment and approver; shortening is logged as \"Changed\".",
+      "deactivateDesc": "Blocks track-in; needs a reason and comment. Change expiry separately.",
+      "reactivateDesc": "After reactivation the expiry date decides track-in; no reason needed.",
+      "expiresTip": "Empty means permanent; valid through the expiry date (site time zone)",
+      "expiresUnchanged": "Same as the current expiry; nothing to save",
+      "reasonTip": "Reason code (category: operator qualification)",
+      "approverTip": "The approver cannot be you or the holder"
     }
   },
   "notify": {

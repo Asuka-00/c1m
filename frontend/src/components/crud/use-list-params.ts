@@ -4,6 +4,7 @@ import {
   ALL_VALUE,
   DEFAULT_FILTERS,
   filterKeys,
+  rangeInverted,
   rangeParam,
   type FilterDef,
 } from './filter-defs'
@@ -61,7 +62,12 @@ export function useListParams(
   const query: Record<string, string> = { ...filters }
   for (const d of filterDefs)
     if (d.type === 'daterange')
-      filterKeys(d).forEach((k, i) => {
+      filterKeys(d).forEach((k, i, ks) => {
+        // D77 补充一：倒置区间（如手改 URL）不发，避免 422 range_inverted
+        if (rangeInverted(filters[ks[0]], filters[ks[1]])) {
+          delete query[k]
+          return
+        }
         if (filters[k]) query[k] = rangeParam(filters[k], i === 1, d.kind)
       })
   const update = (fn: (next: Record<string, unknown>) => void) =>

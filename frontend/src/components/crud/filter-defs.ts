@@ -1,3 +1,5 @@
+import { addDays, getSiteTz, siteDayBoundary } from '@/lib/site-tz'
+
 /** 文本筛选的防抖时长（毫秒）。 */
 export const SEARCH_DEBOUNCE_MS = 300
 
@@ -48,30 +50,41 @@ export function filterKeys(def: FilterDef): string[] {
     : [def.name]
 }
 
-/** 本地日期（YYYY-MM-DD）。 */
+/** 浏览器本地日期（YYYY-MM-DD；业务日期请用 lib/site-tz 的站点日期）。 */
 export function ymd(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
 /**
- * 日期范围参数转换为接口参数：datetime 字段把本地日期转为当日 00:00 / 23:59:59.999 的 ISO 时刻。
+ * 日期范围参数转换为接口参数（D75）：
+ * - datetime 字段（D77 半开区间）：_from 发站点当天 0 点、_to 发站点次日 0 点，都带当时的实际偏移（后端 >= / <）；
+ * - date 字段：只取前 10 位，直接传站点日期。
  *
  * @param v - YYYY-MM-DD
  * @param end - 是否为上限
  * @param kind - 字段类型
+ * @param tz - 站点时区（默认当前站点时区）
  */
 export function rangeParam(
   v: string,
   end: boolean,
-  kind: 'date' | 'datetime' = 'datetime'
+  kind: 'date' | 'datetime' = 'datetime',
+  tz: string = getSiteTz()
 ): string {
-  if (kind === 'date') return v
-  const [y, m, d] = v.split('-').map(Number)
-  const dt = end
-    ? new Date(y, m - 1, d, 23, 59, 59, 999)
-    : new Date(y, m - 1, d, 0, 0, 0, 0)
-  return dt.toISOString()
+  const ymd = v.trim().slice(0, 10)
+  if (kind === 'date') return ymd
+  return siteDayBoundary(end ? addDays(ymd, 1) : ymd, false, tz)
+}
+
+/**
+ * D77 补充一：from 晚于 to（按日期前 10 位比较）为倒置区间，后端 422 value_error ctx.reason=range_inverted。
+ * from 等于 to 不算倒置（datetime 半开区间返回空，date 返回当天）。
+ */
+export function rangeInverted(from?: string | null, to?: string | null) {
+  const a = (from ?? '').trim().slice(0, 10)
+  const b = (to ?? '').trim().slice(0, 10)
+  return !!a && !!b && a > b
 }
 
 /** 所有表格的默认筛选：一个绑定 ?q= 的关键字搜索框 */

@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { fmtDate, fmtDateTime, t } from '@/i18n'
 import type { MesRow } from '@/lib/api/mes/common'
+import { useSiteTz } from '@/lib/site-tz-sync'
 import { Badge } from '@/components/ui/badge'
 import { daysUntil } from './due'
 
@@ -19,8 +20,10 @@ export function DueCell({
   overLabel: string
   warnLabel?: string
 }) {
+  // 站点时区变化时重新计算（D75）
+  const tz = useSiteTz()
   if (!date) return <span className='text-muted-foreground'>—</span>
-  const n = daysUntil(date)
+  const n = daysUntil(date, new Date(), tz)
   const text = fmtDate(date)
   if (done || n > warnDays) return <>{text}</>
   if (n < 0)

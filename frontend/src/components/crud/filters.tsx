@@ -9,6 +9,7 @@ import {
   SlidersHorizontal,
   X,
 } from 'lucide-react'
+import { addDays, siteToday } from '@/lib/site-tz'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -30,9 +31,9 @@ import { IconButton } from '@/components/icon-button'
 import {
   type FilterDef,
   filterKeys,
+  rangeInverted,
   filterOptionsKey,
   SEARCH_DEBOUNCE_MS,
-  ymd,
 } from './filter-defs'
 import { filterDefaults, type ListParams } from './use-list-params'
 
@@ -327,21 +328,21 @@ function DateRangeFilter({
   const [kf, kt] = filterKeys(def)
   const from = params.filters[kf] ?? ''
   const to = params.filters[kt] ?? ''
+  // D77 补充一：from 晚于 to 时拦住，不写入筛选
+  const [inverted, setInverted] = useState(false)
   const setRange = (a: string, b: string) => {
-    params.setRange(kf, a, kt, b)
+    const bad = rangeInverted(a, b)
+    setInverted(bad)
+    if (!bad) params.setRange(kf, a, kt, b)
   }
-  const today = new Date()
-  const back = (n: number) =>
-    ymd(new Date(today.getFullYear(), today.getMonth(), today.getDate() - n))
+  // D75：预设范围按站点日期
+  const today = siteToday()
+  const back = (n: number) => addDays(today, -n)
   const presets: [string, string, string][] = [
-    [t('table.range.today'), ymd(today), ymd(today)],
-    [t('table.range.last7'), back(6), ymd(today)],
-    [t('table.range.last30'), back(29), ymd(today)],
-    [
-      t('table.range.thisMonth'),
-      ymd(new Date(today.getFullYear(), today.getMonth(), 1)),
-      ymd(today),
-    ],
+    [t('table.range.today'), today, today],
+    [t('table.range.last7'), back(6), today],
+    [t('table.range.last30'), back(29), today],
+    [t('table.range.thisMonth'), `${today.slice(0, 8)}01`, today],
   ]
   const active = from || to
   return (
@@ -393,6 +394,14 @@ function DateRangeFilter({
               onChange={(e) => setRange(from, e.target.value)}
             />
           </div>
+          {inverted && (
+            <p
+              className='text-sm text-destructive'
+              data-testid='range-inverted'
+            >
+              {t('errors.rangeInverted')}
+            </p>
+          )}
           {active && (
             <Button variant='ghost' size='sm' onClick={() => setRange('', '')}>
               {t('table.range.clear')}

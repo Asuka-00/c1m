@@ -1,6 +1,7 @@
 /** MES 批次执行：阶段作业、检查、Hold、拆合批。 */
 import type { StageWarning } from '@/features/mes/execution/over-consumption'
 import { http } from '../client'
+import { offsetDatetime } from '../query-dates'
 import {
   BODY_KEYS,
   binSplitBody,
@@ -11,6 +12,7 @@ import {
   transformBody,
 } from '../request-body'
 import type { MesRow } from './common'
+import { apiError } from './mock-utils'
 
 /** 执行阶段。 */
 export type ExecStage = 'move_in' | 'track_in' | 'track_out' | 'move_out'
@@ -32,7 +34,12 @@ export interface CheckResult {
   result: 'pass' | 'warn' | 'block' | 'overridden'
   applicable: boolean
   message: string
+  /** 是否可放行；多原因时任一不能放行即 false（前端只看此值） */
   overridable: boolean
+  /** 第一个失败原因（文案，可选） */
+  reason?: string | null
+  /** 全部失败原因（按检查顺序，可选；元素为文案或 {code, message}） */
+  reasons?: unknown[] | null
   /** 附加数据（如 eqp_wait_qual 的 `{equipment, task_id}`） */
   data?: Record<string, unknown> | null
 }
@@ -157,6 +164,8 @@ export type TraceKind =
   | 'equipment'
   | 'material_lot'
   | 'customer_lot'
+  /** P3-B3：按打标追溯码查询（结果形状见 marking.ts TraceCodeResult，D79-6） */
+  | 'trace_code'
 /** 追溯行（各列按场景出现）。 */
 export type TraceRow = Record<string, unknown>
 /** 追溯结果。 */
@@ -247,8 +256,9 @@ export interface CarrierRow {
   lot_status?: string | null
   wafers: number
   capacity: number | null
-  use_count: number
-  max_uses: number | null
+  /** D76：后端可能改为定点字符串，两种都兼容（显示用 decimalText） */
+  use_count: DecimalValue
+  max_uses: DecimalValue | null
   last_cleaned_at: string | null
   clean_due_at: string | null
   due_state: 'ok' | 'warn' | 'overdue'
@@ -415,7 +425,7 @@ export interface ExecContext {
       usage: DecimalValue
       max: DecimalValue | null
       expiry: string | null
-      warn_pct: number
+      warn_pct: DecimalValue
       /** 有效预警比例（23c502d：工具 → 类型 → warn_pct/100，定点字符串；旧后端没有） */
       warn_ratio?: string | null
     })[]
@@ -423,11 +433,12 @@ export interface ExecContext {
   materials?: {
     material_id: string
     material: string
-    need: number
+    /** D76：定点字符串或数字 */
+    need: DecimalValue
     basis: string
     uom: string | null
     options: (Opt & {
-      qty: number
+      qty: DecimalValue
       expiry: string | null
       location: string | null
     })[]
@@ -640,6 +651,86 @@ export interface TransformResult {
   warnings: { code: string; message?: string; wafer?: string }[]
 }
 
+/** D77 补充三：报表 date_from / date_to 只收严格 YYYY-MM-DD。 */
+export const REPORT_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+/** 报表日期参数归一：带时间 / 偏移的值截到日期部分，保证发出的是严格 YYYY-MM-DD。 */
+export function reportDates<T extends { date_from?: string; date_to?: string }>(
+  p: T
+): T {
+  const day = (v?: string) =>
+    v == null || v === ''
+      ? undefined
+      : /^\d{4}-\d{2}-\d{2}/.test(v)
+        ? v.slice(0, 10)
+        : v
+  return { ...p, date_from: day(p.date_from), date_to: day(p.date_to) }
+}
+
+/**
+ * mock 校验（D77 补充二 / 三，与后端同序）：先查格式 422 pattern（loc=["query", 字段名]），
+ * 再查 from>to 422 value_error ctx.reason=range_inverted。通过返回 null。
+ */
+export function mockReportDateCheck(p: {
+  date_from?: string
+  date_to?: string
+}) {
+  for (const f of ['date_from', 'date_to'] as const) {
+    const v = p[f]
+    if (v != null && !REPORT_DATE.test(v))
+      return apiError(422, [
+        {
+          loc: ['query', f],
+          type: 'value_error',
+          code: 'value_error',
+          msg: `${f}: must be YYYY-MM-DD`,
+          ctx: { reason: 'pattern', pattern: REPORT_DATE.source },
+        },
+      ])
+  }
+  if (p.date_from && p.date_to && p.date_from > p.date_to)
+    return apiError(422, [
+      {
+        loc: ['query', 'date_from'],
+        type: 'value_error',
+        code: 'value_error',
+        msg: 'Value error, date_from must not be after date_to',
+        ctx: { reason: 'range_inverted' },
+      },
+    ])
+  return null
+}
+
+/** 四个报表的 mock（D77 补充二 / 三）：先 mockReportDateCheck，通过后返回空数据。 */
+export const mockReportApi = {
+  output: (p: { date_from?: string; date_to?: string }) =>
+    mockReport(p, (): DailyOutput[] => []),
+  oee: (p: { date_from?: string; date_to?: string }) =>
+    mockReport(p, (): OeeRow[] => []),
+  yieldReport: (p: {
+    date_from?: string
+    date_to?: string
+    group: YieldGroup
+  }) => mockReport(p, () => ({ rows: [] }) as unknown as YieldReport),
+  oeeTrend: (p: {
+    date_from?: string
+    date_to?: string
+    workcenter?: string
+  }) => mockReport(p, (): OeeTrendRow[] => []),
+}
+function mockReport<T>(
+  p: { date_from?: string; date_to?: string },
+  f: () => T
+): Promise<T> {
+  return new Promise((res, rej) =>
+    setTimeout(() => {
+      const e = mockReportDateCheck(p)
+      if (e) rej(e)
+      else res(f())
+    }, 0)
+  )
+}
+
 export const execApi = {
   /** 良率统计与报废帕累托。 */
   yieldReport: (p: {
@@ -648,7 +739,7 @@ export const execApi = {
     group: YieldGroup
   }) =>
     http
-      .get<YieldReport>('/mes/exec/reports/yield', { params: p })
+      .get<YieldReport>('/mes/exec/reports/yield', { params: reportDates(p) })
       .then((r) => r.data),
   /** 晶圆整理（Sorter）：重排槽位，可移入另一载具。 */
   sortWafers: (
@@ -747,25 +838,34 @@ export const execApi = {
   }) =>
     http
       .get<{ data: OeeTrendRow[] }>('/mes/exec/reports/oee-trend', {
-        params: p,
+        params: reportDates(p),
       })
       .then((r) => r.data.data),
   /** 产出日报。 */
   output: (p: { date_from?: string; date_to?: string }) =>
     http
-      .get<{ data: DailyOutput[] }>('/mes/exec/reports/output', { params: p })
+      .get<{ data: DailyOutput[] }>('/mes/exec/reports/output', {
+        params: reportDates(p),
+      })
       .then((r) => r.data.data),
   /** 设备 OEE。 */
   oee: (p: { date_from?: string; date_to?: string }) =>
     http
-      .get<{ data: OeeRow[] }>('/mes/exec/reports/oee', { params: p })
+      .get<{ data: OeeRow[] }>('/mes/exec/reports/oee', {
+        params: reportDates(p),
+      })
       .then((r) => r.data.data),
   /** Hold 列表（服务端分页 / 搜索 / 筛选）；Hold 时间范围映射为 date_from / date_to。 */
   holds: (p: Record<string, string | number | undefined>) => {
     const { held_at_from, held_at_to, ...rest } = p
     return http
       .get<{ data: HoldRow[]; count: number }>('/mes/exec/holds', {
-        params: { ...rest, date_from: held_at_from, date_to: held_at_to },
+        // a72b85b：datetime 必须带偏移（按 site_tz）
+        params: {
+          ...rest,
+          date_from: offsetDatetime(held_at_from as string | undefined),
+          date_to: offsetDatetime(held_at_to as string | undefined, true),
+        },
       })
       .then((r) => r.data)
   },

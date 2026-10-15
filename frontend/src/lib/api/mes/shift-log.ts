@@ -1,5 +1,6 @@
 /** MES 交接班日志接口。 */
 import { http } from '../client'
+import { strictDate } from '../query-dates'
 import { BODY_KEYS, pickBody } from '../request-body'
 
 /** 交接班日志行。 */
@@ -32,7 +33,13 @@ export interface ShiftLogIn {
 export const shiftLogApi = {
   list: (p: { date_from?: string; date_to?: string }) =>
     http
-      .get<{ data: ShiftLog[] }>('/mes/exec/shift-logs', { params: p })
+      .get<{ data: ShiftLog[] }>('/mes/exec/shift-logs', {
+        // a72b85b：date_from / date_to 只发严格 YYYY-MM-DD
+        params: {
+          date_from: strictDate(p.date_from),
+          date_to: strictDate(p.date_to),
+        },
+      })
       .then((r) => r.data.data),
   create: (body: ShiftLogIn) =>
     http

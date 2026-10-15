@@ -1,6 +1,8 @@
 /** 报表页公共组件：KPI 卡片、简单数据表、日期区间。 */
+import { useState } from 'react'
 import { t } from '@/i18n'
 import { Download } from 'lucide-react'
+import { errorMessage } from '@/lib/api/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -14,6 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { downloadCsv } from '@/components/crud'
+import { rangeInverted } from '@/components/crud/filter-defs'
 import { isoDay } from './report-utils'
 
 /** KPI 卡片。 */
@@ -134,12 +137,27 @@ export function DateRange({
   to,
   setFrom,
   setTo,
+  error,
 }: {
   from: string
   to: string
   setFrom: (v: string) => void
   setTo: (v: string) => void
+  /** 报表查询错误（D77 补充二：422 range_inverted / pattern 等），显示后端文案 */
+  error?: unknown
 }) {
+  // D77 补充一：from 晚于 to 时拦住（不写入），并提示
+  const [inverted, setInverted] = useState(false)
+  const pickFrom = (v: string) => {
+    const bad = rangeInverted(v, to)
+    setInverted(bad)
+    if (!bad) setFrom(v)
+  }
+  const pickTo = (v: string) => {
+    const bad = rangeInverted(from, v)
+    setInverted(bad)
+    if (!bad) setTo(v)
+  }
   const today = isoDay()
   const presets: [string, string, string][] = [
     [t('table.range.today'), today, today],
@@ -156,6 +174,7 @@ export function DateRange({
             size='sm'
             variant={from === a && to === b ? 'secondary' : 'ghost'}
             onClick={() => {
+              setInverted(false)
               setFrom(a)
               setTo(b)
             }}
@@ -170,7 +189,8 @@ export function DateRange({
           id='rp-from'
           type='date'
           value={from}
-          onChange={(e) => setFrom(e.target.value)}
+          max={to || undefined}
+          onChange={(e) => pickFrom(e.target.value)}
         />
       </div>
       <div className='grid gap-1'>
@@ -179,9 +199,20 @@ export function DateRange({
           id='rp-to'
           type='date'
           value={to}
-          onChange={(e) => setTo(e.target.value)}
+          min={from || undefined}
+          onChange={(e) => pickTo(e.target.value)}
         />
       </div>
+      {inverted && (
+        <p className='text-sm text-destructive' data-testid='range-inverted'>
+          {t('errors.rangeInverted')}
+        </p>
+      )}
+      {!inverted && error != null && (
+        <p className='text-sm text-destructive' data-testid='report-error'>
+          {errorMessage(error)}
+        </p>
+      )}
     </div>
   )
 }

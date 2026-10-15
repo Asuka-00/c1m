@@ -1,6 +1,7 @@
 /** 实体表单提交体（从 entity-form 拆出，便于测试）。 */
 import type { MesEntity } from '@/lib/api/mes/common'
-import { requiredBy } from './required'
+import { parseDecimal } from '@/lib/decimal'
+import { decimalLimit, requiredBy } from './required'
 
 type V = Record<string, unknown>
 
@@ -21,6 +22,12 @@ export function toPayload(e: MesEntity, v: V, hidden: Set<string>): V {
     const x = v[f.column]
     if (f.type === 'json') {
       out[f.column] = x === '' ? null : JSON.parse(String(x))
+    } else if (f.type === 'float' && decimalLimit(f) != null) {
+      // D72：定点字段按十进制字符串提交（不经过浮点，不丢精度）
+      out[f.column] =
+        x === '' || x == null
+          ? null
+          : (parseDecimal(String(x))?.text ?? String(x).trim())
     } else if (f.type === 'int' || f.type === 'float') {
       out[f.column] = x === '' || x == null ? null : Number(x)
     } else if (f.type === 'bool') {

@@ -12,6 +12,11 @@ import {
   type TraceResult,
   type TraceRow,
 } from '@/lib/api/mes/execution'
+import {
+  isBlankTraceCode,
+  markingApi,
+  type TraceCodeResult,
+} from '@/lib/api/mes/marking'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -28,6 +33,11 @@ import { Page } from '@/components/crud'
 import { CustomerBadges, OwnershipLabel } from '@/features/mes/common/customer'
 import { enumLabel } from '@/features/mes/common/labels'
 import { mesErrorMessage } from '@/features/mes/common/required'
+import {
+  markingErrorMessage,
+  traceErrorTexts,
+  useTraceConfig,
+} from '@/features/mes/marking/marking-rules'
 import { Pick } from './exec-parts'
 import { genealogyRows } from './trace-rows'
 
@@ -49,6 +59,7 @@ const KINDS: TraceKind[] = [
   'equipment',
   'material_lot',
   'customer_lot',
+  'trace_code',
 ]
 
 /** 批次表的列（含客户批号与归属，F6）。 */
@@ -69,7 +80,9 @@ function cell(col: string, v: unknown, row: TraceRow): React.ReactNode {
   if (col === 'ownership')
     return row.code || row.lot_no ? <OwnershipLabel info={row as never} /> : '—'
   if (v === null || v === undefined || v === '') return '—'
-  if (col === 'at') return fmtDateTime(String(v))
+  if (col === 'at' || col === 'marked_at') return fmtDateTime(String(v))
+  if (col === 'latest_inspection_status')
+    return t(`mes.marking.insp.${String(v)}`)
   if (col === 'relation') {
     const rel = enumLabel('genealogy_relation', String(v))
     return row.undone === true ? <UndoneRelation rel={rel} row={row} /> : rel
@@ -212,12 +225,23 @@ export default function TracePage() {
   const [query, setQuery] = useState<{ kind: TraceKind; code: string } | null>(
     null
   )
+  const [includeVoided, setIncludeVoided] = useState(false)
+  const isCode = query?.kind === 'trace_code'
   const q = useQuery({
     queryKey: ['mes', 'exec', tk, 'trace', query],
     queryFn: () => execApi.trace(query!.kind, query!.code),
-    enabled: !!query,
+    enabled: !!query && !isCode,
     retry: false,
   })
+  // D79-6：kind=trace_code 单独形状；默认不含已作废，开关打开传 include_voided=true
+  const tq = useQuery({
+    queryKey: ['mes', 'exec', tk, 'trace-code', query?.code, includeVoided],
+    queryFn: () => markingApi.trace(query!.code, includeVoided),
+    enabled: !!query && isCode,
+    retry: false,
+  })
+  const [codeErr, setCodeErr] = useState<string[]>([])
+  const { rule, patternInvalid } = useTraceConfig()
   const d = q.data
   return (
     <Page title={t('menu.mes-trace')} description={t('mes.traceq.hint')}>
@@ -225,7 +249,13 @@ export default function TracePage() {
         className='mb-4 flex flex-wrap items-end gap-3'
         onSubmit={(e) => {
           e.preventDefault()
-          if (code.trim()) setQuery({ kind, code: code.trim() })
+          // trace_code 原值提交（D78 补充四）；其他类型沿用去空格
+          const c = kind === 'trace_code' ? code : code.trim()
+          // D78：追溯码 ≤32、[A-Z0-9-]，前端先校验（同后端 422 value_error ctx.reason）
+          const bad = kind === 'trace_code' ? traceErrorTexts(c, rule) : []
+          setCodeErr(bad)
+          if (c && !isBlankTraceCode(c) && !bad.length)
+            setQuery({ kind, code: c })
         }}
       >
         <div className='w-40'>
@@ -251,17 +281,52 @@ export default function TracePage() {
             onChange={(e) => setCode(e.target.value)}
           />
         </div>
+        {kind === 'trace_code' && (
+          <label className='flex items-center gap-2 pb-2 text-sm'>
+            <input
+              type='checkbox'
+              checked={includeVoided}
+              onChange={(e) => setIncludeVoided(e.target.checked)}
+              data-testid='trace-include-voided'
+            />
+            {t('mes.traceq.includeVoided')}
+          </label>
+        )}
         <Button type='submit' data-testid='trace-search'>
           <Search className='size-4' />
           {t('mes.traceq.search')}
         </Button>
       </form>
-      {q.error && (
+      {kind === 'trace_code' && patternInvalid && (
+        <p
+          className='text-xs text-muted-foreground'
+          data-testid='trace-pattern-invalid'
+        >
+          {t('mes.marking.patternInvalidHint')}
+        </p>
+      )}
+      {codeErr.length > 0 && (
+        <div className='text-sm text-destructive' data-testid='trace-code-err'>
+          {codeErr.map((m) => (
+            <p key={m}>{m}</p>
+          ))}
+        </div>
+      )}
+      {isCode && tq.data && <TraceCodeBlock r={tq.data} />}
+      {isCode && tq.error && (
+        <p
+          className='text-sm text-destructive'
+          data-testid='trace-code-api-err'
+        >
+          {markingErrorMessage(tq.error)}
+        </p>
+      )}
+      {!isCode && q.error && (
         <p className='text-sm text-destructive'>
           {mesErrorMessage(q.error, undefined)}
         </p>
       )}
-      {d?.backward && (
+      {!isCode && d?.backward && (
         <LotTraceBlock
           title={d.target.code ?? ''}
           info={d.target}
@@ -384,6 +449,39 @@ function CustomerLotResult({ d }: { d: TraceResult }) {
             />
           )
       )}
+    </div>
+  )
+}
+
+/** kind=trace_code 结果：主记录 + 各次打印的检验结果（D79-6）。 */
+function TraceCodeBlock({ r }: { r: TraceCodeResult }) {
+  return (
+    <div className='grid gap-3' data-testid='trace-code-result'>
+      <h3 className='flex flex-wrap items-center gap-2 font-semibold'>
+        <span className='font-mono'>{r.trace_code}</span>
+        <Link
+          to='/$'
+          params={{ _splat: 'mes/lot-history' }}
+          search={{ tab: 'mes-lot-trace', lot: r.lot_id } as never}
+          className='text-sm font-normal underline-offset-2 hover:underline'
+        >
+          {t('mes.traceq.c.lot')}
+        </Link>
+        {r.voided && (
+          <Badge variant='outline' data-testid='trace-code-voided'>
+            {t('mes.marking.voided')}
+          </Badge>
+        )}
+      </h3>
+      <TraceTable
+        title={t('mes.traceq.marking')}
+        rows={r.prints.map((p) => ({
+          seq: p.seq,
+          marked_at: p.marked_at,
+          latest_inspection_status: p.latest_inspection_result,
+        }))}
+        cols={['seq', 'marked_at', 'latest_inspection_status']}
+      />
     </div>
   )
 }

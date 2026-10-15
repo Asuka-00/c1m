@@ -13,7 +13,13 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTenantKey } from '@/lib/api/hooks'
-import { mesApi, type MesEntity, type MesRow } from '@/lib/api/mes/common'
+import {
+  KEYED_ENTITIES,
+  mesApi,
+  type MesEntity,
+  type MesRow,
+} from '@/lib/api/mes/common'
+import { normalizeListQuery } from '@/lib/api/query-dates'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -32,12 +38,14 @@ import {
   type ListParams,
 } from '@/components/crud'
 import { IconButton } from '@/components/icon-button'
+import { useOperationKey } from '@/features/mes/common/idem-key'
+import { qualReasonMessage } from '@/features/mes/execution/qual-history-format'
 import { cellValue } from './cells'
 import { EntityForm } from './entity-form'
 import { EntityTree } from './entity-tree'
 import { entityLabel, fieldLabel, rowLabel, statusLabel } from './labels'
 import { mesErrorMessage } from './required'
-import { CELLS, ROW_RULES } from './row-rules'
+import { CELLS, canRemoveRow, ROW_RULES } from './row-rules'
 import type { MesExtraColumn } from './types'
 import { useMesFilters } from './use-mes-filters'
 
@@ -86,19 +94,37 @@ export function EntityTable({
   const fileRef = useRef<HTMLInputElement>(null)
   const hide = Object.keys(fixed)
   const filters = useMesFilters(e, hide)
-  const query = { ...params.query, ...fixed }
+  // a72b85b：date 严格 YYYY-MM-DD，datetime 带偏移
+  const query = normalizeListQuery(e, { ...params.query, ...fixed })
   const list = useQuery({
     queryKey: ['mes', e.code, 'list', tk, query],
     queryFn: () => mesApi.list(e.code, query),
   })
   const invalidate = () => qc.invalidateQueries({ queryKey: ['mes', e.code] })
-  const onErr = (err: unknown) => toast.error(mesErrorMessage(err, e))
+  // QA P2-1：资质的 self_approval / holder_approval / conflicting_fields 走资质三语文案
+  const onErr = (err: unknown) =>
+    toast.error(
+      (e.code === 'operator_qual' && qualReasonMessage(err)) ||
+        mesErrorMessage(err, e)
+    )
+  // KEYED_ENTITIES：每次操作一个 Idempotency-Key，重试（内容不变）沿用，成功后换新
+  const keyed = KEYED_ENTITIES.includes(e.code)
+  const saveKey = useOperationKey()
+  const removeKey = useOperationKey()
   const save = useMutation({
-    mutationFn: (body: Record<string, unknown>) =>
-      s.editing
-        ? mesApi.update(e.code, s.editing.id, body)
-        : mesApi.create(e.code, body),
+    mutationFn: (body: Record<string, unknown>) => {
+      const id = s.editing?.id
+      const key = keyed
+        ? saveKey.key(
+            `${id ?? 'new'}:${JSON.stringify(body, Object.keys(body).sort())}`
+          )
+        : undefined
+      return id
+        ? mesApi.update(e.code, id, body, key)
+        : mesApi.create(e.code, body, key)
+    },
     onSuccess: () => {
+      saveKey.done()
       toast.success(t('mes.saved'))
       s.closeForm()
       invalidate()
@@ -106,8 +132,14 @@ export function EntityTable({
     onError: onErr,
   })
   const remove = useMutation({
-    mutationFn: (r: MesRow) => mesApi.remove(e.code, r.id),
+    mutationFn: (r: MesRow) =>
+      mesApi.remove(
+        e.code,
+        r.id,
+        keyed ? removeKey.key(`remove:${r.id}`) : undefined
+      ),
     onSuccess: () => {
+      removeKey.done()
       toast.success(t('mes.deleted'))
       s.closeDelete()
       invalidate()
@@ -175,7 +207,7 @@ export function EntityTable({
             ? 'text-right tabular-nums'
             : undefined,
         cell: (r: MesRow) =>
-          CELLS[e.code]?.[f.name]?.(r) ?? cellValue(e, r, f.name),
+          CELLS[e.code]?.[f.name]?.(r, e) ?? cellValue(e, r, f.name),
       })),
     ...(e.versioned
       ? [
@@ -216,7 +248,7 @@ export function EntityTable({
               : undefined
           }
           onDelete={
-            editable(r) && (ROW_RULES[e.code]?.remove?.(r) ?? true)
+            editable(r) && canRemoveRow(e.code, r)
               ? () => s.openDelete(r)
               : undefined
           }
@@ -272,7 +304,11 @@ export function EntityTable({
         variant='outline'
         size='sm'
         title={t('mes.exportHint')}
-        onClick={() => mesApi.exportXlsx(e.code, params.query).catch(onErr)}
+        onClick={() =>
+          mesApi
+            .exportXlsx(e.code, normalizeListQuery(e, params.query))
+            .catch(onErr)
+        }
       >
         <Download />
         {t('mes.export')}
