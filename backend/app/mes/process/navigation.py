@@ -3,6 +3,7 @@
 import uuid
 from typing import Any
 
+from fastapi import HTTPException
 from sqlmodel import Session
 
 from app.core.spec.errors import http_422
@@ -91,7 +92,15 @@ def next_location(
     ev: list[Row] = []
     if rework:
         if not step["rework_route_id"]:
-            raise http_422([("rework", "rework: this step has no rework route")])
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "rework_route_missing",
+                    "message": "this step has no rework route",
+                    "route_step_id": str(step["id"]),
+                    "step_seq": step.get("seq"),
+                },
+            )
         steps = route_steps(s, tid, step["rework_route_id"])
         if not steps:
             raise http_422([("rework", "rework: rework route has no steps")])

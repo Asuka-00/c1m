@@ -86,7 +86,13 @@ register(
                 ref="lot_type",
                 required=True,
             ),
-            F("allow_split", "bool", "Allow split|允许分批|分割可", default=True),
+            F(
+                "allow_split",
+                "bool",
+                "Allow split|允许分批|分割可",
+                default=True,
+                filter=False,
+            ),
             F(
                 "max_children",
                 "int",
@@ -107,12 +113,19 @@ register(
                 default="suffix",
                 list=False,
             ),
-            F("allow_merge", "bool", "Allow merge|允许合批|統合可", default=True),
+            F(
+                "allow_merge",
+                "bool",
+                "Allow merge|允许合批|統合可",
+                default=True,
+                filter=False,
+            ),
             F(
                 "merge_same_wo",
                 "bool",
                 "Merge: same work order|合批：同工单|統合：同一作業指示",
                 default=True,
+                filter=False,
                 list=False,
             ),
             F(
@@ -120,18 +133,21 @@ register(
                 "bool",
                 "Merge: same product|合批：同产品|統合：同一製品",
                 default=True,
+                filter=False,
             ),
             F(
                 "merge_same_step",
                 "bool",
                 "Merge: same route step|合批：同流程步骤|統合：同一ステップ",
                 default=True,
+                filter=False,
             ),
             F(
                 "merge_same_priority",
                 "bool",
                 "Merge: same priority required|合批：要求同优先级（否则取最高）|統合：同一優先度必須（否則最高を採用）",
                 default=False,
+                filter=False,
                 list=False,
             ),
         ],
@@ -146,7 +162,7 @@ register(
     Entity(
         "qtime_rule",
         "lot",
-        "Q-Time rule|Q-Time 规则|Q タイム規則",
+        "Q-Time rule|Q-Time 规则|Q-Time ルール",
         [
             F("route", "ref", required=True, ref="route"),
             F(
@@ -169,6 +185,13 @@ register(
             F("min_minutes", "int", "Min (min)|最短（分钟）|最短（分）"),
             F("max_minutes", "int", "Max (min)|最长（分钟）|最長（分）"),
             F(
+                "warn_minutes",
+                "int",
+                "Warn at (min)|预警阈值（分钟）|事前警告（分）",
+                help="Pre-expiry warning when elapsed ≥ this (blank: none)|已用时间达到该值即预警（留空不预警）|経過がこの値以上で事前警告（空欄：なし）",
+                list=False,
+            ),
+            F(
                 "action",
                 "enum",
                 "On violation|超时动作|違反時処置",
@@ -182,7 +205,19 @@ register(
                 "Reason code|原因代码|理由コード",
                 ref="reason_code",
                 list=False,
-                required_when={"action": ("hold", "scrap")},
+                # D25 / D26：原因码选填，hold 留空时用系统原因码 qtime_expired
+                help="Optional; for hold, blank uses system reason qtime_expired"
+                "|选填；处置为 hold 时留空使用系统原因码 qtime_expired"
+                "|任意。hold で空欄の場合はシステム理由 qtime_expired（Q-Time 超過）を使用",
+            ),
+            # D24/D25：被引用的规则不能删，改为停用（停用后不计时、不处置）
+            F("is_active", "bool", default=True),
+            F(
+                "active_since",
+                "datetime",
+                "Active since|启用时间|有効化日時",
+                list=False,
+                system=True,
             ),
         ],
         phase=4,
@@ -208,7 +243,8 @@ ENUMS.update(
             ("moved_in", "Moved in|已进站|ムーブイン済"),
             ("running", "Running|加工中|処理中"),
             ("tracked_out", "Tracked out|已下机|トラックアウト済"),
-            ("completed", "Completed|已完成|完了"),
+            ("completed", "Finished (to receive)|待入库|入庫待ち"),
+            ("stored", "Stored|已入库|入庫済"),
             ("scrapped", "Scrapped|已报废|廃棄"),
             ("merged", "Merged (terminated)|已合批（终止）|統合済（終了）"),
         ],
@@ -270,6 +306,14 @@ register(
                 list=False,
             ),
             F("scrapped_qty", "int", "Scrapped|报废数|廃棄数", default=0, list=False),
+            F("bonus_qty", "int", "Bonus|补数|追加数", default=0, list=False),
+            F(
+                "rework_count",
+                "int",
+                "Reworks|返工次数|リワーク回数",
+                default=0,
+                list=False,
+            ),
             F("site", "ref", ref="site"),
             F(
                 "current_step",
@@ -310,6 +354,19 @@ register(
                 list=False,
             ),
             F("completed_at", "datetime", "Completed at|完成时间|完了日時", list=False),
+            F(
+                "received_qty",
+                "int",
+                "Received qty (good + scrap)|已入库数（良品 + 报废）|入庫済数（良品 + 廃棄）",
+                default=0,
+                list=False,
+            ),
+            F(
+                "stored_at",
+                "datetime",
+                "Stored at|入库完成时间|入庫完了日時",
+                list=False,
+            ),
             F("carrier", "ref", "Carrier|载具|キャリア", ref="carrier"),
             F(
                 "source_ref",
@@ -417,6 +474,37 @@ register(
             F("held_at", "datetime", "Held at|Hold 时间|ホールド日時"),
             F("held_by", "str", "Held by|Hold 人|ホールド者"),
             F("route_step", "ref", ref="route_step", list=False, filter=False),
+            # D20：Q-Time 自动 Hold 附加信息（手动 Hold / 旧记录为空）
+            F(
+                "qtime_rule",
+                "ref",
+                "Q-Time rule|Q-Time 规则|Q-Time ルール",
+                ref="qtime_rule",
+                list=False,
+                filter=False,
+            ),
+            F(
+                "qtime_from_step",
+                "ref",
+                "Q-Time from step|Q-Time 起始工步|Q-Time 開始ステップ",
+                ref="route_step",
+                list=False,
+                filter=False,
+            ),
+            F(
+                "qtime_to_step",
+                "ref",
+                "Q-Time to step|Q-Time 终点工步|Q-Time 終了ステップ",
+                ref="route_step",
+                list=False,
+                filter=False,
+            ),
+            F(
+                "qtime_overdue_seconds",
+                "int",
+                "Q-Time overdue (s)|Q-Time 超时秒数|Q-Time 超過秒",
+                list=False,
+            ),
             F("released_at", "datetime", "Released at|解除时间|解除日時"),
             F("released_by", "str", "Released by|解除人|解除者", list=False),
             F(
@@ -491,7 +579,7 @@ register(
                 list=False,
             ),
             F("details", "json", "Details|详情|詳細", list=False),
-            F("user_email", "str", "User|用户|ユーザー", max_length=255, search=True),
+            F("username", "str", "User|用户|ユーザー", max_length=255, search=True),
             F("at", "datetime", "Time|时间|日時"),
         ],
         phase=6,
@@ -502,6 +590,55 @@ register(
         menu=False,
         sort_default="at",
         label_field="action",
+    ),
+)
+
+
+register(
+    Entity(
+        "lot_recipe_run",
+        "exec",
+        "Recipe run|配方执行记录|レシピ実行記録",
+        [
+            F("lot", "ref", "Lot|批次|ロット", required=True, ref="lot", cascade=True),
+            F("route_step", "ref", ref="route_step", list=False, filter=False),
+            F("operation", "ref", ref="operation"),
+            F("equipment", "ref", "Equipment|设备|設備", ref="equipment"),
+            F("recipe", "ref", "Recipe|配方|レシピ", ref="recipe"),
+            F("recipe_version", "int", "Recipe version|配方版本|レシピ版数"),
+            F(
+                "eqp_recipe",
+                "str",
+                "Equipment recipe|设备端配方|装置レシピ",
+                max_length=200,
+                search=True,
+            ),
+            F(
+                "chambers",
+                "str",
+                "Chambers|腔体|チャンバー",
+                max_length=300,
+                list=False,
+            ),
+            F("params", "json", "Parameters|参数|パラメータ", list=False),
+            F(
+                "param_specs",
+                "json",
+                "Parameter specs|参数规格|パラメータ規格",
+                list=False,
+            ),
+            F("qty", "int", "Qty|数量|数量"),
+            F("track_in_at", "datetime", "Track in|上机时间|着工日時"),
+            F("track_out_at", "datetime", "Track out|下机时间|完了日時"),
+            F("username", "str", "User|用户|ユーザー", max_length=255, search=True),
+        ],
+        phase=6,
+        has_code=False,
+        readonly=True,
+        icon="FileCode",
+        order=2,
+        sort_default="track_in_at",
+        label_field="track_in_at",
     ),
 )
 
@@ -537,7 +674,7 @@ register(
                 list=False,
             ),
             F("route_step", "ref", ref="route_step", list=False, filter=False),
-            F("user_email", "str", "User|用户|ユーザー", max_length=255, search=True),
+            F("username", "str", "User|用户|ユーザー", max_length=255, search=True),
             F("at", "datetime", "Time|时间|日時"),
         ],
         phase=6,

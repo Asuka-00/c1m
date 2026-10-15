@@ -8,8 +8,10 @@ from sqlmodel import SQLModel
 
 from app.core import registry
 from app.platform.config import models as _config  # noqa: F401
+from app.platform.console import models as _console  # noqa: F401
 from app.platform.files import models as _files  # noqa: F401
 from app.platform.menus import models as _menus  # noqa: F401
+from app.platform.notification import models as _notification  # noqa: F401
 from app.platform.rbac import models as _rbac  # noqa: F401
 from app.platform.tenants import models as _tenants  # noqa: F401
 from app.platform.users import models as _users  # noqa: F401

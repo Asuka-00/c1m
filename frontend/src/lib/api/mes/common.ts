@@ -26,6 +26,8 @@ export interface MesField {
   required: boolean
   /** 条件必填：{同级字段名: 取值}；'*' 表示任意值 */
   required_when: Record<string, unknown[]> | null
+  /** 仅在条件必填满足时显示于表单 */
+  only_when_required?: boolean
   /** 为空时后端复制该同级字段（如 code） */
   default_from: string | null
   /** 为空时由后端生成 */
@@ -42,6 +44,8 @@ export interface MesField {
   help: boolean
   /** 引用选项按该同级引用字段过滤（如 route） */
   depends: string | null
+  /** 引用选项的固定筛选（如只列待入库批次） */
+  ref_filter?: Record<string, string> | null
 }
 
 /** MES 实体元数据。 */
@@ -121,9 +125,19 @@ export const mesApi = {
       .then((r) => r.data),
   newVersion: (code: string, id: string) =>
     http.post<MesRow>(`${base(code)}/${id}/new-version`).then((r) => r.data),
-  exportXlsx: async (code: string) => {
+  /** 文本型筛选字段的去重取值（下拉筛选选项）。 */
+  distinct: (code: string, field: string, q?: string) =>
+    http
+      .get<{ data: string[] }>(`${base(code)}/distinct/${field}`, {
+        params: { q: q || undefined },
+      })
+      .then((r) => r.data.data),
+  /** 导出 xlsx；传入列表查询参数时按当前关键字 / 筛选导出（忽略分页）。 */
+  exportXlsx: async (code: string, query: Record<string, unknown> = {}) => {
+    const { page: _p, page_size: _s, ...params } = query
     const r = await http.get<Blob>(`${base(code)}/export`, {
       responseType: 'blob',
+      params,
     })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(r.data)

@@ -1,10 +1,9 @@
-.git
-**/__pycache__
+**/node_modules
 **/.venv
-backend/htmlcov
-frontend/blob-report
+**/__pycache__
 frontend/dist
-frontend/node_modules
-frontend/playwright-report
-frontend/test-results
-node_modules
+backend/data
+backend/app/frontend
+**/.env
+.git
+screenshots

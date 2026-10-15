@@ -18,9 +18,8 @@
     "permissions": "権限",
     "active": "有効",
     "inactive": "無効",
-    "activeBadge": "有効",
     "superuser": "スーパーユーザー",
-    "owner": "所有者",
+    "owner": "システム管理者",
     "id": "ID",
     "select": "選択…",
     "none": "— なし —",
@@ -36,7 +35,8 @@
     "backHome": "ホームへ戻る",
     "close": "閉じる",
     "no": "いいえ",
-    "username": "ユーザー名"
+    "username": "ユーザー名",
+    "loginName": "ログイン名"
   },
   "table": {
     "rowsPerPage": "表示件数",
@@ -53,19 +53,25 @@
     "clearSearch": "検索をクリア",
     "noMatch": "「{{q}}」に一致する結果はありません。",
     "searchUsers": "メールアドレスまたは名前で検索…",
-    "searchRoles": "名前または説明で検索…",
-    "searchPermissions": "コードまたは説明で検索…",
     "searchTenants": "名前またはスラッグで検索…",
-    "searchMenus": "キー・タイトル・パスで検索…",
     "allStatuses": "すべてのステータス",
     "noMatchFilters": "現在のフィルターに一致する結果はありません。",
     "resetFilters": "フィルターをリセット",
     "allRoles": "すべてのロール",
-    "allScopes": "すべてのスコープ",
-    "allParents": "すべてのグループ",
-    "allSuperuser": "スーパーユーザー：すべて",
-    "allVisibility": "表示・非表示すべて",
-    "visible": "表示"
+    "visible": "表示",
+    "moreFilters": "その他の条件",
+    "recordFilter": "指定レコード",
+    "clearRecordFilter": "すべて表示",
+    "searchOptions": "検索…",
+    "range": {
+      "today": "今日",
+      "last7": "過去 7 日",
+      "last30": "過去 30 日",
+      "thisMonth": "今月",
+      "from": "開始日",
+      "to": "終了日",
+      "clear": "期間をクリア"
+    }
   },
   "theme": {
     "toggle": "テーマ切替",
@@ -84,42 +90,63 @@
     "en": "English"
   },
   "nav": {
-    "selectTenant": "テナントを選択",
-    "tenants": "テナント",
-    "tenantsCount": "{{count}} テナント",
+    "searchMenu": "メニュー検索",
+    "searchMenuHint": "メニュー名（中 / 英 / 日）またはキーを入力",
+    "searchMenuEmpty": "一致するメニューはありません",
+    "breadcrumb": "パンくずリスト",
+    "selectTenant": "工場を選択",
+    "tenants": "工場",
+    "tenantsCount": "{{count}} 工場",
     "noRole": "ロールなし",
     "profile": "プロフィールとパスワード",
     "superuserTag": "（スーパーユーザー）",
     "signOut": "ログアウト",
     "signOutDesc": "ログアウトしますか？再度アクセスするにはログインが必要です。",
-    "sidebar": "ナビゲーション"
+    "sidebar": "ナビゲーション",
+    "platformAdmin": "プラットフォーム管理",
+    "platformSubtitle": "プラットフォーム権限が必要",
+    "backToWorkspace": "ワークスペースに戻る",
+    "impersonating": "テナント「{{name}}」として表示中",
+    "impersonatingShort": "テナントとして表示中",
+    "exitImpersonation": "テナント表示を終了してプラットフォーム管理へ戻る",
+    "noTenant": "工場未割り当て"
   },
   "menu": {
     "dashboard": "ダッシュボード",
-    "members": "メンバー",
-    "tenant-roles": "テナントロール",
+    "members": "ユーザー",
+    "user-roles": "ロール",
     "users": "ユーザー",
     "roles": "ロール",
     "permissions": "権限",
-    "tenants": "テナント",
+    "tenants": "工場",
     "menus": "メニュー",
     "settings": "設定",
-    "config": "システム設定"
+    "config": "システム設定",
+    "notifications": "メッセージセンター",
+    "notify-subscriptions": "通知購読",
+    "mes-wo-board": "作業指示進捗",
+    "mes-change_order": "設計変更（ECN）",
+    "mes-future_hold": "予約ホールド",
+    "mes-shift-handover": "シフト引継ぎ",
+    "mes-label-print": "ラベル印刷",
+    "mes-operator_qual": "作業者資格"
   },
   "auth": {
     "appName": "FastAPI 管理画面",
     "signIn": "ログイン",
-    "signInDesc": "FastAPI バックエンドのアカウントでログインしてください。",
-    "emailRequired": "メールアドレスを入力してください。",
-    "emailInvalid": "有効なメールアドレスを入力してください。",
+    "signInDesc": "アカウントでログインしてください。",
     "passwordRequired": "パスワードを入力してください。",
     "welcome": "おかえりなさい、{{name}} さん！",
-    "loginLabel": "ユーザー名またはメール",
-    "loginPlaceholder": "admin または name@example.com",
+    "loginLabel": "ユーザー名",
+    "loginPlaceholder": "例：admin",
     "loginRequired": "ユーザー名またはメールを入力してください",
-    "loginInvalid": "有効なメールまたはユーザー名（3〜50 文字の英数字・. _ -）を入力してください"
+    "loginInvalid": "有効なユーザー名（3〜50 文字の英数字・. _ -）を入力してください"
   },
   "errors": {
+    "401": {
+      "title": "認証が必要です",
+      "desc": "このリソースにアクセスするにはログインしてください。"
+    },
     "403": {
       "title": "アクセス禁止",
       "desc": "このリソースを表示する権限がありません。"
@@ -132,10 +159,6 @@
       "title": "エラーが発生しました",
       "desc": "ご不便をおかけします。しばらくしてから再度お試しください。"
     },
-    "401": {
-      "title": "認証が必要です",
-      "desc": "このリソースにアクセスするにはログインしてください。"
-    },
     "503": {
       "title": "メンテナンス中です",
       "desc": "現在サイトはご利用いただけません。まもなく再開します。"
@@ -143,7 +166,8 @@
     "server": "サーバー内部エラー！",
     "network": "ネットワークエラー：バックエンドに接続できません。",
     "forbidden": "権限が不足しています。",
-    "validation": "入力が無効です。"
+    "validation": "入力が無効です。",
+    "generic": "処理に失敗しました。管理者にお問い合わせください。"
   },
   "backend": {
     "Incorrect email or password": "メールアドレスまたはパスワードが正しくありません",
@@ -152,26 +176,26 @@
     "Not enough permissions": "権限が不足しています",
     "Could not validate credentials": "認証情報を検証できませんでした",
     "User not found": "ユーザーが見つかりません",
-    "Tenant not found": "テナントが見つかりません",
+    "Tenant not found": "工場が存在しないか、アクセスできません",
     "Role not found": "ロールが見つかりません",
-    "Member not found": "メンバーが見つかりません",
-    "Tenant is suspended": "テナントは停止中です",
+    "Member not found": "ユーザーが見つかりません",
+    "Tenant is suspended": "この工場は停止中です。管理者にお問い合わせください",
     "The user with this email already exists in the system": "このメールアドレスのユーザーは既に存在します",
     "User with this email already exists": "このメールアドレスのユーザーは既に存在します",
     "Incorrect password": "パスワードが正しくありません",
     "New password cannot be the same as the current one": "新しいパスワードは現在のパスワードと同じにできません",
     "Super users are not allowed to delete themselves": "スーパーユーザーは自分自身を削除できません",
-    "User is already a member": "このユーザーは既にメンバーです",
-    "A tenant must keep at least one owner": "テナントには少なくとも1人の所有者が必要です",
-    "Only owners can grant the owner role": "所有者ロールを付与できるのは所有者のみです",
-    "Only owners can change owner roles": "所有者ロールを変更できるのは所有者のみです",
-    "Only owners can remove owners": "所有者を削除できるのは所有者のみです",
+    "User is already a member": "このユーザーは追加済みです",
+    "A tenant must keep at least one owner": "システム管理者を少なくとも 1 名残す必要があります",
+    "Only owners can grant the owner role": "システム管理者ロールを付与できるのはシステム管理者のみです",
+    "Only owners can change owner roles": "システム管理者のロールを変更できるのはシステム管理者のみです",
+    "Only owners can remove owners": "システム管理者を削除できるのはシステム管理者のみです",
     "Tenant slug already exists": "テナントスラッグは既に存在します",
     "Role already exists": "ロールは既に存在します",
     "Permission already exists": "権限は既に存在します",
     "Menu key already exists": "メニューキーは既に存在します",
-    "The owner role permissions are fixed": "所有者ロールの権限は固定です",
-    "The owner role cannot be deleted": "所有者ロールは削除できません",
+    "The owner role permissions are fixed": "システム管理者ロールの権限は変更できません",
+    "The owner role cannot be deleted": "システム管理者ロールは削除できません",
     "Only platform admins can change tenant status": "テナントのステータスを変更できるのはプラットフォーム管理者のみです",
     "Incorrect username/email or password": "ユーザー名/メールまたはパスワードが正しくありません",
     "User with this username already exists": "このユーザー名は既に使われています",
@@ -180,47 +204,57 @@
     "A record with the same key already exists": "同じキーのレコードが既に存在します",
     "Record is referenced by other records": "他のレコードから参照されています",
     "Read-only entity": "読み取り専用",
-    "step_ids must list every step of the route exactly once": "step_ids にはルートの全ステップを 1 回ずつ指定してください"
+    "step_ids must list every step of the route exactly once": "step_ids にはルートの全ステップを 1 回ずつ指定してください",
+    "Incorrect username or password": "ユーザー名またはパスワードが正しくありません",
+    "User belongs to other tenants; ask a platform admin": "このアカウントは一元管理されています。管理者に依頼してください",
+    "Only owners can manage owners": "システム管理者を管理できるのはシステム管理者のみです",
+    "Tenant has expired": "この工場は期限切れです。管理者にお問い合わせください",
+    "X-Tenant-ID header is required (user belongs to multiple or no tenants)": "先に工場を選択してください"
   },
   "dashboard": {
     "title": "ダッシュボード",
     "signedInAs": "ログイン中：{{email}}",
-    "currentTenant": "現在のテナント",
+    "currentTenant": "現在の工場",
     "rolesHint": "ロール：{{roles}}",
-    "selectTenant": "テナントを選択してください",
-    "members": "メンバー",
-    "inTenant": "現在のテナント内",
-    "myTenants": "所属テナント",
-    "superuserHint": "スーパーユーザー：全テナントにアクセス可能",
+    "selectTenant": "工場を選択してください",
+    "members": "ユーザー",
+    "inTenant": "現在の工場内",
+    "myTenants": "所属工場",
+    "superuserHint": "スーパーユーザー：全工場にアクセス可能",
     "effective": "有効な権限",
-    "effectiveDesc": "プラットフォームロール + 現在のテナントでのロール（GET /menus/me より）",
-    "bypass": "スーパーユーザー（全権限）"
+    "effectiveDesc": "現在保有しているすべての権限",
+    "bypass": "スーパーユーザー（全権限）",
+    "showPerms": "表示",
+    "hidePerms": "非表示",
+    "noTenantTitle": "工場・権限が未割り当てです",
+    "noTenantDesc": "工場または権限が未割り当てです。管理者にお問い合わせください。"
   },
   "users": {
     "title": "ユーザー",
     "desc": "全プラットフォームユーザー",
     "new": "新規ユーザー",
     "edit": "ユーザーを編集",
-    "editDesc": "パスワードを空欄にすると変更されません。",
-    "newDesc": "新規ユーザーには個人テナント（所有者）が作成されます。",
-    "passwordUnchanged": "変更なし",
+    "newDesc": "プラットフォームユーザーを作成し、テナントを割り当てます。",
     "passwordMin": "8文字以上",
-    "rolesTitle": "{{email}} のプラットフォームロール",
     "rolesDesc": "テナントロールは各テナントのメンバー画面で管理します。",
-    "rolesAction": "ロール",
     "delete": "ユーザーを削除",
     "deleteDesc": "{{email}} を削除しますか？アイテムも削除されます。",
     "created": "ユーザーを作成しました",
     "updated": "ユーザーを更新しました",
     "deleted": "ユーザーを削除しました",
     "regular": "一般ユーザー",
-    "usernameHint": "任意。3〜50 文字の英数字・. _ -"
+    "usernameHint": "必須。3〜50 文字の英数字と . _ -（大文字小文字を区別しない）",
+    "emailOptional": "任意。入力する場合は一意",
+    "tenants": "所属テナント",
+    "tenant": "テナント",
+    "pickTenant": "テナントを選択",
+    "addTenant": "テナントを追加",
+    "removeTenant": "このテナントを削除"
   },
   "roles": {
-    "platformTitle": "ロール",
     "platformDesc": "プラットフォーム全体のロール（ユーザーに割り当て）。",
-    "tenantTitle": "テナントロール",
-    "tenantDesc": "テナント「{{tenant}}」内のロール（メンバーに割り当て）。権限は権限画面で編集します。",
+    "tenantTitle": "ロール",
+    "tenantDesc": "ロールと権限を管理します。",
     "new": "新規ロール",
     "edit": "ロールを編集",
     "delete": "ロールを削除",
@@ -231,13 +265,9 @@
   },
   "permissions": {
     "title": "権限",
-    "desc": "権限ツリーでロールに権限を割り当てます（リソース別）。",
-    "platformTab": "プラットフォームロール",
-    "tenantTab": "テナントロール",
+    "desc": "ロールに権限を割り当てます。",
     "role": "ロール：{{name}}",
-    "noRoles": "ロールがありません",
-    "tenantOnly": "テナントロールにはテナントスコープの権限のみ付与できます。",
-    "ownerFixed": "所有者ロールは固定です。",
+    "ownerFixed": "システム管理者ロールは固定です。",
     "selected": "{{count}} 件選択",
     "count": "{{count}} 件の権限",
     "allOf": "{{resource}} の全権限",
@@ -256,7 +286,9 @@
     "saved": "権限を保存しました",
     "created": "権限を作成しました",
     "updated": "権限を更新しました",
-    "deleted": "権限を削除しました"
+    "deleted": "権限を削除しました",
+    "tenantTitle": "ロール権限",
+    "tenantDesc": "テナント「{{name}}」のロールに権限を割り当てます。"
   },
   "tenants": {
     "title": "テナント",
@@ -276,44 +308,26 @@
     "deleted": "テナントを削除しました"
   },
   "members": {
-    "title": "メンバー",
-    "desc": "テナント「{{tenant}}」のメンバー",
-    "add": "メンバーを追加",
-    "addDesc": "ユーザーは既にアカウントを持っている必要があります。",
+    "title": "ユーザー",
+    "desc": "ログインできるユーザーとロール・状態",
+    "add": "ユーザーを追加",
+    "addDesc": "ユーザー名で登録済みユーザーを追加します。",
     "rolesOf": "{{email}} のロール",
-    "tenantRoles": "テナントロール",
-    "leave": "テナントから退出",
-    "remove": "メンバーを削除",
-    "removeDesc": "{{email}} を {{tenant}} から削除しますか？",
-    "added": "メンバーを追加しました",
+    "tenantRoles": "ロール",
+    "leave": "自分のアクセス権を削除",
+    "remove": "ユーザーを削除",
+    "removeDesc": "{{email}} のアクセス権を削除しますか？",
+    "added": "ユーザーを追加しました",
     "rolesUpdated": "ロールを更新しました",
-    "removed": "メンバーを削除しました"
-  },
-  "menus": {
-    "title": "メニュー",
-    "desc": "バックエンドのメニュー/ルート定義。サイドバーとルートはここから生成されます。",
-    "new": "新規メニュー",
-    "edit": "メニューを編集",
-    "key": "キー",
-    "parent": "親",
-    "parentGroup": "親グループ",
-    "topLevel": "— トップレベル —",
-    "path": "パス",
-    "pathLabel": "パス（空欄 = グループ）",
-    "group": "（グループ）",
-    "component": "コンポーネント",
-    "componentKey": "コンポーネントキー",
-    "icon": "アイコン",
-    "permission": "権限",
-    "requiredPermission": "必要な権限",
-    "order": "順序",
-    "hidden": "非表示",
-    "delete": "メニューを削除",
-    "deleteDesc": "{{title}} を削除しますか？",
-    "deleteGroupDesc": "{{title}} とその子メニューをすべて削除しますか？",
-    "created": "メニューを作成しました",
-    "updated": "メニューを更新しました",
-    "deleted": "メニューを削除しました"
+    "removed": "ユーザーを削除しました",
+    "edit": "ユーザーを編集",
+    "addExisting": "既存ユーザーを追加",
+    "createUser": "新規ユーザー",
+    "createDesc": "新しいログインアカウントを作成します。",
+    "created": "ユーザーを作成しました",
+    "initialPassword": "初期パスワード",
+    "usernameHint": "既存ユーザーのユーザー名",
+    "sharedUser": "このアカウントは一元管理されているため、ここではロールのみ変更できます。アカウント情報とパスワードは管理者にお問い合わせください。"
   },
   "settings": {
     "title": "設定",
@@ -331,17 +345,15 @@
     "profileUpdated": "プロフィールを更新しました",
     "passwordChanged": "パスワードを変更しました",
     "language": "言語",
-    "languageDesc": "表示言語（このブラウザに保存されます）。"
+    "languageDesc": "表示言語を選択します。"
   },
   "sidebar": {
-    "toggle": "サイドバー切替"
+    "toggle": "サイドバーの切り替え"
   },
   "config": {
     "title": "システム設定",
-    "tenantDesc": "テナント「{{tenant}}」の設定。上書きしていない項目はプラットフォームの値を継承します。",
-    "platformDesc": "プラットフォームの既定値。上書きしない限り全テナントに継承されます。",
-    "tenantTab": "テナント：{{tenant}}",
-    "platformTab": "プラットフォーム既定値",
+    "tenantDesc": "システム設定。変更していない項目は既定値を使用します。",
+    "platformDesc": "全テナントの既定設定。",
     "itemCount": "{{count}} 項目",
     "inherited": "プラットフォームから継承",
     "overridden": "上書き済み",
@@ -361,11 +373,13 @@
     "support": "サポート",
     "groups": {
       "branding": "ブランディング",
-      "security": "セキュリティ"
+      "security": "セキュリティ",
+      "notification": "通知チャネル"
     },
     "groupDescs": {
       "branding": "ログイン画面・サイドバー・ブラウザタブに表示する製品名、ロゴ、フッター。",
-      "security": "プラットフォームのサインインポリシー（プラットフォーム管理者のみ）。"
+      "security": "プラットフォームのサインインポリシー（プラットフォーム管理者のみ）。",
+      "notification": "通知チャネルのプラットフォーム全体スイッチ（プラットフォーム管理者のみ）。"
     },
     "items": {
       "branding": {
@@ -380,9 +394,11 @@
       },
       "security": {
         "session_minutes": "セッション時間（分）",
-        "allow_signup": "セルフ登録を許可",
         "password_policy": "パスワードポリシー",
         "extra": "詳細（JSON）"
+      },
+      "notification": {
+        "in_app_enabled": "アプリ内通知を有効化"
       }
     },
     "itemDescs": {
@@ -395,6 +411,9 @@
         "primary_color": "ブランドのアクセントカラー。",
         "footer_copyright": "ログイン画面とアプリのフッターに表示されます。",
         "support_url": "フッターに表示する任意のサポートリンク。"
+      },
+      "notification": {
+        "in_app_enabled": "通知をアプリ内の受信箱に配信します。"
       }
     }
   },
@@ -455,7 +474,7 @@
     "edgeCall": "呼出",
     "edgeReturn": "戻り",
     "edgeRework": "リワーク",
-    "flowDraftHint": "下書き：ステップ右側のハンドルから別ステップ（分岐）またはリワークルートへドラッグ。エッジを選択し Delete で削除。ステップをクリックで編集・並べ替え。",
+    "flowDraftHint": "ステップのハンドルをドラッグして分岐を追加し、クリックで編集します。",
     "branchDialog": "ステップ {{from}} からステップ {{to}} への分岐",
     "err": {
       "required": "必須",
@@ -464,7 +483,23 @@
       "defaultsFrom": "空欄の場合は{{field}}を使用",
       "parentTypeMismatch": "親設備の設備タイプと一致する必要があります（空欄で継承）",
       "duplicateDefaultRoute": "この製品には既定ルートがあります",
-      "productNeedsDefaultRoute": "有効化の前に有効なルートを既定として割り当てる必要があります"
+      "productNeedsDefaultRoute": "有効化の前に有効なルートを既定として割り当てる必要があります",
+      "code": {
+        "on_hold": "ロットはホールド中です。先にホールドを解除してください",
+        "lot_status": "現在のロット状態ではこの操作はできません",
+        "lot_status_is": "ロットは「{{status}}」状態のため、この操作はできません",
+        "lot_status_stage": "「{{status}}」状態のロットは {{stage}} できません",
+        "lot_busy": "ロットは他の操作で使用中です。しばらくしてから再試行してください",
+        "batch_blocked": "一括作業がチェックで阻止されました。各ロットの結果を確認してください",
+        "idempotency_in_progress": "同じリクエストを処理中です。しばらくして更新してください",
+        "idempotency_key_mismatch": "再送信の内容が最初のリクエストと異なります。更新してやり直してください",
+        "idempotency_key_reused": "このリクエストキーは別の操作で使用済みです。更新して再試行してください",
+        "merge_source_invalid": "統合元ロットに重複があるか、統合先ロットが含まれています",
+        "rework_route_missing": "この工程にリワークルートが設定されていません",
+        "qtime_rule_in_use": "Q-Time 規則 {{qtime_rule_code}} は {{hold_count}} 件のホールド記録から参照されているため削除できません。無効化してください",
+        "qtime_action_invalid": "Q-Time の違反時処置は警告・ホールド・リワークのみ指定できます",
+        "hold_not_found": "ホールド記録が存在しないか削除されています。一覧を更新してください"
+      }
     },
     "autoHint": "空欄の場合は自動採番",
     "currentStep": "現在",
@@ -498,7 +533,7 @@
         "hold": "{{code}} を保留しますか？保留中は投入できません。",
         "resume": "{{code}} を再開しますか？",
         "complete": "{{code}} を完了にしますか？以降は投入できません。",
-        "close": "{{code}} をクローズしますか？元に戻せません。",
+        "close": "{{code}} をクローズしますか？配下のロットはすべて入庫・廃棄・統合済みである必要があり、元に戻せません。",
         "cancel": "{{code}} を取消しますか？元に戻せません。",
         "undo": "{{code}} の全投入を取消しますか？全ロットが先頭ステップで待機中の場合のみ可能。ロットとウェーハは削除されます。"
       }
@@ -534,7 +569,9 @@
       "previewNote": "ロット番号はプレビューです。確定時に正式採番されます。",
       "confirmStart": "{{count}} ロット / {{total}} 枚を投入",
       "done": "{{count}} ロットを投入しました",
-      "again": "続けて投入"
+      "again": "続けて投入",
+      "searchWo": "作業指示 / 製品 / ルート / 顧客を検索",
+      "woMore": "{{n}} 件中先頭 {{show}} 件を表示。キーワードで絞り込んでください"
     },
     "exec": {
       "stage": {
@@ -550,9 +587,9 @@
         "move_out": "ムーブアウト完了"
       },
       "qtimeAction": {
-        "hold": "Q タイム超過：ロットをホールド",
-        "scrap": "Q タイム超過：ロット廃棄",
-        "rework": "Q タイム超過：リワークへ"
+        "hold": "Q-Time 超過：ロットをホールド",
+        "scrap": "Q-Time 超過：ロット廃棄",
+        "rework": "Q-Time 超過：リワークへ"
       },
       "frame": {
         "sub_route": "サブルート",
@@ -582,10 +619,10 @@
       "takeBranch": "順番 {{seq}} へ分岐（条件：{{cond}}）",
       "toRework": "リワークルート {{route}} へ",
       "preview": "チェック事前確認",
-      "holdBlocks": "ロットはホールド中です。全ホールド解除後に作業できます。",
+      "holdBlocks": "ロットはホールド中です。加工中ロットは Track Out できますが、Move In・Track In・Move Out は全ホールド解除後に行えます。",
       "terminal": "ロットは{{status}}です。以降の作業はありません。",
       "checks": "チェック結果",
-      "checksHint": "実行・事前確認で結果を表示",
+      "checksHint": "実行・事前確認後にチェック結果を表示します。",
       "noChecks": "該当するチェックはありません。",
       "overrideReason": "強制解除理由",
       "override": "強制解除して実行",
@@ -605,7 +642,6 @@
       "noDc": "このステップではデータ収集は不要です。",
       "item": "項目",
       "unit": "ウェーハ・ユニット",
-      "limits": "規格・規格外処置",
       "values": "測定値（測定点）",
       "lotLevel": "ロット",
       "scrapQty": "理由別の廃棄数量",
@@ -620,10 +656,16 @@
       "nextAction": "次の操作",
       "slot": "スロット",
       "disposition": "処置",
-      "oosAction": "規格外処置"
+      "oosAction": "規格外処置",
+      "eqpRecipe": "装置レシピ名",
+      "eqpRecipeHint": "装置報告またはスキャン（任意）",
+      "chambers": "チャンバー",
+      "futureHold": "予約ホールド工程に到着、ロットをホールド：{{reason}}",
+      "qtimeHandled": "Q-Time 超過を処置しました",
+      "qtimeStageSkipped": "今回の {{stage}} は実行されていません。ロット状態を確認してください"
     },
     "trace": {
-      "hint": "ロットとユニットの全操作（日時・ユーザー・ステップ・設備・レシピ・数量・チェック結果）。",
+      "hint": "ロットとユニットの全操作履歴。",
       "empty": "履歴はまだありません。",
       "dc": "測定 {{n}} 件、規格外 {{oos}} 件",
       "scrap": "廃棄 {{n}}",
@@ -632,6 +674,8 @@
       "overrideReason": "強制解除理由：{{r}}"
     },
     "sm": {
+      "childMinus": "子ロットを減らす",
+      "childPlus": "子ロットを増やす",
       "title": "分割・統合",
       "split": "分割",
       "merge": "統合",
@@ -647,19 +691,20 @@
       "mergedInto": "統合先",
       "mergedFrom": "統合元",
       "splitQtyHint": "子ロットごとの数量を入力（残りは親ロット）。",
-      "splitUnitHint": "ウェーハ・ユニットを子ロットに割当（未割当は親に残る）。子はステップ・工程・ホールド・Q タイムを継承。",
+      "splitUnitHint": "ウェーハ・ユニットを子ロットに割り当てます（未割当は親に残ります）。",
       "childCount": "子ロット数",
       "remain": "親ロット残 {{n}} / {{total}}",
+      "tooMany": "子ロット合計は親ロット数量 {{total}} 未満にしてください（全量分割不可）",
       "child": "子ロット {{n}}",
       "childShort": "子{{n}}",
       "keep": "残す",
       "goesTo": "移動先",
       "splitDone": "分割完了：{{codes}}",
       "mergeDone": "統合完了：{{codes}}",
-      "mergeHint": "同一製品・ルート版・ステップ・工程のロット。統合元は統合済（終了）になります。",
+      "mergeHint": "統合可能な同一製品・同一ステップのロット。",
       "noCandidates": "統合可能なロットはありません。",
       "mergedQty": "統合後数量：{{n}}",
-      "qtimeNote": "Q タイムは最も早い（厳しい）開始時刻を採用。",
+      "qtimeNote": "Q-Time は最も早い（厳しい）開始時刻を採用。",
       "factChildren": "子ロット：{{list}}",
       "factParent": "親ロット {{code}} から",
       "factTarget": "{{code}} へ統合",
@@ -672,6 +717,706 @@
       "maxLots": "最大ロット数",
       "usedLots": "使用 {{n}}",
       "minQty": "1 ロット最少数"
+    },
+    "receipt": {
+      "actions": "入庫伝票の操作",
+      "noActions": "実行可能な操作はありません",
+      "confirmBtn": "確認",
+      "action": {
+        "submit": "提出",
+        "reject": "差戻し",
+        "confirm": "入庫確認",
+        "cancel": "入庫伝票を取消"
+      },
+      "done": {
+        "submit": "入庫伝票を提出しました",
+        "reject": "入庫伝票を下書きに戻しました",
+        "confirm": "入庫を確認しました",
+        "cancel": "入庫伝票を取り消しました"
+      },
+      "confirm": {
+        "submit": "{{code}} を提出しますか？提出後は明細を変更できず、数量が引き当てられます。",
+        "reject": "{{code}} を下書きに差し戻しますか？",
+        "confirm": "{{code}} の入庫を確認しますか？ロットの入庫済数と作業指示の完了数が加算され、全数入庫したロットはクローズされます。",
+        "cancel": "{{code}} を取り消しますか？元に戻せません。"
+      }
+    },
+    "wip": {
+      "title": "仕掛調整",
+      "hint": "仕掛ロットのジャンプ・廃棄・補数を行います。",
+      "jump": "ステップジャンプ",
+      "jumpDesc": "待機中のロットを同一ルートの別の工程ステップへ移動します。",
+      "toStep": "移動先ステップ",
+      "jumped": "ステップジャンプしました",
+      "override": "ブロックを強制解除（理由を入力）",
+      "adjust": "廃棄/補数",
+      "adjustDesc": "仕掛品の廃棄または補数。",
+      "scrap": "廃棄",
+      "bonus": "補数",
+      "qty": "数量",
+      "adjusted": "調整しました",
+      "runningScrapAll": "加工中のロットは全数廃棄（数量 0）できません。Track Out 後に処理してください"
+    },
+    "qtime": {
+      "hint": "待機中ロットの Q-Time 残り時間と超過状況。",
+      "refresh": "更新",
+      "sweep": "超過を今すぐスキャン",
+      "swept": "{{checked}} ロットをスキャン、{{acted}} 件処置",
+      "lot": "ロット",
+      "step": "工程",
+      "rule": "ルール",
+      "since": "起点",
+      "elapsed": "経過(分)",
+      "max": "上限(分)",
+      "remaining": "残り(分)",
+      "action": "超過処置",
+      "state": "状態",
+      "held": "ホールド中",
+      "exceeded": "超過",
+      "ok": "計時中",
+      "act": {
+        "warn": "警告",
+        "hold": "ホールド",
+        "rework": "リワーク",
+        "scrap": "廃棄"
+      },
+      "warnAt": "警告(分)",
+      "warn": "まもなく超過",
+      "search": "ロット / ルールを検索",
+      "allStates": "全状態",
+      "allProducts": "全製品",
+      "allRoutes": "全工程ルート",
+      "product": "製品",
+      "route": "工程ルート",
+      "autoRefresh": "自動更新",
+      "sweepConfirm": "待機中の全ロットを今すぐスキャンし、Q-Time 超過ロットに設定済みの処置（Hold / リワーク / スクラップ）を実行しますか？"
+    },
+    "eqp": {
+      "hint": "主設備の状態と PM 期限。",
+      "refresh": "更新",
+      "code": "設備コード",
+      "name": "設備名",
+      "state": "E10 状態",
+      "pm": "PM 計画",
+      "actions": "操作",
+      "down": "停止中",
+      "nextDue": "次回期限",
+      "pmDue": "期限切れ",
+      "daysLeft": "残り {{n}} 日",
+      "changeState": "状態変更",
+      "pmDone": "PM 完了",
+      "changed": "状態を変更しました",
+      "current": "現在の状態",
+      "toState": "遷移先",
+      "pmRecorded": "PM を記録しました",
+      "pmDesc": "PM 完了を記録します。",
+      "result": "結果",
+      "search": "設備コード / 名称を検索",
+      "allWorkcenters": "全ワークセンター",
+      "allStates": "全 E10 状態",
+      "allPm": "全 PM 状態",
+      "pmWarn": "PM 期限間近",
+      "allDown": "全て（停止有無）",
+      "notDown": "停止なし",
+      "workcenter": "ワークセンター",
+      "chambers": "チャンバー",
+      "chamberCount": "チャンバー {{n}}",
+      "chambersOf": "{{code}} のチャンバー"
+    },
+    "traceq": {
+      "hint": "ロット・ウェーハ・設備・資材ロットで上流・下流を追跡します。",
+      "kind": "対象",
+      "code": "コード",
+      "search": "検索",
+      "backward": "逆方向トレース",
+      "forward": "順方向トレース",
+      "srcLots": "元ロット",
+      "steps": "処理履歴（トラックイン）",
+      "materials": "消費資材",
+      "outLots": "産出ロット",
+      "lots": "関連ロット",
+      "k": {
+        "lot": "ロット",
+        "wafer": "ウェーハ",
+        "equipment": "設備",
+        "material_lot": "資材ロット"
+      },
+      "c": {
+        "code": "ロット",
+        "lot": "ロット",
+        "relation": "関係",
+        "qty": "数量",
+        "via": "経由",
+        "level": "階層",
+        "at": "日時",
+        "step_seq": "工程",
+        "operation": "工程",
+        "equipment": "設備",
+        "recipe": "レシピ",
+        "user": "ユーザー",
+        "material_lot": "資材ロット",
+        "product": "製品",
+        "consumed": "消費",
+        "downstream": "下流産出"
+      }
+    },
+    "holdrel": {
+      "hint": "ホールド中のロットを確認・解除します。",
+      "reason": "ホールド理由",
+      "source": "発生元",
+      "product": "製品",
+      "all": "すべて",
+      "release": "一括解除",
+      "selected": "{{n}} 件選択",
+      "released": "解除 {{ok}} 件、失敗 {{bad}} 件",
+      "lot": "ロット",
+      "step": "工程",
+      "heldAt": "ホールド日時",
+      "heldBy": "ホールド者",
+      "hours": "経過(時間)",
+      "comment": "コメント",
+      "src": {
+        "manual": "手動",
+        "qtime": "Q-Time",
+        "oos": "規格外",
+        "split": "分割継承",
+        "equipment": "装置"
+      },
+      "search": "ロット / 製品 / 理由 / コメントを検索",
+      "allStatus": "すべて（履歴含む）",
+      "status": {
+        "active": "有効",
+        "released": "解除済み"
+      },
+      "allReasons": "すべての理由",
+      "allSources": "すべての発生元",
+      "allProducts": "すべての製品",
+      "selectAll": "すべて選択",
+      "state": "状態",
+      "releasedAt": "解除日時",
+      "releasedBy": "解除者",
+      "releaseReason": "解除理由",
+      "releaseComment": "解除コメント",
+      "showTerminal": "廃棄・統合済みロットを表示",
+      "lotStatus": "ロット状態"
+    },
+    "report": {
+      "hint": "仕掛分布・滞留ロット・日次産出。",
+      "lots": "仕掛ロット",
+      "qty": "仕掛数量",
+      "onHold": "ホールドロット",
+      "byStatus": "状態別",
+      "byStep": "工程別",
+      "byProduct": "製品別",
+      "aging": "滞留 Top 20",
+      "output": "日次産出",
+      "status": "状態",
+      "route": "ルート",
+      "step": "工程",
+      "operation": "オペレーション",
+      "product": "製品",
+      "lot": "ロット",
+      "hours": "滞留(時間)",
+      "since": "最終操作",
+      "day": "日付",
+      "moves": "ムーブアウト回数",
+      "moveQty": "ムーブアウト数量",
+      "scrapQty": "廃棄数量",
+      "completed": "完了ロット",
+      "to": "終了日",
+      "oeeHint": "OEE = 時間稼働率 × 性能稼働率 × 良品率。",
+      "equipment": "設備",
+      "loading": "負荷(時間)",
+      "prd": "PRD(時間)",
+      "availability": "時間稼働率",
+      "performance": "性能稼働率",
+      "quality": "良品率",
+      "oee": "OEE",
+      "good": "良品",
+      "scrap": "廃棄",
+      "uphMissing": "UPH なし",
+      "from": "開始日",
+      "oeeTrend": "日次トレンド",
+      "allLotTypes": "全ロット種別"
+    },
+    "queue": {
+      "scan": "ロット ID をスキャン / 入力して Enter",
+      "notFound": "ロット {{code}} が見つかりません",
+      "search": "ロット / 製品を検索",
+      "allStatuses": "全ステータス",
+      "allProducts": "全製品",
+      "allOperations": "全工程",
+      "allHold": "ホールド：全て",
+      "notHeld": "ホールドなし",
+      "held": "ホールド中",
+      "empty": "仕掛ロットはありません",
+      "lot": "ロット",
+      "priority": "優先度",
+      "product": "製品",
+      "step": "ステップ · 工程",
+      "status": "ステータス",
+      "qty": "数量",
+      "qtime": "Q-Time 残り(分)",
+      "hours": "滞留(時間)",
+      "open": "作業",
+      "hot": "ホットロット",
+      "allPriorities": "すべてのロット",
+      "hotOnly": "ホットロットのみ",
+      "notHot": "通常ロット"
+    },
+    "due": {
+      "overdue": "納期遅れ",
+      "expired": "期限切れ",
+      "expiring": "期限間近",
+      "ongoing": "継続中",
+      "hours": "{{n}} 時間"
+    },
+    "exportHint": "現在の検索・フィルター条件で出力",
+    "pmStatus": {
+      "title": "期限状態",
+      "due": "{{n}} 台超過",
+      "warn": "{{n}} 台期限間近",
+      "ok": "正常",
+      "next": "次回 {{d}}"
+    },
+    "fieldIs": "{{field}}：{{value}}",
+    "treeToggle": "展開 / 折りたたみ",
+    "tree": {
+      "all": "すべての{{name}}",
+      "expand": "展開",
+      "collapse": "折りたたむ"
+    },
+    "wmap": {
+      "title": "ウェーハマップ",
+      "history": "ウェーハ履歴：{{code}}"
+    },
+    "batch": {
+      "hint": "同一装置で複数ロットを一括着工・完了します。",
+      "search": "ロット・キャリア検索",
+      "allProducts": "全製品",
+      "allOps": "全工程",
+      "lot": "ロット",
+      "product": "製品",
+      "step": "ステップ",
+      "carrier": "キャリア",
+      "qty": "数量",
+      "selectAll": "すべて選択",
+      "run": "一括{{stage}}（{{n}}）",
+      "done": "{{ok}} / {{total}} ロット完了",
+      "blocked": "ブロックされたロットがあるため実行しません",
+      "ok": "成功",
+      "failed": "失敗"
+    },
+    "carrier": {
+      "hint": "キャリアの状態確認・洗浄・載せ替え。",
+      "search": "キャリア・ロット検索",
+      "allTypes": "全タイプ",
+      "allStatus": "全状態",
+      "allDue": "全洗浄状態",
+      "due": {
+        "ok": "正常",
+        "warn": "期限間近",
+        "overdue": "要洗浄"
+      },
+      "code": "キャリア",
+      "type": "タイプ",
+      "status": "状態",
+      "lot": "ロット",
+      "fill": "ウェーハ・容量",
+      "usage": "使用回数",
+      "cleanDue": "洗浄期限",
+      "clean": "洗浄",
+      "cleanConfirm": "キャリア {{code}} を洗浄済みにしますか？",
+      "cleaned": "洗浄を記録しました",
+      "change": "載せ替え",
+      "changeDesc": "ロット {{lot}} を {{code}} から移動：",
+      "target": "移動先キャリア",
+      "moved": "載せ替えました",
+      "splitMerge": "分割・統合"
+    },
+    "sorter": {
+      "action": "ソート",
+      "title": "ウェーハソート：{{lot}}（{{code}}）",
+      "target": "移動先キャリア（任意）",
+      "wafer": "ウェーハ",
+      "from": "元スロット",
+      "to": "新スロット",
+      "pack": "順に詰める",
+      "run": "ソート実行",
+      "done": "ソート完了"
+    },
+    "yield": {
+      "hint": "工程・製品・ロット別の歩留まりと廃棄理由。",
+      "search": "コード・名称検索",
+      "allBands": "全歩留まり",
+      "band": {
+        "low": "90% 未満",
+        "mid": "90%–98%",
+        "high": "98% 以上"
+      },
+      "by": {
+        "operation": "工程",
+        "product": "製品",
+        "lot": "ロット"
+      },
+      "total": "良品 {{good}}・廃棄 {{scrap}}・歩留まり {{y}}",
+      "pareto": "廃棄理由パレート",
+      "noScrap": "期間内に廃棄はありません。",
+      "qty": "数量",
+      "cum": "累積比率",
+      "name": "名称",
+      "good": "良品",
+      "scrap": "廃棄",
+      "yield": "歩留まり"
+    },
+    "woBoard": {
+      "hint": "作業指示の進捗、仕掛分布、納期警告。",
+      "search": "作業指示 / 製品を検索",
+      "allRisks": "すべての納期状態",
+      "risk": {
+        "overdue": "遅延",
+        "at_risk": "納期間近",
+        "ok": "順調",
+        "none": "納期なし",
+        "done": "完了"
+      },
+      "warnDays": "警告日数",
+      "code": "作業指示",
+      "product": "製品",
+      "status": "状態",
+      "qty": "完了/仕掛/廃棄/計画",
+      "progress": "進捗",
+      "wipByOp": "工程別仕掛",
+      "due": "納期",
+      "daysLeft": "残り {{n}} 日",
+      "riskCol": "納期状態",
+      "ruleDefault": "ルール"
+    },
+    "ecn": {
+      "release": "発行",
+      "cancel": "変更取消",
+      "confirm": {
+        "release": "{{code}} を発行しますか？発効日時到来済みなら即時発効します。",
+        "cancel": "{{code}} を取り消しますか？"
+      },
+      "done": {
+        "released": "発行済（発効待ち）",
+        "applied": "発効しました",
+        "cancelled": "取り消しました"
+      },
+      "result": "新版 v{{v}}、参照 {{n}} 件を更新",
+      "switched": "新版へ切替えたロット",
+      "kept": "旧版継続のロット"
+    },
+    "prio": {
+      "title": "優先度変更",
+      "desc": "ホットロットは優先して払い出し、強調表示されます。",
+      "new": "新しい優先度",
+      "done": "優先度を変更しました"
+    },
+    "shiftLog": {
+      "hint": "シフトごとに引継ぎ事項と未完了事項を記録し、次シフトが確認します。",
+      "search": "引継ぎ内容 / 引継ぎ者を検索",
+      "allStatus": "すべての状態",
+      "allShifts": "すべてのシフト",
+      "status": {
+        "open": "引継ぎ待ち",
+        "acknowledged": "引継ぎ済"
+      },
+      "statusCol": "引継ぎ",
+      "date": "日付 / シフト",
+      "shift": "シフト",
+      "area": "エリア",
+      "summary": "引継ぎ事項",
+      "openItems": "未完了事項",
+      "handedBy": "引継ぎ者",
+      "new": "引継ぎ登録",
+      "newDesc": "このシフトの引継ぎ事項と未完了事項を登録します。",
+      "submit": "登録",
+      "created": "引継ぎを登録しました",
+      "ack": "引継ぎ確認",
+      "ackDesc": "引継ぎ事項と未完了事項を確認しました。",
+      "ackComment": "メモ（任意）",
+      "acked": "引継ぎを確認しました"
+    },
+    "label": {
+      "hint": "ロットまたはキャリアを選び、バーコード / QR ラベルを印刷します。",
+      "search": "コード / 製品を検索",
+      "allStatus": "すべての状態",
+      "kind": {
+        "lot": "ロットラベル",
+        "carrier": "キャリアラベル"
+      },
+      "code": {
+        "both": "バーコード + QR",
+        "barcode": "バーコードのみ",
+        "qr": "QR のみ"
+      },
+      "print": "{{n}} 枚印刷",
+      "pickAll": "このページを選択",
+      "codeCol": "コード",
+      "info": "詳細",
+      "status": "状態",
+      "qty": "数量"
+    },
+    "reasonCode": {
+      "qtime_expired": "Q-Time 超過"
+    },
+    "qtimeHold": {
+      "overdue": "{{time}} 超過",
+      "steps": "工程 {{from}} → {{to}}",
+      "rule": "Q-Time ルール",
+      "minutes": "{{m}} 分",
+      "hours": "{{h}} 時間",
+      "hoursMinutes": "{{h}} 時間 {{m}} 分"
     }
+  },
+  "notify": {
+    "bell": "通知",
+    "title": "通知",
+    "unreadCount": "未読 {{count}} 件",
+    "markAllRead": "すべて既読にする",
+    "empty": "通知はありません",
+    "viewAll": "メッセージセンターですべて表示",
+    "center": "メッセージセンター",
+    "centerDesc": "購読したイベントからの通知",
+    "search": "タイトル・対象を検索…",
+    "allTypes": "すべての種類",
+    "allRead": "既読・未読すべて",
+    "allSeverities": "すべての重要度",
+    "unread": "未読",
+    "read": "既読",
+    "time": "日時",
+    "severityCol": "重要度",
+    "type": "イベント種類",
+    "content": "内容",
+    "object": "関連対象",
+    "open": "開く",
+    "readAt": "既読日時",
+    "severity": {
+      "info": "情報",
+      "warning": "警告",
+      "critical": "重大"
+    },
+    "sub": {
+      "title": "通知購読",
+      "desc": "各イベントを受け取るロール・ユーザーを設定",
+      "new": "購読を追加",
+      "edit": "購読を編集",
+      "delete": "購読を削除",
+      "deleteDesc": "購読「{{name}}」を削除しますか？",
+      "created": "購読を作成しました",
+      "updated": "購読を更新しました",
+      "deleted": "購読を削除しました",
+      "search": "名前を検索…",
+      "allStatus": "すべての状態",
+      "enabled": "有効",
+      "disabled": "無効",
+      "name": "名前",
+      "roles": "ロール",
+      "users": "ユーザー",
+      "channels": "チャネル",
+      "status": "状態"
+    },
+    "channel": {
+      "in_app": "アプリ内"
+    },
+    "event": {
+      "mes": {
+        "qtime_warn": {
+          "label": "Q-Time 事前警告",
+          "title": "ロット {{lot}} の Q-Time {{rule}} が {{left}} 分後に超過します"
+        },
+        "qtime_exceeded": {
+          "label": "Q-Time 超過",
+          "title": "ロット {{lot}} の Q-Time {{rule}} 超過：{{minutes}} > {{max}} 分（{{action}}）"
+        },
+        "lot_hold": {
+          "label": "ロット自動ホールド",
+          "title": "ロット {{lot}} が自動ホールドされました（{{source}}）：{{reason}}"
+        },
+        "oos": {
+          "label": "規格外（OOS）",
+          "title": "ロット {{lot}} の工程 {{step}} で規格外：{{items}}（{{action}}）"
+        },
+        "pm_due": {
+          "label": "PM 期限間近",
+          "title": "設備 {{equipment}} の PM {{plan}} の期限が近づいています"
+        },
+        "pm_overdue": {
+          "label": "PM 期限切れ",
+          "title": "設備 {{equipment}} の PM {{plan}} が期限切れです"
+        },
+        "eqp_down": {
+          "label": "設備ダウン",
+          "title": "設備 {{equipment}} ダウン：{{state}} {{state_name}}"
+        },
+        "downtime": {
+          "label": "停止記録",
+          "title": "設備 {{equipment}} の停止を記録：{{reason}}"
+        },
+        "wo_due": {
+          "label": "作業指示納期間近",
+          "title": "作業指示 {{wo}} 納期 {{due}} 間近（進捗 {{progress}}%）"
+        },
+        "wo_overdue": {
+          "label": "作業指示納期遅延",
+          "title": "作業指示 {{wo}} が {{days}} 日遅延（納期 {{due}}）"
+        },
+        "qual_expiring": {
+          "label": "資格期限間近",
+          "title": "{{user}} の {{operation}} 資格は {{date}} に期限切れ"
+        },
+        "qual_expired": {
+          "label": "資格期限切れ",
+          "title": "{{user}} の {{operation}} 資格は {{date}} に期限切れ"
+        }
+      }
+    }
+  },
+  "home": {
+    "wip": "仕掛ロット",
+    "wipQty": "総数量 {{n}}",
+    "hold": "Hold ロット",
+    "holdHint": "Hold 解除へ",
+    "qtime": "Q-Time 超過 / 警告",
+    "qtimeHint": "待機ロットの現在ステップ",
+    "equipment": "設備 E10 状態",
+    "pm": "PM 超過 / 期限間近",
+    "pmHint": "主設備の PM 計画",
+    "trackOuts": "本日のトラックアウト",
+    "trackOutsHint": "ロットのトラックアウト回数"
+  },
+  "platform": {
+    "plans": {
+      "trial": "トライアル",
+      "standard": "スタンダード",
+      "enterprise": "エンタープライズ"
+    },
+    "allPlans": "すべてのプラン",
+    "tenantsDesc": "全テナントを管理します。",
+    "plan": "プラン",
+    "expiresAt": "有効期限",
+    "expired": "期限切れ",
+    "never": "無期限",
+    "owners": "オーナー",
+    "memberCount": "メンバー数",
+    "members": "メンバー",
+    "branding": "ブランディング",
+    "enter": "テナントとして入る",
+    "expiresHint": "YYYY-MM-DD、空欄は無期限",
+    "ownerAssigned": "オーナーを設定しました",
+    "membersOf": "「{{name}}」のメンバー",
+    "membersDesc": "テナントのメンバーとロールを管理します。",
+    "assignOwner": "オーナーにする",
+    "brandingOf": "「{{name}}」のブランディング",
+    "brandingDesc": "このテナントのブランディング。",
+    "channelSaved": "通知チャネルを更新しました",
+    "channelsDesc": "通知チャネルを管理します。",
+    "channel": "チャネル",
+    "code": "コード",
+    "enabled": "有効",
+    "searchLogin": "メール / IP を検索",
+    "allResults": "すべての結果",
+    "success": "成功",
+    "failure": "失敗",
+    "loginLogDesc": "すべてのログイン試行（成功・失敗）。セキュリティ監査用。",
+    "time": "日時",
+    "result": "結果",
+    "reason": "理由",
+    "reasons": {
+      "bad_credentials": "ユーザー名またはパスワードが違います",
+      "inactive": "無効なユーザー"
+    },
+    "userAgent": "クライアント",
+    "searchOps": "操作者 / 操作 / 対象を検索",
+    "allActions": "すべての操作",
+    "actions": {
+      "tenant.create": "テナント作成",
+      "tenant.update": "テナント更新",
+      "tenant.delete": "テナント削除",
+      "tenant.enter": "テナントとして入る",
+      "tenant.exit": "テナントから退出",
+      "tenant.owner": "オーナー指定",
+      "tenant.branding": "テナントブランディング変更",
+      "member.add": "メンバー追加",
+      "member.roles": "メンバーロール変更",
+      "member.remove": "メンバー削除",
+      "config.update": "プラットフォーム設定変更",
+      "channel.update": "通知チャネル変更",
+      "audit.cross_tenant_read": "テナント横断監査の閲覧"
+    },
+    "opsLogDesc": "プラットフォーム管理者の操作履歴。",
+    "actor": "操作者",
+    "action": "操作",
+    "target": "対象",
+    "detail": "詳細",
+    "searchAudit": "レコード / ユーザーを検索",
+    "allTenants": "すべてのテナント",
+    "auditDesc": "全テナントの業務監査ログ。",
+    "tenant": "テナント",
+    "entity": "エンティティ",
+    "record": "レコード",
+    "spaces": {
+      "workspace": "ワークスペース",
+      "platform": "プラットフォーム管理"
+    },
+    "allSpaces": "すべてのスペース",
+    "space": "スペース",
+    "ownerUsername": "オーナーのユーザー名（既存ユーザー）"
+  },
+  "rbac": {
+    "actions": "操作",
+    "enabled": "有効",
+    "disabled": "無効",
+    "displayName": "表示名",
+    "updatedBy": "更新者",
+    "updatedAt": "更新日時",
+    "saved": "保存しました",
+    "deleted": "削除しました",
+    "resetPassword": "パスワードをリセット",
+    "resetPasswordDesc": "{{name}} の新しいパスワードを設定します。",
+    "newPassword": "新しいパスワード",
+    "passwordReset": "パスワードをリセットしました",
+    "pickRoles": "ロールを選択…",
+    "roleCode": "ロールコード",
+    "roleName": "ロール名",
+    "permCount": "権限数",
+    "permTree": "権限",
+    "searchTree": "名前 / コード / パスで検索",
+    "expandAll": "すべて展開",
+    "collapseAll": "すべて折りたたむ",
+    "selectedOf": "{{n}} / {{total}} 件選択",
+    "treeTitle": "権限ツリー",
+    "treeDesc": "メニューと権限を管理します。",
+    "newRoot": "ルート権限を追加",
+    "child": "子項目",
+    "childMenu": "サブメニュー",
+    "childPerm": "権限 / ボタン",
+    "newChildMenu": "「{{parent}}」のサブメニューを追加",
+    "newChildPerm": "「{{parent}}」に権限を追加",
+    "editMenu": "メニューを編集",
+    "code": "コード",
+    "type": "種類",
+    "path": "パス",
+    "sort": "並び順",
+    "visible": "表示",
+    "shown": "表示",
+    "hidden": "非表示",
+    "space": "スペース",
+    "allSpaces": "すべてのスペース",
+    "allTypes": "すべての種類",
+    "spaces": {
+      "workspace": "ワークスペース",
+      "platform": "プラットフォーム"
+    },
+    "menuKey": "メニューキー",
+    "icon": "アイコン",
+    "component": "コンポーネント",
+    "menuPerm": "アクセス権限コード",
+    "otherPerms": "その他の権限",
+    "deleteNode": "ノードを削除",
+    "deleteMenuDesc": "メニュー「{{name}}」とサブメニューを削除しますか？",
+    "search": "検索…"
   }
 }

@@ -38,6 +38,20 @@ ENUMS.update(
             ("per_lot", "Per lot|每批|ロット当たり"),
             ("per_unit", "Per unit / wafer|每单元/片|ユニット・ウェーハ当たり"),
         ],
+        "change_type": [
+            ("route", "Route|流程|ルート"),
+            ("recipe", "Recipe|配方|レシピ"),
+        ],
+        "wip_rule": [
+            ("keep_old", "WIP keeps old version|在制沿用旧版|仕掛は旧版継続"),
+            ("switch_new", "WIP switches to new|在制切换新版|仕掛を新版へ切替"),
+        ],
+        "ecn_status": [
+            ("draft", "Draft|草稿|下書き"),
+            ("released", "Released (pending)|已发布（待生效）|発行済（発効待ち）"),
+            ("applied", "Effective|已生效|発効済"),
+            ("cancelled", "Cancelled|已取消|取消"),
+        ],
         "resource_kind": [
             ("equipment", "Equipment|设备|設備"),
             ("equipment_group", "Equipment group|设备组|設備グループ"),
@@ -150,12 +164,17 @@ register(
                 "Branch condition|分支条件|分岐条件",
                 max_length=200,
                 search=True,
-                help="e.g. lot_type == 'ENG' — evaluated at execution time (not in this module)|"
-                "例如 lot_type == 'ENG'，执行时判定（不在本模块）|"
-                "例：lot_type == 'ENG'（実行時に判定。本モジュール対象外）",
+                help="e.g. lot_type == 'ENG'|例如 lot_type == 'ENG'|例：lot_type == 'ENG'",
                 required_when={"branch_to_seq": ("*",)},
             ),
             F("branch_to_seq", "int", "Branch to seq.|分支跳转序号|分岐先順番"),
+            F(
+                "max_rework",
+                "int",
+                "Max reworks|最大返工次数|最大リワーク回数",
+                help="Blank: unlimited|留空不限|空欄：無制限",
+                list=False,
+            ),
             F(
                 "rework_return",
                 "enum",
@@ -333,6 +352,13 @@ register(
                 max_length=120,
                 search=True,
             ),
+            F(
+                "ideal_uph",
+                "float",
+                "Ideal throughput (UPH)|理论产能（UPH）|理論スループット（UPH）",
+                help="Optional; overrides the equipment UPH for OEE|可选，OEE 计算优先于设备 UPH|任意。OEE 計算で設備 UPH より優先",
+                list=False,
+            ),
             F("is_enabled", "bool", "Enabled|启用|有効", default=True),
         ],
         phase=3,
@@ -371,3 +397,68 @@ register(
 
 # equipment detail sheet shows its capabilities
 ENTITIES["equipment"].children.append("equipment_capability")
+
+
+register(
+    Entity(
+        "change_order",
+        "process",
+        "Engineering change|工程变更|設計変更",
+        [
+            F(
+                "change_type",
+                "enum",
+                "Change of|变更对象|変更対象",
+                required=True,
+                enum="change_type",
+                default="route",
+            ),
+            F(
+                "route",
+                "ref",
+                "New route version|新流程版本|新ルート版",
+                ref="route",
+                required_when={"change_type": ("route",)},
+                only_when_required=True,
+            ),
+            F(
+                "recipe",
+                "ref",
+                "New recipe version|新配方版本|新レシピ版",
+                ref="recipe",
+                required_when={"change_type": ("recipe",)},
+                only_when_required=True,
+            ),
+            F("effective_at", "datetime", "Effective at|生效时间|発効日時"),
+            F(
+                "wip_rule",
+                "enum",
+                "WIP rule|在制规则|仕掛ルール",
+                enum="wip_rule",
+                default="keep_old",
+                required=True,
+                help="Route changes: waiting lots stay on the old version or move to the new one by step seq|流程变更：等待中的在制批次沿用旧版，或按工步序号切换到新版|ルート変更：待機中の仕掛ロットは旧版継続、または工程番号で新版へ切替",
+            ),
+            F("reason", "text", "Reason|变更原因|変更理由", list=False),
+            F(
+                "ecn_status",
+                "enum",
+                "Status|状态|状態",
+                enum="ecn_status",
+                system=True,
+                default="draft",
+            ),
+            F(
+                "applied_at",
+                "datetime",
+                "Applied at|生效于|発効日時",
+                system=True,
+            ),
+            F("result", "json", "Result|执行结果|実行結果", system=True, list=False),
+        ],
+        phase=3,
+        icon="GitPullRequestArrow",
+        order=9,
+        sort_default="created_at",
+    ),
+)

@@ -4,17 +4,23 @@ override, E10 auto transitions, material consumption, tool life, DC + OOS
 actions, Q-Time actions, holds, tracking levels, permissions."""
 
 import uuid
-from datetime import date, timedelta
+from datetime import timedelta
 from typing import Any
 
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlmodel import Session
 
+from app.core.spec.base import now
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
 from app.testing.mes import API, Mes
-from app.testing.utils import random_email, random_lower_string
+from app.testing.utils import (
+    login_name,
+    random_email,
+    random_lower_string,
+    username_for,
+)
 
 EXEC = f"{API}/exec"
 
@@ -266,6 +272,8 @@ class Line:
 def _msgs(r: Any) -> str:
     d = r["detail"]
     if isinstance(d, dict):
+        if "results" not in d:  # N5：{code, message, ...}
+            return f"{d.get('code')}: {d.get('message', '')}"
         return " ".join(x["message"] for x in d["results"])
     return " ".join(x["msg"] for x in d)
 
@@ -297,7 +305,8 @@ def test_stage_sequence_history_and_completion(client: TestClient, db: Session) 
     assert f.ctx(lot)["step"]["is_last"]
     r = f.run_step(lot)
     assert r["lot"]["lot_status"] == "completed" and r["next_step"] is None
-    assert f.m.list("work_order")["data"][0]["completed_qty"] == 2
+    # 完工 = 待入库；工单完工数在入库确认时才累加
+    assert f.m.list("work_order")["data"][0]["completed_qty"] == 0
     acts = [
         h["action"]
         for h in f.m.list(
@@ -368,7 +377,9 @@ def test_branch_and_rework_routing(client: TestClient, db: Session) -> None:
     f.stage(b, "track_in", equipment_id=f.eq["id"])
     f.stage(b, "track_out")
     assert "branch" in _msgs(f.stage(b, "move_out", 422, branch=True))
-    assert "rework" in _msgs(f.stage(b, "move_out", 422, rework=True))
+    d = f.stage(b, "move_out", 422, rework=True)["detail"]  # M3 / N5
+    assert d["code"] == "rework_route_missing" and d["message"] and d["route_step_id"]
+    assert f.lot(b)["lot_status"] == "tracked_out"
 
 
 # ---------------- check resolution / override ----------------
@@ -418,14 +429,18 @@ def test_block_override_permission_and_audit(client: TestClient, db: Session) ->
     )
     # a member may read but not run / override
     email, pw = random_email(), random_lower_string()
-    crud.create_user(session=db, user_create=UserCreate(email=email, password=pw))
+    crud.create_user(
+        session=db,
+        user_create=UserCreate(email=email, username=username_for(email), password=pw),
+    )
     client.post(
         f"{API[:-4]}/tenants/{f.m.tid}/members",
         headers=f.m.h,
-        json={"email": email, "roles": ["member"]},
+        json={"username": login_name(email), "roles": ["member"]},
     )
     tok = client.post(
-        f"{API[:-4]}/login/access-token", data={"username": email, "password": pw}
+        f"{API[:-4]}/login/access-token",
+        data={"username": login_name(email), "password": pw},
     ).json()["access_token"]
     hm = {"Authorization": f"Bearer {tok}", "X-Tenant-ID": f.m.tid}
     assert client.get(f"{EXEC}/lots/{lot['id']}", headers=hm).status_code == 200
@@ -625,7 +640,9 @@ def test_material_sufficiency_and_consumption(client: TestClient, db: Session) -
             "material_id": f.mat["id"],
             "qty_remaining": 10,
             "uom_id": m.fx("uom"),
-            "expiry_date": str(date.today() - timedelta(days=1)),
+            "expiry_date": str(
+                now().date() - timedelta(days=1)
+            ),  # 与应用时钟（UTC）一致,
         },
     )
     assert ml1["initial_qty"] == 3
@@ -671,7 +688,9 @@ def test_tool_life(client: TestClient, db: Session) -> None:
         {
             "code": "T2",
             "fixture_id": f.fixture["id"],
-            "expiry_date": str(date.today() - timedelta(days=1)),
+            "expiry_date": str(
+                now().date() - timedelta(days=1)
+            ),  # 与应用时钟（UTC）一致,
         },
     )
     f.bind("track_in", ("tool_life", "block", {}))
@@ -848,55 +867,66 @@ def test_qtime_min_and_violation_actions(client: TestClient, db: Session) -> Non
             "reason_id": f.reasons["hold"]["id"],
         },
     )
-    f.bind("move_in", ("qtime", "block", {}))
+    f.bind("track_in", ("qtime", "block", {}))  # D19：Q-Time 在 Track In 卡控
     a, b, c = f.start(1, 1, 1)
     for x in (a, b, c):
         f.run_step(x)
-    assert "min 1 min" in _msgs(f.stage(a, "move_in", 409, equipment_id=f.eq["id"]))
+    f.stage(a, "move_in", equipment_id=f.eq["id"])
+    assert "min 1 min" in _msgs(f.stage(a, "track_in", 409, equipment_id=f.eq["id"]))
     f.sql(
         "UPDATE mes_lot_history SET at = at - interval '10 minutes' WHERE lot_id = :l AND action = 'move_out'",
         l=a["id"],
     )
-    f.stage(a, "move_in", equipment_id=f.eq["id"])  # inside the window
+    f.stage(a, "track_in", equipment_id=f.eq["id"])  # inside the window
     # exceeded -> default action hold (once per violation)
     f.sql(
         "UPDATE mes_lot_history SET at = at - interval '2 hours' WHERE lot_id IN (:b, :c) AND action = 'move_out'",
         b=b["id"],
         c=c["id"],
     )
-    r = f.stage(b, "move_in", equipment_id=f.eq["id"])
-    assert (
-        r["qtime"] == "hold"
-        and r["lot"]["on_hold"]
-        and r["lot"]["lot_status"] == "waiting"
-    )
+    # D19：Move In 不停表、不处置；Track In 时超时 → 转 Hold 并 422 on_hold
+    eq = {"equipment_id": f.eq["id"]}
+    r = f.stage(b, "move_in", **eq)
+    assert r["lot"]["lot_status"] == "moved_in" and not r["lot"]["on_hold"]
+    r = f.stage(b, "track_in", **eq)  # D22：转 Hold，200，未进站
+    assert r["qtime"] == "hold"
+    got = f.lot(b)
+    assert got["on_hold"] and got["lot_status"] == "moved_in"
     hold = m.list("lot_hold", lot=b["id"])["data"][0]
     assert hold["source"] == "qtime"
     f.post(
         f"{EXEC}/holds/{hold['id']}/release", {"reason_id": f.reasons["release"]["id"]}
     )
     f.bind(
-        "move_in",
+        "track_in",
         ("lot_hold", "block", {}),
         scope="route_step",
         route_step_id=f.steps[20]["id"],
     )  # replaces qtime check
     assert (
-        f.stage(b, "move_in", equipment_id=f.eq["id"])["lot"]["lot_status"]
-        == "moved_in"
-    )  # not re-held
-    # scrap / rework actions
-    m.patch(
-        "qtime_rule",
-        rule["id"],
-        {"action": "scrap", "reason_id": f.reasons["scrap"]["id"]},
+        f.stage(b, "track_in", **eq)["lot"]["lot_status"] == "running"
+    )  # 同一次超时不重复处置
+    # D26：scrap 处置不再接受
+    r = f.c.patch(
+        m.url("qtime_rule", rule["id"]), headers=m.h, json={"action": "scrap"}
     )
-    r = f.stage(c, "move_in", equipment_id=f.eq["id"])
-    assert (
-        r["qtime"] == "scrap"
-        and r["lot"]["lot_status"] == "scrapped"
-        and r["lot"]["qty"] == 0
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "qtime_action_invalid"
+    m.patch("qtime_rule", rule["id"], {"reason_id": None})
+    # QT-01（M1 / D25）：hold 规则无原因码 → 自动 Hold（原因码 qtime_expired），不报废
+    qe = next(  # 系统原因码，租户初始化时已建（D18）
+        x
+        for x in m.list("reason_code", code="qtime_expired")["data"]
+        if x["code"] == "qtime_expired"
     )
+    f.stage(c, "move_in", **eq)
+    assert f.stage(c, "track_in", **eq)["qtime"] == "hold"
+    assert f.stage(c, "track_in", 422, **eq)["detail"]["code"] == "on_hold"
+    got = f.lot(c)
+    assert got["on_hold"] and got["lot_status"] == "moved_in" and got["qty"] > 0
+    ch = [h for h in m.list("lot_hold", lot=c["id"])["data"] if h["is_active"]]
+    assert len(ch) == 1 and ch[0]["source"] == "qtime"
+    assert ch[0]["reason_id"] == qe["id"]
+    assert m.list("lot_history", lot=c["id"], action="scrap")["count"] == 0
     (d,) = f.start(1)
     f.run_step(d)
     f.sql(
@@ -904,8 +934,9 @@ def test_qtime_min_and_violation_actions(client: TestClient, db: Session) -> Non
         l=d["id"],
     )
     m.patch("qtime_rule", rule["id"], {"action": "rework", "reason_id": None})
-    r = f.stage(d, "move_in", equipment_id=f.eq["id"])
-    assert r["qtime"] == "rework" and f.ctx(d)["step"]["route"].startswith("RW")
+    r = f.post(f"{EXEC}/qtime/sweep", {})
+    assert {"lot": d["code"], "action": "rework"} in r["actions"]
+    assert f.ctx(d)["step"]["route"].startswith("RW")
 
 
 def test_hold_release(client: TestClient, db: Session) -> None:

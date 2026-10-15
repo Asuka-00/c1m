@@ -1,6 +1,6 @@
 """产品与物料实体规格（单位、产品、物料、载具、光罩、治具、线边批次）。"""
 
-from app.core.spec.engine import ENUMS, Entity, F, register
+from app.core.spec.engine import ENTITIES, ENUMS, Entity, F, register
 
 ENUMS.update(
     {
@@ -43,11 +43,17 @@ ENUMS.update(
             ("pod", "Reticle pod|光罩盒|レチクルポッド"),
             ("smif", "SMIF pod|SMIF 盒|SMIF ポッド"),
         ],
+        "carrier_event_type": [
+            ("load", "Load|装入|積込み"),
+            ("unload", "Unload|移出|取出し"),
+            ("clean", "Clean|清洗|洗浄"),
+            ("sort", "Wafer sort|晶圆整理|ウェーハソート"),
+        ],
         "asset_status": [
             ("available", "Available|可用|使用可"),
             ("in_use", "In use|使用中|使用中"),
             ("dirty", "Needs cleaning|待清洗|要洗浄"),
-            ("hold", "On hold|冻结|保留"),
+            ("hold", "On hold|Hold|ホールド"),
             ("retired", "Retired|报废|廃棄"),
         ],
         "reticle_grade": [
@@ -361,6 +367,18 @@ register(
             F("status_code", "enum", enum="asset_status", default="available"),
             F("max_uses", "int", "Max uses|最大使用次数|最大使用回数"),
             F(
+                "use_count",
+                "int",
+                "Uses since clean|清洗后使用次数|洗浄後使用回数",
+                system=True,
+            ),
+            F(
+                "last_cleaned_at",
+                "datetime",
+                "Last cleaned|上次清洗|前回洗浄",
+                system=True,
+            ),
+            F(
                 "rfid",
                 "str",
                 "RFID tag|RFID 标签|RFID タグ",
@@ -372,6 +390,45 @@ register(
         phase=2,
         icon="Archive",
         order=8,
+    ),
+)
+
+
+register(
+    Entity(
+        "carrier_event",
+        "product",
+        "Carrier event|载具履历|キャリア履歴",
+        [
+            F(
+                "carrier",
+                "ref",
+                "Carrier|载具|キャリア",
+                required=True,
+                ref="carrier",
+                cascade=True,
+            ),
+            F("event", "enum", "Event|事件|イベント", enum="carrier_event_type"),
+            F("lot", "ref", "Lot|批次|ロット", ref="lot"),
+            F(
+                "other_carrier",
+                "ref",
+                "From / to carrier|来源 / 目标载具|移動元・先キャリア",
+                ref="carrier",
+            ),
+            F("qty", "int", "Qty|数量|数量"),
+            F("comment", "str", "Comment|备注|コメント", max_length=300, search=True),
+            F("username", "str", "User|用户|ユーザー", max_length=255, search=True),
+            F("at", "datetime", "Time|时间|日時"),
+        ],
+        phase=6,
+        has_code=False,
+        readonly=True,
+        icon="History",
+        order=10,
+        menu=False,
+        sort_default="at",
+        label_field="event",
     ),
 )
 
@@ -460,3 +517,5 @@ register(
         order=0,
     ),
 )
+
+ENTITIES["carrier"].children.append("carrier_event")

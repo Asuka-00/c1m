@@ -10,6 +10,7 @@ import sqlalchemy as sa
 from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core.models import actor_name
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, ENUMS, TABLES
@@ -32,6 +33,9 @@ class Ctx:
         step: 当前工步。
         op / product / wo: 工序、产品、工单（可为空）。
         equipment / recipe / reticle / carrier: 本次选定的资源（可为空）。
+        chambers: 本次选定的腔体。
+        batch: 批量作业时同批作业的全部批次。
+        eqp_recipe: 设备上报 / 扫描的设备端配方名（可为空）。
         tools / material_lots: 选定的工具与线边批次。
         dc: 录入的 DC 值。
         sampling: 抽样判定结果。
@@ -49,8 +53,14 @@ class Ctx:
     wo: Row | None = None
     equipment: Row | None = None
     recipe: Row | None = None
+    eqp_recipe: str | None = None  # 设备上报 / 扫描的设备端配方名
     reticle: Row | None = None
     carrier: Row | None = None
+    chambers: list[Row] = field(default_factory=list)  # 选定的腔体（设备子单元）
+    batch: list[Row] = field(default_factory=list)  # 批量作业的全部批次
+    sort_map: list[Row] = field(default_factory=list)  # 晶圆整理：[{wafer, slot}]
+    priority: Row | None = None  # 优先级变更：新优先级
+    operator: str | None = None  # 操作人（用户名，评估时填入）
     tools: list[Row] = field(default_factory=list)
     material_lots: list[Row] = field(default_factory=list)
     dc: list[Row] = field(default_factory=list)  # 录入的 DC 值（含 is_oos 超规标记）
@@ -158,6 +168,48 @@ def resolve(ctx: Ctx) -> list[tuple[Row, Row]]:
     return out
 
 
+def control_rule(ctx: Ctx, check: str) -> Row | None:
+    """当前上下文中决定某类内置管控的规则（最具体作用域优先），无则 None。"""
+    bs = sorted(
+        (
+            b
+            for b in find(
+                ctx.s, ctx.tid, "check_binding", trigger=ctx.trigger, is_active=True
+            )
+            if _matches(b, ctx)
+        ),
+        key=lambda b: -SPECIFICITY[b["scope"]],
+    )
+    for b in bs:
+        plan = one(ctx.s, ctx.tid, "check_plan", b["check_plan_id"])
+        if not plan or not plan["is_active"]:
+            continue
+        for it in find(
+            ctx.s, ctx.tid, "check_plan_item", order="seq", check_plan_id=plan["id"]
+        ):
+            rule = one(ctx.s, ctx.tid, "check_rule", it["check_rule_id"])
+            if rule and rule["is_active"] and rule["check_type"] == check:
+                return rule
+    return None
+
+
+def enabled(ctx: Ctx, check: str) -> bool:
+    """某类管控在当前上下文是否开启（内置管控的统一开关）。
+
+    在所有命中的有效绑定中，按作用域由具体到宽泛查找包含该检查类型的有效规则，
+    第一条命中规则的严重度决定开关：``off`` 为关闭，其余为开启；无任何命中时默认开启。
+
+    Args:
+        ctx: 检查上下文（使用其触发时机与工步 / 设备 / 产品）。
+        check: 检查类型编码。
+
+    Returns:
+        是否开启。
+    """
+    rule = control_rule(ctx, check)
+    return rule is None or rule["severity"] != "off"
+
+
 # ---------------- evaluation ----------------
 class CheckBlocked(HTTPException):
     """存在未被放行的阻断检查结果（409，detail.code = check_blocked）。"""
@@ -225,6 +277,18 @@ def run(ctx: Ctx) -> list[Row]:
                 )
             )
             continue
+        if rule["severity"] == "off":
+            out.append(
+                result(
+                    rule["check_type"],
+                    "na",
+                    f"control disabled by rule {rule['code']}",
+                    severity="warn",
+                    rule=rule,
+                    plan=plan,
+                )
+            )
+            continue
         oc, msg, data = fn(ctx, rule.get("params") or {})
         out.append(
             result(
@@ -266,6 +330,7 @@ def evaluate(
         CheckBlocked: 仍存在阻断（先提交检查日志再抛出）。
         HTTPException: 放行但未填写原因（422）。
     """
+    ctx.operator = ctx.operator or actor_name(user)
     results = [*(extra or []), *run(ctx)]
     blocks = [r for r in results if r["result"] == "block"]
     hard = [r for r in blocks if not r["overridable"]]
@@ -286,7 +351,7 @@ def evaluate(
         for r in blocks:
             r["result"] = "overridden"
     t = TABLES["check_log"]
-    email = getattr(user, "email", None)
+    email = actor_name(user)
     for r in results:
         conn(ctx.s).execute(
             sa.insert(t).values(
@@ -304,7 +369,7 @@ def evaluate(
                 message=r["message"][:500],
                 context={"preview": preview, **r["data"]},
                 override_reason=reason if r["result"] == "overridden" else None,
-                user_email=email,
+                username=email,
                 created_at=ctx.at,
                 created_by=getattr(user, "id", None),
             )

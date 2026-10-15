@@ -4,16 +4,27 @@ from sqlmodel import Session
 from app.core.config import settings
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
-from app.testing.utils import random_email, random_lower_string
+from app.testing.user import create_owned_tenant
+from app.testing.utils import (
+    login_name,
+    random_email,
+    random_lower_string,
+    username_for,
+)
 
 API = settings.API_V1_STR
 
 
 def _owner(client: TestClient, db: Session) -> dict[str, str]:
     email, pw = random_email(), random_lower_string()
-    crud.create_user(session=db, user_create=UserCreate(email=email, password=pw))
+    _u = crud.create_user(
+        session=db,
+        user_create=UserCreate(email=email, username=username_for(email), password=pw),
+    )
+    create_owned_tenant(db, _u)
     tok = client.post(
-        f"{API}/login/access-token", data={"username": email, "password": pw}
+        f"{API}/login/access-token",
+        data={"username": login_name(email), "password": pw},
     ).json()["access_token"]
     return {"Authorization": f"Bearer {tok}"}
 
@@ -47,11 +58,6 @@ def test_default_page_size_and_sorting(client: TestClient, db: Session) -> None:
         url, headers=h, params={"sort_by": "name", "sort_order": "desc", "page_size": 3}
     ).json()
     assert [x["name"] for x in desc["data"]] == ["role-24", "role-23", "role-22"]
-    # legacy skip/limit still works
-    assert (
-        len(client.get(url, headers=h, params={"skip": 26, "limit": 10}).json()["data"])
-        == 2
-    )
     # whitelist + bounds
     assert client.get(url, headers=h, params={"sort_by": "id; drop"}).status_code == 422
     assert client.get(url, headers=h, params={"page_size": 101}).status_code == 422
@@ -74,21 +80,24 @@ def test_all_list_endpoints_paginate_and_sort(
 ) -> None:
     h = superuser_token_headers
     for _ in range(3):
-        crud.create_user(
+        _u = crud.create_user(
             session=db,
             user_create=UserCreate(
-                email=random_email(), password=random_lower_string()
+                email=random_email(),
+                username=username_for(random_email()),
+                password=random_lower_string(),
             ),
         )
+        create_owned_tenant(db, _u)
     tid = client.get(f"{API}/tenants/me", headers=h).json()["data"][0]["tenant"]["id"]
     cases = {
-        "/users/": "email",
-        "/roles/": "name",
-        "/permissions/": "code",
-        "/tenants/": "slug",
+        "/platform/users/": "email",
+        "/platform/roles/": "name",
+        "/platform/permissions/": "code",
+        "/platform/tenants": "slug",
         f"/tenants/{tid}/members": "email",
         f"/tenants/{tid}/roles": "name",
-        "/menus/": "title",
+        "/platform/menus/": "title",
     }
     for url, field in cases.items():
         r = client.get(

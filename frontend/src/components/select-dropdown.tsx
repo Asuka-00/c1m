@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Loader } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FormControl } from '@/components/ui/form'
@@ -31,13 +32,23 @@ export function SelectDropdown({
   className = '',
   isControlled = false,
 }: SelectDropdownProps) {
+  const [picked, setPicked] = useState(defaultValue)
+  const current = isControlled ? defaultValue : picked
+  const handleChange = (v: string) => {
+    setPicked(v)
+    onValueChange?.(v)
+  }
   const defaultState = isControlled
-    ? { value: defaultValue, onValueChange }
-    : { defaultValue, onValueChange }
+    ? { value: defaultValue, onValueChange: handleChange }
+    : { defaultValue, onValueChange: handleChange }
   return (
     <Select {...defaultState}>
       <FormControl>
-        <SelectTrigger disabled={disabled} className={cn(className)}>
+        <SelectTrigger
+          disabled={disabled}
+          className={cn(className)}
+          title={items?.find((i) => i.value === current)?.label}
+        >
           <SelectValue placeholder={placeholder ?? 'Select'} />
         </SelectTrigger>
       </FormControl>

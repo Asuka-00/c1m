@@ -32,8 +32,35 @@ export interface StartLotIn {
   source_ref?: string | null
 }
 
-/** 工单接口：状态迁移、开批计划、开批与撤销开批。 */
+/** 交期状态。 */
+export type WoRisk = 'overdue' | 'at_risk' | 'ok' | 'none' | 'done'
+/** 工单进度看板行。 */
+export interface WoBoardRow {
+  id: string
+  code: string
+  product: string | null
+  status: string
+  planned: number
+  started: number
+  completed: number
+  wip: number
+  scrapped: number
+  lots: number
+  progress: number
+  due_date: string | null
+  days_left: number | null
+  risk: WoRisk
+  wip_by_op: { operation: string; qty: number }[]
+}
+
+/** 工单接口：进度看板、状态迁移、开批计划、开批与撤销开批。 */
 export const woApi = {
+  board: (warnDays?: number) =>
+    http
+      .get<{ data: WoBoardRow[] }>('/mes/work-order/board', {
+        params: { warn_days: warnDays },
+      })
+      .then((r) => r.data.data),
   transition: (id: string, action: string) =>
     http
       .post<MesRow>(`/mes/work-order/${id}/transition`, { action })

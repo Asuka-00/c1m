@@ -16,6 +16,11 @@ PLATFORM_PERMISSIONS: dict[str, str] = {
     "roles:write": "Manage roles, permissions and assignments",
     "tenants:read": "Read any tenant (platform)",
     "tenants:write": "Manage any tenant (platform)",
+    "platform.config:read": "Read platform default configuration",
+    "platform.config:write": "Edit platform default configuration and tenant branding",
+    "platform.notify:read": "Read notification channels",
+    "platform.notify:write": "Configure notification channels",
+    "platform.audit:read": "Read cross-tenant audit, login and platform operation logs",
 }
 # 租户级权限（经 member_role 关联到租户角色）
 TENANT_PERMISSIONS: dict[str, str] = {
@@ -41,9 +46,9 @@ DEFAULT_ROLES: dict[str, tuple[str, list[str]]] = {
     "user": ("Regular platform user (tenant access comes from memberships)", []),
 }
 TENANT_ROLES: dict[str, tuple[str, list[str]]] = {
-    "owner": ("Tenant owner", list(TENANT_PERMISSIONS)),
+    "owner": ("System administrator with all permissions", list(TENANT_PERMISSIONS)),
     "admin": (
-        "Tenant administrator",
+        "Administrator",
         [
             "members:read",
             "members:write",
@@ -53,7 +58,7 @@ TENANT_ROLES: dict[str, tuple[str, list[str]]] = {
         ],
     ),
     "member": (
-        "Tenant member",
+        "Standard user",
         ["members:read", *(p for p in MES_PERMISSIONS if p.endswith(":read"))],
     ),
 }

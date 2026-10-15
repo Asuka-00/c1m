@@ -7,9 +7,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import col, select
 
 from app.core.deps import SessionDep
-from app.core.models import Message
+from app.core.models import Message, actor_name, get_datetime_utc
 from app.core.pagination import ListParamsDep, paginate
-from app.platform.auth.deps import require_permissions
+from app.platform.auth.deps import (
+    CurrentUser,
+    platform_api_router,
+    require_permissions,
+)
 from app.platform.rbac.models import Permission, Role
 from app.platform.rbac.schemas import (
     PermissionCodes,
@@ -18,10 +22,12 @@ from app.platform.rbac.schemas import (
     PermissionsPublic,
     PermissionUpdate,
     RoleCreate,
+    RoleIds,
     RolePublic,
     RolesPublic,
     RoleUpdate,
 )
+from app.platform.rbac.service import role_filters, touch
 from app.platform.users.models import User
 
 read_dep = [Depends(require_permissions("roles:read"))]
@@ -30,6 +36,24 @@ write_dep = [Depends(require_permissions("roles:write"))]
 permissions_router = APIRouter(prefix="/permissions", tags=["rbac"])
 roles_router = APIRouter(prefix="/roles", tags=["rbac"])
 user_roles_router = APIRouter(prefix="/users", tags=["rbac"])
+
+
+def is_platform_code(code: str) -> bool:
+    """权限编码是否属于平台空间（内置平台权限或 ``platform:`` 前缀）。"""
+    from app.platform.rbac.permissions import PLATFORM_PERMISSIONS
+
+    return code in PLATFORM_PERMISSIONS or code.startswith("platform:")
+
+
+def _check_scope(code: str, scope: str) -> None:
+    """平台权限不得声明为租户作用域（否则可被授予租户角色）。"""
+    if scope not in ("platform", "tenant"):
+        raise HTTPException(status_code=400, detail="scope must be platform or tenant")
+    if scope == "tenant" and is_platform_code(code):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Platform permission {code} cannot be tenant-scoped",
+        )
 
 
 def _get_or_404(session: SessionDep, model: Any, id: uuid.UUID, name: str) -> Any:
@@ -73,6 +97,7 @@ def list_permissions(
 def create_permission(session: SessionDep, perm_in: PermissionCreate) -> Any:
     if session.exec(select(Permission).where(Permission.code == perm_in.code)).first():
         raise HTTPException(status_code=409, detail="Permission already exists")
+    _check_scope(perm_in.code, perm_in.scope)
     perm = Permission.model_validate(perm_in)
     session.add(perm)
     session.commit()
@@ -99,6 +124,7 @@ def update_permission(
         ).first()
         if other and other.id != id:
             raise HTTPException(status_code=409, detail="Permission already exists")
+    _check_scope(data.get("code", perm.code), data.get("scope", perm.scope))
     perm.sqlmodel_update(data)
     session.add(perm)
     session.commit()
@@ -115,16 +141,31 @@ def delete_permission(session: SessionDep, id: uuid.UUID) -> Any:
 
 # ---------------- roles ----------------
 @roles_router.get("/", dependencies=read_dep, response_model=RolesPublic)
-def list_roles(session: SessionDep, params: ListParamsDep) -> Any:
-    """Platform roles. Paginated; sort_by: name, description."""
+def list_roles(
+    session: SessionDep,
+    params: ListParamsDep,
+    code: str | None = None,
+    title: str | None = None,
+    status: Literal["active", "disabled"] | None = None,
+) -> Any:
+    """Platform roles. Paginated; sort_by: name, title, status, updated_at;
+    q: code/name/description; filters: code, title (contains), status."""
     roles, count = paginate(
         session,
-        select(Role).where(col(Role.tenant_id).is_(None)),
+        role_filters(
+            select(Role).where(col(Role.tenant_id).is_(None)), code, title, status
+        ),
         params,
-        {"name": Role.name, "description": Role.description},
+        {
+            "name": Role.name,
+            "title": Role.title,
+            "status": Role.status,
+            "description": Role.description,
+            "updated_at": Role.updated_at,
+        },
         ("name", "asc"),
         Role.id,
-        search=[Role.name, Role.description],
+        search=[Role.name, Role.title, Role.description],
     )
     return RolesPublic(data=[_role_public(r) for r in roles], count=count)
 
@@ -134,12 +175,18 @@ def _role_public(role: Role) -> RolePublic:
 
 
 @roles_router.post("/", dependencies=write_dep, response_model=RolePublic)
-def create_role(session: SessionDep, role_in: RoleCreate) -> Any:
+def create_role(session: SessionDep, user: CurrentUser, role_in: RoleCreate) -> Any:
     if session.exec(
         select(Role).where(Role.name == role_in.name, col(Role.tenant_id).is_(None))
     ).first():
         raise HTTPException(status_code=409, detail="Role already exists")
-    role = Role(name=role_in.name, description=role_in.description)
+    role = Role(
+        name=role_in.name,
+        title=role_in.title,
+        description=role_in.description,
+        status=role_in.status,
+    )
+    touch(role, user)
     for code in role_in.permission_codes:
         perm = session.exec(select(Permission).where(Permission.code == code)).first()
         if not perm:
@@ -157,7 +204,9 @@ def read_role(session: SessionDep, id: uuid.UUID) -> Any:
 
 
 @roles_router.patch("/{id}", dependencies=write_dep, response_model=RolePublic)
-def update_role(session: SessionDep, id: uuid.UUID, role_in: RoleUpdate) -> Any:
+def update_role(
+    session: SessionDep, user: CurrentUser, id: uuid.UUID, role_in: RoleUpdate
+) -> Any:
     role = _get_or_404(session, Role, id, "Role")
     data = role_in.model_dump(exclude_unset=True)
     if "name" in data:
@@ -167,6 +216,7 @@ def update_role(session: SessionDep, id: uuid.UUID, role_in: RoleUpdate) -> Any:
         if other and other.id != id:
             raise HTTPException(status_code=409, detail="Role already exists")
     role.sqlmodel_update(data)
+    touch(role, user)
     session.add(role)
     session.commit()
     session.refresh(role)
@@ -225,6 +275,30 @@ def list_user_roles(session: SessionDep, user_id: uuid.UUID) -> Any:
     return [_role_public(r) for r in user.roles]
 
 
+@user_roles_router.put(
+    "/{user_id}/roles", dependencies=write_dep, response_model=list[RolePublic]
+)
+def set_user_roles(
+    session: SessionDep, current: CurrentUser, user_id: uuid.UUID, body: RoleIds
+) -> Any:
+    """Replace the user's platform roles (user edit dialog)."""
+    user = _get_or_404(session, User, user_id, "User")
+    roles = session.exec(
+        select(Role).where(
+            col(Role.id).in_(body.role_ids), col(Role.tenant_id).is_(None)
+        )
+    ).all()
+    if len(roles) != len(set(body.role_ids)):
+        raise HTTPException(status_code=404, detail="Role not found")
+    user.roles = list(roles)
+    user.updated_at = get_datetime_utc()
+    user.updated_by = actor_name(current)
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return [_role_public(r) for r in user.roles]
+
+
 @user_roles_router.post(
     "/{user_id}/roles/{role_id}",
     dependencies=write_dep,
@@ -265,7 +339,7 @@ def remove_role_from_user(
     "/{id}/permissions", dependencies=write_dep, response_model=RolePublic
 )
 def set_role_permissions(
-    session: SessionDep, id: uuid.UUID, body: PermissionCodes
+    session: SessionDep, user: CurrentUser, id: uuid.UUID, body: PermissionCodes
 ) -> Any:
     """Replace the role's permission set (used by the permission tree UI)."""
     role = _get_or_404(session, Role, id, "Role")
@@ -278,7 +352,14 @@ def set_role_permissions(
             status_code=404, detail=f"Unknown permissions: {sorted(missing)}"
         )
     role.permissions = list(perms)
+    touch(role, user)
     session.add(role)
     session.commit()
     session.refresh(role)
     return _role_public(role)
+
+
+# 平台空间路由：/platform/users|roles|permissions/...（仅超级用户）
+platform_router = platform_api_router(
+    user_roles_router, roles_router, permissions_router
+)

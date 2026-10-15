@@ -1,7 +1,7 @@
 """菜单接口：当前用户菜单树与菜单管理。"""
 
 import uuid
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlmodel import select
@@ -13,6 +13,8 @@ from app.platform.auth.deps import (
     CurrentUser,
     TokenPayloadDep,
     get_current_tenant,
+    platform_api_router,
+    platform_codes,
     require_permissions,
 )
 from app.platform.menus.models import Menu
@@ -22,11 +24,18 @@ from app.platform.menus.schemas import (
     MenusPublic,
     MenuUpdate,
     MyMenus,
+    PermNode,
 )
-from app.platform.menus.service import build_tree, forbidden_paths
+from app.platform.menus.service import (
+    build_tree,
+    forbidden_paths,
+    permission_tree,
+)
 from app.platform.rbac.service import user_permission_codes
 
 router = APIRouter(prefix="/menus", tags=["menus"])
+# 菜单管理（仅在平台空间 /platform/menus 下挂载）
+admin_router = APIRouter(prefix="/menus", tags=["menus"])
 
 
 @router.get("/me", response_model=MyMenus)
@@ -35,10 +44,33 @@ def my_menus(
     current_user: CurrentUser,
     token_data: TokenPayloadDep,
     x_tenant_id: Annotated[uuid.UUID | None, Header()] = None,
+    space: Literal["workspace", "platform"] = "workspace",
 ) -> Any:
     """Menu/route tree filtered by the caller's effective permissions in the
     current tenant (X-Tenant-ID / `tid` claim / only membership). Without a
-    resolvable tenant only platform permissions apply."""
+    resolvable tenant only platform permissions apply.
+
+    `space=platform` returns the platform admin console menus, filtered by platform
+    permissions (superusers see all; users without any platform permission get 403;
+    impersonation tokens are rejected)."""
+    paccess = current_user.is_superuser or bool(platform_codes(current_user))
+    if space == "platform":
+        if not paccess or token_data.imp:
+            raise HTTPException(
+                status_code=403, detail="No access to the platform console"
+            )
+        pperms = user_permission_codes(current_user)
+        pmenus = list(session.exec(select(Menu).where(Menu.space == "platform")).all())
+        ptree = build_tree(pmenus, pperms, current_user.is_superuser)
+        return MyMenus(
+            menus=ptree,
+            forbidden_paths=forbidden_paths(pmenus, ptree),
+            permissions=sorted(pperms),
+            tenant_id=None,
+            is_superuser=current_user.is_superuser,
+            platform_access=True,
+            space="platform",
+        )
     perms = user_permission_codes(current_user)
     tenant_id = None
     try:
@@ -47,18 +79,23 @@ def my_menus(
     except HTTPException as e:
         if e.status_code != 400:
             raise
-    menus = list(session.exec(select(Menu)).all())
+    menus = list(session.exec(select(Menu).where(Menu.space == "workspace")).all())
     tree = build_tree(menus, perms, current_user.is_superuser)
+    forbidden = forbidden_paths(menus, tree)
+    if not (paccess and not token_data.imp):  # 平台页面对无平台权限的用户显示 403
+        ppaths = session.exec(select(Menu.path).where(Menu.space == "platform")).all()
+        forbidden = sorted(set(forbidden) | {"/platform"} | {p for p in ppaths if p})
     return MyMenus(
         menus=tree,
-        forbidden_paths=forbidden_paths(menus, tree),
+        forbidden_paths=forbidden,
         permissions=sorted(perms),
         tenant_id=tenant_id,
         is_superuser=current_user.is_superuser,
+        platform_access=paccess and not token_data.imp,
     )
 
 
-@router.get(
+@admin_router.get(
     "/",
     dependencies=[Depends(require_permissions("roles:read"))],
     response_model=MenusPublic,
@@ -68,10 +105,13 @@ def list_menus(
     params: ListParamsDep,
     parent_id: uuid.UUID | None = None,
     hidden: bool | None = None,
+    space: Literal["workspace", "platform"] | None = None,
 ) -> Any:
     """Paginated; sort_by: key, title, path, component, permission, sort_order; q: key/title/path;
-    filters: parent_id (children of a group), hidden."""
+    filters: parent_id (children of a group), hidden, space."""
     stmt = select(Menu)
+    if space is not None:
+        stmt = stmt.where(Menu.space == space)
     if parent_id is not None:
         stmt = stmt.where(Menu.parent_id == parent_id)
     if hidden is not None:
@@ -95,7 +135,7 @@ def list_menus(
     return MenusPublic(data=data, count=count)
 
 
-@router.post(
+@admin_router.post(
     "/",
     dependencies=[Depends(require_permissions("roles:write"))],
     response_model=MenuPublic,
@@ -112,7 +152,7 @@ def create_menu(session: SessionDep, menu_in: MenuCreate) -> Any:
     return menu
 
 
-@router.patch(
+@admin_router.patch(
     "/{id}",
     dependencies=[Depends(require_permissions("roles:write"))],
     response_model=MenuPublic,
@@ -131,7 +171,7 @@ def update_menu(session: SessionDep, id: uuid.UUID, menu_in: MenuUpdate) -> Any:
     return menu
 
 
-@router.delete(
+@admin_router.delete(
     "/{id}",
     dependencies=[Depends(require_permissions("roles:write"))],
     response_model=Message,
@@ -143,3 +183,19 @@ def delete_menu(session: SessionDep, id: uuid.UUID) -> Any:
     session.delete(menu)
     session.commit()
     return Message(message="Menu deleted successfully")
+
+
+# 平台空间：/platform/menus/...（仅超级用户）与统一权限树
+platform_router = platform_api_router(admin_router)
+
+
+@platform_router.get("/permission-tree", response_model=list[PermNode])
+def read_permission_tree(
+    session: SessionDep,
+    space: Literal["workspace", "platform", "all"] = "all",
+    scope: Literal["platform", "tenant"] | None = None,
+) -> Any:
+    """Unified permission tree: menus (MENU) -> attached permissions (MENU / BUTTON).
+    `space=all` returns both spaces; `scope` keeps only that permission scope."""
+    spaces: list[str] = ["platform", "workspace"] if space == "all" else [space]
+    return permission_tree(session, spaces, scope)

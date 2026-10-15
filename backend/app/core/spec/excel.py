@@ -53,13 +53,20 @@ def columns(session: Session, tenant_id: uuid.UUID, e: Entity) -> list[str]:
     return cols
 
 
-def export_xlsx(session: Session, tenant_id: uuid.UUID, e: Entity) -> bytes:
-    """导出实体全部行为 xlsx。
+def export_xlsx(
+    session: Session,
+    tenant_id: uuid.UUID,
+    e: Entity,
+    *,
+    q: str | None = None,
+    filters: dict[str, str] | None = None,
+) -> bytes:
+    """导出实体行为 xlsx（按当前关键字 / 筛选；无筛选时为全部行）。
 
     Returns:
         xlsx 文件字节。
     """
-    rows = all_rows(session, e, tenant_id, MAX_ROWS)
+    rows = all_rows(session, e, tenant_id, MAX_ROWS, q=q, filters=filters)
     cols = columns(session, tenant_id, e)
     refs = {
         f.name: _ref_code(

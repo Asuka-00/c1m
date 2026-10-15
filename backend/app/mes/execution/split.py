@@ -27,7 +27,7 @@ from app.mes.execution.sm_rules import (
 )
 from app.mes.execution.stage_common import _brief, _ov
 from app.mes.execution.stages import LOT
-from app.mes.lot.service import history, lock_lot, units
+from app.mes.lot.service import check_transition, history, lock_lot, lot_error, units
 
 Row = dict[str, Any]
 
@@ -55,6 +55,7 @@ def split(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
         CheckBlocked: 检查阻断。
     """
     lot = lock_lot(s, tid, lot_id)
+    check_transition(lot, "split")
     rule = rule_for(s, tid, lot)
     qty_mode = (lot["tracking_level"] or "wafer") == "quantity"
     kids = body.get("children") or []
@@ -93,6 +94,10 @@ def split(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
         take.append([active[x] for x in ids])
         qtys.append(len(ids))
     remain = lot["qty"] - sum(qtys)
+    if remain < 1:  # 不能拆完，母批至少保留 1（P13）
+        raise lot_error(
+            "lot_status", "parent lot must keep at least 1", lot, action="split"
+        )
     # 规则校验（不可强制放行）
     errs: list[str] = []
     if lot["lot_status"] not in SPLIT_STATES:
@@ -148,6 +153,9 @@ def split(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
             code=code,
             qty=qtys[i],
             scrapped_qty=0,
+            received_qty=0,
+            rework_count=0,
+            bonus_qty=0,
             on_hold=bool(holds),
             carrier_id=carriers[i],
             **vals,

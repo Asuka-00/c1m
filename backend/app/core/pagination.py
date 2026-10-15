@@ -12,7 +12,7 @@ MAX_PAGE_SIZE = 100
 class ListParams:
     """列表查询参数（FastAPI 依赖）。
 
-    支持 ``page``/``page_size``（默认 1/20，最大 100）或兼容旧的 ``skip``/``limit``，
+    支持 ``page``/``page_size``（默认 1/20，最大 100），
     外加 ``sort_by``（按接口白名单）、``sort_order`` 与模糊搜索 ``q``。
 
     Attributes:
@@ -27,15 +27,13 @@ class ListParams:
         self,
         page: Annotated[int, Query(ge=1)] = 1,
         page_size: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
-        skip: Annotated[int | None, Query(ge=0)] = None,
-        limit: Annotated[int | None, Query(ge=1, le=MAX_PAGE_SIZE)] = None,
         sort_by: str | None = None,
         sort_order: Literal["asc", "desc"] = "asc",
         q: Annotated[str | None, Query(max_length=100)] = None,
     ) -> None:
-        """解析并规范化分页参数（page 优先于 skip/limit）。"""
-        self.limit = limit or page_size
-        self.offset = skip if skip is not None else (page - 1) * page_size
+        """解析并规范化分页参数。"""
+        self.limit = page_size
+        self.offset = (page - 1) * page_size
         self.sort_by = sort_by
         self.sort_order = sort_order
         self.q = (q or "").strip() or None  # 自由文本搜索，见 paginate(search=...)

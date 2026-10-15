@@ -10,6 +10,7 @@ import {
 } from '@tanstack/react-table'
 import { t } from '@/i18n'
 import { Loader2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -23,13 +24,15 @@ import {
   DataTableColumnHeader,
   DataTablePagination,
 } from '@/components/data-table'
-import { DEFAULT_FILTERS, type FilterDef } from './filter-defs'
+import { DEFAULT_FILTERS, filterKeys, type FilterDef } from './filter-defs'
 import { FilterToolbar } from './filters'
 import type { ListParams } from './use-list-params'
 
 /** DataTable 列定义。 */
 export interface Column<T> {
   header: string
+  /** 自定义表头内容（如全选复选框）；设置后替代默认的可排序表头 */
+  headerNode?: React.ReactNode
   cell: (row: T) => React.ReactNode
   /** 后端 sort_by 键；设置后列头可排序 */
   sortKey?: string
@@ -74,11 +77,20 @@ export function DataTable<T>({
         accessorFn: () => null,
         enableSorting: !!c.sortKey,
         enableHiding: false,
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={c.header} />
-        ),
+        header: ({ column }) =>
+          c.headerNode ?? (
+            <DataTableColumnHeader column={column} title={c.header} />
+          ),
         cell: ({ row }) => c.cell(row.original),
-        meta: { className: c.className },
+        // 末列为空表头的操作列：固定在右侧，宽表横向滚动时始终可见
+        meta: {
+          className: cn(
+            c.className,
+            i === columns.length - 1 &&
+              !c.header &&
+              'sticky end-0 z-10 bg-background shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.15)]'
+          ),
+        },
       })),
     [columns]
   )
@@ -178,7 +190,9 @@ export function DataTable<T>({
                         variant='outline'
                         size='sm'
                         onClick={() =>
-                          filters.forEach((f) => params.setFilter(f.name, ''))
+                          ['id', ...filters.flatMap(filterKeys)].forEach((k) =>
+                            params.setFilter(k, undefined)
+                          )
                         }
                       >
                         {t('table.resetFilters')}

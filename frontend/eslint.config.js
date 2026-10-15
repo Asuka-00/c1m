@@ -5,6 +5,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig } from 'eslint/config'
 import tseslint from 'typescript-eslint'
+import iconOnlyButton from './eslint-rules/icon-only-button.js'
 
 export default defineConfig(
   { ignores: ['dist', 'src/components/ui'] },
@@ -22,6 +23,7 @@ export default defineConfig(
     plugins: {
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
+      local: { rules: { 'icon-only-button': iconOnlyButton } },
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
@@ -54,6 +56,8 @@ export default defineConfig(
       ],
       // Prevent duplicate imports from the same module
       'no-duplicate-imports': 'error',
+      // 只有图标的按钮必须使用 IconButton（悬停提示 + aria-label）
+      'local/icon-only-button': 'error',
     },
   }
 )

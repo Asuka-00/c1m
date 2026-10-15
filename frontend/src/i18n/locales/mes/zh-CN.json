@@ -11,7 +11,8 @@
       "wo": "工单",
       "process": "工艺",
       "product": "产品与物料",
-      "quality": "质量"
+      "quality": "质量",
+      "wh": "仓储"
     },
     "entity": {
       "dict_type": "数据字典",
@@ -26,11 +27,18 @@
       "equipment_capability": "设备能力",
       "tool": "工具",
       "e10_auto_rule": "E10 自动迁移",
+      "e10_history": "E10 状态履历",
+      "pm_plan": "PM 计划",
+      "pm_record": "PM 执行记录",
+      "downtime": "停机记录",
       "check_rule": "卡控规则",
       "check_plan": "卡控方案",
       "check_plan_item": "方案规则",
       "check_binding": "卡控绑定",
       "check_log": "卡控记录",
+      "future_hold": "预约 Hold",
+      "shift_log": "交接班日志",
+      "operator_qual": "操作员资质",
       "site": "工厂",
       "area": "区域",
       "workcenter": "Bay / 工作中心",
@@ -45,6 +53,7 @@
       "wafer": "晶圆 / 单元",
       "lot_hold": "批次 Hold",
       "lot_history": "批次履历",
+      "lot_recipe_run": "配方执行记录",
       "lot_genealogy": "批次谱系",
       "work_order": "工单",
       "operation": "工序",
@@ -55,6 +64,7 @@
       "recipe": "配方",
       "recipe_equipment": "配方设备映射",
       "param_spec": "工艺参数规格",
+      "change_order": "工程变更",
       "uom": "计量单位",
       "uom_conversion": "单位换算",
       "tech_node": "工艺节点",
@@ -64,6 +74,7 @@
       "material": "物料",
       "carrier_type": "载具类型",
       "carrier": "载具",
+      "carrier_event": "载具履历",
       "reticle": "光罩",
       "fixture": "治具 / 工具",
       "material_lot": "线边物料批",
@@ -74,6 +85,10 @@
       "defect_code": "缺陷代码",
       "reason_code": "原因代码",
       "dc_result": "量测数据",
+      "warehouse": "仓库",
+      "storage_location": "库位",
+      "receipt": "完工入库单",
+      "receipt_line": "入库明细",
       "audit_log": "审计日志"
     },
     "field": {
@@ -154,6 +169,7 @@
         "serial_no": "序列号",
         "initial_state": "初始 E10 状态",
         "e10_state": "当前 E10 状态",
+        "ideal_uph": "理论产能（UPH）",
         "is_active": "启用",
         "description": "描述"
       },
@@ -181,6 +197,43 @@
         "equipment_type": "设备类型",
         "to_state": "目标状态",
         "is_active": "启用"
+      },
+      "e10_history": {
+        "equipment": "设备",
+        "from_state": "源状态",
+        "to_state": "目标状态",
+        "source": "来源",
+        "reason": "原因代码",
+        "comment": "备注",
+        "username": "用户",
+        "at": "时间"
+      },
+      "pm_plan": {
+        "code": "编码",
+        "name": "名称",
+        "equipment": "设备",
+        "equipment_type": "设备类型",
+        "interval_days": "周期（天）",
+        "interval_lots": "周期（批次数）",
+        "warn_days": "提前预警（天）",
+        "is_active": "启用",
+        "description": "描述"
+      },
+      "pm_record": {
+        "pm_plan": "PM 计划",
+        "equipment": "设备",
+        "result": "结果",
+        "comment": "备注",
+        "username": "用户",
+        "done_at": "完成时间"
+      },
+      "downtime": {
+        "equipment": "设备",
+        "start_at": "开始时间",
+        "end_at": "结束时间",
+        "reason": "原因代码",
+        "e10_state": "E10 状态",
+        "comment": "备注"
       },
       "check_rule": {
         "code": "编码",
@@ -226,7 +279,36 @@
         "message": "信息",
         "context": "上下文",
         "override_reason": "放行原因",
-        "user_email": "用户"
+        "username": "用户"
+      },
+      "future_hold": {
+        "lot": "批次",
+        "route_step": "Hold 工步",
+        "reason": "原因代码",
+        "comment": "备注",
+        "fh_status": "状态",
+        "triggered_at": "触发时间"
+      },
+      "shift_log": {
+        "shift_date": "日期",
+        "shift": "班次",
+        "area": "区域",
+        "summary": "交接事项",
+        "open_items": "未结事项",
+        "handed_by": "交班人",
+        "handed_at": "交班时间",
+        "log_status": "状态",
+        "received_by": "接班人",
+        "received_at": "接班时间",
+        "receive_comment": "接班备注"
+      },
+      "operator_qual": {
+        "username": "用户",
+        "operation": "工序",
+        "equipment_type": "设备类型",
+        "certified_on": "认证日期",
+        "expires_on": "有效期至",
+        "is_active": "启用"
       },
       "site": {
         "code": "编码",
@@ -320,8 +402,11 @@
         "product": "产品",
         "min_minutes": "最短（分钟）",
         "max_minutes": "最长（分钟）",
+        "warn_minutes": "预警阈值（分钟）",
         "action": "超时动作",
         "reason": "原因代码",
+        "is_active": "启用",
+        "active_since": "启用时间",
         "description": "描述"
       },
       "lot": {
@@ -334,6 +419,8 @@
         "qty": "数量",
         "tracking_level": "追踪层级",
         "scrapped_qty": "报废数",
+        "bonus_qty": "补数",
+        "rework_count": "返工次数",
         "site": "工厂",
         "current_step": "当前步骤",
         "lot_status": "状态",
@@ -346,6 +433,8 @@
         "route_stack": "流程栈",
         "exec_ctx": "作业上下文",
         "completed_at": "完成时间",
+        "received_qty": "已入库数（良品 + 报废）",
+        "stored_at": "入库完成时间",
         "carrier": "载具",
         "source_ref": "来源晶圆 / 物料批次",
         "started_at": "投产时间",
@@ -373,6 +462,10 @@
         "held_at": "Hold 时间",
         "held_by": "Hold 人",
         "route_step": "流程步骤",
+        "qtime_rule": "Q-Time 规则",
+        "qtime_from_step": "Q-Time 起始工步",
+        "qtime_to_step": "Q-Time 终点工步",
+        "qtime_overdue_seconds": "Q-Time 超时秒数",
         "released_at": "解除时间",
         "released_by": "解除人",
         "release_reason": "解除原因",
@@ -393,8 +486,24 @@
         "reason": "原因代码",
         "comment": "备注",
         "details": "详情",
-        "user_email": "用户",
+        "username": "用户",
         "at": "时间"
+      },
+      "lot_recipe_run": {
+        "lot": "批次",
+        "route_step": "流程步骤",
+        "operation": "工序",
+        "equipment": "设备",
+        "recipe": "配方",
+        "recipe_version": "配方版本",
+        "eqp_recipe": "设备端配方",
+        "chambers": "腔体",
+        "params": "参数",
+        "param_specs": "参数规格",
+        "qty": "数量",
+        "track_in_at": "上机时间",
+        "track_out_at": "下机时间",
+        "username": "用户"
       },
       "lot_genealogy": {
         "parent_lot": "母批 / 来源批",
@@ -403,7 +512,7 @@
         "qty": "数量",
         "units": "晶圆 / 单元",
         "route_step": "流程步骤",
-        "user_email": "用户",
+        "username": "用户",
         "at": "时间"
       },
       "work_order": {
@@ -455,6 +564,7 @@
         "is_optional": "可选",
         "branch_condition": "分支条件",
         "branch_to_seq": "分支跳转序号",
+        "max_rework": "最大返工次数",
         "rework_return": "返工返回",
         "auto_move_in": "自动进站",
         "auto_track_in": "自动上机",
@@ -495,6 +605,7 @@
         "recipe": "配方",
         "equipment": "设备",
         "eqp_recipe": "设备端配方名",
+        "ideal_uph": "理论产能（UPH）",
         "is_enabled": "启用"
       },
       "param_spec": {
@@ -507,6 +618,20 @@
         "target": "目标值",
         "lsl": "规格下限",
         "usl": "规格上限",
+        "description": "描述"
+      },
+      "change_order": {
+        "code": "编码",
+        "name": "名称",
+        "change_type": "变更对象",
+        "route": "新流程版本",
+        "recipe": "新配方版本",
+        "effective_at": "生效时间",
+        "wip_rule": "在制规则",
+        "reason": "变更原因",
+        "ecn_status": "状态",
+        "applied_at": "生效于",
+        "result": "执行结果",
         "description": "描述"
       },
       "uom": {
@@ -582,8 +707,20 @@
         "carrier_type": "载具类型",
         "status_code": "状态",
         "max_uses": "最大使用次数",
+        "use_count": "清洗后使用次数",
+        "last_cleaned_at": "上次清洗",
         "rfid": "RFID 标签",
         "description": "描述"
+      },
+      "carrier_event": {
+        "carrier": "载具",
+        "event": "事件",
+        "lot": "批次",
+        "other_carrier": "来源 / 目标载具",
+        "qty": "数量",
+        "comment": "备注",
+        "username": "用户",
+        "at": "时间"
       },
       "reticle": {
         "code": "编码",
@@ -680,7 +817,50 @@
         "value": "值",
         "is_oos": "超规",
         "oos_action": "超规动作",
-        "user_email": "用户"
+        "username": "用户"
+      },
+      "warehouse": {
+        "code": "编码",
+        "name": "名称",
+        "site": "工厂",
+        "warehouse_type": "仓库类型",
+        "address": "地址",
+        "keeper": "仓管员",
+        "is_active": "启用",
+        "description": "描述"
+      },
+      "storage_location": {
+        "code": "编码",
+        "name": "名称",
+        "warehouse": "仓库",
+        "location_type": "库位类型",
+        "capacity": "容量（批）",
+        "is_active": "启用",
+        "description": "描述"
+      },
+      "receipt": {
+        "code": "入库单号",
+        "warehouse": "仓库",
+        "location": "库位",
+        "receipt_status": "状态",
+        "lot_count": "批次数",
+        "total_good": "良品数",
+        "total_scrap": "报废数",
+        "remarks": "备注",
+        "submitted_at": "提交时间",
+        "submitted_by": "提交人",
+        "confirmed_at": "确认时间",
+        "confirmed_by": "确认人",
+        "description": "描述"
+      },
+      "receipt_line": {
+        "receipt": "入库单",
+        "lot": "批次",
+        "work_order": "工单",
+        "product": "产品",
+        "good_qty": "良品数",
+        "scrap_qty": "报废数",
+        "remarks": "备注"
       },
       "audit_log": {
         "entity_type": "实体",
@@ -688,12 +868,15 @@
         "record_id": "记录 ID",
         "record_code": "记录",
         "changes": "变更内容",
-        "user_email": "用户"
+        "username": "用户"
       }
     },
     "help": {
       "code_rule": {
         "pattern": "占位符：{YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}"
+      },
+      "equipment": {
+        "ideal_uph": "可选，预留给 OEE 性能稼动率"
       },
       "tool": {
         "max_usage": "留空则使用工具类型的最大使用次数"
@@ -701,18 +884,38 @@
       "e10_auto_rule": {
         "equipment_type": "留空表示所有类型"
       },
+      "pm_plan": {
+        "equipment": "留空则适用该类型全部设备"
+      },
       "check_rule": {
         "params": "例如 E10 用 {\"allowed\": [\"SBY\", \"PRD\"]}"
       },
+      "future_hold": {
+        "reason": "留空则使用默认 Hold 原因"
+      },
+      "operator_qual": {
+        "equipment_type": "留空则适用全部设备类型"
+      },
       "calendar_day": {
         "shifts": "逗号分隔的班次编码"
+      },
+      "qtime_rule": {
+        "warn_minutes": "已用时间达到该值即预警（留空不预警）",
+        "reason": "选填；处置为 hold 时留空使用系统原因码 qtime_expired"
       },
       "work_order": {
         "priority": "留空则使用批次类型的默认优先级",
         "over_start_limit_pct": "投产片数最多可超出计划片数的百分比"
       },
       "route_step": {
-        "branch_condition": "例如 lot_type == 'ENG'，执行时判定（不在本模块）"
+        "branch_condition": "例如 lot_type == 'ENG'",
+        "max_rework": "留空不限"
+      },
+      "recipe_equipment": {
+        "ideal_uph": "可选，OEE 计算优先于设备 UPH"
+      },
+      "change_order": {
+        "wip_rule": "流程变更：等待中的在制批次沿用旧版，或按工步序号切换到新版"
       },
       "uom_conversion": {
         "factor": "目标 = 源 × 系数"
@@ -722,6 +925,12 @@
       },
       "sampling_rule": {
         "fixed_slots": "逗号分隔的槽位号，例如 1,13,25"
+      },
+      "storage_location": {
+        "capacity": "留空表示不限"
+      },
+      "receipt_line": {
+        "lot": "仅可选择待入库的批次"
       }
     },
     "enum": {
@@ -741,6 +950,10 @@
         "hold": "暂停",
         "resume": "恢复",
         "complete": "完工",
+        "submit": "提交",
+        "confirm": "确认",
+        "reject": "退回",
+        "receive": "入库",
         "close": "关闭",
         "cancel": "取消",
         "start": "投产",
@@ -751,6 +964,7 @@
         "move_out": "出站",
         "override": "卡控放行",
         "split": "分批",
+        "qtime_rework": "Q-Time 返工",
         "merge": "合批",
         "e10": "E10 状态变更"
       },
@@ -767,6 +981,7 @@
         "material": "物料批号",
         "equipment": "设备编号",
         "work_order": "工单号",
+        "receipt": "入库单号",
         "unit": "单元序列号",
         "other": "其他"
       },
@@ -795,13 +1010,25 @@
         "holiday": "节假日",
         "maintenance": "维护日"
       },
+      "e10_source": {
+        "manual": "手动",
+        "auto": "自动"
+      },
+      "pm_result": {
+        "ok": "合格",
+        "ng": "不合格"
+      },
       "exec_trigger": {
         "move_in": "进站",
         "track_in": "上机",
         "track_out": "下机",
         "move_out": "出站",
         "split": "分批",
-        "merge": "合批"
+        "merge": "合批",
+        "jump": "跳站",
+        "adjust": "报废 / 补数",
+        "sort": "晶圆整理",
+        "priority": "优先级变更"
       },
       "check_type": {
         "e10_available": "设备 E10 状态可用",
@@ -811,17 +1038,34 @@
         "material_sufficient": "物料充足",
         "tool_life": "工具可用 + 寿命",
         "carrier_available": "载具可用",
+        "batch_same_step": "批量：同一工步",
+        "sort_order": "整理保持晶圆顺序",
+        "hot_lot_limit": "急件在制上限",
+        "handover_ack_other": "接班须由他人确认",
+        "operator_qualified": "操作员具备资质",
+        "qual_expiry_notice": "资质到期提醒",
+        "future_hold": "预约 Hold",
+        "wo_due": "工单交期提醒",
+        "carrier_clean": "载具清洗周期",
+        "carrier_usage": "载具使用次数",
+        "chamber_required": "已选腔体",
+        "chamber_available": "腔体 E10 状态可用",
         "qtime": "Q-Time",
         "lot_hold": "批次未 Hold",
         "wo_status": "工单状态",
         "dc_complete": "数据收集完整",
         "oos": "超规",
         "sampling": "抽样判定",
-        "split_merge_rule": "分批合批规则"
+        "split_merge_rule": "分批合批规则",
+        "recipe_match": "配方设备映射",
+        "pm_due": "设备 PM 未超期",
+        "rework_limit": "返工次数上限",
+        "qty_adjust_limit": "报废 / 补数数量上限"
       },
       "check_severity": {
         "block": "拦截",
-        "warn": "预警"
+        "warn": "预警",
+        "off": "关闭（不管控）"
       },
       "check_result": {
         "pass": "通过",
@@ -838,7 +1082,7 @@
       },
       "ml_status": {
         "available": "可用",
-        "hold": "冻结",
+        "hold": "Hold",
         "empty": "已用完",
         "expired": "已过期"
       },
@@ -855,7 +1099,17 @@
       },
       "hold_type": {
         "manual": "手动",
-        "auto": "自动"
+        "auto": "自动",
+        "future": "预约 Hold"
+      },
+      "shift_log_status": {
+        "open": "待接班",
+        "acknowledged": "已接班"
+      },
+      "fh_status": {
+        "active": "待触发",
+        "triggered": "已触发",
+        "cancelled": "已取消"
       },
       "history_action": {
         "start": "投产",
@@ -870,12 +1124,18 @@
         "branch": "分支",
         "sub_route": "进入子流程",
         "return": "子流程/返工返回",
-        "complete": "完成",
+        "complete": "完工待入库",
+        "receive": "入库",
         "override": "卡控放行",
         "qtime": "Q-Time 超时",
         "oos": "超规",
         "split": "分批",
-        "merge": "合批"
+        "merge": "合批",
+        "jump": "跳站",
+        "bonus": "补数",
+        "carrier_change": "换载具",
+        "sort": "晶圆整理",
+        "priority": "优先级变更"
       },
       "genealogy_relation": {
         "split": "分批",
@@ -895,7 +1155,8 @@
         "moved_in": "已进站",
         "running": "加工中",
         "tracked_out": "已下机",
-        "completed": "已完成",
+        "completed": "待入库",
+        "stored": "已入库",
         "scrapped": "已报废",
         "merged": "已合批（终止）"
       },
@@ -944,6 +1205,20 @@
         "per_lot": "每批",
         "per_unit": "每单元/片"
       },
+      "change_type": {
+        "route": "流程",
+        "recipe": "配方"
+      },
+      "wip_rule": {
+        "keep_old": "在制沿用旧版",
+        "switch_new": "在制切换新版"
+      },
+      "ecn_status": {
+        "draft": "草稿",
+        "released": "已发布（待生效）",
+        "applied": "已生效",
+        "cancelled": "已取消"
+      },
       "resource_kind": {
         "equipment": "设备",
         "equipment_group": "设备组",
@@ -990,11 +1265,17 @@
         "pod": "光罩盒",
         "smif": "SMIF 盒"
       },
+      "carrier_event_type": {
+        "load": "装入",
+        "unload": "移出",
+        "clean": "清洗",
+        "sort": "晶圆整理"
+      },
       "asset_status": {
         "available": "可用",
         "in_use": "使用中",
         "dirty": "待清洗",
-        "hold": "冻结",
+        "hold": "Hold",
         "retired": "报废"
       },
       "reticle_grade": {
@@ -1077,8 +1358,12 @@
       "reason_type": {
         "scrap": "报废",
         "rework": "返工",
-        "hold": "冻结",
-        "release": "解冻"
+        "hold": "Hold",
+        "e10": "设备状态变更",
+        "downtime": "设备停机",
+        "release": "解冻",
+        "jump": "跳站",
+        "bonus": "补数"
       },
       "oos_action": {
         "warn": "预警",
@@ -1088,87 +1373,276 @@
       },
       "qtime_action": {
         "warn": "预警",
-        "hold": "冻结批次",
-        "rework": "返工",
-        "scrap": "报废"
+        "hold": "Hold 批次",
+        "rework": "返工"
+      },
+      "warehouse_type": {
+        "finished_goods": "成品仓",
+        "semi_finished": "半成品仓",
+        "raw_material": "原材料仓",
+        "quarantine": "待检隔离仓",
+        "scrap": "废品仓"
+      },
+      "location_type": {
+        "rack": "货架",
+        "shelf": "层板",
+        "bin": "料箱",
+        "dry_cabinet": "干燥柜 / 氮气柜",
+        "floor": "地面区"
+      },
+      "receipt_status": {
+        "draft": "草稿",
+        "submitted": "已提交",
+        "confirmed": "已确认",
+        "cancelled": "已取消"
       }
     }
   },
   "menu": {
     "g-workspace": "工作台",
-    "g-factory": "工厂建模",
-    "g-equipment": "设备管理",
-    "g-product": "产品与物料",
-    "g-process": "工艺管理",
-    "g-quality": "质量管理",
+    "g-execution": "批次作业",
+    "g-exception": "异常处置",
+    "g-wip": "在制与查询",
     "g-planning": "生产计划",
-    "g-execution": "生产执行",
-    "g-lot": "批次管理",
-    "g-check": "卡控管理",
+    "g-warehouse": "仓储管理",
+    "g-equipment": "机台管理",
+    "g-quality": "质量管理",
+    "g-process": "工艺管理",
+    "g-product": "产品与物料",
+    "g-factory": "工厂建模",
     "g-master": "基础数据",
     "g-system": "系统管理",
     "dashboard": "仪表盘",
-    "mes-site": "工厂",
-    "mes-area": "区域",
-    "mes-workcenter": "工作中心",
-    "mes-shift": "班次",
-    "mes-work_calendar": "工作日历",
+    "notifications": "消息中心",
+    "settings": "个人设置",
+    "mes-lot-console": "批次作业（进出站）",
+    "mes-lot_hold": "Hold 管理",
+    "mes-qtime-monitor": "Q-Time 监控",
+    "mes-batch-ops": "批量作业",
+    "mes-carrier-ops": "载具作业",
+    "mes-shift-handover": "交接班日志",
+    "mes-label-print": "标签打印",
+    "mes-future_hold": "Future Hold（预约 Hold）",
+    "mes-check_log": "卡控记录",
+    "mes-wip-dashboard": "WIP 看板",
+    "mes-oee-report": "设备 OEE",
+    "mes-yield-report": "良率报表",
+    "mes-lot-history": "批次履历与追溯",
+    "mes-lot_recipe_run": "配方执行记录",
+    "mes-lot": "批次查询",
+    "mes-wafer": "晶圆查询",
+    "mes-lot-start": "投片/开批",
+    "mes-wo-board": "工单进度",
+    "mes-work_order": "工单",
+    "mes-receipt": "完工入库",
+    "mes-material_lot": "线边物料批",
+    "mes-warehouse-master": "仓库主数据",
+    "mes-eqp-board": "机台状态看板",
+    "mes-pm_plan": "PM 计划",
+    "mes-downtime": "停机记录",
+    "mes-e10_history": "E10 状态履历",
+    "mes-tool": "耗材/治具寿命",
+    "mes-equipment-master": "机台主数据",
+    "mes-e10-model": "E10 状态配置",
+    "mes-dc_result": "量测数据",
+    "mes-dc-config": "数据收集配置",
+    "mes-defect_code": "缺陷代码",
+    "mes-route-master": "工艺流程配置",
+    "mes-recipe-param": "配方与参数",
+    "mes-change_order": "工程变更（ECN）",
+    "mes-qtime_rule": "Q-Time 规则",
+    "mes-check-config": "卡控配置",
+    "mes-lot-rules": "批次规则",
+    "mes-product-master": "产品主数据",
+    "mes-material-master": "物料主数据",
+    "mes-carrier-master": "载具主数据",
+    "mes-reticle": "光罩",
+    "mes-fixture": "治具",
+    "mes-factory-model": "工厂模型",
+    "mes-calendar": "日历与班次",
+    "mes-operator_qual": "操作员资质",
+    "mes-reason_code": "原因代码",
+    "mes-code_rule": "编码规则",
+    "mes-uom": "计量单位",
+    "mes-dict_type": "数据字典",
+    "mes-attr_def": "自定义属性",
+    "user-permissions": "用户与权限",
+    "notify-subscriptions": "通知订阅",
+    "config": "系统设置",
+    "mes-audit_log": "审计日志",
+    "mes-check_rule": "卡控规则",
+    "mes-check_plan": "卡控方案",
+    "mes-check_binding": "卡控绑定",
+    "mes-product": "产品",
+    "mes-product_family": "产品族",
+    "mes-tech_node": "工艺节点",
+    "mes-material": "物料",
+    "mes-material_type": "物料类型",
+    "mes-carrier": "载具",
+    "mes-carrier_type": "载具类型",
     "mes-equipment": "设备",
     "mes-equipment_type": "设备类型",
     "mes-equipment_group": "设备组",
     "mes-equipment_capability": "设备能力",
     "mes-e10_state": "E10 状态模型",
     "mes-e10_auto_rule": "E10 自动迁移",
-    "mes-product": "产品",
-    "mes-product_family": "产品族",
-    "mes-tech_node": "工艺节点",
-    "mes-material": "物料",
-    "mes-material_type": "物料类型",
-    "mes-material_lot": "线边物料批",
-    "mes-carrier": "载具",
-    "mes-carrier_type": "载具类型",
-    "mes-reticle": "光罩",
-    "mes-fixture": "治具",
-    "mes-tool": "工具寿命",
-    "mes-operation": "工序",
-    "mes-route": "工艺流程",
-    "mes-recipe": "配方",
-    "mes-param_spec": "参数规格",
-    "mes-product_route": "产品流程",
-    "mes-measurement_item": "量测项目",
-    "mes-dc_plan": "数据收集计划",
-    "mes-sampling_rule": "抽样规则",
-    "mes-defect_code": "缺陷代码",
-    "mes-reason_code": "原因代码",
-    "mes-dc_result": "量测数据",
-    "mes-work_order": "工单",
-    "mes-lot-start": "投产",
-    "mes-lot-console": "批次作业",
-    "mes-lot-trace": "批次履历",
-    "mes-lot_hold": "Hold 管理",
-    "mes-lot": "批次",
-    "mes-wafer": "晶圆",
     "mes-lot_type": "批次类型",
     "mes-lot_priority": "优先级",
-    "mes-split_merge_rule": "分批合批",
-    "mes-qtime_rule": "Q-Time",
-    "mes-check_rule": "卡控规则",
-    "mes-check_plan": "卡控方案",
-    "mes-check_binding": "卡控绑定",
-    "mes-check_log": "卡控记录",
-    "mes-dict_type": "数据字典",
-    "mes-code_rule": "编码规则",
-    "mes-uom": "计量单位",
-    "mes-attr_def": "自定义属性",
-    "users": "用户",
-    "roles": "角色",
-    "permissions": "权限",
-    "tenants": "租户",
-    "members": "成员",
-    "tenant-roles": "租户角色",
-    "menus": "菜单",
-    "config": "系统配置",
-    "mes-audit_log": "审计日志",
-    "settings": "个人设置"
+    "mes-split_merge_rule": "分批合批规则",
+    "mes-site": "工厂",
+    "mes-area": "区域",
+    "mes-workcenter": "工作中心",
+    "mes-work_calendar": "工作日历",
+    "mes-shift": "班次",
+    "mes-route": "工艺流程",
+    "mes-operation": "工序",
+    "mes-product_route": "产品流程",
+    "mes-recipe": "配方",
+    "mes-param_spec": "参数规格",
+    "mes-dc_plan": "数据收集计划",
+    "mes-measurement_item": "量测项目",
+    "mes-sampling_rule": "抽样规则",
+    "mes-lot-trace": "批次履历",
+    "mes-trace": "追溯查询",
+    "mes-warehouse": "仓库",
+    "mes-storage_location": "库位",
+    "members": "用户",
+    "user-roles": "角色",
+    "p-g-tenants": "租户管理",
+    "p-g-rbac": "平台权限",
+    "p-g-settings": "平台设置",
+    "p-g-ops": "运维与审计",
+    "p-tenants": "租户列表",
+    "p-users": "平台用户",
+    "p-roles": "平台角色",
+    "p-permissions": "权限树",
+    "p-config": "系统配置（平台默认）",
+    "p-channels": "通知渠道",
+    "p-audit": "跨租户审计日志",
+    "p-login-log": "登录日志",
+    "p-ops-log": "平台操作日志"
+  },
+  "permName": {
+    "users__read": "查看平台用户",
+    "users__write": "编辑平台用户",
+    "users__delete": "删除平台用户",
+    "roles__read": "查看角色与权限",
+    "roles__write": "管理角色与权限",
+    "tenants__read": "查看租户",
+    "tenants__write": "管理租户",
+    "platform_config__read": "查看平台默认配置",
+    "platform_config__write": "编辑平台默认配置",
+    "platform_notify__read": "查看通知渠道",
+    "platform_notify__write": "配置通知渠道",
+    "platform_audit__read": "查看审计与日志",
+    "tenant__manage": "管理系统设置与管理员",
+    "members__read": "查看用户",
+    "members__write": "管理用户",
+    "config__read": "查看系统配置",
+    "config__write": "编辑系统配置",
+    "mes_common__read": "通用·查看",
+    "mes_common__write": "通用·编辑",
+    "mes_equipment__read": "设备·查看",
+    "mes_equipment__write": "设备·编辑",
+    "mes_exec__read": "生产执行·查看",
+    "mes_exec__write": "生产执行·编辑",
+    "mes_inventory__read": "物料与工具·查看",
+    "mes_inventory__write": "物料与工具·编辑",
+    "mes_check__read": "卡控·查看",
+    "mes_check__write": "卡控·编辑",
+    "mes_org__read": "组织·查看",
+    "mes_org__write": "组织·编辑",
+    "mes_lot__read": "批次与晶圆规则·查看",
+    "mes_lot__write": "批次与晶圆规则·编辑",
+    "mes_wo__read": "工单·查看",
+    "mes_wo__write": "工单·编辑",
+    "mes_process__read": "工艺·查看",
+    "mes_process__write": "工艺·编辑",
+    "mes_product__read": "产品与物料·查看",
+    "mes_product__write": "产品与物料·编辑",
+    "mes_quality__read": "质量·查看",
+    "mes_quality__write": "质量·编辑",
+    "mes_wh__read": "仓储·查看",
+    "mes_wh__write": "仓储·编辑",
+    "mes_equipment__e10": "设备·变更 E10 状态",
+    "mes_equipment__pm": "设备·记录保养",
+    "mes_exec__override": "生产执行·强制放行",
+    "mes_exec__hold": "生产执行·暂停 / 释放",
+    "mes_exec__split": "生产执行·分批",
+    "mes_exec__merge": "生产执行·合批",
+    "mes_exec__jump": "生产执行·跳站",
+    "mes_exec__adjust": "生产执行·报废 / 补数",
+    "mes_wo__release": "工单·下达 / 关闭",
+    "mes_lot__start": "批次与晶圆规则·投产",
+    "mes_wh__confirm": "仓储·确认入库",
+    "notify__config": "配置通知订阅"
+  },
+  "roleName": {
+    "admin": "管理员",
+    "user": "普通用户",
+    "owner": "系统管理员",
+    "member": "普通用户"
+  },
+  "permDesc": {
+    "users__read": "允许：查看平台用户",
+    "users__write": "允许：编辑平台用户",
+    "users__delete": "允许：删除平台用户",
+    "roles__read": "允许：查看角色与权限",
+    "roles__write": "允许：管理角色与权限",
+    "tenants__read": "允许：查看租户",
+    "tenants__write": "允许：管理租户",
+    "platform_config__read": "允许：查看平台默认配置",
+    "platform_config__write": "允许：编辑平台默认配置",
+    "platform_notify__read": "允许：查看通知渠道",
+    "platform_notify__write": "允许：配置通知渠道",
+    "platform_audit__read": "允许：查看审计与日志",
+    "tenant__manage": "允许：管理系统设置与管理员",
+    "members__read": "允许：查看用户",
+    "members__write": "允许：管理用户",
+    "config__read": "允许：查看系统配置",
+    "config__write": "允许：编辑系统配置",
+    "mes_common__read": "允许：通用·查看",
+    "mes_common__write": "允许：通用·编辑",
+    "mes_equipment__read": "允许：设备·查看",
+    "mes_equipment__write": "允许：设备·编辑",
+    "mes_exec__read": "允许：生产执行·查看",
+    "mes_exec__write": "允许：生产执行·编辑",
+    "mes_inventory__read": "允许：物料与工具·查看",
+    "mes_inventory__write": "允许：物料与工具·编辑",
+    "mes_check__read": "允许：卡控·查看",
+    "mes_check__write": "允许：卡控·编辑",
+    "mes_org__read": "允许：组织·查看",
+    "mes_org__write": "允许：组织·编辑",
+    "mes_lot__read": "允许：批次与晶圆规则·查看",
+    "mes_lot__write": "允许：批次与晶圆规则·编辑",
+    "mes_wo__read": "允许：工单·查看",
+    "mes_wo__write": "允许：工单·编辑",
+    "mes_process__read": "允许：工艺·查看",
+    "mes_process__write": "允许：工艺·编辑",
+    "mes_product__read": "允许：产品与物料·查看",
+    "mes_product__write": "允许：产品与物料·编辑",
+    "mes_quality__read": "允许：质量·查看",
+    "mes_quality__write": "允许：质量·编辑",
+    "mes_wh__read": "允许：仓储·查看",
+    "mes_wh__write": "允许：仓储·编辑",
+    "mes_equipment__e10": "允许：设备·变更 E10 状态",
+    "mes_equipment__pm": "允许：设备·记录保养",
+    "mes_exec__override": "允许：生产执行·强制放行",
+    "mes_exec__hold": "允许：生产执行·暂停 / 释放",
+    "mes_exec__split": "允许：生产执行·分批",
+    "mes_exec__merge": "允许：生产执行·合批",
+    "mes_exec__jump": "允许：生产执行·跳站",
+    "mes_exec__adjust": "允许：生产执行·报废 / 补数",
+    "mes_wo__release": "允许：工单·下达 / 关闭",
+    "mes_lot__start": "允许：批次与晶圆规则·投产",
+    "mes_wh__confirm": "允许：仓储·确认入库",
+    "notify__config": "允许：配置通知订阅"
+  },
+  "roleDesc": {
+    "platform_admin": "拥有全部权限的平台管理员",
+    "platform_user": "无平台权限的普通用户",
+    "owner": "拥有全部权限的系统管理员",
+    "admin": "管理用户、系统设置与全部业务数据",
+    "member": "只读访问业务数据"
   }
 }

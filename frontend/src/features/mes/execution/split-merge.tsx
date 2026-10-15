@@ -47,15 +47,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { EmptyState } from '@/components/desc-list'
+import { IconButton } from '@/components/icon-button'
+import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
 import { CheckPanel } from './exec-parts'
-
-const lotLink = (page: string, id: string) => ({
-  to: '/$' as const,
-  params: { _splat: `mes/${page}` },
-  search: { lot: id } as never,
-})
+import { type LotPage, lotPageLink } from './lot-links'
+import { canMergeLot, canSplitLot, checkSplit } from './lot-rules'
 
 /** 谱系列表：拆批母批 / 子批，合批源批次 / 目标批次。 */
 export function GenealogyList({
@@ -65,7 +63,7 @@ export function GenealogyList({
 }: {
   lotId: string
   links: GenealogyLink[]
-  page?: string
+  page?: LotPage
 }) {
   if (!links.length)
     return <EmptyState icon={GitFork}>{t('mes.sm.noGenealogy')}</EmptyState>
@@ -95,7 +93,7 @@ export function GenealogyList({
             />
             <span className='text-muted-foreground'>{t(`mes.sm.${key}`)}</span>
             <Link
-              {...lotLink(page, other.id)}
+              {...lotPageLink(page, other.id)}
               className='font-mono font-medium underline-offset-2 hover:underline'
             >
               {other.code}
@@ -122,22 +120,21 @@ export function GenealogyList({
 }
 
 /** 操作台卡片：规则摘要、拆批 / 合批按钮、谱系。 */
-export function SplitMergeCard({
-  cx,
-  perms,
-}: {
-  cx: ExecContext
-  perms: string[]
-}) {
+export function SplitMergeCard({ cx }: { cx: ExecContext }) {
+  const can = useMesCan()
   const [open, setOpen] = useState<'split' | 'merge' | null>(null)
   const sm = cx.sm
   if (!sm) return null
   const r = sm.rule
   const onHold = !!cx.lot.on_hold
   const canSplit =
-    perms.includes('mes.exec:split') && sm.allowed && !!r?.allow_split
+    can(MES_PERM.execSplit) &&
+    canSplitLot(cx.lot) &&
+    sm.allowed &&
+    !!r?.allow_split
   const canMerge =
-    perms.includes('mes.exec:merge') &&
+    can(MES_PERM.execMerge) &&
+    canMergeLot(cx.lot) &&
     sm.allowed &&
     !onHold &&
     !!r?.allow_merge
@@ -227,10 +224,10 @@ export function SplitMergeCard({
         </div>
       </CardContent>
       {open === 'split' && (
-        <SplitDialog cx={cx} perms={perms} onClose={() => setOpen(null)} />
+        <SplitDialog cx={cx} onClose={() => setOpen(null)} />
       )}
       {open === 'merge' && (
-        <MergeDialog cx={cx} perms={perms} onClose={() => setOpen(null)} />
+        <MergeDialog cx={cx} onClose={() => setOpen(null)} />
       )}
     </Card>
   )
@@ -270,13 +267,12 @@ function useSm<T>(
 
 function SplitDialog({
   cx,
-  perms,
   onClose,
 }: {
   cx: ExecContext
-  perms: string[]
   onClose: () => void
 }) {
+  const can = useMesCan()
   const qc = useQueryClient()
   const qtyMode = cx.tracking_level === 'quantity'
   const active = cx.units.filter((u) => u.status !== 'scrapped')
@@ -298,13 +294,7 @@ function SplitDialog({
       ),
     [n, pick, qtys, qtyMode]
   )
-  const moved = children.reduce(
-    (a, c) => a + (qtyMode ? c.qty || 0 : c.unit_ids?.length || 0),
-    0
-  )
-  const ready = children.every((c) =>
-    qtyMode ? (c.qty || 0) > 0 : (c.unit_ids?.length || 0) > 0
-  )
+  const { remain, tooMany, ready } = checkSplit(children, lotQty, qtyMode)
   const sm = useSm(
     (body) => execApi.split(String(cx.lot.id), children, { comment, ...body }),
     (r) => {
@@ -338,29 +328,36 @@ function SplitDialog({
         </DialogHeader>
         <div className='flex items-center gap-2 text-sm'>
           <Label>{t('mes.sm.childCount')}</Label>
-          <Button
-            size='icon'
+          <IconButton
+            label={t('mes.sm.childMinus')}
             variant='outline'
             className='size-7'
-            aria-label='-'
             onClick={() => setCount(n - 1)}
           >
             <Minus className='size-3' />
-          </Button>
+          </IconButton>
           <span className='w-6 text-center tabular-nums'>{n}</span>
-          <Button
-            size='icon'
+          <IconButton
+            label={t('mes.sm.childPlus')}
             variant='outline'
             className='size-7'
-            aria-label='+'
             onClick={() => setCount(n + 1)}
             data-testid='child-plus'
           >
             <Plus className='size-3' />
-          </Button>
-          <span className='ms-auto text-muted-foreground'>
-            {t('mes.sm.remain', { n: lotQty - moved, total: lotQty })}
-          </span>
+          </IconButton>
+          {tooMany ? (
+            <span
+              className='ms-auto text-destructive'
+              data-testid='split-too-many'
+            >
+              {t('mes.sm.tooMany', { total: lotQty })}
+            </span>
+          ) : (
+            <span className='ms-auto text-muted-foreground'>
+              {t('mes.sm.remain', { n: remain, total: lotQty })}
+            </span>
+          )}
         </div>
         {qtyMode ? (
           <div className='grid grid-cols-3 gap-3'>
@@ -448,7 +445,7 @@ function SplitDialog({
         <CheckPanel
           results={sm.results}
           blocked={sm.blocked}
-          canOverride={perms.includes('mes.exec:override')}
+          canOverride={can(MES_PERM.execOverride)}
           busy={sm.busy}
           onOverride={(reason) =>
             sm.run({ override: true, override_reason: reason })
@@ -478,13 +475,12 @@ function SplitDialog({
 
 function MergeDialog({
   cx,
-  perms,
   onClose,
 }: {
   cx: ExecContext
-  perms: string[]
   onClose: () => void
 }) {
+  const can = useMesCan()
   const qc = useQueryClient()
   const cands = cx.sm?.candidates ?? []
   const [sel, setSel] = useState<string[]>([])
@@ -596,7 +592,7 @@ function MergeDialog({
         <CheckPanel
           results={sm.results}
           blocked={sm.blocked}
-          canOverride={perms.includes('mes.exec:override')}
+          canOverride={can(MES_PERM.execOverride)}
           busy={sm.busy}
           onOverride={(reason) =>
             sm.run({ override: true, override_reason: reason })

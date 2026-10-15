@@ -8,14 +8,21 @@ from app.platform.rbac.service import has_permissions
 from app.platform.users import service as crud
 from app.platform.users.models import User
 from app.platform.users.schemas import UserCreate
-from app.testing.utils import random_email, random_lower_string
+from app.testing.user import create_owned_tenant
+from app.testing.utils import (
+    login_name,
+    random_email,
+    random_lower_string,
+    username_for,
+)
 
 API = settings.API_V1_STR
 
 
 def _login(client: TestClient, email: str, password: str) -> dict[str, str]:
     r = client.post(
-        f"{API}/login/access-token", data={"username": email, "password": password}
+        f"{API}/login/access-token",
+        data={"username": login_name(email), "password": password},
     )
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
@@ -23,8 +30,10 @@ def _login(client: TestClient, email: str, password: str) -> dict[str, str]:
 def _new_user(client: TestClient, db: Session) -> tuple[User, dict[str, str]]:
     email, pw = random_email(), random_lower_string()
     user = crud.create_user(
-        session=db, user_create=UserCreate(email=email, password=pw)
+        session=db,
+        user_create=UserCreate(email=email, username=username_for(email), password=pw),
     )
+    create_owned_tenant(db, user)
     return user, _login(client, email, pw)
 
 
@@ -58,35 +67,27 @@ def test_new_user_gets_user_role(client: TestClient, db: Session) -> None:
     assert "users:read" not in body["permissions"]
 
 
-def test_signup_gets_user_role(client: TestClient) -> None:
-    email, pw = random_email(), random_lower_string()
-    assert (
-        client.post(
-            f"{API}/users/signup", json={"email": email, "password": pw}
-        ).status_code
-        == 200
-    )
-    body = client.get(
-        f"{API}/users/me/permissions", headers=_login(client, email, pw)
-    ).json()
-    assert body["roles"] == ["user"]
-
-
 def test_normal_user_cannot_manage_roles(
     client: TestClient, normal_user_token_headers: dict[str, str]
 ) -> None:
     assert (
-        client.get(f"{API}/roles/", headers=normal_user_token_headers).status_code
-        == 403
-    )
-    assert (
-        client.post(
-            f"{API}/roles/", headers=normal_user_token_headers, json={"name": "x"}
+        client.get(
+            f"{API}/platform/roles/", headers=normal_user_token_headers
         ).status_code
         == 403
     )
     assert (
-        client.get(f"{API}/permissions/", headers=normal_user_token_headers).status_code
+        client.post(
+            f"{API}/platform/roles/",
+            headers=normal_user_token_headers,
+            json={"name": "x"},
+        ).status_code
+        == 403
+    )
+    assert (
+        client.get(
+            f"{API}/platform/permissions/", headers=normal_user_token_headers
+        ).status_code
         == 403
     )
 
@@ -97,24 +98,28 @@ def test_role_and_permission_crud(
     h = superuser_token_headers
     code = f"reports:{random_lower_string()[:8]}"
     p = client.post(
-        f"{API}/permissions/", headers=h, json={"code": code, "description": "d"}
+        f"{API}/platform/permissions/",
+        headers=h,
+        json={"code": code, "description": "d"},
     )
     assert p.status_code == 200
     pid = p.json()["id"]
     assert (
-        client.post(f"{API}/permissions/", headers=h, json={"code": code}).status_code
+        client.post(
+            f"{API}/platform/permissions/", headers=h, json={"code": code}
+        ).status_code
         == 409
     )
     assert (
         client.patch(
-            f"{API}/permissions/{pid}", headers=h, json={"description": "new"}
+            f"{API}/platform/permissions/{pid}", headers=h, json={"description": "new"}
         ).json()["description"]
         == "new"
     )
 
     name = f"role-{random_lower_string()[:8]}"
     r = client.post(
-        f"{API}/roles/",
+        f"{API}/platform/roles/",
         headers=h,
         json={"name": name, "permission_codes": ["users:read"]},
     )
@@ -122,26 +127,28 @@ def test_role_and_permission_crud(
     rid = r.json()["id"]
     assert [x["code"] for x in r.json()["permissions"]] == ["users:read"]
 
-    r = client.post(f"{API}/roles/{rid}/permissions/{pid}", headers=h)
+    r = client.post(f"{API}/platform/roles/{rid}/permissions/{pid}", headers=h)
     assert {x["code"] for x in r.json()["permissions"]} == {"users:read", code}
-    r = client.delete(f"{API}/roles/{rid}/permissions/{pid}", headers=h)
+    r = client.delete(f"{API}/platform/roles/{rid}/permissions/{pid}", headers=h)
     assert {x["code"] for x in r.json()["permissions"]} == {"users:read"}
 
     assert (
-        client.patch(f"{API}/roles/{rid}", headers=h, json={"description": "x"}).json()[
-            "description"
-        ]
+        client.patch(
+            f"{API}/platform/roles/{rid}", headers=h, json={"description": "x"}
+        ).json()["description"]
         == "x"
     )
     assert any(
         x["name"] == name
-        for x in client.get(f"{API}/roles/", headers=h, params={"q": name}).json()[
-            "data"
-        ]
+        for x in client.get(
+            f"{API}/platform/roles/", headers=h, params={"q": name}
+        ).json()["data"]
     )
-    assert client.delete(f"{API}/roles/{rid}", headers=h).status_code == 200
-    assert client.get(f"{API}/roles/{rid}", headers=h).status_code == 404
-    assert client.delete(f"{API}/permissions/{pid}", headers=h).status_code == 200
+    assert client.delete(f"{API}/platform/roles/{rid}", headers=h).status_code == 200
+    assert client.get(f"{API}/platform/roles/{rid}", headers=h).status_code == 404
+    assert (
+        client.delete(f"{API}/platform/permissions/{pid}", headers=h).status_code == 200
+    )
 
 
 def test_assign_role_grants_permission(
@@ -149,27 +156,39 @@ def test_assign_role_grants_permission(
 ) -> None:
     h = superuser_token_headers
     user, uh = _new_user(client, db)
-    assert client.get(f"{API}/users/", headers=uh).status_code == 403
+    assert client.get(f"{API}/platform/users/", headers=uh).status_code == 403
 
     role = client.post(
-        f"{API}/roles/",
+        f"{API}/platform/roles/",
         headers=h,
         json={
             "name": f"viewer-{random_lower_string()[:8]}",
             "permission_codes": ["users:read"],
         },
     ).json()
-    r = client.post(f"{API}/users/{user.id}/roles/{role['id']}", headers=h)
+    r = client.post(f"{API}/platform/users/{user.id}/roles/{role['id']}", headers=h)
     assert r.status_code == 200
     assert {x["name"] for x in r.json()} == {"user", role["name"]}
 
-    # non-superuser with users:read can now list users, but not delete them
-    assert client.get(f"{API}/users/", headers=uh).status_code == 200
-    assert client.delete(f"{API}/users/{user.id}", headers=uh).status_code == 403
+    # 平台角色授予的权限：可读平台用户，但不能删除（缺 users:delete）
+    me = client.get(f"{API}/users/me/permissions", headers=uh).json()
+    assert "users:read" in me["permissions"]
+    assert client.get(f"{API}/platform/users/", headers=uh).status_code == 200
+    assert (
+        client.delete(f"{API}/platform/users/{user.id}", headers=uh).status_code == 403
+    )
+    assert client.get(f"{API}/platform/roles/", headers=uh).status_code == 403
+    # 停用角色后不再授予权限
+    client.patch(
+        f"{API}/platform/roles/{role['id']}", headers=h, json={"status": "disabled"}
+    )
+    me = client.get(f"{API}/users/me/permissions", headers=uh).json()
+    assert "users:read" not in me["permissions"]
+    assert client.get(f"{API}/platform/users/", headers=uh).status_code == 403
 
-    r = client.delete(f"{API}/users/{user.id}/roles/{role['id']}", headers=h)
+    r = client.delete(f"{API}/platform/users/{user.id}/roles/{role['id']}", headers=h)
     assert {x["name"] for x in r.json()} == {"user"}
-    assert client.get(f"{API}/users/", headers=uh).status_code == 403
+    assert client.get(f"{API}/platform/users/", headers=uh).status_code == 403
 
 
 def test_removing_tenant_roles_blocks_members(
@@ -188,7 +207,7 @@ def test_removing_tenant_roles_blocks_members(
         client.post(
             f"{API}/tenants/{tenant['id']}/members",
             headers=uh,
-            json={"email": other.email, "roles": ["owner"]},
+            json={"username": other.username, "roles": ["owner"]},
         ).status_code
         == 200
     )
@@ -207,6 +226,11 @@ def test_removing_tenant_roles_blocks_members(
 
 
 def test_superuser_bypass_without_roles() -> None:
-    u = User(email=random_email(), hashed_password="x", is_superuser=True)
+    u = User(
+        email=random_email(),
+        username="su_" + random_lower_string()[:10],
+        hashed_password="x",
+        is_superuser=True,
+    )
     assert u.roles == []
     assert has_permissions(u, "anything:at_all")

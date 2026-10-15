@@ -6,7 +6,7 @@
     hold      released|in_progress -> on_hold
     resume    on_hold -> Hold 前的状态
     complete  in_progress -> completed
-    close     completed -> closed
+    close     completed -> closed            （手动结案；批次须已全部入库 / 报废 / 合批）
     cancel    draft|released（未开批）-> cancelled
 
 开批使工单 released → in_progress；撤销全部开批后回到 released。
@@ -20,6 +20,7 @@ import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
+from app.core.models import actor_name
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, TABLES, Entity
@@ -28,6 +29,7 @@ from app.core.spec.query import get_row
 from app.core.spec.validate import validator
 from app.mes.common import coderule
 from app.mes.lot import service as lot_svc
+from app.mes.planning.board import wo_due_notify as wo_due_notify
 from app.mes.process import service as process_svc
 
 Row = dict[str, Any]
@@ -277,12 +279,39 @@ def transition(
             "product_version": prod["version"],
             "route_version": route["version"],
             "released_at": now(),
-            "released_by": getattr(user, "email", None),
+            "released_by": actor_name(user),
         }
     elif action == "hold":
         extra = {"held_from": wo["wo_status"]}
     elif action == "resume":
         to, extra = wo["held_from"] or "released", {"held_from": None}
+    elif action == "close":
+        t = TABLES["lot"]
+        open_lots = (
+            conn(s)
+            .execute(
+                sa.select(t.c.code)
+                .where(
+                    t.c.tenant_id == tid,
+                    t.c.work_order_id == wo["id"],
+                    t.c.lot_status.notin_(["stored", "scrapped", "merged"]),
+                )
+                .order_by(t.c.code)
+                .limit(5)
+            )
+            .scalars()
+            .all()
+        )
+        if open_lots:
+            raise http_422(
+                [
+                    (
+                        "wo_status",
+                        "wo_status: lots still in process or awaiting receipt: "
+                        + ", ".join(open_lots),
+                    )
+                ]
+            )
     elif action == "cancel" and wo["started_qty"]:
         raise http_422([("wo_status", "wo_status: lots were started; undo them first")])
     new = _set(s, tid, wo, user, action, wo_status=to, **extra)
@@ -344,7 +373,7 @@ def _carrier_busy(s: Session, tid: uuid.UUID, carrier_id: Any) -> bool:
             sa.select(t.c.id).where(
                 t.c.tenant_id == tid,
                 t.c.carrier_id == carrier_id,
-                t.c.lot_status.notin_(["completed", "scrapped", "merged"]),
+                t.c.lot_status.notin_(["completed", "stored", "scrapped", "merged"]),
             )
         )
         .first()
@@ -487,12 +516,15 @@ def start(
                 step_in_at=at,
                 on_hold=False,
                 scrapped_qty=0,
+                received_qty=0,
+                rework_count=0,
+                bonus_qty=0,
                 pending_rework=False,
                 lot_status="waiting",
                 carrier_id=x.get("carrier_id"),
                 source_ref=x.get("source_ref") or None,
                 started_at=at,
-                started_by=getattr(user, "email", None),
+                started_by=actor_name(user),
                 attrs=dict(tag),
                 **sysv,
             )
@@ -557,9 +589,11 @@ def undo_start(
     stmt = sa.select(t).where(t.c.tenant_id == tid, t.c.work_order_id == wo["id"])
     if lot_ids:
         stmt = stmt.where(t.c.id.in_(lot_ids))
-    lots = [dict(r) for r in conn(s).execute(stmt).mappings()]
-    if not lots:
+    ids = list(conn(s).execute(stmt.with_only_columns(t.c.id)).scalars())
+    if not ids:
         raise http_422([("lots", "lots: nothing to undo")])
+    # 加锁后再判断状态，防止与 Move In / Hold 并发
+    lots = list(lot_svc.lock_lots(s, tid, ids).values())
     h = TABLES["lot_history"]
     acted = set(
         conn(s)

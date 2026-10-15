@@ -59,7 +59,7 @@ core  <-  platform.*  <-  mes.common  <-  mes.<domain>  <-  mes.execution
 - `app.core` 不导入 `platform` / `mes`；`platform` 不导入 `mes`（需要 MES 信息时经注册表获取，如权限、菜单）。
 - MES 领域依赖（只能向左）：`factory`、`product` → common；`equipment` → common、product；`process` → + equipment；`quality` → + process；`lot` → + quality；`planning` → + lot；`execution` 可依赖所有领域，任何模块都不得依赖 `execution`。
 - 跨模块只能导入对方的公开面：`service`、`models`、`schemas`、`specs`、`permissions`、`menus`、`deps`（`core` 与 `mes.common` 为共享内核，全部公开）。
-- 模块间无循环依赖（`router*.py` / `deps.py` / `module.py` 为组合边界，不计入循环检查；`if TYPE_CHECKING:` 中的导入忽略）。需要“反向”通知时使用钩子，例如 `users.service.USER_CREATED_HOOKS`（tenants 注册个人工作区创建）。
+- 模块间无循环依赖（`router*.py` / `deps.py` / `module.py` 为组合边界，不计入循环检查；`if TYPE_CHECKING:` 中的导入忽略）。需要“反向”通知时使用钩子。
 - 规则由 `app/tests/test_architecture.py`（随 pytest 运行）强制执行。
 
 > 注意：包名 `app.platform` 与标准库 `platform` 同名，不要以 `python app/xxx.py` 方式运行脚本（会把 `app/` 放进 `sys.path`），请使用 `python -m app.xxx`。
@@ -72,7 +72,7 @@ core  <-  platform.*  <-  mes.common  <-  mes.<domain>  <-  mes.execution
 
 ## RBAC
 
-- 权限编码为 `<资源>:<动作>`，如 `mes.lot:write`、`mes.exec:override`。实体权限由规格自动生成，读写权限按各模块 `permissions.py` 的 `PERM_MODULES` 自动生成，额外权限在 `PERMISSIONS` 中声明（经 `module.py` 注册），新增权限需在迁移中 `add_permissions()`。
+- 权限编码为 `<资源>:<动作>`，如 `mes.lot:write`、`mes.exec:override`。实体权限由规格自动生成，读写权限按各模块 `permissions.py` 的 `PERM_MODULES` 自动生成，额外权限在 `PERMISSIONS` 中声明（经 `module.py` 注册），启动时由种子数据同步到数据库。
 - 角色按租户分配；超级用户拥有全部权限。前端通过 `/mes/_meta` 等接口获取当前权限控制按钮显示，后端在每个路由中再校验。
 
 ## 动态菜单
@@ -145,7 +145,38 @@ pnpm exec tsc -b
 pnpm lint
 pnpm format:check
 pnpm i18n:check
+pnpm test                        # vitest 组件 / 单元测试（无头 Chromium；首次需 pnpm exec playwright install chromium-headless-shell）
 pnpm build
 ```
 
 UI 布局巡检（需前后端已启动）：`node scripts/ui-audit.cjs`。
+
+## RBAC：统一权限树
+
+- 菜单与权限合并为一棵权限树：`Menu`（目录 / 页面）是 MENU 节点；`Permission.menu_id` 把权限挂到菜单下，`type` 为 MENU（页面访问）/ BUTTON（页面内操作）/ API。未挂接的权限归入“其他权限”分组。启动时 `seed_menus` → `link_permissions` 只为 `menu_id` 为空的权限补挂接，不覆盖手工调整。
+- 角色与权限都有 `status`（active / disabled）；停用的角色或权限不授予任何权限（`rbac.service.active_codes`）。角色 `name` 为编码，`title` 为显示名称。
+- 接口：
+  - `GET /platform/permission-tree?space=all|workspace|platform&scope=platform|tenant`：权限树（超级用户）。
+  - `GET /tenants/{id}/permission-tree`：租户角色对话框用的权限树（仅工作区、租户作用域）。
+  - `PUT /platform/users/{id}/roles` `{role_ids}`：整体设置用户的平台角色。
+  - 用户列表筛选 `username` / `full_name` / `is_active`；角色列表筛选 `code` / `title` / `status`；成员列表筛选 `username` / `full_name` / `is_active` / `role_id`。
+- 前端：平台控制台“权限树”页（`platform-permissions`）维护菜单与权限；角色对话框内嵌三态复选权限树。
+
+### 平台权限与租户模拟
+
+- 平台接口（`/platform/...`）按平台权限授权（`auth.deps.platform_permission`）：路径首段映射资源，GET 需 `<资源>:read`，其余需 `<资源>:write`；`users` 删除需 `users:delete`，设置用户角色需 `roles:write`，租户品牌属 `platform.config:*`。资源：`users`、`roles`（角色 / 权限 / 权限树 / 菜单）、`tenants`、`platform.config`、`platform.notify`、`platform.audit`。超级用户直接通过；非超级用户不能创建 / 修改 / 删除超级用户。
+- 平台菜单带访问权限（`menus.service.PLATFORM_MENU_PERMS`），`/menus/me?space=platform` 按权限过滤；持有任一平台权限即可进入控制台（`/menus/me` 返回 `platform_access`）。
+- 菜单 `status`（active / disabled）：停用的菜单对所有人隐藏，其路径进入 `forbidden_paths`（前端 403）。
+- 内置权限 / 角色名称：`rbac.labels` 提供三语名称，种子数据补齐英文 `name` / `title`，`scripts/export_mes_i18n.py` 生成前端 `permName.*` / `roleName.*`；前端在名称为空或仍为内置英文名时按语言翻译（`lib/rbac-labels.ts`）。
+- 以租户身份进入：`POST /platform/tenants/{id}/enter`（`tenants:write`）签发 `imp` 模拟令牌（`IMPERSONATION_EXPIRE_MINUTES`，默认 30 分钟），只能访问绑定租户（具全部租户权限）且不能调用平台接口；前端保存原令牌，退出（或模拟令牌过期）时恢复并调用 `POST /platform/tenants/{id}/exit`。进入 / 退出均记入平台操作日志。
+
+## 用户身份：用户名为主
+
+- `user.username` 必填，以小写存储，并有 `lower(username)` 唯一索引（不区分大小写唯一）；`email` 可选，填写时唯一（比较不区分大小写）。重复时返回 409：`User with this username already exists` / `User with this email already exists`。
+- 仅支持用户名登录（`/login/access-token` 的 `username` 字段，不接受邮箱）。错误信息为 `Incorrect username or password`。
+- 所有操作人字段统一记录用户名：`core.models.actor_name(user)`（审计 / 履历表 `username`、平台操作日志 `actor_username`、登录日志 `username`、`updated_by`、通知等）。
+- 平台用户：`GET/PUT /platform/users/{id}/tenants` 整体设置用户的租户成员身份与租户角色（保留最后一个 owner 校验，逐项记入平台操作日志）。系统**不会**为任何用户自动创建个人工作区 / 租户（注册、平台创建、租户内创建、首个超级用户均如此）；租户（工厂 / 站点级作用域）只由平台创建，用户须显式加入。未分配租户的普通用户登录后看到“尚未分配厂区 / 权限，请联系管理员”的提示。无公开注册。
+- 租户成员（需 `members:write`；涉及 owner 需 `tenant:manage`）：
+  - `POST /tenants/{id}/members` 按用户名（或邮箱）添加已有用户；
+  - `POST /tenants/{id}/members/new` 直接在租户内创建用户（不能创建超级用户，不创建个人工作区）；
+  - `PATCH /tenants/{id}/members/{uid}/user` 修改账号 / 重置密码，仅当该用户只属于本租户（`MemberPublic.sole_tenant`）时允许，否则 403。

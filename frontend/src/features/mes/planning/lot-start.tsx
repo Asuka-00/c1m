@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Page } from '@/components/crud'
+import { IconButton } from '@/components/icon-button'
 import { cellValue } from '@/features/mes/common/cells'
 import { RefSelect } from '@/features/mes/common/ref-select'
 import { mesErrorMessage } from '@/features/mes/common/required'
@@ -36,6 +37,9 @@ type LotDraft = {
   slots: string
   source_ref: string
 }
+
+/** 工单选择列表最多显示条数（其余通过关键字缩小范围）。 */
+const WO_SHOW = 20
 
 /** "1-3,7" -> [1,2,3,7]；格式错误时返回 null。 */
 function parseSlots(s: string): number[] | null {
@@ -106,6 +110,13 @@ export default function LotStartPage() {
     },
   })
   const wo = wos.data?.find((w) => w.id === woId) ?? null
+  // 工单列表关键字（工单号 / 产品 / 流程 / 客户），最多显示 WO_SHOW 条
+  const [woQ, setWoQ] = useState('')
+  const woMatch = (wos.data ?? []).filter((w) =>
+    [w.code, w.customer, w.order_ref, w.product_label, w.route_label]
+      .map((x) => String(x ?? '').toLowerCase())
+      .some((x) => x.includes(woQ.trim().toLowerCase()))
+  )
   const site = useQuery({
     queryKey: ['mes', 'site', 'one', tk, plan?.site_id],
     queryFn: () => mesApi.get('site', plan!.site_id!),
@@ -227,6 +238,25 @@ export default function LotStartPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className='space-y-2'>
+              <div className='flex items-center gap-3'>
+                <Input
+                  className='max-w-sm'
+                  value={woQ}
+                  onChange={(e) => setWoQ(e.target.value)}
+                  placeholder={t('mes.start.searchWo')}
+                  data-testid='wo-search'
+                />
+                {!!wos.data?.length && (
+                  <span className='text-sm text-muted-foreground'>
+                    {woMatch.length > WO_SHOW
+                      ? t('mes.start.woMore', {
+                          n: woMatch.length,
+                          show: WO_SHOW,
+                        })
+                      : t('common.total', { count: woMatch.length })}
+                  </span>
+                )}
+              </div>
               {wos.isLoading && <Loader2 className='animate-spin' />}
               {wos.data?.length === 0 && (
                 <p className='text-sm text-muted-foreground'>
@@ -234,7 +264,7 @@ export default function LotStartPage() {
                 </p>
               )}
               {woE &&
-                wos.data?.map((w) => (
+                woMatch.slice(0, WO_SHOW).map((w) => (
                   <button
                     key={w.id}
                     type='button'
@@ -401,16 +431,15 @@ export default function LotStartPage() {
                               />
                             </td>
                             <td className='p-2'>
-                              <Button
-                                size='icon'
+                              <IconButton
+                                label={t('common.delete')}
                                 variant='ghost'
-                                aria-label={t('common.delete')}
                                 onClick={() =>
                                   setLots((ls) => ls.filter((_, k) => k !== i))
                                 }
                               >
                                 <Trash2 className='size-4 text-destructive' />
-                              </Button>
+                              </IconButton>
                             </td>
                           </tr>
                         ))}

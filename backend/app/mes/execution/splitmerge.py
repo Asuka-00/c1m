@@ -68,7 +68,7 @@ def sm_context(s: Session, tid: uuid.UUID, lot: Row) -> Row:
                 "qty": r["qty"],
                 "units": r["units"] or [],
                 "at": r["at"].isoformat() if r["at"] else None,
-                "user": r["user_email"],
+                "user": r["username"],
             }
             for r in rows
         ],
