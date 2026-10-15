@@ -27,7 +27,7 @@ export const DATE_CODE_BASES = [
 ] as const
 export type DateCodeBasis = (typeof DATE_CODE_BASES)[number]
 
-/** `mes_marking_template`（status / version / approved_* 只读）。 */
+/** `mes_marking_template`：一个模板（id 不变）下挂多个版本；顶层 version/status/lines 为最新版本（同 be/p3 ser）。 */
 export interface MarkingTemplate {
   id: string
   code: string
@@ -47,6 +47,8 @@ export interface MarkingTemplate {
   created_at: string | null
   approved_by: string | null
   approved_at: string | null
+  /** 当前 approved 版本号（没有为 null） */
+  approved_version?: number | null
   /** D90-3：仅详情接口带 */
   versions?: TemplateVersion[]
 }
@@ -426,10 +428,6 @@ export interface TraceCodeResult {
   }[]
 }
 
-/**
- * B1 开工清单未定项（设备集成 07:44 提出，等架构师答复）。mock 暂按下列取值，测试不断言这些部分。
- * 后端定稿后只改这里。
- */
 /** D89 补充二：code 租户内唯一（大小写不敏感，同 be/p3 test_marking_template）；同 product_id+customer_id
  * 租户内只一个模板（版本挂其下）。两种重复都同 spec.errors.integrity()：409 字符串 detail、无 code。 */
 const dupErr = () => apiError(409, 'A record with the same key already exists')
@@ -473,7 +471,6 @@ export interface MarkingApi {
   /** 复制最新版本为草稿（D79-1） */
   newVersion: (id: string, key: string) => Promise<MarkingTemplate>
   approve: (id: string, key: string) => Promise<MarkingTemplate>
-  retire: (id: string) => Promise<MarkingTemplate>
   /** POST /mes/marking-template/preview（只读，不带 Idempotency-Key） */
   templatePreview: (input: TemplateCheckInput) => Promise<TemplatePreviewOut>
   /** POST /mes/marking-template/validate（只读，不带 Idempotency-Key） */
@@ -550,10 +547,6 @@ export const httpMarkingApi: MarkingApi = {
         undefined,
         idemHeaders(key)
       )
-      .then((r) => r.data),
-  retire: (id) =>
-    http
-      .post<MarkingTemplate>(`/mes/marking-template/${id}/retire`)
       .then((r) => r.data),
   templatePreview: (input) =>
     http
@@ -712,17 +705,6 @@ export function diffTemplates(
   }
   return out
 }
-
-/** 同一「产品+客户」的其他版本（版本对比的候选）。 */
-export const siblingVersions = (all: MarkingTemplate[], tpl: MarkingTemplate) =>
-  all
-    .filter(
-      (x) =>
-        x.id !== tpl.id &&
-        x.product_id === tpl.product_id &&
-        x.customer_id === tpl.customer_id
-    )
-    .sort((x, y) => y.version - x.version)
 
 /** 重打原因校验：reason_id、comment 都必填，comment ≤300；返回缺失 / 超长字段。 */
 export function reprintErrors(
@@ -899,9 +881,13 @@ const NAMES: Record<string, string> = {
   c2: 'Globex',
 }
 
-const tplSeed = (): MarkingTemplate[] => [
+/** mock 内部：每个版本一行，gid 为对外的模板 id。 */
+type TplRow = MarkingTemplate & { gid: string }
+
+const tplSeed = (): TplRow[] => [
   {
-    id: 't1',
+    id: 'v-t1',
+    gid: 't2',
     code: 'MK-QFN32-ACME',
     product_id: 'p1',
     product_name: 'QFN32-A',
@@ -918,7 +904,8 @@ const tplSeed = (): MarkingTemplate[] => [
     approved_at: '2026-09-02T01:00:00Z',
   },
   {
-    id: 't2',
+    id: 'v-t2',
+    gid: 't2',
     code: 'MK-QFN32-ACME',
     product_id: 'p1',
     product_name: 'QFN32-A',
@@ -935,7 +922,8 @@ const tplSeed = (): MarkingTemplate[] => [
     approved_at: '2026-10-02T01:00:00Z',
   },
   {
-    id: 't3',
+    id: 'v-t3',
+    gid: 't3',
     code: 'MK-SOP8-GLOBEX',
     product_id: 'p2',
     product_name: 'SOP8-B',
@@ -954,7 +942,7 @@ const tplSeed = (): MarkingTemplate[] => [
 ]
 
 interface Store {
-  t: MarkingTemplate[]
+  t: TplRow[]
   rec: MarkingRecord[]
   seq: Record<string, number>
   n: number
@@ -1077,10 +1065,22 @@ function withIdem<T>(
   return out
 }
 
+/** 模板的全部版本行，新版本在前。 */
+const rowsOf = (gid: string) =>
+  tpls()
+    .filter((y) => y.gid === gid)
+    .sort((a, b) => b.version - a.version)
+/** 按模板 id 取最新版本行；不存在（含跨租户）404。 */
 const findTpl = (id: string) => {
-  const x = tpls().find((y) => y.id === id)
+  const x = rowsOf(id)[0]
   if (!x) throw apiError(404, 'not found')
   return x
+}
+/** 对外形状：id = 模板 id，顶层为最新版本，另带 approved_version。 */
+const serTpl = (row: TplRow): MarkingTemplate => {
+  const { gid, ...rest } = structuredClone(row)
+  const appr = rowsOf(gid).find((y) => y.status === 'approved')
+  return { ...rest, id: gid, approved_version: appr?.version ?? null }
 }
 const findLot = (id: string) => {
   const x = LOTS.find((l) => l.id === id || l.code === id)
@@ -1156,34 +1156,30 @@ function mockCreate(input: TemplateInput): MarkingTemplate {
     ...pickBody(input, MARKING_BODY.template),
     // QA F4：不静默丢弃空行，原样保存（后端口径待对齐）
     lines: [...input.lines],
-    id: `t${store.t.length + 1}-${++store.n}`,
+    id: `v${store.t.length + 1}-${++store.n}`,
+    gid: `t${store.t.length + 1}-${store.n}`,
     product_name: NAMES[input.product_id] ?? null,
     customer_name: NAMES[input.customer_id] ?? null,
-    version: Math.max(0, ...same.map((y) => y.version)) + 1,
+    version: 1,
     status: 'draft',
     created_by: mockUser,
     created_at: mockNow().toISOString(),
     approved_by: null,
     approved_at: null,
-  } as MarkingTemplate
+  } as TplRow
   store.t.push(tpl)
   tplTenant.set(tpl.id, mockTenant)
-  return tpl
+  return serTpl(tpl)
 }
 
 /** D79-1：复制同「产品+客户」的最新版本为草稿，版本号递增。 */
 function mockNewVersion(id: string): MarkingTemplate {
-  const base = findTpl(id)
-  const same = tpls().filter(
-    (y) =>
-      y.product_id === base.product_id && y.customer_id === base.customer_id
-  )
-  if (same.some((y) => y.status === 'draft'))
+  const latest = findTpl(id)
+  if (rowsOf(id).some((y) => y.status === 'draft'))
     throw err409('draft_exists', 'a draft already exists')
-  const latest = same.reduce((a, b) => (b.version > a.version ? b : a))
-  const tpl: MarkingTemplate = {
+  const tpl: TplRow = {
     ...structuredClone(latest),
-    id: `t${store.t.length + 1}-${++store.n}`,
+    id: `v${store.t.length + 1}-${++store.n}`,
     version: latest.version + 1,
     status: 'draft',
     created_by: mockUser,
@@ -1193,7 +1189,7 @@ function mockNewVersion(id: string): MarkingTemplate {
   }
   store.t.push(tpl)
   tplTenant.set(tpl.id, mockTenant)
-  return tpl
+  return serTpl(tpl)
 }
 
 const sameGroup = (a: MarkingTemplate, b: MarkingTemplate) =>
@@ -1202,25 +1198,22 @@ const sameGroup = (a: MarkingTemplate, b: MarkingTemplate) =>
 /** D90-3：详情带同产品+客户的全部版本（倒序）。 */
 function mockDetail(id: string): MarkingTemplate {
   const tpl = findTpl(id)
-  const versions = tpls()
-    .filter((y) => sameGroup(y, tpl))
-    .sort((a, b) => b.version - a.version)
-    .map((y) => ({
-      version: y.version,
-      status: y.status,
-      created_by: y.created_by,
-      created_at: y.created_at,
-      approved_by: y.status === 'draft' ? null : y.approved_by,
-      approved_at: y.status === 'draft' ? null : y.approved_at,
-    }))
-  return { ...structuredClone(tpl), versions }
+  const versions = rowsOf(id).map((y) => ({
+    version: y.version,
+    status: y.status,
+    created_by: y.created_by,
+    created_at: y.created_at,
+    approved_by: y.status === 'draft' ? null : y.approved_by,
+    approved_at: y.status === 'draft' ? null : y.approved_at,
+  }))
+  return { ...serTpl(tpl), versions }
 }
 
 function mockUpdate(id: string, input: Partial<TemplateInput>) {
   // D81：请求体 422 → 404 → 409 template_readonly
   validateTemplate(input, false)
   const tpl = findTpl(id)
-  // D90-1：product_id / customer_id 建好后不可改；相同值视为没改。需查到记录，排在 404 后、409 前
+  // D90-1 / D91 补充一：product_id / customer_id 不可改（同值视为没改）；需查到记录的 422，404 之后、409 template_readonly 之前
   const changed = (['product_id', 'customer_id'] as const).filter(
     (f) => input[f] !== undefined && input[f] !== tpl[f]
   )
@@ -1244,7 +1237,9 @@ function mockUpdate(id: string, input: Partial<TemplateInput>) {
   )
     throw dupErr()
   Object.assign(tpl, pickBody(input, MARKING_BODY.template))
-  return tpl
+  // code 属于模板：各版本行同步
+  if (input.code !== undefined) for (const y of rowsOf(id)) y.code = input.code
+  return serTpl(tpl)
 }
 
 function mockApprove(id: string) {
@@ -1262,25 +1257,12 @@ function mockApprove(id: string) {
     )
   if (tpl.status !== 'draft')
     throw err409('invalid_transition', 'only draft can be approved')
-  for (const y of tpls())
-    if (
-      y.status === 'approved' &&
-      y.product_id === tpl.product_id &&
-      y.customer_id === tpl.customer_id
-    )
-      y.status = 'retired'
+  // 新版本批准后旧 approved 自动 retired（唯一产生 retired 的途径）
+  for (const y of rowsOf(id)) if (y.status === 'approved') y.status = 'retired'
   tpl.status = 'approved'
   tpl.approved_by = mockUser
   tpl.approved_at = mockNow().toISOString()
-  return tpl
-}
-
-function mockRetire(id: string) {
-  const tpl = findTpl(id)
-  if (tpl.status !== 'approved')
-    throw err409('invalid_transition', 'only approved can be retired')
-  tpl.status = 'retired'
-  return tpl
+  return serTpl(tpl)
 }
 
 /** template_id 与 lines 二选一：都传 / 都不传 422 value_error（请求体 422 先于 404）。 */
@@ -1327,7 +1309,7 @@ function mockPreview(lotId: string): MarkingPreview {
     lot_id: lot.id,
     lot: lot.code,
     bin: lot.bin,
-    template_id: live?.template_id ?? tpl.id,
+    template_id: live?.template_id ?? tpl.gid,
     template_code: live?.template_code ?? tpl.code,
     template_version: live?.template_version ?? tpl.version,
     date_code: yyww,
@@ -1354,7 +1336,7 @@ function mockCreateRec(input: CreateInput): MarkingRecord {
     id: `m${++store.n}`,
     lot_id: lot.id,
     lot: lot.code,
-    template_id: tpl.id,
+    template_id: tpl.gid,
     template_code: tpl.code,
     template_version: tpl.version,
     content: renderLines(tpl.lines, values(lot, yyww, trace)),
@@ -1579,7 +1561,11 @@ export const mockMarkingApi: MarkingApi = {
   templates: (q) =>
     later(() => {
       needTpl(TPL_PERM.read)
-      return tpls().filter((x) => !q?.status || x.status === q.status)
+      // 每个模板一行（最新版本）
+      const gids = [...new Set(tpls().map((x) => x.gid))]
+      return gids
+        .map((g) => serTpl(findTpl(g)))
+        .filter((x) => !q?.status || x.status === q.status)
     }),
   template: (id) =>
     later(() => {
@@ -1621,7 +1607,6 @@ export const mockMarkingApi: MarkingApi = {
         mockApprove(id)
       )
     }),
-  retire: (id) => later(() => mockRetire(id)),
   templatePreview: (input) =>
     later(() => mockTplPreview(pickBody(input, MARKING_BODY.templateCheck))),
   templateValidate: (input) =>

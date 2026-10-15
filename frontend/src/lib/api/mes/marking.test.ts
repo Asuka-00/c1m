@@ -27,7 +27,6 @@ import {
   setMarkingMockConfig,
   setMarkingMockNow,
   setMarkingMockUser,
-  siblingVersions,
   traceCodeError,
   traceCodeErrors,
   trackOutBlock,
@@ -158,11 +157,34 @@ describe('D78 补充五：纯空白只认 /^[ \\t\\r\\n\\u3000]*$/', () => {
 })
 
 describe('模板 mock（D79）', () => {
-  it('版本对比：逐字段、逐行', async () => {
+  it('一个模板挂多个版本：列表每模板一行（最新版本）；详情 versions 倒序', async () => {
     const all = await api.templates()
-    const [v1, v2] = [all[0], all[1]]
-    expect(siblingVersions(all, v2).map((x) => x.id)).toEqual(['t1'])
-    expect(diffTemplates(v1, v2)).toEqual([
+    expect(all.map((x) => [x.id, x.version, x.status])).toEqual([
+      ['t2', 2, 'approved'],
+      ['t3', 1, 'draft'],
+    ])
+    const v2 = all[0]
+    expect(v2.approved_version).toBe(2)
+    const d = await api.template('t2')
+    expect(d.versions?.map((x) => [x.version, x.status])).toEqual([
+      [2, 'approved'],
+      [1, 'retired'],
+    ])
+    expect(v2.product_name).toBe('QFN32-A')
+    expect(v2.customer_name).toBe('ACME')
+  })
+  it('diffTemplates：逐字段、逐行', () => {
+    const base = {
+      date_code_basis: 'lot_start',
+      uses_bin: false,
+      lines: ['{product_code}', '{date_code}'],
+    } as never
+    const v2 = {
+      date_code_basis: 'marking',
+      uses_bin: false,
+      lines: ['{product_code}', '{date_code} {trace_code}'],
+    } as never
+    expect(diffTemplates(base, v2)).toEqual([
       { field: 'date_code_basis', before: 'lot_start', after: 'marking' },
       {
         field: 'lines',
@@ -171,8 +193,6 @@ describe('模板 mock（D79）', () => {
         after: '{date_code} {trace_code}',
       },
     ])
-    expect(v2.product_name).toBe('QFN32-A')
-    expect(v2.customer_name).toBe('ACME')
   })
   it('白名单外占位符 422 value_error ctx.reason=unknown_placeholder', async () => {
     expect(
@@ -201,8 +221,14 @@ describe('模板 mock（D79）', () => {
   })
   it('新版本复制最新版本为草稿、版本号递增；已有草稿 409 draft_exists', async () => {
     setMarkingMockUser('eng1')
-    const d = await api.newVersion('t1', 'tk10')
-    expect(d).toMatchObject({ version: 3, status: 'draft', created_by: 'eng1' })
+    const d = await api.newVersion('t2', 'tk10')
+    // 模板 id 不变，顶层为最新版本
+    expect(d).toMatchObject({
+      id: 't2',
+      version: 3,
+      status: 'draft',
+      created_by: 'eng1',
+    })
     expect(d.lines).toEqual(['{product_code}', '{date_code} {trace_code}'])
     expect(await detail(api.newVersion('t2', 'tk11'))).toMatchObject({
       status: 409,
@@ -218,8 +244,12 @@ describe('模板 mock（D79）', () => {
     })
     setMarkingMockUser('qa1')
     await api.approve(t.id, 'tk14')
-    const all = await api.templates()
-    expect(all.find((x) => x.id === 't2')!.status).toBe('retired')
+    const det = await api.template('t2')
+    expect(det.versions?.map((x) => x.status)).toEqual([
+      'approved',
+      'retired',
+      'retired',
+    ])
     expect(
       await detail(api.updateTemplate(t.id, { lines: ['x'] }, 'tk15'))
     ).toMatchObject({

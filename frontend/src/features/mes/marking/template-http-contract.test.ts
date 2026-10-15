@@ -74,11 +74,11 @@ describe('模板 HTTP 契约', () => {
   })
   it('预览 / 校验 POST，只读不带 key', async () => {
     status = 200
-    await api.templatePreview({ template_id: 't1' })
+    await api.templatePreview({ template_id: 't2' })
     expect(last().method).toBe('post')
     expect(last().url).toBe('/mes/marking-template/preview')
     expect(idem(last())).toBeNull()
-    await api.templateValidate({ template_id: 't1' })
+    await api.templateValidate({ template_id: 't2' })
     expect(last().method).toBe('post')
     expect(last().url).toBe('/mes/marking-template/validate')
     expect(idem(last())).toBeNull()
@@ -93,7 +93,7 @@ describe('mock 预览 / 校验与 comment 上限', () => {
       await mockMarkingApi.templateValidate({ lines: ['{model}'] })
     ).toEqual({ valid: false, unknown_placeholders: ['model'] })
     expect(
-      (await mockMarkingApi.templateValidate({ template_id: 't1' })).valid
+      (await mockMarkingApi.templateValidate({ template_id: 't2' })).valid
     ).toBe(true)
   })
   it('检验 comment 超长 422 value_error {reason:max_length, max_length:300}', async () => {
@@ -134,25 +134,25 @@ describe('mock 预览 / 校验与 comment 上限', () => {
       mockMarkingApi.templateValidate,
     ]) {
       expect(await st(f({}))).toBe(422)
-      expect(await st(f({ template_id: 't1', lines: ['x'] }))).toBe(422)
+      expect(await st(f({ template_id: 't2', lines: ['x'] }))).toBe(422)
       expect(await st(f({ template_id: 'nope' }))).toBe(404)
-      expect(await st(f({ template_id: 't1' }))).toBe(200)
+      expect(await st(f({ template_id: 't2' }))).toBe(200)
     }
     const e = await mockMarkingApi.templatePreview({}).catch((x) => x)
     expect(e.response.data.detail[0]).toMatchObject({ type: 'value_error' })
     const p = await mockMarkingApi.templatePreview({ lines: ['{lot_id}'] })
     expect(p.template_id).toBeNull()
     expect(
-      (await mockMarkingApi.templatePreview({ template_id: 't1' })).template_id
-    ).toBe('t1')
+      (await mockMarkingApi.templatePreview({ template_id: 't2' })).template_id
+    ).toBe('t2')
   })
 })
 
 describe('预览 / 校验请求体 pickBody', () => {
   it('HTTP 只发 template_id、lines', async () => {
-    const extra = { template_id: 't1', code: 'X', foo: 1 } as never
+    const extra = { template_id: 't2', code: 'X', foo: 1 } as never
     await api.templatePreview(extra)
-    expect(JSON.parse(last().data)).toEqual({ template_id: 't1' })
+    expect(JSON.parse(last().data)).toEqual({ template_id: 't2' })
     await api.templateValidate({ lines: ['x'], uses_bin: true } as never)
     expect(JSON.parse(last().data)).toEqual({ lines: ['x'] })
   })
@@ -164,7 +164,7 @@ describe('预览 / 校验请求体 pickBody', () => {
     } as never)
     expect(p.template_id).toBeNull()
     const e = await mockMarkingApi
-      .templateValidate({ foo: 't1' } as never)
+      .templateValidate({ foo: 't2' } as never)
       .catch((x) => x)
     expect(e.response.status).toBe(422)
   })

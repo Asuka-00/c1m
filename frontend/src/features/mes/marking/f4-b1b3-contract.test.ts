@@ -121,10 +121,11 @@ describe('B1 模板审批', () => {
   it('self_approval / template_readonly / draft_exists 三语文案', async () => {
     setMarkingMockUser('eng1')
     const [ok] = await api.templates({ status: 'approved' })
+    // 最新为 approved 时编辑 409；建草稿后最新变为草稿（同一模板 id）
+    const ro = await err(api.updateTemplate(ok.id, { lines: ['x'] }, 'tk8'))
     const d = await api.newVersion(ok.id, 'tk5')
     const self = await err(api.approve(d.id, 'tk6'))
     const dup = await err(api.newVersion(ok.id, 'tk7'))
-    const ro = await err(api.updateTemplate(ok.id, { lines: ['x'] }, 'tk8'))
     for (const lng of ['zh-CN', 'en', 'ja']) {
       await i18n.changeLanguage(lng)
       expect(markingErrorMessage(self)).toBe(t('mes.marking.err.selfApproval'))

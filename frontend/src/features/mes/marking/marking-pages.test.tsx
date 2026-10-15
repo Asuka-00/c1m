@@ -73,16 +73,21 @@ describe('打标模板页', () => {
     await expect.element(s.getByTestId('tpl-edit')).not.toBeInTheDocument()
     await expect.element(s.getByTestId('tpl-approve')).not.toBeInTheDocument()
   })
-  it('版本对比列出逐行差异', async () => {
+  it('D90-3 版本列表倒序；没有手动停用按钮', async () => {
     const s = await render(wrap(<TemplatePage />, ALL))
     await s.getByTestId('tpl-row-MK-QFN32-ACME-v2').click()
-    await userEvent.selectOptions(s.getByTestId('tpl-compare').element(), 't1')
     await expect
-      .element(s.getByTestId('tpl-diff'))
-      .toHaveTextContent('{date_code} {trace_code}')
+      .element(s.getByTestId('tpl-version-v2'))
+      .toHaveTextContent(t('mes.marking.status.approved'))
     await expect
-      .element(s.getByTestId('tpl-diff'))
-      .toHaveTextContent(t('mes.marking.lineN', { n: 2 }))
+      .element(s.getByTestId('tpl-version-v1'))
+      .toHaveTextContent(t('mes.marking.status.retired'))
+    const rows = s.getByTestId(/^tpl-version-v/).elements()
+    expect(rows.map((r) => r.dataset.testid)).toEqual([
+      'tpl-version-v2',
+      'tpl-version-v1',
+    ])
+    await expect.element(s.getByTestId('tpl-retire')).not.toBeInTheDocument()
   })
 })
 

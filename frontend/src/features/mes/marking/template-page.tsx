@@ -1,4 +1,4 @@
-/** 打标模板页面（P3-F4）：列表、编辑草稿、审批 / 退役、版本对比。 */
+/** 打标模板页面（P3-F4）：列表（每模板一行）、编辑草稿、审批、新版本、版本列表（D90-3）。 */
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fmtDateTime, t } from '@/i18n'
@@ -6,14 +6,12 @@ import { toast } from 'sonner'
 import { useMe } from '@/lib/api/hooks'
 import {
   DATE_CODE_BASES,
-  diffTemplates,
   isEditable,
   isSelfApproval,
   MARKING_MOCK,
   markingApi,
   markingSignature,
   setMarkingMockUser,
-  siblingVersions,
   unknownPlaceholders,
   TEMPLATE_STATUSES,
   type MarkingTemplate,
@@ -200,13 +198,12 @@ function TemplateDetail({
   const approveKey = useOperationKey()
   const nvKey = useOperationKey()
   const act = useMutation({
-    mutationFn: (a: 'approve' | 'retire') =>
-      a === 'approve'
-        ? markingApi.approve(tpl.id, approveKey.key(`approve:${tpl.id}`))
-        : markingApi.retire(tpl.id),
-    onSuccess: (_, a) => {
-      if (a === 'approve') approveKey.done()
-      toast.success(t(`mes.marking.done.${a}`))
+    // retired 只在新版本批准后自动产生，没有手动停用（D89 补充一）
+    mutationFn: () =>
+      markingApi.approve(tpl.id, approveKey.key(`approve:${tpl.id}`)),
+    onSuccess: () => {
+      approveKey.done()
+      toast.success(t('mes.marking.done.approve'))
       void qc.invalidateQueries({ queryKey: KEY })
     },
     onError: (e) => toast.error(markingErrorMessage(e)),
@@ -259,22 +256,12 @@ function TemplateDetail({
             )}
           {can(MARKING_PERM.templateApprove) && tpl.status === 'draft' && (
             <Button
-              onClick={() => act.mutate('approve')}
+              onClick={() => act.mutate()}
               disabled={self || act.isPending}
               title={self ? t('mes.marking.selfApprovalHint') : undefined}
               data-testid='tpl-approve'
             >
               {t('mes.marking.approve')}
-            </Button>
-          )}
-          {can(MARKING_PERM.templateApprove) && tpl.status === 'approved' && (
-            <Button
-              variant='outline'
-              onClick={() => act.mutate('retire')}
-              disabled={act.isPending}
-              data-testid='tpl-retire'
-            >
-              {t('mes.marking.retire')}
             </Button>
           )}
         </div>
@@ -312,7 +299,7 @@ function TemplateDetail({
           {tpl.lines.join('\n')}
         </pre>
       </div>
-      <VersionCompare tpl={tpl} all={all} />
+      <VersionList id={tpl.id} />
     </div>
   )
 }
@@ -326,98 +313,50 @@ function Info({ k, v }: { k: string; v: unknown }) {
   )
 }
 
-/** 版本对比：同一「产品+客户」的其他版本，逐字段逐行列出差异。 */
-export function VersionCompare({
-  tpl,
-  all,
-}: {
-  tpl: MarkingTemplate
-  all: MarkingTemplate[]
-}) {
-  const others = siblingVersions(all, tpl)
-  const [with_, setWith] = useState('')
-  const base = others.find((x) => x.id === with_)
-  if (!others.length)
-    return (
-      <p className='text-sm text-muted-foreground'>
-        {t('mes.marking.noOtherVersion')}
-      </p>
-    )
-  const diff = base
-    ? base.version < tpl.version
-      ? diffTemplates(base, tpl)
-      : diffTemplates(tpl, base)
-    : []
-  const [older, newer] = base
-    ? base.version < tpl.version
-      ? [base, tpl]
-      : [tpl, base]
-    : [null, null]
-  const show = (field: string, v: string | null) =>
-    v == null
-      ? '—'
-      : field === 'date_code_basis'
-        ? t(`mes.marking.basis.${v}`)
-        : field === 'uses_bin'
-          ? t(v === 'true' ? 'common.yes' : 'common.no')
-          : v
+/** D90-3：详情 versions[]（version 倒序；未批准的 approved_by/approved_at 为 null）。 */
+export function VersionList({ id }: { id: string }) {
+  const q = useQuery({
+    queryKey: [...KEY, 'detail', id],
+    queryFn: () => markingApi.template(id),
+  })
+  const vs = q.data?.versions ?? []
   return (
-    <div className='grid gap-2'>
-      <div className='flex items-center gap-2'>
-        <Label htmlFor='tpl-compare'>{t('mes.marking.compareWith')}</Label>
-        <select
-          id='tpl-compare'
-          className='rounded-md border border-input bg-transparent px-2 py-1 text-sm'
-          value={with_}
-          onChange={(e) => setWith(e.target.value)}
-          data-testid='tpl-compare'
-        >
-          <option value=''>—</option>
-          {others.map((o) => (
-            <option key={o.id} value={o.id}>
-              v{o.version} · {t(`mes.marking.status.${o.status}`)}
-            </option>
+    <Table data-testid='tpl-versions'>
+      <TableHeader>
+        <TableRow>
+          {(
+            [
+              'version',
+              'status',
+              'createdBy',
+              'createdAt',
+              'approvedBy',
+              'approvedAt',
+            ] as const
+          ).map((c) => (
+            <TableHead key={c}>{t(`mes.marking.col.${c}`)}</TableHead>
           ))}
-        </select>
-      </div>
-      {base && older && newer && (
-        <Table data-testid='tpl-diff'>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t('mes.marking.diffField')}</TableHead>
-              <TableHead>v{older.version}</TableHead>
-              <TableHead>v{newer.version}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {diff.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={3} className='text-muted-foreground'>
-                  {t('mes.marking.noDiff')}
-                </TableCell>
-              </TableRow>
-            )}
-            {diff.map((d, i) => (
-              <TableRow key={i} data-testid='tpl-diff-row'>
-                <TableCell>
-                  {d.field === 'lines'
-                    ? t('mes.marking.lineN', { n: d.line })
-                    : t(
-                        `mes.marking.col.${d.field === 'uses_bin' ? 'usesBin' : 'dateCodeBasis'}`
-                      )}
-                </TableCell>
-                <TableCell className='font-mono text-destructive line-through'>
-                  {show(d.field, d.before)}
-                </TableCell>
-                <TableCell className='font-mono text-green-700 dark:text-green-400'>
-                  {show(d.field, d.after)}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-    </div>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {vs.map((v) => (
+          <TableRow key={v.version} data-testid={`tpl-version-v${v.version}`}>
+            <TableCell>v{v.version}</TableCell>
+            <TableCell>
+              <StatusBadge status={v.status} />
+            </TableCell>
+            <TableCell>{dash(v.created_by)}</TableCell>
+            <TableCell>
+              {dash(v.created_at && fmtDateTime(v.created_at))}
+            </TableCell>
+            <TableCell>{dash(v.approved_by)}</TableCell>
+            <TableCell>
+              {dash(v.approved_at && fmtDateTime(v.approved_at))}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   )
 }
 

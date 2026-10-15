@@ -191,7 +191,9 @@ describe('D89 补充一', () => {
     })
     setMarkingMockUser('qa1')
     await api.approve(v2.id, k())
-    expect((await api.template(d.id)).status).toBe('retired')
+    // 同一模板 id：v1 自动 retired
+    expect(v2.id).toBe(d.id)
+    expect((await api.template(d.id)).versions?.[1].status).toBe('retired')
     // D90-4：只编辑最新版本；最新为 approved 时 409（不再测编辑 retired）
     expect(
       await fail(api.updateTemplate(v2.id, { lines: ['{lot_id}'] }, k()))
@@ -251,6 +253,12 @@ describe('D89 补充二 重复键（同 spec.errors.integrity：409 字符串 de
     expect(
       await fail(api.updateTemplate('nope', { product_id: 'p2' }, k()))
     ).toMatchObject({ status: 404 })
+    // D91 补充一：已批准版本改 product_id 先报 422 immutable，不是 409
+    const r2 = await fail(api.updateTemplate('t2', { product_id: 'zz' }, k()))
+    expect(r2).toMatchObject({
+      status: 422,
+      detail: [{ ctx: { reason: 'immutable' } }],
+    })
   })
 
   it('code 租户内唯一、同产品+客户只一个模板，都 409 duplicate；别的租户不冲突', async () => {
