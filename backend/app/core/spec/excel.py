@@ -207,6 +207,11 @@ def _cell(e: Entity, header: list[str], n: int, key: Any) -> dict[str, Any]:
 IMPORT_GUARDS: dict[str, Any] = {}
 
 
+def _blank(v: Any) -> bool:
+    """导入单元格是否为空（None / 空串 / 纯空白）。"""
+    return v is None or (isinstance(v, str) and not v.strip())
+
+
 def import_xlsx(
     session: Session, tenant_id: uuid.UUID, e: Entity, data: bytes, user: Any
 ) -> dict[str, int]:
@@ -292,6 +297,9 @@ def import_xlsx(
                     payload[k] = v.date()
                 else:
                     payload[k] = v
+            # D90-1：空单元格（None / 空串 / 纯空白）= 未提供。更新已有行时不改该字段
+            # （不写履历不发事件）；新建时按默认值或 null，必填由 create_row 报 missing。
+            payload = {k: v for k, v in payload.items() if not _blank(v)}
             if attrs:
                 payload["attrs"] = attrs
             key_cols = [

@@ -331,3 +331,56 @@ def test_excel_import_only_grants(client: TestClient, db: Session) -> None:
     assert res == {"created": 1, "updated": 1}
     acts = [r["action"] for r in _hist(f, q["id"])]
     assert "renewed" not in acts and "deactivated" not in acts
+
+
+def test_excel_import_blank_cells_mean_no_change(
+    client: TestClient, db: Session
+) -> None:
+    """D90-1/2：更新已有行时空单元格 = 不改；只改 certified_on 写 changed + 事件，值没变不写。"""
+    f = Line(client, db)
+    op_id = f.steps[10]["operation_id"]
+    op = next(o for o in f.m.list("operation", limit=200)["data"] if o["id"] == op_id)
+    exp = str(_today(f) + timedelta(days=10))
+    q = f.m.post(
+        "operator_qual", {"username": "imp_b", "operation_id": op_id, "expires_on": exp}
+    )
+    hdr = ["username", "operation", "expires_on", "is_active", "certified_on"]
+
+    def imp(*rows: list[Any]) -> Any:
+        return f.m.import_rows("operator_qual", [hdr, *rows], status=200)
+
+    def counts() -> tuple[int, int]:
+        return len(_hist(f, q["id"])), len(_events(f, q["id"]))
+
+    before = counts()
+    for blank in (None, "", "   "):
+        assert imp(["imp_b", op["code"], blank, blank, blank]) == {
+            "created": 0,
+            "updated": 1,
+        }
+        cur = f.m.list("operator_qual", id=q["id"])["data"][0]
+        assert cur["is_active"] is True and cur["expires_on"] == exp
+        assert counts() == before
+    # 缺整列也当不改
+    f.m.import_rows("operator_qual", [["username", "operation"], ["imp_b", op["code"]]])
+    assert counts() == before
+    # 只改 certified_on → changed + 事件
+    cert = str(_today(f) - timedelta(days=3))
+    imp(["imp_b", op["code"], None, None, cert])
+    assert _hist(f, q["id"])[0]["action"] == "changed"
+    assert _events(f, q["id"]).count("operator_qual.changed") == 1
+    after = counts()
+    # 同值再导入不写
+    imp(["imp_b", op["code"], exp, "true", cert])
+    assert counts() == after
+
+
+def test_excel_import_blank_generic_entity(client: TestClient, db: Session) -> None:
+    """D90-1：通用实体更新时空单元格不改原值。"""
+    f = Line(client, db)
+    c = f.m.post("customer", {"code": "C-BLK", "name": "keep", "description": "d0"})
+    f.m.import_rows(
+        "customer", [["code", "name", "description"], [c["code"], "  ", None]]
+    )
+    cur = f.m.list("customer", id=c["id"])["data"][0]
+    assert (cur["name"], cur["description"]) == ("keep", "d0")

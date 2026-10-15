@@ -529,13 +529,16 @@ def _imp_bool(v: Any) -> Any:
 
 
 def import_guard(old: Row, payload: Row) -> None:
-    """导入命中已有资质且会改动 is_active / expires_on → 整行拒绝（value_error use_api）。"""
+    """导入命中已有资质且会改动 is_active / expires_on → 整行拒绝（value_error use_api）。
+
+    D90-1：空单元格已由通用导入当作“不改”去掉，这里只看非空且值不同的情况。
+    """
     bad = []
     if "expires_on" in payload and _imp_date(payload["expires_on"]) != old.get(
         "expires_on"
     ):
         bad.append("expires_on")
-    if "is_active" in payload and payload["is_active"] not in (None, ""):
+    if "is_active" in payload:
         if _imp_bool(payload["is_active"]) != old.get("is_active"):
             bad.append("is_active")
     if bad:
