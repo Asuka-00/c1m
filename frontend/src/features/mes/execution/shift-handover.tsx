@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { useTenantKey } from '@/lib/api/hooks'
 import { mesApi } from '@/lib/api/mes/common'
 import { shiftLogApi, type ShiftLog } from '@/lib/api/mes/shift-log'
+import { fetchAllPages } from '@/lib/api/request'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -200,7 +201,9 @@ function HandoverDialog({
     queryKey: ['mes', 'shift-refs', tk],
     queryFn: async () => ({
       shifts: (await mesApi.list('shift', { page_size: 100 })).data,
-      areas: (await mesApi.list('area', { page_size: 200 })).data,
+      areas: await fetchAllPages((page, page_size) =>
+        mesApi.list('area', { page, page_size })
+      ),
     }),
     enabled: open,
   })

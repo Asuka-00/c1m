@@ -6,10 +6,13 @@ import { t } from '@/i18n'
 import { Gauge, History, PlayCircle } from 'lucide-react'
 import { useTenantKey } from '@/lib/api/hooks'
 import { mesApi, type MesRow } from '@/lib/api/mes/common'
+import { decimalText } from '@/lib/decimal'
+import { cn } from '@/lib/utils'
 import { IconButton } from '@/components/icon-button'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { ReleaseDialog } from './lot-console/release-dialog'
 import { lotPageLink } from './lot-links'
+import { maxUsage, toolLifeLevel, warnRatio } from './tool-life'
 
 /** 批次行操作：在操作台 / 履历时间线中打开。 */
 export function LotActions({ row }: { row: MesRow }) {
@@ -79,30 +82,48 @@ export function HoldActions({ row }: { row: MesRow }) {
   )
 }
 
-/** 工具寿命条：已用 / 上限（按预警阈值着色）。 */
+/** 工具寿命条：已用 / 上限（定点字符串原样显示；预警区间黄、达到上限红）。 */
 export function ToolLife({ row }: { row: MesRow }) {
-  const used = Number(row.usage_count ?? 0)
-  const max = Number(row.max_usage ?? 0)
-  if (!max) return <span>{used}</span>
-  const pct = Math.min(100, (used / max) * 100)
-  const warn = pct >= Number(row.warn_pct ?? 90)
+  const used = decimalText(row.usage_count as string) || '0'
+  const max = maxUsage(row) ?? ''
+  const level = toolLifeLevel(used, max, warnRatio(row))
+  if (!level) return <span className='tabular-nums'>{used}</span>
+  const pct = Math.min(100, (Number(used) / Number(max)) * 100)
+  const hint =
+    level === 'over'
+      ? t('mes.toolLife.over')
+      : level === 'warn'
+        ? t('mes.toolLife.warn')
+        : ''
   return (
-    <div className='flex min-w-28 items-center gap-2' title={`${used}/${max}`}>
+    <div
+      className='flex min-w-28 items-center gap-2'
+      title={`${used}/${max}${hint ? ` · ${hint}` : ''}`}
+      data-testid='tool-life'
+      data-level={level}
+    >
       <div className='h-2 w-20 overflow-hidden rounded bg-muted'>
         <div
           className={
-            pct >= 100
+            level === 'over'
               ? 'h-full bg-destructive'
-              : warn
+              : level === 'warn'
                 ? 'h-full bg-amber-500'
                 : 'h-full bg-emerald-500'
           }
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className='text-xs tabular-nums'>
+      <span
+        className={cn(
+          'text-xs tabular-nums',
+          level === 'over' && 'text-destructive',
+          level === 'warn' && 'text-amber-700 dark:text-amber-400'
+        )}
+      >
         {used}/{max}
       </span>
+      {hint && <span className='sr-only'>{hint}</span>}
     </div>
   )
 }

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
+  blockedOverridable,
   blockedResults,
   execApi,
   type CheckResult,
@@ -74,21 +75,19 @@ export function GenealogyList({
         const other = isParent
           ? { id: g.child_id, code: g.child }
           : { id: g.parent_id, code: g.parent }
-        const key =
-          g.relation === 'split'
-            ? isParent
-              ? 'splitTo'
-              : 'splitFrom'
-            : isParent
-              ? 'mergedInto'
-              : 'mergedFrom'
-        const Icon = g.relation === 'split' ? GitFork : GitMerge
+        // 单位转换 / 按 bin 拆批的谱系 relation=transform，不能落到“合入”。
+        const key = {
+          split: isParent ? 'splitTo' : 'splitFrom',
+          transform: isParent ? 'transformTo' : 'transformFrom',
+          merge: isParent ? 'mergedInto' : 'mergedFrom',
+        }[g.relation]
+        const Icon = g.relation === 'merge' ? GitMerge : GitFork
         return (
           <li key={i} className='flex flex-wrap items-center gap-x-2'>
             <Icon
               className={cn(
                 'size-4',
-                g.relation === 'split' ? 'text-sky-600' : 'text-violet-600'
+                g.relation === 'merge' ? 'text-violet-600' : 'text-sky-600'
               )}
             />
             <span className='text-muted-foreground'>{t(`mes.sm.${key}`)}</span>
@@ -239,12 +238,14 @@ function useSm<T>(
 ): {
   results: CheckResult[] | null
   blocked: boolean
+  overridable: boolean | null
   busy: boolean
   run: (body: SmBody) => void
 } {
   const { entity } = useMesEntity('lot')
   const [results, setResults] = useState<CheckResult[] | null>(null)
   const [blocked, setBlocked] = useState(false)
+  const [overridable, setOverridable] = useState<boolean | null>(null)
   const m = useMutation({
     mutationFn: fn,
     onSuccess: (r, body) => {
@@ -257,12 +258,19 @@ function useSm<T>(
       const b = blockedResults(e)
       if (b) {
         setResults(b)
+        setOverridable(blockedOverridable(e))
         setBlocked(true)
         toast.error(t('mes.exec.blocked'))
       } else toast.error(mesErrorMessage(e, entity))
     },
   })
-  return { results, blocked, busy: m.isPending, run: (b) => m.mutate(b) }
+  return {
+    results,
+    blocked,
+    overridable,
+    busy: m.isPending,
+    run: (b) => m.mutate(b),
+  }
 }
 
 function SplitDialog({
@@ -445,6 +453,7 @@ function SplitDialog({
         <CheckPanel
           results={sm.results}
           blocked={sm.blocked}
+          overridable={sm.overridable}
           canOverride={can(MES_PERM.execOverride)}
           busy={sm.busy}
           onOverride={(reason) =>
@@ -592,6 +601,7 @@ function MergeDialog({
         <CheckPanel
           results={sm.results}
           blocked={sm.blocked}
+          overridable={sm.overridable}
           canOverride={can(MES_PERM.execOverride)}
           busy={sm.busy}
           onOverride={(reason) =>

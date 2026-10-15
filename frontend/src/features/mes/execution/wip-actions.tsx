@@ -4,6 +4,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { t } from '@/i18n'
 import {
   Flame,
+  Grid3x3,
+  Layers,
   PackageMinus,
   SkipForward,
   TriangleAlert,
@@ -36,25 +38,34 @@ import { optLabel } from '@/features/mes/common/labels'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
+import { BinSplitDialog } from './bin-split-dialog'
 import { Pick } from './exec-parts'
 import {
   blocksScrapToZero,
   canAdjustLot,
   canChangePriority,
   canJumpLot,
+  canTransformLot,
 } from './lot-rules'
 import { PriorityDialog } from './priority-dialog'
+import { TransformDialog } from './transform-dialog'
 
 /** 在制调整卡片：按权限与批次状态提供跳站等操作。 */
 export function WipActionsCard({ cx }: { cx: ExecContext }) {
   const can = useMesCan()
-  const [open, setOpen] = useState<'jump' | 'adjust' | 'priority' | null>(null)
+  const [open, setOpen] = useState<
+    'jump' | 'adjust' | 'priority' | 'transform' | 'bin' | null
+  >(null)
   const canJump =
     can(MES_PERM.execJump) &&
     canJumpLot(cx.lot) &&
     (cx.route_steps?.length ?? 0) > 1
   const canAdjust = can(MES_PERM.execAdjust) && canAdjustLot(cx.lot)
   const canPriority = can(MES_PERM.execAdjust) && canChangePriority(cx.lot)
+  const canTransform =
+    can(MES_PERM.execTransform) &&
+    canTransformLot(cx.lot) &&
+    cx.units.some((u) => u.unit_kind === 'wafer')
   return (
     <Card className='gap-3'>
       <CardHeader>
@@ -63,6 +74,26 @@ export function WipActionsCard({ cx }: { cx: ExecContext }) {
           {t('mes.wip.title')}
         </CardTitle>
         <CardAction className='flex gap-2'>
+          <Button
+            size='sm'
+            variant='outline'
+            disabled={!canTransform}
+            onClick={() => setOpen('transform')}
+            data-testid='open-transform'
+          >
+            <Layers className='size-4' />
+            {t('mes.trf.title')}
+          </Button>
+          <Button
+            size='sm'
+            variant='outline'
+            disabled={!canTransform}
+            onClick={() => setOpen('bin')}
+            data-testid='open-bin-split'
+          >
+            <Grid3x3 className='size-4' />
+            {t('mes.bin.title')}
+          </Button>
           <Button
             size='sm'
             variant='outline'
@@ -110,6 +141,20 @@ export function WipActionsCard({ cx }: { cx: ExecContext }) {
         canOverride={can(MES_PERM.execOverride)}
         onOpenChange={(o) => setOpen(o ? 'priority' : null)}
       />
+      {open === 'transform' && (
+        <TransformDialog
+          cx={cx}
+          open
+          onOpenChange={(o) => setOpen(o ? 'transform' : null)}
+        />
+      )}
+      {open === 'bin' && (
+        <BinSplitDialog
+          cx={cx}
+          open
+          onOpenChange={(o) => setOpen(o ? 'bin' : null)}
+        />
+      )}
       <AdjustDialog
         cx={cx}
         open={open === 'adjust'}

@@ -42,3 +42,9 @@ export const EXTRA_COLUMNS = Object.assign(
   {},
   ...MODULES.map((m) => m.extraColumns ?? {})
 ) as NonNullable<MesExtensions['extraColumns']>
+
+/** 实体专用的详情页签（如产品详情的 BOM）。 */
+export const DETAIL_TABS = Object.assign(
+  {},
+  ...MODULES.map((m) => m.detailTabs ?? {})
+) as NonNullable<MesExtensions['detailTabs']>

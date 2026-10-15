@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import i18n, { t } from '@/i18n'
 import { toast } from 'sonner'
 import {
+  blockedOverridable,
   blockedResults,
   execApi,
   type CheckResult,
@@ -14,6 +15,8 @@ import {
 } from '@/lib/api/mes/execution'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
+import { overWarningText } from '../over-consumption'
+import { toolLifeWarning, withToolUsage } from '../tool-life'
 
 const detailOf = (e: unknown) =>
   e instanceof AxiosError
@@ -53,6 +56,7 @@ export function useStageRun(cx: ExecContext, body: () => StageBody) {
   const stage = cx.next_stage
   const [results, setResults] = useState<CheckResult[] | null>(null)
   const [blocked, setBlocked] = useState(false)
+  const [overridable, setOverridable] = useState<boolean | null>(null)
   const run = useMutation({
     mutationFn: (o: { override?: string }) =>
       execApi.stage(
@@ -91,12 +95,19 @@ export function useStageRun(cx: ExecContext, body: () => StageBody) {
           .filter(Boolean)
           .join(' · ')
       )
+      // F4：BOM 超量只提示（黄色），出站已经完成、不拦截
+      const over = overWarningText(r.warnings)
+      if (over) toast.warning(over, { duration: 10_000 })
+      // D54-5：工具进入寿命预警区间只提示（已写入检查记录与履历），不需人工放行
+      const tool = toolLifeWarning(r.results)
+      if (tool) toast.warning(tool, { duration: 10_000 })
       qc.invalidateQueries({ queryKey: ['mes'] })
     },
     onError: (e) => {
       const res = blockedResults(e)
       if (res) {
-        setResults(res)
+        setResults(withToolUsage(res, cx))
+        setOverridable(blockedOverridable(e))
         setBlocked(true)
         toast.error(t('mes.exec.blocked'))
         return
@@ -110,12 +121,13 @@ export function useStageRun(cx: ExecContext, body: () => StageBody) {
     mutationFn: () =>
       execApi.preview(String(lot.id), stage as ExecStage, body()),
     onSuccess: (r) => {
-      setResults(r.results)
+      setResults(withToolUsage(r.results, cx))
+      setOverridable(typeof r.overridable === 'boolean' ? r.overridable : null)
       setBlocked(false)
     },
     onError: (e) => toast.error(mesErrorMessage(e, lotE)),
   })
-  return { run, preview, results, blocked }
+  return { run, preview, results, blocked, overridable }
 }
 
 export type StageRun = ReturnType<typeof useStageRun>

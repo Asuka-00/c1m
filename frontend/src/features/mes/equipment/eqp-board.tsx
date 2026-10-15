@@ -1,4 +1,4 @@
-/** 设备状态看板：E10 当前状态、PM 到期、停机标记；支持手动改状态与登记 PM 完成。 */
+/** 设备状态看板：E10 当前状态、PM 到期、停机、PM 后待 Qual 标记；支持手动改状态、登记 PM 完成与登记 Qual 结果（F5）。 */
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fmtDateTime, t } from '@/i18n'
@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { useTenantKey } from '@/lib/api/hooks'
 import { mesApi } from '@/lib/api/mes/common'
 import { eqpApi, type BoardRow, type E10Unit } from '@/lib/api/mes/equipment'
+import { qualApi, type QualTask } from '@/lib/api/mes/qual'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -30,11 +31,15 @@ import {
   type FilterDef,
 } from '@/components/crud'
 import { IconButton } from '@/components/icon-button'
+import { ReasonButton } from '@/components/reason-button'
 import { optLabel } from '@/features/mes/common/labels'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { Pick } from '@/features/mes/execution/exec-parts'
 import { ChamberStates } from './chamber-states'
+import { MountDialog } from './mount-dialog'
+import { QualBadge, QualDialog } from './qual'
+import { isWaitQual } from './qual-rules'
 
 /** 去重选项。 */
 const opts = (vs: (string | null | undefined)[]) =>
@@ -47,7 +52,11 @@ export default function EqpBoard() {
   const tk = useTenantKey()
   const can = useMesCan()
   const [dlg, setDlg] = useState<
-    { kind: 'e10'; row: E10Unit } | { kind: 'pm'; row: BoardRow } | null
+    | { kind: 'e10'; row: E10Unit }
+    | { kind: 'pm'; row: BoardRow }
+    | { kind: 'mount'; row: BoardRow }
+    | { kind: 'qual'; row: BoardRow }
+    | null
   >(null)
   const [open, setOpen] = useState<string[]>([])
   const q = useQuery({
@@ -56,6 +65,17 @@ export default function EqpBoard() {
     refetchInterval: 60_000,
   })
   const all = useMemo(() => q.data ?? [], [q.data])
+  const anyWait = all.some(isWaitQual)
+  // 打开的 Qual 任务：只用来显示子单元与生成时间；取不到时仍按 qual_state 显示待 Qual
+  const tasks = useQuery({
+    queryKey: ['mes', 'eqp', tk, 'qual-open'],
+    queryFn: qualApi.openTasks,
+    enabled: anyWait,
+    refetchInterval: 60_000,
+  })
+  const taskOf = (r: BoardRow): QualTask | undefined =>
+    (tasks.data ?? []).find((x) => x.id === r.qual_task_id)
+  const canQual = can(MES_PERM.equipmentQual)
   const filters: FilterDef[] = [
     { type: 'text', name: 'q', placeholder: t('mes.eqp.search') },
     {
@@ -85,6 +105,15 @@ export default function EqpBoard() {
       label: t('mes.eqp.allDown'),
       options: boolOptions(t('mes.eqp.down'), t('mes.eqp.notDown')),
     },
+    {
+      type: 'select',
+      name: 'qual',
+      label: t('mes.eqp.qual.all'),
+      options: [
+        { value: 'wait', label: t('mes.eqp.qual.wait') },
+        { value: 'ready', label: t('mes.eqp.qual.ready') },
+      ],
+    },
   ]
   const lp = useListParams(filters)
   const sorted = useMemo(
@@ -102,6 +131,7 @@ export default function EqpBoard() {
       category: (r, v) => r.state?.category === v,
       pm: (r, v) => (v === 'due' ? r.pm_due : r.pm_warn && !r.pm_due),
       down: (r, v) => String(!!r.down) === v,
+      qual: (r, v) => isWaitQual(r) === (v === 'wait'),
     },
   })
   // 各 E10 状态的设备数（点击即按该状态筛选）
@@ -130,6 +160,7 @@ export default function EqpBoard() {
                   t('mes.eqp.name'),
                   t('mes.eqp.state'),
                   t('mes.eqp.down'),
+                  t('mes.eqp.qual.col'),
                   t('mes.eqp.pm'),
                 ],
                 view.filtered.map((r) => [
@@ -138,6 +169,9 @@ export default function EqpBoard() {
                   r.name,
                   r.state ? `${r.state.code} · ${r.state.name}` : '',
                   r.down ? t('common.yes') : '',
+                  isWaitQual(r)
+                    ? (taskOf(r)?.sub_unit_label ?? t('mes.eqp.qual.wait'))
+                    : '',
                   r.pm
                     .map(
                       (p) => `${p.plan}${p.due ? ` ${t('mes.eqp.pmDue')}` : ''}`
@@ -178,6 +212,24 @@ export default function EqpBoard() {
             <span className='font-semibold tabular-nums'>{v.n}</span>
           </button>
         ))}
+        {anyWait && (
+          <button
+            type='button'
+            data-testid='qual-summary'
+            onClick={() =>
+              lp.setFilter('qual', lp.filters.qual === 'wait' ? '' : 'wait')
+            }
+            className={cn(
+              'inline-flex items-center gap-2 rounded-md border border-amber-500 px-3 py-1.5 text-sm hover:bg-muted',
+              lp.filters.qual === 'wait' && 'ring-2 ring-primary'
+            )}
+          >
+            <span>{t('mes.eqp.qual.wait')}</span>
+            <span className='font-semibold tabular-nums'>
+              {all.filter(isWaitQual).length}
+            </span>
+          </button>
+        )}
       </div>
       <DataTable
         rows={view.rows}
@@ -242,6 +294,7 @@ export default function EqpBoard() {
                 {r.down && (
                   <Badge variant='destructive'>{t('mes.eqp.down')}</Badge>
                 )}
+                <QualBadge row={r} task={taskOf(r)} />
                 {r.chambers.length > 0 && !open.includes(r.id) && (
                   <span className='text-xs text-muted-foreground'>
                     {t('mes.eqp.chamberCount', { n: r.chambers.length })}
@@ -305,6 +358,28 @@ export default function EqpBoard() {
                 >
                   {t('mes.eqp.pmDone')}
                 </Button>
+                {isWaitQual(r) && (
+                  <ReasonButton
+                    label={t('mes.eqp.qual.record')}
+                    testId={`qualbtn-${r.code}`}
+                    reason={
+                      !canQual
+                        ? t('mes.eqp.qual.noPermission')
+                        : !r.qual_task_id
+                          ? t('mes.eqp.qual.noTask')
+                          : null
+                    }
+                    onClick={() => setDlg({ kind: 'qual', row: r })}
+                  />
+                )}
+                <Button
+                  size='sm'
+                  variant='outline'
+                  onClick={() => setDlg({ kind: 'mount', row: r })}
+                  data-testid={`mount-${r.code}`}
+                >
+                  {t('mes.mount.title')}
+                </Button>
               </span>
             ),
           },
@@ -327,6 +402,16 @@ export default function EqpBoard() {
       )}
       {dlg?.kind === 'e10' && (
         <E10Dialog row={dlg.row} onClose={() => setDlg(null)} />
+      )}
+      {dlg?.kind === 'mount' && (
+        <MountDialog eq={dlg.row} onClose={() => setDlg(null)} />
+      )}
+      {dlg?.kind === 'qual' && (
+        <QualDialog
+          row={dlg.row}
+          task={taskOf(dlg.row)}
+          onClose={() => setDlg(null)}
+        />
       )}
       {dlg?.kind === 'pm' && (
         <PmDialog row={dlg.row} onClose={() => setDlg(null)} />

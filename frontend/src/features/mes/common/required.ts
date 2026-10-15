@@ -1,13 +1,27 @@
 /** MES 表单必填规则与 422 错误消息翻译（与后端 required / required_when 一致）。 */
 import { AxiosError } from 'axios'
 import i18n, { t } from '@/i18n'
-import { errorMessage } from '@/lib/api/client'
+import {
+  codeItemText,
+  errorMessage,
+  isParamLoc,
+  queryItemText,
+} from '@/lib/api/client'
 import type { MesEntity, MesField } from '@/lib/api/mes/common'
+import { parseDecimal } from '@/lib/decimal'
 import { TERMINAL_STATUSES } from '@/features/mes/execution/lot-rules'
 import { entityLabel, enumLabel, fieldLabel } from './labels'
 
 type V = Record<string, unknown>
 const blank = (x: unknown) => x == null || x === ''
+
+/**
+ * 前端补充的条件必填 / 仅允许（后端由校验器而非元数据 required_when 表达时用）。
+ * D59：alarm_code.target_state 仅在 action=set_state 时必填，action=none 时不能填。
+ */
+export const ONLY_WHEN: Record<string, Record<string, [string, unknown[]]>> = {
+  alarm_code: { target_state: ['action', ['set_state']] },
+}
 
 /** 使 `f` 必填的条件（同级字段 + 当前值）；
  *  无条件必填时为 `true`，可选时为 `null`。与后端的
@@ -18,7 +32,12 @@ export function requiredBy(
   v: V
 ): true | { field: MesField; value: unknown } | null {
   if (f.required) return true
-  for (const [name, allowed] of Object.entries(f.required_when ?? {})) {
+  const extra = ONLY_WHEN[e.code]?.[f.name]
+  const when = {
+    ...(extra ? { [extra[0]]: extra[1] } : {}),
+    ...(f.required_when ?? {}),
+  }
+  for (const [name, allowed] of Object.entries(when)) {
     const other = e.fields.find((x) => x.name === name)
     if (!other) continue
     const cur = v[other.column]
@@ -51,6 +70,44 @@ export function validateRequired(e: MesEntity, v: V, skip: Set<string>) {
     const by = requiredBy(e, f, v)
     if (by && blank(v[f.column]))
       errs[f.name] = by === true ? t('mes.err.required') : condText(e, by)
+    const only = ONLY_WHEN[e.code]?.[f.name]
+    if (!by && only && !blank(v[f.column])) {
+      const other = e.fields.find((x) => x.name === only[0])
+      if (other)
+        errs[f.name] = t('mes.err.onlyWhen', {
+          cond: fieldLabel(e, other),
+          value: other.enum
+            ? enumLabel(other.enum, String(only[1][0]))
+            : String(only[1][0]),
+        })
+    }
+  }
+  return errs
+}
+
+/** 定点数字段的最大小数位（D60：numeric(18,6)，超过 6 位后端 422 too_many_decimals）。 */
+export const MAX_DECIMALS = 6
+
+/**
+ * 字段的最大小数位（D60）：优先元数据 `decimal_places`；为 null 表示普通浮点、不限位数。
+ * 旧后端不带 `decimal_places` 时退回 `scale`（也没有时不限）。
+ */
+export function decimalLimit(f: MesField): number | null {
+  if (f.decimal_places !== undefined) return f.decimal_places
+  return f.scale ?? null
+}
+
+/** 提前校验小数位：先去掉末尾 0 再数位数（1.1000000 算 1 位），超过 decimal_places 时提示。 */
+export function validateDecimals(e: MesEntity, v: V, skip: Set<string>) {
+  const errs: Record<string, string> = {}
+  for (const f of e.fields) {
+    if (f.type !== 'float' || skip.has(f.column) || f.system) continue
+    const raw = v[f.column]
+    if (raw == null || raw === '') continue
+    const n = decimalLimit(f)
+    if (n == null) continue
+    const d = parseDecimal(String(raw))
+    if (d && d.decimals > n) errs[f.name] = t('mes.err.tooManyDecimals', { n })
   }
   return errs
 }
@@ -83,8 +140,11 @@ export const MES_ERROR_CODES = [
   'hold_not_found',
   'qtime_action_invalid',
   'idempotency_in_progress',
-  'idempotency_key_mismatch',
   'idempotency_key_reused',
+  'too_many_decimals',
+  'read_only_field',
+  'unknown_field',
+  'timezone_required',
 ] as const
 type MesErrorCode = (typeof MES_ERROR_CODES)[number]
 const isCode = (x: unknown): x is MesErrorCode =>
@@ -121,6 +181,15 @@ const MERGE_SOURCES = /duplicate|repeated|target|重复|目标/i
  * 后端按 N5 统一为 `detail: {code}` 后可删除。
  */
 function fieldCodeMessage(name: string, rest: string): string | null {
+  // D59：alarm_code.target_state 后端英文校验消息
+  if (name === 'target_state') {
+    if (/^required when action=set_state$/.test(rest))
+      return t('mes.alarm.err.targetRequired')
+    if (/^only allowed when action=set_state$/.test(rest))
+      return t('mes.alarm.err.targetOnly')
+    const u = /^unknown E10 state (.*)$/.exec(rest)
+    if (u) return t('mes.alarm.err.targetUnknown', { state: u[1] })
+  }
   if (name === 'on_hold') return t('mes.err.code.on_hold')
   if (
     (name === 'lot_status' || name === 'source_lot_ids') &&
@@ -175,6 +244,7 @@ export function mesErrorMessage(err: unknown, e: MesEntity | undefined) {
       ? (err.response.data as { detail?: unknown })?.detail
       : null
   if (!Array.isArray(d)) return errorMessage(err)
+  const isQuery = isParamLoc
   const parse = (x: { loc?: string[]; msg?: string }) => {
     const msg = String(x.msg ?? '')
     const name = x.loc?.[1] ?? msg.split(':')[0]
@@ -182,8 +252,38 @@ export function mesErrorMessage(err: unknown, e: MesEntity | undefined) {
     return { name, rest }
   }
   // 全部是业务错误码时直接给出本地化提示（不加“校验失败”前缀）
+  const tooMany = (x: { type?: string; code?: string }) =>
+    x.code === 'too_many_decimals' || x.type === 'too_many_decimals'
+  // 通用字段级 422 码（OQ-20 read_only_field、unknown_field）→ 三语文案
+  const FIELD_CODES: Record<string, string> = {
+    read_only_field: 'mes.err.readOnlyField',
+    unknown_field: 'mes.err.unknownField',
+  }
+  const fieldCode = (x: { type?: string; code?: string }) =>
+    FIELD_CODES[x.code ?? ''] ?? FIELD_CODES[x.type ?? '']
   const codes = d.map((x) => {
     const { name, rest } = parse(x)
+    // D65：查询参数 422（sort_by、筛选值等）不映射表单字段
+    if (!fieldCode(x) && !tooMany(x)) {
+      // 固定码（如 date_range_too_large）按码取文案；查询参数不映射表单字段
+      const ct = codeItemText(x)
+      if (ct) return ct
+      if (isQuery(x)) return queryItemText(x)
+    }
+    const fk = fieldCode(x)
+    if (fk) {
+      // 查询参数（loc[0]='query'）不映射到表单字段，前缀参数名
+      const f = isQuery(x) ? undefined : e?.fields.find((y) => y.name === name)
+      const msg = isQuery(x) ? `${name}: ${t(fk)}` : t(fk)
+      return e && f ? `${fieldLabel(e, name)}: ${msg}` : msg
+    }
+    if (tooMany(x)) {
+      const f = e?.fields.find((y) => y.name === name)
+      const msg = t('mes.err.tooManyDecimals', {
+        n: (f && decimalLimit(f)) ?? MAX_DECIMALS,
+      })
+      return e && f ? `${fieldLabel(e, name)}: ${msg}` : msg
+    }
     return fieldCodeMessage(name, rest)
   })
   if (codes.every(Boolean)) return [...new Set(codes)].join('；')
@@ -191,9 +291,10 @@ export function mesErrorMessage(err: unknown, e: MesEntity | undefined) {
   const msgs = d.map((x: { loc?: string[]; msg?: string }, i) => {
     const { name, rest } = parse(x)
     if (codes[i]) return codes[i]
-    const label = e.fields.some((f) => f.name === name)
-      ? fieldLabel(e, name)
-      : entityLabel(name)
+    const label =
+      !isQuery(x) && e.fields.some((f) => f.name === name)
+        ? fieldLabel(e, name)
+        : entityLabel(name)
     const m = /^required when (\w+) = (.+)$/.exec(rest)
     if (rest === 'required') return `${label}: ${t('mes.err.required')}`
     if (m) {

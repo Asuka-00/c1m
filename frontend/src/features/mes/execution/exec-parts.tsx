@@ -4,6 +4,7 @@ import { t } from '@/i18n'
 import { Check, ShieldAlert, TriangleAlert, X, Zap } from 'lucide-react'
 import {
   EXEC_STAGES,
+  isHardBlock,
   type CheckResult,
   type ExecStage,
 } from '@/lib/api/mes/execution'
@@ -20,6 +21,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { enumLabel } from '@/features/mes/common/labels'
+import { checkMessage } from './check-message'
 
 const NONE = '__none'
 
@@ -179,9 +181,12 @@ export function CheckPanel({
   canOverride,
   onOverride,
   busy,
+  overridable,
 }: {
   results: CheckResult[] | null
   blocked: boolean
+  /** 顶层整体能否放行（c6b5907）；null / 未给时按 results[] 里有无不可放行的阻断项兜底 */
+  overridable?: boolean | null
   canOverride: boolean
   onOverride: (reason: string) => void
   busy?: boolean
@@ -189,7 +194,7 @@ export function CheckPanel({
   const [reason, setReason] = useState('')
   if (!results) return null
   const shown = results.filter((r) => r.applicable || r.result !== 'pass')
-  const hard = results.some((r) => r.result === 'block' && !r.overridable)
+  const hard = isHardBlock(results, overridable)
   return (
     <div className='space-y-2' data-testid='check-panel'>
       {shown.length === 0 && (
@@ -213,7 +218,7 @@ export function CheckPanel({
                 )}
               </div>
               <div className='break-words text-muted-foreground'>
-                {r.message}
+                {checkMessage(r)}
               </div>
             </div>
           </li>

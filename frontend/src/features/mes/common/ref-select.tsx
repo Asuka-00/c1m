@@ -20,6 +20,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { FIELD_MIN_W, POPOVER_W } from '@/components/field-width'
 import { IconButton } from '@/components/icon-button'
 import { rowLabel } from './labels'
@@ -57,32 +62,41 @@ export function RefSelect({
       mesApi.list(target, { q: q || undefined, page_size: 30, ...filters }),
     enabled: open,
   })
+  const trigger = (
+    <PopoverTrigger asChild>
+      <Button
+        ref={triggerRef}
+        id={id}
+        type='button'
+        variant='outline'
+        role='combobox'
+        disabled={disabled}
+        className='w-full min-w-0 justify-between font-normal'
+      >
+        <span
+          className={cn(
+            'truncate',
+            !value && 'text-muted-foreground',
+            clearable && 'pe-6'
+          )}
+        >
+          {value ? (label ?? value) : t('common.select')}
+        </span>
+        <ChevronsUpDown className='opacity-50' />
+      </Button>
+    </PopoverTrigger>
+  )
   return (
     <div className={cn('relative w-full', FIELD_MIN_W)}>
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            ref={triggerRef}
-            id={id}
-            type='button'
-            variant='outline'
-            role='combobox'
-            disabled={disabled}
-            className='w-full min-w-0 justify-between font-normal'
-          >
-            <span
-              className={cn(
-                'truncate',
-                !value && 'text-muted-foreground',
-                clearable && 'pe-6'
-              )}
-              title={value ? String(label ?? value) : undefined}
-            >
-              {value ? (label ?? value) : t('common.select')}
-            </span>
-            <ChevronsUpDown className='opacity-50' />
-          </Button>
-        </PopoverTrigger>
+        {/* 截断的长值：悬停和键盘聚焦都显示全文提示（FE-02），读屏读按钮名即全文；
+            始终包一层 Tooltip（无值时关闭），避免清空后触发框重建而丢失焦点 */}
+        <Tooltip open={value ? undefined : false}>
+          <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+          <TooltipContent data-testid='ref-select-full'>
+            {value ? String(label ?? value) : ''}
+          </TooltipContent>
+        </Tooltip>
         <PopoverContent className={cn(POPOVER_W, 'p-0')} align='start'>
           <Command shouldFilter={false}>
             <CommandInput

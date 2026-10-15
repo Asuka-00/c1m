@@ -138,8 +138,8 @@
     "passwordRequired": "Please enter your password.",
     "welcome": "Welcome back, {{name}}!",
     "loginLabel": "Username",
-    "loginPlaceholder": "e.g. admin",
-    "loginRequired": "Please enter your username or email",
+    "loginPlaceholder": "Username",
+    "loginRequired": "Please enter your username",
     "loginInvalid": "Enter a valid username (3–50 letters, digits, . _ -)"
   },
   "errors": {
@@ -167,7 +167,11 @@
     "network": "Network error, the backend is unreachable.",
     "forbidden": "You don't have enough privileges.",
     "validation": "Invalid input.",
-    "generic": "The request failed; please contact your administrator."
+    "generic": "The request failed; please contact your administrator.",
+    "query": {
+      "sortBy": "Cannot sort by this column (allowed: {{list}})",
+      "notTextFilter": "{{field}} is not a filterable text field"
+    }
   },
   "backend": {
     "Incorrect email or password": "Incorrect email or password",
@@ -492,14 +496,30 @@
         "lot_busy": "The lot is being used by another operation; try again shortly",
         "batch_blocked": "The batch was blocked by checks; review each lot's check results",
         "idempotency_in_progress": "The same request is still being processed; refresh shortly to see the result",
-        "idempotency_key_mismatch": "The resubmitted request differs from the original; refresh and try again",
         "idempotency_key_reused": "This request key was already used for another operation; refresh and try again",
         "merge_source_invalid": "The source lots contain duplicates or include the target lot",
         "rework_route_missing": "No rework route is configured for this step",
         "qtime_rule_in_use": "Q-Time rule {{qtime_rule_code}} is referenced by {{hold_count}} hold record(s) and cannot be deleted. Deactivate it instead.",
         "qtime_action_invalid": "The Q-Time action must be Warn, Hold or Rework",
-        "hold_not_found": "The hold record does not exist or was deleted; refresh the list"
-      }
+        "hold_not_found": "The hold record does not exist or was deleted; refresh the list",
+        "too_many_decimals": "At most 6 decimal places",
+        "read_only_field": "This field is read-only",
+        "unknown_field": "Contains an unknown field",
+        "timezone_required": "The time must include a time zone (e.g. 2026-10-14T08:00:00+08:00)",
+        "date_range_too_large": "The date range can span at most {{max_days}} days; narrow it down.",
+        "date_range_too_large_nolimit": "The date range is too large; narrow it down.",
+        "date_range_invalid": "The start date cannot be later than the end date.",
+        "unknown_columns": "The import file has unrecognized columns: {{columns}}",
+        "no_conversion_path": "No conversion from {{from_uom}} to {{to_uom}}.",
+        "ref_not_found": "The {{entity}} was not found.",
+        "enum": "Invalid value; allowed: {{expected}}",
+        "step_ids_mismatch": "The step list does not match the current route; refresh and try again.",
+        "not_text_filter": "{{field}} is not a filterable text field"
+      },
+      "tooManyDecimals": "At most {{n}} decimal places",
+      "onlyWhen": "Only allowed when {{cond}} is “{{value}}”",
+      "readOnlyField": "this field is read-only and cannot be changed",
+      "unknownField": "this field is not accepted"
     },
     "autoHint": "Leave blank to generate automatically",
     "currentStep": "Current",
@@ -571,7 +591,24 @@
       "done": "{{count}} lot(s) started",
       "again": "Start more",
       "searchWo": "Search work order / product / route / customer",
-      "woMore": "{{n}} matches, showing first {{show}}; refine the search"
+      "woMore": "{{n}} matches, showing first {{show}}; refine the search",
+      "fe": {
+        "banner": "Lots were not started. Fix the marked fields and submit again",
+        "notAllowed": "Field not allowed",
+        "customerRequired": "Select a customer for customer-owned material",
+        "customerNotFound": "Customer not found",
+        "customerOwnOnly": "Own material cannot have a customer",
+        "customerLotOwnOnly": "Own material cannot have a customer lot no.",
+        "qty": "Quantity out of range",
+        "carrier": "Carrier not available",
+        "slots": "Invalid slots",
+        "tooLong": "Too long",
+        "invalid": "Invalid value",
+        "customerLotRequired": "Customer lot no. is required for customer-owned material",
+        "noRoute": "The product has no active default route",
+        "noSteps": "The route has no steps",
+        "noBom": "Product {{product}} has no active BOM; lots can't be started"
+      }
     },
     "exec": {
       "stage": {
@@ -662,7 +699,10 @@
       "chambers": "Chambers",
       "futureHold": "Future hold at this step, lot held: {{reason}}",
       "qtimeHandled": "Q-Time exceeded and handled",
-      "qtimeStageSkipped": "{{stage}} was not performed; check the lot status"
+      "qtimeStageSkipped": "{{stage}} was not performed; check the lot status",
+      "checkMsg": {
+        "eqp_wait_qual": "Equipment {{equipment}} is waiting for Qual after PM; it cannot start production until Qual passes (cannot be overridden)"
+      }
     },
     "trace": {
       "hint": "All operations on the lot and its units.",
@@ -690,6 +730,8 @@
       "splitFrom": "split from",
       "mergedInto": "merged into",
       "mergedFrom": "merged from",
+      "transformTo": "Converted to",
+      "transformFrom": "Converted from",
       "splitQtyHint": "Enter the quantity for each child lot; the parent keeps the rest.",
       "splitUnitHint": "Assign wafers / units to child lots; the rest stay in the parent.",
       "childCount": "Child lots",
@@ -821,7 +863,32 @@
       "workcenter": "Work center",
       "chambers": "Chambers",
       "chamberCount": "{{n}} chambers",
-      "chambersOf": "{{code}} chambers"
+      "chambersOf": "{{code}} chambers",
+      "qual": {
+        "col": "Qual",
+        "all": "All Qual states",
+        "wait": "Waiting Qual",
+        "waitSub": "Waiting Qual: {{unit}}",
+        "ready": "Released",
+        "record": "Record Qual",
+        "desc": "Pass releases the equipment; fail creates a retest task.",
+        "descSub": "Sub-unit {{unit}}: pass releases it; fail creates a retest task.",
+        "requestedAt": "Requested at",
+        "pass": "Pass",
+        "fail": "Fail",
+        "passed": "Qual recorded as passed",
+        "failed": "Qual failed; a retest task was created",
+        "noPermission": "You do not have permission to record Qual",
+        "noTask": "No open Qual task; please refresh",
+        "err": {
+          "forbidden": "You do not have permission",
+          "notFound": "Qual task not found; please refresh the board",
+          "closed": "This Qual task has already been recorded; please refresh the board",
+          "closedAs": "This Qual task has already been recorded ({{status}}); please refresh the board",
+          "conflict": "Conflict; please refresh and try again",
+          "invalid": "The submitted data is invalid"
+        }
+      }
     },
     "traceq": {
       "hint": "Trace upstream and downstream by lot, wafer, equipment or material lot.",
@@ -839,7 +906,8 @@
         "lot": "Lot",
         "wafer": "Wafer",
         "equipment": "Equipment",
-        "material_lot": "Material lot"
+        "material_lot": "Material lot",
+        "customer_lot": "Customer lot no."
       },
       "c": {
         "code": "Lot",
@@ -857,8 +925,22 @@
         "material_lot": "Material lot",
         "product": "Product",
         "consumed": "Consumed",
-        "downstream": "Downstream"
-      }
+        "downstream": "Downstream",
+        "customer_lot_no": "Customer lot no.",
+        "ownership": "Ownership",
+        "lot_status": "Status",
+        "child_lot": "Child lot",
+        "child_seq": "Position",
+        "child_unit": "Child unit",
+        "parent_lot": "Parent lot",
+        "parent_wafer": "Parent wafer",
+        "die_row": "Die row",
+        "die_col": "Die col",
+        "transform_id": "Transform record"
+      },
+      "origins": "Source wafers & die coordinates",
+      "dies": "Where this wafer's dies went",
+      "outOrigins": "Downstream child positions"
     },
     "holdrel": {
       "hint": "View and release held lots.",
@@ -1169,6 +1251,446 @@
       "minutes": "{{m}} min",
       "hours": "{{h}} h",
       "hoursMinutes": "{{h}} h {{m}} min"
+    },
+    "map": {
+      "title": "Map Import",
+      "description": "Import wafer/strip map and bin definition set CSV files. Preview and validate first, then confirm.",
+      "kind": {
+        "map": "Map",
+        "binSet": "Bin definition set"
+      },
+      "chooseFile": "Choose CSV file",
+      "confirm": "Confirm import",
+      "previewFailed": "Preview failed",
+      "importFailed": "Import failed",
+      "imported": "Imported maps for {{n}} substrate(s)",
+      "binSetImported": "Imported bin definition set {{code}} v{{version}}",
+      "conflict": "Someone just imported the same substrate version. Preview again, then import.",
+      "tooLarge": "The file is larger than 10 MB and cannot be imported.",
+      "forbidden": "You do not have permission.",
+      "notFound": "No map found for this substrate.",
+      "noPermission": "No permission",
+      "fileError": "File cannot be imported",
+      "hasErrors": "{{n}} problem(s); cannot import",
+      "previewOk": "Validation passed, {{n}} substrate(s)",
+      "binSetPreview": "Bin definition set {{code}} v{{version}}",
+      "rowNo": "Data row",
+      "wholeFile": "Whole file",
+      "fileLine": "File line {{n}}",
+      "field": "Field",
+      "problem": "Problem",
+      "errors": {
+        "bad_bin_type": "Invalid bin type",
+        "bad_csv": "Malformed CSV (e.g. unbalanced quotes)",
+        "bad_header": "Invalid file header",
+        "bad_int": "Not an integer",
+        "duplicate_bin": "Duplicate bin code",
+        "duplicate_coord": "Duplicate coordinate",
+        "extra_columns": "More values than columns",
+        "missing_columns": "Required columns missing",
+        "missing_header": "File header missing",
+        "out_of_range": "Row or column out of range",
+        "too_long": "Value too long",
+        "too_many_rows": "Too many rows",
+        "unknown_bin": "Bin code not defined in the set",
+        "required": "Required value is empty",
+        "empty": "The file is empty",
+        "bin_set_exists": "This bin set version already exists",
+        "bin_set_not_found": "Referenced bin set version not found",
+        "qty_mismatch": "Quantity mismatch"
+      },
+      "listTitle": "Maps imported in this session",
+      "substrate": "Substrate ID",
+      "version": "Version",
+      "size": "Rows×Cols",
+      "total": "Total",
+      "good": "Good",
+      "excluded": "Excluded",
+      "binCounts": "Bin counts",
+      "binSet": "Bin definition set",
+      "binCode": "Bin code",
+      "binType": "Bin type",
+      "binDesc": "Description",
+      "origin": "Origin / axes",
+      "lot": "Lot",
+      "importedAt": "Imported at",
+      "lookup": "Look up substrate map",
+      "lookupPlaceholder": "Substrate ID, e.g. FEDL0001-01",
+      "lookupBtn": "Search"
+    },
+    "mount": {
+      "title": "Mount",
+      "desc": "Each load port holds one material lot at a time. Unmount the current lot before loading another.",
+      "current": "Currently mounted",
+      "empty": "No material mounted on any port",
+      "port": "Load port",
+      "lot": "Material lot",
+      "submit": "Mount",
+      "mounted": "Mounted",
+      "unmount": "Unmount",
+      "unmounted": "Unmounted",
+      "portOccupied": "Port {{port}} already holds material lot {{lot}}. Unmount it first.",
+      "portBusy": "The port is in use. Refresh and try again.",
+      "overlap": "The mount time overlaps an earlier record on this port",
+      "alreadyUnmounted": "This lot was already unmounted. Refreshed.",
+      "duplicate": "Already recorded: port {{port}}, lot {{lot}}"
+    },
+    "bomTab": {
+      "title": "BOM",
+      "versions": "BOM versions",
+      "empty": "This product has no BOM yet",
+      "lines": "BOM lines",
+      "linesOf": "v{{version}} lines",
+      "noLines": "This version has no lines",
+      "lineN": "Line {{n}}",
+      "create": "New version",
+      "createTitle": "New BOM draft",
+      "createDesc": "The version number is assigned by the system; the new version is a draft you can add lines to.",
+      "edit": "Edit",
+      "editTitle": "Edit draft v{{version}}",
+      "editDesc": "Units can only be chosen from those defined in unit conversions.",
+      "activate": "Activate",
+      "void": "Void",
+      "copy": "Copy to new version",
+      "addLine": "Add line",
+      "removeLine": "Remove line",
+      "pickUom": "Select a unit",
+      "noPermission": "You do not have permission to do this",
+      "status": {
+        "draft": "Draft",
+        "active": "Active",
+        "superseded": "Superseded",
+        "void": "Void"
+      },
+      "col": {
+        "version": "Version",
+        "status": "Status",
+        "description": "Description",
+        "effectiveAt": "Effective at",
+        "copiedFrom": "Copied from",
+        "createdAt": "Created at",
+        "lineNo": "Line no.",
+        "component": "Component",
+        "qty": "Qty",
+        "uom": "Unit",
+        "perBasis": "Per",
+        "scrapRate": "Scrap rate",
+        "consumeMode": "Consume mode",
+        "componentType": "Component type",
+        "substitutes": "Substitutes"
+      },
+      "perBasis": {
+        "wafer": "Per wafer",
+        "strip": "Per strip",
+        "die": "Per die",
+        "package": "Per package",
+        "unit": "Per unit",
+        "lot": "Per lot"
+      },
+      "consume": {
+        "issue": "Issue at track-out",
+        "mounted": "Mounted on equipment"
+      },
+      "reason": {
+        "noPermission": "No BOM permission",
+        "notDraft": "This version is {{status}} and read-only; only drafts can be edited or activated. Copy it to a new version to make changes",
+        "cannotVoid": "This version is {{status}} and cannot be voided"
+      },
+      "confirm": {
+        "activateTitle": "Activate v{{version}}?",
+        "activateDesc": "This version becomes read-only; the previous active version becomes superseded.",
+        "voidTitle": "Void v{{version}}?",
+        "voidDesc": "Voiding cannot be undone; voiding the active version leaves the product with no active BOM."
+      },
+      "done": {
+        "create": "Draft v{{version}} created",
+        "save": "Draft v{{version}} saved",
+        "activate": "v{{version}} activated",
+        "void": "v{{version}} voided",
+        "copy": "Copied to new draft v{{version}}"
+      },
+      "err": {
+        "validation": "Please fix the highlighted fields",
+        "required": "Required",
+        "notWritable": "This field cannot be set by the client",
+        "wholeNumber": "Quantity must be a whole number for a count unit",
+        "noLines": "A BOM needs at least one line before activation",
+        "circular": "The BOM has a circular reference",
+        "tooDeep": "The BOM expands beyond the allowed levels",
+        "invalid": "Invalid value",
+        "readOnly": "This version is no longer a draft and is read-only; copy it to a new version to make changes",
+        "notDraft": "Only drafts can be activated",
+        "superseded": "A superseded version cannot be voided",
+        "alreadyVoid": "This version is already void",
+        "duplicateLine": "Duplicate line number",
+        "conflict": "The data changed or its status does not allow this; refresh and try again",
+        "notFound": "This BOM does not exist or was deleted",
+        "ownProduct": "A BOM cannot use its own product",
+        "sameAsPrimary": "Substitute cannot be the primary material",
+        "subMaterialOnly": "Only material lines can have substitutes",
+        "positive": "Must be greater than 0",
+        "dupSubPriority": "Duplicate substitute priority on this line",
+        "dupSubMaterial": "Duplicate substitute material on this line",
+        "bomCycle": "Cannot activate: circular reference involving {{items}}",
+        "bomDepth": "Cannot activate: BOM would exceed two levels, involving {{items}}",
+        "componentNoActive": "Cannot activate: these semi-finished components have no active BOM: {{items}}",
+        "referenced": "Cannot void: this is the only active BOM of the product and is still used by: {{items}}",
+        "bomCycleField": "Cannot use its own product or form a circular reference",
+        "bomDepthField": "Its active BOM already has semi-finished lines (two levels max)",
+        "componentNoActiveField": "This semi-finished product has no active BOM",
+        "referencedField": "Still used by other active BOMs",
+        "refItem": "{{product}} (BOM v{{bom}})",
+        "refSep": ", ",
+        "notNumber": "Enter a number",
+        "scrapRange": "Scrap rate must be between 0 and 1",
+        "tooManyDecimals": "At most {{n}} decimal places"
+      },
+      "componentType": {
+        "material": "Material",
+        "product": "Semi-finished product"
+      },
+      "addSub": "Add substitute",
+      "removeSub": "Remove substitute",
+      "subMaterial": "Substitute material",
+      "subPriority": "Priority",
+      "subNone": "No substitutes",
+      "subHint": "Substitutes take effect with the BOM version; material lines only",
+      "childActive": "Active v{{version}} (read-only)",
+      "childNone": "This semi-finished product has no active BOM",
+      "expand": "Expand semi-finished product {{name}}",
+      "collapse": "Collapse semi-finished product {{name}}",
+      "maintain": "Maintain in that product",
+      "subOf": "Substitutes: {{list}}"
+    },
+    "cust": {
+      "title": "Customer material",
+      "ownership": "Ownership",
+      "customer": "Customer",
+      "lotNo": "Customer lot no.",
+      "errCustomer": "Lot {{n}}: select a customer for customer-owned material",
+      "errLotNo": "Lot {{n}}: enter the customer lot no. for customer-owned material"
+    },
+    "over": {
+      "line": "{{material}} {{actual}} / {{planned}} {{uom}} (over by {{excess}})",
+      "toast": "BOM over-consumption (tracked out, notice only): {{lines}}",
+      "transformTo": "Converted to: {{list}}",
+      "transformFrom": "From: {{list}}",
+      "dieQty": "{{n}} dies"
+    },
+    "trf": {
+      "title": "Unit transform",
+      "desc": "Preview good qty and allocation, then submit. A transform can't be undone.",
+      "type": "Transform type",
+      "types": {
+        "dicing": "Dicing",
+        "die_attach": "Die attach",
+        "singulation": "Singulation",
+        "bin_split": "Bin split"
+      },
+      "kinds": {
+        "die": "Die",
+        "strip": "Strip",
+        "package": "Package",
+        "unit": "Unit"
+      },
+      "wafers": "Input wafers",
+      "wafer": "Wafer",
+      "source": "Good qty source",
+      "good": "Good",
+      "fail": "Fail",
+      "excluded": "Excluded",
+      "total": "Total",
+      "allocated": "Allocated",
+      "src": {
+        "map": "Map v{{v}} (read-only)",
+        "noMap": "No map: enter manually",
+        "unknown": "Determined by preview",
+        "mapShort": "Map v{{v}}",
+        "manual": "Manual",
+        "gross": "Product gross die"
+      },
+      "grossHint": "blank = gross die",
+      "output": "Output {{n}}",
+      "product": "Child product",
+      "route": "Child route",
+      "kind": "Track unit",
+      "stripQty": "Strip count",
+      "allocOf": "Dies from {{wafer}} to output {{n}}",
+      "allGood": "All good",
+      "addOutput": "Add output",
+      "preview": "Preview",
+      "commit": "Transform",
+      "previewTitle": "Preview",
+      "stale": "Inputs changed; preview again before submitting.",
+      "outLine": "Output {{n}}: {{kind}} {{qty}} ({{dies}} dies)",
+      "children": "Child lots created:",
+      "done": "Transform done, child lots: {{list}}",
+      "warn": {
+        "gross": "{{wafer}}: no substrate map; good qty uses product gross die"
+      },
+      "e": {
+        "noWafer": "This lot has no wafers to transform",
+        "int": "{{wafer}}: quantities must be non-negative integers",
+        "reason": "A reason code is required for manual good qty",
+        "product": "Output {{n}}: select a product",
+        "route": "Output {{n}}: select a route",
+        "strip": "Output {{n}}: strip count is required",
+        "alloc": "Output {{n}}: allocated dies must be non-negative integers",
+        "noDie": "Output {{n}}: allocate at least 1 die",
+        "balance": "{{wafer}}: allocated {{allocated}}, good {{good}}; quantities don't balance",
+        "noGross": "{{wafer}}: the product has no gross die; please enter the good qty"
+      },
+      "be": {
+        "manualWithMap": "Has a substrate map; manual good qty not allowed",
+        "noGross": "The product has no gross die; please enter the good qty",
+        "reason": "A reason code is required for manual good qty",
+        "reasonNotFound": "Reason code not found",
+        "noWafer": "No wafers to transform",
+        "strip": "Strip count is required",
+        "noDie": "Each output needs at least 1 die",
+        "product": "Product not found",
+        "route": "Route not found",
+        "notInput": "Not an input wafer",
+        "extra": "The request contains fields that are not allowed",
+        "mapQty": "Quantities don't balance: children {{children}} + excluded {{excluded}} ≠ map total {{total}}",
+        "trfQty": "{{wafer}}: allocated {{allocated}} ≠ good {{good}}",
+        "invalid": "Some input is invalid; please check and try again"
+      }
+    },
+    "bin": {
+      "title": "Split by bin",
+      "desc": "Split a whole lot into child lots by bin: preview bin quantities and the balance check, then submit.",
+      "bin": "Bin",
+      "qty": "Qty",
+      "child": "Child lot",
+      "noMap": "No map: enter manually (total {{sum}})",
+      "binOf": "{{wafer}} row {{n}} bin code",
+      "qtyOf": "{{wafer}} row {{n}} qty",
+      "addBin": "Add bin",
+      "commit": "Split",
+      "summary": "Bin summary",
+      "excluded": "Excluded",
+      "ok": "Pass",
+      "fail": "Fail",
+      "conserve": "{{wafer}}: children {{children}} + excluded {{excluded}} / total {{total}}",
+      "diff": "Difference {{diff}}",
+      "children": "Child lots to create",
+      "outLine": "Bin {{bin}}: {{qty}} dies",
+      "done": "Split done, child lots: {{list}}",
+      "e": {
+        "need": "{{wafer}}: no substrate map; enter bin quantities",
+        "code": "{{wafer}}: bin code is required, up to 32 characters",
+        "dup": "{{wafer}}: bin {{bin}} is duplicated",
+        "reason": "A reason code is required for manual bin quantities"
+      },
+      "be": {
+        "manualWithMap": "Has a substrate map; manual bin quantities not allowed",
+        "needManual": "No substrate map; enter bin quantities with a reason",
+        "reason": "A reason code is required for manual bin quantities",
+        "duplicate": "Duplicate bin",
+        "noGross": "The product has no gross die to check manual bins against",
+        "route": "Input lots are at different steps; a route is required",
+        "mapQty": "Quantities don't balance: children {{children}} + excluded {{excluded}} ≠ map total {{total}} (difference {{diff}})",
+        "binQty": "{{wafer}}: bins total {{actual}} ≠ expected {{expected}} (difference {{diff}})",
+        "unassigned": "Bins not assigned to any child lot: {{list}}"
+      }
+    },
+    "qtw": {
+      "text": "Q-Time warning: rule {{rule}} · step {{step}} · {{over}} past the warning limit",
+      "hm": "{{h}} h {{m}} min",
+      "m": "{{m}} min",
+      "s": "{{s}} s"
+    },
+    "tundo": {
+      "title": "Undo transform",
+      "desc": "Deletes the child lots and restores the parents; not allowed once a child is worked on.",
+      "willRemove": "Child lots to delete: {{list}}",
+      "confirm": "Undo",
+      "done": "Transform undone; deleted child lots: {{list}}",
+      "undone": "Undone",
+      "removed": "{{type}} undone; deleted child lots: {{list}}",
+      "notFound": "The transform does not exist or was already undone",
+      "blocked": "{{lot}}: {{reason}}",
+      "blockedRef": "Child lots are referenced by other records; can't undo",
+      "why": {
+        "lot_status": "child lot is no longer waiting",
+        "on_hold": "child lot is on hold",
+        "has_transactions": "child lot has later transactions",
+        "has_descendants": "child lot has been split further",
+        "parent_status": "parent lot status has changed",
+        "referenced": "child lot is referenced by other records",
+        "other": "undo conditions not met"
+      },
+      "already": "This transform was already undone",
+      "info": "Undone at {{at}} · by {{by}} · reason {{reason}}",
+      "carrier": "Carrier not restored; rebind if needed",
+      "tables": " (referenced by: {{list}})"
+    },
+    "mapList": {
+      "title": "Imported maps",
+      "q": "Substrate ID / file name",
+      "from": "Imported from",
+      "to": "Imported to",
+      "latestOnly": "Latest versions only",
+      "version": "Version",
+      "latest": "Latest",
+      "total": "Total",
+      "good": "Good",
+      "excluded": "Excluded",
+      "binSet": "Bin set",
+      "lot": "Lot",
+      "file": "File",
+      "importedBy": "Imported by",
+      "importedAt": "Imported at",
+      "count": "{{count}} maps · page {{page}}/{{pages}}",
+      "prev": "Previous",
+      "next": "Next"
+    },
+    "alarm": {
+      "clear": "Clear alarm",
+      "clearDesc": "Equipment state is not restored automatically.",
+      "cleared": "Alarm cleared",
+      "already": "Alarm was already cleared; nothing changed",
+      "err": {
+        "targetRequired": "Target state is required when the action is “Set equipment state”",
+        "targetOnly": "Target state is only allowed when the action is “Set equipment state”",
+        "targetUnknown": "Target state {{state}} does not exist"
+      },
+      "skip": {
+        "unknown_state": "the target state does not exist",
+        "already_in_state": "the equipment is already in the target state",
+        "transition_not_allowed": "the state transition table does not allow this change"
+      },
+      "stateSkipped": "Equipment state not changed: {{why}}. The alarm was recorded.",
+      "stateUnchanged": "Equipment state not changed. The alarm was recorded.",
+      "col": {
+        "stateChanged": "State changed",
+        "skipReason": "Skip reason"
+      },
+      "changed": {
+        "yes": "Changed",
+        "no": "Not changed"
+      }
+    },
+    "toolLife": {
+      "warn": "Near end of life",
+      "over": "Life limit reached",
+      "reached": "Tool {{tool}} reached its life limit ({{used}}/{{max}}); track-in blocked, no override",
+      "near": "Tool {{tool}} is near end of life ({{used}}/{{max}})",
+      "expired": "Tool {{tool}} expired on {{date}}; track-in blocked",
+      "expiring": "Tool {{tool}} expires on {{date}}",
+      "status": "Tool {{tool}} is {{status}}; track-in blocked",
+      "logged": "Recorded in the check log and lot history",
+      "unknownStatus": "unknown status"
+    },
+    "alarmCode": {
+      "migration": {
+        "col": "Migration",
+        "pending": "Needs reconfiguring after migration",
+        "none": "No reconfiguring needed",
+        "all": "All migration states",
+        "hint": "Migration 0029 turned the linkage off; reconfigure \"Set equipment state\""
+      }
     }
   },
   "notify": {

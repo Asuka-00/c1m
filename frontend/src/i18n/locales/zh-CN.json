@@ -138,8 +138,8 @@
     "passwordRequired": "请输入密码。",
     "welcome": "欢迎回来，{{name}}！",
     "loginLabel": "用户名",
-    "loginPlaceholder": "例如 admin",
-    "loginRequired": "请输入用户名或邮箱",
+    "loginPlaceholder": "用户名",
+    "loginRequired": "请输入用户名",
     "loginInvalid": "请输入有效的用户名（3–50 位字母、数字、. _ -）"
   },
   "errors": {
@@ -167,7 +167,11 @@
     "network": "网络错误，无法连接后端。",
     "forbidden": "权限不足。",
     "validation": "输入无效。",
-    "generic": "操作失败，请联系管理员。"
+    "generic": "操作失败，请联系管理员。",
+    "query": {
+      "sortBy": "不支持按该列排序（可选：{{list}}）",
+      "notTextFilter": "{{field}} 不是可筛选的文本字段"
+    }
   },
   "backend": {
     "Incorrect email or password": "邮箱或密码错误",
@@ -492,14 +496,30 @@
         "lot_busy": "批次正被其他操作占用，请稍后重试",
         "batch_blocked": "批量作业被检查规则阻断，请查看各批次的检查结果",
         "idempotency_in_progress": "相同的请求正在处理中，请稍后刷新查看结果",
-        "idempotency_key_mismatch": "重复提交的内容与首次请求不一致，请刷新后重新操作",
         "idempotency_key_reused": "该请求标识已用于其他操作，请刷新后重试",
         "merge_source_invalid": "合批来源批次有重复，或包含了目标批次",
         "rework_route_missing": "当前工步未配置返工路线，无法返工",
         "qtime_rule_in_use": "Q-Time 规则 {{qtime_rule_code}} 已被 {{hold_count}} 条 Hold 记录引用，不能删除，请改为停用",
         "qtime_action_invalid": "Q-Time 超时动作只能是警告、Hold 或返工",
-        "hold_not_found": "Hold 记录不存在或已被删除，请刷新列表"
-      }
+        "hold_not_found": "Hold 记录不存在或已被删除，请刷新列表",
+        "too_many_decimals": "最多 6 位小数",
+        "read_only_field": "该字段只读，不能修改",
+        "unknown_field": "包含未知字段",
+        "timezone_required": "时间必须带时区（如 2026-10-14T08:00:00+08:00）",
+        "date_range_too_large": "日期跨度最多 {{max_days}} 天，请缩小范围。",
+        "date_range_too_large_nolimit": "日期跨度过大，请缩小范围。",
+        "date_range_invalid": "开始日期不能晚于结束日期。",
+        "unknown_columns": "导入文件有无法识别的列：{{columns}}",
+        "no_conversion_path": "没有从 {{from_uom}} 到 {{to_uom}} 的换算关系。",
+        "ref_not_found": "找不到对应的{{entity}}。",
+        "enum": "取值无效，可选：{{expected}}",
+        "step_ids_mismatch": "工步列表与当前流程的工步不一致，请刷新后重试。",
+        "not_text_filter": "{{field}} 不是可筛选的文本字段"
+      },
+      "tooManyDecimals": "最多 {{n}} 位小数",
+      "onlyWhen": "仅当{{cond}}为「{{value}}」时才能填写",
+      "readOnlyField": "只读字段，不能修改",
+      "unknownField": "未知字段，不能提交"
     },
     "autoHint": "留空则自动生成",
     "currentStep": "当前",
@@ -571,7 +591,24 @@
       "done": "已投产 {{count}} 个批次",
       "again": "继续投产",
       "searchWo": "搜索工单号 / 产品 / 流程 / 客户",
-      "woMore": "共 {{n}} 条，显示前 {{show}} 条，请输入关键字缩小范围"
+      "woMore": "共 {{n}} 条，显示前 {{show}} 条，请输入关键字缩小范围",
+      "fe": {
+        "banner": "开批未成功：请按标出的字段修改后再提交",
+        "notAllowed": "不允许的字段",
+        "customerRequired": "客户来料须选择客户",
+        "customerNotFound": "客户不存在",
+        "customerOwnOnly": "自有物料不能指定客户",
+        "customerLotOwnOnly": "自有物料不能填写客户批号",
+        "qty": "数量超出范围",
+        "carrier": "载具不可用",
+        "slots": "槽位不正确",
+        "tooLong": "内容过长",
+        "invalid": "输入有误",
+        "customerLotRequired": "客户来料须填写客户批号",
+        "noRoute": "产品没有生效的默认流程",
+        "noSteps": "流程没有工步",
+        "noBom": "产品 {{product}} 没有生效的 BOM，不能开批"
+      }
     },
     "exec": {
       "stage": {
@@ -662,7 +699,10 @@
       "chambers": "腔体",
       "futureHold": "到达预约 Hold 工步，批次已 Hold：{{reason}}",
       "qtimeHandled": "Q-Time 超时已处置",
-      "qtimeStageSkipped": "本次 {{stage}} 未执行，请刷新后查看批次状态"
+      "qtimeStageSkipped": "本次 {{stage}} 未执行，请刷新后查看批次状态",
+      "checkMsg": {
+        "eqp_wait_qual": "设备 {{equipment}} PM 后待 Qual，登记 Qual 通过前不能开工（不可强制放行）"
+      }
     },
     "trace": {
       "hint": "查看批次及其单元的全部操作记录。",
@@ -690,6 +730,8 @@
       "splitFrom": "分自母批",
       "mergedInto": "合入",
       "mergedFrom": "合并自",
+      "transformTo": "转换出子批",
+      "transformFrom": "转换自母批",
       "splitQtyHint": "输入每个子批的数量，其余留在母批。",
       "splitUnitHint": "将晶圆 / 单元分配到子批，未分配的留在母批。",
       "childCount": "子批数",
@@ -821,7 +863,32 @@
       "workcenter": "工作中心",
       "chambers": "腔体",
       "chamberCount": "{{n}} 个腔体",
-      "chambersOf": "{{code}} 腔体"
+      "chambersOf": "{{code}} 腔体",
+      "qual": {
+        "col": "Qual",
+        "all": "全部 Qual 状态",
+        "wait": "待 Qual",
+        "waitSub": "待 Qual：{{unit}}",
+        "ready": "已放行",
+        "record": "登记 Qual",
+        "desc": "通过后机台恢复可生产；不通过会生成复测任务。",
+        "descSub": "子单元 {{unit}}：通过后恢复可生产；不通过会生成复测任务。",
+        "requestedAt": "生成时间",
+        "pass": "通过",
+        "fail": "不通过",
+        "passed": "Qual 已登记通过",
+        "failed": "Qual 不通过，已生成复测任务",
+        "noPermission": "没有登记 Qual 的权限",
+        "noTask": "没有待登记的 Qual 任务，请刷新",
+        "err": {
+          "forbidden": "没有权限",
+          "notFound": "Qual 任务不存在，请刷新看板",
+          "closed": "该 Qual 任务已登记，请刷新看板",
+          "closedAs": "该 Qual 任务已登记（{{status}}），请刷新看板",
+          "conflict": "操作冲突，请刷新后重试",
+          "invalid": "提交内容不正确"
+        }
+      }
     },
     "traceq": {
       "hint": "按批次、晶圆、设备或物料批追溯上下游。",
@@ -839,7 +906,8 @@
         "lot": "批次",
         "wafer": "晶圆",
         "equipment": "设备",
-        "material_lot": "物料批"
+        "material_lot": "物料批",
+        "customer_lot": "客户批号"
       },
       "c": {
         "code": "批次",
@@ -857,8 +925,22 @@
         "material_lot": "物料批",
         "product": "产品",
         "consumed": "消耗",
-        "downstream": "下游产出"
-      }
+        "downstream": "下游产出",
+        "customer_lot_no": "客户批号",
+        "ownership": "物料归属",
+        "lot_status": "状态",
+        "child_lot": "子批",
+        "child_seq": "子批位置",
+        "child_unit": "子单元",
+        "parent_lot": "母批",
+        "parent_wafer": "母晶圆",
+        "die_row": "die 行",
+        "die_col": "die 列",
+        "transform_id": "转换记录"
+      },
+      "origins": "来源晶圆与 die 坐标",
+      "dies": "该晶圆的 die 去向",
+      "outOrigins": "下游子批位置"
     },
     "holdrel": {
       "hint": "查看并释放 Hold 中的批次。",
@@ -1169,6 +1251,446 @@
       "minutes": "{{m}} 分钟",
       "hours": "{{h}} 小时",
       "hoursMinutes": "{{h}} 小时 {{m}} 分钟"
+    },
+    "map": {
+      "title": "坐标图导入",
+      "description": "导入晶圆或框架的坐标图、bin 定义集 CSV，先预览校验，确认后再写入。",
+      "kind": {
+        "map": "坐标图",
+        "binSet": "bin 定义集"
+      },
+      "chooseFile": "选择 CSV 文件",
+      "confirm": "确认导入",
+      "previewFailed": "预览失败",
+      "importFailed": "导入失败",
+      "imported": "已导入 {{n}} 片基板的坐标图",
+      "binSetImported": "已导入 bin 定义集 {{code}} v{{version}}",
+      "conflict": "同一基板刚被别人导入了同一版本，请重新预览后再导入。",
+      "tooLarge": "文件超过 10MB，不能导入。",
+      "forbidden": "没有权限。",
+      "notFound": "没有找到这个基板的坐标图。",
+      "noPermission": "没有权限",
+      "fileError": "文件不能导入",
+      "hasErrors": "有 {{n}} 处问题，不能导入",
+      "previewOk": "校验通过，共 {{n}} 片基板",
+      "binSetPreview": "bin 定义集 {{code}} v{{version}}",
+      "rowNo": "数据行",
+      "wholeFile": "整份文件",
+      "fileLine": "原始文件第 {{n}} 行",
+      "field": "字段",
+      "problem": "问题",
+      "errors": {
+        "bad_bin_type": "bin 类型不对",
+        "bad_csv": "CSV 格式错误（引号不成对等）",
+        "bad_header": "文件头不对",
+        "bad_int": "不是整数",
+        "duplicate_bin": "bin 码重复",
+        "duplicate_coord": "坐标重复",
+        "extra_columns": "列数多于列名",
+        "missing_columns": "缺少必需的列",
+        "missing_header": "缺少文件头",
+        "out_of_range": "行或列超出范围",
+        "too_long": "内容太长",
+        "too_many_rows": "行数太多",
+        "unknown_bin": "bin 码在定义集里不存在",
+        "required": "必填项为空",
+        "empty": "文件是空的",
+        "bin_set_exists": "这个 bin 定义集版本已经存在",
+        "bin_set_not_found": "引用的 bin 定义集版本不存在",
+        "qty_mismatch": "数量不一致"
+      },
+      "listTitle": "本次导入的坐标图",
+      "substrate": "基板编号",
+      "version": "版本",
+      "size": "行×列",
+      "total": "总数",
+      "good": "良品",
+      "excluded": "排除",
+      "binCounts": "各 bin 数量",
+      "binSet": "bin 定义集",
+      "binCode": "bin 码",
+      "binType": "bin 类型",
+      "binDesc": "说明",
+      "origin": "原点 / 轴向",
+      "lot": "批次",
+      "importedAt": "导入时间",
+      "lookup": "查询基板坐标图",
+      "lookupPlaceholder": "输入基板编号，如 FEDL0001-01",
+      "lookupBtn": "查询"
+    },
+    "mount": {
+      "title": "上料",
+      "desc": "上料口同时只能装一批物料，换料前先卸下当前的料。",
+      "current": "当前在装",
+      "empty": "各上料口都没有在装的料",
+      "port": "上料口",
+      "lot": "物料批号",
+      "submit": "上料",
+      "mounted": "已上料",
+      "unmount": "卸料",
+      "unmounted": "已卸料",
+      "portOccupied": "上料口 {{port}} 已经装着物料批 {{lot}}，请先卸料",
+      "portBusy": "上料口正被占用，请刷新后重试",
+      "overlap": "上料时间和这个上料口之前的记录重叠",
+      "alreadyUnmounted": "这批料已经卸下了，已刷新",
+      "duplicate": "已记录（重复提交）：上料口 {{port}}，物料批 {{lot}}"
+    },
+    "bomTab": {
+      "title": "BOM",
+      "versions": "BOM 版本",
+      "empty": "该产品还没有 BOM",
+      "lines": "BOM 明细",
+      "linesOf": "v{{version}} 明细",
+      "noLines": "该版本没有明细",
+      "lineN": "行 {{n}}",
+      "create": "新建版本",
+      "createTitle": "新建 BOM 草稿",
+      "createDesc": "版本号由系统生成，新建后为草稿，可再添加明细。",
+      "edit": "编辑",
+      "editTitle": "编辑草稿 v{{version}}",
+      "editDesc": "单位只能从单位换算里已有的单位中选择。",
+      "activate": "生效",
+      "void": "作废",
+      "copy": "复制为新版本",
+      "addLine": "添加明细",
+      "removeLine": "删除此行",
+      "pickUom": "请选择单位",
+      "noPermission": "没有权限执行此操作",
+      "status": {
+        "draft": "草稿",
+        "active": "生效",
+        "superseded": "已取代",
+        "void": "作废"
+      },
+      "col": {
+        "version": "版本",
+        "status": "状态",
+        "description": "说明",
+        "effectiveAt": "生效时间",
+        "copiedFrom": "复制自",
+        "createdAt": "创建时间",
+        "lineNo": "行号",
+        "component": "组件",
+        "qty": "用量",
+        "uom": "单位",
+        "perBasis": "计量基准",
+        "scrapRate": "损耗率",
+        "consumeMode": "扣料方式",
+        "componentType": "组件类型",
+        "substitutes": "替代料"
+      },
+      "perBasis": {
+        "wafer": "每晶圆",
+        "strip": "每条",
+        "die": "每晶粒",
+        "package": "每封装体",
+        "unit": "每单元",
+        "lot": "每批"
+      },
+      "consume": {
+        "issue": "出站扣料",
+        "mounted": "机台上料"
+      },
+      "reason": {
+        "noPermission": "没有 BOM 操作权限",
+        "notDraft": "当前版本为{{status}}，只读；只有草稿可以编辑或生效，可复制为新版本后修改",
+        "cannotVoid": "当前版本为{{status}}，不能作废"
+      },
+      "confirm": {
+        "activateTitle": "生效 v{{version}}？",
+        "activateDesc": "生效后该版本只读，同产品原来生效的版本会变为已取代。",
+        "voidTitle": "作废 v{{version}}？",
+        "voidDesc": "作废后不能恢复；如果作废的是生效版本，该产品将没有生效的 BOM。"
+      },
+      "done": {
+        "create": "已新建草稿 v{{version}}",
+        "save": "草稿 v{{version}} 已保存",
+        "activate": "v{{version}} 已生效",
+        "void": "v{{version}} 已作废",
+        "copy": "已复制为新草稿 v{{version}}"
+      },
+      "err": {
+        "validation": "请修正标红的字段",
+        "required": "必填",
+        "notWritable": "该字段不能由客户端填写",
+        "wholeNumber": "计件单位的用量必须是整数",
+        "noLines": "至少要有一行明细才能生效",
+        "circular": "BOM 存在循环引用",
+        "tooDeep": "BOM 展开层级超过限制",
+        "invalid": "取值不合法",
+        "readOnly": "该版本已不是草稿，只读；请复制为新版本后修改",
+        "notDraft": "只有草稿可以生效",
+        "superseded": "已取代的版本不能作废",
+        "alreadyVoid": "该版本已作废",
+        "duplicateLine": "行号重复",
+        "conflict": "数据已被修改或状态不允许此操作，请刷新后重试",
+        "notFound": "该 BOM 不存在或已被删除",
+        "ownProduct": "不能引用本产品自己",
+        "sameAsPrimary": "替代料不能与主料相同",
+        "subMaterialOnly": "只有物料行可以设置替代料",
+        "positive": "必须大于 0",
+        "dupSubPriority": "同一行的替代料优先级重复",
+        "dupSubMaterial": "同一行的替代物料重复",
+        "bomCycle": "不能生效：会形成循环引用，涉及 {{items}}",
+        "bomDepth": "不能生效：会超过两级 BOM，涉及 {{items}}",
+        "componentNoActive": "不能生效：引用的半成品没有生效的 BOM：{{items}}",
+        "referenced": "不能作废：这是该产品唯一生效的 BOM，仍被以下生效 BOM 引用：{{items}}",
+        "bomCycleField": "不能引用本产品，也不能形成循环引用",
+        "bomDepthField": "该半成品的生效 BOM 已含半成品，P1 只允许两级",
+        "componentNoActiveField": "该半成品没有生效的 BOM",
+        "referencedField": "该 BOM 仍被其他生效 BOM 引用",
+        "refItem": "{{product}}（BOM v{{bom}}）",
+        "refSep": "、",
+        "notNumber": "请输入数字",
+        "scrapRange": "损耗率须在 0 到 1 之间",
+        "tooManyDecimals": "最多 {{n}} 位小数"
+      },
+      "componentType": {
+        "material": "物料",
+        "product": "半成品"
+      },
+      "addSub": "添加替代料",
+      "removeSub": "删除替代料",
+      "subMaterial": "替代物料",
+      "subPriority": "优先级",
+      "subNone": "无替代料",
+      "subHint": "替代料随 BOM 版本一起生效；只有物料行可以设置",
+      "childActive": "当前生效 v{{version}}（只读）",
+      "childNone": "该半成品没有生效的 BOM",
+      "expand": "展开半成品 {{name}}",
+      "collapse": "收起半成品 {{name}}",
+      "maintain": "到该产品维护",
+      "subOf": "替代：{{list}}"
+    },
+    "cust": {
+      "title": "客户来料",
+      "ownership": "物料归属",
+      "customer": "客户",
+      "lotNo": "客户批号",
+      "errCustomer": "第 {{n}} 批：客户来料须选择客户",
+      "errLotNo": "第 {{n}} 批：客户来料须填写客户批号"
+    },
+    "over": {
+      "line": "{{material}} {{actual}} / {{planned}} {{uom}}（超 {{excess}}）",
+      "toast": "BOM 超量用料（已出站，仅提示）：{{lines}}",
+      "transformTo": "转换为：{{list}}",
+      "transformFrom": "来源：{{list}}",
+      "dieQty": "die 数 {{n}}"
+    },
+    "trf": {
+      "title": "单位转换",
+      "desc": "先预览确认良品数和分配，再提交。转换后不能撤销。",
+      "type": "转换类型",
+      "types": {
+        "dicing": "切割",
+        "die_attach": "装片",
+        "singulation": "分离",
+        "bin_split": "按 bin 拆批"
+      },
+      "kinds": {
+        "die": "颗（die）",
+        "strip": "条（strip）",
+        "package": "封装体",
+        "unit": "单元"
+      },
+      "wafers": "输入晶圆",
+      "wafer": "晶圆",
+      "source": "良品来源",
+      "good": "良品数",
+      "fail": "不良数",
+      "excluded": "排除数",
+      "total": "总数",
+      "allocated": "已分配",
+      "src": {
+        "map": "坐标图 v{{v}}（只读）",
+        "noMap": "无坐标图：人工录入",
+        "unknown": "以预览为准",
+        "mapShort": "坐标图 v{{v}}",
+        "manual": "人工录入",
+        "gross": "产品 gross die"
+      },
+      "grossHint": "空=gross die",
+      "output": "输出 {{n}}",
+      "product": "子批产品",
+      "route": "子批流程",
+      "kind": "追踪单位",
+      "stripQty": "条数",
+      "allocOf": "输出 {{n}} 从 {{wafer}} 分配的颗数",
+      "allGood": "全部良品",
+      "addOutput": "添加输出",
+      "preview": "预览",
+      "commit": "确认转换",
+      "previewTitle": "预览结果",
+      "stale": "输入已修改，请重新预览后再提交。",
+      "outLine": "输出 {{n}}：{{kind}} {{qty}}（{{dies}} 颗）",
+      "children": "已生成子批：",
+      "done": "转换完成，子批：{{list}}",
+      "warn": {
+        "gross": "{{wafer}}：没有坐标图，已按产品 gross die 计良品数"
+      },
+      "e": {
+        "noWafer": "本批没有可转换的晶圆",
+        "int": "{{wafer}}：数量必须是非负整数",
+        "reason": "人工录入良品数时必须选择原因码",
+        "product": "输出 {{n}}：请选择产品",
+        "route": "输出 {{n}}：请选择流程",
+        "strip": "输出 {{n}}：转换为条时必须填条数",
+        "alloc": "输出 {{n}}：分配颗数必须是非负整数",
+        "noDie": "输出 {{n}}：至少分配 1 颗",
+        "balance": "{{wafer}}：已分配 {{allocated}}，良品 {{good}}，数量不守恒",
+        "noGross": "{{wafer}}：产品没有 gross die，请填写良品数"
+      },
+      "be": {
+        "manualWithMap": "已有坐标图，不能人工录入良品数",
+        "noGross": "产品没有 gross die，请填写良品数",
+        "reason": "人工录入良品数必须填原因码",
+        "reasonNotFound": "原因码不存在",
+        "noWafer": "没有可转换的晶圆",
+        "strip": "转换为条时必须填条数",
+        "noDie": "每个输出至少分配 1 颗",
+        "product": "产品不存在",
+        "route": "流程不存在",
+        "notInput": "不是本次输入的晶圆",
+        "extra": "请求包含不允许的字段",
+        "mapQty": "数量不守恒：子批 {{children}} + 排除 {{excluded}} ≠ 坐标图总数 {{total}}",
+        "trfQty": "{{wafer}}：已分配 {{allocated}} ≠ 良品数 {{good}}",
+        "invalid": "提交内容有误，请检查后重试"
+      }
+    },
+    "bin": {
+      "title": "按 bin 拆批",
+      "desc": "按 bin 把整批拆成子批：先预览确认各 bin 数量和守恒，再提交。",
+      "bin": "Bin",
+      "qty": "数量",
+      "child": "子批",
+      "noMap": "无坐标图：人工录入（合计 {{sum}}）",
+      "binOf": "{{wafer}} 第 {{n}} 行 bin 码",
+      "qtyOf": "{{wafer}} 第 {{n}} 行数量",
+      "addBin": "添加 bin",
+      "commit": "确认拆批",
+      "summary": "Bin 分档汇总",
+      "excluded": "排除",
+      "ok": "通过",
+      "fail": "不通过",
+      "conserve": "{{wafer}}：子批 {{children}} + 排除 {{excluded}} / 总数 {{total}}",
+      "diff": "差额 {{diff}}",
+      "children": "将生成子批",
+      "outLine": "Bin {{bin}}：{{qty}} 颗",
+      "done": "拆批完成，子批：{{list}}",
+      "e": {
+        "need": "{{wafer}}：没有坐标图，请录入各 bin 数量",
+        "code": "{{wafer}}：bin 码必填，最多 32 个字符",
+        "dup": "{{wafer}}：bin {{bin}} 重复",
+        "reason": "人工录入 bin 数量时必须选择原因码"
+      },
+      "be": {
+        "manualWithMap": "已有坐标图，不能人工录入 bin 数量",
+        "needManual": "没有坐标图，请录入各 bin 数量并填原因",
+        "reason": "人工录入 bin 数量必须填原因码",
+        "duplicate": "bin 重复",
+        "noGross": "产品未设 gross die，无法核对人工 bin 数量",
+        "route": "输入批次不在同一工步，必须指定流程",
+        "mapQty": "数量不守恒：子批 {{children}} + 排除 {{excluded}} ≠ 坐标图总数 {{total}}（差额 {{diff}}）",
+        "binQty": "{{wafer}}：bin 合计 {{actual}} ≠ 期望 {{expected}}（差额 {{diff}}）",
+        "unassigned": "以下 bin 没有分到子批：{{list}}"
+      }
+    },
+    "qtw": {
+      "text": "Q-Time 预警：规则 {{rule}} · 工步 {{step}} · 已超出预警 {{over}}",
+      "hm": "{{h}} 小时 {{m}} 分",
+      "m": "{{m}} 分",
+      "s": "{{s}} 秒"
+    },
+    "tundo": {
+      "title": "撤销转换",
+      "desc": "删除转换生成的子批，母批恢复到转换前状态。子批已动过时不能撤销。",
+      "willRemove": "将删除子批：{{list}}",
+      "confirm": "确认撤销",
+      "done": "已撤销转换，删除子批：{{list}}",
+      "undone": "已撤销",
+      "removed": "撤销{{type}}，删除子批：{{list}}",
+      "notFound": "转换记录不存在或已撤销",
+      "blocked": "{{lot}}：{{reason}}",
+      "blockedRef": "子批已被其他记录引用，不能撤销",
+      "why": {
+        "lot_status": "子批已不在等待状态",
+        "on_hold": "子批处于 Hold",
+        "has_transactions": "子批已有后续作业",
+        "has_descendants": "子批已再分出下游批次",
+        "parent_status": "母批状态已变化",
+        "referenced": "子批已被其他记录引用",
+        "other": "不满足撤销条件"
+      },
+      "already": "该转换已撤销，不能重复撤销",
+      "info": "撤销时间 {{at}} · 撤销人 {{by}} · 撤销原因 {{reason}}",
+      "carrier": "载具未恢复，请按需重新绑定",
+      "tables": "（引用表：{{list}}）"
+    },
+    "mapList": {
+      "title": "已导入的坐标图",
+      "q": "基板编号 / 文件名",
+      "from": "导入日期从",
+      "to": "导入日期至",
+      "latestOnly": "只看最新版本",
+      "version": "版本",
+      "latest": "最新",
+      "total": "总数",
+      "good": "良品",
+      "excluded": "排除",
+      "binSet": "Bin 定义集",
+      "lot": "批次",
+      "file": "文件",
+      "importedBy": "导入人",
+      "importedAt": "导入时间",
+      "count": "共 {{count}} 条 · 第 {{page}}/{{pages}} 页",
+      "prev": "上一页",
+      "next": "下一页"
+    },
+    "alarm": {
+      "clear": "清除报警",
+      "clearDesc": "清除后不会自动恢复设备状态。",
+      "cleared": "报警已清除",
+      "already": "该报警已清除，未做改动",
+      "err": {
+        "targetRequired": "联动为「切换设备状态」时必须填写目标状态",
+        "targetOnly": "联动为「不联动」时不能填写目标状态",
+        "targetUnknown": "目标状态 {{state}} 不存在"
+      },
+      "skip": {
+        "unknown_state": "目标状态不存在",
+        "already_in_state": "设备已处于目标状态",
+        "transition_not_allowed": "状态迁移表不允许这次切换"
+      },
+      "stateSkipped": "设备状态未切换：{{why}}。报警已记录。",
+      "stateUnchanged": "设备状态未切换。报警已记录。",
+      "col": {
+        "stateChanged": "切换设备状态",
+        "skipReason": "未切换原因"
+      },
+      "changed": {
+        "yes": "已切换",
+        "no": "未切换"
+      }
+    },
+    "toolLife": {
+      "warn": "接近寿命上限",
+      "over": "已达寿命上限",
+      "reached": "工具 {{tool}} 已达寿命上限（{{used}}/{{max}}），不能进站，不可强制放行",
+      "near": "工具 {{tool}} 接近寿命上限（{{used}}/{{max}}）",
+      "expired": "工具 {{tool}} 已于 {{date}} 过期，不能进站",
+      "expiring": "工具 {{tool}} 将于 {{date}} 到期",
+      "status": "工具 {{tool}} 当前状态为 {{status}}，不能进站",
+      "logged": "已记入检查记录和批次履历",
+      "unknownStatus": "状态未知"
+    },
+    "alarmCode": {
+      "migration": {
+        "col": "迁移",
+        "pending": "迁移待补配",
+        "none": "无需补配",
+        "all": "全部迁移状态",
+        "hint": "0029 迁移时联动被改为不联动，请补配“切换设备状态”"
+      }
     }
   },
   "notify": {

@@ -138,8 +138,8 @@
     "passwordRequired": "パスワードを入力してください。",
     "welcome": "おかえりなさい、{{name}} さん！",
     "loginLabel": "ユーザー名",
-    "loginPlaceholder": "例：admin",
-    "loginRequired": "ユーザー名またはメールを入力してください",
+    "loginPlaceholder": "ユーザー名",
+    "loginRequired": "ユーザー名を入力してください",
     "loginInvalid": "有効なユーザー名（3〜50 文字の英数字・. _ -）を入力してください"
   },
   "errors": {
@@ -167,7 +167,11 @@
     "network": "ネットワークエラー：バックエンドに接続できません。",
     "forbidden": "権限が不足しています。",
     "validation": "入力が無効です。",
-    "generic": "処理に失敗しました。管理者にお問い合わせください。"
+    "generic": "処理に失敗しました。管理者にお問い合わせください。",
+    "query": {
+      "sortBy": "この列では並べ替えできません（指定可能：{{list}}）",
+      "notTextFilter": "{{field}} はフィルタ可能なテキスト項目ではありません"
+    }
   },
   "backend": {
     "Incorrect email or password": "メールアドレスまたはパスワードが正しくありません",
@@ -492,14 +496,30 @@
         "lot_busy": "ロットは他の操作で使用中です。しばらくしてから再試行してください",
         "batch_blocked": "一括作業がチェックで阻止されました。各ロットの結果を確認してください",
         "idempotency_in_progress": "同じリクエストを処理中です。しばらくして更新してください",
-        "idempotency_key_mismatch": "再送信の内容が最初のリクエストと異なります。更新してやり直してください",
         "idempotency_key_reused": "このリクエストキーは別の操作で使用済みです。更新して再試行してください",
         "merge_source_invalid": "統合元ロットに重複があるか、統合先ロットが含まれています",
         "rework_route_missing": "この工程にリワークルートが設定されていません",
         "qtime_rule_in_use": "Q-Time 規則 {{qtime_rule_code}} は {{hold_count}} 件のホールド記録から参照されているため削除できません。無効化してください",
         "qtime_action_invalid": "Q-Time の違反時処置は警告・ホールド・リワークのみ指定できます",
-        "hold_not_found": "ホールド記録が存在しないか削除されています。一覧を更新してください"
-      }
+        "hold_not_found": "ホールド記録が存在しないか削除されています。一覧を更新してください",
+        "too_many_decimals": "小数は最大 6 桁です",
+        "read_only_field": "この項目は読み取り専用です",
+        "unknown_field": "不明な項目が含まれています",
+        "timezone_required": "時刻にはタイムゾーンが必要です（例：2026-10-14T08:00:00+08:00）",
+        "date_range_too_large": "期間は最大 {{max_days}} 日です。範囲を狭めてください。",
+        "date_range_too_large_nolimit": "期間が長すぎます。範囲を狭めてください。",
+        "date_range_invalid": "開始日は終了日より後にできません。",
+        "unknown_columns": "取込ファイルに認識できない列があります：{{columns}}",
+        "no_conversion_path": "{{from_uom}} から {{to_uom}} への換算がありません。",
+        "ref_not_found": "{{entity}}が見つかりません。",
+        "enum": "値が無効です。指定可能：{{expected}}",
+        "step_ids_mismatch": "工程リストが現在のルートと一致しません。更新して再試行してください。",
+        "not_text_filter": "{{field}} はフィルタ可能なテキスト項目ではありません"
+      },
+      "tooManyDecimals": "小数は最大 {{n}} 桁です",
+      "onlyWhen": "{{cond}}が「{{value}}」のときのみ入力できます",
+      "readOnlyField": "読み取り専用の項目です",
+      "unknownField": "不明な項目のため受け付けられません"
     },
     "autoHint": "空欄の場合は自動採番",
     "currentStep": "現在",
@@ -571,7 +591,24 @@
       "done": "{{count}} ロットを投入しました",
       "again": "続けて投入",
       "searchWo": "作業指示 / 製品 / ルート / 顧客を検索",
-      "woMore": "{{n}} 件中先頭 {{show}} 件を表示。キーワードで絞り込んでください"
+      "woMore": "{{n}} 件中先頭 {{show}} 件を表示。キーワードで絞り込んでください",
+      "fe": {
+        "banner": "ロットを投入できませんでした。表示された項目を修正して再度送信してください",
+        "notAllowed": "指定できない項目です",
+        "customerRequired": "顧客支給の場合は顧客を選択してください",
+        "customerNotFound": "顧客が見つかりません",
+        "customerOwnOnly": "自社品には顧客を指定できません",
+        "customerLotOwnOnly": "自社品には顧客ロット番号を入力できません",
+        "qty": "数量が範囲外です",
+        "carrier": "キャリアが使用できません",
+        "slots": "スロットが正しくありません",
+        "tooLong": "長すぎます",
+        "invalid": "入力に誤りがあります",
+        "customerLotRequired": "顧客支給の場合は顧客ロット番号が必須です",
+        "noRoute": "製品に有効な既定ルートがありません",
+        "noSteps": "ルートに工程がありません",
+        "noBom": "製品 {{product}} に有効な BOM がないため、ロットを投入できません"
+      }
     },
     "exec": {
       "stage": {
@@ -662,7 +699,10 @@
       "chambers": "チャンバー",
       "futureHold": "予約ホールド工程に到着、ロットをホールド：{{reason}}",
       "qtimeHandled": "Q-Time 超過を処置しました",
-      "qtimeStageSkipped": "今回の {{stage}} は実行されていません。ロット状態を確認してください"
+      "qtimeStageSkipped": "今回の {{stage}} は実行されていません。ロット状態を確認してください",
+      "checkMsg": {
+        "eqp_wait_qual": "設備 {{equipment}} は PM 後の Qual 待ちです。Qual 合格まで着工できません（強制解除不可）"
+      }
     },
     "trace": {
       "hint": "ロットとユニットの全操作履歴。",
@@ -690,6 +730,8 @@
       "splitFrom": "分割元",
       "mergedInto": "統合先",
       "mergedFrom": "統合元",
+      "transformTo": "変換先",
+      "transformFrom": "変換元",
       "splitQtyHint": "子ロットごとの数量を入力（残りは親ロット）。",
       "splitUnitHint": "ウェーハ・ユニットを子ロットに割り当てます（未割当は親に残ります）。",
       "childCount": "子ロット数",
@@ -821,7 +863,32 @@
       "workcenter": "ワークセンター",
       "chambers": "チャンバー",
       "chamberCount": "チャンバー {{n}}",
-      "chambersOf": "{{code}} のチャンバー"
+      "chambersOf": "{{code}} のチャンバー",
+      "qual": {
+        "col": "Qual",
+        "all": "すべての Qual 状態",
+        "wait": "Qual 待ち",
+        "waitSub": "Qual 待ち：{{unit}}",
+        "ready": "解除済み",
+        "record": "Qual 登録",
+        "desc": "合格で生産可能に戻り、不合格なら再テストを作成します。",
+        "descSub": "サブユニット {{unit}}：合格で解除、不合格なら再テストを作成。",
+        "requestedAt": "作成日時",
+        "pass": "合格",
+        "fail": "不合格",
+        "passed": "Qual を合格として登録しました",
+        "failed": "Qual 不合格、再テストタスクを作成しました",
+        "noPermission": "Qual を登録する権限がありません",
+        "noTask": "未登録の Qual タスクがありません。更新してください",
+        "err": {
+          "forbidden": "権限がありません",
+          "notFound": "Qual タスクが見つかりません。ボードを更新してください",
+          "closed": "この Qual タスクは登録済みです。ボードを更新してください",
+          "closedAs": "この Qual タスクは登録済みです（{{status}}）。ボードを更新してください",
+          "conflict": "競合が発生しました。更新して再試行してください",
+          "invalid": "入力内容が正しくありません"
+        }
+      }
     },
     "traceq": {
       "hint": "ロット・ウェーハ・設備・資材ロットで上流・下流を追跡します。",
@@ -839,7 +906,8 @@
         "lot": "ロット",
         "wafer": "ウェーハ",
         "equipment": "設備",
-        "material_lot": "資材ロット"
+        "material_lot": "資材ロット",
+        "customer_lot": "顧客ロット番号"
       },
       "c": {
         "code": "ロット",
@@ -857,8 +925,22 @@
         "material_lot": "資材ロット",
         "product": "製品",
         "consumed": "消費",
-        "downstream": "下流産出"
-      }
+        "downstream": "下流産出",
+        "customer_lot_no": "顧客ロット番号",
+        "ownership": "所有区分",
+        "lot_status": "状態",
+        "child_lot": "子ロット",
+        "child_seq": "位置",
+        "child_unit": "子ユニット",
+        "parent_lot": "親ロット",
+        "parent_wafer": "親ウェーハ",
+        "die_row": "ダイ行",
+        "die_col": "ダイ列",
+        "transform_id": "変換記録"
+      },
+      "origins": "元ウェーハとダイ座標",
+      "dies": "このウェーハのダイの行き先",
+      "outOrigins": "下流子ロットの位置"
     },
     "holdrel": {
       "hint": "ホールド中のロットを確認・解除します。",
@@ -1169,6 +1251,446 @@
       "minutes": "{{m}} 分",
       "hours": "{{h}} 時間",
       "hoursMinutes": "{{h}} 時間 {{m}} 分"
+    },
+    "map": {
+      "title": "マップインポート",
+      "description": "マップとビン定義セットの CSV を検証してからインポートします。",
+      "kind": {
+        "map": "マップ",
+        "binSet": "ビン定義セット"
+      },
+      "chooseFile": "CSV ファイルを選択",
+      "confirm": "インポート確定",
+      "previewFailed": "プレビューに失敗しました",
+      "importFailed": "インポートに失敗しました",
+      "imported": "{{n}} 枚の基板のマップをインポートしました",
+      "binSetImported": "ビン定義セット {{code}} v{{version}} をインポートしました",
+      "conflict": "同じ基板の同じバージョンが先にインポートされました。再度プレビューしてからインポートしてください。",
+      "tooLarge": "ファイルが 10MB を超えているためインポートできません。",
+      "forbidden": "権限がありません。",
+      "notFound": "この基板のマップが見つかりません。",
+      "noPermission": "権限がありません",
+      "fileError": "ファイルをインポートできません",
+      "hasErrors": "{{n}} 件の問題があるためインポートできません",
+      "previewOk": "検証 OK、基板 {{n}} 枚",
+      "binSetPreview": "ビン定義セット {{code}} v{{version}}",
+      "rowNo": "データ行",
+      "wholeFile": "ファイル全体",
+      "fileLine": "元ファイル {{n}} 行目",
+      "field": "項目",
+      "problem": "問題",
+      "errors": {
+        "bad_bin_type": "ビン種別が不正です",
+        "bad_csv": "CSV 形式エラー（引用符の不一致など）",
+        "bad_header": "ファイルヘッダーが不正です",
+        "bad_int": "整数ではありません",
+        "duplicate_bin": "ビンコードが重複しています",
+        "duplicate_coord": "座標が重複しています",
+        "extra_columns": "列数が列名より多いです",
+        "missing_columns": "必須列がありません",
+        "missing_header": "ファイルヘッダーがありません",
+        "out_of_range": "行または列が範囲外です",
+        "too_long": "値が長すぎます",
+        "too_many_rows": "行数が多すぎます",
+        "unknown_bin": "ビンコードが定義セットにありません",
+        "required": "必須項目が空です",
+        "empty": "ファイルが空です",
+        "bin_set_exists": "このビン定義セットのバージョンは既に存在します",
+        "bin_set_not_found": "参照するビン定義セットのバージョンがありません",
+        "qty_mismatch": "数量が一致しません"
+      },
+      "listTitle": "今回インポートしたマップ",
+      "substrate": "基板 ID",
+      "version": "バージョン",
+      "size": "行×列",
+      "total": "総数",
+      "good": "良品",
+      "excluded": "除外",
+      "binCounts": "ビン別数量",
+      "binSet": "ビン定義セット",
+      "binCode": "ビンコード",
+      "binType": "ビン種別",
+      "binDesc": "説明",
+      "origin": "原点／軸方向",
+      "lot": "ロット",
+      "importedAt": "インポート日時",
+      "lookup": "基板マップ検索",
+      "lookupPlaceholder": "基板 ID（例: FEDL0001-01）",
+      "lookupBtn": "検索"
+    },
+    "mount": {
+      "title": "資材装着",
+      "desc": "投入口ごとに装着できるのは 1 ロットのみです。",
+      "current": "装着中",
+      "empty": "装着中の資材はありません",
+      "port": "投入口",
+      "lot": "資材ロット",
+      "submit": "装着",
+      "mounted": "装着しました",
+      "unmount": "取外し",
+      "unmounted": "取り外しました",
+      "portOccupied": "投入口 {{port}} には資材ロット {{lot}} が装着済みです。先に取り外してください",
+      "portBusy": "投入口は使用中です。更新して再試行してください",
+      "overlap": "装着日時がこの投入口の以前の記録と重なっています",
+      "alreadyUnmounted": "この資材はすでに取り外されています。更新しました",
+      "duplicate": "記録済み：投入口 {{port}}、ロット {{lot}}"
+    },
+    "bomTab": {
+      "title": "BOM",
+      "versions": "BOM バージョン",
+      "empty": "この製品には BOM がありません",
+      "lines": "BOM 明細",
+      "linesOf": "v{{version}} の明細",
+      "noLines": "このバージョンには明細がありません",
+      "lineN": "行 {{n}}",
+      "create": "新規バージョン",
+      "createTitle": "BOM 下書きを作成",
+      "createDesc": "バージョン番号はシステムが採番します。作成後は下書きとなり、明細を追加できます。",
+      "edit": "編集",
+      "editTitle": "下書き v{{version}} を編集",
+      "editDesc": "単位は単位換算に登録された単位からのみ選択できます。",
+      "activate": "有効化",
+      "void": "無効化",
+      "copy": "新バージョンへコピー",
+      "addLine": "明細を追加",
+      "removeLine": "この行を削除",
+      "pickUom": "単位を選択",
+      "noPermission": "この操作を行う権限がありません",
+      "status": {
+        "draft": "下書き",
+        "active": "有効",
+        "superseded": "置換済",
+        "void": "無効"
+      },
+      "col": {
+        "version": "バージョン",
+        "status": "状態",
+        "description": "説明",
+        "effectiveAt": "有効日時",
+        "copiedFrom": "コピー元",
+        "createdAt": "作成日時",
+        "lineNo": "行番号",
+        "component": "構成品",
+        "qty": "使用量",
+        "uom": "単位",
+        "perBasis": "基準",
+        "scrapRate": "ロス率",
+        "consumeMode": "払出方式",
+        "componentType": "構成品種別",
+        "substitutes": "代替資材"
+      },
+      "perBasis": {
+        "wafer": "ウェーハ当たり",
+        "strip": "ストリップ当たり",
+        "die": "ダイ当たり",
+        "package": "パッケージ当たり",
+        "unit": "ユニット当たり",
+        "lot": "ロット当たり"
+      },
+      "consume": {
+        "issue": "トラックアウト時払出",
+        "mounted": "装置装着"
+      },
+      "reason": {
+        "noPermission": "BOM の操作権限がありません",
+        "notDraft": "このバージョンは{{status}}のため読み取り専用です。編集・有効化できるのは下書きのみです。新バージョンにコピーして変更してください",
+        "cannotVoid": "このバージョンは{{status}}のため無効化できません"
+      },
+      "confirm": {
+        "activateTitle": "v{{version}} を有効化しますか？",
+        "activateDesc": "有効化後は読み取り専用になり、同じ製品の従来の有効バージョンは置換済になります。",
+        "voidTitle": "v{{version}} を無効化しますか？",
+        "voidDesc": "無効化は元に戻せません。有効バージョンを無効化すると、製品に有効な BOM がなくなります。"
+      },
+      "done": {
+        "create": "下書き v{{version}} を作成しました",
+        "save": "下書き v{{version}} を保存しました",
+        "activate": "v{{version}} を有効化しました",
+        "void": "v{{version}} を無効化しました",
+        "copy": "新しい下書き v{{version}} にコピーしました"
+      },
+      "err": {
+        "validation": "赤く表示された項目を修正してください",
+        "required": "必須",
+        "notWritable": "この項目はクライアントから設定できません",
+        "wholeNumber": "個数単位の使用量は整数である必要があります",
+        "noLines": "有効化するには明細が 1 行以上必要です",
+        "circular": "BOM に循環参照があります",
+        "tooDeep": "BOM の展開階層が上限を超えています",
+        "invalid": "値が不正です",
+        "readOnly": "このバージョンは下書きではないため読み取り専用です。新バージョンにコピーして変更してください",
+        "notDraft": "有効化できるのは下書きのみです",
+        "superseded": "置換済のバージョンは無効化できません",
+        "alreadyVoid": "このバージョンは既に無効です",
+        "duplicateLine": "行番号が重複しています",
+        "conflict": "データが変更されたか、状態がこの操作を許可していません。更新して再試行してください",
+        "notFound": "この BOM は存在しないか削除されました",
+        "ownProduct": "自身の製品は参照できません",
+        "sameAsPrimary": "代替資材は主資材と同じにできません",
+        "subMaterialOnly": "代替資材は資材行のみ設定できます",
+        "positive": "0 より大きい値が必要です",
+        "dupSubPriority": "同じ行で代替資材の優先度が重複しています",
+        "dupSubMaterial": "同じ行で代替資材が重複しています",
+        "bomCycle": "有効化できません：循環参照になります（{{items}}）",
+        "bomDepth": "有効化できません：2 階層を超えます（{{items}}）",
+        "componentNoActive": "有効化できません：参照する半製品に有効な BOM がありません：{{items}}",
+        "referenced": "無効化できません：製品で唯一の有効 BOM で、次の有効 BOM から参照されています：{{items}}",
+        "bomCycleField": "自製品の参照や循環参照はできません",
+        "bomDepthField": "この半製品の有効 BOM には半製品行があります（2 階層まで）",
+        "componentNoActiveField": "この半製品に有効な BOM がありません",
+        "referencedField": "他の有効 BOM から参照されています",
+        "refItem": "{{product}}（BOM v{{bom}}）",
+        "refSep": "、",
+        "notNumber": "数値を入力してください",
+        "scrapRange": "ロス率は 0 から 1 の間で入力してください",
+        "tooManyDecimals": "小数は {{n}} 桁までです"
+      },
+      "componentType": {
+        "material": "資材",
+        "product": "半製品"
+      },
+      "addSub": "代替資材を追加",
+      "removeSub": "代替資材を削除",
+      "subMaterial": "代替資材",
+      "subPriority": "優先度",
+      "subNone": "代替資材なし",
+      "subHint": "代替資材は BOM 版と一緒に有効になります（資材行のみ）",
+      "childActive": "有効版 v{{version}}（読み取り専用）",
+      "childNone": "この半製品には有効な BOM がありません",
+      "expand": "半製品 {{name}} を展開",
+      "collapse": "半製品 {{name}} を折りたたむ",
+      "maintain": "その製品で編集",
+      "subOf": "代替：{{list}}"
+    },
+    "cust": {
+      "title": "顧客支給",
+      "ownership": "所有区分",
+      "customer": "顧客",
+      "lotNo": "顧客ロット番号",
+      "errCustomer": "ロット {{n}}：顧客支給の場合は顧客を選択してください",
+      "errLotNo": "ロット {{n}}：顧客支給の場合は顧客ロット番号を入力してください"
+    },
+    "over": {
+      "line": "{{material}} {{actual}} / {{planned}} {{uom}}（{{excess}} 超過）",
+      "toast": "BOM 使用量超過（トラックアウト済み・通知のみ）：{{lines}}",
+      "transformTo": "変換先：{{list}}",
+      "transformFrom": "変換元：{{list}}",
+      "dieQty": "ダイ数 {{n}}"
+    },
+    "trf": {
+      "title": "単位変換",
+      "desc": "良品数と割当をプレビューしてから実行します。変換は取り消せません。",
+      "type": "変換種別",
+      "types": {
+        "dicing": "ダイシング",
+        "die_attach": "ダイボンド",
+        "singulation": "個片化",
+        "bin_split": "ビン別分割"
+      },
+      "kinds": {
+        "die": "ダイ",
+        "strip": "ストリップ",
+        "package": "パッケージ",
+        "unit": "ユニット"
+      },
+      "wafers": "投入ウェーハ",
+      "wafer": "ウェーハ",
+      "source": "良品数の出所",
+      "good": "良品数",
+      "fail": "不良数",
+      "excluded": "除外数",
+      "total": "総数",
+      "allocated": "割当済",
+      "src": {
+        "map": "マップ v{{v}}（読み取り専用）",
+        "noMap": "マップなし：手入力",
+        "unknown": "プレビューで確定",
+        "mapShort": "マップ v{{v}}",
+        "manual": "手入力",
+        "gross": "製品 gross die"
+      },
+      "grossHint": "空欄=gross die",
+      "output": "出力 {{n}}",
+      "product": "子ロット製品",
+      "route": "子ロットルート",
+      "kind": "追跡単位",
+      "stripQty": "ストリップ数",
+      "allocOf": "出力 {{n}} への {{wafer}} からの割当ダイ数",
+      "allGood": "全良品",
+      "addOutput": "出力を追加",
+      "preview": "プレビュー",
+      "commit": "変換を実行",
+      "previewTitle": "プレビュー結果",
+      "stale": "入力が変更されました。再度プレビューしてから実行してください。",
+      "outLine": "出力 {{n}}：{{kind}} {{qty}}（{{dies}} ダイ）",
+      "children": "作成された子ロット：",
+      "done": "変換完了、子ロット：{{list}}",
+      "warn": {
+        "gross": "{{wafer}}：マップがないため製品の gross die を良品数としました"
+      },
+      "e": {
+        "noWafer": "このロットには変換できるウェーハがありません",
+        "int": "{{wafer}}：数量は 0 以上の整数で入力してください",
+        "reason": "良品数を手入力する場合は理由コードが必要です",
+        "product": "出力 {{n}}：製品を選択してください",
+        "route": "出力 {{n}}：ルートを選択してください",
+        "strip": "出力 {{n}}：ストリップ数は必須です",
+        "alloc": "出力 {{n}}：割当ダイ数は 0 以上の整数で入力してください",
+        "noDie": "出力 {{n}}：1 ダイ以上割り当ててください",
+        "balance": "{{wafer}}：割当 {{allocated}}、良品 {{good}}、数量が一致しません",
+        "noGross": "{{wafer}}：製品に gross die がありません。良品数を入力してください"
+      },
+      "be": {
+        "manualWithMap": "マップがあるため良品数は手入力できません",
+        "noGross": "製品に gross die がありません。良品数を入力してください",
+        "reason": "良品数を手入力する場合は理由コードが必要です",
+        "reasonNotFound": "理由コードが存在しません",
+        "noWafer": "変換できるウェーハがありません",
+        "strip": "ストリップ数は必須です",
+        "noDie": "各出力に 1 ダイ以上必要です",
+        "product": "製品が存在しません",
+        "route": "ルートが存在しません",
+        "notInput": "今回の投入ウェーハではありません",
+        "extra": "許可されていない項目が含まれています",
+        "mapQty": "数量不一致：子ロット {{children}} + 除外 {{excluded}} ≠ マップ総数 {{total}}",
+        "trfQty": "{{wafer}}：割当 {{allocated}} ≠ 良品数 {{good}}",
+        "invalid": "入力内容に誤りがあります。確認して再試行してください"
+      }
+    },
+    "bin": {
+      "title": "ビン別分割",
+      "desc": "ロットをビンごとに子ロットへ分割します。数量と整合をプレビューしてから実行します。",
+      "bin": "ビン",
+      "qty": "数量",
+      "child": "子ロット",
+      "noMap": "マップなし：手入力（合計 {{sum}}）",
+      "binOf": "{{wafer}} {{n}} 行目のビンコード",
+      "qtyOf": "{{wafer}} {{n}} 行目の数量",
+      "addBin": "ビンを追加",
+      "commit": "分割を実行",
+      "summary": "ビン別集計",
+      "excluded": "除外",
+      "ok": "合格",
+      "fail": "不合格",
+      "conserve": "{{wafer}}：子ロット {{children}} + 除外 {{excluded}} / 総数 {{total}}",
+      "diff": "差分 {{diff}}",
+      "children": "作成される子ロット",
+      "outLine": "ビン {{bin}}：{{qty}} ダイ",
+      "done": "分割完了、子ロット：{{list}}",
+      "e": {
+        "need": "{{wafer}}：マップがありません。各ビンの数量を入力してください",
+        "code": "{{wafer}}：ビンコードは必須で、32 文字以内です",
+        "dup": "{{wafer}}：ビン {{bin}} が重複しています",
+        "reason": "ビン数量を手入力する場合は理由コードが必要です"
+      },
+      "be": {
+        "manualWithMap": "マップがあるためビン数量は手入力できません",
+        "needManual": "マップがありません。ビン数量と理由を入力してください",
+        "reason": "ビン数量を手入力する場合は理由コードが必要です",
+        "duplicate": "ビンが重複しています",
+        "noGross": "製品に gross die がないため手入力のビン数量を照合できません",
+        "route": "投入ロットの工程が異なるため、ルートの指定が必要です",
+        "mapQty": "数量不一致：子ロット {{children}} + 除外 {{excluded}} ≠ マップ総数 {{total}}（差分 {{diff}}）",
+        "binQty": "{{wafer}}：ビン合計 {{actual}} ≠ 期待値 {{expected}}（差分 {{diff}}）",
+        "unassigned": "子ロットに割り当てられていないビン：{{list}}"
+      }
+    },
+    "qtw": {
+      "text": "Q-Time 警告：ルール {{rule}} · 工程 {{step}} · 警告値を {{over}} 超過",
+      "hm": "{{h}} 時間 {{m}} 分",
+      "m": "{{m}} 分",
+      "s": "{{s}} 秒"
+    },
+    "tundo": {
+      "title": "変換を取り消す",
+      "desc": "子ロットを削除し、親ロットを元に戻します。子ロットに作業済みなら取り消せません。",
+      "willRemove": "削除する子ロット：{{list}}",
+      "confirm": "取り消す",
+      "done": "変換を取り消しました。削除した子ロット：{{list}}",
+      "undone": "取消済み",
+      "removed": "{{type}}を取消、削除した子ロット：{{list}}",
+      "notFound": "変換記録が存在しないか、取消済みです",
+      "blocked": "{{lot}}：{{reason}}",
+      "blockedRef": "子ロットが他の記録から参照されているため取り消せません",
+      "why": {
+        "lot_status": "子ロットが待機状態ではありません",
+        "on_hold": "子ロットがホールド中です",
+        "has_transactions": "子ロットに後続作業があります",
+        "has_descendants": "子ロットが再分割されています",
+        "parent_status": "親ロットの状態が変わっています",
+        "referenced": "子ロットが他のレコードから参照されています",
+        "other": "取り消し条件を満たしていません"
+      },
+      "already": "この変換は取り消し済みです",
+      "info": "取消日時 {{at}} · 取消者 {{by}} · 取消理由 {{reason}}",
+      "carrier": "キャリアは復元されません。必要に応じて再割当してください",
+      "tables": "（参照元テーブル：{{list}}）"
+    },
+    "mapList": {
+      "title": "取り込み済みマップ",
+      "q": "基板 ID / ファイル名",
+      "from": "取込日（開始）",
+      "to": "取込日（終了）",
+      "latestOnly": "最新版のみ",
+      "version": "版",
+      "latest": "最新",
+      "total": "総数",
+      "good": "良品",
+      "excluded": "除外",
+      "binSet": "ビン定義セット",
+      "lot": "ロット",
+      "file": "ファイル",
+      "importedBy": "取込者",
+      "importedAt": "取込日時",
+      "count": "全 {{count}} 件 · {{page}}/{{pages}} ページ",
+      "prev": "前へ",
+      "next": "次へ"
+    },
+    "alarm": {
+      "clear": "アラーム解除",
+      "clearDesc": "解除しても装置状態は自動で戻りません。",
+      "cleared": "アラームを解除しました",
+      "already": "解除済みのため変更はありません",
+      "err": {
+        "targetRequired": "連動が「設備状態変更」のときは遷移先状態が必須です",
+        "targetOnly": "連動が「連動なし」のときは遷移先状態を入力できません",
+        "targetUnknown": "遷移先状態 {{state}} は存在しません"
+      },
+      "skip": {
+        "unknown_state": "遷移先の状態が存在しません",
+        "already_in_state": "設備はすでに遷移先の状態です",
+        "transition_not_allowed": "状態遷移表でこの遷移は許可されていません"
+      },
+      "stateSkipped": "設備状態は変更されませんでした：{{why}}。アラームは記録済みです。",
+      "stateUnchanged": "設備状態は変更されませんでした。アラームは記録済みです。",
+      "col": {
+        "stateChanged": "状態切替",
+        "skipReason": "未切替の理由"
+      },
+      "changed": {
+        "yes": "切替済み",
+        "no": "未切替"
+      }
+    },
+    "toolLife": {
+      "warn": "寿命上限間近",
+      "over": "寿命上限到達",
+      "reached": "工具 {{tool}} は寿命上限に到達しました（{{used}}/{{max}}）。トラックイン不可、強制解除不可",
+      "near": "工具 {{tool}} は寿命上限間近です（{{used}}/{{max}}）",
+      "expired": "工具 {{tool}} は {{date}} に期限切れです。トラックイン不可",
+      "expiring": "工具 {{tool}} は {{date}} に期限切れになります",
+      "status": "工具 {{tool}} の状態は {{status}} です。トラックイン不可",
+      "logged": "チェック記録とロット履歴に記録済み",
+      "unknownStatus": "不明な状態"
+    },
+    "alarmCode": {
+      "migration": {
+        "col": "移行",
+        "pending": "移行後の再設定待ち",
+        "none": "再設定不要",
+        "all": "すべての移行状態",
+        "hint": "移行 0029 で連動がなしに変更されました。「設備状態の切替」を再設定してください"
+      }
     }
   },
   "notify": {

@@ -1,5 +1,6 @@
 /** MES 计划：工单状态迁移与开批。 */
 import { http } from '../client'
+import { BODY_KEYS, pickBody } from '../request-body'
 import type { MesRow } from './common'
 
 /** 开批计划中的一个批次（预览的批次号与晶圆号）。 */
@@ -30,6 +31,10 @@ export interface StartLotIn {
   carrier_id?: string | null
   slots?: number[]
   source_ref?: string | null
+  /** B7 客户来料（D40 严格载荷只接受这三个客户字段） */
+  ownership?: 'own' | 'customer'
+  customer_id?: string
+  customer_lot_no?: string | null
 }
 
 /** 交期状态。 */
@@ -67,11 +72,16 @@ export const woApi = {
       .then((r) => r.data),
   plan: (id: string, body: { lot_size?: number; qty?: number }) =>
     http
-      .post<StartPlan>(`/mes/work-order/${id}/start-plan`, body)
+      .post<StartPlan>(
+        `/mes/work-order/${id}/start-plan`,
+        pickBody(body, BODY_KEYS.plan)
+      )
       .then((r) => r.data),
   start: (id: string, lots: StartLotIn[]) =>
     http
-      .post<{ data: MesRow[] }>(`/mes/work-order/${id}/start`, { lots })
+      .post<{ data: MesRow[] }>(`/mes/work-order/${id}/start`, {
+        lots: lots.map((l) => pickBody(l, BODY_KEYS.startLot)),
+      })
       .then((r) => r.data),
   undo: (id: string, lotIds?: string[]) =>
     http

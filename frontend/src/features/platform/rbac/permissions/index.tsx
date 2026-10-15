@@ -239,7 +239,7 @@ export default function PermissionTreePage() {
                     {n.children.length ? (
                       <IconTooltip
                         label={
-                          expanded.has(n.id)
+                          filtering || expanded.has(n.id)
                             ? t('common.collapse')
                             : t('common.expand')
                         }
@@ -248,7 +248,7 @@ export default function PermissionTreePage() {
                           type='button'
                           className='text-muted-foreground'
                           aria-label={
-                            expanded.has(n.id)
+                            filtering || expanded.has(n.id)
                               ? t('common.collapse')
                               : t('common.expand')
                           }

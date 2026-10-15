@@ -56,6 +56,11 @@ export const canMergeLot = (lot: LotLike) => canSplitLot(lot) && !held(lot)
 export const canJumpLot = (lot: LotLike) =>
   status(lot) === 'waiting' && !held(lot)
 
+/** 能否单位转换 / 按 bin 拆批（B5 / B8，lot/state.py `transform`）：waiting / moved_in，且非 Hold。 */
+export const canTransformLot = (lot: LotLike) =>
+  (SPLIT_MERGE_STATUSES as readonly string[]).includes(status(lot)) &&
+  !held(lot)
+
 /**
  * 能否数量调整（报废 / 补数）：非终态，Hold 中允许。
  * 加工中（running）不能报废至 0（decisions #3），由后端按数量校验。

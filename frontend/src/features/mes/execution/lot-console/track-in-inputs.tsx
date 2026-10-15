@@ -1,11 +1,13 @@
 /** Track In 阶段输入：配方、设备配方、光罩、载具、治具与物料。 */
 import { t } from '@/i18n'
 import type { ExecContext } from '@/lib/api/mes/execution'
+import { decimalText } from '@/lib/decimal'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { enumLabel, optLabel } from '@/features/mes/common/labels'
 import { RefSelect } from '@/features/mes/common/ref-select'
 import { Pick } from '../exec-parts'
+import { toolLifeLevel, warnRatio } from '../tool-life'
 import { MaterialPick } from './material-pick'
 
 export function TrackInInputs(p: {
@@ -80,7 +82,7 @@ export function TrackInInputs(p: {
               onChange={(v) => p.setTools({ ...p.tools, [g.fixture!.id]: v })}
               options={g.options.map((o) => ({
                 id: o.id,
-                label: `${o.code} · ${o.usage}/${o.max ?? '∞'} · ${enumLabel('tool_status', o.status)}`,
+                label: `${o.code} · ${decimalText(o.usage)}/${o.max == null ? '∞' : decimalText(o.max)} · ${enumLabel('tool_status', o.status)}${toolLifeLevel(o.usage, o.max, warnRatio(o)) === 'warn' ? ` · ${t('mes.toolLife.warn')}` : ''}`,
               }))}
             />
           ) : null

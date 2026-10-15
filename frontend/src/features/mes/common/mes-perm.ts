@@ -18,6 +18,8 @@ export const MES_PERM = {
   execSplit: 'mes.exec:split',
   /** 合批 */
   execMerge: 'mes.exec:merge',
+  /** 单位转换 / 按 bin 拆批（P1 / F8、F7） */
+  execTransform: 'mes.exec:transform',
   /** 跳站 */
   execJump: 'mes.exec:jump',
   /** 在制报废 / 补数 / 优先级 */
@@ -30,6 +32,20 @@ export const MES_PERM = {
   equipmentE10: 'mes.equipment:e10',
   /** 设备 PM */
   equipmentPm: 'mes.equipment:pm',
+  /** 登记 PM 后 Qual 结果（B6 / F5） */
+  equipmentQual: 'mes.equipment:qual',
+  /** 机台上料 / 卸料（P1 / B3） */
+  equipmentMount: 'mes.equipment:mount',
+  /** 坐标图导入（P1 / B4） */
+  mapImport: 'mes.map:import',
+  /** 坐标图查询（P1 / B4） */
+  mapRead: 'mes.map:read',
+  /** BOM 新建 / 编辑草稿 / 复制（P1 / F3） */
+  bomWrite: 'mes.bom:write',
+  /** BOM 生效 / 作废（P1 / F3） */
+  bomActivate: 'mes.bom:activate',
+  /** 设备报警登记 / 清除（P2 / B9） */
+  alarmWrite: 'mes.alarm:write',
 } as const
 
 export type MesPerm = (typeof MES_PERM)[keyof typeof MES_PERM] | (string & {})

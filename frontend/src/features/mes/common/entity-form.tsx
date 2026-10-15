@@ -33,11 +33,18 @@ import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { cellValue } from './cells'
+import { NEVER_SUBMIT, toPayload } from './form-payload'
 import { entityLabel, enumLabel, fieldHelp, fieldLabel } from './labels'
 import { RefSelect } from './ref-select'
-import { requiredBy, requiredHint, validateRequired } from './required'
+import {
+  requiredBy,
+  requiredHint,
+  validateDecimals,
+  validateRequired,
+} from './required'
 
 type V = Record<string, unknown>
+
 const NONE = '__none__'
 
 function initialValues(e: MesEntity, row: MesRow | null, preset: V): V {
@@ -62,35 +69,11 @@ function initialValues(e: MesEntity, row: MesRow | null, preset: V): V {
 /** 以开关渲染的布尔字段（实体.字段）；其他布尔字段仍用复选框。 */
 const SWITCH_FIELDS = new Set(['qtime_rule.is_active'])
 /** 编辑时只读显示的系统维护字段（实体.字段）。 */
-const READONLY_ON_EDIT = new Set(['qtime_rule.active_since'])
-
-function toPayload(e: MesEntity, v: V, hidden: Set<string>): V {
-  const out: V = {}
-  for (const f of e.fields) {
-    if (f.system || (hidden.has(f.column) && v[f.column] === '')) continue
-    // 条件字段未满足条件时清空（如切换卡控绑定范围后残留的旧范围值）
-    if (f.only_when_required && !requiredBy(e, f, v)) {
-      out[f.column] = null
-      continue
-    }
-    const x = v[f.column]
-    if (f.type === 'json') {
-      out[f.column] = x === '' ? null : JSON.parse(String(x))
-    } else if (f.type === 'int' || f.type === 'float') {
-      out[f.column] = x === '' || x == null ? null : Number(x)
-    } else if (f.type === 'bool') {
-      out[f.column] = !!x
-    } else {
-      out[f.column] = x === '' ? null : x
-    }
-  }
-  for (const f of e.fields)
-    if (f.default_from && out[f.column] == null && v[f.default_from])
-      out[f.column] = v[f.default_from]
-  out.attrs = v.attrs
-  return out
-}
-
+const READONLY_ON_EDIT = new Set([
+  'qtime_rule.active_since',
+  // OQ-20：迁移说明只由迁移写入，表单只读展示、绝不提交（写了后端 422 read_only_field）
+  'alarm_code.migration_note',
+])
 /** 根据实体元数据（含自定义属性）渲染的新增 / 编辑对话框。 */
 export function EntityForm({
   entity: e,
@@ -169,7 +152,10 @@ function FormBody({
     setV((p) => ({ ...p, attrs: { ...(p.attrs as V), [k]: x } }))
   const submit = async (ev: React.FormEvent) => {
     ev.preventDefault()
-    const found = validateRequired(e, v, hidden)
+    const found = {
+      ...validateDecimals(e, v, hidden),
+      ...validateRequired(e, v, hidden),
+    }
     setErrs(found)
     if (Object.keys(found).length) return
     let body: V
@@ -187,6 +173,7 @@ function FormBody({
     (f) =>
       !hidden.has(f.column) &&
       !f.system &&
+      !NEVER_SUBMIT.has(`${e.code}.${f.name}`) &&
       (!f.only_when_required || !!requiredBy(e, f, v))
   )
   // 系统维护字段编辑时只读显示（不提交）；本轮仅 Q-Time 规则的 active_since

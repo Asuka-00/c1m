@@ -17,7 +17,7 @@ export function TabsPage({ node }: { node: MenuNode }) {
   const navigate = useNavigate()
   const tabs = node.tabs ?? []
   const cur = pickTab(tabs, search.tab)
-  if (!cur) return <ForbiddenError />
+  if (!cur) return <ForbiddenError inApp />
   return (
     <Page title={tabTitle(node.key, node.title)}>
       <Tabs

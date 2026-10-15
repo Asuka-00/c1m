@@ -13,7 +13,7 @@ export function ChecksCard({
   stageRun: StageRun
   canOverride: boolean
 }) {
-  const { results, blocked, run } = stageRun
+  const { results, blocked, run, overridable } = stageRun
   return (
     <Card className='gap-3'>
       <CardHeader>
@@ -27,6 +27,7 @@ export function ChecksCard({
           <CheckPanel
             results={results}
             blocked={blocked}
+            overridable={overridable}
             canOverride={canOverride}
             busy={run.isPending}
             onOverride={(reason) => run.mutate({ override: reason })}

@@ -22,6 +22,7 @@ import {
   Trash2,
   TriangleAlert,
   Undo2,
+  Shuffle,
   type LucideIcon,
 } from 'lucide-react'
 import { useTenantKey } from '@/lib/api/hooks'
@@ -39,10 +40,21 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Page } from '@/components/crud'
+import { CustomerBadges } from '@/features/mes/common/customer'
 import { enumLabel, reasonLabel } from '@/features/mes/common/labels'
+import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { RefSelect } from '@/features/mes/common/ref-select'
 import { ResultBadge } from './exec-parts'
+import { type OverLine, overLineText } from './over-consumption'
+import { qtimeWarnedText } from './qtime-warned'
 import { GenealogyList } from './split-merge'
+import {
+  transformIdOf,
+  undoneInfo,
+  undoneText,
+  undoRowInfo,
+} from './transform-undo'
+import { TransformUndoDialog } from './transform-undo-dialog'
 
 const ICON: Record<string, [LucideIcon, string]> = {
   start: [Rocket, 'bg-sky-500'],
@@ -60,9 +72,13 @@ const ICON: Record<string, [LucideIcon, string]> = {
   complete: [CircleCheck, 'bg-emerald-600'],
   override: [ShieldAlert, 'bg-violet-600'],
   qtime: [Timer, 'bg-amber-600'],
+  qtime_warned: [Timer, 'bg-amber-400'],
   oos: [TriangleAlert, 'bg-amber-500'],
   split: [GitFork, 'bg-sky-600'],
   merge: [GitMerge, 'bg-violet-600'],
+  transform: [Shuffle, 'bg-cyan-600'],
+  transform_undo: [Undo2, 'bg-slate-500'],
+  bom_over_consumption: [TriangleAlert, 'bg-amber-400'],
 }
 
 type Check = {
@@ -100,6 +116,9 @@ function Details({ d }: { d: Record<string, unknown> }) {
   if (d.condition) facts.push(t('mes.trace.condition', { c: d.condition }))
   if (d.route) facts.push(String(d.route))
   if (d.source) facts.push(t('mes.trace.source', { s: d.source }))
+  // Q-01：warn 超时履历（qtime_warned，带规则、工步、超时秒数）
+  if (d.overdue_seconds != null || d.over_seconds != null)
+    facts.push(qtimeWarnedText(d))
   if (d.rule && d.minutes)
     facts.push(`${d.rule}: ${d.minutes} > ${d.max} min → ${d.action}`)
   if (d.override_reason)
@@ -107,8 +126,29 @@ function Details({ d }: { d: Record<string, unknown> }) {
   if (d.reason && typeof d.reason === 'string')
     facts.push(t('mes.trace.overrideReason', { r: d.reason }))
   if (d.sampling) facts.push(String(d.sampling))
+  // F4 单位转换：母批（role=input）去向子批；子批（role=output）来源母批与 die 数
+  if (d.transform_id) {
+    const to = d.to as string[] | undefined
+    const from = d.from as string[] | undefined
+    if (to?.length)
+      facts.push(t('mes.over.transformTo', { list: to.join(', ') }))
+    if (from?.length)
+      facts.push(t('mes.over.transformFrom', { list: from.join(', ') }))
+    if (d.die_qty != null)
+      facts.push(t('mes.over.dieQty', { n: String(d.die_qty) }))
+  }
+  // F4-02：撤销转换履历（details 为转换快照，children 是被删除的子批编码）
   const kids = d.children as { code: string; qty: number }[] | undefined
-  if (kids?.length)
+  if (kids?.length && typeof kids[0] === 'string')
+    facts.push(
+      t('mes.tundo.removed', {
+        type: t(`mes.trf.types.${String(d.transform_type ?? '')}`, {
+          defaultValue: t('mes.trf.title'),
+        }),
+        list: (kids as unknown as string[]).join(', '),
+      })
+    )
+  else if (kids?.length)
     facts.push(
       t('mes.sm.factChildren', {
         list: kids.map((c) => `${c.code} (${c.qty})`).join(', '),
@@ -126,8 +166,19 @@ function Details({ d }: { d: Record<string, unknown> }) {
         list: srcs.map((c) => `${c.code} (${c.qty})`).join(', '),
       })
     )
+  const over = (d.lines as OverLine[] | undefined) ?? []
   return (
     <div className='space-y-1'>
+      {over.length > 0 && (
+        <ul
+          className='rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-100'
+          data-testid='over-lines'
+        >
+          {over.map((l, i) => (
+            <li key={i}>{overLineText(l)}</li>
+          ))}
+        </ul>
+      )}
       {facts.length > 0 && (
         <div className='flex flex-wrap gap-x-3 text-xs text-muted-foreground'>
           {facts.map((f, i) => (
@@ -153,76 +204,137 @@ function Details({ d }: { d: Record<string, unknown> }) {
   )
 }
 
-/** 履历时间线（批次或晶圆）。 */
-function HistoryTimeline({ rows }: { rows: MesRow[] }) {
+/**
+ * 履历时间线（批次或晶圆）。
+ * `canUndo`：有 mes.exec:transform 时，未撤销的转换行显示「撤销转换」（F4-02）；已撤销的显示标记。
+ */
+export function HistoryTimeline({
+  rows,
+  canUndo = false,
+}: {
+  rows: MesRow[]
+  canUndo?: boolean
+}) {
+  const [undo, setUndo] = useState<{ id: string; children: string[] } | null>(
+    null
+  )
   return (
-    <ol className='relative space-y-4 border-s ps-6' data-testid='timeline'>
-      {rows.map((h: MesRow) => {
-        const [Icon, color] = ICON[String(h.action)] ?? [
-          Square,
-          'bg-muted-foreground',
-        ]
-        return (
-          <li key={h.id} className='relative'>
-            <span
-              className={cn(
-                'absolute -start-[37px] flex size-6 items-center justify-center rounded-full text-white ring-4 ring-background',
-                color
-              )}
-            >
-              <Icon className='size-3.5' />
-            </span>
-            <div className='flex flex-wrap items-baseline gap-x-3 gap-y-0.5'>
-              <span className='font-medium'>
-                {enumLabel('history_action', String(h.action))}
+    <>
+      {undo && (
+        <TransformUndoDialog
+          transformId={undo.id}
+          childCodes={undo.children}
+          open
+          onOpenChange={(o) => !o && setUndo(null)}
+        />
+      )}
+      <ol className='relative space-y-4 border-s ps-6' data-testid='timeline'>
+        {rows.map((h: MesRow) => {
+          const [Icon, color] = ICON[String(h.action)] ?? [
+            Square,
+            'bg-muted-foreground',
+          ]
+          const tid = h.action === 'transform' ? transformIdOf(h) : null
+          const undone = undoneInfo(h, rows)
+          const undoRow = undoRowInfo(h)
+          const d = (h.details ?? {}) as Record<string, unknown>
+          return (
+            <li key={h.id} className='relative'>
+              <span
+                className={cn(
+                  'absolute -start-[37px] flex size-6 items-center justify-center rounded-full text-white ring-4 ring-background',
+                  color
+                )}
+              >
+                <Icon className='size-3.5' />
               </span>
-              <span className='text-xs text-muted-foreground'>
-                {fmtDateTime(String(h.at))}
-              </span>
-              <span className='text-xs text-muted-foreground'>
-                {String(h.username ?? '')}
-              </span>
-            </div>
-            <div className='flex flex-wrap gap-x-4 text-sm'>
-              {h.step_seq != null && (
-                <span>
-                  {String(h.step_seq)} ·{' '}
-                  {String(h.operation_label ?? '').split(' · ')[0]}
+              <div className='flex flex-wrap items-baseline gap-x-3 gap-y-0.5'>
+                <span className='font-medium'>
+                  {enumLabel('history_action', String(h.action))}
                 </span>
-              )}
-              {!!h.equipment_label && (
-                <span>{String(h.equipment_label).split(' · ')[0]}</span>
-              )}
-              {!!h.recipe_label && (
-                <span>{String(h.recipe_label).split(' · ')[0]}</span>
-              )}
-              {!!h.unit_label && (
-                <span className='font-mono text-xs'>
-                  {String(h.unit_label)}
+                <span className='text-xs text-muted-foreground'>
+                  {fmtDateTime(String(h.at))}
                 </span>
-              )}
-              <span className='text-muted-foreground'>
-                {t('mes.exec.qty')} {String(h.qty ?? '')}
-              </span>
-              {!!h.to_status && (
-                <Badge variant='outline'>
-                  {enumLabel('lot_status', String(h.to_status))}
-                </Badge>
-              )}
-              {!!h.reason_label && <span>{reasonLabel(h.reason_label)}</span>}
-              {!!h.comment && (
+                <span className='text-xs text-muted-foreground'>
+                  {String(h.username ?? '')}
+                </span>
+                {undone && (
+                  <Badge variant='secondary' data-testid='transform-undone'>
+                    {undoneText(undone)}
+                  </Badge>
+                )}
+                {tid && !undone && canUndo && (
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    className='h-6 px-2 text-xs'
+                    data-testid='open-undo'
+                    onClick={() =>
+                      setUndo({
+                        id: tid,
+                        children: (d.to as string[] | undefined) ?? [],
+                      })
+                    }
+                  >
+                    <Undo2 className='size-3' />
+                    {t('mes.tundo.title')}
+                  </Button>
+                )}
+              </div>
+              <div className='flex flex-wrap gap-x-4 text-sm'>
+                {h.step_seq != null && (
+                  <span>
+                    {String(h.step_seq)} ·{' '}
+                    {String(h.operation_label ?? '').split(' · ')[0]}
+                  </span>
+                )}
+                {!!h.equipment_label && (
+                  <span>{String(h.equipment_label).split(' · ')[0]}</span>
+                )}
+                {!!h.recipe_label && (
+                  <span>{String(h.recipe_label).split(' · ')[0]}</span>
+                )}
+                {!!h.unit_label && (
+                  <span className='font-mono text-xs'>
+                    {String(h.unit_label)}
+                  </span>
+                )}
                 <span className='text-muted-foreground'>
-                  “{String(h.comment)}”
+                  {t('mes.exec.qty')} {String(h.qty ?? '')}
                 </span>
+                {!!h.to_status && (
+                  <Badge variant='outline'>
+                    {enumLabel('lot_status', String(h.to_status))}
+                  </Badge>
+                )}
+                {!!h.reason_label && <span>{reasonLabel(h.reason_label)}</span>}
+                {!!h.comment && (
+                  <span className='text-muted-foreground'>
+                    “{String(h.comment)}”
+                  </span>
+                )}
+              </div>
+              {undoRow && (
+                <div className='text-sm' data-testid='undo-info'>
+                  <span>{undoRow.info}</span>
+                  {undoRow.carrier && (
+                    <span
+                      className='ms-2 text-amber-700 dark:text-amber-400'
+                      data-testid='undo-carrier'
+                    >
+                      {t('mes.tundo.carrier')}
+                    </span>
+                  )}
+                </div>
               )}
-            </div>
-            {!!h.details && (
-              <Details d={h.details as Record<string, unknown>} />
-            )}
-          </li>
-        )
-      })}
-    </ol>
+              {!!h.details && (
+                <Details d={h.details as Record<string, unknown>} />
+              )}
+            </li>
+          )
+        })}
+      </ol>
+    </>
   )
 }
 
@@ -342,6 +454,7 @@ export default function LotTracePage() {
     enabled: !!lotId,
   })
   const rows = hist.data?.data ?? []
+  const can = useMesCan()
   return (
     <Page
       title={t('menu.mes-lot-trace')}
@@ -385,6 +498,13 @@ export default function LotTracePage() {
             {!!lot.data.on_hold && (
               <Badge variant='destructive'>{t('mes.exec.onHold')}</Badge>
             )}
+            <CustomerBadges
+              info={{
+                ownership: lot.data.ownership as string | null,
+                customer_label: lot.data.customer_label as string | null,
+                customer_lot_no: lot.data.customer_lot_no as string | null,
+              }}
+            />
           </>
         )}
       </div>
@@ -411,7 +531,10 @@ export default function LotTracePage() {
             {rows.length === 0 && !hist.isLoading && (
               <p className='text-muted-foreground'>{t('mes.trace.empty')}</p>
             )}
-            <HistoryTimeline rows={rows} />
+            <HistoryTimeline
+              rows={rows}
+              canUndo={can(MES_PERM.execTransform)}
+            />
           </CardContent>
         </Card>
       )}

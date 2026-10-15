@@ -41,6 +41,13 @@ export interface MesField {
   search: boolean
   default: unknown
   max_length: number | null
+  /** 定点小数位数（numeric(18, scale)）；普通浮点为 null */
+  scale?: number | null
+  /**
+   * D60（后端 0dd2b4b）：定点字段最大小数位（= scale），超出 422 too_many_decimals；
+   * 普通浮点（规格限、量测值等）为 null，不限位数。
+   */
+  decimal_places?: number | null
   help: boolean
   /** 引用选项按该同级引用字段过滤（如 route） */
   depends: string | null
@@ -152,9 +159,10 @@ export const mesApi = {
       .post<{ created: number; updated: number }>(`${base(code)}/import`, fd)
       .then((r) => r.data)
   },
-  convert: (from_uom: string, to_uom: string, value: number) =>
+  /** 单位换算：数量按十进制字符串传，返回值为定点字符串（D50，2d65b94；也兼容数字）。 */
+  convert: (from_uom: string, to_uom: string, value: string) =>
     http
-      .get<{ value: number; path: string[] }>('/mes/_convert', {
+      .get<{ value: number | string; path: string[] }>('/mes/_convert', {
         params: { from_uom, to_uom, value },
       })
       .then((r) => r.data),
