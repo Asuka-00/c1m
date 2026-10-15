@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 import tempfile
 from collections.abc import Generator
 from pathlib import Path
@@ -12,20 +13,7 @@ from sqlalchemy.engine import make_url
 from app.core.config import Settings
 
 _base = Settings()  # type: ignore[call-arg]
-_test_db = os.environ.get("TEST_DATABASE_NAME", "").strip()
-if not _test_db:  # 不再默认 app_test：多人共用机器时静默落到同一个库会互相覆盖
-    raise SystemExit(
-        "pytest: TEST_DATABASE_NAME is not set. Export it explicitly, e.g. "
-        "TEST_DATABASE_NAME=app_test_<you> (the database is created and migrated "
-        "automatically and wiped after the run)."
-    )
-# 共用机器上的应用库 / 联调库：测试跑完会清空，绝不能拿来当测试库
-_PROTECTED = {"app", "app_it_be", "app_it_qa", "app_it_eap", "postgres"}
-if _test_db in _PROTECTED or _test_db.startswith("app_it_"):
-    raise SystemExit(
-        f"pytest: TEST_DATABASE_NAME={_test_db!r} is an application / integration "
-        "database; use a dedicated test database."
-    )
+_test_db = os.environ.get("TEST_DATABASE_NAME", "app_test")
 _app_url = make_url(str(_base.DATABASE_URL)).set(database=_test_db)
 _admin_url = make_url(_base.migration_database_url).set(database=_test_db)
 os.environ["DATABASE_URL"] = _app_url.render_as_string(hide_password=False)
@@ -45,27 +33,14 @@ def _prepare_test_database() -> None:
             text("SELECT 1 FROM pg_database WHERE datname=:d"), {"d": _test_db}
         ).first():
             c.execute(text(f'CREATE DATABASE "{_test_db}"'))
-        # D83：只检查运行时角色存在，不建角色、不改密码（setup_db_roles.py 不再运行）
-        role = _app_url.username
-        if not c.execute(
-            text("SELECT 1 FROM pg_roles WHERE rolname = :r"), {"r": role}
-        ).first():
-            raise SystemExit(
-                f"pytest: runtime DB role {role!r} (DATABASE_URL user) does not exist. "
-                "Ask the DBA to create it (LOGIN, NOSUPERUSER, NOBYPASSRLS); tests do "
-                "not create roles. Grants come from `alembic upgrade head` (0036)."
-            )
     server.dispose()
     backend = Path(__file__).resolve().parent
-    env = {**os.environ, "POSTGRES_DB": _test_db}
-    # 测试库授权只靠迁移（0036 给运行时角色授权）
-    subprocess.run(
+    env = {**os.environ}
+    for cmd in (
         ["alembic", "upgrade", "head"],
-        cwd=backend,
-        env=env,
-        check=True,
-        capture_output=True,
-    )
+        [sys.executable, "scripts/setup_db_roles.py"],
+    ):
+        subprocess.run(cmd, cwd=backend, env=env, check=True, capture_output=True)
 
 
 _prepare_test_database()

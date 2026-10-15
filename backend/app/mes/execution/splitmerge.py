@@ -6,7 +6,6 @@ from typing import Any
 import sqlalchemy as sa
 from sqlmodel import Session
 
-from app.core.models import iso_utc
 from app.core.spec.base import conn
 from app.core.spec.engine import TABLES
 from app.mes.execution.merge import merge_candidates
@@ -68,8 +67,8 @@ def sm_context(s: Session, tid: uuid.UUID, lot: Row) -> Row:
                 "child": r["child_code"],
                 "qty": r["qty"],
                 "units": r["units"] or [],
-                "at": iso_utc(r["at"]) if r["at"] else None,
-                "user": r["username"],
+                "at": r["at"].isoformat() if r["at"] else None,
+                "user": r["user_email"],
             }
             for r in rows
         ],

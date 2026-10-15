@@ -1,6 +1,6 @@
 """产品与物料实体规格（单位、产品、物料、载具、光罩、治具、线边批次）。"""
 
-from app.core.spec.engine import ENTITIES, ENUMS, Entity, F, register
+from app.core.spec.engine import ENUMS, Entity, F, register
 
 ENUMS.update(
     {
@@ -43,37 +43,12 @@ ENUMS.update(
             ("pod", "Reticle pod|光罩盒|レチクルポッド"),
             ("smif", "SMIF pod|SMIF 盒|SMIF ポッド"),
         ],
-        "carrier_event_type": [
-            ("load", "Load|装入|積込み"),
-            ("unload", "Unload|移出|取出し"),
-            ("clean", "Clean|清洗|洗浄"),
-            ("sort", "Wafer sort|晶圆整理|ウェーハソート"),
-        ],
         "asset_status": [
             ("available", "Available|可用|使用可"),
             ("in_use", "In use|使用中|使用中"),
             ("dirty", "Needs cleaning|待清洗|要洗浄"),
-            ("hold", "On hold|Hold|ホールド"),
+            ("hold", "On hold|冻结|保留"),
             ("retired", "Retired|报废|廃棄"),
-        ],
-        # P3-B4（D66 Q15 / D67 / D68）：光罩专用状态，不复用 asset_status
-        "reticle_status": [
-            ("available", "Available|可用|使用可"),
-            ("in_use", "In use|使用中|使用中"),
-            ("dirty", "Cleaning|清洗中|洗浄中"),
-            ("inspecting", "Inspecting|检查中|検査中"),
-            ("on_hold", "On hold|Hold|ホールド"),
-            ("pending_maintenance", "Pending maintenance|待维修|保守待ち"),
-            ("scrapped", "Scrapped|报废|廃棄"),
-        ],
-        "reticle_hold_reason": [
-            ("incident", "Incident|事故|事故"),
-            ("inspection_failed", "Inspection failed|检查不合格|検査不合格"),
-            ("manual", "Manual|人工|手動"),
-        ],
-        "reticle_count_basis": [
-            ("track_out", "Track out|出站|トラックアウト"),
-            ("eap", "Equipment report|设备上报|設備報告"),
         ],
         "reticle_grade": [
             ("binary", "Binary|二元掩模|バイナリ"),
@@ -386,18 +361,6 @@ register(
             F("status_code", "enum", enum="asset_status", default="available"),
             F("max_uses", "int", "Max uses|最大使用次数|最大使用回数"),
             F(
-                "use_count",
-                "int",
-                "Uses since clean|清洗后使用次数|洗浄後使用回数",
-                system=True,
-            ),
-            F(
-                "last_cleaned_at",
-                "datetime",
-                "Last cleaned|上次清洗|前回洗浄",
-                system=True,
-            ),
-            F(
                 "rfid",
                 "str",
                 "RFID tag|RFID 标签|RFID タグ",
@@ -415,55 +378,19 @@ register(
 
 register(
     Entity(
-        "carrier_event",
-        "product",
-        "Carrier event|载具履历|キャリア履歴",
-        [
-            F(
-                "carrier",
-                "ref",
-                "Carrier|载具|キャリア",
-                required=True,
-                ref="carrier",
-                cascade=True,
-            ),
-            F("event", "enum", "Event|事件|イベント", enum="carrier_event_type"),
-            F("lot", "ref", "Lot|批次|ロット", ref="lot"),
-            F(
-                "other_carrier",
-                "ref",
-                "From / to carrier|来源 / 目标载具|移動元・先キャリア",
-                ref="carrier",
-            ),
-            F("qty", "int", "Qty|数量|数量"),
-            F("comment", "str", "Comment|备注|コメント", max_length=300, search=True),
-            F("username", "str", "User|用户|ユーザー", max_length=255, search=True),
-            F("at", "datetime", "Time|时间|日時"),
-        ],
-        phase=6,
-        has_code=False,
-        readonly=True,
-        icon="History",
-        order=10,
-        menu=False,
-        sort_default="at",
-        label_field="event",
-    ),
-)
-
-
-# P3-B4：光罩主数据（docs p3-reticle-model v0.8 + D66–D69）。状态类字段只读（system），
-# 只经 /mes/reticle/{id}/<动作> 与系统规则改变；通用 CRUD 写入 422 read_only_field
-# （app.mes.common.validators.READ_ONLY_FIELDS）。
-register(
-    Entity(
         "reticle",
         "product",
         "Reticle|光罩|レチクル",
         [
-            F("revision", "str", "Revision|版本|リビジョン", max_length=20),
-            F("product", "ref", ref="product"),
-            F("layer", "str", "Layer|层|レイヤー", max_length=40, search=True),
+            F("product", "ref", ref="product", required=True),
+            F(
+                "layer",
+                "str",
+                "Layer|层|レイヤー",
+                max_length=40,
+                search=True,
+                required=True,
+            ),
             F(
                 "grade",
                 "enum",
@@ -471,145 +398,12 @@ register(
                 enum="reticle_grade",
                 default="binary",
             ),
-            F("max_shots", "float", "Max shots|最大曝光次数|最大ショット数", scale=6),
-            F(
-                "status_code",
-                "enum",
-                enum="reticle_status",
-                default="available",
-                system=True,
-            ),
-            F(
-                "hold_reason",
-                "enum",
-                "Hold reason|Hold 原因|ホールド理由",
-                enum="reticle_hold_reason",
-                system=True,
-            ),
-            F(
-                "status_before_hold",
-                "enum",
-                "Status before hold|Hold 前状态|ホールド前状態",
-                enum="reticle_status",
-                system=True,
-                list=False,
-            ),
-            F(
-                "inspection_required",
-                "bool",
-                "Inspection required|待检|要検査",
-                default=False,
-                system=True,
-            ),
-            F(
-                "shot_count",
-                "float",
-                "Shot count|累计曝光次数|累計ショット数",
-                scale=6,
-                default=0,
-                system=True,
-            ),
-            F(
-                "warn_ratio",
-                "float",
-                "Warn ratio|预警比例|警告比率",
-                scale=4,
-                list=False,
-            ),
-            F(
-                "mount_count",
-                "int",
-                "Mount count|挂载次数|装着回数",
-                default=0,
-                system=True,
-                list=False,
-            ),
-            F(
-                "life_reset_count",
-                "int",
-                "Life resets|寿命复位次数|寿命リセット回数",
-                default=0,
-                system=True,
-                list=False,
-            ),
-            F(
-                "count_basis",
-                "enum",
-                "Count basis|计数来源|カウント基準",
-                enum="reticle_count_basis",
-                required=True,
-                default="track_out",
-                list=False,
-            ),
-            F(
-                "shots_per_wafer_default",
-                "float",
-                "Shots per wafer|每片曝光次数|ウェーハ当たりショット数",
-                scale=6,
-                list=False,
-            ),
-            F("received_at", "datetime", "Received at|入库时间|入庫日時", list=False),
-            F(
-                "first_used_at",
-                "datetime",
-                "First used at|首次启用|初回使用日時",
-                system=True,
-                list=False,
-            ),
-            F(
-                "storage_location",
-                "str",
-                "Storage location|库位|保管場所",
-                max_length=64,
-                search=True,
-            ),
-            F("carrier", "ref", "Pod|光罩盒|ポッド", ref="carrier", list=False),
-            F(
-                "equipment",
-                "ref",
-                "Mounted on|挂载机台|装着設備",
-                ref="equipment",
-                system=True,
-            ),
-            F(
-                "mounted_at",
-                "datetime",
-                "Mounted at|挂载时间|装着日時",
-                system=True,
-                list=False,
-            ),
-            F(
-                "last_inspected_at",
-                "datetime",
-                "Last inspected|上次检查|前回検査",
-                system=True,
-                list=False,
-            ),
-            F(
-                "next_inspection_due_at",
-                "datetime",
-                "Next inspection due|下次检查|次回検査期限",
-                system=True,
-                list=False,
-            ),
-            F(
-                "inspection_interval_shots",
-                "float",
-                "Inspection interval (shots)|检查周期（shot）|検査周期（ショット）",
-                scale=6,
-                list=False,
-            ),
-            F(
-                "inspection_interval_days",
-                "int",
-                "Inspection interval (days)|检查周期（天）|検査周期（日）",
-                list=False,
-            ),
+            F("max_shots", "int", "Max shots|最大曝光次数|最大ショット数"),
+            F("status_code", "enum", enum="asset_status", default="available"),
         ],
         phase=2,
         icon="Aperture",
         order=9,
-        perm_module="reticle",
     ),
 )
 
@@ -621,46 +415,8 @@ register(
         "Fixture / tool|治具 / 工具|治具・工具",
         [
             F("kind", "enum", "Kind|类型|種別", required=True, enum="fixture_kind"),
-            # P2-B10：上限按 life_unit 计，numeric(18,6)（0026）
-            F("max_uses", "float", "Max life|寿命上限|寿命上限", scale=6),
+            F("max_uses", "int", "Max uses|最大使用次数|最大使用回数"),
             F("status_code", "enum", enum="asset_status", default="available"),
-            F(
-                "consumable_kind",
-                "enum",
-                "Consumable kind|耗材类别|消耗品種別",
-                enum="consumable_kind",
-                default="other",
-            ),
-            F(
-                "life_unit",
-                "enum",
-                "Life unit|寿命单位|寿命単位",
-                enum="life_unit",
-                default="use",
-            ),
-            F(
-                "count_basis",
-                "enum",
-                "Count basis|计数基准|カウント基準",
-                enum="count_basis",
-                default="per_track_out",
-            ),
-            F(
-                "warn_ratio",
-                "float",
-                "Warn ratio|预警比例|警告比率",
-                scale=4,
-                list=False,
-                help="Default warn ratio for tools of this type (0-1)"
-                "|该类型工具的默认预警比例（0–1）|この種別の工具の既定警告比率（0–1）",
-            ),
-            F(
-                "require_qual_on_replace",
-                "bool",
-                "Qual after replace|更换后需 Qual|交換後 Qual 必要",
-                default=False,
-                list=False,
-            ),
         ],
         phase=2,
         icon="Hammer",
@@ -677,20 +433,8 @@ register(
         "Material lot|线边物料批|ラインサイド資材ロット",
         [
             F("material", "ref", "Material|物料|資材", required=True, ref="material"),
-            F(
-                "qty_remaining",
-                "float",
-                "Qty remaining|剩余数量|残数量",
-                required=True,
-                scale=6,
-            ),
-            F(
-                "initial_qty",
-                "float",
-                "Received qty|收料数量|受入数量",
-                list=False,
-                scale=6,
-            ),
+            F("qty_remaining", "float", "Qty remaining|剩余数量|残数量", required=True),
+            F("initial_qty", "float", "Received qty|收料数量|受入数量", list=False),
             F("uom", "ref", ref="uom", required=True),
             F("expiry_date", "date", "Expiry|有效期|有効期限"),
             F(
@@ -708,16 +452,6 @@ register(
                 required=True,
                 default="available",
             ),
-            # B7：物料归属与客户（客户来料）
-            F(
-                "ownership",
-                "enum",
-                "Ownership|物料归属|所有区分",
-                enum="ownership",
-                default="own",
-                list=False,
-            ),
-            F("customer", "ref", "Customer|客户|顧客", ref="customer", list=False),
         ],
         phase=6,
         has_name=False,
@@ -725,34 +459,4 @@ register(
         icon="PackageOpen",
         order=0,
     ),
-)
-
-ENTITIES["carrier"].children.append("carrier_event")
-
-
-ENUMS.update(
-    {
-        "consumable_kind": [
-            ("probe_card", "Probe card|探针卡|プローブカード"),
-            ("capillary", "Capillary|劈刀|キャピラリ"),
-            ("mold", "Mold|模具|金型"),
-            ("blade", "Blade|刀片|ブレード"),
-            ("other", "Other|其他|その他"),
-        ],
-        "life_unit": [
-            ("use", "Uses|次数|回数"),
-            ("wafer", "Wafers|片数|ウェーハ数"),
-            ("unit", "Units / dies|颗数|個数"),
-            ("touchdown", "Touchdowns|触点次数|タッチダウン"),
-            ("shot", "Shots|冲次|ショット"),
-            ("length_mm", "Length (mm)|长度（mm）|長さ（mm）"),
-            ("hours", "Hours|小时|時間"),
-        ],
-        "count_basis": [
-            ("per_track_out", "Per track-out (+1)|每次出站 +1|トラックアウト毎 +1"),
-            ("per_wafer", "Per wafer|按片数|ウェーハ数"),
-            ("per_unit", "Per unit / die|按颗数|個数"),
-            ("reported", "Reported only|仅上报|報告のみ"),
-        ],
-    }
 )

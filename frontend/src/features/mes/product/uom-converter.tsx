@@ -1,10 +1,9 @@
 /** 单位换算面板。 */
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { t } from '@/i18n'
+import { fmtNumber, t } from '@/i18n'
 import { errorMessage } from '@/lib/api/client'
 import { mesApi, type MesRow } from '@/lib/api/mes/common'
-import { decimalText, parseDecimal } from '@/lib/decimal'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { rowLabel } from '@/features/mes/common/labels'
@@ -17,12 +16,11 @@ export function UomConverter({ row }: { row: MesRow }) {
     id: null,
     label: null,
   })
-  // D50：数量全程按十进制字符串处理，不经浮点
-  const n = parseDecimal(value)?.text ?? null
+  const n = Number(value)
   const { data, error } = useQuery({
     queryKey: ['mes', 'uom', 'convert', row.id, to.id, n],
-    queryFn: () => mesApi.convert(row.id, to.id!, n!),
-    enabled: !!to.id && n != null,
+    queryFn: () => mesApi.convert(row.id, to.id!, n),
+    enabled: !!to.id && Number.isFinite(n),
     retry: false,
   })
   return (
@@ -33,7 +31,8 @@ export function UomConverter({ row }: { row: MesRow }) {
         </Label>
         <Input
           id='uom-v'
-          inputMode='decimal'
+          type='number'
+          step='any'
           value={value}
           onChange={(e) => setValue(e.target.value)}
         />
@@ -54,7 +53,7 @@ export function UomConverter({ row }: { row: MesRow }) {
         {error
           ? errorMessage(error)
           : data
-            ? `${n} → ${decimalText(data.value)} ${to.label ?? ''}`
+            ? `${fmtNumber(n)} → ${fmtNumber(data.value)} ${to.label ?? ''}`
             : '—'}
       </p>
     </div>

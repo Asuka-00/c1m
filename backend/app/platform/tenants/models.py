@@ -20,10 +20,6 @@ class TenantBase(SQLModel):
 class Tenant(TenantBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     status: str = Field(default="active", max_length=20)
-    # 套餐（trial / standard / enterprise），由平台管理维护
-    plan: str = Field(default="standard", max_length=20)
-    # 到期时间（None 表示永久）；过期后非超级用户无法进入租户
-    expires_at: datetime | None = None
     created_at: datetime | None = Field(default_factory=get_datetime_utc)
     members: list[TenantMember] = Relationship(
         back_populates="tenant", passive_deletes="all"

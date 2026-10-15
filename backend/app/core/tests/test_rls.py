@@ -12,10 +12,10 @@ from sqlmodel import Session
 from app.core.db import admin_engine, engine
 from app.core.rls import disable_tenant_rls_sql, enable_tenant_rls_sql
 from app.core.tenant import set_tenant
+from app.platform.tenants.service import create_personal_tenant
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
-from app.testing.user import create_owned_tenant
-from app.testing.utils import random_email, random_lower_string, username_for
+from app.testing.utils import random_email, random_lower_string
 
 TABLE = "rls_probe"
 
@@ -49,13 +49,10 @@ def probe_table(db: Session) -> Generator[str]:
 def _tenant(db: Session) -> uuid.UUID:
     u = crud.create_user(
         session=db,
-        user_create=UserCreate(
-            email=random_email(),
-            username=username_for(random_email()),
-            password=random_lower_string(),
-        ),
+        user_create=UserCreate(email=random_email(), password=random_lower_string()),
+        with_personal_tenant=False,
     )
-    return create_owned_tenant(db, u)
+    return create_personal_tenant(db, u).id
 
 
 def test_app_connects_as_non_owner_without_bypassrls(probe_table: str) -> None:

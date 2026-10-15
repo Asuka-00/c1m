@@ -8,13 +8,7 @@ from sqlmodel import Session, col, select
 
 from app.core.deps import SessionDep
 from app.core.tenant import set_tenant
-from app.platform.auth.deps import (
-    CurrentTenant,
-    CurrentUser,
-    platform_api_router,
-    require_permissions,
-    resolve_tenant,
-)
+from app.platform.auth.deps import CurrentTenant, require_permissions
 from app.platform.config.models import ConfigGroup, ConfigItem, TenantConfigValue
 from app.platform.config.schemas import (
     ConfigGroupPublic,
@@ -23,7 +17,6 @@ from app.platform.config.schemas import (
     ConfigItemPublic,
 )
 from app.platform.config.service import ConfigValidationError, validate_value
-from app.platform.console.service import record_platform_audit
 from app.platform.files.models import UploadedFile
 from app.platform.files.service import FILE_PREFIX, release_values
 from app.platform.tenants.models import Tenant
@@ -272,71 +265,3 @@ def public_config(
         if vals:
             out[g.code] = vals
     return out
-
-
-# ---------------- platform space (superuser only) ----------------
-# 平台控制台：平台默认值（与 /config/groups 同一实现）与任意租户的品牌覆盖。
-# 租户覆盖表受 RLS 保护：显式 resolve_tenant 进入目标租户，写操作记入平台操作日志。
-platform_router = platform_api_router()
-
-
-@platform_router.get("/config/groups", response_model=ConfigGroupsPublic)
-def platform_list_defaults(session: SessionDep) -> Any:
-    """Platform defaults inherited by every tenant."""
-    return list_platform_config(session)
-
-
-@platform_router.patch("/config/groups/{code}", response_model=ConfigGroupPublic)
-def platform_update_defaults(
-    session: SessionDep, user: CurrentUser, code: str, body: ConfigGroupUpdate
-) -> Any:
-    record_platform_audit(
-        session,
-        user,
-        "config.update",
-        "config",
-        code,
-        None,
-        {"items": sorted(body.values)},
-    )
-    return update_platform_config(session, code, body)
-
-
-def _platform_tenant(
-    session: SessionDep, user: CurrentUser, tenant_id: uuid.UUID
-) -> TenantContext:
-    if not session.get(Tenant, tenant_id):
-        raise HTTPException(status_code=404, detail="Tenant not found")
-    return resolve_tenant(session, user, tenant_id)
-
-
-@platform_router.get("/tenants/{tenant_id}/branding", response_model=ConfigGroupsPublic)
-def platform_get_branding(
-    session: SessionDep, user: CurrentUser, tenant_id: uuid.UUID
-) -> Any:
-    """Tenant-overridable config (branding) of any tenant."""
-    return get_tenant_config(session, _platform_tenant(session, user, tenant_id))
-
-
-@platform_router.patch(
-    "/tenants/{tenant_id}/branding/{code}", response_model=ConfigGroupPublic
-)
-def platform_update_branding(
-    session: SessionDep,
-    user: CurrentUser,
-    tenant_id: uuid.UUID,
-    code: str,
-    body: ConfigGroupUpdate,
-) -> Any:
-    """Set / reset (null) branding overrides of any tenant."""
-    ctx = _platform_tenant(session, user, tenant_id)
-    record_platform_audit(
-        session,
-        user,
-        "tenant.branding",
-        "config",
-        code,
-        tenant_id,
-        {"items": sorted(body.values)},
-    )
-    return update_tenant_config(session, ctx, code, body)

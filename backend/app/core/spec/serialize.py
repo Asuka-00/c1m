@@ -1,14 +1,12 @@
 """规格行的（反）序列化：值转换、引用标签、JSON 输出。"""
 
 import uuid
-from datetime import date, datetime, time, tzinfo
-from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from datetime import date, datetime, time
 from typing import Any
 
 import sqlalchemy as sa
 from sqlmodel import Session
 
-from app.core.models import iso_utc
 from app.core.spec.base import Row, conn, table
 from app.core.spec.engine import (
     ENTITIES,
@@ -20,52 +18,16 @@ from app.core.spec.engine import (
 
 # ---------------- (de)serialization ----------------
 def to_json(v: Any) -> Any:
-    """把数据库值转换为 JSON 可序列化值（UUID / 日期 / Decimal）。
-
-    带时区的 datetime 一律输出 UTC（``Z``，bom.md §12 / D2），与数据库会话时区无关。
-    """
+    """把数据库值转换为 JSON 可序列化值（UUID / 日期 / Decimal）。"""
     if isinstance(v, uuid.UUID):
         return str(v)
-    if isinstance(v, datetime):
-        return iso_utc(v)
-    if isinstance(v, date | time):
+    if isinstance(v, datetime | date | time):
         return v.isoformat()
-    if isinstance(v, Decimal):
-        return float(v)
     return v
 
 
-def dec_str(v: Any) -> str | None:
-    """D50：P1 新接口的小数字段输出为定点字符串（不用科学计数、去掉尾随零）。
-
-    ``Decimal`` 原样格式化；float 先经 ``str`` 取最短往返表示，避免二进制误差。
-    """
-    if v is None:
-        return None
-    d = v if isinstance(v, Decimal) else Decimal(str(v))
-    out = format(d.normalize(), "f")
-    return "0" if out in ("-0", "0") else out
-
-
-class TooManyDecimals(ValueError):
-    """定点字段小数位超过 scale（D60 / D72：422 ``value_error``，``ctx.max_places``）。
-
-    格式与 ``app.mes.common.numeric.six`` 一致（D71-5），``too_many_decimals`` 已作废。
-    """
-
-    code = "value_error"
-
-    def __init__(self, max_places: int) -> None:
-        """以允许的最大小数位构造。"""
-        super().__init__(f"Value error, at most {max_places} decimal places")
-        self.ctx = {"max_places": max_places}
-
-
-def coerce(f: F, v: Any, tz: tzinfo | None = None) -> Any:
+def coerce(f: F, v: Any) -> Any:
     """把原始 JSON / xlsx 值转换为字段对应的 Python 值。
-
-    ``tz``：站点时区。date 字段收到带时区的时间（datetime 或带偏移的字符串）时，
-    先换算到站点时区再取日期（D75）；不给 ``tz`` 或无时区时直接取日期部分。
 
     Raises:
         ValueError: 值不符合字段类型。
@@ -85,22 +47,7 @@ def coerce(f: F, v: Any, tz: tzinfo | None = None) -> Any:
         case "float":
             if isinstance(v, bool):
                 raise ValueError("must be a number")
-            if f.scale is None:
-                return float(v)
-            try:
-                d = Decimal(str(v).strip())
-            except InvalidOperation as ex:
-                raise ValueError("must be a number") from ex
-            if not d.is_finite():
-                raise ValueError("must be a number")
-            # D60 / D72：超出小数位一律 422 value_error（ctx.max_places），不静默舍入
-            exp = d.normalize().as_tuple().exponent
-            if isinstance(exp, int) and exp < -f.scale:
-                raise TooManyDecimals(f.scale)
-            q = d.quantize(Decimal(1).scaleb(-f.scale), rounding=ROUND_HALF_UP)
-            if abs(q) >= Decimal(10) ** (18 - f.scale):
-                raise ValueError("out of range")
-            return q
+            return float(v)
         case "bool":
             if isinstance(v, bool):
                 return v
@@ -115,14 +62,7 @@ def coerce(f: F, v: Any, tz: tzinfo | None = None) -> Any:
                 raise ValueError(f"must be one of: {', '.join(allowed)}")
             return str(v)
         case "date":
-            if isinstance(v, str) and len(v.strip()) > 10:
-                try:
-                    v = datetime.fromisoformat(v.strip().replace("Z", "+00:00"))
-                except ValueError:
-                    pass
             if isinstance(v, datetime):
-                if tz is not None and v.tzinfo is not None:
-                    return v.astimezone(tz).date()
                 return v.date()
             return v if isinstance(v, date) else date.fromisoformat(str(v)[:10])
         case "time":
@@ -183,20 +123,11 @@ def ref_labels(
     return out
 
 
-def _out(v: Any) -> Any:
-    """通用 CRUD 输出：定点数（numeric 列 → ``Decimal``）一律定点字符串（D50 / D72）。"""
-    return dec_str(v) if isinstance(v, Decimal) else to_json(v)
-
-
-# 按实体名追加计算字段：hook(session, tenant_id, rows, out) 原地修改 out（通用列表 / 详情共用）
-SERIALIZE_HOOKS: dict[str, Any] = {}
-
-
 def serialize(
     session: Session, tenant_id: uuid.UUID, e: Entity, rows: list[Row]
 ) -> list[Row]:
     """序列化行：值转 JSON，并为引用字段附加 ``<name>`` 显示标签。"""
-    out = [{k: _out(v) for k, v in r.items() if k != "tenant_id"} for r in rows]
+    out = [{k: to_json(v) for k, v in r.items() if k != "tenant_id"} for r in rows]
     for f in e.all_fields:
         if f.type != "ref":
             continue
@@ -206,7 +137,4 @@ def serialize(
         )
         for src, dst in zip(rows, out, strict=True):
             dst[f"{f.name}_label"] = labels.get(src[f.column])
-    hook = SERIALIZE_HOOKS.get(e.code)
-    if hook and rows:
-        hook(session, tenant_id, rows, out)
     return out

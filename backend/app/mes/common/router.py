@@ -5,23 +5,19 @@
 """
 
 import uuid
-from decimal import Decimal
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
-from fastapi.exceptions import RequestValidationError
+from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import Response
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from app.core.deps import SessionDep
 from app.core.pagination import ListParamsDep
-from app.core.schemas import StrictBody
 from app.core.spec.base import get_entity
 from app.core.spec.engine import ENTITIES, EXTRA_PERMISSIONS, MODULES, Entity, perm
-from app.core.spec.errors import query_422
 from app.core.spec.excel import export_xlsx, import_xlsx
-from app.core.spec.query import distinct_values, get_row, list_rows, tree
-from app.core.spec.serialize import dec_str, serialize
+from app.core.spec.query import get_row, list_rows, tree
+from app.core.spec.serialize import serialize
 from app.core.spec.validate import attr_defs, attr_options
 from app.core.spec.write import (
     create_row,
@@ -31,28 +27,17 @@ from app.core.spec.write import (
     update_row,
 )
 from app.mes.common import coderule
-from app.mes.common import idempotency as idem
-from app.mes.common.guard import need_key, raw_json
-from app.mes.common.keyed_write import KEYED, META_HOOKS, ROW_EXTRAS
 from app.mes.common.meta import all_meta
-from app.mes.common.uom import convert, count_errors
-from app.mes.common.validators import reject_unwritable
+from app.mes.common.uom import convert
 from app.platform.auth.deps import CurrentTenant
 from app.platform.tenants.service import TenantContext
 
 router = APIRouter(prefix="/mes", tags=["mes"])
-# D65：mes.eap:read_master 只放开这三个实体的列表与详情（不含导出、树、去重等）
-EAP_READ_PERM = "mes.eap:read_master"
-EAP_READ_ENTITIES = frozenset({"equipment", "alarm_code", "e10_state"})
 RESERVED = {"page", "page_size", "skip", "limit", "sort_by", "sort_order", "q"}
 
 
 def require_entity(
-    ctx: TenantContext,
-    code: str,
-    action: Literal["read", "write"],
-    *,
-    eap: bool = False,
+    ctx: TenantContext, code: str, action: Literal["read", "write"]
 ) -> Entity:
     """获取实体并校验当前租户上下文是否具备其模块权限。
 
@@ -60,107 +45,19 @@ def require_entity(
         HTTPException: 实体不存在（404）或无权限（403）。
     """
     e = get_entity(code)
-    if (
-        eap
-        and action == "read"
-        and e.code in EAP_READ_ENTITIES
-        and ctx.can(EAP_READ_PERM)
-    ):
-        return e
     if not ctx.can(perm(e.pmod, action)):
         raise HTTPException(status_code=403, detail="Not enough permissions")
     return e
 
 
-async def write_body(
-    session: SessionDep, ctx: CurrentTenant, entity: str, request: Request
-) -> dict[str, Any]:
-    """通用新建 / 修改的请求体：先查实体写权限，再解析 JSON 对象（D34）。
-
-    受控写实体（:data:`KEYED`，D74/D81）：权限后先查 Idempotency-Key，附加字段在
-    ``request.state.keyed_extra``。
-    """
-    e = require_entity(ctx, entity, "write")
-    kw = KEYED.get(e.code)
-    if kw:
-        need_key(request)
-    data = await raw_json(request)
-    if not isinstance(data, dict):
-        raise RequestValidationError(
-            [
-                {
-                    "type": "dict_type",
-                    "loc": ("body",),
-                    "msg": "Input should be a valid dictionary",
-                    "input": data,
-                }
-            ]
-        )
-    # D65 补充 4 / D38：通用增删改查对所有实体（含旧实体）严格载荷，未知 / 系统字段 422。
-    if kw:
-        extra = {k: data.pop(k) for k in kw.extra_fields if k in data}
-        reject_unwritable(e, data)
-        request.state.keyed_extra = kw.extras(
-            session, ctx.id, request.method, {**data, **extra}, ctx.user
-        )
-        request.state.keyed_body = {**data, **extra}
-        return data
-    reject_unwritable(e, data)
-    return data
-
-
-def _keyed(
-    session: Any,
-    ctx: TenantContext,
-    e: Entity,
-    request: Request,
-    endpoint: str,
-    body: Any,
-    fn: Any,
-) -> Any:
-    """受控写：幂等存档（重放先于 404，D81），附加字段经上下文变量传给写入钩子。"""
-    kw = KEYED[e.code]
-    extra = getattr(request.state, "keyed_extra", None) or {}
-
-    def go() -> Any:
-        token = kw.extra_var.set(extra)
-        try:
-            out = fn(kw, extra)
-            session.commit()
-            return out
-        finally:
-            kw.extra_var.reset(token)
-
-    return idem.run(
-        session,
-        ctx.id,
-        ctx.user,
-        endpoint,
-        request.headers.get(idem.HEADER),
-        body,
-        go,
-    )
-
-
 def _one(
     session: SessionDep, ctx: TenantContext, e: Entity, row: dict[str, Any]
 ) -> dict[str, Any]:
-    out: dict[str, Any] = _with_extras(
-        e.code, serialize(session, ctx.id, e, [row]), [row]
-    )[0]
-    return out
-
-
-def _with_extras(code: str, out: list[Any], rows: list[Any]) -> list[Any]:
-    fn = ROW_EXTRAS.get(code)
-    if fn:
-        for o, r in zip(out, rows, strict=True):
-            o.update(fn(r))
-    return out
+    return serialize(session, ctx.id, e, [row])[0]
 
 
 @router.get("/_meta")
-def mes_meta(session: SessionDep, ctx: CurrentTenant) -> Any:
+def mes_meta(ctx: CurrentTenant) -> Any:
     """Entity metadata (fields, enums, refs, flags) the frontend renders from;
     each entity carries `can_read` / `can_write` for the current user."""
     meta = all_meta()
@@ -171,9 +68,6 @@ def mes_meta(session: SessionDep, ctx: CurrentTenant) -> Any:
     for m in meta["entities"]:
         m["can_read"] = ctx.can(m["read"])
         m["can_write"] = ctx.can(m["write"])
-        hook = META_HOOKS.get(m["code"])
-        if hook:
-            m.update(hook(session, ctx.id))
     return meta
 
 
@@ -193,7 +87,7 @@ def mes_attr_defs(session: SessionDep, ctx: CurrentTenant, entity: str) -> Any:
     ]
 
 
-class CodeGenIn(StrictBody):
+class CodeGenIn(BaseModel):
     count: int = Field(default=1, ge=1, le=100)
     context: dict[str, Any] = Field(default_factory=dict)
 
@@ -224,20 +118,11 @@ def uom_convert(
     ctx: CurrentTenant,
     from_uom: uuid.UUID,
     to_uom: uuid.UUID,
-    value: Decimal = Decimal(1),
+    value: float = 1.0,
 ) -> Any:
-    """Convert `value` between units (direct, inverse or multi-hop conversions).
-
-    D50: `value` is parsed as a decimal (e.g. `1.5`, `1e-6`), computed in Decimal and
-    returned as a fixed-point string.
-    """
+    """Convert `value` between units (direct, inverse or multi-hop conversions)."""
     require_entity(ctx, "uom", "read")
-    res = convert(session, ctx.id, from_uom, to_uom, value)
-    errs = count_errors(session, ctx.id, to_uom, {"value": res["value"]})
-    if errs:
-        raise query_422(errs)
-    qty = res.pop("qty")
-    return {**res, "value": dec_str(qty)}  # D50
+    return convert(session, ctx.id, from_uom, to_uom, value)
 
 
 @router.get("/{entity}")
@@ -250,7 +135,7 @@ def mes_list(
 ) -> Any:
     """Paginated list (20/page default) with ?q= search, ?sort_by=, and filters
     on any enum/bool/ref field (`?site_id=<uuid>`, `?status=active`, ...)."""
-    e = require_entity(ctx, entity, "read", eap=True)
+    e = require_entity(ctx, entity, "read")
     filters = {
         k: v for k, v in request.query_params.items() if k not in RESERVED and v != ""
     }
@@ -265,21 +150,7 @@ def mes_list(
         offset=params.offset,
         limit=params.limit,
     )
-    data = _with_extras(e.code, serialize(session, ctx.id, e, rows), rows)
-    return {"data": data, "count": count}
-
-
-@router.get("/{entity}/distinct/{field}")
-def mes_distinct(
-    session: SessionDep,
-    ctx: CurrentTenant,
-    entity: str,
-    field: str,
-    q: str | None = None,
-) -> Any:
-    """Distinct values of a text filter field (dropdown filter options)."""
-    e = require_entity(ctx, entity, "read")
-    return {"data": distinct_values(session, e, ctx.id, field, q)}
+    return {"data": serialize(session, ctx.id, e, rows), "count": count}
 
 
 @router.get("/{entity}/tree")
@@ -289,20 +160,10 @@ def mes_tree(session: SessionDep, ctx: CurrentTenant, entity: str) -> Any:
 
 
 @router.get("/{entity}/export")
-def mes_export(
-    session: SessionDep,
-    ctx: CurrentTenant,
-    entity: str,
-    request: Request,
-    q: str | None = None,
-) -> Response:
-    """Export as xlsx, honouring the same ?q= and filters as the list."""
+def mes_export(session: SessionDep, ctx: CurrentTenant, entity: str) -> Response:
     e = require_entity(ctx, entity, "read")
-    filters = {
-        k: v for k, v in request.query_params.items() if k not in RESERVED and v != ""
-    }
     return Response(
-        export_xlsx(session, ctx.id, e, q=q, filters=filters),
+        export_xlsx(session, ctx.id, e),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{e.code}.xlsx"'},
     )
@@ -327,37 +188,15 @@ async def mes_import(
 def mes_get(
     session: SessionDep, ctx: CurrentTenant, entity: str, rid: uuid.UUID
 ) -> Any:
-    e = require_entity(ctx, entity, "read", eap=True)
+    e = require_entity(ctx, entity, "read")
     return _one(session, ctx, e, get_row(session, e, ctx.id, rid))
 
 
 @router.post("/{entity}")
 def mes_create(
-    session: SessionDep,
-    ctx: CurrentTenant,
-    entity: str,
-    body: Annotated[dict[str, Any], Depends(write_body)],
-    request: Request,
+    session: SessionDep, ctx: CurrentTenant, entity: str, body: dict[str, Any]
 ) -> Any:
     e = require_entity(ctx, entity, "write")
-    if e.code in KEYED:
-        return _keyed(
-            session,
-            ctx,
-            e,
-            request,
-            f"POST /mes/{e.url}",
-            request.state.keyed_body,
-            lambda kw, x: (
-                kw.after_404(x, body),
-                _one(
-                    session,
-                    ctx,
-                    e,
-                    create_row(session, ctx.id, e, dict(body), ctx.user, commit=False),
-                ),
-            )[1],
-        )
     return _one(session, ctx, e, create_row(session, ctx.id, e, body, ctx.user))
 
 
@@ -367,64 +206,22 @@ def mes_update(
     ctx: CurrentTenant,
     entity: str,
     rid: uuid.UUID,
-    body: Annotated[dict[str, Any], Depends(write_body)],
-    request: Request,
+    body: dict[str, Any],
 ) -> Any:
     e = require_entity(ctx, entity, "write")
-    if e.code in KEYED:
-
-        def upd(kw: Any, extra: dict[str, Any]) -> Any:
-            cur = get_row(session, e, ctx.id, rid)  # 404
-            kw.after_404(extra, cur)  # 422（需查到记录后判断，D79 补充七）
-            row = update_row(
-                session, ctx.id, e, rid, dict(body), ctx.user, commit=False
-            )
-            return _one(session, ctx, e, row)
-
-        return _keyed(
-            session,
-            ctx,
-            e,
-            request,
-            f"PATCH /mes/{e.url}/{{rid}}",
-            {"rid": str(rid), **request.state.keyed_body},
-            upd,
-        )
     return _one(session, ctx, e, update_row(session, ctx.id, e, rid, body, ctx.user))
 
 
 @router.delete("/{entity}/{rid}")
 def mes_delete(
-    session: SessionDep,
-    ctx: CurrentTenant,
-    entity: str,
-    rid: uuid.UUID,
-    request: Request,
+    session: SessionDep, ctx: CurrentTenant, entity: str, rid: uuid.UUID
 ) -> Any:
     e = require_entity(ctx, entity, "write")
-    if e.code in KEYED:
-        need_key(request)
-
-        def rm(kw: Any, _x: Any) -> Any:
-            get_row(session, e, ctx.id, rid)  # 404
-            kw.before_delete(session, ctx.id, rid)  # 409 referenced（资质恒 409）
-            delete_row(session, ctx.id, e, rid, ctx.user)
-            return {"message": "Deleted"}
-
-        return _keyed(
-            session,
-            ctx,
-            e,
-            request,
-            f"DELETE /mes/{e.url}/{{rid}}",
-            {"rid": str(rid)},
-            rm,
-        )
     delete_row(session, ctx.id, e, rid, ctx.user)
     return {"message": "Deleted"}
 
 
-class StatusIn(StrictBody):
+class StatusIn(BaseModel):
     status: str
 
 
@@ -446,11 +243,7 @@ def mes_new_version(
 ) -> Any:
     """Copy a version (incl. child rows such as route steps) as a new draft."""
     e = require_entity(ctx, entity, "write")
-    hook: dict[str, Any] = {"can": ctx.can, "warnings": []}
-    out = _one(session, ctx, e, new_version(session, ctx.id, e, rid, ctx.user, hook))
-    if e.code == "product":  # 自动复制 BOM 的结果提示（bom_copy_skipped，bom.md §12）
-        out["warnings"] = hook["warnings"]
-    return out
+    return _one(session, ctx, e, new_version(session, ctx.id, e, rid, ctx.user))
 
 
 __all__ = ["router", "ENTITIES", "Query"]

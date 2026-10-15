@@ -1,5 +1,4 @@
 import io
-import uuid
 from typing import Any
 
 from fastapi.testclient import TestClient
@@ -109,53 +108,18 @@ class Mes:
                 out[f"{k}_id"] = self.fx(k)
         return out
 
-    def hk(self, e: str) -> dict[str, str]:
-        """受控写实体（D81 KEYED）自动带新 Idempotency-Key。"""
-        from app.mes.common.keyed_write import KEYED
-
-        if e not in KEYED:
-            return self.h
-        return {**self.h, "Idempotency-Key": str(uuid.uuid4())}
-
-    def qual_extra(self, comment: str = "renew") -> dict[str, Any]:
-        """资质停用/延期必带的 reason_id / comment / approved_by（D74）；审批人为另一成员。"""
-        if "_qual_extra" not in self._fx:
-            rc = self.post(
-                "reason_code",
-                {"code": "OQ-RENEW", "name": "renew", "reason_type": "operator_qual"},
-            )
-            name = "appr_" + uuid.uuid4().hex[:8]
-            r = self.c.post(
-                f"{settings.API_V1_STR}/tenants/{self.tid}/members/new",
-                headers=self.h,
-                json={
-                    "username": name,
-                    "full_name": "approver",
-                    "password": uuid.uuid4().hex,
-                    "roles": ["member"],
-                },
-            )
-            assert r.status_code == 200, r.text
-            self._fx["_qual_extra"] = rc["id"]
-            self._fx["_qual_appr"] = r.json()["username"]
-        return {
-            "reason_id": self._fx["_qual_extra"],
-            "comment": comment,
-            "approved_by": self._fx["_qual_appr"],
-        }
-
     def url(self, e: str, *p: str) -> str:
         return "/".join([API, e.replace("_", "-"), *p])
 
     def post(self, e: str, body: dict[str, Any], status: int = 200) -> dict[str, Any]:
-        r = self.c.post(self.url(e), headers=self.hk(e), json=self._fill(e, body))
+        r = self.c.post(self.url(e), headers=self.h, json=self._fill(e, body))
         assert r.status_code == status, r.text
         return r.json()  # type: ignore[no-any-return]
 
     def patch(
         self, e: str, rid: str, body: dict[str, Any], status: int = 200
     ) -> dict[str, Any]:
-        r = self.c.patch(self.url(e, rid), headers=self.hk(e), json=body)
+        r = self.c.patch(self.url(e, rid), headers=self.h, json=body)
         assert r.status_code == status, r.text
         return r.json()  # type: ignore[no-any-return]
 
@@ -165,7 +129,7 @@ class Mes:
         return r.json()  # type: ignore[no-any-return]
 
     def delete(self, e: str, rid: str, status: int = 200) -> None:
-        r = self.c.delete(self.url(e, rid), headers=self.hk(e))
+        r = self.c.delete(self.url(e, rid), headers=self.h)
         assert r.status_code == status, r.text
 
     def action(

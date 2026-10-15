@@ -1,10 +1,5 @@
-import { addDays, getSiteTz, siteDayBoundary } from '@/lib/site-tz'
-
 /** 文本筛选的防抖时长（毫秒）。 */
 export const SEARCH_DEBOUNCE_MS = 300
-
-/** 有默认值的筛选被用户显式选择“全部”时在 URL 中的取值。 */
-export const ALL_VALUE = '*'
 
 /** 下拉筛选的选项。 */
 export interface FilterOption {
@@ -27,65 +22,7 @@ export type FilterDef =
       loadOptions?: () => Promise<FilterOption[]>
       /** loadOptions 的 react-query key（默认 ['filter-options', name]） */
       optionsKey?: unknown[]
-      /** 远程搜索选项（数据量大的引用字段）：按输入关键字分页查询 */
-      search?: (q: string) => Promise<FilterOption[]>
-      /** 远程模式下解析当前值的显示标签 */
-      resolve?: (value: string) => Promise<string>
-      /** 默认值：URL 无此参数时生效；选择“全部”时以 ALL_VALUE 显式记录 */
-      defaultValue?: string
     }
-  | {
-      /** 日期范围：URL 参数为 `<name>_from` / `<name>_to`（YYYY-MM-DD） */
-      type: 'daterange'
-      name: string
-      label: string
-      /** 字段类型：datetime 时按本地时区转换为当日起止时刻发送 */
-      kind?: 'date' | 'datetime'
-    }
-
-/** 筛选定义对应的 URL 参数名（日期范围展开为起止两个参数）。 */
-export function filterKeys(def: FilterDef): string[] {
-  return def.type === 'daterange'
-    ? [`${def.name}_from`, `${def.name}_to`]
-    : [def.name]
-}
-
-/** 浏览器本地日期（YYYY-MM-DD；业务日期请用 lib/site-tz 的站点日期）。 */
-export function ymd(d: Date): string {
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
-}
-
-/**
- * 日期范围参数转换为接口参数（D75）：
- * - datetime 字段（D77 半开区间）：_from 发站点当天 0 点、_to 发站点次日 0 点，都带当时的实际偏移（后端 >= / <）；
- * - date 字段：只取前 10 位，直接传站点日期。
- *
- * @param v - YYYY-MM-DD
- * @param end - 是否为上限
- * @param kind - 字段类型
- * @param tz - 站点时区（默认当前站点时区）
- */
-export function rangeParam(
-  v: string,
-  end: boolean,
-  kind: 'date' | 'datetime' = 'datetime',
-  tz: string = getSiteTz()
-): string {
-  const ymd = v.trim().slice(0, 10)
-  if (kind === 'date') return ymd
-  return siteDayBoundary(end ? addDays(ymd, 1) : ymd, false, tz)
-}
-
-/**
- * D77 补充一：from 晚于 to（按日期前 10 位比较）为倒置区间，后端 422 value_error ctx.reason=range_inverted。
- * from 等于 to 不算倒置（datetime 半开区间返回空，date 返回当天）。
- */
-export function rangeInverted(from?: string | null, to?: string | null) {
-  const a = (from ?? '').trim().slice(0, 10)
-  const b = (to ?? '').trim().slice(0, 10)
-  return !!a && !!b && a > b
-}
 
 /** 所有表格的默认筛选：一个绑定 ?q= 的关键字搜索框 */
 export const DEFAULT_FILTERS: FilterDef[] = [{ type: 'text', name: 'q' }]
@@ -111,21 +48,3 @@ export const boolOptions = (yes: string, no: string): FilterOption[] => [
   { value: 'true', label: yes },
   { value: 'false', label: no },
 ]
-
-/** 选项缓存键的专用后缀：保证与同前缀的数据查询（如 ['notifications', 'meta']）不冲突。 */
-export const FILTER_OPTIONS_SUFFIX = '__filter-options'
-
-/**
- * 下拉筛选选项的 react-query key：调用方的 `optionsKey`（缺省 ['filter-options', name]）
- * 末尾追加专用后缀。保留前缀以便按前缀失效，同时避免与页面中同键的数据查询共享缓存
- * （否则缓存中的非数组数据会被当作选项，导致渲染异常）。
- */
-export function filterOptionsKey(def: {
-  name: string
-  optionsKey?: unknown[]
-}): unknown[] {
-  return [
-    ...(def.optionsKey ?? ['filter-options', def.name]),
-    FILTER_OPTIONS_SUFFIX,
-  ]
-}

@@ -42,7 +42,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ConfirmDialog } from '@/components/crud'
-import { IconButton } from '@/components/icon-button'
 import { EntityForm } from '@/features/mes/common/entity-form'
 import { StatusBadge } from '@/features/mes/common/entity-table'
 import { enumLabel } from '@/features/mes/common/labels'
@@ -544,14 +543,15 @@ export function RouteFlow({
               <span className='font-semibold'>
                 {t('mes.entity.route_step')} {String(sel.seq)}
               </span>
-              <IconButton
-                label={t('common.close')}
+              <Button
+                size='icon'
                 variant='ghost'
                 className='size-7'
                 onClick={() => setSelected(null)}
+                aria-label={t('common.close')}
               >
                 <X className='size-4' />
-              </IconButton>
+              </Button>
             </div>
             <dl className='space-y-1 text-xs'>
               {(['operation', 'sub_route', 'rework_route'] as const).map((k) =>
@@ -585,29 +585,32 @@ export function RouteFlow({
                   <Pencil />
                   {t('common.edit')}
                 </Button>
-                <IconButton
-                  label={t('mes.moveUp')}
+                <Button
+                  size='icon'
                   variant='outline'
                   disabled={idx <= 0}
                   onClick={() => swap(idx, idx - 1)}
+                  aria-label={t('mes.moveUp')}
                 >
                   <ArrowUp />
-                </IconButton>
-                <IconButton
-                  label={t('mes.moveDown')}
+                </Button>
+                <Button
+                  size='icon'
                   variant='outline'
                   disabled={idx >= list.length - 1}
                   onClick={() => swap(idx, idx + 1)}
+                  aria-label={t('mes.moveDown')}
                 >
                   <ArrowDown />
-                </IconButton>
-                <IconButton
-                  label={t('common.delete')}
+                </Button>
+                <Button
+                  size='icon'
                   variant='outline'
                   onClick={() => setDeleting(sel)}
+                  aria-label={t('common.delete')}
                 >
                   <Trash2 className='text-destructive' />
-                </IconButton>
+                </Button>
               </div>
             )}
           </aside>

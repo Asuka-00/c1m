@@ -1,6 +1,6 @@
 import { t } from '@/i18n'
 import { Pencil, Trash2 } from 'lucide-react'
-import { IconButton } from '@/components/icon-button'
+import { Button } from '@/components/ui/button'
 
 /** 表格行的编辑 / 删除操作按钮（按权限与回调显示）。 */
 export function RowActions({
@@ -16,18 +16,24 @@ export function RowActions({
     <div className='flex justify-end gap-1'>
       {children}
       {onEdit && (
-        <IconButton label={t('common.edit')} variant='ghost' onClick={onEdit}>
+        <Button
+          size='icon'
+          variant='ghost'
+          aria-label={t('common.edit')}
+          onClick={onEdit}
+        >
           <Pencil className='size-4' />
-        </IconButton>
+        </Button>
       )}
       {onDelete && (
-        <IconButton
-          label={t('common.delete')}
+        <Button
+          size='icon'
           variant='ghost'
+          aria-label={t('common.delete')}
           onClick={onDelete}
         >
           <Trash2 className='size-4 text-destructive' />
-        </IconButton>
+        </Button>
       )}
     </div>
   )

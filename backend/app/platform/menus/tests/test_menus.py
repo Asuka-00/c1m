@@ -4,13 +4,7 @@ from sqlmodel import Session
 from app.core.config import settings
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
-from app.testing.user import create_owned_tenant
-from app.testing.utils import (
-    login_name,
-    random_email,
-    random_lower_string,
-    username_for,
-)
+from app.testing.utils import random_email, random_lower_string
 
 API = settings.API_V1_STR
 
@@ -19,21 +13,15 @@ def _keys(nodes: list[dict]) -> set[str]:  # type: ignore[type-arg]
     out: set[str] = set()
     for n in nodes:
         out.add(n["key"])
-        out |= {t["key"] for t in n.get("tabs", [])}  # 合并菜单的页签
         out |= _keys(n["children"])
     return out
 
 
 def _user(client: TestClient, db: Session) -> tuple[str, dict[str, str]]:
     email, pw = random_email(), random_lower_string()
-    _u = crud.create_user(
-        session=db,
-        user_create=UserCreate(email=email, username=username_for(email), password=pw),
-    )
-    create_owned_tenant(db, _u)
+    crud.create_user(session=db, user_create=UserCreate(email=email, password=pw))
     tok = client.post(
-        f"{API}/login/access-token",
-        data={"username": login_name(email), "password": pw},
+        f"{API}/login/access-token", data={"username": email, "password": pw}
     ).json()["access_token"]
     return email, {"Authorization": f"Bearer {tok}"}
 
@@ -44,36 +32,23 @@ def test_superuser_sees_all_menus(
     r = client.get(f"{API}/menus/me", headers=superuser_token_headers)
     assert r.status_code == 200
     keys = _keys(r.json()["menus"])
-    assert {"dashboard", "members", "user-roles", "settings"} <= keys
-    # 平台页面不在工作区菜单中
-    assert not keys & {"users", "roles", "permissions", "tenants", "menus"}
-    p = client.get(
-        f"{API}/menus/me", headers=superuser_token_headers, params={"space": "platform"}
-    )
-    assert p.status_code == 200 and p.json()["space"] == "platform"
-    pkeys = _keys(p.json()["menus"])
     assert {
-        "p-g-tenants",
-        "p-g-rbac",
-        "p-g-settings",
-        "p-g-ops",
-        "p-tenants",
-        "p-users",
-        "p-roles",
-        "p-permissions",
-        "p-config",
-        "p-channels",
-        "p-audit",
-        "p-login-log",
-        "p-ops-log",
-    } == pkeys
+        "dashboard",
+        "members",
+        "users",
+        "roles",
+        "permissions",
+        "tenants",
+        "menus",
+        "settings",
+    } <= keys
 
 
 def test_owner_vs_member_menus(client: TestClient, db: Session) -> None:
     _, ho = _user(client, db)
     owner_body = client.get(f"{API}/menus/me", headers=ho).json()
     keys = _keys(owner_body["menus"])
-    assert {"dashboard", "members", "user-roles", "settings"} <= keys
+    assert {"dashboard", "members", "tenant-roles", "settings"} <= keys
     assert not keys & {
         "users",
         "roles",
@@ -83,33 +58,15 @@ def test_owner_vs_member_menus(client: TestClient, db: Session) -> None:
     }
     # tenant owners manage their tenant's config (System group)
     assert {"g-system", "config"} <= keys
-    assert {"/platform", "/platform/users"} <= set(owner_body["forbidden_paths"])
-    # 用户与权限：租户所有者只看到成员 / 租户角色页签
-    up = next(
-        c
-        for g in owner_body["menus"]
-        for c in g["children"]
-        if c["key"] == "user-permissions"
-    )
-    assert [t["key"] for t in up["tabs"]] == [
-        "members",
-        "user-roles",
-    ]
-    # 平台控制台菜单仅超级用户
-    assert (
-        client.get(
-            f"{API}/menus/me", headers=ho, params={"space": "platform"}
-        ).status_code
-        == 403
-    )
-    assert "/platform/tenants" in owner_body["forbidden_paths"]
+    assert {"/users", "/roles", "/tenants"} <= set(owner_body["forbidden_paths"])
+    assert "/members" not in owner_body["forbidden_paths"]
     tid = owner_body["tenant_id"]
 
     member_email, hm = _user(client, db)
     client.post(
         f"{API}/tenants/{tid}/members",
         headers=ho,
-        json={"username": username_for(member_email), "roles": []},
+        json={"email": member_email, "roles": []},
     )
     # no roles in that tenant -> no members menus there
     keys = _keys(
@@ -129,7 +86,7 @@ def test_menu_crud(
     h = superuser_token_headers
     key = f"reports-{random_lower_string()[:6]}"
     r = client.post(
-        f"{API}/platform/menus/",
+        f"{API}/menus/",
         headers=h,
         json={
             "key": key,
@@ -143,7 +100,7 @@ def test_menu_crud(
     mid = r.json()["id"]
     assert (
         client.post(
-            f"{API}/platform/menus/", headers=h, json={"key": key, "title": "x"}
+            f"{API}/menus/", headers=h, json={"key": key, "title": "x"}
         ).status_code
         == 409
     )
@@ -152,18 +109,18 @@ def test_menu_crud(
     assert key not in _keys(client.get(f"{API}/menus/me", headers=hu).json()["menus"])
     assert (
         client.post(
-            f"{API}/platform/menus/", headers=hu, json={"key": "x", "title": "x"}
+            f"{API}/menus/", headers=hu, json={"key": "x", "title": "x"}
         ).status_code
         == 403
     )
     assert (
-        client.patch(
-            f"{API}/platform/menus/{mid}", headers=h, json={"hidden": True}
-        ).json()["hidden"]
+        client.patch(f"{API}/menus/{mid}", headers=h, json={"hidden": True}).json()[
+            "hidden"
+        ]
         is True
     )
     assert key not in _keys(client.get(f"{API}/menus/me", headers=h).json()["menus"])
-    assert client.delete(f"{API}/platform/menus/{mid}", headers=h).status_code == 200
+    assert client.delete(f"{API}/menus/{mid}", headers=h).status_code == 200
 
 
 def test_role_permission_bulk_and_tenant_roles(
@@ -171,21 +128,17 @@ def test_role_permission_bulk_and_tenant_roles(
 ) -> None:
     h = superuser_token_headers
     role = client.post(
-        f"{API}/platform/roles/",
-        headers=h,
-        json={"name": f"r-{random_lower_string()[:6]}"},
+        f"{API}/roles/", headers=h, json={"name": f"r-{random_lower_string()[:6]}"}
     ).json()
     r = client.put(
-        f"{API}/platform/roles/{role['id']}/permissions",
+        f"{API}/roles/{role['id']}/permissions",
         headers=h,
         json={"codes": ["users:read", "roles:read"]},
     )
     assert {p["code"] for p in r.json()["permissions"]} == {"users:read", "roles:read"}
     assert (
         client.put(
-            f"{API}/platform/roles/{role['id']}/permissions",
-            headers=h,
-            json={"codes": ["nope"]},
+            f"{API}/roles/{role['id']}/permissions", headers=h, json={"codes": ["nope"]}
         ).status_code
         == 404
     )
@@ -244,205 +197,50 @@ def test_role_permission_bulk_and_tenant_roles(
         client.delete(f"{API}/tenants/{tid}/roles/{rid}", headers=ho).status_code == 200
     )
     # platform /roles must not expose tenant roles
-    assert (
-        client.get(f"{API}/platform/roles/{roles['member']}", headers=h).status_code
-        == 404
-    )
+    assert client.get(f"{API}/roles/{roles['member']}", headers=h).status_code == 404
 
 
 def test_menu_layout_complete_and_synced(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
     from app.core.registry import menu_items
-    from app.platform.menus.layout import GROUPS, ITEMS, MERGED, tab_keys
+    from app.platform.menus.layout import GROUPS, ITEMS
     from app.platform.menus.service import SYSTEM_ITEMS
 
     placed = [k for items in ITEMS.values() for k, _ in items]
-    tabs = [k for *_, ts in MERGED.values() for k in ts]
-    assert len(placed) == len(set(placed)) and len(tabs) == len(set(tabs))
-    assert set(MERGED) <= set(placed) and not tab_keys() & set(placed)
-    # 每个页面恰好出现一次：独立菜单或合并菜单的页签
-    assert (set(placed) - set(MERGED)) | tab_keys() == set(SYSTEM_ITEMS) | set(
-        menu_items()
-    )
+    assert len(placed) == len(set(placed))  # each item once
+    assert set(placed) == set(SYSTEM_ITEMS) | set(menu_items())  # nothing missing
     assert [g for g, *_ in GROUPS] == list(ITEMS)
     tree = client.get(f"{API}/menus/me", headers=superuser_token_headers).json()
     top = [n["key"] for n in tree["menus"]]
     assert top == [g for g, *_ in GROUPS]  # ordered domain groups only
     by = {n["key"]: [c["key"] for c in n["children"]] for n in tree["menus"]}
-    assert by["g-planning"] == ["mes-lot-start", "mes-wo-board", "mes-work_order"]
+    assert by["g-planning"] == ["mes-work_order", "mes-lot-start"]
     assert "mes-audit_log" in by["g-system"] and "mes-uom" in by["g-master"]
-    # 业务流顺序：工作台 → 执行 → 在制报表 … 主数据 → 系统；组内日常作业在前
-    assert top[:4] == ["g-workspace", "g-execution", "g-exception", "g-wip"]
-    assert top[-1] == "g-system"
-    assert by["g-workspace"][:2] == ["dashboard", "notifications"]
-    # 方案 A：批次作业组前三项为进出站、Hold 管理、Q-Time 监控，只放作业项
-    assert by["g-execution"][:3] == [
-        "mes-lot-console",
-        "mes-lot_hold",
-        "mes-qtime-monitor",
-    ]
-    assert not {"mes-lot", "mes-wafer", "mes-operator_qual"} & set(by["g-execution"])
-    assert by["g-exception"] == ["mes-future_hold", "mes-check_log"]
-    assert {"mes-lot", "mes-wafer"} <= set(by["g-wip"])
-    assert "mes-operator_qual" in by["g-factory"]
-    assert by["g-equipment"][0] == "mes-eqp-board"
-    assert any("mes-equipment-master" in v for v in by.values())
     assert not {"general", "admin", "other", "tenant"} & set(top)
 
 
-def test_sync_restores_declared_layout(db: Session) -> None:
+def test_sync_moves_and_drops_legacy_groups(db: Session) -> None:
     from sqlmodel import select
 
     from app.platform.menus.models import Menu
     from app.platform.menus.service import seed_menus
 
-    other = db.exec(select(Menu).where(Menu.key == "g-wip")).one()
+    legacy = Menu(key="mes-g-legacy", title="MES · Legacy", sort_order=1)
+    db.add(legacy)
+    db.flush()
+    custom = Menu(
+        key="custom-under-legacy", title="x", parent_id=legacy.id, sort_order=1
+    )
     dash = db.exec(select(Menu).where(Menu.key == "dashboard")).one()
-    dash.parent_id, dash.title = other.id, "changed"
-    # 被改动的位置 / 排序在重新同步后恢复为注册表定义
-    wip = db.exec(select(Menu).where(Menu.key == "mes-wip-dashboard")).one()
-    sysg = db.exec(select(Menu).where(Menu.key == "g-system")).one()
-    wip.parent_id, wip.sort_order, sysg.sort_order = sysg.id, 999, -5
-    db.add_all([dash, wip, sysg])
+    dash.parent_id, dash.title = legacy.id, "old"
+    db.add_all([custom, dash])
     db.commit()
     seed_menus(db)
     keys = {m.key: m for m in db.exec(select(Menu)).all()}
+    assert "mes-g-legacy" not in keys
+    assert keys["custom-under-legacy"].parent_id is None
     assert keys["dashboard"].parent_id == keys["g-workspace"].id
     assert keys["dashboard"].title == "Dashboard"
-    assert keys["mes-wip-dashboard"].parent_id == keys["g-wip"].id
-    assert keys["mes-wip-dashboard"].sort_order == 0
-    assert keys["g-system"].sort_order == 110
-
-
-def test_merged_menu_tabs(
-    client: TestClient, superuser_token_headers: dict[str, str]
-) -> None:
-    """合并菜单返回页签（key / 组件 / 权限）。"""
-    from app.platform.menus.layout import MERGED
-
-    body = client.get(f"{API}/menus/me", headers=superuser_token_headers).json()
-    nodes = {}
-
-    def walk(ns: list[dict]) -> None:  # type: ignore[type-arg]
-        for n in ns:
-            nodes[n["key"]] = n
-            walk(n["children"])
-
-    walk(body["menus"])
-    for key, (path, _, view, tabs) in MERGED.items():
-        n = nodes[key]
-        assert n["path"] == path and n["component"] == view
-        assert [t["key"] for t in n["tabs"]] == tabs
-        for t in n["tabs"]:
-            assert t["component"]
-            assert t["key"] not in nodes  # 不再是独立菜单
-
-
-def test_merged_menu_permission_any_tab(db: Session) -> None:
-    """合并菜单：拥有任一页签权限即可见，页签按各自权限过滤。"""
-    from sqlmodel import select
-
-    from app.platform.menus.models import Menu
-    from app.platform.menus.service import allowed_perm, build_tree
-
-    assert allowed_perm("a:read,b:read", {"b:read"}, False)
-    assert not allowed_perm("a:read,b:read", {"c:read"}, False)
-    assert allowed_perm(None, set(), False) and allowed_perm("x", set(), True)
-    menus = list(db.exec(select(Menu)).all())
-    tree = build_tree(menus, {"mes.check:read"}, False)
-    flat = {c["key"]: c for g in tree for c in g.model_dump()["children"]}
-    node = flat["mes-check-config"]
-    assert [t["key"] for t in node["tabs"]] == [
-        "mes-check_rule",
-        "mes-check_plan",
-        "mes-check_binding",
-    ]
-    assert "mes-product-master" not in flat  # 无产品权限
-
-
-def test_menu_titles_plan_a() -> None:
-    """方案 A 菜单标题：三语齐全、改名、日文 Q-Time 带空格、Hold 不叫冻结。"""
-    import re
-
-    from app.platform.menus import layout
-
-    en, zh, ja = (layout.titles(i) for i in range(3))
-    for items in layout.ITEMS.values():
-        for _, lbl in items:
-            parts = lbl.split("|")
-            assert len(parts) == 3 and all(p.strip() for p in parts), lbl
-    for _, lbl, _, _ in layout.GROUPS:
-        assert len(lbl.split("|")) == 3 and all(lbl.split("|")), lbl
-    assert zh["g-execution"] == "批次作业" and zh["g-equipment"] == "机台管理"
-    assert zh["g-exception"] == "异常处置" and zh["g-wip"] == "在制与查询"
-    assert ja["mes-qtime-monitor"] == "Q-Time 監視"
-    assert ja["mes-qtime_rule"] == "Q-Time ルール"
-    assert not any("Q タイム" in v for v in ja.values())
-    assert not any(re.search(r"Q-Time(?! )", v) for v in ja.values())
-    assert not any("冻结" in v for v in zh.values())
-    assert zh["mes-lot-start"] == "投片/开批"
-    assert (
-        zh["mes-carrier-ops"] == "载具作业" and en["mes-check_log"] == "Interlock Log"
-    )
-    assert zh["mes-tool"] == "耗材/治具寿命" and en["mes-change_order"] == "ECN"
-    # 8 个与首个页签重名的合并菜单已改名，页签名不变
-    assert {
-        k: zh[k]
-        for k in (
-            "mes-warehouse-master",
-            "mes-equipment-master",
-            "mes-product-master",
-            "mes-material-master",
-            "mes-carrier-master",
-            "mes-e10-model",
-            "mes-route-master",
-            "mes-calendar",
-        )
-    } == {
-        "mes-warehouse-master": "仓库主数据",
-        "mes-equipment-master": "机台主数据",
-        "mes-product-master": "产品主数据",
-        "mes-material-master": "物料主数据",
-        "mes-carrier-master": "载具主数据",
-        "mes-e10-model": "E10 状态配置",
-        "mes-route-master": "工艺流程配置",
-        "mes-calendar": "日历与班次",
-    }
-    for key, (*_, tabs) in layout.MERGED.items():
-        for lang in (en, zh, ja):
-            assert lang[key] != lang[tabs[0]], key
-    assert zh["mes-e10_state"] == "E10 状态模型"  # 页签名不变
-
-
-def test_admin_notify_config_and_member_user_permissions(
-    client: TestClient, db: Session
-) -> None:
-    """admin 有 notify:config 能看到通知订阅；member 看不到用户与权限但接口仍可调。"""
-    from app.platform.rbac.permissions import TENANT_ROLES
-
-    # admin 经 MES_PERMISSIONS（含模块注册的 EXTRA 权限）已有 notify:config
-    assert "notify:config" in TENANT_ROLES["admin"][1]
-    assert "notify:config" not in TENANT_ROLES["member"][1]
-    _, ho = _user(client, db)
-    tid = client.get(f"{API}/menus/me", headers=ho).json()["tenant_id"]
-    out = {}
-    for role in ("admin", "member"):
-        email, h = _user(client, db)
-        r = client.post(
-            f"{API}/tenants/{tid}/members",
-            headers=ho,
-            json={"username": username_for(email), "roles": [role]},
-        )
-        assert r.status_code in (200, 201), r.text
-        hh = {**h, "X-Tenant-ID": tid}
-        body = client.get(f"{API}/menus/me", headers=hh).json()
-        out[role] = (_keys(body["menus"]), body["forbidden_paths"], hh)
-    akeys = out["admin"][0]
-    assert {"notify-subscriptions", "user-permissions", "members"} <= akeys
-    mkeys, mforbidden, mh = out["member"]
-    assert not {"user-permissions", "members", "user-roles"} & mkeys
-    assert "notify-subscriptions" not in mkeys and "dashboard" in mkeys
-    assert "/user-permissions" in mforbidden
-    # 已知缺口（MENU-B4 关闭）：members:read 接口本期不收紧
-    assert client.get(f"{API}/tenants/{tid}/members", headers=mh).status_code == 200
+    db.delete(keys["custom-under-legacy"])
+    db.commit()

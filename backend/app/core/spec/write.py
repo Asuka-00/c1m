@@ -16,25 +16,9 @@ from app.core.spec.engine import (
     STATUSES,
     Entity,
 )
-from app.core.spec.errors import MesError, err_422, http_422, integrity
+from app.core.spec.errors import MesError, http_422, integrity
 from app.core.spec.query import get_row
 from app.core.spec.validate import VALIDATORS, check_editable, locking_parent, validate
-
-#: 写入后钩子（同一事务，提交前）：``fn(session, tenant_id, e, old, new, user)``；
-#: 新建时 ``old`` 为 None。用于需要随业务写入留痕的实体（如 D74 资质履历）。
-AFTER_WRITE: dict[str, list[Any]] = {}
-
-
-def _after_write(
-    session: Session,
-    tenant_id: uuid.UUID,
-    e: Entity,
-    old: Row | None,
-    new: Row,
-    user: Any,
-) -> None:
-    for fn in AFTER_WRITE.get(e.code, []):
-        fn(session, tenant_id, e, old, new, user)
 
 
 # ---------------- writes ----------------
@@ -79,7 +63,7 @@ def create_row(
     )
     if e.versioned:
         values["version"] = (
-            _parse_version(data["version"])
+            int(data["version"])
             if data.get("version")
             else _next_version(session, tenant_id, e, values.get("code"))
         )
@@ -99,7 +83,6 @@ def create_row(
         user,
         diff(None, {k: v for k, v in row.items() if k != "tenant_id"}),
     )
-    _after_write(session, tenant_id, e, None, row, user)
     if commit:
         session.commit()
     return row
@@ -151,7 +134,6 @@ def update_row(
     audit(
         session, tenant_id, e, action, new, user, diff(old, {k: new[k] for k in values})
     )
-    _after_write(session, tenant_id, e, old, new, user)
     if commit:
         session.commit()
     return new
@@ -300,18 +282,9 @@ def _copy_children(
 
 
 def new_version(
-    session: Session,
-    tenant_id: uuid.UUID,
-    e: Entity,
-    rid: uuid.UUID,
-    user: Any,
-    hook_ctx: Row | None = None,
+    session: Session, tenant_id: uuid.UUID, e: Entity, rid: uuid.UUID, user: Any
 ) -> Row:
-    """复制某版本（含子表行）为下一个 draft 版本。
-
-    ``hook_ctx`` 原样交给 ``<entity>:new_version`` 钩子（放在 ``new["_ctx"]``），
-    钩子可读其中的 ``can``（权限判断）并向 ``warnings`` 列表追加提示。
-    """
+    """复制某版本（含子表行）为下一个 draft 版本。"""
     if not e.versioned:
         raise HTTPException(status_code=404, detail="Entity is not versioned")
     old = get_row(session, e, tenant_id, rid)
@@ -329,10 +302,6 @@ def new_version(
     conn(session).execute(sa.insert(table(e)).values(**vals))
     _copy_children(session, tenant_id, e, rid, nid, user)
     new = get_row(session, e, tenant_id, nid)
-    # 出新版本后的钩子（如产品新版本复制生效 BOM）：fn(session, tid, e, new, old)，
-    # 操作人放在 new["_user"]
-    for fn in VALIDATORS.get(f"{e.code}:new_version", []):
-        fn(session, tenant_id, e, {**new, "_user": user, "_ctx": hook_ctx or {}}, old)
     audit(
         session,
         tenant_id,
@@ -344,15 +313,3 @@ def new_version(
     )
     session.commit()
     return new
-
-
-def _parse_version(v: Any) -> int:
-    """P2-D10：``version`` 必须是整数（或整数字符串），否则 422 ``int_parsing``。"""
-    if not isinstance(v, bool):
-        if isinstance(v, int):
-            return v
-        if isinstance(v, str) and v.strip().lstrip("+-").isdigit():
-            return int(v)
-    raise err_422(
-        ["body", "version"], "Input should be a valid integer", "int_parsing", input=v
-    )

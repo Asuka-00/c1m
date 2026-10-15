@@ -1,14 +1,10 @@
 import { authApi } from './platform/auth'
 import { configApi } from './platform/config'
-import { platformApi } from './platform/console'
 import { filesApi } from './platform/files'
 import { menusApi, myMenusApi } from './platform/menus'
-import { notificationsApi } from './platform/notifications'
 import { permissionsApi, rolesApi } from './platform/rbac'
 import { myTenantsApi, tenantsApi } from './platform/tenants'
 import { usersApi } from './platform/users'
-
-export type { MemberUserIn } from './platform/tenants'
 
 /**
  * FastAPI 后端的类型化 API 客户端，由各业务域客户端
@@ -25,10 +21,7 @@ export const api = {
   roles: rolesApi,
   tenants: tenantsApi,
   menus: menusApi,
-  notifications: notificationsApi,
-  platform: platformApi,
 }
 export { ALL, type ListQuery } from './request'
 export type { UserIn } from './platform/users'
-export type * from './platform/notifications'
 export * from './types'

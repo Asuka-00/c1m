@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo, useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import { Link, useLocation } from '@tanstack/react-router'
 import { ChevronRight } from 'lucide-react'
 import {
@@ -26,7 +26,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu'
-import { type AccordionNode, activeChain, toggleGroup } from './accordion'
 import {
   type NavCollapsible,
   type NavItem,
@@ -34,46 +33,10 @@ import {
   type NavGroup as NavGroupProps,
 } from './types'
 
-/**
- * 菜单名单行完整显示（FE-02：不截断、不折行）：侧栏宽度按中英日最长菜单名定为 17.5rem，
- * 由 `nav-width.test.tsx` 逐个菜单名回归；这里去掉按钮里 `[&>span:last-child]:truncate` 的省略号。
- */
-const SUB_WRAP = 'h-auto min-h-7 py-1'
-const LABEL_WRAP = 'whitespace-nowrap overflow-visible! text-clip!'
-
-/** 分组 id（key 优先，回退到标题）。 */
-const groupId = (item: NavCollapsible) => item.key ?? item.title
-
-/** 菜单项转为手风琴树节点。 */
-function toNodes(items: NavItem[]): AccordionNode[] {
-  return items.map((i) =>
-    i.items
-      ? { id: groupId(i), children: toNodes(i.items) }
-      : { id: `${i.title}-${String(i.url)}`, url: String(i.url) }
-  )
-}
-
-/**
- * 侧栏中的一组菜单（标题 + 菜单项）。分组为手风琴：同时只展开一条祖先链，
- * 展开某分组会收起其他分组；路由变化时自动展开当前页面所在分组并收起其余分组；
- * 再次点击已展开的分组可将其收起。
- */
+/** 侧栏中的一组菜单（标题 + 菜单项）。 */
 export function NavGroup({ title, items }: NavGroupProps) {
   const { state, isMobile } = useSidebar()
   const href = useLocation({ select: (location) => location.href })
-  const path = href.split('?')[0]
-  const nodes = useMemo(() => toNodes(items), [items])
-  const [open, setOpen] = useState<string[]>(() => activeChain(nodes, path))
-  // 路由变化（或菜单加载完成）时同步到当前页面所在分组（渲染期间调整状态，不使用 effect）
-  const sig = `${path}|${nodes.length}`
-  const [seen, setSeen] = useState(sig)
-  if (sig !== seen) {
-    setSeen(sig)
-    const chain = activeChain(nodes, path)
-    if (chain.length) setOpen(chain)
-  }
-  const onToggle = (id: string, next: boolean) =>
-    setOpen((o) => toggleGroup(nodes, o, id, next))
   return (
     <SidebarGroup>
       {title && <SidebarGroupLabel>{title}</SidebarGroupLabel>}
@@ -89,15 +52,7 @@ export function NavGroup({ title, items }: NavGroupProps) {
               <SidebarMenuCollapsedDropdown key={key} item={item} href={href} />
             )
 
-          return (
-            <SidebarMenuCollapsible
-              key={key}
-              item={item}
-              href={href}
-              open={open}
-              onToggle={onToggle}
-            />
-          )
+          return <SidebarMenuCollapsible key={key} item={item} href={href} />
         })}
       </SidebarMenu>
     </SidebarGroup>
@@ -119,7 +74,7 @@ function SidebarMenuLink({ item, href }: { item: NavLink; href: string }) {
       >
         <Link to={item.url} onClick={() => setOpenMobile(false)}>
           {item.icon && <item.icon />}
-          <span className={LABEL_WRAP}>{item.title}</span>
+          <span>{item.title}</span>
           {item.badge && <NavBadge>{item.badge}</NavBadge>}
         </Link>
       </SidebarMenuButton>
@@ -127,90 +82,85 @@ function SidebarMenuLink({ item, href }: { item: NavLink; href: string }) {
   )
 }
 
-/** 分组下的全部叶子链接（多级分组展平，用于折叠侧栏的下拉菜单）。 */
-const leaves = (item: NavCollapsible): NavLink[] =>
-  item.items.flatMap((i) => (i.items ? leaves(i) : [i]))
-
+const GROUPS_KEY = 'sidebar_groups'
+const readGroups = (): Record<string, boolean> => {
+  try {
+    return JSON.parse(localStorage.getItem(GROUPS_KEY) ?? '{}')
+  } catch {
+    return {}
+  }
+}
 /** 当前路径属于该分组的子项（或其下级）时为 true */
 const containsActive = (href: string, item: NavCollapsible) => {
   const path = href.split('?')[0]
-  return leaves(item).some(
+  return item.items.some(
     (i) =>
       typeof i.url === 'string' &&
       (path === i.url || (i.url !== '/' && path.startsWith(`${i.url}/`)))
   )
 }
 
-/** 可折叠菜单分组（手风琴，展开状态由 NavGroup 统一管理；支持多级分组）。 */
+/** 可折叠菜单分组：默认折叠，包含当前路由时自动展开；
+ *  用户手动的展开 / 折叠状态保存在 localStorage。 */
 function SidebarMenuCollapsible({
   item,
   href,
-  open,
-  onToggle,
-  nested = false,
 }: {
   item: NavCollapsible
   href: string
-  open: string[]
-  onToggle: (id: string, next: boolean) => void
-  nested?: boolean
 }) {
   const { setOpenMobile } = useSidebar()
-  const id = groupId(item)
-  const isOpen = open.includes(id)
-  const Item = nested ? SidebarMenuSubItem : SidebarMenuItem
-  const Button = nested ? SidebarMenuSubButton : SidebarMenuButton
+  const id = item.key ?? item.title
+  const active = containsActive(href, item)
+  const [open, setOpen] = useState(() => active || readGroups()[id] === true)
+  // 导航进入分组时自动展开（在渲染期间调整状态，不使用 effect）
+  const [wasActive, setWasActive] = useState(active)
+  if (active !== wasActive) {
+    setWasActive(active)
+    if (active) setOpen(true)
+  }
+  const toggle = (next: boolean) => {
+    setOpen(next)
+    localStorage.setItem(
+      GROUPS_KEY,
+      JSON.stringify({ ...readGroups(), [id]: next })
+    )
+  }
   return (
     <Collapsible
       asChild
-      open={isOpen}
-      onOpenChange={(next) => onToggle(id, next)}
+      open={open}
+      onOpenChange={toggle}
       className='group/collapsible'
     >
-      <Item data-group={id}>
+      <SidebarMenuItem>
         <CollapsibleTrigger asChild>
-          <Button
-            {...(nested ? {} : { tooltip: item.title })}
-            data-group-trigger={id}
-            className='cursor-pointer'
-          >
+          <SidebarMenuButton tooltip={item.title}>
             {item.icon && <item.icon />}
-            <span className={LABEL_WRAP}>{item.title}</span>
+            <span>{item.title}</span>
             {item.badge && <NavBadge>{item.badge}</NavBadge>}
             <ChevronRight className='ms-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 rtl:rotate-180' />
-          </Button>
+          </SidebarMenuButton>
         </CollapsibleTrigger>
         <CollapsibleContent className='CollapsibleContent'>
           <SidebarMenuSub>
-            {item.items.map((subItem) =>
-              subItem.items ? (
-                <SidebarMenuCollapsible
-                  key={groupId(subItem)}
-                  item={subItem}
-                  href={href}
-                  open={open}
-                  onToggle={onToggle}
-                  nested
-                />
-              ) : (
-                <SidebarMenuSubItem key={subItem.title}>
-                  <SidebarMenuSubButton
-                    asChild
-                    isActive={checkIsActive(href, subItem)}
-                    className={SUB_WRAP}
-                  >
-                    <Link to={subItem.url} onClick={() => setOpenMobile(false)}>
-                      {subItem.icon && <subItem.icon />}
-                      <span className={LABEL_WRAP}>{subItem.title}</span>
-                      {subItem.badge && <NavBadge>{subItem.badge}</NavBadge>}
-                    </Link>
-                  </SidebarMenuSubButton>
-                </SidebarMenuSubItem>
-              )
-            )}
+            {item.items.map((subItem) => (
+              <SidebarMenuSubItem key={subItem.title}>
+                <SidebarMenuSubButton
+                  asChild
+                  isActive={checkIsActive(href, subItem)}
+                >
+                  <Link to={subItem.url} onClick={() => setOpenMobile(false)}>
+                    {subItem.icon && <subItem.icon />}
+                    <span>{subItem.title}</span>
+                    {subItem.badge && <NavBadge>{subItem.badge}</NavBadge>}
+                  </Link>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            ))}
           </SidebarMenuSub>
         </CollapsibleContent>
-      </Item>
+      </SidebarMenuItem>
     </Collapsible>
   )
 }
@@ -241,7 +191,7 @@ function SidebarMenuCollapsedDropdown({
             {item.title} {item.badge ? `(${item.badge})` : ''}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {leaves(item).map((sub) => (
+          {item.items.map((sub) => (
             <DropdownMenuItem key={`${sub.title}-${sub.url}`} asChild>
               <Link
                 to={sub.url}

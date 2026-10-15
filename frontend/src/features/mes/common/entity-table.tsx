@@ -1,5 +1,5 @@
 /** MES 实体通用表格。 */
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import { AxiosError } from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fmtDateTime, t } from '@/i18n'
@@ -13,13 +13,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTenantKey } from '@/lib/api/hooks'
-import {
-  KEYED_ENTITIES,
-  mesApi,
-  type MesEntity,
-  type MesRow,
-} from '@/lib/api/mes/common'
-import { normalizeListQuery } from '@/lib/api/query-dates'
+import { mesApi, type MesEntity, type MesRow } from '@/lib/api/mes/common'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -37,16 +31,11 @@ import {
   type Column,
   type ListParams,
 } from '@/components/crud'
-import { IconButton } from '@/components/icon-button'
-import { useOperationKey } from '@/features/mes/common/idem-key'
-import { qualReasonMessage } from '@/features/mes/execution/qual-history-format'
 import { cellValue } from './cells'
 import { EntityForm } from './entity-form'
-import { EntityTree } from './entity-tree'
 import { entityLabel, fieldLabel, rowLabel, statusLabel } from './labels'
 import { mesErrorMessage } from './required'
-import { CELLS, canRemoveRow, ROW_RULES } from './row-rules'
-import type { MesExtraColumn } from './types'
+import { CELLS, ROW_RULES } from './row-rules'
 import { useMesFilters } from './use-mes-filters'
 
 const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'outline'> = {
@@ -71,60 +60,34 @@ export function EntityTable({
   params,
   fixed = {},
   extraActions,
-  extraColumns = [],
   onOpenChildren,
-  readOnly = false,
 }: {
   entity: MesEntity
   params: ListParams
   /** 固定筛选条件，同时作为新增行的预设值（如 {route_id}） */
   fixed?: Record<string, string>
   extraActions?: (r: MesRow) => React.ReactNode
-  /** 额外计算列（显示在操作列之前） */
-  extraColumns?: MesExtraColumn[]
   onOpenChildren?: (r: MesRow) => void
-  /** 只读：隐藏新增 / 导入 / 编辑 / 删除（如父级已锁定的子表） */
-  readOnly?: boolean
 }) {
   const qc = useQueryClient()
-  // 树形实体可切换 表格 / 树形 视图
-  const [view, setView] = useState<'table' | 'tree'>('table')
   const tk = useTenantKey()
   const s = useCrudState<MesRow>()
   const fileRef = useRef<HTMLInputElement>(null)
   const hide = Object.keys(fixed)
   const filters = useMesFilters(e, hide)
-  // a72b85b：date 严格 YYYY-MM-DD，datetime 带偏移
-  const query = normalizeListQuery(e, { ...params.query, ...fixed })
+  const query = { ...params.query, ...fixed }
   const list = useQuery({
     queryKey: ['mes', e.code, 'list', tk, query],
     queryFn: () => mesApi.list(e.code, query),
   })
   const invalidate = () => qc.invalidateQueries({ queryKey: ['mes', e.code] })
-  // QA P2-1：资质的 self_approval / holder_approval / conflicting_fields 走资质三语文案
-  const onErr = (err: unknown) =>
-    toast.error(
-      (e.code === 'operator_qual' && qualReasonMessage(err)) ||
-        mesErrorMessage(err, e)
-    )
-  // KEYED_ENTITIES：每次操作一个 Idempotency-Key，重试（内容不变）沿用，成功后换新
-  const keyed = KEYED_ENTITIES.includes(e.code)
-  const saveKey = useOperationKey()
-  const removeKey = useOperationKey()
+  const onErr = (err: unknown) => toast.error(mesErrorMessage(err, e))
   const save = useMutation({
-    mutationFn: (body: Record<string, unknown>) => {
-      const id = s.editing?.id
-      const key = keyed
-        ? saveKey.key(
-            `${id ?? 'new'}:${JSON.stringify(body, Object.keys(body).sort())}`
-          )
-        : undefined
-      return id
-        ? mesApi.update(e.code, id, body, key)
-        : mesApi.create(e.code, body, key)
-    },
+    mutationFn: (body: Record<string, unknown>) =>
+      s.editing
+        ? mesApi.update(e.code, s.editing.id, body)
+        : mesApi.create(e.code, body),
     onSuccess: () => {
-      saveKey.done()
       toast.success(t('mes.saved'))
       s.closeForm()
       invalidate()
@@ -132,14 +95,8 @@ export function EntityTable({
     onError: onErr,
   })
   const remove = useMutation({
-    mutationFn: (r: MesRow) =>
-      mesApi.remove(
-        e.code,
-        r.id,
-        keyed ? removeKey.key(`remove:${r.id}`) : undefined
-      ),
+    mutationFn: (r: MesRow) => mesApi.remove(e.code, r.id),
     onSuccess: () => {
-      removeKey.done()
       toast.success(t('mes.deleted'))
       s.closeDelete()
       invalidate()
@@ -190,10 +147,7 @@ export function EntityTable({
     }
   }
   const editable = (r: MesRow) =>
-    !readOnly &&
-    e.can_write &&
-    !e.readonly &&
-    (!e.versioned || r.status === 'draft')
+    e.can_write && !e.readonly && (!e.versioned || r.status === 'draft')
 
   const columns: Column<MesRow>[] = [
     ...e.fields
@@ -201,13 +155,8 @@ export function EntityTable({
       .map((f) => ({
         header: fieldLabel(e, f),
         sortKey: ['json', 'ref', 'text'].includes(f.type) ? undefined : f.name,
-        // 数值列右对齐
-        className:
-          f.type === 'int' || f.type === 'float'
-            ? 'text-right tabular-nums'
-            : undefined,
         cell: (r: MesRow) =>
-          CELLS[e.code]?.[f.name]?.(r, e) ?? cellValue(e, r, f.name),
+          CELLS[e.code]?.[f.name]?.(r) ?? cellValue(e, r, f.name),
       })),
     ...(e.versioned
       ? [
@@ -223,11 +172,7 @@ export function EntityTable({
           },
         ]
       : []),
-    // 日志类实体（按创建时间排序且无其它时间列）显示时间列
-    ...(e.sort_default === 'created_at' &&
-    !e.fields.some(
-      (f) => f.list && (f.type === 'datetime' || f.type === 'date')
-    )
+    ...(e.code === 'audit_log'
       ? [
           {
             header: t('mes.at'),
@@ -236,7 +181,6 @@ export function EntityTable({
           },
         ]
       : []),
-    ...extraColumns.map((c) => ({ header: c.header(), cell: c.cell })),
     {
       header: '',
       className: 'w-0',
@@ -248,27 +192,33 @@ export function EntityTable({
               : undefined
           }
           onDelete={
-            editable(r) && canRemoveRow(e.code, r)
+            editable(r) && (ROW_RULES[e.code]?.remove?.(r) ?? true)
               ? () => s.openDelete(r)
               : undefined
           }
         >
           {extraActions?.(r)}
           {onOpenChildren && (
-            <IconButton
-              label={t('mes.details')}
+            <Button
+              size='icon'
               variant='ghost'
+              aria-label={t('mes.details')}
+              title={t('mes.details')}
               onClick={() => onOpenChildren(r)}
             >
               <ListTree className='size-4' />
-            </IconButton>
+            </Button>
           )}
           {e.versioned && e.can_write && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <IconButton label={t('mes.versionActions')} variant='ghost'>
+                <Button
+                  size='icon'
+                  variant='ghost'
+                  aria-label={t('mes.versionActions')}
+                >
                   <MoreHorizontal className='size-4' />
-                </IconButton>
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align='end'>
                 {r.status !== 'active' && (
@@ -303,17 +253,12 @@ export function EntityTable({
       <Button
         variant='outline'
         size='sm'
-        title={t('mes.exportHint')}
-        onClick={() =>
-          mesApi
-            .exportXlsx(e.code, normalizeListQuery(e, params.query))
-            .catch(onErr)
-        }
+        onClick={() => mesApi.exportXlsx(e.code).catch(onErr)}
       >
         <Download />
         {t('mes.export')}
       </Button>
-      {!readOnly && e.can_write && !e.readonly && (
+      {e.can_write && !e.readonly && (
         <>
           <input
             ref={fileRef}
@@ -341,38 +286,17 @@ export function EntityTable({
 
   return (
     <>
-      {e.tree && (
-        <div className='flex justify-end'>
-          <div className='inline-flex rounded-md border p-0.5'>
-            {(['table', 'tree'] as const).map((v) => (
-              <Button
-                key={v}
-                size='sm'
-                variant={view === v ? 'secondary' : 'ghost'}
-                onClick={() => setView(v)}
-                data-testid={`view-${v}`}
-              >
-                {v === 'tree' ? t('mes.treeView') : t('mes.tableView')}
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
-      {view === 'tree' ? (
-        <EntityTree entity={e} columns={columns} />
-      ) : (
-        <DataTable
-          rows={list.data?.data}
-          total={list.data?.count}
-          loading={list.isLoading}
-          rowKey={(r) => r.id}
-          params={params}
-          filters={filters}
-          columns={columns}
-          toolbar={toolbar}
-          empty={t('mes.empty', { entity: entityLabel(e.code) })}
-        />
-      )}
+      <DataTable
+        rows={list.data?.data}
+        total={list.data?.count}
+        loading={list.isLoading}
+        rowKey={(r) => r.id}
+        params={params}
+        filters={filters}
+        columns={columns}
+        toolbar={toolbar}
+        empty={t('mes.empty', { entity: entityLabel(e.code) })}
+      />
       <EntityForm
         entity={e}
         row={s.editing}

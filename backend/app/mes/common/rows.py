@@ -23,7 +23,7 @@ def _sys(user: Any, at: datetime) -> Row:
 
 
 def _upd(
-    s: Session, tid: uuid.UUID, code: str, rid: Any, user: Any = None, /, **vals: Any
+    s: Session, tid: uuid.UUID, code: str, rid: Any, user: Any = None, **vals: Any
 ) -> None:
     t = TABLES[code]
     vals.setdefault("updated_at", now())

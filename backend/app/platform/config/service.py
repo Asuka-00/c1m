@@ -110,24 +110,6 @@ DEFAULT_CONFIG: dict[str, tuple[str, str, str, int, list[tuple[Any, ...]]]] = {
             ),
         ],
     ),
-    "notification": (
-        "通知渠道",
-        "config.groups.notification",
-        "Platform-wide switches for notification channels (platform admins only).",
-        20,
-        [
-            (
-                "in_app_enabled",
-                "In-app channel enabled",
-                T.boolean,
-                True,
-                False,
-                None,
-                None,
-                "Deliver notifications to the in-app inbox.",
-            ),
-        ],
-    ),
     "security": (
         "安全",
         "config.groups.security",
@@ -143,6 +125,16 @@ DEFAULT_CONFIG: dict[str, tuple[str, str, str, int, list[tuple[Any, ...]]]] = {
                 None,
                 {"min": 5, "max": 525600},
                 "Access token lifetime for new sign-ins.",
+            ),
+            (
+                "allow_signup",
+                "Allow self sign-up",
+                T.boolean,
+                True,
+                False,
+                None,
+                None,
+                "Allow new users to register themselves.",
             ),
             (
                 "password_policy",

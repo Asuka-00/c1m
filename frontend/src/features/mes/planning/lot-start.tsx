@@ -23,28 +23,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Page } from '@/components/crud'
-import { IconButton } from '@/components/icon-button'
 import { cellValue } from '@/features/mes/common/cells'
-import {
-  CustomerFields,
-  FieldMsg,
-  OwnershipLabel,
-} from '@/features/mes/common/customer'
-import {
-  customerBody,
-  type CustomerDraft,
-  customerErrors,
-  emptyCustomer,
-  customerRowErrors,
-} from '@/features/mes/common/customer-fields'
 import { RefSelect } from '@/features/mes/common/ref-select'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
-import {
-  type LotFieldErrors,
-  startFieldErrors,
-  startTopErrors,
-} from './start-errors'
 import { WoProgress } from './wo-actions'
 
 type LotDraft = {
@@ -53,10 +35,7 @@ type LotDraft = {
   carrier_label: string | null
   slots: string
   source_ref: string
-} & CustomerDraft
-
-/** 工单选择列表最多显示条数（其余通过关键字缩小范围）。 */
-const WO_SHOW = 20
+}
 
 /** "1-3,7" -> [1,2,3,7]；格式错误时返回 null。 */
 function parseSlots(s: string): number[] | null {
@@ -110,9 +89,6 @@ export default function LotStartPage() {
   const [lotSize, setLotSize] = useState('')
   const [qty, setQty] = useState('')
   const [created, setCreated] = useState<MesRow[] | null>(null)
-  // 开批接口 422 定位到批次行的字段错误（行下标从 0 开始）
-  const [lotErrs, setLotErrs] = useState<LotFieldErrors>({})
-  const [topErrs, setTopErrs] = useState<string[]>([])
 
   const wos = useQuery({
     queryKey: ['mes', 'work_order', 'startable', tk],
@@ -130,13 +106,6 @@ export default function LotStartPage() {
     },
   })
   const wo = wos.data?.find((w) => w.id === woId) ?? null
-  // 工单列表关键字（工单号 / 产品 / 流程 / 客户），最多显示 WO_SHOW 条
-  const [woQ, setWoQ] = useState('')
-  const woMatch = (wos.data ?? []).filter((w) =>
-    [w.code, w.customer, w.order_ref, w.product_label, w.route_label]
-      .map((x) => String(x ?? '').toLowerCase())
-      .some((x) => x.includes(woQ.trim().toLowerCase()))
-  )
   const site = useQuery({
     queryKey: ['mes', 'site', 'one', tk, plan?.site_id],
     queryFn: () => mesApi.get('site', plan!.site_id!),
@@ -162,7 +131,6 @@ export default function LotStartPage() {
           carrier_label: null,
           slots: range(x.qty),
           source_ref: '',
-          ...emptyCustomer(),
         }))
       )
     },
@@ -181,31 +149,14 @@ export default function LotStartPage() {
           carrier_id: l.carrier_id,
           slots: parseSlots(l.slots) ?? undefined,
           source_ref: l.source_ref || null,
-          ...customerBody(l),
         }))
       ),
-    onMutate: () => {
-      setLotErrs({})
-      setTopErrs([])
-    },
     onSuccess: (r) => {
       setCreated(r.data)
       qc.invalidateQueries({ queryKey: ['mes'] })
       toast.success(t('mes.start.done', { count: r.data.length }))
     },
-    onError: (e) => {
-      const fe = startFieldErrors(e)
-      const top = startTopErrors(e)
-      // 非批次级错误（流程 / BOM 等）显示在页面顶部，与行错误同时保留
-      setTopErrs(top)
-      if (fe) {
-        // 标到对应批次行的字段下，并带回「拆分批次」这一步改正
-        setLotErrs(fe)
-        setStep(2)
-        return
-      }
-      toast.error(mesErrorMessage(e, lotE ?? woE))
-    },
+    onError: (e) => toast.error(mesErrorMessage(e, lotE ?? woE)),
   })
 
   const total = lots.reduce((s, l) => s + (Number(l.qty) || 0), 0)
@@ -224,31 +175,10 @@ export default function LotStartPage() {
     })
     const cs = lots.map((l) => l.carrier_id).filter(Boolean)
     if (new Set(cs).size !== cs.length) out.push(t('mes.start.errCarrierTwice'))
-    out.push(...customerErrors(lots))
     return out
   }, [plan, lots, total])
-  const set = (i: number, patch: Partial<LotDraft>) => {
+  const set = (i: number, patch: Partial<LotDraft>) =>
     setLots((ls) => ls.map((l, k) => (k === i ? { ...l, ...patch } : l)))
-    // 改过的字段清掉对应的后端错误（改归属时客户字段一起清）
-    setLotErrs((all) => {
-      const row = all[i]
-      if (!row) return all
-      const keys = Object.keys(patch).flatMap((k) =>
-        k === 'ownership'
-          ? ['ownership', 'customer_id', 'customer_lot_no']
-          : k === 'customer_label'
-            ? []
-            : [k]
-      )
-      const next = { ...row }
-      for (const k of keys) delete next[k]
-      return { ...all, [i]: next }
-    })
-  }
-  // 前端校验（D52 等）与后端 422 合并，按批次行标在字段下
-  const clientErrs = useMemo(() => customerRowErrors(lots), [lots])
-  const errOf = (i: number, f: string) => lotErrs[i]?.[f]
-  const hasLotErrs = Object.values(lotErrs).some((r) => Object.keys(r).length)
 
   const summary = wo && woE && (
     <Card>
@@ -289,17 +219,6 @@ export default function LotStartPage() {
     <Page title={t('menu.mes-lot-start')} description={t('mes.start.desc')}>
       <div className='space-y-4'>
         <Steps step={created ? 4 : step} />
-        {topErrs.length > 0 && !created && (
-          <ul
-            className='list-disc rounded-md border border-destructive/50 p-3 ps-8 text-sm text-destructive'
-            role='alert'
-            data-testid='start-top-errors'
-          >
-            {topErrs.map((x) => (
-              <li key={x}>{x}</li>
-            ))}
-          </ul>
-        )}
         {step === 1 && (
           <Card>
             <CardHeader>
@@ -308,25 +227,6 @@ export default function LotStartPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className='space-y-2'>
-              <div className='flex items-center gap-3'>
-                <Input
-                  className='max-w-sm'
-                  value={woQ}
-                  onChange={(e) => setWoQ(e.target.value)}
-                  placeholder={t('mes.start.searchWo')}
-                  data-testid='wo-search'
-                />
-                {!!wos.data?.length && (
-                  <span className='text-sm text-muted-foreground'>
-                    {woMatch.length > WO_SHOW
-                      ? t('mes.start.woMore', {
-                          n: woMatch.length,
-                          show: WO_SHOW,
-                        })
-                      : t('common.total', { count: woMatch.length })}
-                  </span>
-                )}
-              </div>
               {wos.isLoading && <Loader2 className='animate-spin' />}
               {wos.data?.length === 0 && (
                 <p className='text-sm text-muted-foreground'>
@@ -334,7 +234,7 @@ export default function LotStartPage() {
                 </p>
               )}
               {woE &&
-                woMatch.slice(0, WO_SHOW).map((w) => (
+                wos.data?.map((w) => (
                   <button
                     key={w.id}
                     type='button'
@@ -442,9 +342,6 @@ export default function LotStartPage() {
                           <th className='p-2 text-start'>
                             {t('mes.field.lot.source_ref')}
                           </th>
-                          <th className='p-2 text-start'>
-                            {t('mes.cust.title')}
-                          </th>
                           <th />
                         </tr>
                       </thead>
@@ -468,7 +365,6 @@ export default function LotStartPage() {
                                   })
                                 }
                               />
-                              <FieldMsg msg={errOf(i, 'qty')} />
                             </td>
                             <td className='w-56 p-2'>
                               <RefSelect
@@ -483,7 +379,6 @@ export default function LotStartPage() {
                                   })
                                 }
                               />
-                              <FieldMsg msg={errOf(i, 'carrier_id')} />
                             </td>
                             <td className='p-2'>
                               <Input
@@ -494,7 +389,6 @@ export default function LotStartPage() {
                                   set(i, { slots: e.target.value })
                                 }
                               />
-                              <FieldMsg msg={errOf(i, 'slots')} />
                             </td>
                             <td className='p-2'>
                               <Input
@@ -505,30 +399,18 @@ export default function LotStartPage() {
                                   set(i, { source_ref: e.target.value })
                                 }
                               />
-                              <FieldMsg
-                                msg={
-                                  errOf(i, 'source_ref') ??
-                                  errOf(i, 'wafer_sources')
-                                }
-                              />
-                            </td>
-                            <td className='p-2' data-testid={`lot-cust-${i}`}>
-                              <CustomerFields
-                                value={l}
-                                onChange={(patch) => set(i, patch)}
-                                errors={{ ...clientErrs[i], ...lotErrs[i] }}
-                              />
                             </td>
                             <td className='p-2'>
-                              <IconButton
-                                label={t('common.delete')}
+                              <Button
+                                size='icon'
                                 variant='ghost'
+                                aria-label={t('common.delete')}
                                 onClick={() =>
                                   setLots((ls) => ls.filter((_, k) => k !== i))
                                 }
                               >
                                 <Trash2 className='size-4 text-destructive' />
-                              </IconButton>
+                              </Button>
                             </td>
                           </tr>
                         ))}
@@ -548,7 +430,6 @@ export default function LotStartPage() {
                             carrier_label: null,
                             slots: '1',
                             source_ref: '',
-                            ...emptyCustomer(),
                           },
                         ])
                       }
@@ -560,15 +441,6 @@ export default function LotStartPage() {
                       {t('mes.start.total', { total, max: plan.remaining })}
                     </span>
                   </div>
-                  {hasLotErrs && (
-                    <p
-                      className='text-sm text-destructive'
-                      role='alert'
-                      data-testid='start-server-errors'
-                    >
-                      {t('mes.start.fe.banner')}
-                    </p>
-                  )}
                   {errors.length > 0 && (
                     <ul
                       className='list-disc ps-5 text-sm text-destructive'
@@ -643,10 +515,6 @@ export default function LotStartPage() {
                       <th className='p-2 text-start'>
                         {t('mes.start.wafers')}
                       </th>
-                      <th className='p-2 text-start'>
-                        {t('mes.cust.ownership')}
-                      </th>
-                      <th className='p-2 text-start'>{t('mes.cust.lotNo')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -688,17 +556,6 @@ export default function LotStartPage() {
                               : sl.length
                                 ? `${no}.${String(sl[0]).padStart(2, '0')} … ${no}.${String(sl[sl.length - 1]).padStart(2, '0')}`
                                 : '—'}
-                          </td>
-                          <td className='p-2'>
-                            <OwnershipLabel
-                              info={{
-                                ownership: lot.ownership,
-                                customer_label: lot.customer_label,
-                              }}
-                            />
-                          </td>
-                          <td className='p-2 font-mono'>
-                            {String(lot.customer_lot_no || '—')}
                           </td>
                         </tr>
                       )

@@ -66,34 +66,16 @@ def validate(
     Raises:
         HTTPException: 校验失败（422，字段错误列表）。
     """
-    # 原始载荷校验器（在类型 / 枚举转换前，可直接抛 HTTPException 给出结构化错误）
-    for fn in VALIDATORS.get(f"{e.code}:payload", []):
-        fn(session, tenant_id, e, data, existing)
-    errors: list[tuple[Any, ...]] = []
+    errors: list[tuple[str, str]] = []
     values: Row = {}
-    site_tz: list[Any] = []
     for f in e.all_fields:
         key = f.column if f.column in data else f.name if f.name in data else None
         if key is None or f.system:
             continue
         try:
-            if f.type == "date" and not site_tz:
-                from app.core.spec.excel import tenant_tz
-
-                site_tz.append(tenant_tz(session, tenant_id))
-            values[f.column] = coerce(
-                f, data[key], site_tz[0] if f.type == "date" else None
-            )
+            values[f.column] = coerce(f, data[key])
         except (ValueError, TypeError) as ex:
-            code = getattr(ex, "code", None)
-            ctx = getattr(ex, "ctx", None)
-            errors.append(
-                (f.name, f"{f.name}: {ex}", code, ctx)
-                if ctx
-                else (f.name, f"{f.name}: {ex}", code)
-                if code
-                else (f.name, f"{f.name}: {ex}")
-            )
+            errors.append((f.name, f"{f.name}: {ex}"))
     if "attrs" in data:
         values["attrs"] = data["attrs"]
     merged = {**(existing or {}), **values}
@@ -115,9 +97,8 @@ def validate(
             if src not in (None, ""):
                 merged[f.column] = values[f.column] = src
     by_name = {f.name: f for f in e.all_fields}
-    bad_type = {x[0] for x in errors}
     for f in e.all_fields:
-        if merged.get(f.column) not in (None, "") or f.name in bad_type:
+        if merged.get(f.column) not in (None, ""):
             continue
         if f.required:
             errors.append((f.name, f"{f.name}: required"))

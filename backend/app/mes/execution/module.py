@@ -13,14 +13,8 @@ register(
             "app.mes.execution.specs",
             "app.mes.execution.validators",
             "app.mes.execution.checks.types",
-            "app.mes.execution.events",
         ),
-        routers=(
-            "app.mes.execution.router:router",
-            "app.mes.execution.router_alarm:router",
-            "app.mes.execution.router_eap:router",
-        ),
+        routers=("app.mes.execution.router:router",),
         menus=MENUS,
-        tenant_seed="app.mes.execution.seed:seed_system_reasons",
     )
 )

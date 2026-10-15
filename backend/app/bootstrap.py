@@ -32,16 +32,23 @@ def init_db(session: Session) -> None:
     from app.platform.rbac.service import assign_role, seed_rbac
 
     seed_rbac(session)
-    uname = (settings.FIRST_SUPERUSER_USERNAME or "admin").lower()
-    user = session.exec(select(User).where(User.username == uname)).first()
+    user = session.exec(
+        select(User).where(User.email == settings.FIRST_SUPERUSER)
+    ).first()
     if not user:
         user_in = UserCreate(
             email=settings.FIRST_SUPERUSER,
-            username=uname,
+            username=settings.FIRST_SUPERUSER_USERNAME or None,
             password=settings.FIRST_SUPERUSER_PASSWORD,
             is_superuser=True,
         )
-        user = crud.create_user(session=session, user_create=user_in)
+        user = crud.create_user(
+            session=session, user_create=user_in, with_personal_tenant=False
+        )
+    elif not user.username and settings.FIRST_SUPERUSER_USERNAME:
+        user.username = settings.FIRST_SUPERUSER_USERNAME
+        session.add(user)
+        session.commit()
     assign_role(session, user, ADMIN_ROLE)
     # 多租户：默认租户，FIRST_SUPERUSER 为其 owner
     from app.platform.menus.service import seed_menus
@@ -60,11 +67,9 @@ def init_db(session: Session) -> None:
         add_member(session, tenant, user, ["owner"])
         session.commit()
     # 让每个租户的默认角色同步新增的默认权限
-    from app.core.registry import seed_tenant
     from app.platform.tenants.models import Tenant
     from app.platform.tenants.service import seed_tenant_roles
 
     for t in session.exec(select(Tenant)).all():
         seed_tenant_roles(session, t)
-        seed_tenant(session, t.id)
     session.commit()

@@ -1,14 +1,20 @@
 """用户接口模型：创建、注册、更新、改密与输出。"""
 
 import uuid
+from datetime import datetime
 from typing import Annotated
 
 from pydantic import AfterValidator, EmailStr, StringConstraints
 from sqlmodel import Field, SQLModel
 
-from app.core.models import UtcDateTime
-from app.core.schemas import StrictSQLModel
 from app.platform.users.models import USERNAME_RE, UserBase
+
+
+# 创建时通过 API 接收的属性
+class UserCreate(UserBase):
+    username: Username | None = Field(default=None, max_length=50)
+    password: str = Field(min_length=8, max_length=128)
+
 
 # 以小写存储，使唯一索引实际上不区分大小写
 Username = Annotated[
@@ -16,12 +22,13 @@ Username = Annotated[
 ]
 
 
-# 创建时通过 API 接收的属性
-class UserCreate(UserBase):
-    username: Username = Field(max_length=50)
+class UserRegister(SQLModel):
+    email: EmailStr = Field(max_length=255)
     password: str = Field(min_length=8, max_length=128)
+    full_name: str | None = Field(default=None, max_length=255)
 
 
+# 更新时通过 API 接收的属性，均为可选
 class UserUpdate(SQLModel):
     email: EmailStr | None = Field(default=None, max_length=255)
     username: Username | None = Field(default=None, max_length=50)
@@ -31,13 +38,13 @@ class UserUpdate(SQLModel):
     password: str | None = Field(default=None, min_length=8, max_length=128)
 
 
-class UserUpdateMe(StrictSQLModel):
+class UserUpdateMe(SQLModel):
     full_name: str | None = Field(default=None, max_length=255)
     username: Username | None = Field(default=None, max_length=50)
     email: EmailStr | None = Field(default=None, max_length=255)
 
 
-class UpdatePassword(StrictSQLModel):
+class UpdatePassword(SQLModel):
     current_password: str = Field(min_length=8, max_length=128)
     new_password: str = Field(min_length=8, max_length=128)
 
@@ -45,11 +52,7 @@ class UpdatePassword(StrictSQLModel):
 # 通过 API 返回的属性，id 必有
 class UserPublic(UserBase):
     id: uuid.UUID
-    created_at: UtcDateTime | None = None
-    updated_at: UtcDateTime | None = None
-    updated_by: str | None = None
-    # 平台角色（编码）；仅管理列表填充
-    role_names: list[str] = []
+    created_at: datetime | None = None
 
 
 class UsersPublic(SQLModel):
@@ -57,6 +60,6 @@ class UsersPublic(SQLModel):
     count: int
 
 
-class NewPassword(StrictSQLModel):
+class NewPassword(SQLModel):
     token: str
     new_password: str = Field(min_length=8, max_length=128)

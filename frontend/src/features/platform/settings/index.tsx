@@ -34,10 +34,7 @@ export default function SettingsPage() {
     <Page title={t('settings.title')} description={t('settings.desc')}>
       <div className='grid gap-4 lg:grid-cols-2'>
         {me && (
-          <ProfileCard
-            key={me.id + (me.email ?? '') + (me.full_name ?? '')}
-            me={me}
-          />
+          <ProfileCard key={me.id + me.email + (me.full_name ?? '')} me={me} />
         )}
         <Card>
           <CardHeader>
@@ -114,7 +111,7 @@ export default function SettingsPage() {
 
 function ProfileCard({ me }: { me: User }) {
   const [fullName, setFullName] = useState(me.full_name ?? '')
-  const [email, setEmail] = useState(me.email ?? '')
+  const [email, setEmail] = useState(me.email)
   const save = useApiMutation(
     api.updateMe,
     [['me']],
@@ -135,16 +132,9 @@ function ProfileCard({ me }: { me: User }) {
           className='grid gap-4'
           onSubmit={(e) => {
             e.preventDefault()
-            save.mutate({
-              full_name: fullName || null,
-              email: email.trim() || null,
-            })
+            save.mutate({ full_name: fullName || null, email })
           }}
         >
-          <div className='grid gap-2'>
-            <Label htmlFor='username'>{t('common.username')}</Label>
-            <Input id='username' value={me.username} readOnly disabled />
-          </div>
           <div className='grid gap-2'>
             <Label htmlFor='full_name'>{t('common.fullName')}</Label>
             <Input

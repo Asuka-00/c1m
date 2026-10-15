@@ -7,8 +7,8 @@
    Session ``after_begin`` 钩子，即 ``SET LOCAL``），租户表的策略只暴露 / 接受
    ``tenant_id`` 与之相等的行；未设置租户时看不到任何行。
 
-运行时以非 owner、无 BYPASSRLS 的角色（如 ``app_user``，由 DBA 预先创建；表权限由迁移
-0036 授予，D83 起不再运行 ``scripts/setup_db_roles.py``）连接；迁移以 owner 运行。``FORCE ROW LEVEL SECURITY`` 使策略对 owner 同样生效。
+运行时以非 owner、无 BYPASSRLS 的角色（``app_user``，由 ``scripts/setup_db_roles.py`` 创建）
+连接；迁移以 owner 运行。``FORCE ROW LEVEL SECURITY`` 使策略对 owner 同样生效。
 
 新增租户表时：模型加 ``tenant_id`` 外键列（ondelete CASCADE、索引）；迁移在建表后执行
 :func:`enable_tenant_rls_sql` 返回的语句（降级用 :func:`disable_tenant_rls_sql`）；路由中用

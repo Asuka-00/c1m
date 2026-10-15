@@ -7,16 +7,14 @@ from app.core.config import settings
 from app.platform.rbac.permissions import TENANT_PERMISSIONS
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate, UserUpdate
-from app.testing.user import create_owned_tenant
-from app.testing.utils import login_name, random_lower_string, username_for
+from app.testing.utils import random_lower_string
 
 API = settings.API_V1_STR
 
 
 def _login(client: TestClient, email: str, pw: str) -> dict[str, str]:
     tok = client.post(
-        f"{API}/login/access-token",
-        data={"username": login_name(email), "password": pw},
+        f"{API}/login/access-token", data={"username": email, "password": pw}
     ).json()["access_token"]
     return {"Authorization": f"Bearer {tok}"}
 
@@ -26,37 +24,31 @@ def test_users_search_paginates_sorts_and_counts(
 ) -> None:
     tag = random_lower_string()[:8]
     for i in range(23):
-        _u = crud.create_user(
+        crud.create_user(
             session=db,
             user_create=UserCreate(
                 email=f"{tag}-{i:02d}@example.com",
-                username=username_for(f"{tag}-{i:02d}@example.com"),
                 password=random_lower_string(),
                 full_name=f"Zed {i}",
             ),
         )
-        create_owned_tenant(db, _u)
-    _u = crud.create_user(
+    crud.create_user(
         session=db,
         user_create=UserCreate(
             email=f"other-{tag[:4]}x@example.com",
-            username=username_for(f"other-{tag[:4]}x@example.com"),
             password=random_lower_string(),
             full_name=f"Name {tag.upper()}",
         ),
     )
-    create_owned_tenant(db, _u)
     h = superuser_token_headers
     r = client.get(
-        f"{API}/platform/users/", headers=h, params={"q": tag.upper()}
+        f"{API}/users/", headers=h, params={"q": tag.upper()}
     ).json()  # case-insensitive
     assert r["count"] == 24 and len(r["data"]) == 20  # also matches full_name
-    p2 = client.get(
-        f"{API}/platform/users/", headers=h, params={"q": tag, "page": 2}
-    ).json()
+    p2 = client.get(f"{API}/users/", headers=h, params={"q": tag, "page": 2}).json()
     assert len(p2["data"]) == 4
     s = client.get(
-        f"{API}/platform/users/",
+        f"{API}/users/",
         headers=h,
         params={
             "q": f"{tag}-",
@@ -70,25 +62,18 @@ def test_users_search_paginates_sorts_and_counts(
         f"{tag}-21@example.com",
     ]
     assert (
-        client.get(f"{API}/platform/users/", headers=h, params={"q": "   "}).json()[
-            "count"
-        ]
+        client.get(f"{API}/users/", headers=h, params={"q": "   "}).json()["count"]
         >= 25
     )  # blank = no filter
     assert client.get(
-        f"{API}/platform/users/", headers=h, params={"q": "zz-no-such-user-zz"}
+        f"{API}/users/", headers=h, params={"q": "zz-no-such-user-zz"}
     ).json() == {"data": [], "count": 0}
     # LIKE wildcards are literal
     assert (
-        client.get(f"{API}/platform/users/", headers=h, params={"q": "%"}).json()[
-            "count"
-        ]
-        == 0
+        client.get(f"{API}/users/", headers=h, params={"q": "%"}).json()["count"] == 0
     )
     assert (
-        client.get(
-            f"{API}/platform/users/", headers=h, params={"q": "x" * 101}
-        ).status_code
+        client.get(f"{API}/users/", headers=h, params={"q": "x" * 101}).status_code
         == 422
     )
     # is_active filter combines with q
@@ -97,17 +82,13 @@ def test_users_search_paginates_sorts_and_counts(
     crud.update_user(session=db, db_user=u, user_in=UserUpdate(is_active=False))
     assert (
         client.get(
-            f"{API}/platform/users/",
-            headers=h,
-            params={"q": f"{tag}-", "is_active": False},
+            f"{API}/users/", headers=h, params={"q": f"{tag}-", "is_active": False}
         ).json()["count"]
         == 1
     )
     assert (
         client.get(
-            f"{API}/platform/users/",
-            headers=h,
-            params={"q": f"{tag}-", "is_active": True},
+            f"{API}/users/", headers=h, params={"q": f"{tag}-", "is_active": True}
         ).json()["count"]
         == 22
     )
@@ -118,13 +99,7 @@ def test_search_respects_tenant_scope(client: TestClient, db: Session) -> None:
     hs = []
     for _ in range(2):
         email, pw = f"{random_lower_string()[:8]}@example.com", random_lower_string()
-        _u = crud.create_user(
-            session=db,
-            user_create=UserCreate(
-                email=email, username=username_for(email), password=pw
-            ),
-        )
-        create_owned_tenant(db, _u)
+        crud.create_user(session=db, user_create=UserCreate(email=email, password=pw))
         hs.append(_login(client, email, pw))
     ha, hb = hs
     ta = client.get(f"{API}/tenants/me", headers=ha).json()["data"][0]["tenant"]["id"]
@@ -152,12 +127,13 @@ def test_search_respects_tenant_scope(client: TestClient, db: Session) -> None:
         ]
         == 0
     )
-    # 非超级用户无法使用平台租户列表；只能看到自己的租户
+    # a non-admin only searches their own tenants
     assert (
-        client.get(f"{API}/platform/tenants", headers=hb, params={"q": "x"}).status_code
-        == 403
+        client.get(f"{API}/tenants/", headers=hb, params={"q": "workspace"}).json()[
+            "count"
+        ]
+        == 1
     )
-    assert len(client.get(f"{API}/tenants/me", headers=hb).json()["data"]) == 1
     members = client.get(
         f"{API}/tenants/{ta}/members", headers=ha, params={"q": "@example"}
     ).json()
@@ -174,51 +150,39 @@ def test_search_other_endpoints(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
     h = superuser_token_headers
-    perms = client.get(
-        f"{API}/platform/permissions/", headers=h, params={"q": "MEMBERS"}
-    ).json()
+    perms = client.get(f"{API}/permissions/", headers=h, params={"q": "MEMBERS"}).json()
     assert perms["count"] == 2 and {p["code"] for p in perms["data"]} == {
         "members:read",
         "members:write",
     }
     assert (
-        client.get(
-            f"{API}/platform/permissions/", headers=h, params={"q": "platform users"}
-        ).json()["count"]
+        client.get(f"{API}/permissions/", headers=h, params={"q": "any user"}).json()[
+            "count"
+        ]
         >= 2
     )  # description
     assert [
         r["name"]
-        for r in client.get(
-            f"{API}/platform/roles/", headers=h, params={"q": "admin"}
-        ).json()["data"]
+        for r in client.get(f"{API}/roles/", headers=h, params={"q": "admin"}).json()[
+            "data"
+        ]
     ] == ["admin"]
-    menus = client.get(
-        f"{API}/platform/menus/", headers=h, params={"q": "/ten"}
-    ).json()  # path
-    assert {m["key"] for m in menus["data"]} >= {"p-tenants"}
+    menus = client.get(f"{API}/menus/", headers=h, params={"q": "/ten"}).json()  # path
+    assert {m["key"] for m in menus["data"]} >= {"tenants", "tenant-roles"}
     assert (
-        client.get(
-            f"{API}/platform/menus/",
-            headers=h,
-            params={"q": "Settings", "space": "workspace"},
-        ).json()["count"]
-        == 2  # Settings + Tenant Settings
+        client.get(f"{API}/menus/", headers=h, params={"q": "Settings"}).json()["count"]
+        == 1
     )
-    t = client.get(f"{API}/platform/tenants", headers=h, params={"q": "DEFAULT"}).json()
+    t = client.get(f"{API}/tenants/", headers=h, params={"q": "DEFAULT"}).json()
     assert "default" in {x["slug"] for x in t["data"]}
     assert (
         client.get(
-            f"{API}/platform/tenants",
-            headers=h,
-            params={"q": "default", "status": "suspended"},
+            f"{API}/tenants/", headers=h, params={"q": "default", "status": "suspended"}
         ).json()["count"]
         == 0
     )
     assert (
-        client.get(
-            f"{API}/platform/tenants", headers=h, params={"status": "bogus"}
-        ).status_code
+        client.get(f"{API}/tenants/", headers=h, params={"status": "bogus"}).status_code
         == 422
     )
 
@@ -229,99 +193,85 @@ def test_enumerable_filters(
     h = superuser_token_headers
     tag = random_lower_string()[:8]
     # users: role_id (platform role), is_superuser — combined with q
-    role = client.post(
-        f"{API}/platform/roles/", headers=h, json={"name": f"r-{tag}"}
-    ).json()
+    role = client.post(f"{API}/roles/", headers=h, json={"name": f"r-{tag}"}).json()
     users = [
         crud.create_user(
             session=db,
             user_create=UserCreate(
-                email=f"{tag}-{i}@example.com",
-                username=username_for(f"{tag}-{i}@example.com"),
-                password=random_lower_string(),
+                email=f"{tag}-{i}@example.com", password=random_lower_string()
             ),
         )
         for i in range(3)
     ]
-    client.post(f"{API}/platform/users/{users[0].id}/roles/{role['id']}", headers=h)
-    r = client.get(
-        f"{API}/platform/users/", headers=h, params={"role_id": role["id"]}
-    ).json()
+    client.post(f"{API}/users/{users[0].id}/roles/{role['id']}", headers=h)
+    r = client.get(f"{API}/users/", headers=h, params={"role_id": role["id"]}).json()
     assert r["count"] == 1 and r["data"][0]["email"] == users[0].email
     assert (
         client.get(
-            f"{API}/platform/users/",
-            headers=h,
-            params={"role_id": role["id"], "q": f"{tag}-1"},
+            f"{API}/users/", headers=h, params={"role_id": role["id"], "q": f"{tag}-1"}
         ).json()["count"]
         == 0
     )
     admin_id = next(
         x["id"]
-        for x in client.get(f"{API}/platform/roles/", headers=h).json()["data"]
+        for x in client.get(f"{API}/roles/", headers=h).json()["data"]
         if x["name"] == "admin"
     )
     assert settings.FIRST_SUPERUSER in {
         u["email"]
         for u in client.get(
-            f"{API}/platform/users/", headers=h, params={"role_id": admin_id}
+            f"{API}/users/", headers=h, params={"role_id": admin_id}
         ).json()["data"]
     }
     sup = client.get(
-        f"{API}/platform/users/",
-        headers=h,
-        params={"is_superuser": True, "page_size": 100},
+        f"{API}/users/", headers=h, params={"is_superuser": True, "page_size": 100}
     ).json()
     assert sup["count"] >= 1 and all(u["is_superuser"] for u in sup["data"])
     assert (
-        client.get(
-            f"{API}/platform/users/", headers=h, params={"role_id": "nope"}
-        ).status_code
+        client.get(f"{API}/users/", headers=h, params={"role_id": "nope"}).status_code
         == 422
     )
     # permissions: scope
     p = client.get(
-        f"{API}/platform/permissions/",
-        headers=h,
-        params={"scope": "tenant", "page_size": 100},
+        f"{API}/permissions/", headers=h, params={"scope": "tenant", "page_size": 100}
     ).json()
     assert p["count"] == len(TENANT_PERMISSIONS) and {
         x["scope"] for x in p["data"]
     } == {"tenant"}
     assert (
         client.get(
-            f"{API}/platform/permissions/",
-            headers=h,
-            params={"scope": "tenant", "q": "members"},
+            f"{API}/permissions/", headers=h, params={"scope": "tenant", "q": "members"}
         ).json()["count"]
         == 2
     )
     # menus: parent_id / hidden
-    menus = client.get(
-        f"{API}/platform/menus/", headers=h, params={"page_size": 100}
-    ).json()["data"]
+    menus = client.get(f"{API}/menus/", headers=h, params={"page_size": 100}).json()[
+        "data"
+    ]
     admin_group = next(m["id"] for m in menus if m["key"] == "g-system")
     kids = client.get(
-        f"{API}/platform/menus/", headers=h, params={"parent_id": admin_group}
+        f"{API}/menus/", headers=h, params={"parent_id": admin_group}
     ).json()
     assert {m["key"] for m in kids["data"]} == {
-        "user-permissions",  # 成员 / 租户角色 / 角色权限 合并为页签
+        "users",
+        "roles",
+        "permissions",
+        "tenants",
+        "members",
+        "tenant-roles",
+        "menus",
         "config",
         "mes-audit_log",
-        "notify-subscriptions",
+        "settings",
     }
     assert (
         client.get(
-            f"{API}/platform/menus/",
-            headers=h,
-            params={"parent_id": admin_group, "q": "perm"},
+            f"{API}/menus/", headers=h, params={"parent_id": admin_group, "q": "perm"}
         ).json()["count"]
         == 1
     )
     assert (
-        client.get(f"{API}/platform/menus/", headers=h, params={"hidden": True}).json()[
-            "count"
-        ]
+        client.get(f"{API}/menus/", headers=h, params={"hidden": True}).json()["count"]
         == 0
     )
     # members: role_id (tenant role)
@@ -333,7 +283,7 @@ def test_enumerable_filters(
     client.post(
         f"{API}/tenants/{tid}/members",
         headers=h,
-        json={"username": users[1].username, "roles": ["member"]},
+        json={"email": users[1].email, "roles": ["member"]},
     )
     m = client.get(
         f"{API}/tenants/{tid}/members",

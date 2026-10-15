@@ -6,7 +6,6 @@ import { useTenantKey } from '@/lib/api/hooks'
 import { mesApi, type MesRow } from '@/lib/api/mes/common'
 import { DescItem, DescList } from '@/components/desc-list'
 import { cellValue } from '@/features/mes/common/cells'
-import { OwnershipLabel } from '@/features/mes/common/customer'
 import { fieldLabel } from '@/features/mes/common/labels'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
 import { RouteFlow } from '@/features/mes/process/route-flow'
@@ -36,8 +35,6 @@ export function LotDetail({ row }: { row: MesRow }) {
     'started_at',
     'started_by',
     'source_ref',
-    // F6 客户来料
-    'customer_lot_no',
   ]
   return (
     <div className='space-y-3 pt-2' data-testid='lot-detail'>
@@ -49,18 +46,6 @@ export function LotDetail({ row }: { row: MesRow }) {
             value={cellValue(entity, row, k)}
           />
         ))}
-        {/* 归属与客户合成一项，和其他页面用同一个标签（O-F6-1） */}
-        <DescItem
-          label={fieldLabel(entity, 'ownership')}
-          value={
-            <OwnershipLabel
-              info={{
-                ownership: row.ownership as string | null,
-                customer_label: row.customer_label as string | null,
-              }}
-            />
-          }
-        />
       </DescList>
       <p className='text-sm font-medium'>{t('mes.lotRoute')}</p>
       {route.data ? (

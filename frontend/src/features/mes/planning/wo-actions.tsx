@@ -13,6 +13,7 @@ import {
 import { toast } from 'sonner'
 import { type MesRow } from '@/lib/api/mes/common'
 import { woApi } from '@/lib/api/mes/planning'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +22,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ConfirmDialog } from '@/components/crud'
-import { IconButton } from '@/components/icon-button'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity, useMesMeta } from '@/features/mes/common/use-mes-meta'
 
@@ -73,18 +73,22 @@ export function WoActions({ row }: { row: MesRow }) {
   return (
     <>
       {canRelease && st === 'draft' && (
-        <IconButton
-          label={t('mes.wo.action.release')}
+        <Button
+          size='icon'
           variant='ghost'
+          title={t('mes.wo.action.release')}
+          aria-label={t('mes.wo.action.release')}
           onClick={() => setConfirm('release')}
         >
           <Send className='size-4' />
-        </IconButton>
+        </Button>
       )}
       {canStart && startable && (
-        <IconButton
-          label={t('mes.wo.startLots')}
+        <Button
+          size='icon'
           variant='ghost'
+          title={t('mes.wo.startLots')}
+          aria-label={t('mes.wo.startLots')}
           onClick={() =>
             nav({
               to: '/$',
@@ -94,13 +98,13 @@ export function WoActions({ row }: { row: MesRow }) {
           }
         >
           <PlayCircle className='size-4' />
-        </IconButton>
+        </Button>
       )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <IconButton label={t('mes.wo.actions')} variant='ghost'>
+          <Button size='icon' variant='ghost' aria-label={t('mes.wo.actions')}>
             <MoreHorizontal className='size-4' />
-          </IconButton>
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align='end'>
           {canRelease &&

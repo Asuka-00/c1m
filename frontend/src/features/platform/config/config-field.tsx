@@ -88,7 +88,7 @@ export function ConfigField({
     case 'select':
       return (
         <Select value={s} onValueChange={onChange}>
-          <SelectTrigger id={id} className='max-w-full min-w-64'>
+          <SelectTrigger id={id} className='w-64'>
             <SelectValue placeholder={t('common.select')} />
           </SelectTrigger>
           <SelectContent>

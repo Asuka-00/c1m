@@ -30,7 +30,6 @@ class Module:
         router_priority: 路由挂载优先级（升序，稳定）；通配路由需排在具体路由之后。
         menus: 静态菜单项 ``{key: (path, icon, component, permission)}``。
         menu_provider: 返回更多菜单项的函数引用 ``"pkg.mod:fn"``。
-        tenant_seed: 租户初始化时调用的幂等函数引用 ``"pkg.mod:fn(session, tenant_id)"``。
     """
 
     name: str
@@ -51,9 +50,6 @@ class Module:
     #: static menu items (key -> item) and/or "pkg.mod:fn" returning more
     menus: dict[str, MenuItem] = field(default_factory=dict)
     menu_provider: str | None = None
-    #: "pkg.mod:fn" called as fn(session, tenant_id) when a tenant is created /
-    #: synced; must be idempotent
-    tenant_seed: str | None = None
 
 
 REGISTRY: dict[str, Module] = {}
@@ -133,12 +129,3 @@ def menu_items() -> dict[str, MenuItem]:
             fn: Callable[[], dict[str, MenuItem]] = _ref(m.menu_provider)
             out.update(fn())
     return out
-
-
-def seed_tenant(session: Any, tenant_id: Any) -> None:
-    """依次调用各模块的 ``tenant_seed``（幂等），为租户补齐系统数据（如系统原因码）。"""
-    load()  # 种子函数依赖规格表
-    for m in modules():
-        if m.tenant_seed:
-            fn: Callable[[Any, Any], None] = _ref(m.tenant_seed)
-            fn(session, tenant_id)

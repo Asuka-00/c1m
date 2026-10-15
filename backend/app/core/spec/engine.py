@@ -68,24 +68,17 @@ class F:
     ref: str | None = None  # 目标实体编码
     cascade: bool = False  # 引用：随被引用行一起删除（子表行）
     max_length: int = 100
-    # float：设置后存为定点小数 Numeric(18, scale)，输入四舍五入到 scale 位
-    scale: int | None = None
     search: bool = False  # 参与 ?q= 关键字搜索
-    # 参与 ?q= 搜索，但不区分大小写的精确匹配（upper(col) = upper(q)），不做模糊查询
-    search_exact: bool = False
     list: bool = True  # 显示为表格列
     default: Any = None
     filter: bool | None = None  # 下拉筛选；默认 enum/bool/ref 字段
     help: str | None = None
     # 条件必填：{其他字段: (取值...)}；"*" 表示任意非空值
     required_when: dict[str, tuple[Any, ...]] | None = None
-    # 仅在 required_when 条件满足时显示于表单（如卡控绑定的范围字段）
-    only_when_required: bool = False
     default_from: str | None = None  # 为空时复制该同级字段（如 code）
     auto: bool = False  # 为空时由后端生成（如编码规则）
     system: bool = False  # 仅由后端设置，从不取自请求载荷
     depends: str | None = None  # 引用选项按此同级引用过滤（目标上同名字段）
-    ref_filter: dict[str, str] | None = None  # 引用选项的固定筛选（如只列待入库批次）
 
     @property
     def column(self) -> str:
@@ -125,11 +118,6 @@ class Entity:
     tree: bool = False  # 自引用 `parent_id`
     versioned: bool = False  # `version` + `status`（draft/active/inactive）
     unique: list[tuple[str, ...]] = field(default_factory=list)  # 业务唯一键
-    # 部分唯一索引：(索引名, 字段名..., WHERE 条件 SQL)；tenant_id 自动作为首列
-    partial_unique: list[tuple[str, tuple[str, ...], str]] = field(default_factory=list)
-    # 普通（非唯一）复合索引：(索引名, 字段)，自动以 tenant_id 打头；
-    # 字段写成 ``"upper:<字段>"`` 时建在 upper(列) 表达式上
-    indexes: list[tuple[str, tuple[str, ...]]] = field(default_factory=list)
     parent: str | None = None  # 作为该引用字段的子表（在详情抽屉中显示）
     children: list[str] = field(default_factory=list)  # 子实体编码
     readonly: bool = False  # 如审计日志
@@ -142,7 +130,6 @@ class Entity:
     parent_required_when: dict[str, tuple[Any, ...]] | None = None
     has_name: bool = True
     code_label: str | None = None
-    name_label: str | None = None
     code_auto: bool = False  # code 为空时按编码规则生成
     perm_module: str | None = None  # 使用其他模块的权限
     menu: bool = True  # 独立菜单项（False：从其他页面进入）
@@ -182,15 +169,7 @@ class Entity:
                 )
             )
             if self.has_name:
-                out.append(
-                    F(
-                        "name",
-                        label=self.name_label,
-                        required=True,
-                        search=True,
-                        max_length=200,
-                    )
-                )
+                out.append(F("name", required=True, search=True, max_length=200))
         if self.tree:
             out.append(
                 F(
@@ -229,7 +208,7 @@ def _sa_type(f: F) -> Any:
         case "int":
             return sa.Integer()
         case "float":
-            return sa.Numeric(18, f.scale) if f.scale is not None else sa.Float()
+            return sa.Float()
         case "bool":
             return sa.Boolean()
         case "date":
@@ -296,26 +275,7 @@ def build_table(e: Entity) -> sa.Table:
                 postgresql_nulls_not_distinct=True,  # 唯一键中的可选部分
             )
         )
-    for name, key, where in e.partial_unique:
-        colnames = [(fld.column if (fld := e.field(k)) else k) for k in key]
-        cols.append(
-            sa.Index(
-                name,
-                "tenant_id",
-                *colnames,
-                unique=True,
-                postgresql_where=sa.text(where),
-            )
-        )
-    tbl = sa.Table(e.table_name, SQLModel.metadata, *cols)
-    for name, key in e.indexes:
-        exprs: list[Any] = []
-        for k in key:
-            fn, _, fname = k.rpartition(":")
-            c = tbl.c[fld.column if (fld := e.field(fname)) else fname]
-            exprs.append(sa.func.upper(c) if fn == "upper" else c)
-        sa.Index(name, tbl.c.tenant_id, *exprs)
-    return tbl
+    return sa.Table(e.table_name, SQLModel.metadata, *cols)
 
 
 def register(*entities: Entity) -> None:

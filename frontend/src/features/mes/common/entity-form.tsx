@@ -10,7 +10,6 @@ import {
   type MesField,
   type MesRow,
 } from '@/lib/api/mes/common'
-import { decimalText } from '@/lib/decimal'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -31,21 +30,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import { cellValue } from './cells'
-import { NEVER_SUBMIT, toPayload } from './form-payload'
 import { entityLabel, enumLabel, fieldHelp, fieldLabel } from './labels'
 import { RefSelect } from './ref-select'
-import {
-  requiredBy,
-  requiredHint,
-  validateDecimals,
-  validateRequired,
-} from './required'
+import { requiredBy, requiredHint, validateRequired } from './required'
 
 type V = Record<string, unknown>
-
 const NONE = '__none__'
 
 function initialValues(e: MesEntity, row: MesRow | null, preset: V): V {
@@ -59,9 +49,7 @@ function initialValues(e: MesEntity, row: MesRow | null, preset: V): V {
           : JSON.stringify(raw, null, 2)
         : f.type === 'time' && typeof raw === 'string'
           ? raw.slice(0, 5)
-          : f.type === 'float' && raw != null && raw !== ''
-            ? decimalText(raw as number | string)
-            : (raw ?? (f.type === 'bool' ? false : ''))
+          : (raw ?? (f.type === 'bool' ? false : ''))
     if (f.type === 'ref')
       v[`${f.name}_label`] = row?.[`${f.name}_label`] ?? null
   }
@@ -69,14 +57,28 @@ function initialValues(e: MesEntity, row: MesRow | null, preset: V): V {
   return v
 }
 
-/** 以开关渲染的布尔字段（实体.字段）；其他布尔字段仍用复选框。 */
-const SWITCH_FIELDS = new Set(['qtime_rule.is_active'])
-/** 编辑时只读显示的系统维护字段（实体.字段）。 */
-const READONLY_ON_EDIT = new Set([
-  'qtime_rule.active_since',
-  // OQ-20：迁移说明只由迁移写入，表单只读展示、绝不提交（写了后端 422 read_only_field）
-  'alarm_code.migration_note',
-])
+function toPayload(e: MesEntity, v: V, hidden: Set<string>): V {
+  const out: V = {}
+  for (const f of e.fields) {
+    if (f.system || (hidden.has(f.column) && v[f.column] === '')) continue
+    const x = v[f.column]
+    if (f.type === 'json') {
+      out[f.column] = x === '' ? null : JSON.parse(String(x))
+    } else if (f.type === 'int' || f.type === 'float') {
+      out[f.column] = x === '' || x == null ? null : Number(x)
+    } else if (f.type === 'bool') {
+      out[f.column] = !!x
+    } else {
+      out[f.column] = x === '' ? null : x
+    }
+  }
+  for (const f of e.fields)
+    if (f.default_from && out[f.column] == null && v[f.default_from])
+      out[f.column] = v[f.default_from]
+  out.attrs = v.attrs
+  return out
+}
+
 /** 根据实体元数据（含自定义属性）渲染的新增 / 编辑对话框。 */
 export function EntityForm({
   entity: e,
@@ -155,10 +157,7 @@ function FormBody({
     setV((p) => ({ ...p, attrs: { ...(p.attrs as V), [k]: x } }))
   const submit = async (ev: React.FormEvent) => {
     ev.preventDefault()
-    const found = {
-      ...validateDecimals(e, v, hidden),
-      ...validateRequired(e, v, hidden),
-    }
+    const found = validateRequired(e, v, hidden)
     setErrs(found)
     if (Object.keys(found).length) return
     let body: V
@@ -172,20 +171,7 @@ function FormBody({
     if (!row) Object.assign(body, preset)
     await onSubmit(body)
   }
-  const fields = e.fields.filter(
-    (f) =>
-      !hidden.has(f.column) &&
-      !f.system &&
-      !NEVER_SUBMIT.has(`${e.code}.${f.name}`) &&
-      (!f.only_when_required || !!requiredBy(e, f, v))
-  )
-  // 系统维护字段编辑时只读显示（不提交）；本轮仅 Q-Time 规则的 active_since
-  const readonly = row
-    ? e.fields.filter(
-        (f) =>
-          READONLY_ON_EDIT.has(`${e.code}.${f.name}`) && row[f.column] != null
-      )
-    : []
+  const fields = e.fields.filter((f) => !hidden.has(f.column) && !f.system)
   return (
     <form onSubmit={submit} noValidate className='space-y-4'>
       <DialogHeader>
@@ -247,22 +233,6 @@ function FormBody({
         ))}
       </div>
       {jsonErr && <p className='text-sm text-destructive'>{jsonErr}</p>}
-      {readonly.length > 0 && (
-        <div className='grid gap-4 sm:grid-cols-2'>
-          {readonly.map((f) => (
-            <div
-              key={f.name}
-              className='space-y-1.5'
-              data-testid={`ro-${f.name}`}
-            >
-              <p className='text-sm font-medium'>{fieldLabel(e, f)}</p>
-              <div className='text-sm text-muted-foreground'>
-                {cellValue(e, row!, f.name)}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
       {!!attrs.data?.length && (
         <>
           <Separator />
@@ -361,19 +331,11 @@ function FieldInput({
     case 'bool':
       return (
         <div className='flex h-9 items-center'>
-          {SWITCH_FIELDS.has(`${e.code}.${f.name}`) ? (
-            <Switch
-              id={id}
-              checked={val === true}
-              onCheckedChange={(c) => set(f.column, c)}
-            />
-          ) : (
-            <Checkbox
-              id={id}
-              checked={val === true}
-              onCheckedChange={(c) => set(f.column, c === true)}
-            />
-          )}
+          <Checkbox
+            id={id}
+            checked={val === true}
+            onCheckedChange={(c) => set(f.column, c === true)}
+          />
         </div>
       )
     case 'enum':
@@ -394,15 +356,8 @@ function FieldInput({
           value={(val as string) || null}
           label={v[`${f.name}_label`] as string | null}
           filters={
-            f.depends || f.ref_filter
-              ? {
-                  ...f.ref_filter,
-                  ...(f.depends
-                    ? {
-                        [`${f.depends}_id`]: String(v[`${f.depends}_id`] ?? ''),
-                      }
-                    : {}),
-                }
+            f.depends
+              ? { [`${f.depends}_id`]: String(v[`${f.depends}_id`] ?? '') }
               : undefined
           }
           disabled={!!f.depends && !v[`${f.depends}_id`]}

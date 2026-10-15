@@ -1,7 +1,6 @@
 """执行相关实体的 CRUD 校验器。"""
 
 import uuid
-from decimal import Decimal
 from typing import Any
 
 from sqlmodel import Session
@@ -9,58 +8,33 @@ from sqlmodel import Session
 from app.core.spec.engine import Entity
 from app.core.spec.errors import MesError
 from app.core.spec.validate import validator
-from app.mes.common.uom import count_errors
 from app.mes.execution.checks import service as ck
 
 Row = dict[str, Any]
 
 
 # ---------------- CRUD validators ----------------
-def _ratio_err(row: Row) -> list[tuple[str, str]]:
-    v = row.get("warn_ratio")
-    if v is not None and not 0 < Decimal(str(v)) <= 1:
-        return [("warn_ratio", "warn_ratio: must be > 0 and <= 1")]
-    return []
-
-
 @validator("tool")
 def _tool(_s: Session, _t: uuid.UUID, _e: Entity, row: Row, _o: Row | None) -> None:
-    errs = _ratio_err(row)
+    errs = []
     if (row.get("usage_count") or 0) < 0:
         errs.append(("usage_count", "usage_count: must be >= 0"))
-    if row.get("max_usage") is not None and row["max_usage"] <= 0:
-        errs.append(("max_usage", "max_usage: must be > 0"))
+    if row.get("max_usage") is not None and row["max_usage"] < 1:
+        errs.append(("max_usage", "max_usage: must be >= 1"))
     if row.get("warn_pct") is not None and not 1 <= row["warn_pct"] <= 100:
         errs.append(("warn_pct", "warn_pct: must be 1..100"))
     if errs:
         raise MesError(errs)
 
 
-@validator("fixture")
-def _fixture(_s: Session, _t: uuid.UUID, _e: Entity, row: Row, _o: Row | None) -> None:
-    errs = _ratio_err(row)
-    if row.get("max_uses") is not None and row["max_uses"] <= 0:
-        errs.append(("max_uses", "max_uses: must be > 0"))
-    if errs:
-        raise MesError(errs)
-
-
 @validator("material_lot")
 def _material_lot(
-    s: Session, tid: uuid.UUID, _e: Entity, row: Row, _o: Row | None
+    _s: Session, _t: uuid.UUID, _e: Entity, row: Row, _o: Row | None
 ) -> None:
     if (row.get("qty_remaining") or 0) < 0:
         raise MesError([("qty_remaining", "qty_remaining: must be >= 0")])
     if row.get("initial_qty") is None:
         row["initial_qty"] = row.get("qty_remaining")
-    errs = count_errors(
-        s,
-        tid,
-        row.get("uom_id"),
-        {k: row.get(k) for k in ("qty_remaining", "initial_qty")},
-    )
-    if errs:
-        raise MesError(errs)
 
 
 @validator("check_rule")

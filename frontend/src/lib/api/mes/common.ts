@@ -26,8 +26,6 @@ export interface MesField {
   required: boolean
   /** 条件必填：{同级字段名: 取值}；'*' 表示任意值 */
   required_when: Record<string, unknown[]> | null
-  /** 仅在条件必填满足时显示于表单 */
-  only_when_required?: boolean
   /** 为空时后端复制该同级字段（如 code） */
   default_from: string | null
   /** 为空时由后端生成 */
@@ -41,18 +39,9 @@ export interface MesField {
   search: boolean
   default: unknown
   max_length: number | null
-  /** 定点小数位数（numeric(18, scale)）；普通浮点为 null */
-  scale?: number | null
-  /**
-   * D60（后端 0dd2b4b）：定点字段最大小数位（= scale），超出 422 too_many_decimals；
-   * 普通浮点（规格限、量测值等）为 null，不限位数。
-   */
-  decimal_places?: number | null
   help: boolean
   /** 引用选项按该同级引用字段过滤（如 route） */
   depends: string | null
-  /** 引用选项的固定筛选（如只列待入库批次） */
-  ref_filter?: Record<string, string> | null
 }
 
 /** MES 实体元数据。 */
@@ -74,8 +63,6 @@ export interface MesEntity {
   can_read: boolean
   can_write: boolean
   fields: MesField[]
-  /** 预警天数（operator_qual 等实体元数据下发，可缺省） */
-  warn_days?: number | null
 }
 
 /** `GET /mes/_meta` 的返回：全部实体、枚举与当前用户的 MES 权限。 */
@@ -112,16 +99,6 @@ const seg = (code: string) => code.replace(/_/g, '-')
 const base = (code: string) => `/mes/${seg(code)}`
 
 /** 通用 MES 主数据客户端（/mes/<entity>）。 */
-/** 通用 CRUD 里写接口必须带 Idempotency-Key 的实体（授予、PATCH 变更 / 停用 / 延期 / 恢复、删除）。 */
-// D87 补充一：光罩主数据新建 / 编辑 / 删除也必带 key；D87 补充二：报警代码同口径（后端 B8 强制）
-export const KEYED_ENTITIES: readonly string[] = [
-  'operator_qual',
-  'reticle',
-  'alarm_code',
-]
-const keyHeader = (key?: string) =>
-  key ? { headers: { 'Idempotency-Key': key } } : undefined
-
 export const mesApi = {
   meta: () => http.get<MesMeta>('/mes/_meta').then((r) => r.data),
   attrs: (code: string) =>
@@ -132,39 +109,21 @@ export const mesApi = {
     http.get<MesTreeNode[]>(`${base(code)}/tree`).then((r) => r.data),
   get: (code: string, id: string) =>
     http.get<MesRow>(`${base(code)}/${id}`).then((r) => r.data),
-  // key：KEYED_ENTITIES 的写接口必带 Idempotency-Key（D81；operator_qual 见 B6 / QA P2-2）
-  create: (code: string, body: Record<string, unknown>, key?: string) =>
-    http.post<MesRow>(base(code), body, keyHeader(key)).then((r) => r.data),
-  update: (
-    code: string,
-    id: string,
-    body: Record<string, unknown>,
-    key?: string
-  ) =>
-    http
-      .patch<MesRow>(`${base(code)}/${id}`, body, keyHeader(key))
-      .then((r) => r.data),
-  remove: (code: string, id: string, key?: string) =>
-    http.delete(`${base(code)}/${id}`, keyHeader(key)).then((r) => r.data),
+  create: (code: string, body: Record<string, unknown>) =>
+    http.post<MesRow>(base(code), body).then((r) => r.data),
+  update: (code: string, id: string, body: Record<string, unknown>) =>
+    http.patch<MesRow>(`${base(code)}/${id}`, body).then((r) => r.data),
+  remove: (code: string, id: string) =>
+    http.delete(`${base(code)}/${id}`).then((r) => r.data),
   setStatus: (code: string, id: string, status: string) =>
     http
       .post<MesRow>(`${base(code)}/${id}/status`, { status })
       .then((r) => r.data),
   newVersion: (code: string, id: string) =>
     http.post<MesRow>(`${base(code)}/${id}/new-version`).then((r) => r.data),
-  /** 文本型筛选字段的去重取值（下拉筛选选项）。 */
-  distinct: (code: string, field: string, q?: string) =>
-    http
-      .get<{ data: string[] }>(`${base(code)}/distinct/${field}`, {
-        params: { q: q || undefined },
-      })
-      .then((r) => r.data.data),
-  /** 导出 xlsx；传入列表查询参数时按当前关键字 / 筛选导出（忽略分页）。 */
-  exportXlsx: async (code: string, query: Record<string, unknown> = {}) => {
-    const { page: _p, page_size: _s, ...params } = query
+  exportXlsx: async (code: string) => {
     const r = await http.get<Blob>(`${base(code)}/export`, {
       responseType: 'blob',
-      params,
     })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(r.data)
@@ -179,10 +138,9 @@ export const mesApi = {
       .post<{ created: number; updated: number }>(`${base(code)}/import`, fd)
       .then((r) => r.data)
   },
-  /** 单位换算：数量按十进制字符串传，返回值为定点字符串（D50，2d65b94；也兼容数字）。 */
-  convert: (from_uom: string, to_uom: string, value: string) =>
+  convert: (from_uom: string, to_uom: string, value: number) =>
     http
-      .get<{ value: number | string; path: string[] }>('/mes/_convert', {
+      .get<{ value: number; path: string[] }>('/mes/_convert', {
         params: { from_uom, to_uom, value },
       })
       .then((r) => r.data),

@@ -5,7 +5,6 @@ from typing import Any
 
 from sqlmodel import SQLModel
 
-from app.core.schemas import StrictSQLModel
 from app.platform.config.models import ConfigValueType
 
 
@@ -42,7 +41,7 @@ class ConfigGroupsPublic(SQLModel):
     count: int
 
 
-class ConfigGroupUpdate(StrictSQLModel):
+class ConfigGroupUpdate(SQLModel):
     """Bulk update: item code -> new value (null resets to the default)."""
 
     values: dict[str, Any]

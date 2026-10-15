@@ -47,13 +47,10 @@ export function ConfigGroupCard({
   group,
   scope,
   canEdit,
-  tenantId,
 }: {
   group: ConfigGroup
   scope: Scope
   canEdit: boolean
-  /** 平台控制台编辑指定租户的覆盖值（品牌）；为空时作用于当前租户 */
-  tenantId?: string
 }) {
   const qc = useQueryClient()
   const [open, setOpen] = useState(false)
@@ -85,7 +82,6 @@ export function ConfigGroupCard({
   const done = () => {
     // 同时刷新列表与公开品牌信息（侧栏、标题、favicon、页脚）
     qc.invalidateQueries({ queryKey: ['config'] })
-    if (tenantId) qc.invalidateQueries({ queryKey: ['platform', 'branding'] })
   }
   const save = useMutation({
     mutationFn: () => {
@@ -97,8 +93,6 @@ export function ConfigGroupCard({
             : draft[i.code],
         ])
       )
-      if (scope === 'tenant' && tenantId)
-        return api.platform.updateBranding(tenantId, group.code, values)
       return scope === 'tenant'
         ? api.config.updateTenant(group.code, values)
         : api.config.updatePlatform(group.code, values)
@@ -110,10 +104,7 @@ export function ConfigGroupCard({
     onError: (e) => toast.error(errorMessage(e)),
   })
   const resetItem = useMutation({
-    mutationFn: (code: string) =>
-      tenantId
-        ? api.platform.updateBranding(tenantId, group.code, { [code]: null })
-        : api.config.resetTenantItem(group.code, code),
+    mutationFn: (code: string) => api.config.resetTenantItem(group.code, code),
     onSuccess: () => {
       toast.success(t('config.resetDone'))
       done()

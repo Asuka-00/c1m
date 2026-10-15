@@ -127,7 +127,6 @@ for i in range(1, 7):
         carrier_type=("carrier_type", "FOUP25"),
         max_uses=500,
         status_code="dirty" if i == 5 else "available",
-        **({"use_count": 480} if i == 6 else {}),
     )
 for c, layer, g in _rows(
     [

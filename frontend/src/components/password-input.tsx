@@ -2,7 +2,7 @@ import * as React from 'react'
 import { t } from '@/i18n'
 import { Eye, EyeOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { IconButton } from '@/components/icon-button'
+import { Button } from './ui/button'
 
 type PasswordInputProps = Omit<
   React.InputHTMLAttributes<HTMLInputElement>,
@@ -29,16 +29,19 @@ export function PasswordInput({
         disabled={disabled}
         {...props}
       />
-      <IconButton
-        label={showPassword ? t('password.hide') : t('password.show')}
+      <Button
         type='button'
+        size='icon'
         variant='ghost'
         disabled={disabled}
         className='absolute inset-e-1 top-1/2 h-6 w-6 -translate-y-1/2 rounded-md text-muted-foreground'
         onClick={() => setShowPassword((prev) => !prev)}
       >
         {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
-      </IconButton>
+        <span className='sr-only'>
+          {showPassword ? t('password.hide') : t('password.show')}
+        </span>
+      </Button>
     </div>
   )
 }

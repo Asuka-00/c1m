@@ -11,7 +11,6 @@ from app.core.spec.engine import TABLES, Entity
 from app.core.spec.errors import MesError
 from app.core.spec.validate import validator
 from app.mes.common.validators import Row, _get
-from app.mes.equipment.maint import downtime_notify
 
 
 def check_recipe_equipment_type(
@@ -98,29 +97,3 @@ def _capability(
     s: Session, tid: uuid.UUID, _e: Entity, row: Row, _old: Row | None
 ) -> None:
     check_recipe_equipment_type(s, tid, row.get("recipe_id"), row.get("equipment_id"))
-
-
-@validator("pm_plan")
-def _pm_plan(
-    _s: Session, _t: uuid.UUID, _e: Entity, row: Row, _old: Row | None
-) -> None:
-    """PM 计划：须指定设备或设备类型，且至少一种周期（天数 / 批次数）。"""
-    if not row.get("equipment_id") and not row.get("equipment_type_id"):
-        raise MesError([("equipment", "equipment: set equipment or equipment type")])
-    if not row.get("interval_days") and not row.get("interval_lots"):
-        raise MesError([("interval_days", "interval_days: set days or lots interval")])
-    for f in ("interval_days", "interval_lots"):
-        if row.get(f) is not None and row[f] <= 0:
-            raise MesError([(f, f"{f}: must be > 0")])
-
-
-@validator("downtime")
-def _downtime(
-    s: Session, tid: uuid.UUID, _e: Entity, row: Row, old: Row | None
-) -> None:
-    """停机记录：结束时间须晚于开始时间；新建时发送停机通知（与记录同事务）。"""
-    a, b = row.get("start_at"), row.get("end_at")
-    if a and b and b <= a:
-        raise MesError([("end_at", "end_at: must be after start_at")])
-    if old is None:
-        downtime_notify(s, tid, row)

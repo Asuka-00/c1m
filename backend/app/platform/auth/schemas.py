@@ -13,5 +13,3 @@ class Token(SQLModel):
 class TokenPayload(SQLModel):
     sub: str | None = None
     tid: str | None = None
-    # 平台“以租户身份进入”签发的短期模拟令牌
-    imp: bool = False

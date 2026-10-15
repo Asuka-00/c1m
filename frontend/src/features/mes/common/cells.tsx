@@ -1,10 +1,8 @@
 /** MES 通用表格的单元格渲染。 */
 import { fmtDateTime, t } from '@/i18n'
 import type { MesEntity, MesRow } from '@/lib/api/mes/common'
-import { decimalText } from '@/lib/decimal'
 import { Badge } from '@/components/ui/badge'
 import { enumLabel } from './labels'
-import { RefLink } from './ref-link'
 
 /**
  * 按字段类型渲染单元格（枚举标签、布尔、日期、引用标签、实体专用渲染器）。
@@ -25,13 +23,7 @@ export function cellValue(
     return <span className='text-muted-foreground'>—</span>
   switch (f.type) {
     case 'ref':
-      return (
-        <RefLink
-          target={f.ref!}
-          id={String(v)}
-          label={String(row[`${f.name}_label`] ?? v)}
-        />
-      )
+      return String(row[`${f.name}_label`] ?? v)
     case 'enum':
       return <Badge variant='outline'>{enumLabel(f.enum!, String(v))}</Badge>
     case 'bool':
@@ -46,9 +38,6 @@ export function cellValue(
       return String(v).slice(0, 5)
     case 'datetime':
       return fmtDateTime(String(v))
-    case 'float':
-      // D72：numeric 列为定点字符串（兼容 mock / 旧接口的数字），原样按十进制显示
-      return decimalText(v as number | string)
     default:
       return name === 'code' ? (
         <span className='font-medium'>{String(v)}</span>

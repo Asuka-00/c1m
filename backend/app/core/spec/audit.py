@@ -6,7 +6,6 @@ from typing import Any
 import sqlalchemy as sa
 from sqlmodel import Session
 
-from app.core.models import actor_name
 from app.core.spec.base import SYSTEM_COLS, Row, conn, now
 from app.core.spec.engine import (
     TABLES,
@@ -52,7 +51,7 @@ def audit(
             changes={
                 k: [to_json(a), to_json(b)] for k, (a, b) in (changes or {}).items()
             },
-            username=actor_name(user),
+            user_email=getattr(user, "email", None),
             created_at=now(),
             created_by=getattr(user, "id", None),
         )

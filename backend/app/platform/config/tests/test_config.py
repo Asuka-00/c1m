@@ -14,13 +14,7 @@ from app.core.db import engine
 from app.core.tenant import set_tenant
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
-from app.testing.user import create_owned_tenant
-from app.testing.utils import (
-    login_name,
-    random_email,
-    random_lower_string,
-    username_for,
-)
+from app.testing.utils import random_email, random_lower_string
 
 API = settings.API_V1_STR
 PNG = (
@@ -31,14 +25,9 @@ PNG = (
 
 def _owner(client: TestClient, db: Session) -> tuple[dict[str, str], str, str]:
     email, pw = random_email(), random_lower_string()
-    _u = crud.create_user(
-        session=db,
-        user_create=UserCreate(email=email, username=username_for(email), password=pw),
-    )
-    create_owned_tenant(db, _u)
+    crud.create_user(session=db, user_create=UserCreate(email=email, password=pw))
     tok = client.post(
-        f"{API}/login/access-token",
-        data={"username": login_name(email), "password": pw},
+        f"{API}/login/access-token", data={"username": email, "password": pw}
     ).json()["access_token"]
     h = {"Authorization": f"Bearer {tok}"}
     t = client.get(f"{API}/tenants/me", headers=h).json()["data"][0]["tenant"]
@@ -82,7 +71,7 @@ def test_platform_config_read_update_validate(
         and name["is_public"]
         and name["tenant_overridable"]
     )
-    assert not _item(groups, "security", "session_minutes")["tenant_overridable"]
+    assert not _item(groups, "security", "allow_signup")["tenant_overridable"]
 
     r = client.patch(
         f"{API}/config/groups/branding",
@@ -121,18 +110,20 @@ def test_platform_config_read_update_validate(
         json={
             "values": {
                 "session_minutes": "x",
+                "allow_signup": "yes",
                 "password_policy": "nope",
                 "extra": "{bad",
             }
         },
     )
-    assert sec.status_code == 422 and len(sec.json()["detail"]) == 3
+    assert sec.status_code == 422 and len(sec.json()["detail"]) == 4
     ok = client.patch(
         f"{API}/config/groups/security",
         headers=h,
         json={
             "values": {
                 "session_minutes": 60,
+                "allow_signup": False,
                 "password_policy": "strict",
                 "extra": '{"a": 1}',
             }
@@ -142,11 +133,15 @@ def test_platform_config_read_update_validate(
     reset = client.patch(
         f"{API}/config/groups/security",
         headers=h,
-        json={"values": dict.fromkeys(("session_minutes", "password_policy", "extra"))},
+        json={
+            "values": dict.fromkeys(
+                ("session_minutes", "allow_signup", "password_policy", "extra")
+            )
+        },
     )
     assert {i["code"]: i["value"] for i in reset.json()["items"]}[
-        "password_policy"
-    ] == "standard"  # back to default
+        "allow_signup"
+    ] is True  # back to default
     assert (
         client.patch(
             f"{API}/config/groups/nope", headers=h, json={"values": {}}
@@ -232,7 +227,7 @@ def test_tenant_overrides_inherit_and_reset(
         client.patch(
             f"{API}/tenants/current/config/security",
             headers=ha,
-            json={"values": {"session_minutes": 60}},
+            json={"values": {"allow_signup": False}},
         ).status_code
         == 422
     )
@@ -285,19 +280,14 @@ def test_tenant_overrides_inherit_and_reset(
 def test_tenant_config_permissions(client: TestClient, db: Session) -> None:
     ho, tid, _ = _owner(client, db)
     email, pw = random_email(), random_lower_string()
-    _u = crud.create_user(
-        session=db,
-        user_create=UserCreate(email=email, username=username_for(email), password=pw),
-    )
-    create_owned_tenant(db, _u)
+    crud.create_user(session=db, user_create=UserCreate(email=email, password=pw))
     client.post(
         f"{API}/tenants/{tid}/members",
         headers=ho,
-        json={"username": login_name(email), "roles": ["member"]},
+        json={"email": email, "roles": ["member"]},
     )
     tok = client.post(
-        f"{API}/login/access-token",
-        data={"username": login_name(email), "password": pw},
+        f"{API}/login/access-token", data={"username": email, "password": pw}
     ).json()["access_token"]
     hm = {"Authorization": f"Bearer {tok}", "X-Tenant-ID": tid}
     assert (

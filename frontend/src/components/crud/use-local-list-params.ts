@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { rangeParam } from './filter-defs'
 import { DEFAULT_PAGE_SIZE, type ListParams } from './use-list-params'
 
 /** 与 useListParams() 约定相同，但状态保存在组件内（用于
@@ -24,27 +23,11 @@ export function useLocalListParams(
         else filters[name] = value
         return { ...p, filters, page: 1 }
       }),
-    setRange: (ka, a, kb, b) =>
-      setS((p) => {
-        const filters = { ...p.filters }
-        for (const [k, v] of [
-          [ka, a],
-          [kb, b],
-        ])
-          if (v) filters[k] = v
-          else delete filters[k]
-        return { ...p, filters, page: 1 }
-      }),
     query: {
       page: s.page,
       page_size: s.pageSize,
       ...(s.sortBy ? { sort_by: s.sortBy, sort_order: s.sortOrder } : {}),
-      ...Object.fromEntries(
-        Object.entries(s.filters).map(([k, v]) => [
-          k,
-          /_(from|to)$/.test(k) ? rangeParam(v, k.endsWith('_to')) : v,
-        ])
-      ),
+      ...s.filters,
     },
     set: (patch) => setS((p) => ({ ...p, ...patch })),
   }

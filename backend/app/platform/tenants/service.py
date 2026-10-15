@@ -1,16 +1,17 @@
 """租户服务：成员关系、租户角色、租户创建与默认租户。"""
 
+import re
+import secrets
 import uuid
 from dataclasses import dataclass, field
 
 from sqlmodel import Session, select
 
-from app.core.registry import seed_tenant
 from app.platform.rbac.models import Permission, Role
 from app.platform.rbac.permissions import TENANT_ROLES
-from app.platform.rbac.service import fill_names
 from app.platform.tenants.models import Tenant, TenantMember
 from app.platform.users.models import User
+from app.platform.users.service import USER_CREATED_HOOKS
 
 DEFAULT_TENANT_SLUG = "default"
 
@@ -43,12 +44,10 @@ class TenantContext:
 
 # ---------- tenants / members ----------
 def member_permission_codes(member: TenantMember | None) -> set[str]:
-    """成员在租户内的角色权限编码（忽略停用的角色与权限）。"""
+    """成员在租户内的角色权限编码。"""
     if not member:
         return set()
-    from app.platform.rbac.service import active_codes
-
-    return active_codes(member.roles)
+    return {p.code for r in member.roles for p in r.permissions}
 
 
 def get_membership(
@@ -75,10 +74,8 @@ def seed_tenant_roles(session: Session, tenant: Tenant) -> None:
     for name, (desc, codes) in TENANT_ROLES.items():
         role = tenant_role(session, tenant.id, name)
         if not role:
-            role = Role(name=name, tenant_id=tenant.id)
+            role = Role(name=name, description=desc, tenant_id=tenant.id)
             session.add(role)
-            fill_names(role)
-            role.description = role.description or desc
         have = {p.code for p in role.permissions}
         for c in codes:
             if c not in have and c in perms:
@@ -116,12 +113,33 @@ def create_tenant(session: Session, name: str, slug: str, owner: User | None) ->
     session.flush()
     seed_tenant_roles(session, tenant)
     session.flush()
-    seed_tenant(session, tenant.id)
     if owner:
         add_member(session, tenant, owner, ["owner"])
     session.commit()
     session.refresh(tenant)
     return tenant
+
+
+def slugify(value: str) -> str:
+    """把名称转换为 URL 友好的 slug。"""
+    s = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+    return (s or "t")[:40]
+
+
+def create_personal_tenant(session: Session, user: User) -> Tenant:
+    """为用户创建个人工作区租户（用户为 owner）。"""
+    base = slugify(user.email.split("@")[0])
+    slug = f"{base}-{secrets.token_hex(3)}"
+    return create_tenant(session, f"{user.email}'s workspace", slug, owner=user)
+
+
+# 每个新用户（注册或管理员创建）都会获得一个个人租户并作为 owner，
+# 之后可被邀请加入其他租户
+def _on_user_created(session: Session, user: User) -> None:
+    create_personal_tenant(session, user)
+
+
+USER_CREATED_HOOKS.append(_on_user_created)
 
 
 def ensure_default_tenant(session: Session) -> Tenant:

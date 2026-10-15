@@ -3,64 +3,26 @@
 工作表布局：第 1 行为列键（字段名，版本化数据加 ``version``/``status``，自定义属性为
 ``attr:<code>``）。引用以目标编码读写（``CODE`` = 激活或最新版本，``CODE@2`` = 指定版本），
 无编码的目标使用 id。导入按业务唯一键新增或更新，全部成功或全部回滚。
-
-时间（D46 P2）：datetime 字段写成 Excel 日期单元格，按租户时区换算（租户时区取第一个启用
-厂区的 timezone，没有厂区时用 Asia/Taipei），列名带时区，如 ``created_at (Asia/Taipei)``；
-date 字段写成日期单元格（无时区，列名不变）。导入时去掉列名里的时区后缀，无时区的
-datetime 按同一租户时区理解。接口 JSON 仍输出 UTC Z（D45）。
 """
 
 import io
 import json
-import re
 import uuid
-from datetime import date, datetime
 from typing import Any
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import sqlalchemy as sa
 from fastapi import HTTPException
 from openpyxl import Workbook, load_workbook
-from openpyxl.utils import get_column_letter
 from sqlmodel import Session
 
 from app.core.spec.base import conn, table
 from app.core.spec.engine import ENTITIES, Entity
-from app.core.spec.errors import err_422
-from app.core.spec.query import all_rows, get_row
-from app.core.spec.serialize import TooManyDecimals, to_json
+from app.core.spec.query import all_rows
+from app.core.spec.serialize import to_json
 from app.core.spec.validate import attr_defs
 from app.core.spec.write import create_row, update_row
 
 MAX_ROWS = 5000
-DEFAULT_TZ = "Asia/Taipei"
-DT_FORMAT = "yyyy-mm-dd hh:mm:ss"
-DATE_FORMAT = "yyyy-mm-dd"
-_TZ_SUFFIX = re.compile(r"\s+\([^()]+\)$")
-
-
-def tenant_tz(session: Session, tenant_id: uuid.UUID) -> ZoneInfo:
-    """租户时区：第一个启用厂区（按编码）的 timezone；无厂区或时区无效时用 Asia/Taipei。"""
-    t = table(ENTITIES["site"])
-    name = (
-        conn(session)
-        .execute(
-            sa.select(t.c.timezone)
-            .where(t.c.tenant_id == tenant_id, t.c.is_active.is_not(False))
-            .order_by(t.c.code)
-            .limit(1)
-        )
-        .scalar()
-    )
-    try:
-        return ZoneInfo(name or DEFAULT_TZ)
-    except ZoneInfoNotFoundError, ValueError:
-        return ZoneInfo(DEFAULT_TZ)
-
-
-def _header(e: Entity, col: str, tz: ZoneInfo) -> str:
-    f = e.field(col) if not col.startswith("attr:") else None
-    return f"{col} ({tz.key})" if f and f.type == "datetime" else col
 
 
 def _ref_code(
@@ -91,20 +53,13 @@ def columns(session: Session, tenant_id: uuid.UUID, e: Entity) -> list[str]:
     return cols
 
 
-def export_xlsx(
-    session: Session,
-    tenant_id: uuid.UUID,
-    e: Entity,
-    *,
-    q: str | None = None,
-    filters: dict[str, str] | None = None,
-) -> bytes:
-    """导出实体行为 xlsx（按当前关键字 / 筛选；无筛选时为全部行）。
+def export_xlsx(session: Session, tenant_id: uuid.UUID, e: Entity) -> bytes:
+    """导出实体全部行为 xlsx。
 
     Returns:
         xlsx 文件字节。
     """
-    rows = all_rows(session, e, tenant_id, MAX_ROWS, q=q, filters=filters)
+    rows = all_rows(session, e, tenant_id, MAX_ROWS)
     cols = columns(session, tenant_id, e)
     refs = {
         f.name: _ref_code(
@@ -120,8 +75,7 @@ def export_xlsx(
     ws = wb.active
     assert ws is not None
     ws.title = e.code[:31]
-    tz = tenant_tz(session, tenant_id)
-    ws.append([_header(e, c, tz) for c in cols])
+    ws.append(cols)
     for r in rows:
         line: list[Any] = []
         for c in cols:
@@ -137,28 +91,8 @@ def export_xlsx(
                 )
             else:
                 v = r[f.column if f else c]
-                if f and f.type == "datetime" and isinstance(v, datetime):
-                    # openpyxl 不接受带时区的 datetime：换算到租户时区后去掉 tzinfo
-                    line.append(
-                        v.astimezone(tz).replace(tzinfo=None) if v.tzinfo else v
-                    )
-                elif (
-                    f
-                    and f.type in ("date", "time", "datetime")
-                    and not isinstance(v, date)
-                ):
-                    line.append(to_json(v))
-                elif f and f.type == "time":
-                    line.append(to_json(v))
-                else:
-                    line.append(v)
+                line.append(to_json(v) if f and f.type in ("date", "time") else v)
         ws.append(line)
-        for cell, c in zip(ws[ws.max_row], cols, strict=True):
-            f = e.field(c) if not c.startswith("attr:") else None
-            if f and f.type == "datetime" and isinstance(cell.value, datetime):
-                cell.number_format = DT_FORMAT
-            elif f and f.type == "date" and isinstance(cell.value, date):
-                cell.number_format = DATE_FORMAT
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()
@@ -182,34 +116,6 @@ def _resolve(session: Session, tenant_id: uuid.UUID, target: Entity, raw: str) -
                 sa.case((t.c.status == "active", 0), else_=1), t.c.version.desc()
             )
     return c.execute(stmt.limit(1)).scalar()
-
-
-def _cell(e: Entity, header: list[str], n: int, key: Any) -> dict[str, Any]:
-    """导入错误定位到单元格：``loc=["file", 行号, 列名]``，另给 ``column`` 与 ``cell``（如 ``C5``）。
-
-    ``key`` 为字段名 / 列名（取自校验错误 loc 末项）；对不上表头时只给到行。
-    """
-    if not isinstance(key, str):
-        return {}
-    for i, h in enumerate(header):
-        f = e.field(h) if h else None
-        if h and (h == key or (f and key in (f.name, f.column))):
-            return {
-                "loc": ["file", n, h],
-                "column": h,
-                "cell": f"{get_column_letter(i + 1)}{n}",
-            }
-    return {}
-
-
-#: 导入更新已有行前的校验：fn(旧行, 导入载荷)，不合规时抛 HTTPException 422（整行拒绝）。
-#: 如 operator_qual（D88-3）：改动 is_active / expires_on 必须走 API。
-IMPORT_GUARDS: dict[str, Any] = {}
-
-
-def _blank(v: Any) -> bool:
-    """导入单元格是否为空（None / 空串 / 纯空白）。"""
-    return v is None or (isinstance(v, str) and not v.strip())
 
 
 def import_xlsx(
@@ -238,21 +144,14 @@ def import_xlsx(
         raise HTTPException(status_code=400, detail="Not a valid .xlsx file") from ex
     ws = wb.worksheets[0]
     it = ws.iter_rows(values_only=True)
-    header = [
-        _TZ_SUFFIX.sub("", str(h).strip()) if h is not None else ""
-        for h in next(it, ())
-    ]
-    tz = tenant_tz(session, tenant_id)
+    header = [str(h).strip() if h is not None else "" for h in next(it, ())]
     if not header or not any(header):
         raise HTTPException(status_code=400, detail="Empty sheet")
     known = set(columns(session, tenant_id, e)) | {""}
     unknown = [h for h in header if h not in known]
     if unknown:
-        raise err_422(
-            ["body", "file"],
-            f"Unknown columns: {', '.join(unknown)}",
-            "unknown_columns",
-            {"columns": unknown},
+        raise HTTPException(
+            status_code=422, detail=f"Unknown columns: {', '.join(unknown)}"
         )
     errors: list[dict[str, Any]] = []
     created = updated = 0
@@ -260,13 +159,7 @@ def import_xlsx(
     nested = session.begin_nested()
     for n, values in enumerate(it, start=2):
         if n > MAX_ROWS + 1:
-            errors.append(
-                {
-                    "row": n,
-                    "msg": f"too many rows (max {MAX_ROWS})",
-                    "loc": ["file", n],
-                }
-            )
+            errors.append({"row": n, "msg": f"too many rows (max {MAX_ROWS})"})
             break
         raw = dict(zip(header, values, strict=False))
         if all(v in (None, "") for v in raw.values()):
@@ -285,21 +178,12 @@ def import_xlsx(
                 if f and f.type == "ref" and v not in (None, ""):
                     rid = _resolve(session, tenant_id, ENTITIES[f.ref or ""], str(v))
                     if rid is None:
-                        miss = ValueError(f"{k}: '{v}' not found")
-                        miss.field = k  # type: ignore[attr-defined]
-                        raise miss
+                        raise ValueError(f"{k}: '{v}' not found")
                     payload[f.column] = rid
                 elif f and f.type == "json" and isinstance(v, str) and v.strip():
                     payload[k] = json.loads(v)
-                elif f and f.type == "datetime" and isinstance(v, datetime):
-                    payload[k] = v if v.tzinfo else v.replace(tzinfo=tz)
-                elif f and f.type == "date" and isinstance(v, datetime):
-                    payload[k] = v.date()
                 else:
                     payload[k] = v
-            # D90-1：空单元格（None / 空串 / 纯空白）= 未提供。更新已有行时不改该字段
-            # （不写履历不发事件）；新建时按默认值或 null，必填由 create_row 报 missing。
-            payload = {k: v for k, v in payload.items() if not _blank(v)}
             if attrs:
                 payload["attrs"] = attrs
             key_cols = [
@@ -309,28 +193,13 @@ def import_xlsx(
                 payload.get(c, payload.get(c.removesuffix("_id"))) for c in key_cols
             ]
             existing = None
-            # 可空的键字段（如 operator_qual.equipment_type）留空 = 匹配 NULL
-            optional = {
-                (fld.column if (fld := e.field(k)) else k)
-                for k in e.natural_key
-                if (fld := e.field(k)) is not None and not fld.required
-            }
-            if all(
-                v not in (None, "") or c in optional
-                for c, v in zip(key_cols, key_vals, strict=True)
-            ):
+            if all(v not in (None, "") for v in key_vals):
                 stmt = sa.select(t.c.id).where(t.c.tenant_id == tenant_id)
                 for c, v in zip(key_cols, key_vals, strict=True):
                     column: Any = t.c[c]
-                    if v in (None, ""):
-                        stmt = stmt.where(column.is_(None))
-                        continue
                     stmt = stmt.where(column == (int(str(v)) if c == "version" else v))
                 existing = conn(session).execute(stmt).scalar()
             if existing:
-                guard = IMPORT_GUARDS.get(e.code)
-                if guard:
-                    guard(get_row(session, e, tenant_id, existing), payload)
                 update_row(
                     session,
                     tenant_id,
@@ -352,20 +221,9 @@ def import_xlsx(
                 if isinstance(d, list)
                 else str(d)
             )
-            err: dict[str, Any] = {"row": n, "msg": msg, "loc": ["file", n]}
-            first = d[0] if isinstance(d, list) and d else None
-            if isinstance(first, dict) and first.get("type"):
-                # D76：导入错误同样带首条的 type / ctx（如 value_error max_places）
-                err.update({k: first[k] for k in ("type", "ctx") if k in first})
-                loc = first.get("loc") or []
-                err.update(_cell(e, header, n, loc[-1] if loc else None))
-            errors.append(err)
+            errors.append({"row": n, "msg": msg})
         except (ValueError, TypeError) as ex:
-            err = {"row": n, "msg": str(ex), "loc": ["file", n]}
-            if isinstance(ex, TooManyDecimals):
-                err.update(type=ex.code, ctx=ex.ctx)
-            err.update(_cell(e, header, n, getattr(ex, "field", None)))
-            errors.append(err)
+            errors.append({"row": n, "msg": str(ex)})
     if errors:
         nested.rollback()
         session.rollback()

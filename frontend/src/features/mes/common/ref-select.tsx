@@ -1,5 +1,5 @@
 /** MES 引用字段选择器。 */
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { t } from '@/i18n'
 import { Check, ChevronsUpDown, X } from 'lucide-react'
@@ -20,13 +20,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { FIELD_MIN_W, POPOVER_W } from '@/components/field-width'
-import { IconButton } from '@/components/icon-button'
 import { rowLabel } from './labels'
 
 /** 可搜索的引用选择器（在目标实体上做服务端搜索）。 */
@@ -52,8 +45,6 @@ export function RefSelect({
   disabled?: boolean
 }) {
   const [open, setOpen] = useState(false)
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const clearable = Boolean(value) && !disabled
   const [q, setQ] = useState('')
   const tk = useTenantKey()
   const { data, isFetching } = useQuery({
@@ -62,42 +53,25 @@ export function RefSelect({
       mesApi.list(target, { q: q || undefined, page_size: 30, ...filters }),
     enabled: open,
   })
-  const trigger = (
-    <PopoverTrigger asChild>
-      <Button
-        ref={triggerRef}
-        id={id}
-        type='button'
-        variant='outline'
-        role='combobox'
-        disabled={disabled}
-        className='w-full min-w-0 justify-between font-normal'
-      >
-        <span
-          className={cn(
-            'truncate',
-            !value && 'text-muted-foreground',
-            clearable && 'pe-6'
-          )}
-        >
-          {value ? (label ?? value) : t('common.select')}
-        </span>
-        <ChevronsUpDown className='opacity-50' />
-      </Button>
-    </PopoverTrigger>
-  )
   return (
-    <div className={cn('relative w-full', FIELD_MIN_W)}>
+    <div className='flex min-w-0 gap-1'>
       <Popover open={open} onOpenChange={setOpen}>
-        {/* 截断的长值：悬停和键盘聚焦都显示全文提示（FE-02），读屏读按钮名即全文；
-            始终包一层 Tooltip（无值时关闭），避免清空后触发框重建而丢失焦点 */}
-        <Tooltip open={value ? undefined : false}>
-          <TooltipTrigger asChild>{trigger}</TooltipTrigger>
-          <TooltipContent data-testid='ref-select-full'>
-            {value ? String(label ?? value) : ''}
-          </TooltipContent>
-        </Tooltip>
-        <PopoverContent className={cn(POPOVER_W, 'p-0')} align='start'>
+        <PopoverTrigger asChild>
+          <Button
+            id={id}
+            type='button'
+            variant='outline'
+            role='combobox'
+            disabled={disabled}
+            className='min-w-0 flex-1 justify-between font-normal'
+          >
+            <span className={cn('truncate', !value && 'text-muted-foreground')}>
+              {value ? (label ?? value) : t('common.select')}
+            </span>
+            <ChevronsUpDown className='opacity-50' />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className='w-(--radix-popover-trigger-width) p-0'>
           <Command shouldFilter={false}>
             <CommandInput
               value={q}
@@ -124,12 +98,7 @@ export function RefSelect({
                         value === r.id ? 'opacity-100' : 'opacity-0'
                       )}
                     />
-                    <span
-                      className='break-words whitespace-normal'
-                      title={rowLabel(r, labelField)}
-                    >
-                      {rowLabel(r, labelField)}
-                    </span>
+                    {rowLabel(r, labelField)}
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -137,20 +106,16 @@ export function RefSelect({
           </Command>
         </PopoverContent>
       </Popover>
-      {clearable && (
-        <IconButton
-          label={t('mes.clear')}
+      {value && !disabled && (
+        <Button
           type='button'
-          variant='ghost'
           size='icon'
-          className='absolute end-8 top-1/2 size-6 -translate-y-1/2'
-          onClick={() => {
-            onChange(null, null)
-            triggerRef.current?.focus()
-          }}
+          variant='ghost'
+          aria-label={t('mes.clear')}
+          onClick={() => onChange(null, null)}
         >
           <X className='size-4' />
-        </IconButton>
+        </Button>
       )}
     </div>
   )

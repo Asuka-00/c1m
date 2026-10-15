@@ -1,7 +1,6 @@
 """执行演示数据（检查规则/方案、线边物料、工具、装配线）及演示作业。"""
 
 import uuid
-from datetime import timedelta
 from typing import Any
 
 import sqlalchemy as sa
@@ -9,9 +8,7 @@ from sqlmodel import Session
 
 from app.core.spec.base import conn
 from app.core.spec.engine import TABLES
-from app.mes.common.demo import ACTIVATE, SiteDay, _resolve, _rows, add
-from app.mes.common.sitedate import site_today
-from app.mes.execution.checks.types import chambers_of
+from app.mes.common.demo import ACTIVATE, _resolve, _rows, add
 
 # ---------------- execution: checks, E10, line-side material, tools ----------------
 for trig, st in (("track_in", "PRD-RUN"), ("track_out", "SBY-IDLE")):
@@ -30,39 +27,7 @@ CHECK_RULES: list[tuple[str, str, str, str, dict[str, Any]]] = [
     ("CR-MAT", "Line-side material sufficient", "material_sufficient", "block", {}),
     ("CR-TOOL", "Tool available + life", "tool_life", "block", {"expiry_warn_days": 7}),
     ("CR-CARR", "Carrier usable", "carrier_available", "warn", {}),
-    ("CR-CHMB", "Chamber selected", "chamber_required", "block", {}),
-    ("CR-BATCH", "Batch: same step", "batch_same_step", "block", {}),
-    ("CR-SORT", "Sort keeps wafer order", "sort_order", "warn", {}),
-    ("CR-FH", "Future hold at step", "future_hold", "block", {}),
-    ("CR-HOT", "Hot lot WIP limit", "hot_lot_limit", "block", {"max": 3}),
-    (
-        "CR-SHIFT",
-        "Handover confirmed by another user",
-        "handover_ack_other",
-        "block",
-        {},
-    ),
-    ("CR-QUAL", "Operator qualified", "operator_qualified", "warn", {}),
-    (
-        "CR-QUAL-EXP",
-        "Qualification expiry notice",
-        "qual_expiry_notice",
-        "warn",
-        {"warn_days": 14},
-    ),
-    ("CR-WO-DUE", "Work order due notice", "wo_due", "warn", {"warn_days": 3}),
-    ("CR-CARR-CLN", "Carrier cleaning due", "carrier_clean", "warn", {}),
-    ("CR-CARR-USE", "Carrier usage limit", "carrier_usage", "block", {}),
-    (
-        "CR-CHMB-E10",
-        "Chamber available (E10 SBY/PRD)",
-        "chamber_available",
-        "block",
-        {},
-    ),
     ("CR-QT", "Q-Time window", "qtime", "block", {}),
-    ("CR-PM", "Equipment PM not overdue", "pm_due", "block", {}),
-    ("CR-RCP-MAP", "Recipe ↔ equipment mapping", "recipe_match", "warn", {}),
     ("CR-HOLD", "Lot not on hold", "lot_hold", "block", {}),
     ("CR-WO", "Work order active", "wo_status", "block", {}),
     ("CR-DC", "DC data complete", "dc_complete", "block", {}),
@@ -79,47 +44,19 @@ for c, n, tp, sev, prm in CHECK_RULES:
         params=prm,
     )
 CHECK_PLANS = [
-    ("CP-MI", "Standard move-in", ["CR-HOLD", "CR-WO", "CR-QT", "CR-FH"]),
+    ("CP-MI", "Standard move-in", ["CR-HOLD", "CR-WO", "CR-QT"]),
     (
         "CP-TI",
         "Standard track-in",
-        [
-            "CR-E10",
-            "CR-CAP",
-            "CR-RCP",
-            "CR-TOOL",
-            "CR-CARR",
-            "CR-MAT",
-            "CR-CHMB",
-            "CR-CHMB-E10",
-            "CR-BATCH",
-            "CR-CARR-CLN",
-            "CR-CARR-USE",
-            "CR-QUAL",
-        ],
+        ["CR-E10", "CR-CAP", "CR-RCP", "CR-TOOL", "CR-CARR", "CR-MAT"],
     ),
     (
         "CP-TI-LITHO",
         "Litho track-in (+ reticle)",
         ["CR-E10", "CR-CAP", "CR-RCP", "CR-RET"],
     ),
-    ("CP-SORT", "Wafer sort", ["CR-SORT"]),
-    ("CP-PRIO", "Priority change", ["CR-HOT"]),
     ("CP-TO", "Standard track-out", ["CR-SMP", "CR-DC", "CR-OOS", "CR-MAT"]),
 ]
-for user, op, days in (
-    ("admin", "DF-OX", 365),
-    ("admin", "TF-DEP", 365),
-    ("admin", "PH-CD", 10),
-    ("operator", "DF-OX", -5),
-):
-    add(
-        "operator_qual",
-        username=user,
-        operation=("operation", op),
-        certified_on=SiteDay(-365),
-        expires_on=SiteDay(days),
-    )
 for c, n, rules in CHECK_PLANS:
     add("check_plan", code=c, name=f"{n} (DEMO)")
     for i, r in enumerate(rules):
@@ -134,8 +71,6 @@ for prod in ("MCU-A100", "MCU-B200"):
         ("move_in", "CP-MI"),
         ("track_in", "CP-TI"),
         ("track_out", "CP-TO"),
-        ("sort", "CP-SORT"),
-        ("priority", "CP-PRIO"),
     ):
         add(
             "check_binding",
@@ -268,7 +203,6 @@ add(
 add(
     "work_order",
     code="WO-DEMO-03",
-    due_date=SiteDay(2),
     product=("product", "PKG-A100@1"),
     lot_type=("lot_type", "ASSY"),
     planned_qty=2000,
@@ -341,10 +275,6 @@ def _run_exec(session: Session, tid: uuid.UUID, admin: Any) -> None:
         body: dict[str, Any] = {}
         if eq:
             body["equipment_id"] = _resolve(session, tid, ("equipment", eq))
-            if stage == "track_in":
-                # 带腔体的设备默认选第一个腔体
-                chs = chambers_of(session, tid, {"id": body["equipment_id"]})
-                body["chamber_ids"] = [str(c["id"]) for c in chs[:1]]
         if rc:
             body["recipe_id"] = _resolve(session, tid, ("recipe", f"{rc}@1"))
         extra = extra or {}
@@ -401,155 +331,3 @@ def _run_exec(session: Session, tid: uuid.UUID, admin: Any) -> None:
             },
             admin,
         )
-
-
-def _post_demo(session: Session, tid: uuid.UUID, admin: Any) -> None:
-    """幂等补充演示数据：演示工单交期、预约 Hold 示例。"""
-    from app.mes.common.rows import _ins
-
-    wt = TABLES["work_order"]
-    for wo, days in (("WO-DEMO-01", 5), ("WO-DEMO-02", -2), ("WO-DEMO-03", 2)):
-        conn(session).execute(
-            sa.update(wt)
-            .where(wt.c.tenant_id == tid, wt.c.code == wo, wt.c.due_date.is_(None))
-            .values(due_date=site_today(session, tid) + timedelta(days=days))
-        )
-    _hot_demo(session, tid, admin)
-    _shift_demo(session, tid, admin)
-    fh = TABLES["future_hold"]
-    if (
-        conn(session)
-        .execute(sa.select(sa.func.count()).where(fh.c.tenant_id == tid))
-        .scalar()
-    ):
-        return
-    w = _resolve(session, tid, ("work_order", "WO-DEMO-01"))
-    lot = (
-        conn(session)
-        .execute(
-            sa.select(TABLES["lot"])
-            .where(
-                TABLES["lot"].c.work_order_id == w,
-                TABLES["lot"].c.lot_status.in_(("waiting", "moved_in", "running")),
-            )
-            .order_by(TABLES["lot"].c.code)
-        )
-        .mappings()
-        .first()
-    )
-    if not lot:
-        return
-    st = TABLES["route_step"]
-    cur = (
-        conn(session)
-        .execute(sa.select(st.c.seq).where(st.c.id == lot["current_step_id"]))
-        .scalar()
-    )
-    nxt = (
-        conn(session)
-        .execute(
-            sa.select(st.c.id)
-            .where(st.c.route_id == lot["route_id"], st.c.seq > (cur or 0))
-            .order_by(st.c.seq)
-        )
-        .scalar()
-    )
-    if nxt:
-        _ins(
-            session,
-            tid,
-            "future_hold",
-            admin,
-            lot_id=lot["id"],
-            route_step_id=nxt,
-            comment="Engineer review before next step (DEMO)",
-            fh_status="active",
-            attrs={"_demo": True},
-        )
-    session.commit()
-
-
-def _hot_demo(session: Session, tid: uuid.UUID, admin: Any) -> None:
-    """演示急件：WO-DEMO-01 的最后一个在制批次设为 HOT（已有急件则跳过）。"""
-    from app.mes.execution import service as ex
-
-    lt, pt = TABLES["lot"], TABLES["lot_priority"]
-    hot = [
-        r[0]
-        for r in conn(session).execute(
-            sa.select(pt.c.id).where(pt.c.tenant_id == tid, pt.c.is_hot.is_(True))
-        )
-    ]
-    w = _resolve(session, tid, ("work_order", "WO-DEMO-01"))
-    lots = (
-        conn(session)
-        .execute(
-            sa.select(lt)
-            .where(
-                lt.c.work_order_id == w,
-                lt.c.lot_status.in_(("waiting", "moved_in", "running")),
-            )
-            .order_by(lt.c.code.desc())
-        )
-        .mappings()
-        .all()
-    )
-    if not lots or any(x["priority_id"] in hot for x in lots):
-        return
-    pr = _resolve(session, tid, ("lot_priority", "HOT"))
-    ex.set_priority(
-        session,
-        tid,
-        lots[0]["id"],
-        {"priority_id": pr, "comment": "Customer escalation (DEMO)"},
-        admin,
-    )
-
-
-def _shift_demo(session: Session, tid: uuid.UUID, admin: Any) -> None:
-    """演示交接班日志：昨日夜班已接班、今日白班待接班（已有日志则跳过）。"""
-    from app.core.spec.base import now
-    from app.mes.common.rows import _ins
-
-    t = TABLES["shift_log"]
-    if (
-        conn(session)
-        .execute(sa.select(sa.func.count()).where(t.c.tenant_id == tid))
-        .scalar()
-    ):
-        return
-    today = site_today(session, tid)
-    for d, sh, summary, items, ack in (
-        (
-            today - timedelta(days=1),
-            "N",
-            "ETC01 PM done, seasoning passed; DM26100001 held for OOS (DEMO)",
-            "Engineer review of DM26100001 CD data",
-            True,
-        ),
-        (
-            today,
-            "D",
-            "Hot lot DM26100002 at DF-OX; FRN01 running (DEMO)",
-            "Wait for CD disposition; reticle RT-A100-PO inspection due",
-            False,
-        ),
-    ):
-        _ins(
-            session,
-            tid,
-            "shift_log",
-            admin,
-            shift_date=d,
-            shift_id=_resolve(session, tid, ("shift", sh)),
-            area_id=_resolve(session, tid, ("area", "DIFF")),
-            summary=summary,
-            open_items=items,
-            handed_by="admin",
-            handed_at=now(),
-            log_status="acknowledged" if ack else "open",
-            received_by="operator" if ack else None,
-            received_at=now() if ack else None,
-            attrs={"_demo": True},
-        )
-    session.commit()

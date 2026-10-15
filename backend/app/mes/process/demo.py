@@ -250,23 +250,3 @@ for seq, kind, ref, rc in _rows(
         **{kind: ref},
         **({"recipe": ("recipe", f"{rc}@1")} if rc else {}),
     )
-
-# 工程变更：ETCH-POLY v2（草稿，RF 功率 600 -> 620 W），待发布生效
-add(
-    "recipe",
-    code="ETCH-POLY",
-    version=2,
-    name="Poly gate main etch (DEMO)",
-    equipment_type=("equipment_type", "DRYETCH"),
-    recipe_type="production",
-    body={"rf_w": 620, "pressure_mtorr": 8, "cl2_sccm": 80},
-)
-add(
-    "change_order",
-    code="ECN-DEMO-01",
-    name="ETCH-POLY RF power 620 W (DEMO)",
-    change_type="recipe",
-    recipe=("recipe", "ETCH-POLY@2"),
-    wip_rule="keep_old",
-    reason="Improve CD uniformity",
-)

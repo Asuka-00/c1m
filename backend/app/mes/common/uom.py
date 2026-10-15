@@ -1,77 +1,21 @@
-"""单位换算：基于换算关系图（直接、反向、多跳）；数量精度与计件单位整数校验。
-
-数量统一保留 ``QTY_SCALE``（6）位小数（bom.md §10）；量纲为 ``count`` 的单位
-（ea / die / strip / unit / wafer 等计件单位）录入的数量必须是整数。
-"""
+"""单位换算：基于换算关系图（直接、反向、多跳）。"""
 
 import uuid
 from collections import deque
-from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 import sqlalchemy as sa
+from fastapi import HTTPException
 from sqlmodel import Session
 
 from app.core.spec.base import conn
 from app.core.spec.engine import TABLES
-from app.core.spec.errors import err_422
 
-QTY_SCALE = 6
-Edge = tuple[Decimal, Decimal]  # 目标值 = 源值 * factor + offset
-
-
-_Q = Decimal(1).scaleb(-QTY_SCALE)
-
-
-def to_qty(v: Any) -> Decimal:
-    """数量转 Decimal 并按 ROUND_HALF_UP 保留 6 位小数（D31：浮点误差不入库、不进比对）。
-
-    非 Decimal 值按 ``Decimal(str(v))`` 转换（不经 float 运算；float 取其最短十进制表示），
-    如 ``0.1 + 0.2`` → ``0.300000``。
-    """
-    d = v if isinstance(v, Decimal) else Decimal(str(v))
-    return d.quantize(_Q, rounding=ROUND_HALF_UP)
-
-
-def round_qty(v: Any) -> float:
-    """数量按 :func:`to_qty` 规则四舍五入后的浮点值（用于 JSON 输出与内部比较）。"""
-    return float(to_qty(v))
-
-
-def is_count(session: Session, tid: uuid.UUID, uom_id: Any) -> bool:
-    """单位是否为计件单位（量纲 count）。"""
-    if not uom_id:
-        return False
-    t = TABLES["uom"]
-    dim = (
-        conn(session)
-        .execute(sa.select(t.c.dimension).where(t.c.tenant_id == tid, t.c.id == uom_id))
-        .scalar()
-    )
-    return dim == "count"
-
-
-def is_whole(v: Any) -> bool:
-    """按 6 位小数取整后是否为整数。"""
-    r = round_qty(v)
-    return r == int(r)
-
-
-def count_errors(
-    session: Session, tid: uuid.UUID, uom_id: Any, fields: dict[str, Any]
-) -> list[tuple[str, str]]:
-    """计件单位下各数量字段须为整数，返回 ``(字段, 信息)`` 错误列表。"""
-    if not is_count(session, tid, uom_id):
-        return []
-    return [
-        (k, f"{k}: must be a whole number for a count unit")
-        for k, v in fields.items()
-        if v is not None and not is_whole(v)
-    ]
+Edge = tuple[float, float]  # 目标值 = 源值 * factor + offset
 
 
 def convert(
-    session: Session, tid: uuid.UUID, src: uuid.UUID, dst: uuid.UUID, value: Any
+    session: Session, tid: uuid.UUID, src: uuid.UUID, dst: uuid.UUID, value: float
 ) -> dict[str, Any]:
     """单位换算。
 
@@ -83,22 +27,20 @@ def convert(
         value: 数值。
 
     Returns:
-        ``{"value": 换算结果（float）, "path": 换算路径, "qty": 换算结果（Decimal，
-        6 位）}``。运算全程用 Decimal（D50），避免大数 / 多位小数经 float 失真。
+        ``{"value": 换算结果, "path": 换算路径}``。
 
     Raises:
         HTTPException: 无可用换算路径（422）。
     """
-    value = value if isinstance(value, Decimal) else Decimal(str(value))
     if src == dst:
-        return {"value": round_qty(value), "path": [str(src)], "qty": to_qty(value)}
+        return {"value": value, "path": [str(src)]}
     t = TABLES["uom_conversion"]
     graph: dict[Any, list[tuple[Any, Edge]]] = {}
     for r in conn(session).execute(sa.select(t).where(t.c.tenant_id == tid)).mappings():
-        f, o = Decimal(str(r["factor"])), Decimal(str(r["offset"] or 0))
+        f, o = float(r["factor"]), float(r["offset"] or 0)
         graph.setdefault(r["from_uom_id"], []).append((r["to_uom_id"], (f, o)))
         graph.setdefault(r["to_uom_id"], []).append((r["from_uom_id"], (1 / f, -o / f)))
-    q: deque[tuple[Any, Decimal, list[Any]]] = deque([(src, value, [src])])
+    q: deque[tuple[Any, float, list[Any]]] = deque([(src, value, [src])])
     seen = {src}
     while q:
         node, v, path = q.popleft()
@@ -107,16 +49,9 @@ def convert(
                 continue
             nv = v * f + o
             if nxt == dst:
-                return {
-                    "value": round_qty(nv),
-                    "path": [str(p) for p in [*path, nxt]],
-                    "qty": to_qty(nv),
-                }
+                return {"value": nv, "path": [str(p) for p in [*path, nxt]]}
             seen.add(nxt)
             q.append((nxt, nv, [*path, nxt]))
-    raise err_422(
-        ["query", "to_uom"],
-        "No conversion path between these units",
-        "no_conversion_path",
-        {"from_uom": str(src), "to_uom": str(dst)},
+    raise HTTPException(
+        status_code=422, detail="No conversion path between these units"
     )

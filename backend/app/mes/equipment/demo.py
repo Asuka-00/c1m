@@ -139,21 +139,4 @@ for c, n, et, g, wc, subs in _rows(
             name=f"{n} {sc}",
             unit_kind=kind,
             parent=("equipment", c),
-            initial_state=("e10_state", "SBY-IDLE"),
         )
-for c, n, et, days, lots in _rows(
-    [
-        ("PM-SCAN-W", "Scanner weekly PM", "SCANNER", 7, None),
-        ("PM-ETCH-RF", "Etch chamber clean / 50 lots", "DRYETCH", 30, 50),
-        ("PM-FURN-M", "Furnace monthly PM", "FURNACE", 30, None),
-    ]
-):
-    add(
-        "pm_plan",
-        code=c,
-        name=n,
-        equipment_type=("equipment_type", et),
-        interval_days=days,
-        interval_lots=lots,
-        warn_days=3,
-    )

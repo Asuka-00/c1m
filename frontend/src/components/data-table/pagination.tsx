@@ -15,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { IconButton } from '@/components/icon-button'
 
 type DataTablePaginationProps<TData> = {
   table: Table<TData>
@@ -73,24 +72,24 @@ export function DataTablePagination<TData>({
           {t('table.pageOf', { page: currentPage, total: totalPages })}
         </div>
         <div className='flex items-center space-x-2'>
-          <IconButton
-            label={t('table.firstPage')}
+          <Button
             variant='outline'
             className='size-8 p-0 @max-md/content:hidden'
             onClick={() => table.setPageIndex(0)}
             disabled={!table.getCanPreviousPage()}
           >
+            <span className='sr-only'>{t('table.firstPage')}</span>
             <DoubleArrowLeftIcon className='h-4 w-4' />
-          </IconButton>
-          <IconButton
-            label={t('table.prevPage')}
+          </Button>
+          <Button
             variant='outline'
             className='size-8 p-0'
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
+            <span className='sr-only'>{t('table.prevPage')}</span>
             <ChevronLeftIcon className='h-4 w-4' />
-          </IconButton>
+          </Button>
 
           {/* Page number buttons */}
           {pageNumbers.map((pageNumber, index) => (
@@ -112,24 +111,24 @@ export function DataTablePagination<TData>({
             </div>
           ))}
 
-          <IconButton
-            label={t('table.nextPage')}
+          <Button
             variant='outline'
             className='size-8 p-0'
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
+            <span className='sr-only'>{t('table.nextPage')}</span>
             <ChevronRightIcon className='h-4 w-4' />
-          </IconButton>
-          <IconButton
-            label={t('table.lastPage')}
+          </Button>
+          <Button
             variant='outline'
             className='size-8 p-0 @max-md/content:hidden'
             onClick={() => table.setPageIndex(table.getPageCount() - 1)}
             disabled={!table.getCanNextPage()}
           >
+            <span className='sr-only'>{t('table.lastPage')}</span>
             <DoubleArrowRightIcon className='h-4 w-4' />
-          </IconButton>
+          </Button>
         </div>
       </div>
     </div>

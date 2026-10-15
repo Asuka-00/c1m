@@ -9,9 +9,8 @@ from sqlmodel import Session
 from app.core.spec.base import now
 from app.core.spec.engine import ENTITIES
 from app.core.spec.errors import http_422
-from app.core.spec.serialize import dec_str, serialize, to_json
+from app.core.spec.serialize import serialize, to_json
 from app.mes.common.query import find, one
-from app.mes.equipment.service import num, warn_ratio
 from app.mes.execution.checks import service as ck
 from app.mes.execution.checks.registry import Ctx
 from app.mes.execution.constants import NEXT_STAGE, STAGES
@@ -43,7 +42,6 @@ def build_ctx(s: Session, tid: uuid.UUID, lot: Row, trigger: str, body: Row) -> 
     rt = one(s, tid, "reticle", body.get("reticle_id") or xc.get("reticle_id"))
     car = one(s, tid, "carrier", body.get("carrier_id") or lot.get("carrier_id"))
     tools = _rows(s, tid, "tool", body.get("tool_ids") or xc.get("tool_ids"))
-    chs = _rows(s, tid, "equipment", body.get("chamber_ids") or xc.get("chamber_ids"))
     mls = _rows(
         s,
         tid,
@@ -61,13 +59,10 @@ def build_ctx(s: Session, tid: uuid.UUID, lot: Row, trigger: str, body: Row) -> 
         wo=one(s, tid, "work_order", lot["work_order_id"]),
         equipment=eq,
         recipe=rc,
-        eqp_recipe=body.get("eqp_recipe") or None,
         reticle=rt,
         carrier=car,
-        chambers=chs,
         tools=tools,
         material_lots=mls,
-        batch=body.get("batch") or [],
     )
     ctx.material_needs = material_needs(s, tid, step, lot, mls, ctx.at)
     ctx.sampling = sampling(s, tid, lot, step, units(s, tid, lot["id"]))
@@ -116,24 +111,12 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
             for r in find(s, tid, "reason_code", order="code", reason_type=k)
             if r["is_active"]
         ]
-        for k in ("hold", "release", "scrap", "rework", "jump", "bonus")
+        for k in ("hold", "release", "scrap", "rework")
     }
     out["stack"] = lot.get("route_stack") or []
     if not step:
         return out
     rt = one(s, tid, "route", step["route_id"])
-    # 同一流程的工序工步（跳站目标）
-    out["route_steps"] = [
-        {
-            "id": str(x["id"]),
-            "seq": x["seq"],
-            "operation": (one(s, tid, "operation", x["operation_id"]) or {}).get(
-                "code"
-            ),
-        }
-        for x in find(s, tid, "route_step", order="seq", route_id=step["route_id"])
-        if x["operation_id"]
-    ]
     op = one(s, tid, "operation", step["operation_id"])
     rw = one(s, tid, "route", step["rework_route_id"])
     out["step"] = {
@@ -169,9 +152,9 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
         ]
     )
 
-    def _eq(e: Row, sub: bool = False) -> Row:
+    def _eq(e: Row) -> Row:
         st = ck.e10_current(s, tid, e)
-        out: Row = {
+        return {
             "id": str(e["id"]),
             "code": e["code"],
             "name": e["name"],
@@ -179,9 +162,6 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
             "category": st and st["e10_category"],
             "color": st and st["color"],
         }
-        if not sub:
-            out["chambers"] = [_eq(c, True) for c in ck.chambers_of(s, tid, e)]
-        return out
 
     out["equipment"] = sorted((_eq(e) for e in eqs), key=lambda x: x["code"])
     rids = {r["recipe_id"] for r in res if r["recipe_id"]}
@@ -218,12 +198,10 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
                         "id": str(t["id"]),
                         "code": t["code"],
                         "status": t["tool_status"],
-                        "usage": num(used),
-                        "max": num(mx),
+                        "usage": used,
+                        "max": mx,
                         "expiry": to_json(t["expiry_date"]),
                         "warn_pct": t["warn_pct"],
-                        # D54：有效预警比例（工具 → 类型 → warn_pct/100），十进制字符串
-                        "warn_ratio": dec_str(warn_ratio(s, tid, t)),
                     }
                 )
             out["tools"].append(
@@ -264,7 +242,6 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
             "min": x["rule"]["min_minutes"],
             "max": x["rule"]["max_minutes"],
             "exceeded": x["exceeded"],
-            "warn": x.get("warn", False),
             "too_early": x["too_early"],
         }
         for x in ck.qtime_status(s, tid, lot, step, at)

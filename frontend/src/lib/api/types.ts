@@ -4,19 +4,12 @@ export type UUID = string
 /** 用户。 */
 export interface User {
   id: UUID
-  /** 用户名：主身份与登录名（不区分大小写唯一，小写存储） */
-  username: string
-  /** 邮箱：可选，填写时唯一 */
-  email: string | null
+  email: string
+  username: string | null
   full_name: string | null
   is_active: boolean
   is_superuser: boolean
   created_at: string | null
-  /** 最后更新时间 / 更新人 */
-  updated_at?: string | null
-  updated_by?: string | null
-  /** 平台角色名称 */
-  role_names?: string[]
 }
 /** 分页列表响应 `{data, count}`。 */
 export interface Paged<T> {
@@ -29,52 +22,13 @@ export interface Permission {
   code: string
   description: string | null
   scope: 'platform' | 'tenant' | string
-  /** 显示名称 */
-  name?: string | null
-  /** 类型：MENU / BUTTON / API */
-  type?: PermType
-  /** 所属菜单 id */
-  menu_id?: UUID | null
-  sort_order?: number
-  /** active / disabled */
-  status?: string
-}
-/** 权限类型。 */
-export type PermType = 'MENU' | 'BUTTON' | 'API' | 'GROUP'
-/** 统一权限树节点：菜单（kind=menu）、权限（kind=perm）或虚拟分组（kind=group）。 */
-export interface PermNode {
-  id: string
-  kind: 'menu' | 'perm' | 'group'
-  type: PermType
-  key: string | null
-  name: string
-  code: string
-  path: string | null
-  icon: string | null
-  component: string | null
-  sort_order: number
-  visible: boolean
-  status: string
-  scope: string | null
-  space: string | null
-  description: string | null
-  /** 菜单：父菜单 id；权限：所属菜单 id */
-  menu_id: string | null
-  children: PermNode[]
 }
 /** 角色（平台或租户）。 */
 export interface Role {
   id: UUID
-  /** 角色编码 */
   name: string
-  /** 角色名称（显示） */
-  title?: string | null
   description: string | null
-  /** active / disabled */
-  status?: string
   tenant_id: UUID | null
-  updated_at?: string | null
-  updated_by?: string | null
   permissions: Permission[]
 }
 /** 租户。 */
@@ -83,68 +37,8 @@ export interface Tenant {
   name: string
   slug: string
   status: string
-  /** 套餐：trial / standard / enterprise */
-  plan?: string
-  /** 到期时间（null 表示永久） */
-  expires_at?: string | null
   created_at: string | null
 }
-/** 平台视角的租户（含成员数与 owner）。 */
-export interface PlatformTenant extends Tenant {
-  plan: string
-  expires_at: string | null
-  member_count: number
-  owners: string[]
-}
-/** 登录日志。 */
-export interface LoginLog {
-  id: UUID
-  /** 登录名（尝试登录时输入的用户名） */
-  username: string
-  user_id: UUID | null
-  success: boolean
-  reason: string | null
-  ip: string | null
-  user_agent: string | null
-  created_at: string | null
-}
-/** 平台操作日志。 */
-export interface PlatformAudit {
-  id: UUID
-  /** 操作人用户名 */
-  actor_username: string
-  action: string
-  target_type: string
-  target_id: string | null
-  tenant_id: UUID | null
-  detail: Record<string, unknown> | null
-  created_at: string | null
-}
-/** 跨租户业务审计行。 */
-export interface CrossTenantAudit {
-  id: string
-  tenant_id: string
-  tenant_name: string
-  entity_type: string | null
-  action: string | null
-  record_code: string | null
-  username: string | null
-  changes: unknown
-  created_at: string | null
-}
-/** 通知渠道（平台开关）。 */
-export interface NotifyChannel {
-  code: string
-  label: string
-  enabled: boolean
-}
-/** 访问令牌。 */
-export interface Token {
-  access_token: string
-  token_type?: string
-}
-/** 菜单空间：租户工作区或平台管理控制台。 */
-export type MenuSpace = 'workspace' | 'platform'
 /** 当前用户的租户及其在该租户的角色。 */
 export interface MyTenant {
   tenant: Tenant
@@ -154,18 +48,8 @@ export interface MyTenant {
 /** 租户成员。 */
 export interface Member {
   user_id: UUID
-  username: string
-  email: string | null
+  email: string
   full_name: string | null
-  is_active?: boolean
-  roles: string[]
-  /** 是否只属于本租户（仅此时租户管理员可修改账号 / 重置密码） */
-  sole_tenant?: boolean
-}
-/** 用户在某租户的成员身份（平台为用户分配租户）。 */
-export interface UserTenantRoles {
-  tenant_id: UUID
-  tenant_name?: string | null
   roles: string[]
 }
 /** 菜单树节点。 */
@@ -175,18 +59,8 @@ export interface MenuNode {
   path: string | null
   icon: string | null
   component: string | null
-  /** 权限编码；多个以逗号分隔表示“任一即可”（合并菜单） */
   permission: string | null
-  /** 合并菜单的页签（已按权限过滤） */
-  tabs?: MenuTab[]
   children: MenuNode[]
-}
-/** 合并菜单的页签（原独立菜单）。 */
-export interface MenuTab {
-  key: string
-  title: string
-  component: string | null
-  permission: string | null
 }
 /** 当前用户菜单：菜单树、权限与禁止访问的路径。 */
 export interface MyMenus {
@@ -195,10 +69,6 @@ export interface MyMenus {
   permissions: string[]
   tenant_id: UUID | null
   is_superuser: boolean
-  /** 可进入平台管理控制台（超级用户或持有任一平台权限；模拟令牌下为 false） */
-  platform_access?: boolean
-  /** 菜单所属空间 */
-  space?: MenuSpace
 }
 /** 菜单（管理视图）。 */
 export interface Menu {
@@ -212,10 +82,6 @@ export interface Menu {
   permission: string | null
   hidden: boolean
   parent_id: UUID | null
-  /** 所属空间（workspace / platform） */
-  space?: MenuSpace
-  /** active / disabled（停用：隐藏且禁止访问） */
-  status?: string
 }
 /** 通用消息响应。 */
 export interface Message {

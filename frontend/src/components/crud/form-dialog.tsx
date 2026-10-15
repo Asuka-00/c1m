@@ -12,7 +12,6 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Select,
   SelectContent,
@@ -21,7 +20,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { TagSelect } from './tag-select'
 
 /** 表单字段值。 */
 export type FieldValue = string | boolean | string[]
@@ -41,20 +39,10 @@ export interface Field {
     | 'select'
     | 'multi'
     | 'number'
-    | 'radio'
-    | 'tags'
-    | 'custom'
   options?: { value: string; label: string }[]
   required?: boolean
   placeholder?: string
   hidden?: boolean
-  /** 只读（如编辑时的用户名） */
-  readOnly?: boolean
-  /** type='custom' 时的自定义渲染（如嵌入的权限树） */
-  render?: (
-    value: FieldValue,
-    onChange: (v: FieldValue) => void
-  ) => React.ReactNode
 }
 
 /** 由字段列表驱动的通用新增 / 编辑对话框。 */
@@ -81,13 +69,7 @@ export function FormDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className={
-          fields.some((f) => f.type === 'custom')
-            ? 'sm:max-w-2xl'
-            : 'sm:max-w-lg'
-        }
-      >
+      <DialogContent className='sm:max-w-lg'>
         {open && (
           <FormBody
             title={title}
@@ -163,34 +145,7 @@ function FormBody({
             return (
               <div key={f.name} className='grid gap-2'>
                 <Label htmlFor={f.name}>{f.label}</Label>
-                {f.type === 'custom' ? (
-                  f.render?.(v, (x) => set(f.name, x))
-                ) : f.type === 'radio' ? (
-                  <RadioGroup
-                    id={f.name}
-                    className='flex gap-6'
-                    value={(v as string) ?? ''}
-                    onValueChange={(x) => set(f.name, x)}
-                  >
-                    {f.options?.map((o) => (
-                      <label
-                        key={o.value}
-                        className='flex items-center gap-2 text-sm'
-                      >
-                        <RadioGroupItem value={o.value} />
-                        {o.label}
-                      </label>
-                    ))}
-                  </RadioGroup>
-                ) : f.type === 'tags' ? (
-                  <TagSelect
-                    id={f.name}
-                    options={f.options ?? []}
-                    value={(v as string[]) ?? []}
-                    onChange={(x) => set(f.name, x)}
-                    placeholder={f.placeholder}
-                  />
-                ) : f.type === 'textarea' ? (
+                {f.type === 'textarea' ? (
                   <Textarea
                     id={f.name}
                     value={(v as string) ?? ''}
@@ -244,8 +199,6 @@ function FormBody({
                     id={f.name}
                     type={f.type ?? 'text'}
                     required={f.required}
-                    readOnly={f.readOnly}
-                    disabled={f.readOnly}
                     placeholder={f.placeholder}
                     value={(v as string) ?? ''}
                     onChange={(e) => set(f.name, e.target.value)}

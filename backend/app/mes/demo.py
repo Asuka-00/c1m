@@ -5,7 +5,7 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, col, select
+from sqlmodel import Session, select
 
 from app.core.spec.base import conn
 from app.core.spec.engine import ENTITIES, TABLES
@@ -22,53 +22,9 @@ from app.mes.quality import demo as _quality  # noqa: F401  # isort: skip
 from app.mes.lot import demo as _lot  # noqa: F401  # isort: skip
 from app.mes.planning import demo as _planning  # noqa: F401  # isort: skip
 from app.mes.execution import demo as _execution  # noqa: F401  # isort: skip
-from app.mes.warehouse import demo as _warehouse  # noqa: F401  # isort: skip
-from app.mes.common.demo import (
-    ACTIVATE,
-    DEMO,
-    SiteDay,
-    _exists,
-    _resolve,
-    default_tenant,
-)
-from app.mes.execution.demo import _post_demo, _run_exec
+from app.mes.common.demo import ACTIVATE, DEMO, _exists, _resolve, default_tenant
+from app.mes.execution.demo import _run_exec
 from app.mes.planning.demo import STARTS
-
-DEMO_SUB = "[demo] "
-
-
-def _demo_subscriptions(session: Session, tid: Any) -> None:
-    """演示通知订阅：租户 admin / owner 角色订阅全部 MES 事件（幂等）。"""
-    import app.mes.equipment.events  # noqa: F401  （登记事件类型）
-    import app.mes.execution.events  # noqa: F401
-    from app.platform.notification.models import NotificationSubscription
-    from app.platform.notification.service import event_types
-    from app.platform.rbac.models import Role
-
-    roles = session.exec(
-        select(Role.id).where(
-            Role.tenant_id == tid, col(Role.name).in_(("admin", "owner"))
-        )
-    ).all()
-    have = set(
-        session.exec(
-            select(NotificationSubscription.event_type).where(
-                NotificationSubscription.tenant_id == tid,
-                col(NotificationSubscription.name).startswith(DEMO_SUB),
-            )
-        ).all()
-    )
-    for e in event_types():
-        if e["code"].startswith("mes.") and e["code"] not in have:
-            session.add(
-                NotificationSubscription(
-                    tenant_id=tid,
-                    name=f"{DEMO_SUB}{e['code']}",
-                    event_type=e["code"],
-                    role_ids=[str(r) for r in roles],
-                )
-            )
-    session.commit()
 
 
 def seed(session: Session) -> int:
@@ -82,14 +38,11 @@ def seed(session: Session) -> int:
     """
     tid = default_tenant(session)
     admin = session.exec(select(User).where(User.is_superuser)).first()
-    _demo_subscriptions(session, tid)
     n = 0
     for ent, raw in DEMO:
         values: dict[str, Any] = {}
         for k, v in raw.items():
-            if isinstance(v, SiteDay):
-                values[k] = v.resolve(session, tid)
-            elif isinstance(v, tuple):
+            if isinstance(v, tuple):
                 rid = _resolve(session, tid, v)
                 assert rid, f"{ent}.{k}: {v} not found"
                 values[f"{k}_id"] = rid
@@ -141,7 +94,6 @@ def seed(session: Session) -> int:
             demo=True,
         )
     _run_exec(session, tid, admin)
-    _post_demo(session, tid, admin)
     return n
 
 
@@ -157,15 +109,6 @@ def remove(session: Session) -> int:
     c = conn(session)
     total = 0
     pending = [e for e in ENTITIES.values() if e.code != "audit_log" and not e.internal]
-    # D74：资质履历由写入钩子追加（不带 _demo 标记），随演示资质一起删
-    q, lg = TABLES["operator_qual"], TABLES["operator_qual_log"]
-    qd = sa.cast(q.c.attrs, JSONB)["_demo"].astext == "true"
-    total += c.execute(
-        sa.delete(lg).where(
-            lg.c.tenant_id == tid,
-            lg.c.qual_id.in_(sa.select(q.c.id).where(q.c.tenant_id == tid, qd)),
-        )
-    ).rowcount
     for _ in range(len(pending) + 1):
         progress = False
         for e in reversed(pending):
@@ -180,13 +123,5 @@ def remove(session: Session) -> int:
                 continue
         if not progress:
             break
-    from app.platform.notification.models import NotificationSubscription
-
-    conn(session).execute(
-        sa.delete(NotificationSubscription).where(
-            col(NotificationSubscription.tenant_id) == tid,
-            col(NotificationSubscription.name).startswith(DEMO_SUB),
-        )
-    )
     session.commit()
     return total

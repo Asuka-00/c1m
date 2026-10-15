@@ -1,11 +1,10 @@
-/** 平台用户管理页面：筛选、列表、编辑（角色标签多选 + 状态单选）、重置密码、删除。 */
+/** 用户管理页面。 */
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { fmtDateTime, t } from '@/i18n'
-import { KeyRound, Plus } from 'lucide-react'
+import { t } from '@/i18n'
+import { Plus, ShieldPlus } from 'lucide-react'
 import { ALL, api, type User, type UserIn } from '@/lib/api'
 import { useApiMutation, useCan, useMe } from '@/lib/api/hooks'
-import { roleLabel } from '@/lib/rbac-labels'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -18,28 +17,89 @@ import {
   useListParams,
   type Values,
   type FilterDef,
+  searchFilter,
+  boolOptions,
 } from '@/components/crud'
-import { IconButton } from '@/components/icon-button'
-import { StatusBadge } from '../rbac/status'
-import { statusOptions } from '../rbac/status-options'
-import { TenantRolesEditor } from './tenant-roles-editor'
-import { decodeRows, encodeRows } from './tenant-rows'
 
-/** 用户管理（平台）：用户 CRUD、启停、平台角色分配与重置密码。 */
+function UserRolesDialog({
+  user,
+  onClose,
+}: {
+  user: User | null
+  onClose: () => void
+}) {
+  const roles = useQuery({
+    queryKey: ['roles', 'all'],
+    queryFn: () => api.roles.list(ALL),
+  })
+  const userRoles = useQuery({
+    queryKey: ['user-roles', user?.id],
+    queryFn: () => api.users.roles(user!.id),
+    enabled: !!user,
+  })
+  const add = useApiMutation(
+    (rid: string) => api.users.addRole(user!.id, rid),
+    [['user-roles']]
+  )
+  const del = useApiMutation(
+    (rid: string) => api.users.removeRole(user!.id, rid),
+    [['user-roles']]
+  )
+  const has = new Set(userRoles.data?.map((r) => r.id))
+  return (
+    <FormDialog
+      open={!!user}
+      onOpenChange={(o) => !o && onClose()}
+      title={t('users.rolesTitle', { email: user?.email ?? '' })}
+      description={t('users.rolesDesc')}
+      fields={[
+        {
+          name: 'roles',
+          label: t('common.roles'),
+          type: 'multi',
+          options:
+            roles.data?.data.map((r) => ({ value: r.id, label: r.name })) ?? [],
+        },
+      ]}
+      initial={{ roles: [...has] as string[] }}
+      onSubmit={async (v) => {
+        const want = new Set(v.roles as string[])
+        for (const r of roles.data?.data ?? []) {
+          if (want.has(r.id) && !has.has(r.id)) await add.mutateAsync(r.id)
+          if (!want.has(r.id) && has.has(r.id)) await del.mutateAsync(r.id)
+        }
+      }}
+    />
+  )
+}
+
+/** 用户管理（平台）：用户 CRUD、启停与平台角色分配。 */
 export default function UsersPage() {
   const can = useCan()
   const { data: me } = useMe()
   const filters: FilterDef[] = [
-    { type: 'text', name: 'username', placeholder: t('common.username') },
-    { type: 'text', name: 'full_name', placeholder: t('rbac.displayName') },
+    searchFilter(t('table.searchUsers')),
+    {
+      type: 'select',
+      name: 'role_id',
+      label: t('table.allRoles'),
+      optionsKey: ['roles', 'all', 'options'],
+      loadOptions: () =>
+        api.roles
+          .list(ALL)
+          .then((r) => r.data.map((x) => ({ value: x.id, label: x.name }))),
+    },
     {
       type: 'select',
       name: 'is_active',
       label: t('table.allStatuses'),
-      options: [
-        { value: 'true', label: t('rbac.enabled') },
-        { value: 'false', label: t('rbac.disabled') },
-      ],
+      options: boolOptions(t('common.activeBadge'), t('common.inactive')),
+    },
+    {
+      type: 'select',
+      name: 'is_superuser',
+      label: t('table.allSuperuser'),
+      options: boolOptions(t('common.superuser'), t('users.regular')),
     },
   ]
   const lp = useListParams(filters)
@@ -47,69 +107,40 @@ export default function UsersPage() {
     queryKey: ['users', lp.query],
     queryFn: () => api.users.list(lp.query),
   })
-  const roles = useQuery({
-    queryKey: ['roles', 'all'],
-    queryFn: () => api.roles.list(ALL),
-  })
-  const roleOptions =
-    roles.data?.data.map((r) => ({ value: r.id, label: roleLabel(r) })) ?? []
   const s = useCrudState<User>()
-  const editing = s.editing
-  const userRoles = useQuery({
-    queryKey: ['user-roles', editing?.id],
-    queryFn: () => api.users.roles(editing!.id),
-    enabled: !!editing,
-  })
-  const userTenants = useQuery({
-    queryKey: ['user-tenants', editing?.id],
-    queryFn: () => api.users.tenants(editing!.id),
-    enabled: !!editing,
-  })
-  const [resetFor, setResetFor] = useState<User | null>(null)
-  const save = useApiMutation(
-    async (v: Values) => {
-      const b: UserIn = {
-        full_name: (v.full_name as string) || null,
-        is_active: v.status === 'active',
-      }
-      b.email = ((v.email as string) || '').trim() || null
-      const roleIds = v.roles as string[]
-      const rows = decodeRows(v.tenants as string[])
-      if (editing) {
-        await api.users.update(editing.id, b)
-        await api.users.setTenants(editing.id, rows)
-        return api.users.setRoles(editing.id, roleIds)
-      }
-      const u = await api.users.create({
-        ...b,
-        username: (v.username as string).trim(),
-        password: v.password as string,
-      })
-      // 不会自动创建租户：按所选行分配
-      if (rows.length) await api.users.setTenants(u.id, rows)
-      return roleIds.length ? api.users.setRoles(u.id, roleIds) : u
-    },
-    [['users'], ['user-roles'], ['user-tenants'], ['platform-tenants']],
-    t('rbac.saved')
-  )
-  const reset = useApiMutation(
-    (v: { id: string; password: string }) =>
-      api.users.update(v.id, { password: v.password }),
+  const [rolesFor, setRolesFor] = useState<User | null>(null)
+  const create = useApiMutation(
+    api.users.create,
     [['users']],
-    t('rbac.passwordReset')
+    t('users.created')
+  )
+  const update = useApiMutation(
+    (v: { id: string } & UserIn) => api.users.update(v.id, v),
+    [['users']],
+    t('users.updated')
   )
   const remove = useApiMutation(
     api.users.remove,
     [['users']],
     t('users.deleted')
   )
-  const writable = can('users:write')
+  const toBody = (v: Values): UserIn => {
+    const b: UserIn = {
+      email: v.email as string,
+      username: ((v.username as string) || '').trim() || null,
+      full_name: (v.full_name as string) || null,
+      is_active: !!v.is_active,
+      is_superuser: !!v.is_superuser,
+    }
+    if (v.password) b.password = v.password as string
+    return b
+  }
   return (
     <Page
       title={t('users.title')}
       description={t('users.desc')}
       actions={
-        writable && (
+        can('users:write') && (
           <Button onClick={s.openCreate}>
             <Plus /> {t('users.new')}
           </Button>
@@ -125,71 +156,61 @@ export default function UsersPage() {
         rowKey={(r) => r.id}
         columns={[
           {
-            header: t('common.username'),
-            sortKey: 'username',
-            cell: (r) => <span className='font-medium'>{r.username}</span>,
+            header: t('common.email'),
+            sortKey: 'email',
+            cell: (r) => <span className='font-medium'>{r.email}</span>,
           },
           {
-            header: t('rbac.displayName'),
+            header: t('common.username'),
+            sortKey: 'username',
+            cell: (r) =>
+              r.username ? (
+                <code className='text-xs'>{r.username}</code>
+              ) : (
+                <span className='text-muted-foreground'>—</span>
+              ),
+          },
+          {
+            header: t('common.name'),
             sortKey: 'full_name',
             cell: (r) => r.full_name ?? '—',
           },
           {
-            header: t('common.email'),
-            sortKey: 'email',
-            cell: (r) => (
-              <span className='text-muted-foreground'>{r.email ?? '—'}</span>
-            ),
-          },
-          {
-            header: t('common.roles'),
-            cell: (r) => (
-              <div className='flex flex-wrap gap-1'>
-                {r.is_superuser && <Badge>{t('common.superuser')}</Badge>}
-                {r.role_names?.map((x) => (
-                  <Badge key={x} variant='secondary'>
-                    {roleLabel(
-                      roles.data?.data.find((o) => o.name === x) ?? { name: x }
-                    )}
-                  </Badge>
-                ))}
-              </div>
-            ),
-          },
-          {
             header: t('common.status'),
             sortKey: 'is_active',
-            cell: (r) => <StatusBadge active={r.is_active} />,
+            cell: (r) => (
+              <Badge variant={r.is_active ? 'secondary' : 'outline'}>
+                {r.is_active ? t('common.activeBadge') : t('common.inactive')}
+              </Badge>
+            ),
           },
           {
-            header: t('rbac.updatedBy'),
-            cell: (r) => r.updated_by ?? '—',
+            header: t('common.superuser'),
+            sortKey: 'is_superuser',
+            cell: (r) =>
+              r.is_superuser ? <Badge>{t('common.superuser')}</Badge> : '',
           },
           {
-            header: t('rbac.updatedAt'),
-            sortKey: 'updated_at',
-            cell: (r) => fmtDateTime(r.updated_at ?? r.created_at),
-          },
-          {
-            header: t('rbac.actions'),
+            header: '',
             className: 'w-32',
             cell: (r) => (
               <RowActions
-                onEdit={writable ? () => s.openEdit(r) : undefined}
+                onEdit={can('users:write') ? () => s.openEdit(r) : undefined}
                 onDelete={
                   can('users:delete') && r.id !== me?.id
                     ? () => s.openDelete(r)
                     : undefined
                 }
               >
-                {writable && (
-                  <IconButton
-                    label={t('rbac.resetPassword')}
+                {can('roles:write') && (
+                  <Button
+                    size='icon'
                     variant='ghost'
-                    onClick={() => setResetFor(r)}
+                    aria-label={t('common.roles')}
+                    onClick={() => setRolesFor(r)}
                   >
-                    <KeyRound className='size-4' />
-                  </IconButton>
+                    <ShieldPlus className='size-4' />
+                  </Button>
                 )}
               </RowActions>
             ),
@@ -197,104 +218,59 @@ export default function UsersPage() {
         ]}
       />
       <FormDialog
-        key={`${editing?.id ?? 'new'}-${userRoles.isSuccess}-${userTenants.isSuccess}`}
-        open={
-          s.formOpen &&
-          (!editing || (!userRoles.isLoading && !userTenants.isLoading))
-        }
+        open={s.formOpen}
         onOpenChange={(o) => !o && s.closeForm()}
-        title={editing ? t('users.edit') : t('users.new')}
-        description={editing ? undefined : t('users.newDesc')}
+        title={s.editing ? t('users.edit') : t('users.new')}
+        description={s.editing ? t('users.editDesc') : t('users.newDesc')}
         fields={[
-          {
-            name: 'username',
-            label: t('common.username'),
-            required: true,
-            readOnly: !!editing,
-            placeholder: t('users.usernameHint'),
-          },
           {
             name: 'email',
             label: t('common.email'),
             type: 'email',
-            placeholder: t('users.emailOptional'),
+            required: true,
           },
-          { name: 'full_name', label: t('rbac.displayName') },
+          {
+            name: 'username',
+            label: t('common.username'),
+            placeholder: t('users.usernameHint'),
+          },
+          { name: 'full_name', label: t('common.fullName') },
           {
             name: 'password',
             label: t('common.password'),
             type: 'password',
-            required: true,
-            hidden: !!editing,
-            placeholder: t('users.passwordMin'),
+            required: !s.editing,
+            placeholder: s.editing
+              ? t('users.passwordUnchanged')
+              : t('users.passwordMin'),
           },
+          { name: 'is_active', label: t('common.active'), type: 'checkbox' },
           {
-            name: 'roles',
-            label: t('common.roles'),
-            type: 'tags',
-            options: roleOptions,
-            placeholder: t('rbac.pickRoles'),
-          },
-          {
-            name: 'status',
-            label: t('common.status'),
-            type: 'radio',
-            options: statusOptions(),
-          },
-          {
-            name: 'tenants',
-            label: t('users.tenants'),
-            type: 'custom',
-            render: (val, onChange) => (
-              <TenantRolesEditor
-                value={val as string[]}
-                onChange={(x) => onChange(x)}
-              />
-            ),
+            name: 'is_superuser',
+            label: t('common.superuser'),
+            type: 'checkbox',
           },
         ]}
         initial={{
-          username: editing?.username ?? '',
-          email: editing?.email ?? '',
-          full_name: editing?.full_name ?? '',
+          email: s.editing?.email ?? '',
+          username: s.editing?.username ?? '',
+          full_name: s.editing?.full_name ?? '',
           password: '',
-          roles: userRoles.data?.map((r) => r.id) ?? [],
-          status: editing && !editing.is_active ? 'disabled' : 'active',
-          tenants: encodeRows(userTenants.data ?? []),
+          is_active: s.editing?.is_active ?? true,
+          is_superuser: s.editing?.is_superuser ?? false,
         }}
-        pending={save.isPending}
-        onSubmit={(v) => save.mutateAsync(v)}
-      />
-      <FormDialog
-        open={!!resetFor}
-        onOpenChange={(o) => !o && setResetFor(null)}
-        title={t('rbac.resetPassword')}
-        description={t('rbac.resetPasswordDesc', {
-          name: resetFor?.username,
-        })}
-        fields={[
-          {
-            name: 'password',
-            label: t('rbac.newPassword'),
-            type: 'password',
-            required: true,
-            placeholder: t('users.passwordMin'),
-          },
-        ]}
-        initial={{ password: '' }}
-        pending={reset.isPending}
+        pending={create.isPending || update.isPending}
         onSubmit={(v) =>
-          reset.mutateAsync({
-            id: resetFor!.id,
-            password: v.password as string,
-          })
+          s.editing
+            ? update.mutateAsync({ id: s.editing.id, ...toBody(v) })
+            : create.mutateAsync(toBody(v))
         }
       />
       <ConfirmDialog
         open={!!s.deleting}
         onOpenChange={(o) => !o && s.closeDelete()}
         title={t('users.delete')}
-        desc={t('users.deleteDesc', { email: s.deleting?.username })}
+        desc={t('users.deleteDesc', { email: s.deleting?.email })}
         destructive
         confirmText={t('common.delete')}
         handleConfirm={() =>
@@ -302,6 +278,7 @@ export default function UsersPage() {
           remove.mutate(s.deleting.id, { onSuccess: s.closeDelete })
         }
       />
+      <UserRolesDialog user={rolesFor} onClose={() => setRolesFor(null)} />
     </Page>
   )
 }

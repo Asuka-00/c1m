@@ -11,7 +11,6 @@ from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import TABLES
 from app.core.spec.errors import http_422
-from app.mes.common.query import one
 from app.mes.common.rows import _upd
 from app.mes.execution.checks import service as ck
 from app.mes.execution.sm_rules import (
@@ -28,24 +27,14 @@ from app.mes.execution.sm_rules import (
 )
 from app.mes.execution.stage_common import _brief, _ov
 from app.mes.execution.stages import LOT
-from app.mes.lot.service import (
-    check_transition,
-    customer_mismatch,
-    history,
-    lock_lots,
-    lot_error,
-    same_customer_lot,
-    units,
-)
-from app.mes.lot.service import customer_info as cust_info
-from app.mes.product import service as bom_svc
+from app.mes.lot.service import history, lock_lot, units
 
 Row = dict[str, Any]
 
 
 # ---------------- merge ----------------
 def merge_problems(
-    s: Session, target: Row, src: Row, rule: Row | None, src_rule: Row | None = None
+    target: Row, src: Row, rule: Row | None, src_rule: Row | None = None
 ) -> list[str]:
     """检查源批次能否合入目标批次。
 
@@ -72,14 +61,6 @@ def merge_problems(
             p.append(f"{c}: different {label}")
     if (src.get("route_stack") or []) != (target.get("route_stack") or []):
         p.append(f"{c}: different sub-route / rework frame")
-    if src.get("bom_id") != target.get("bom_id"):  # D28：空与非空也算不同
-        p.append(f"{c}: different BOM version")
-    if customer_mismatch(target, src):  # B7
-        p.append(f"{c}: different customer / ownership")
-    if not same_customer_lot(
-        s, src.get("customer_lot_no"), target.get("customer_lot_no")
-    ):
-        p.append(f"{c}: different customer lot no.")  # D36
     if (
         rule
         and rule.get("merge_same_wo", True)
@@ -127,7 +108,7 @@ def merge_candidates(s: Session, tid: uuid.UUID, target: Row) -> list[Row]:
             "on_hold": r["on_hold"],
             "priority": _prio_json(_prio(s, tid, r["priority_id"])),
             "problems": merge_problems(
-                s, target, dict(r), rule, rule_for(s, tid, dict(r))
+                target, dict(r), rule, rule_for(s, tid, dict(r))
             ),
         }
         for r in rows
@@ -154,102 +135,16 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
         HTTPException: 规则不满足或载具容量不足（422）。
         CheckBlocked: 检查阻断。
     """
-    ids = [str(x) for x in body.get("source_lot_ids") or []]
+    ids = list(dict.fromkeys(str(x) for x in body.get("source_lot_ids") or []))
     if not ids:
         raise http_422([("source_lot_ids", "source_lot_ids: pick lots to merge")])
-    dup = sorted({x for x in ids if ids.count(x) > 1})
-    if dup or str(lot_id) in ids:  # P14：不静默去重
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "code": "merge_source_invalid",
-                "message": "source_lot_ids: duplicate lots or the target lot itself",
-                "duplicates": dup,
-                "includes_target": str(lot_id) in ids,
-            },
-        )
-    src_ids: list[uuid.UUID] = []
+    target = lock_lot(s, tid, lot_id)
+    srcs: list[Row] = []
     for x in ids:
         try:
-            src_ids.append(uuid.UUID(x))
-        except ValueError:
+            srcs.append(lock_lot(s, tid, uuid.UUID(x)))
+        except HTTPException, ValueError:
             raise http_422([("source_lot_ids", f"source_lot_ids: {x} not found")])
-    # 目标与源批次按 id 升序一次加锁，避免反向合批互相等待造成死锁
-    try:
-        locked = lock_lots(s, tid, [lot_id, *src_ids])
-    except HTTPException:
-        if not one(s, tid, "lot", lot_id):
-            raise
-        missing = [str(x) for x in src_ids if not one(s, tid, "lot", x)]
-        raise http_422(
-            [("source_lot_ids", f"source_lot_ids: {', '.join(missing)} not found")]
-        )
-    target = locked[uuid.UUID(str(lot_id))]
-    srcs = [locked[x] for x in src_ids]
-    # N4：先目标、再按 id 升序逐个源批次走状态机，遇到第一个不合格即 422
-    # （状态非法 lot_status 优先于 on_hold）；全部通过后才做合批规则检查（409）
-    check_transition(target, "merge_target")
-    for src in sorted(srcs, key=lambda x: x["id"]):
-        check_transition(src, "merge_source")
-        if src["lot_status"] != target["lot_status"]:
-            raise lot_error(
-                "lot_status",
-                f"{src['code']} is {src['lot_status']}, "
-                f"target is {target['lot_status']}",
-                src,
-                action="merge_source",
-                lot_status=src["lot_status"],
-                target_status=target["lot_status"],
-            )
-    # D28：BOM 版本必须一致（两个都为空可以合），硬性拒绝，不可强制放行
-    for src in sorted(srcs, key=lambda x: x["id"]):
-        if src.get("bom_id") != target.get("bom_id"):
-            tv = bom_svc.version_label(s, tid, target.get("bom_id"))
-            sv = bom_svc.version_label(s, tid, src.get("bom_id"))
-            raise lot_error(
-                "bom_mismatch",
-                f"BOM version differs: target {target['code']} {tv}, "
-                f"source {src['code']} {sv}",
-                src,
-                action="merge_source",
-                target_lot_code=target["code"],
-                target_bom_id=target.get("bom_id") and str(target["bom_id"]),
-                target_bom_version=tv,
-                source_bom_id=src.get("bom_id") and str(src["bom_id"]),
-                source_bom_version=sv,
-            )
-    # B7：客户 / 物料归属必须一致，硬性拒绝，不可强制放行
-    for src in sorted(srcs, key=lambda x: x["id"]):
-        if customer_mismatch(target, src):
-            ti, si = cust_info(s, tid, target), cust_info(s, tid, src)
-            raise lot_error(
-                "customer_mismatch",
-                f"customer differs: target {target['code']} "
-                f"{ti['customer'] or ti['ownership']}, source {src['code']} "
-                f"{si['customer'] or si['ownership']}",
-                src,
-                action="merge_source",
-                target_lot_code=target["code"],
-                target_customer_id=ti["customer_id"],
-                target_ownership=ti["ownership"],
-                source_customer_id=si["customer_id"],
-                source_ownership=si["ownership"],
-            )
-    # D36：客户批号必须一致（两边都为空可以合；一边为空也算不同），硬性拒绝
-    for src in sorted(srcs, key=lambda x: x["id"]):
-        tl = target.get("customer_lot_no") or None
-        sl = src.get("customer_lot_no") or None
-        if not same_customer_lot(s, tl, sl):  # D37：不区分大小写
-            raise lot_error(
-                "customer_lot_mismatch",
-                f"customer lot no. differs: target {target['code']} {tl or '-'}, "
-                f"source {src['code']} {sl or '-'}",
-                src,
-                action="merge_source",
-                target_lot_code=target["code"],
-                target_customer_lot_no=tl,
-                source_customer_lot_no=sl,
-            )
     rule = rule_for(s, tid, target)
     errs: list[str] = []
     if target["lot_status"] not in SPLIT_STATES:
@@ -259,7 +154,7 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
     elif not rule["allow_merge"]:
         errs.append(f"rule {rule['code']}: merge not allowed")
     for src in srcs:
-        errs += merge_problems(s, target, src, rule, rule_for(s, tid, src))
+        errs += merge_problems(target, src, rule, rule_for(s, tid, src))
     qty_mode = (target["tracking_level"] or "wafer") == "quantity"
     total = target["qty"] + sum(x["qty"] for x in srcs)
     if target["carrier_id"] and not qty_mode:
@@ -323,11 +218,7 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
             user,
             from_status=old_status,
             comment=body.get("comment"),
-            details={
-                "target": target["code"],
-                "qty": old_qty,
-                "units": ucodes,
-            },
+            details={"target": target["code"], "qty": old_qty, "units": ucodes},
         )
         audit(
             s,

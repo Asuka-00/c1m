@@ -4,7 +4,6 @@ import { t } from '@/i18n'
 import { Check, ShieldAlert, TriangleAlert, X, Zap } from 'lucide-react'
 import {
   EXEC_STAGES,
-  isHardBlock,
   type CheckResult,
   type ExecStage,
 } from '@/lib/api/mes/execution'
@@ -21,7 +20,6 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { enumLabel } from '@/features/mes/common/labels'
-import { checkMessage, markingCheckInfo } from './check-message'
 
 const NONE = '__none'
 
@@ -181,12 +179,9 @@ export function CheckPanel({
   canOverride,
   onOverride,
   busy,
-  overridable,
 }: {
   results: CheckResult[] | null
   blocked: boolean
-  /** 顶层整体能否放行（c6b5907）；null / 未给时按 results[] 里有无不可放行的阻断项兜底 */
-  overridable?: boolean | null
   canOverride: boolean
   onOverride: (reason: string) => void
   busy?: boolean
@@ -194,7 +189,7 @@ export function CheckPanel({
   const [reason, setReason] = useState('')
   if (!results) return null
   const shown = results.filter((r) => r.applicable || r.result !== 'pass')
-  const hard = isHardBlock(results, overridable)
+  const hard = results.some((r) => r.result === 'block' && !r.overridable)
   return (
     <div className='space-y-2' data-testid='check-panel'>
       {shown.length === 0 && (
@@ -218,8 +213,7 @@ export function CheckPanel({
                 )}
               </div>
               <div className='break-words text-muted-foreground'>
-                {checkMessage(r)}
-                <MarkingRecordLink r={r} />
+                {r.message}
               </div>
             </div>
           </li>
@@ -247,30 +241,9 @@ export function CheckPanel({
           </Button>
         </div>
       )}
-      {blocked && canOverride && hard && (
-        <p className='text-sm text-destructive' data-testid='hard-block'>
-          {t('mes.exec.hardBlock')}
-        </p>
-      )}
       {blocked && !canOverride && (
         <p className='text-sm text-destructive'>{t('mes.exec.noOverride')}</p>
       )}
     </div>
-  )
-}
-
-/** 打标检验拦出站且带 marking_id 时，跳转到该打标记录（D79 补充）。 */
-export function MarkingRecordLink({ r }: { r: CheckResult }) {
-  if (r.check_type !== 'marking_inspection') return null
-  const id = markingCheckInfo(r).markingId
-  if (!id) return null
-  return (
-    <a
-      href={`/mes/marking?record=${encodeURIComponent(id)}`}
-      className='ms-2 text-primary underline-offset-2 hover:underline'
-      data-testid='marking-record-link'
-    >
-      {t('mes.marking.openRecord')}
-    </a>
   )
 }

@@ -27,7 +27,6 @@ def field_meta(e: Entity) -> list[dict[str, Any]]:
                 "type": f.type,
                 "required": f.required,
                 "required_when": f.required_when,
-                "only_when_required": f.only_when_required,
                 "default_from": f.default_from,
                 "auto": f.auto,
                 "system": f.system,
@@ -38,12 +37,8 @@ def field_meta(e: Entity) -> list[dict[str, Any]]:
                 "search": f.search,
                 "default": f.default,
                 "max_length": f.max_length if f.type == "str" else None,
-                "scale": f.scale,
-                # D60：定点字段最大小数位（超出 422 too_many_decimals）；非定点为 null
-                "decimal_places": f.scale if f.scale is not None else None,
                 "help": bool(f.help),
                 "depends": f.depends,
-                "ref_filter": f.ref_filter,
             }
         )
     return out

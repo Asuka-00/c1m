@@ -6,7 +6,6 @@ from typing import Any
 import sqlalchemy as sa
 from sqlmodel import Session
 
-from app.core.models import actor_name
 from app.core.spec.base import conn
 from app.core.spec.engine import TABLES
 from app.core.spec.errors import http_422
@@ -19,9 +18,8 @@ from app.mes.execution.context import build_ctx
 from app.mes.execution.stages import LOT
 
 Row = dict[str, Any]
-SPLIT_STATES = ("waiting", "moved_in")  # == RULES["split"].from_（见 lot.state）
+SPLIT_STATES = ("waiting", "moved_in")
 COPY = (
-    "bom_id",  # 子批沿用母批锁定的 BOM 版本（D28）
     "work_order_id",
     "product_id",
     "route_id",
@@ -82,9 +80,7 @@ def _carrier_busy(s: Session, tid: uuid.UUID, carrier_id: Any, but: Any = None) 
     q = sa.select(t.c.id).where(
         t.c.tenant_id == tid,
         t.c.carrier_id == carrier_id,
-        t.c.lot_status.notin_(
-            ["completed", "stored", "scrapped", "merged", "converted"]
-        ),
+        t.c.lot_status.notin_(["completed", "scrapped", "merged"]),
     )
     if but is not None:
         q = q.where(t.c.id != but)
@@ -139,7 +135,7 @@ def _genealogy(
         qty=qty,
         units=unit_codes,
         route_step_id=parent["current_step_id"],
-        username=actor_name(user),
+        user_email=getattr(user, "email", None),
         at=at,
     )
 

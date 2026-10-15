@@ -12,12 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Page, useListParams } from '@/components/crud'
-import {
-  DETAIL_TABS,
-  EXTRA_ACTIONS,
-  EXTRA_COLUMNS,
-  ROW_PANELS,
-} from '@/features/mes/registry'
+import { EXTRA_ACTIONS, ROW_PANELS } from '@/features/mes/registry'
 import { NotFoundError } from '@/features/shell/errors/not-found-error'
 import { ChildTable } from './child-table'
 import { EntityTable } from './entity-table'
@@ -33,15 +28,16 @@ export function MesEntityPage({ code }: { code: string }) {
   const [detail, setDetail] = useState<MesRow | null>(null)
   if (isLoading) return <Loader2 className='mx-auto mt-24 animate-spin' />
   if (!entity) return <NotFoundError />
-  const hasDetail =
-    entity.children.length > 0 || !!ROW_PANELS[code] || !!DETAIL_TABS[code]
+  const hasDetail = entity.children.length > 0 || !!ROW_PANELS[code]
   return (
-    <Page title={entityLabel(code)}>
+    <Page
+      title={entityLabel(code)}
+      description={t(`mes.module.${entity.module}`)}
+    >
       <EntityTable
         entity={entity}
         params={params}
         extraActions={EXTRA_ACTIONS[code]}
-        extraColumns={EXTRA_COLUMNS[code]}
         onOpenChildren={hasDetail ? setDetail : undefined}
       />
       <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
@@ -57,7 +53,6 @@ function Detail({ code, row }: { code: string; row: MesRow }) {
   const { entity } = useMesEntity(code)
   const { data: meta } = useMesMeta()
   const Panel = ROW_PANELS[code]
-  const extra = DETAIL_TABS[code] ?? []
   if (!entity || !meta) return null
   const kids = entity.children
     .map((c) => meta.entities.find((x) => x.code === c))
@@ -65,7 +60,6 @@ function Detail({ code, row }: { code: string; row: MesRow }) {
   const tabs = [
     ...(Panel ? [{ key: '_panel', label: t(`mes.panel.${code}`) }] : []),
     ...kids.map((k) => ({ key: k.code, label: entityLabel(k.code) })),
-    ...extra.map((x) => ({ key: `_tab_${x.key}`, label: x.label() })),
   ]
   return (
     <>
@@ -92,17 +86,7 @@ function Detail({ code, row }: { code: string; row: MesRow }) {
         )}
         {kids.map((k) => (
           <TabsContent key={k.code} value={k.code}>
-            <ChildTable
-              code={k.code}
-              parentCode={code}
-              parentId={row.id}
-              parentRow={row}
-            />
-          </TabsContent>
-        ))}
-        {extra.map((x) => (
-          <TabsContent key={x.key} value={`_tab_${x.key}`}>
-            <x.Component row={row} />
+            <ChildTable code={k.code} parentCode={code} parentId={row.id} />
           </TabsContent>
         ))}
       </Tabs>

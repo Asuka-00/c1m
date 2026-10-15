@@ -12,7 +12,4 @@ PERMISSIONS: dict[str, str] = {
     "mes.exec:hold": "MES execution: hold / release lots",
     "mes.exec:split": "MES execution: split lots",
     "mes.exec:merge": "MES execution: merge lots",
-    "mes.exec:jump": "MES execution: jump a lot to another step",
-    "mes.exec:adjust": "MES execution: in-process scrap / bonus",
-    "mes.exec:transform": "MES execution: unit transform (dicing / die attach / singulation)",
 }

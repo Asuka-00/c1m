@@ -8,10 +8,12 @@ from sqlmodel import Session
 from app.core.spec.audit import audit
 from app.core.spec.base import now
 from app.core.spec.engine import ENTITIES
+from app.core.spec.errors import http_422
 from app.core.spec.serialize import serialize
 from app.mes.common.query import one
 from app.mes.common.rows import _upd
-from app.mes.lot.service import check_transition, history, units
+from app.mes.execution.constants import FROM_STATUS
+from app.mes.lot.service import TERMINAL, history, units
 from app.mes.process.service import next_location
 
 Row = dict[str, Any]
@@ -20,8 +22,14 @@ LOT = ENTITIES["lot"]
 
 # ---------------- stages ----------------
 def _guard(lot: Row, stage: str) -> None:
-    # 合法转移集中在 lot.state.RULES（running 中被 Hold 允许 track_out）
-    check_transition(lot, stage)
+    if lot["lot_status"] in TERMINAL:
+        raise http_422([("lot_status", f"lot_status: lot is {lot['lot_status']}")])
+    if lot["on_hold"]:
+        raise http_422([("on_hold", "on_hold: lot is on hold; release it first")])
+    if lot["lot_status"] != FROM_STATUS[stage]:
+        raise http_422(
+            [("lot_status", f"lot_status: cannot {stage} a {lot['lot_status']} lot")]
+        )
 
 
 def _result(
@@ -59,8 +67,6 @@ def _relocate(
             from_status="tracked_out",
             to_status="waiting" if nxt else "completed",
             equipment_id=lot["equipment_id"],
-            # D73 补充二：带 rework 离开主路线的出站，报表计 move 但不进 CT 样本
-            **({"details": {"rework": True}} if rework else {}),
         )
     for e in ev:
         st = e.pop("step")
@@ -75,9 +81,18 @@ def _relocate(
     }
     if nxt is None:
         vals.update(lot_status="completed", completed_at=at)
-        # 完工 = 待入库；工单完工数在入库单确认时累加（见 app.mes.warehouse）
         for u in units(s, tid, lot["id"]):
             _upd(s, tid, "wafer", u["id"], user, wafer_status="completed")
+        wo = one(s, tid, "work_order", lot["work_order_id"])
+        if wo:
+            _upd(
+                s,
+                tid,
+                "work_order",
+                wo["id"],
+                user,
+                completed_qty=(wo["completed_qty"] or 0) + lot["qty"],
+            )
     else:
         vals.update(lot_status="waiting", current_step_id=nxt["id"], step_in_at=at)
         for u in units(s, tid, lot["id"]):

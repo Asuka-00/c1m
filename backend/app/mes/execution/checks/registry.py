@@ -10,13 +10,10 @@ import sqlalchemy as sa
 from fastapi import HTTPException
 from sqlmodel import Session
 
-from app.core.models import actor_name
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, ENUMS, TABLES
 from app.mes.common.query import find, jsonable, one
-from app.mes.common.sitedate import site_today
-from app.mes.equipment.service import qual_block, tool_block
 
 Row = dict[str, Any]
 Outcome = tuple[str, str, Row]  # ("pass" | "fail" | "warn" | "na", 消息, 数据)
@@ -35,9 +32,6 @@ class Ctx:
         step: 当前工步。
         op / product / wo: 工序、产品、工单（可为空）。
         equipment / recipe / reticle / carrier: 本次选定的资源（可为空）。
-        chambers: 本次选定的腔体。
-        batch: 批量作业时同批作业的全部批次。
-        eqp_recipe: 设备上报 / 扫描的设备端配方名（可为空）。
         tools / material_lots: 选定的工具与线边批次。
         dc: 录入的 DC 值。
         sampling: 抽样判定结果。
@@ -55,14 +49,8 @@ class Ctx:
     wo: Row | None = None
     equipment: Row | None = None
     recipe: Row | None = None
-    eqp_recipe: str | None = None  # 设备上报 / 扫描的设备端配方名
     reticle: Row | None = None
     carrier: Row | None = None
-    chambers: list[Row] = field(default_factory=list)  # 选定的腔体（设备子单元）
-    batch: list[Row] = field(default_factory=list)  # 批量作业的全部批次
-    sort_map: list[Row] = field(default_factory=list)  # 晶圆整理：[{wafer, slot}]
-    priority: Row | None = None  # 优先级变更：新优先级
-    operator: str | None = None  # 操作人（用户名，评估时填入）
     tools: list[Row] = field(default_factory=list)
     material_lots: list[Row] = field(default_factory=list)
     dc: list[Row] = field(default_factory=list)  # 录入的 DC 值（含 is_oos 超规标记）
@@ -82,8 +70,8 @@ class Ctx:
 
     @property
     def today(self) -> date:
-        """站点时区的当前日期（有效期类检查使用，D74 第 7 条）。"""
-        return site_today(self.s, self.tid, self.at)
+        """当前日期（有效期类检查使用）。"""
+        return self.at.date()
 
 
 CheckFn = Callable[[Ctx, Row], Outcome]
@@ -170,75 +158,14 @@ def resolve(ctx: Ctx) -> list[tuple[Row, Row]]:
     return out
 
 
-def control_rule(ctx: Ctx, check: str) -> Row | None:
-    """当前上下文中决定某类内置管控的规则（最具体作用域优先），无则 None。"""
-    bs = sorted(
-        (
-            b
-            for b in find(
-                ctx.s, ctx.tid, "check_binding", trigger=ctx.trigger, is_active=True
-            )
-            if _matches(b, ctx)
-        ),
-        key=lambda b: -SPECIFICITY[b["scope"]],
-    )
-    for b in bs:
-        plan = one(ctx.s, ctx.tid, "check_plan", b["check_plan_id"])
-        if not plan or not plan["is_active"]:
-            continue
-        for it in find(
-            ctx.s, ctx.tid, "check_plan_item", order="seq", check_plan_id=plan["id"]
-        ):
-            rule = one(ctx.s, ctx.tid, "check_rule", it["check_rule_id"])
-            if rule and rule["is_active"] and rule["check_type"] == check:
-                return rule
-    return None
-
-
-def enabled(ctx: Ctx, check: str) -> bool:
-    """某类管控在当前上下文是否开启（内置管控的统一开关）。
-
-    在所有命中的有效绑定中，按作用域由具体到宽泛查找包含该检查类型的有效规则，
-    第一条命中规则的严重度决定开关：``off`` 为关闭，其余为开启；无任何命中时默认开启。
-
-    Args:
-        ctx: 检查上下文（使用其触发时机与工步 / 设备 / 产品）。
-        check: 检查类型编码。
-
-    Returns:
-        是否开启。
-    """
-    rule = control_rule(ctx, check)
-    return rule is None or rule["severity"] != "off"
-
-
 # ---------------- evaluation ----------------
-# 规则产生的阻断也不可放行的检查类型（P2-D3）
-# D74：operator_qualified 不通过不可放行（同 D43）
-HARD_CHECKS = frozenset({"tool_life", "operator_qualified"})
-
-
-def overall_overridable(results: list[Row]) -> bool:
-    """整体能否放行：任一阻断项 ``overridable=false`` 即整体不可放行（适用于全部检查类型）。
-
-    没有阻断项时为 ``False``（无需放行）。
-    """
-    blocks = [r for r in results if r["result"] == "block"]
-    return bool(blocks) and all(r["overridable"] for r in blocks)
-
-
 class CheckBlocked(HTTPException):
     """存在未被放行的阻断检查结果（409，detail.code = check_blocked）。"""
 
     def __init__(self, results: list[Row]) -> None:
-        """以检查结果列表构造 409 响应（带整体 ``overridable``）。"""
+        """以检查结果列表构造 409 响应。"""
         super().__init__(
-            status_code=409,
-            detail={
-                "code": "check_blocked",
-                "overridable": overall_overridable(results),
-                "results": results,
-            },
+            status_code=409, detail={"code": "check_blocked", "results": results}
         )
 
 
@@ -266,9 +193,7 @@ def result(
         overridable: 阻断时是否允许有权限者强制放行。
     """
     res = {"fail": severity, "warn": "warn", "pass": "pass", "na": "pass"}[outcome]
-    extra = {"ctx": jsonable(data["ctx"])} if data and "ctx" in data else {}
     return {
-        **extra,
         "check_type": check,
         "rule_id": rule and str(rule["id"]),
         "rule_code": rule and rule["code"],
@@ -300,18 +225,6 @@ def run(ctx: Ctx) -> list[Row]:
                 )
             )
             continue
-        if rule["severity"] == "off":
-            out.append(
-                result(
-                    rule["check_type"],
-                    "na",
-                    f"control disabled by rule {rule['code']}",
-                    severity="warn",
-                    rule=rule,
-                    plan=plan,
-                )
-            )
-            continue
         oc, msg, data = fn(ctx, rule.get("params") or {})
         out.append(
             result(
@@ -322,16 +235,9 @@ def run(ctx: Ctx) -> list[Row]:
                 rule=rule,
                 plan=plan,
                 data=data,
-                # P2-D3：规则产生的 tool_life 与内置硬拦截一致，不可放行
-                # D69 补充 / D54-5：光罩到寿命上限（data.overridable=false）同样不可放行
-                overridable=rule["check_type"] not in HARD_CHECKS
-                and (data or {}).get("overridable") is not False,
             )
         )
     return out
-
-
-QUAL_TRIGGERS = ("move_in", "track_in")  # 进站：Move In / Track In
 
 
 def evaluate(
@@ -360,41 +266,7 @@ def evaluate(
         CheckBlocked: 仍存在阻断（先提交检查日志再抛出）。
         HTTPException: 放行但未填写原因（422）。
     """
-    ctx.operator = ctx.operator or actor_name(user)
-    builtin = []
-    # B6：PM 后待 Qual 的机台进站硬拦截（不可强制放行），结果同样写卡控记录
-    blk = (
-        qual_block(ctx.s, ctx.tid, ctx.equipment)
-        if ctx.trigger in QUAL_TRIGGERS
-        else None
-    )
-    if blk:
-        builtin.append(
-            result(
-                "eqp_wait_qual",
-                "fail",
-                f"{blk['equipment']} is waiting for Qual after PM (WAIT_QUAL)",
-                severity="block",
-                data=blk,
-                overridable=False,
-            )
-        )
-    # P2-B10 / D53-5 / D54：工具用满 / 过期 / 不可用 → 检查项 tool_life 硬拦截（不可放行）
-    if ctx.trigger == "track_in":
-        for tl in ctx.tools:
-            msg = tool_block(ctx.s, ctx.tid, tl, ctx.today)
-            if msg:
-                builtin.append(
-                    result(
-                        "tool_life",
-                        "fail",
-                        msg,
-                        severity="block",
-                        data={"tool_id": str(tl["id"]), "tool": tl["code"]},
-                        overridable=False,
-                    )
-                )
-    results = [*builtin, *(extra or []), *run(ctx)]
+    results = [*(extra or []), *run(ctx)]
     blocks = [r for r in results if r["result"] == "block"]
     hard = [r for r in blocks if not r["overridable"]]
     # 仅当所有阻断都可放行（无硬阻断）且非预览时才允许强制放行
@@ -414,7 +286,7 @@ def evaluate(
         for r in blocks:
             r["result"] = "overridden"
     t = TABLES["check_log"]
-    email = actor_name(user)
+    email = getattr(user, "email", None)
     for r in results:
         conn(ctx.s).execute(
             sa.insert(t).values(
@@ -432,7 +304,7 @@ def evaluate(
                 message=r["message"][:500],
                 context={"preview": preview, **r["data"]},
                 override_reason=reason if r["result"] == "overridden" else None,
-                username=email,
+                user_email=email,
                 created_at=ctx.at,
                 created_by=getattr(user, "id", None),
             )

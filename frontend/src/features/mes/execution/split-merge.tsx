@@ -14,7 +14,6 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
-  blockedOverridable,
   blockedResults,
   execApi,
   type CheckResult,
@@ -48,13 +47,15 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { EmptyState } from '@/components/desc-list'
-import { IconButton } from '@/components/icon-button'
-import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
 import { CheckPanel } from './exec-parts'
-import { type LotPage, lotPageLink } from './lot-links'
-import { canMergeLot, canSplitLot, checkSplit } from './lot-rules'
+
+const lotLink = (page: string, id: string) => ({
+  to: '/$' as const,
+  params: { _splat: `mes/${page}` },
+  search: { lot: id } as never,
+})
 
 /** 谱系列表：拆批母批 / 子批，合批源批次 / 目标批次。 */
 export function GenealogyList({
@@ -64,7 +65,7 @@ export function GenealogyList({
 }: {
   lotId: string
   links: GenealogyLink[]
-  page?: LotPage
+  page?: string
 }) {
   if (!links.length)
     return <EmptyState icon={GitFork}>{t('mes.sm.noGenealogy')}</EmptyState>
@@ -75,24 +76,26 @@ export function GenealogyList({
         const other = isParent
           ? { id: g.child_id, code: g.child }
           : { id: g.parent_id, code: g.parent }
-        // 单位转换 / 按 bin 拆批的谱系 relation=transform，不能落到“合入”。
-        const key = {
-          split: isParent ? 'splitTo' : 'splitFrom',
-          transform: isParent ? 'transformTo' : 'transformFrom',
-          merge: isParent ? 'mergedInto' : 'mergedFrom',
-        }[g.relation]
-        const Icon = g.relation === 'merge' ? GitMerge : GitFork
+        const key =
+          g.relation === 'split'
+            ? isParent
+              ? 'splitTo'
+              : 'splitFrom'
+            : isParent
+              ? 'mergedInto'
+              : 'mergedFrom'
+        const Icon = g.relation === 'split' ? GitFork : GitMerge
         return (
           <li key={i} className='flex flex-wrap items-center gap-x-2'>
             <Icon
               className={cn(
                 'size-4',
-                g.relation === 'merge' ? 'text-violet-600' : 'text-sky-600'
+                g.relation === 'split' ? 'text-sky-600' : 'text-violet-600'
               )}
             />
             <span className='text-muted-foreground'>{t(`mes.sm.${key}`)}</span>
             <Link
-              {...lotPageLink(page, other.id)}
+              {...lotLink(page, other.id)}
               className='font-mono font-medium underline-offset-2 hover:underline'
             >
               {other.code}
@@ -119,21 +122,22 @@ export function GenealogyList({
 }
 
 /** 操作台卡片：规则摘要、拆批 / 合批按钮、谱系。 */
-export function SplitMergeCard({ cx }: { cx: ExecContext }) {
-  const can = useMesCan()
+export function SplitMergeCard({
+  cx,
+  perms,
+}: {
+  cx: ExecContext
+  perms: string[]
+}) {
   const [open, setOpen] = useState<'split' | 'merge' | null>(null)
   const sm = cx.sm
   if (!sm) return null
   const r = sm.rule
   const onHold = !!cx.lot.on_hold
   const canSplit =
-    can(MES_PERM.execSplit) &&
-    canSplitLot(cx.lot) &&
-    sm.allowed &&
-    !!r?.allow_split
+    perms.includes('mes.exec:split') && sm.allowed && !!r?.allow_split
   const canMerge =
-    can(MES_PERM.execMerge) &&
-    canMergeLot(cx.lot) &&
+    perms.includes('mes.exec:merge') &&
     sm.allowed &&
     !onHold &&
     !!r?.allow_merge
@@ -223,10 +227,10 @@ export function SplitMergeCard({ cx }: { cx: ExecContext }) {
         </div>
       </CardContent>
       {open === 'split' && (
-        <SplitDialog cx={cx} onClose={() => setOpen(null)} />
+        <SplitDialog cx={cx} perms={perms} onClose={() => setOpen(null)} />
       )}
       {open === 'merge' && (
-        <MergeDialog cx={cx} onClose={() => setOpen(null)} />
+        <MergeDialog cx={cx} perms={perms} onClose={() => setOpen(null)} />
       )}
     </Card>
   )
@@ -238,14 +242,12 @@ function useSm<T>(
 ): {
   results: CheckResult[] | null
   blocked: boolean
-  overridable: boolean | null
   busy: boolean
   run: (body: SmBody) => void
 } {
   const { entity } = useMesEntity('lot')
   const [results, setResults] = useState<CheckResult[] | null>(null)
   const [blocked, setBlocked] = useState(false)
-  const [overridable, setOverridable] = useState<boolean | null>(null)
   const m = useMutation({
     mutationFn: fn,
     onSuccess: (r, body) => {
@@ -258,29 +260,23 @@ function useSm<T>(
       const b = blockedResults(e)
       if (b) {
         setResults(b)
-        setOverridable(blockedOverridable(e))
         setBlocked(true)
         toast.error(t('mes.exec.blocked'))
       } else toast.error(mesErrorMessage(e, entity))
     },
   })
-  return {
-    results,
-    blocked,
-    overridable,
-    busy: m.isPending,
-    run: (b) => m.mutate(b),
-  }
+  return { results, blocked, busy: m.isPending, run: (b) => m.mutate(b) }
 }
 
 function SplitDialog({
   cx,
+  perms,
   onClose,
 }: {
   cx: ExecContext
+  perms: string[]
   onClose: () => void
 }) {
-  const can = useMesCan()
   const qc = useQueryClient()
   const qtyMode = cx.tracking_level === 'quantity'
   const active = cx.units.filter((u) => u.status !== 'scrapped')
@@ -302,7 +298,13 @@ function SplitDialog({
       ),
     [n, pick, qtys, qtyMode]
   )
-  const { remain, tooMany, ready } = checkSplit(children, lotQty, qtyMode)
+  const moved = children.reduce(
+    (a, c) => a + (qtyMode ? c.qty || 0 : c.unit_ids?.length || 0),
+    0
+  )
+  const ready = children.every((c) =>
+    qtyMode ? (c.qty || 0) > 0 : (c.unit_ids?.length || 0) > 0
+  )
   const sm = useSm(
     (body) => execApi.split(String(cx.lot.id), children, { comment, ...body }),
     (r) => {
@@ -336,36 +338,29 @@ function SplitDialog({
         </DialogHeader>
         <div className='flex items-center gap-2 text-sm'>
           <Label>{t('mes.sm.childCount')}</Label>
-          <IconButton
-            label={t('mes.sm.childMinus')}
+          <Button
+            size='icon'
             variant='outline'
             className='size-7'
+            aria-label='-'
             onClick={() => setCount(n - 1)}
           >
             <Minus className='size-3' />
-          </IconButton>
+          </Button>
           <span className='w-6 text-center tabular-nums'>{n}</span>
-          <IconButton
-            label={t('mes.sm.childPlus')}
+          <Button
+            size='icon'
             variant='outline'
             className='size-7'
+            aria-label='+'
             onClick={() => setCount(n + 1)}
             data-testid='child-plus'
           >
             <Plus className='size-3' />
-          </IconButton>
-          {tooMany ? (
-            <span
-              className='ms-auto text-destructive'
-              data-testid='split-too-many'
-            >
-              {t('mes.sm.tooMany', { total: lotQty })}
-            </span>
-          ) : (
-            <span className='ms-auto text-muted-foreground'>
-              {t('mes.sm.remain', { n: remain, total: lotQty })}
-            </span>
-          )}
+          </Button>
+          <span className='ms-auto text-muted-foreground'>
+            {t('mes.sm.remain', { n: lotQty - moved, total: lotQty })}
+          </span>
         </div>
         {qtyMode ? (
           <div className='grid grid-cols-3 gap-3'>
@@ -453,8 +448,7 @@ function SplitDialog({
         <CheckPanel
           results={sm.results}
           blocked={sm.blocked}
-          overridable={sm.overridable}
-          canOverride={can(MES_PERM.execOverride)}
+          canOverride={perms.includes('mes.exec:override')}
           busy={sm.busy}
           onOverride={(reason) =>
             sm.run({ override: true, override_reason: reason })
@@ -484,12 +478,13 @@ function SplitDialog({
 
 function MergeDialog({
   cx,
+  perms,
   onClose,
 }: {
   cx: ExecContext
+  perms: string[]
   onClose: () => void
 }) {
-  const can = useMesCan()
   const qc = useQueryClient()
   const cands = cx.sm?.candidates ?? []
   const [sel, setSel] = useState<string[]>([])
@@ -601,8 +596,7 @@ function MergeDialog({
         <CheckPanel
           results={sm.results}
           blocked={sm.blocked}
-          overridable={sm.overridable}
-          canOverride={can(MES_PERM.execOverride)}
+          canOverride={perms.includes('mes.exec:override')}
           busy={sm.busy}
           onOverride={(reason) =>
             sm.run({ override: true, override_reason: reason })

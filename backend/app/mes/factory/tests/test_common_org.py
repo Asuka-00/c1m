@@ -12,12 +12,7 @@ from app.core.tenant import set_tenant
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
 from app.testing.mes import API, Mes
-from app.testing.utils import (
-    login_name,
-    random_email,
-    random_lower_string,
-    username_for,
-)
+from app.testing.utils import random_email, random_lower_string
 
 
 def _org(m: Mes) -> tuple[dict, dict]:  # type: ignore[type-arg]
@@ -46,10 +41,7 @@ def test_meta_and_menus(client: TestClient, db: Session) -> None:
     site = next(e for e in meta["entities"] if e["code"] == "site")
     assert site["can_write"] and site["read"] == "mes.org:read"
     menus = client.get("/api/v1/menus/me", headers=m.h).json()
-    # 独立菜单与合并菜单的页签
-    keys = {c["key"] for g in menus["menus"] for c in g["children"]} | {
-        t["key"] for g in menus["menus"] for c in g["children"] for t in c["tabs"]
-    }
+    keys = {c["key"] for g in menus["menus"] for c in g["children"]}
     assert {
         "mes-site",
         "mes-workcenter",
@@ -325,7 +317,7 @@ def test_audit_log(client: TestClient, db: Session) -> None:
     m.patch("site", site["id"], {"name": "Fab One"})
     logs = m.list("audit_log", entity_type="site")["data"]
     assert [x["action"] for x in logs] == ["update", "create"]  # newest first
-    assert logs[0]["changes"]["name"] == ["Fab 1", "Fab One"] and logs[0]["username"]
+    assert logs[0]["changes"]["name"] == ["Fab 1", "Fab One"] and logs[0]["user_email"]
     assert client.post(m.url("audit_log"), headers=m.h, json={}).status_code == 405
 
 
@@ -362,18 +354,14 @@ def test_isolation_and_permissions(client: TestClient, db: Session) -> None:
         assert s.execute(text("SELECT count(*) FROM mes_site")).scalar_one() == 1
     # plain member: read yes, write no
     email, pw = random_email(), random_lower_string()
-    crud.create_user(
-        session=db,
-        user_create=UserCreate(email=email, username=username_for(email), password=pw),
-    )
+    crud.create_user(session=db, user_create=UserCreate(email=email, password=pw))
     client.post(
         f"/api/v1/tenants/{a.tid}/members",
         headers=a.h,
-        json={"username": login_name(email), "roles": ["member"]},
+        json={"email": email, "roles": ["member"]},
     )
     tok = client.post(
-        "/api/v1/login/access-token",
-        data={"username": login_name(email), "password": pw},
+        "/api/v1/login/access-token", data={"username": email, "password": pw}
     ).json()["access_token"]
     hm = {"Authorization": f"Bearer {tok}", "X-Tenant-ID": a.tid}
     assert client.get(a.url("site"), headers=hm).json()["count"] == 1

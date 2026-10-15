@@ -30,11 +30,7 @@ target_metadata = SQLModel.metadata
 
 
 def get_url():
-    from app.core.migrate import check_db_target
-
-    url = settings.migration_database_url
-    check_db_target(url)  # POSTGRES_DB 与实际目标库不一致时拒绝执行
-    return url
+    return settings.migration_database_url
 
 
 def run_migrations_offline():

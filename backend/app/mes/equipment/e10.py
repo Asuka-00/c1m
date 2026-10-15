@@ -11,7 +11,6 @@ from app.core.spec.base import conn
 from app.core.spec.engine import ENTITIES, TABLES
 from app.mes.common.query import find, one
 from app.mes.common.rows import _upd
-from app.mes.equipment.maint import e10_log
 from app.mes.equipment.status import e10_current
 
 Row = dict[str, Any]
@@ -73,7 +72,6 @@ def e10_apply(
     ):
         return {"skipped": f"transition {cur['code']} -> {to['code']} not allowed"}
     _upd(s, tid, "equipment", eq["id"], user, e10_state_id=to["id"])
-    e10_log(s, tid, eq, cur, to, "auto", user, comment=f"{trigger} {lot['code']}")
     audit(
         s,
         tid,

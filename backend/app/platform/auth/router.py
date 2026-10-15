@@ -3,7 +3,7 @@
 from datetime import timedelta
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -19,7 +19,6 @@ from app.platform.auth.service import (
     send_email,
     verify_password_reset_token,
 )
-from app.platform.console.service import record_login
 from app.platform.users import service as crud
 from app.platform.users.schemas import NewPassword, UserPublic, UserUpdate
 
@@ -28,28 +27,20 @@ router = APIRouter(tags=["login"])
 
 @router.post("/login/access-token")
 def login_access_token(
-    request: Request,
-    session: SessionDep,
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    session: SessionDep, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
 ) -> Token:
     """
-    OAuth2 compatible token login, get an access token for future requests.
-    Every attempt (success or failure) is written to the platform login log.
+    OAuth2 compatible token login, get an access token for future requests
     """
     user = crud.authenticate(
-        session=session, username=form_data.username, password=form_data.password
+        session=session, email=form_data.username, password=form_data.password
     )
-    ip = request.client.host if request.client else None
-    ua = request.headers.get("user-agent")
     if not user:
-        record_login(
-            session, form_data.username, None, False, "bad_credentials", ip, ua
+        raise HTTPException(
+            status_code=400, detail="Incorrect username/email or password"
         )
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
     elif not user.is_active:
-        record_login(session, user.username, user, False, "inactive", ip, ua)
         raise HTTPException(status_code=400, detail="Inactive user")
-    record_login(session, user.username, user, True, None, ip, ua)
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return Token(
         access_token=security.create_access_token(
@@ -75,7 +66,7 @@ def recover_password(email: str, session: SessionDep) -> Message:
 
     # 始终返回相同响应，防止邮箱枚举攻击
     # 仅当用户存在时才发送邮件
-    if user and user.email:
+    if user:
         password_reset_token = generate_password_reset_token(email=email)
         email_data = generate_reset_password_email(
             email_to=user.email, email=email, token=password_reset_token
@@ -124,7 +115,7 @@ def recover_password_html_content(email: str, session: SessionDep) -> Any:
     """
     user = crud.get_user_by_email(session=session, email=email)
 
-    if not user or not user.email:
+    if not user:
         raise HTTPException(
             status_code=404,
             detail="The user with this username does not exist in the system.",

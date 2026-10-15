@@ -5,10 +5,7 @@ from app.core.registry import Module, register
 register(
     Module(
         name="platform.menus",
-        routers=(
-            "app.platform.menus.router:router",
-            "app.platform.menus.router:platform_router",
-        ),
+        routers=("app.platform.menus.router:router",),
         router_priority=300,
     )
 )

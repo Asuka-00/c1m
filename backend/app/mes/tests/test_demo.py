@@ -26,13 +26,10 @@ def _count(s: Session) -> int:
             "audit_log",
             "code_rule_counter",
             "lot_history",
-            "lot_recipe_run",
-            "e10_history",
             "check_log",
             "lot_hold",
             "dc_result",
             "lot_genealogy",
-            "operator_qual_log",  # D74：资质写入自动追加的履历
         )
     )
 
@@ -48,10 +45,8 @@ def test_seed_and_remove() -> None:
                 len(lots) + (0 if wo == "WO-DEMO-03" else sum(q for q, _ in lots))
                 for wo, lots in STARTS
             )
-            + 2  # split example: two child lots (one merged back)
-            + 1  # future hold example
-            + 2  # shift handover examples
-        )
+            + 2
+        )  # split example: two child lots (one merged back)
         assert _count(s) == before + len(DEMO) + started  # + lots / wafers
         assert remove(s) >= len(DEMO)  # + started demo lots / wafers
         assert _count(s) == before

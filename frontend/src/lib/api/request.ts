@@ -29,31 +29,3 @@ export interface ListQuery {
 }
 /** 用于选项列表 / 小型参考数据：取一页最大条数。 */
 export const ALL: ListQuery = { page_size: 100 }
-
-/** 后端分页上限（core/pagination.py MAX_PAGE_SIZE）。 */
-export const MAX_PAGE_SIZE = 100
-
-/**
- * 按 `page_size=100` 逐页拉全（后端 page_size 上限 100，超出 422）。
- * `fetchPage(page)` 返回 `{data, count}`；拉满 `count` 或某页为空即停止，最多 `maxPages` 页。
- */
-export async function fetchAllPages<T>(
-  fetchPage: (
-    page: number,
-    page_size: number
-  ) => Promise<{ data: T[]; count: number }>,
-  maxPages = 50
-): Promise<T[]> {
-  const out: T[] = []
-  for (let page = 1; page <= maxPages; page++) {
-    const r = await fetchPage(page, MAX_PAGE_SIZE)
-    out.push(...r.data)
-    if (
-      !r.data.length ||
-      out.length >= r.count ||
-      r.data.length < MAX_PAGE_SIZE
-    )
-      break
-  }
-  return out
-}

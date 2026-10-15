@@ -15,10 +15,6 @@ class MenuBase(SQLModel):
     sort_order: int = 0
     permission: str | None = Field(default=None, max_length=100)  # 所需权限编码
     hidden: bool = False
-    # 菜单空间："workspace"（租户工作区）或 "platform"（平台管理控制台），两者分别同步
-    space: str = Field(default="workspace", max_length=20, index=True)
-    # active / disabled：停用的菜单对所有人（含超级用户）隐藏，其路径返回 403
-    status: str = Field(default="active", max_length=20)
 
 
 class Menu(MenuBase, table=True):
