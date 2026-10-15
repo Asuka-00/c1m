@@ -51,12 +51,13 @@ steps:
   # D79 补充 5：产品 P-MK 绑定已批准模板（要求打标）；P-NOMK 不绑定（出站不查打标）。MK0001–MK0004 属 P-MK，MK0009 属 P-NOMK
   - marking_template_ready: {product: P-MK, customer: C-MK, approved: true, lots: [MK0001, MK0002, MK0003, MK0004]}
   - marking_template_ready: {product: P-NOMK, approved: false, lots: [MK0009]}
+  # 评审 1c7178b P2：请求体按 D79/D89 补充一只用 code、product_id、customer_id、lines，不带 name（D89-1 已撤回）；编辑步骤改 lines
   # ---- D79 补充七：模板写接口（创建 / 编辑 / 新版本 / 审批）必须带 Idempotency-Key；预览 / 校验只读 POST 不带
-  - marking_template: {action: create, no_idem: true, body: {code: T-SIM-12, name: T-SIM-12, product_id: $product.P-MK, customer_id: $customer.C-SIM-A, lines: ["{lot_id}"]}, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
-  - marking_template: {action: create, idem: tpl-c1, body: {code: T-SIM-12, name: T-SIM-12, product_id: $product.P-MK, customer_id: $customer.C-SIM-A, lines: ["{lot_id}"]}, save_as: tpl,
+  - marking_template: {action: create, no_idem: true, body: {code: T-SIM-12, product_id: $product.P-MK, customer_id: $customer.C-SIM-A, lines: ["{lot_id}"]}, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
+  - marking_template: {action: create, idem: tpl-c1, body: {code: T-SIM-12, product_id: $product.P-MK, customer_id: $customer.C-SIM-A, lines: ["{lot_id}"]}, save_as: tpl,
                        expect: {status: 201, body: {data.version: 1, data.status: draft, data.product_name: $nonempty, data.customer_name: $nonempty, data.created_by: $nonempty}}}
-  - marking_template: {action: update, template: $tpl.id, no_idem: true, body: {name: T-SIM-12b}, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
-  - marking_template: {action: update, template: $tpl.id, idem: tpl-u1, body: {name: T-SIM-12b}, expect: {status: 200}}
+  - marking_template: {action: update, template: $tpl.id, no_idem: true, body: {lines: ["{lot_id}", "{date_code}"]}, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
+  - marking_template: {action: update, template: $tpl.id, idem: tpl-u1, body: {lines: ["{lot_id}", "{date_code}"]}, expect: {status: 200}}
   - marking_template: {action: new_version, template: $tpl.id, no_idem: true, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
   # D79-2：v1 还是草稿时再建版本 → 409 draft_exists（对象格式）。原先此处期望 201 与 D79-2 冲突，已改
   - marking_template: {action: new_version, template: $tpl.id, idem: tpl-v1, expect: {status: 409, code: draft_exists, detail_object: true}}
@@ -78,26 +79,26 @@ steps:
   - marking_template: {action: approve, template: $tpl.id, idem: tpl-a3, expect: {status: 422, code: self_approval}}
   - marking_template: {action: approve, template: $tpl.id, idem: tpl-a4, as: approver, expect: {status: 409, detail_object: true, code: invalid_transition}}
   # idempotency_key_reused 本期仍是对象格式
-  - marking_template: {action: update, template: $tpl.id, idem: tpl-u1, body: {name: T-SIM-12c}, expect: {status: 422, code: idempotency_key_reused, detail_object: true}}
+  - marking_template: {action: update, template: $tpl.id, idem: tpl-u1, body: {lines: ["{lot_id}", "{product_code}"]}, expect: {status: 422, code: idempotency_key_reused, detail_object: true}}
   # ---- B1 版本流转（p3-tasks「B1→B2→B3 开工清单」B1 + D79-1/2 + D81）
   # 占位符白名单 trace_code/date_code/lot_id/product_code/customer_code，其他 → 422 value_error ctx.reason=unknown_placeholder
   # D79-1 + D89 补充一：lines 为字符串数组（白名单占位符）；请求体带 product_id、customer_id；响应只读 product_name、customer_name、created_by
   # unknown_placeholder：每个未知占位符一条，loc [body, lines, i]（i 为 0 起数组下标），ctx {reason: unknown_placeholder, placeholder}
   # 种子：本组模板用客户 C-SIM-A / C-SIM-B（与 marking_template_ready 的 P-MK+C-MK 不重复，D89 补充二 产品+客户唯一）
-  # TODO-MK-B1-10：seed-p3 需在 B1 落地时补客户 C-SIM-A、C-SIM-B（$customer.* 由执行器按 code 查 id）
-  - marking_template: {action: create, idem: tpl-ph1, body: {code: T-SIM-PH, name: T-SIM-PH, product_id: $product.P-MK, customer_id: $customer.C-SIM-B, lines: ["{lot_id}", "{nope_sim}", "{bad2_sim}"]},
+  # TODO-MK-B1-10：seed-p3 需在 B1 落地时补客户 C-SIM-A、C-SIM-B、C-SIM-DUP（C-SIM-DUP 供 code 重复那一步用，评审 1c7178b P3）（$customer.* 由执行器按 code 查 id）
+  - marking_template: {action: create, idem: tpl-ph1, body: {code: T-SIM-PH, product_id: $product.P-MK, customer_id: $customer.C-SIM-B, lines: ["{lot_id}", "{nope_sim}", "{bad2_sim}"]},
                        expect: {status: 422, errors: [{type: value_error, loc: [body, lines, 1], ctx: {reason: unknown_placeholder, placeholder: nope_sim}},
                                                       {type: value_error, loc: [body, lines, 2], ctx: {reason: unknown_placeholder, placeholder: bad2_sim}}]}}
-  - marking_template: {action: create, idem: tpl-ph2, save_as: tpl2, body: {code: T-SIM-12V, name: T-SIM-12V, product_id: $product.P-MK, customer_id: $customer.C-SIM-B, lines: ["{trace_code}", "{date_code}", "{lot_id}", "{product_code}", "{customer_code}"]},
+  - marking_template: {action: create, idem: tpl-ph2, save_as: tpl2, body: {code: T-SIM-12V, product_id: $product.P-MK, customer_id: $customer.C-SIM-B, lines: ["{trace_code}", "{date_code}", "{lot_id}", "{product_code}", "{customer_code}"]},
                        expect: {status: 201, body: {data.version: 1, data.status: draft}}}   # 白名单全集可建（v1 草稿）
   - marking_template: {action: update, template: $tpl2.id, idem: tpl2-ph, body: {lines: ["{bad_sim}"]},
                        expect: {status: 422, errors: [{type: value_error, loc: [body, lines, 0], ctx: {reason: unknown_placeholder, placeholder: bad_sim}}]}}
   # D89 补充二：code 租户内唯一、同一租户 产品+客户 只能一个模板 → 通用重复键错误
   # 后端通用 integrity（core/spec/errors.py）：409 detail 字符串 "A record with the same key already exists"（无 code）
   # TODO-MK-B1-11：B1 若走专用路由，重复键的 code / 是否对象格式（TODO-409 要求 409 一律 {code, message}）与后端对齐后再收紧
-  - marking_template: {action: create, idem: tpl-dup1, body: {code: T-SIM-12V, name: dup-code, product_id: $product.P-MK, customer_id: $customer.C-SIM-DUP, lines: ["{lot_id}"]},
+  - marking_template: {action: create, idem: tpl-dup1, body: {code: T-SIM-12V, product_id: $product.P-MK, customer_id: $customer.C-SIM-DUP, lines: ["{lot_id}"]},
                        expect: {status: 409, message: "A record with the same key already exists"}}   # code 重复
-  - marking_template: {action: create, idem: tpl-dup2, body: {code: T-SIM-12D, name: dup-pc, product_id: $product.P-MK, customer_id: $customer.C-SIM-B, lines: ["{lot_id}"]},
+  - marking_template: {action: create, idem: tpl-dup2, body: {code: T-SIM-12D, product_id: $product.P-MK, customer_id: $customer.C-SIM-B, lines: ["{lot_id}"]},
                        expect: {status: 409, message: "A record with the same key already exists"}}   # 产品+客户重复
   # D81 顺序（模板写接口）：403 → 缺 key 422 → body 422 → 重放 → 404 → 409
   - marking_template: {action: update, template: $tpl2.id, no_idem: true, as: read_only, body: {lines: ["{bad_sim}"]}, expect: {status: 403}}   # 403 先于缺 key / body
@@ -105,13 +106,13 @@ steps:
                        expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}   # 缺 key 先于 body / 404
   - marking_template: {action: update, template: $missing_uuid, idem: tpl2-o1, body: {lines: ["{bad_sim}"]},
                        expect: {status: 422, errors: [{type: value_error, loc: [body, lines, 0], ctx: {reason: unknown_placeholder, placeholder: bad_sim}}]}}   # body 422 先于 404
-  - marking_template: {action: update, template: $missing_uuid, idem: tpl2-o2, body: {name: T-SIM-404}, expect: {status: 404}}
+  - marking_template: {action: update, template: $missing_uuid, idem: tpl2-o2, body: {lines: ["{lot_id}"]}, expect: {status: 404}}
   # 审批：起草人自批 422 self_approval；别人批 200；已批准版本只读 → 编辑 409 template_readonly
   - marking_template: {action: approve, template: $tpl2.id, idem: tpl2-a1, expect: {status: 422, type: value_error, ctx: {reason: self_approval}}}
   - marking_template: {action: approve, template: $tpl2.id, idem: tpl2-a2, as: approver, save_as: tpl2ok, expect: {status: 200, body: {data.version: 1, data.status: approved}}}
   - marking_template: {action: approve, template: $tpl2.id, idem: tpl2-a2, as: approver, expect: {status: 200, replayed: true}}   # 回放：Idempotent-Replayed: true
-  - marking_template: {action: update, template: $tpl2.id, idem: tpl2-ro, body: {name: T-SIM-12V-改}, expect: {status: 409, code: template_readonly, detail_object: true}}
-  - marking_template: {action: update, template: $tpl2.id, idem: tpl2-ro, body: {name: T-SIM-12V-改}, expect: {status: 409, code: template_readonly, detail_object: true, replayed: false}}   # 4xx 不缓存（D86）
+  - marking_template: {action: update, template: $tpl2.id, idem: tpl2-ro, body: {lines: ["{lot_id}", "{customer_code}"]}, expect: {status: 409, code: template_readonly, detail_object: true}}
+  - marking_template: {action: update, template: $tpl2.id, idem: tpl2-ro, body: {lines: ["{lot_id}", "{customer_code}"]}, expect: {status: 409, code: template_readonly, detail_object: true, replayed: false}}   # 4xx 不缓存（D86）
   # 新版本：复制最新版本为草稿、版本号后端递增 → 201；草稿未批时再建 → 409 draft_exists
   # D79 + D89 补充一：version 从 1 起；状态只有 draft / approved / retired（无 pending、无提交接口）；
   #   审批 draft→approved，同模板上一个 approved 版本自动 retired；approved / retired 编辑 409 template_readonly；draft 可编辑
@@ -120,7 +121,7 @@ steps:
   - marking_template: {action: new_version, template: $tpl2.id, idem: tpl2-v3, expect: {status: 409, code: draft_exists, detail_object: true}}
   - marking_template: {action: new_version, template: $missing_uuid, idem: tpl2-v4, expect: {status: 404}}   # 404 先于 409
   # 草稿可编辑 → 有草稿 v2 时编辑改的是草稿，200（v2 仍 draft）
-  - marking_template: {action: update, template: $tpl2.id, idem: tpl2-u2, body: {name: T-SIM-12V-v2, lines: ["{lot_id}", "{date_code}"]}, expect: {status: 200, body: {data.version: 2, data.status: draft}}}
+  - marking_template: {action: update, template: $tpl2.id, idem: tpl2-u2, body: {lines: ["{lot_id}", "{date_code}"]}, expect: {status: 200, body: {data.version: 2, data.status: draft}}}
   # D90-1：product_id / customer_id 创建后不可改（在 v2 仍为草稿时测，避开 template_readonly）；不同值 422 value_error ctx.reason=immutable，同值视为未改
   - marking_template: {action: update, template: $tpl2.id, idem: tpl2-im1, body: {product_id: $product.P-NOMK},
                        expect: {status: 422, errors: [{type: value_error, loc: [body, product_id], ctx: {reason: immutable}}]}}
@@ -136,17 +137,24 @@ steps:
                        data.versions.0.approved_by: $nonempty, data.versions.0.approved_at: $utc_z,
                        data.versions.1.version: 1, data.versions.1.status: retired, data.versions.1.created_by: $nonempty, data.versions.1.approved_by: $nonempty}}}
   # D90-4：编辑只针对最新版本；最新为 approved → 409 template_readonly（「编辑 retired 409」用例已删除）
-  - marking_template: {action: update, template: $tpl2.id, idem: tpl2-ro2, body: {name: T-SIM-12V-v2b}, expect: {status: 409, code: template_readonly, detail_object: true}}   # approved v2 只读
+  - marking_template: {action: update, template: $tpl2.id, idem: tpl2-ro2, body: {lines: ["{trace_code}"]}, expect: {status: 409, code: template_readonly, detail_object: true}}   # approved v2 只读
+  # D91 补充一：改绑定 immutable 属 D81「需查记录的 422」：404 之后、409 template_readonly 之前；每字段一条 value_error ctx {reason: immutable}
+  - marking_template: {action: update, template: $missing_uuid, idem: tpl2-im4, body: {product_id: $product.P-NOMK}, expect: {status: 404}}   # 404 先于 immutable
+  - marking_template: {action: update, template: $tpl2.id, idem: tpl2-im5, body: {product_id: $product.P-NOMK},   # 最新 approved：422 immutable 先于 409 template_readonly
+                       expect: {status: 422, errors: [{type: value_error, loc: [body, product_id], ctx: {reason: immutable}}]}}
+  - marking_template: {action: update, template: $tpl2.id, idem: tpl2-im6, body: {product_id: $product.P-NOMK, customer_id: $customer.C-SIM-A},   # 两字段同改 → 两条
+                       expect: {status: 422, errors: [{type: value_error, loc: [body, product_id], ctx: {reason: immutable}},
+                                                      {type: value_error, loc: [body, customer_id], ctx: {reason: immutable}}]}}
   # 跨租户：另一租户账号读 / 写本租户模板 → 404（不是 403）
   # 跨租户：8013 不补账号（D88 补充一），as: other_tenant 无凭据记 skip —— 由 QA 覆盖
-  - marking_template: {action: update, template: $tpl2.id, idem: tpl2-x1, as: other_tenant, body: {name: X}, expect: {status: 404}}
+  - marking_template: {action: update, template: $tpl2.id, idem: tpl2-x1, as: other_tenant, body: {lines: ["{lot_id}"]}, expect: {status: 404}}
   - marking_template: {action: approve, template: $tpl2.id, idem: tpl2-x2, as: other_tenant, expect: {status: 404}}
   # ---- 未绑定模板：出站不做打标检查
   - track_out: {eq: EAP-MK01, lot: MK0009, expect: {status: 200}}
   # ---- MK0004：产品要求打标但没有主记录
   - track_out: {eq: EAP-MK01, lot: MK0004,
                 expect: {status: 409, code: check_blocked, ctx: {check: marking_inspection, reason: not_marked, marking_id: null, trace_code: null}, overridable: false,
-                         results: [{check_type: marking_inspection, result: $nonempty, ctx: {reason: not_marked, marking_id: null, trace_code: null}}]}}
+                         results: [{check_type: marking_inspection, result: block, ctx: {reason: not_marked, marking_id: null, trace_code: null}}]}}
   - marking_report: {eq: EAP-MK01, lot: MK0004, seq: 20, kind: print, payload: {trace_code: ANY-01},
                      expect: {status: 409, detail_object: true, code: no_active_marking}}
   - expect_marking_prints: {lot: MK0004, count: 0}
@@ -159,7 +167,7 @@ steps:
   # D82 / D79 补充七：主记录已建未首打 → not_marked，ctx 带 marking_id；results 打标项 ctx.trace_code 为 null
   - track_out: {eq: EAP-MK01, lot: MK0001,
                 expect: {status: 409, code: check_blocked, ctx: {check: marking_inspection, reason: not_marked, marking_id: $marking.MK0001, trace_code: null}, overridable: false,
-                         results: [{check_type: marking_inspection, result: $nonempty, ctx: {reason: not_marked, marking_id: $marking.MK0001, trace_code: null}}]}}
+                         results: [{check_type: marking_inspection, result: block, ctx: {reason: not_marked, marking_id: $marking.MK0001, trace_code: null}}]}}
   - marking_print: {lot: MK0001, eq: EAP-MK01, idem: mk-ro-0, as: read_only, expect: {status: 403}}   # 只有 mes.marking:read
   # 前端 80a36a3：打标记录 create / print / inspect / void 四个写接口 Idempotency-Key 必填（D81：缺 key 422 先于 body 422 / 404 / 409）
   - marking_create: {lot: MK0001, no_idem: true, expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}   # 已有主记录，带 key 才会 409
@@ -240,7 +248,7 @@ steps:
   # 未检验（pending）→ 出站 409
   - track_out: {eq: EAP-MK01, lot: MK0001,
                 expect: {status: 409, code: check_blocked, ctx: {check: marking_inspection, reason: pending, marking_id: $marking.MK0001, trace_code: $nonempty}, overridable: false,
-                         results: [{check_type: marking_inspection, result: $nonempty, ctx: {reason: pending, marking_id: $marking.MK0001, trace_code: $nonempty}}]}}
+                         results: [{check_type: marking_inspection, result: block, ctx: {reason: pending, marking_id: $marking.MK0001, trace_code: $nonempty}}]}}
   - marking_inspect: {lot: MK0001, result: pass, no_idem: true, omit: [read_code],   # D81：缺 key 先于 body 422
                       expect: {status: 422, code: missing, loc: [header, Idempotency-Key]}}
   - marking_inspect: {lot: MK0001, result: fail, read_code: $issued, idem: mk-insp-1, save_as: insp1, expect: {status: 200, absent: [duplicate]}}
@@ -253,7 +261,7 @@ steps:
   # fail → 出站 409
   - track_out: {eq: EAP-MK01, lot: MK0001,
                 expect: {status: 409, code: check_blocked, ctx: {check: marking_inspection, reason: fail, marking_id: $marking.MK0001, trace_code: $nonempty}, overridable: false,
-                         results: [{check_type: marking_inspection, result: $nonempty, ctx: {reason: fail, marking_id: $marking.MK0001, trace_code: $nonempty}}]}}
+                         results: [{check_type: marking_inspection, result: block, ctx: {reason: fail, marking_id: $marking.MK0001, trace_code: $nonempty}}]}}
   # 重打：只读字段 422；缺原因 422；成功 seq=2
   - marking_print: {lot: MK0001, eq: EAP-MK01, idem: mk-ro-1, extra: {reprint_count: 5}, expect: {status: 422, code: unknown_field}}
   - marking_print: {lot: MK0001, eq: EAP-MK01, idem: mk-rep-1, expect: {status: 422, errors: [{type: missing, loc: [body, reason_id]}, {type: missing, loc: [body, comment]}]}}   # D89-5：两项都缺分两条
@@ -269,7 +277,7 @@ steps:
   # 重打本身不算处理：新打印未检验 → 仍 409（旧打印的 fail 不再拦，拦的是新打印 pending）
   - track_out: {eq: EAP-MK01, lot: MK0001,
                 expect: {status: 409, code: check_blocked, ctx: {check: marking_inspection, reason: pending, marking_id: $marking.MK0001, trace_code: $nonempty}, overridable: false,
-                         results: [{check_type: marking_inspection, result: $nonempty, ctx: {reason: pending, marking_id: $marking.MK0001, trace_code: $nonempty}}]}}
+                         results: [{check_type: marking_inspection, result: block, ctx: {reason: pending, marking_id: $marking.MK0001, trace_code: $nonempty}}]}}
   - marking_inspect: {lot: MK0001, result: pass, read_code: $issued, idem: mk-insp-2, expect: {status: 200}}
   - expect_marking: {lot: MK0001, fields: {latest_inspection_status: pass}}
   - expect_marking_inspections: {lot: MK0001, count: 2, last: {result: pass, seq: 2, print_id: $print_seq_2}}
@@ -305,7 +313,7 @@ steps:
   # 最新一次 fail → 出站 409
   - track_out: {eq: EAP-MK01, lot: MK0001,
                 expect: {status: 409, code: check_blocked, ctx: {check: marking_inspection, reason: fail, marking_id: $marking.MK0001, trace_code: $nonempty}, overridable: false,
-                         results: [{check_type: marking_inspection, result: $nonempty, ctx: {reason: fail, marking_id: $marking.MK0001, trace_code: $nonempty}}]}}
+                         results: [{check_type: marking_inspection, result: block, ctx: {reason: fail, marking_id: $marking.MK0001, trace_code: $nonempty}}]}}
   - marking_inspect: {lot: MK0001, result: pass, read_code: $issued, idem: mk-insp-ok, expect: {status: 200, body: {data.result: pass, data.result_overridden: false}}}
   - expect_marking_inspections: {lot: MK0001, count: 6, last: {result: pass, seq: 2}}
   - expect_marking: {lot: MK0001, fields: {latest_inspection_status: pass}}
@@ -387,7 +395,7 @@ steps:
   # 作废后、重建前：只有已作废主记录 → 出站 not_marked
   - track_out: {eq: EAP-MK01, lot: MK0002,
                 expect: {status: 409, code: check_blocked, ctx: {check: marking_inspection, reason: not_marked, marking_id: null, trace_code: null}, overridable: false,
-                         results: [{check_type: marking_inspection, result: $nonempty, ctx: {reason: not_marked, marking_id: null, trace_code: null}}]}}
+                         results: [{check_type: marking_inspection, result: block, ctx: {reason: not_marked, marking_id: null, trace_code: null}}]}}
   - expect_marking_trace: {code: $issued.MK0002, include_voided: true, count: 1,
                            first: {marking_id: $marking.MK0002, lot_id: $lot.MK0002, trace_code: $issued.MK0002, voided: true,
                                    prints: [{print_id: $print_seq_1, seq: 1, marked_at: $utc_z, latest_inspection_result: fail}]}}
@@ -400,7 +408,7 @@ steps:
   # 作废前 fail（insp9），重建后首打 pending → 409；检验 pass → 放行（check_blocked 只看未作废主记录）
   - track_out: {eq: EAP-MK01, lot: MK0002,
                 expect: {status: 409, code: check_blocked, ctx: {check: marking_inspection, reason: pending, marking_id: $marking.c2b, trace_code: $nonempty}, overridable: false,
-                         results: [{check_type: marking_inspection, result: $nonempty, ctx: {reason: pending, marking_id: $marking.c2b, trace_code: $nonempty}}]}}
+                         results: [{check_type: marking_inspection, result: block, ctx: {reason: pending, marking_id: $marking.c2b, trace_code: $nonempty}}]}}
   - marking_inspect: {lot: MK0002, result: pass, read_code: $issued.MK0002, idem: mk-insp-2b,
                       expect: {status: 200, body: {data.result: pass, data.result_overridden: false}}}
   - expect_marking: {lot: MK0002, marking: $marking.MK0002, voided: true, fields: {latest_inspection_status: fail}}   # 旧主记录保留

@@ -956,3 +956,25 @@ def test_d90_d91_drafts():
     assert any(a.get("kind") == "bogus" for a in t) and any(a["code"] == "$absent" for a in t)
     src = inspect.getsource(opq)
     assert "D90-5" in src and "imp_blank_keep" in src and "imp_active_use_api" in src
+
+
+def test_review_1c7178b_and_d91_sup1():
+    """评审 1c7178b P2/P3 + D91 补充一。"""
+    import inspect
+
+    from sim import opq
+    from sim.scenario import load
+
+    mk = load("scenarios/p3-draft/marking-report.yaml")
+    tpl = [s.args for s in mk.steps if s.kind == "marking_template"]
+    assert not any("name" in (a.get("body") or {}) for a in tpl)  # P2：不带已撤回的 name
+    upd = [a for a in tpl if a["action"] == "update" and "product_id" not in a["body"] and "customer_id" not in a["body"]]
+    assert upd and all("lines" in a["body"] for a in upd)
+    res = [r for s in mk.steps for r in ((s.args.get("expect") or {}).get("results") or [])]
+    assert res and all(r["result"] == "block" for r in res)  # P3
+    assert "C-SIM-DUP" in open("scenarios/p3-draft/marking-report.yaml").read().split("TODO-MK-B1-10")[1].split("\n")[0]
+    im = [a for a in tpl if any((e.get("ctx") or {}).get("reason") == "immutable" for e in a["expect"].get("errors") or [])]
+    assert len(im) == 4 and any(len(a["expect"]["errors"]) == 2 for a in im)
+    assert any(a.get("idem") == "tpl2-im4" and a["expect"]["status"] == 404 for a in tpl)
+    src = inspect.getsource(opq)
+    assert "imp_certified" in src and "imp_new_blank_expiry" in src

@@ -525,6 +525,44 @@ class Opq:
             assert after.get("is_active") == before.get("is_active"), "is_active 被改"
         self.step("Excel 导入真改已有资质 is_active → 422 use_api（D90-5 / D91 注）", imp_active_use_api)
 
+        def _et_code():
+            et_row = c.get(f"/mes/equipment_type/{et}").body
+            return (et_row.get("data", et_row) or {}).get("code")
+
+        def imp_certified(e):
+            # D90-6 / D91 补充一 3：导入只改 certified_on 同 PATCH：写一条 changed 履历 + 事件，不要求原因
+            before = c.get(qp).body
+            before = before.get("data", before)
+            nh, ne = len(self.hist(q)), len(self.events(q))
+            new_cert = d(-3) if before.get("certified_on") != d(-3) else d(-4)
+            rows = [["username", "operation", "equipment_type", "certified_on"], [me, "OP-MK", _et_code(), new_cert]]
+            r = upload(c, "/mes/operator_qual/import", xlsx_bytes(rows))
+            e.update(status=r.status)
+            assert r.status == 200, f"HTTP {r.status} {json.dumps(r.body, ensure_ascii=False)[:300]}"
+            after = c.get(qp).body
+            after = after.get("data", after)
+            assert after.get("certified_on") == new_cert, f"certified_on {after.get('certified_on')!r}"
+            h = self.hist(q)
+            assert len(h) == nh + 1 and h[0].get("action") == "changed", f"履历 {[x.get('action') for x in h[:3]]}"
+            assert len(self.events(q)) == ne + 1, "应发一条事件"
+            # 值未变：再导同值 → 不写履历、不发事件
+            r = upload(c, "/mes/operator_qual/import", xlsx_bytes(rows))
+            assert r.status == 200, f"同值 HTTP {r.status}"
+            assert len(self.hist(q)) == nh + 1, "值未变不应写履历"
+            assert len(self.events(q)) == ne + 1, "值未变不应发事件"
+        self.step("Excel 导入只改 certified_on → 1 条 changed 履历 + 事件；同值再导不写不发（D90-6 / D91 补充一 3）", imp_certified)
+
+        def imp_new_blank_expiry(e):
+            # D91 补充一 2：导入新建资质 expires_on 非必填，留空 = 永久有效（null）
+            new_user = f"imp2-{self.run[-6:]}"  # 与 imp_use_api 新行同法（那次整表回滚未建）
+            rows = [["username", "operation", "equipment_type", "expires_on"], [new_user, "OP-MK", _et_code(), None]]
+            r = upload(c, "/mes/operator_qual/import", xlsx_bytes(rows))
+            e.update(status=r.status, resp=json.dumps(r.body, ensure_ascii=False)[:300])
+            assert r.status == 200, f"HTTP {r.status}"
+            n = [z for z in self.rows(c.get("/mes/operator_qual", username=new_user, page_size=5)) if z.get("username") == new_user]
+            assert len(n) == 1 and n[0].get("expires_on") is None, f"新建行 {n[:1]}"
+        self.step("Excel 导入新建资质 expires_on 留空 → 成功且 expires_on 为 null（D91 补充一 2）", imp_new_blank_expiry)
+
         def expiring(e):
             r = c.get("/mes/exec/operator-qual/expiring", days=0)
             self.err422(r, "value_error", ["query", "days"], {"min": 1, "max": 365})

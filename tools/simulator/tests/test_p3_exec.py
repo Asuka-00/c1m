@@ -614,8 +614,16 @@ def test_marking_scenario_d79_supp7():
     assert blocked and all(e.get("results") for e in blocked)
     # D89 补充一（撤回 D89-6）：顶层与 results[] 都是 marking_inspection，ctx {reason, marking_id, trace_code}；未首打 trace_code=null
     assert any(r["ctx"].get("trace_code", "x") is None for e in blocked for r in e["results"])
-    assert all(r["check_type"] == "marking_inspection" and {"reason", "marking_id", "trace_code"} <= set(r["ctx"]) for e in blocked for r in e["results"])
-    assert all(e["ctx"]["check"] == "marking_inspection" and {"reason", "marking_id", "trace_code"} <= set(e["ctx"]) for e in blocked)
+    # 评审 1c7178b P3：相等比较（多出 mark_id 等键也要失败）；result 一律 block（D79 补充七）
+    assert all(
+        r["check_type"] == "marking_inspection" and r["result"] == "block" and set(r) == {"check_type", "result", "ctx"}
+        and set(r["ctx"]) == {"reason", "marking_id", "trace_code"}
+        for e in blocked for r in e["results"]
+    )
+    assert all(e["ctx"]["check"] == "marking_inspection" and set(e["ctx"]) == {"check", "reason", "marking_id", "trace_code"} for e in blocked)
+    assert all("mark_id" not in e["ctx"] and all(r["check_type"] != "marking" for r in e["results"]) for e in blocked)
+    nm = [r["ctx"] for e in blocked for r in e["results"] if r["ctx"]["reason"] == "not_marked"]
+    assert any(c["marking_id"] is None for c in nm)  # 无主记录时 marking_id 为 None
     # 作废后重打：缺原因 422 在 409 之前
     mk2 = [
         (s.args.get("expect") or {}).get("code")
