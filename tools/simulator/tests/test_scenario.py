@@ -86,7 +86,7 @@ def test_p3_draft_scenarios_parse_and_skip_without_backend():
     from sim.scenario import load
 
     files = sorted(glob.glob("scenarios/p3-draft/*.yaml"))
-    assert len(files) == 6
+    assert len(files) == 7  # +trace-report（P3-B3 草稿）
     for f in files:
         sc = load(f)
         if f.endswith("reticle-report.yaml"):  # ret-report-08 起不再是草稿（f9e9dda 联调）
@@ -169,15 +169,15 @@ def test_b8_draft_reuses_alarm_and_track_in_steps():
     assert any(a.get("level") == "equipment" and a.get("value") is None and a["expect"]["status"] == 200 for a in sets)
     assert "expect_effective_track_in_action" in kinds
     # B8 补充：ctx.alarms[] 带 sub_unit_id；多腔体整机拦截后清除放行；已清除不再拦；覆盖层 null 继承类型层
-    assert sc.run_id == "alarm-tia-06"
+    assert sc.run_id == "alarm-tia-07"
     # D82 补充四：check_blocked 用 results[]，alarm_severity 项 ctx.alarms[] 每条带 sub_unit_id
     blocks = [s.args["expect"] for s in tis if s.args["expect"].get("status") == 409 and "results" in s.args["expect"]]
-    assert len(blocks) == 5 and all("body" not in b for b in blocks)
+    assert len(blocks) == 6 and all("body" not in b for b in blocks)  # +D84 Q1 多检查项（pending）
     # D84 Q1：result 只取 block / warn；所有被拦的进站 results[] 都是 block
     assert all(
         set(r) == {"check_type", "result", "ctx"} and r["result"] == "block" for b in blocks for r in b["results"]
     )
-    detailed = [r for b in blocks for r in b["results"] if isinstance(r["ctx"], dict)]
+    detailed = [r for b in blocks for r in b["results"] if isinstance(r["ctx"], dict) and r["check_type"] == "alarm_severity"]
     assert len(detailed) == 2 and all("sub_unit_id" in al for r in detailed for al in r["ctx"]["alarms"])
     mc = [s for s in tis if s.args["eq"] == "EAP-MC01"]
     assert [t.args["expect"]["status"] for t in mc] == [409, 200]
@@ -249,9 +249,10 @@ def test_b8_draft_type_row_rules():
     dels = [s.args for s in st if s.kind == "delete_alarm_code"]
     # D84 Q5：referenced 顶层 ref_type / ref_count；Q6：删除缺 key 422 missing
     # D86：tia-d1 同 key 重发重新校验（409/404/200），已有 2xx 后换体才 reused；最后是缺 key
-    assert [d["expect"]["status"] for d in dels] == [409, 409, 404, 200, 200, 422, 422]
+    assert [d["expect"]["status"] for d in dels] == [409, 409, 404, 200, 200, 422, 422, 422]  # +缺 key 先于 404（D87 补充）
     assert dels[0]["expect"]["body"] == {"detail.ref_type": "alarm_record", "detail.ref_count": 1} and dels[0]["idem"]
     assert dels[-1]["no_idem"] and dels[-1]["expect"]["code"] == "missing"
+    assert dels[-1].get("rid")  # rid 不存在也先报 missing
 
 
 def test_marking_draft_follows_d78():
@@ -687,7 +688,8 @@ def test_b8_draft_d81_d82_refined():
     sets = [s.args for s in sc.steps if s.kind == "set_track_in_action"]
     assert all(a.get("idem") or a.get("no_idem") for a in sets)
     miss = [a for a in sets if a.get("no_idem") and not a.get("as")]
-    assert len(miss) == 2 and all(a["expect"]["code"] == "missing" for a in miss)
+    assert len(miss) == 3 and all(a["expect"]["code"] == "missing" for a in miss)
+    assert any(a.get("rid") for a in miss)  # D87 补充：缺 key 先于 404
     assert any(a["value"] == "bogus" for a in miss)  # 缺 key 先于 enum 422
     assert any(a.get("no_idem") and a.get("as") == "read_only" and a["expect"]["status"] == 403 for a in sets)
     keys = [a["idem"] for a in sets if a.get("idem")]
@@ -763,7 +765,8 @@ def test_b8_draft_d84_contract():
     sets = [s.args for s in st if s.kind == "set_track_in_action"]
     nf = [a for a in sets if a["expect"]["status"] == 404]
     # D86：404 不缓存，同 key 同体重发仍 404
-    assert len(nf) == 2 and all(a["expect"]["code"] == "not_found" and a.get("rid") for a in nf)
+    # D86：通用 404 只断言状态码，不断言 code
+    assert len(nf) == 2 and all("code" not in a["expect"] and a.get("rid") for a in nf)
     assert all(a["expect"].get("detail_object") for a in sets if a["expect"].get("code") == "idempotency_key_reused")
     warn = [s.args["expect"] for s in st if s.kind == "track_in" and "warning" in s.args["expect"]]
     assert warn and all(set(w["warning"]) >= {"code"} and "check_type" not in w["warning"] for w in warn)
@@ -910,3 +913,20 @@ def test_reticle_crud_d87():
     ls = [s.args for s in sc.steps if s.kind == "expect_reticle_life_state"]
     assert ls and not any(a.get("xfail") for a in ls)
     assert "inspection_pending:" not in open("scenarios/p3-draft/reticle-report.yaml", encoding="utf-8").read()
+
+
+def test_trace_draft_b3_acceptance():
+    """P3-B3 追溯草稿：作废前后（include_voided）、跨租户、出货标签一致；草稿不连后端。"""
+    from sim.p3 import P3_EXEC_STEPS
+    from sim.scenario import load
+
+    sc = load("scenarios/p3-draft/trace-report.yaml")
+    assert sc.draft and "B3" in sc.draft
+    tr = [s.args for s in sc.steps if s.kind == "expect_marking_trace"]
+    assert any(a.get("include_voided") and (a.get("first") or {}).get("voided") is True for a in tr)
+    assert any(not a.get("include_voided") and a.get("count") == 0 and str(a["code"]).startswith("$issued") for a in tr)
+    assert any(a.get("as") == "other_tenant" for a in tr)
+    lb = [s.args for s in sc.steps if s.kind == "label_print"]
+    assert any(a["expect"].get("code") == "label_marking_mismatch" for a in lb)
+    assert any(a["expect"]["status"] == 200 and not a.get("pending") for a in lb)
+    assert {s.kind for s in sc.steps} - {"precondition"} <= P3_EXEC_STEPS

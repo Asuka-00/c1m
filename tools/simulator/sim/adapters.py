@@ -125,6 +125,11 @@ def default_adapters() -> dict[str, Adapter]:
         # D79-5/6 + 补充 1：追溯 GET /mes/exec/trace?kind=trace_code&code=，权限 mes.exec:read；
         #   默认不含已作废，include_voided=true 才含
         "marking_trace": Adapter("追溯（kind=trace_code）", ["/mes/exec/trace"], card="P3-B3"),
+        # P3-B3（未实现）：出货标签生成时比对打标内容，不一致 409 label_marking_mismatch（D78 补充一 2）
+        #   包装 / 标签接口是 P2-B2：/mes/pack、/mes/pack/{id}/pack、/mes/label/{pack_id}/print
+        "pack_create": Adapter("包装创建", ["/mes/pack"], card="P2-B2"),
+        "pack_pack": Adapter("包装装入批次", ["/mes/pack/{pack_id}/pack"], card="P2-B2"),
+        "label_print": Adapter("出货标签打印", ["/mes/label/{pack_id}/print"], card="P3-B3"),
         "marking_inspect": Adapter(
             "打标检验（新增 inspection 行）", ["/mes/marking/{marking_id}/inspect"], card="P3-B2"
         ),
@@ -215,6 +220,8 @@ STEP_ADAPTERS: dict[str, list[str]] = {
     "marking_print": ["marking_print"],  # seq=1 首打；seq>1 重打必填 reason + comment
     "expect_marking_list": ["marking_list"],
     "expect_marking_trace": ["marking_trace"],
+    "pack_lot": ["pack_create", "pack_pack"],
+    "label_print": ["label_print"],
     "marking_inspect": ["marking_inspect"],
     "marking_void": ["marking_void"],
     "lot_scrap": ["lot_adjust"],

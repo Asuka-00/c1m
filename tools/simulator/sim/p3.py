@@ -77,6 +77,8 @@ MARKING_STEPS = {
     "expect_marking_events",
     "expect_marking_list",
     "expect_marking_trace",
+    "pack_lot",
+    "label_print",
 }
 RETICLE_STEPS = RETICLE_WRITE | {
     "reticle_report",
@@ -684,8 +686,8 @@ class P3Exec:
                     else [f"config pattern {d.get('trace_code_pattern')!r} 白名单判断 {ok} != {a['pattern_allowed']}"]
                 )
 
-    def _idem(self, a: dict) -> str | None:
-        return None if a.get("no_idem") else f"{self.run_id}:{a.get('idem') or 'x'}"
+    def _idem(self, a: dict, suffix: str = "") -> str | None:
+        return None if a.get("no_idem") else f"{self.run_id}:{a.get('idem') or 'x'}{suffix}"
 
     def _marking_create(self, a: dict, entry: dict) -> None:
         body = {"lot_id": self.id_of("lot", a["lot"]), **self.resolve(a.get("extra") or {})}
@@ -742,6 +744,25 @@ class P3Exec:
         body = self._body_from(a, {"result": "result", "read_code": "read_code", "comment": "comment"})
         call = Call("POST", self.path("marking_inspect", marking_id=mid), body, self._idem(a))
         self.send(entry, call, a.get("expect"), "marking_inspect", a.get("save_as"))
+
+    # ---- P3-B3 草稿：出货标签与打标一致（P2-B2 /mes/pack、/mes/label/{pack_id}/print）
+    def _pack_lot(self, a: dict, entry: dict) -> None:
+        """建包装并装入批次：POST /mes/pack（code）→ POST /mes/pack/{id}/pack（lot_id）。"""
+        call = Call("POST", self.path("pack_create"), {"code": a["pack"], **self.resolve(a.get("extra") or {})}, self._idem(a))
+        r = self.send(entry, call, None, "pack_lot")
+        d = (r.body or {}).get("data", r.body) if isinstance(r.body, dict) else {}
+        pid = d.get("id") if isinstance(d, dict) else None
+        if not pid:
+            self._fail_if([f"建包装 {a['pack']} 没拿到 id"])
+        self.saved[f"pack:{a['pack']}"] = pid
+        body = {"lot_id": self.id_of("lot", a["lot"])}
+        call = Call("POST", self.path("pack_pack", pack_id=pid), body, self._idem(a, "-in"))
+        self.send(entry, call, a.get("expect"), "pack_lot", a.get("save_as"))
+
+    def _label_print(self, a: dict, entry: dict) -> None:
+        pid = self.saved.get(f"pack:{a['pack']}") or self.id_of("pack", a["pack"])
+        call = Call("POST", self.path("label_print", pack_id=pid), self.resolve(a.get("body") or {}), self._idem(a))
+        self._as(a, entry, call, "label_print")
 
     def _marking_void(self, a: dict, entry: dict) -> None:
         self.path("marking_void", marking_id="x")  # 先确认接口在，再查原因码
@@ -859,6 +880,13 @@ class P3Exec:
         params: dict[str, Any] = {"kind": "trace_code", "code": self.resolve(a["code"])}
         if a.get("include_voided"):
             params["include_voided"] = "true"
+        if a.get("expect") or a.get("as"):
+            # B3 草稿：权限 / 跨租户（as: other_tenant，无凭据记 skip）/ 422 断言，走 send 统一检查
+            from urllib.parse import urlencode
+
+            call = Call("GET", self.path("marking_trace") + "?" + urlencode(params))
+            self._as(a, entry, call, "expect_marking_trace")
+            return
         rows = self._rows(self._get(self.path("marking_trace"), **params))
         errs = [] if len(rows) == int(a.get("count", len(rows))) else [f"追溯 {len(rows)} 条 != 期望 {a['count']}"]
         if a.get("first"):
