@@ -218,6 +218,7 @@ error:
   code_400040: '{{field}}: 有効化する前に有効な既定ルートの紐付けが必要です'
   code_400042: '{{field}}: 「$t(mes.enum.resource_kind.{{kind}})」リソースでは必須です'
   code_400043: '{{field}}: 「$t(mes.enum.resource_kind.{{kind}})」リソースでは空にしてください'
+  code_400044: 'レイアウトにこのルート外のステップが含まれています'
   code_500001: 設備が見つかりません
   code_500002: E10 状態が存在しません
   code_500003: 設備は既に {{state}} です

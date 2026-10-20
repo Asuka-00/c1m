@@ -1,24 +1,39 @@
 /** 路线可视化编辑器。 */
-import { useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { t } from '@/i18n'
-import dagre from '@dagrejs/dagre'
 import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+} from 'react'
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryKey,
+} from '@tanstack/react-query'
+import { t } from '@/i18n'
+import {
+  applyNodeChanges,
   Background,
   Controls,
-  Handle,
-  MarkerType,
-  Position,
+  MiniMap,
+  Panel,
   ReactFlow,
+  ReactFlowProvider,
+  useNodesInitialized,
+  useReactFlow,
   type Connection,
   type Edge,
   type Node,
-  type NodeProps,
+  type NodeChange,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import {
   ArrowDown,
   ArrowUp,
+  LayoutTemplate,
   Loader2,
   Pencil,
   Plus,
@@ -28,9 +43,11 @@ import {
 import { toast } from 'sonner'
 import { useTenantKey } from '@/lib/api/hooks'
 import { mesApi, type MesRow } from '@/lib/api/mes/common'
-import { reorderRouteSteps } from '@/lib/api/mes/process'
-import { cn } from '@/lib/utils'
-import { Badge } from '@/components/ui/badge'
+import {
+  reorderRouteSteps,
+  saveRouteLayout,
+  type StepLayout,
+} from '@/lib/api/mes/process'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -45,138 +62,31 @@ import { ConfirmDialog } from '@/components/crud'
 import { IconButton } from '@/components/icon-button'
 import { EntityForm } from '@/features/mes/common/entity-form'
 import { StatusBadge } from '@/features/mes/common/entity-table'
-import { enumLabel } from '@/features/mes/common/labels'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
-
-type StepData = { step: MesRow; selected: boolean; current?: boolean }
-type RefData = {
-  label: string
-  kind: 'sub' | 'rework'
-  steps?: MesRow[]
-  linked: boolean
-}
-type TermData = { label: string }
-
-const W = 260
-const H = 72
-
-function StepNode({ data }: NodeProps<Node<StepData>>) {
-  const s = data.step
-  const sub = s.step_type === 'sub_route'
-  return (
-    <div
-      className={cn(
-        'rounded-lg border-2 bg-card px-3 py-2 text-xs shadow-sm',
-        sub ? 'border-primary/60 bg-primary/5' : 'border-border',
-        data.selected && 'ring-2 ring-primary',
-        data.current &&
-          'border-amber-500 bg-amber-50 ring-4 ring-amber-400/60 dark:bg-amber-950'
-      )}
-      style={{ width: W }}
-      data-testid={`step-${String(s.seq)}`}
-    >
-      <Handle type='target' position={Position.Top} />
-      <div className='flex items-center gap-2'>
-        <span className='rounded bg-muted px-1.5 font-mono font-semibold'>
-          {String(s.seq)}
-        </span>
-        <span className='truncate font-medium'>
-          {String((sub ? s.sub_route_label : s.operation_label) ?? '')}
-        </span>
-      </div>
-      <div className='mt-1 flex gap-1'>
-        <Badge variant='outline' className='text-[10px]'>
-          {enumLabel('step_type', String(s.step_type))}
-        </Badge>
-        {data.current && (
-          <Badge className='bg-amber-500 text-[10px] text-white'>
-            {t('mes.currentStep')}
-          </Badge>
-        )}
-        {!!s.is_optional && (
-          <Badge variant='secondary' className='text-[10px]'>
-            {t('mes.field.route_step.is_optional')}
-          </Badge>
-        )}
-      </div>
-      <Handle type='source' position={Position.Bottom} />
-      <Handle type='source' id='side' position={Position.Right} />
-      <Handle type='target' id='side-in' position={Position.Left} />
-    </div>
-  )
-}
-
-function RefNode({ data }: NodeProps<Node<RefData>>) {
-  return (
-    <div
-      className={cn(
-        'rounded-lg border-2 border-dashed px-3 py-2 text-xs',
-        data.kind === 'rework'
-          ? 'border-destructive/60 bg-destructive/5'
-          : 'border-primary/60 bg-primary/5',
-        !data.linked && 'opacity-60'
-      )}
-      style={{ width: W }}
-    >
-      <Handle type='target' position={Position.Left} />
-      <div className='font-medium'>
-        {data.kind === 'rework' ? t('mes.reworkRoute') : t('mes.subRoute')}:{' '}
-        {data.label}
-      </div>
-      {data.steps && (
-        <ol className='mt-1 space-y-0.5 text-muted-foreground'>
-          {data.steps.map((x) => (
-            <li key={x.id}>
-              {String(x.seq)} ·{' '}
-              {String(x.operation_label ?? x.sub_route_label ?? '')}
-            </li>
-          ))}
-        </ol>
-      )}
-      <Handle type='source' position={Position.Right} />
-    </div>
-  )
-}
-
-function TermNode({ data }: NodeProps<Node<TermData>>) {
-  return (
-    <div className='rounded-full border-2 bg-muted px-4 py-1 text-xs font-semibold'>
-      <Handle type='target' position={Position.Top} />
-      {data.label}
-      <Handle type='source' position={Position.Bottom} />
-    </div>
-  )
-}
+import {
+  buildGraph,
+  GRID,
+  H,
+  insertIndexAt,
+  layoutOf,
+  mainEdgeId,
+  stepIdOf,
+  stepNodeId,
+  W,
+} from './flow/graph'
+import { RefNode, StepNode, TermNode } from './flow/nodes'
+import { Palette, PALETTE_MIME, type PaletteItem } from './flow/palette'
 
 const nodeTypes = { step: StepNode, ref: RefNode, term: TermNode }
 
-function layout(nodes: Node[], edges: Edge[]): Node[] {
-  const g = new dagre.graphlib.Graph()
-  g.setGraph({ rankdir: 'TB', nodesep: 60, ranksep: 50 })
-  g.setDefaultEdgeLabel(() => ({}))
-  for (const n of nodes) {
-    const h =
-      n.type === 'ref'
-        ? H + 16 * ((n.data as RefData).steps?.length ?? 0)
-        : n.type === 'term'
-          ? 32
-          : H
-    g.setNode(n.id, { width: n.type === 'term' ? 100 : W, height: h })
-  }
-  // 只有主链与子路线调用参与布局；返工回路叠加绘制
-  for (const e of edges) if (e.data?.layout) g.setEdge(e.source, e.target)
-  dagre.layout(g)
-  return nodes.map((n) => {
-    const p = g.node(n.id)
-    return { ...n, position: { x: p.x - p.width / 2, y: p.y - p.height / 2 } }
-  })
-}
+type Branch = { from: MesRow; to: MesRow; cond: string }
 
 function useRouteSteps(routeId: string | undefined) {
   const tk = useTenantKey()
-  return useQuery({
-    queryKey: ['mes', 'route_step', 'flow', tk, routeId],
+  const queryKey: QueryKey = ['mes', 'route_step', 'flow', tk, routeId]
+  const query = useQuery({
+    queryKey,
     queryFn: () =>
       mesApi.list('route_step', {
         route_id: routeId!,
@@ -185,20 +95,37 @@ function useRouteSteps(routeId: string | undefined) {
       }),
     enabled: !!routeId,
   })
+  return { query, queryKey }
 }
 
+const snap = (v: number) => Math.round(v / GRID) * GRID
+
 /** 可视化路线编辑器（React Flow + dagre 自动布局）：按顺序展示工步、主流程、
- *  子路线调用、返工回路与带标签的分支。草稿：可把工步连到
- *  另一工步（分支）或返工路线、删除连线，并在侧栏新增 /
- *  编辑 / 删除 / 重排工步。已激活 / 已停用：只读。 */
-export function RouteFlow({
+ *  子路线调用、返工回路与带标签的分支。草稿：节点可自由拖动（位置随路线保存），
+ *  从左侧面板把工序 / 子流程拖进画布添加工步，拖到连线上即插入该位置，
+ *  拖动已有工步到另一段连线上调整顺序；把工步连接点拖到另一工步（分支）或返工路线，
+ *  拖动连线端点改接、Delete 删除；侧栏新增 / 编辑 / 删除 / 重排。
+ *  已激活 / 已停用：只读。 */
+export function RouteFlow(props: {
+  row: MesRow
+  readOnly?: boolean
+  /** 需高亮的工步 id（如批次的当前工步） */
+  highlight?: string | null
+}) {
+  return (
+    <ReactFlowProvider>
+      <RouteFlowInner {...props} />
+    </ReactFlowProvider>
+  )
+}
+
+function RouteFlowInner({
   row,
   readOnly = false,
   highlight = null,
 }: {
   row: MesRow
   readOnly?: boolean
-  /** 需高亮的工步 id（如批次的当前工步） */
   highlight?: string | null
 }) {
   const qc = useQueryClient()
@@ -207,7 +134,7 @@ export function RouteFlow({
   const { entity: routeEntity } = useMesEntity('route')
   const editable =
     !readOnly && row.status === 'draft' && !!routeEntity?.can_write
-  const steps = useRouteSteps(row.id)
+  const { query: steps, queryKey: stepsKey } = useRouteSteps(row.id)
   const list = useMemo(() => steps.data?.data ?? [], [steps.data])
   const subIds = [
     ...new Set(list.map((s) => s.sub_route_id).filter(Boolean)),
@@ -241,18 +168,20 @@ export function RouteFlow({
       }),
     enabled: editable,
   })
+  const { screenToFlowPosition, getNodes, fitView } = useReactFlow()
+  const measured = useNodesInitialized()
+  const fitted = useRef(false)
+  const [dropEdge, setDropEdge] = useState<string | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
   const [editing, setEditing] = useState<MesRow | null>(null)
   const [creating, setCreating] = useState(false)
   const [deleting, setDeleting] = useState<MesRow | null>(null)
-  const [branch, setBranch] = useState<{
-    from: MesRow
-    to: MesRow
-    cond: string
-  } | null>(null)
+  const [branch, setBranch] = useState<Branch | null>(null)
 
-  const refresh = () =>
-    qc.invalidateQueries({ queryKey: ['mes', 'route_step'] })
+  const refresh = useCallback(
+    () => qc.invalidateQueries({ queryKey: ['mes', 'route_step'] }),
+    [qc]
+  )
   const onErr = (e: unknown) => toast.error(mesErrorMessage(e, stepEntity))
   const patch = useMutation({
     mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
@@ -287,184 +216,242 @@ export function RouteFlow({
     onSuccess: refresh,
     onError: onErr,
   })
+  /** 保存节点位置（可选：随后重排工步）；位置先写入缓存，避免等待刷新时节点跳回。 */
+  const commit = useMutation({
+    mutationFn: async ({
+      layout,
+      order,
+    }: {
+      layout: Record<string, StepLayout | null>
+      order?: string[]
+    }) => {
+      await saveRouteLayout(row.id, layout)
+      if (order) await reorderRouteSteps(row.id, order)
+    },
+    onMutate: ({ layout }) =>
+      qc.setQueryData<typeof steps.data>(stepsKey, (old) =>
+        old
+          ? {
+              ...old,
+              data: old.data.map((s) =>
+                s.id in layout ? { ...s, layout: layout[s.id] } : s
+              ),
+            }
+          : old
+      ),
+    onSuccess: refresh,
+    onError: (e) => {
+      onErr(e)
+      refresh()
+    },
+  })
+  /** 从面板拖入新工步：创建、保存全部节点位置，必要时插入到指定位置。 */
+  const add = useMutation({
+    mutationFn: async ({
+      item,
+      at,
+      index,
+    }: {
+      item: PaletteItem
+      at: { x: number; y: number }
+      index: number | null
+    }) => {
+      const last = (list[list.length - 1]?.seq as number | undefined) ?? 0
+      const created = await mesApi.create('route_step', {
+        route_id: row.id,
+        seq: last + 10,
+        step_type: item.kind,
+        ...(item.kind === 'operation'
+          ? { operation_id: item.id }
+          : { sub_route_id: item.id }),
+      })
+      const pos = new Map(getNodes().map((n) => [n.id, n.position]))
+      await saveRouteLayout(row.id, {
+        ...layoutOf(list, (id) => pos.get(id)),
+        [created.id]: at,
+      })
+      if (index !== null && index < list.length) {
+        const ids = list.map((s) => s.id)
+        await reorderRouteSteps(row.id, [
+          ...ids.slice(0, index),
+          created.id,
+          ...ids.slice(index),
+        ])
+      }
+    },
+    onSuccess: refresh,
+    onError: (e) => {
+      onErr(e)
+      refresh()
+    },
+  })
 
-  const { nodes, edges } = useMemo(() => {
-    const ns: Node[] = [
-      {
-        id: 'start',
-        type: 'term',
-        position: { x: 0, y: 0 },
-        data: { label: t('mes.flowStart') },
-      },
-      {
-        id: 'end',
-        type: 'term',
-        position: { x: 0, y: 0 },
-        data: { label: t('mes.flowEnd') },
-      },
-    ]
-    const es: Edge[] = []
-    const bySeq = new Map(list.map((s) => [Number(s.seq), s]))
-    const arrow = { type: MarkerType.ArrowClosed }
-    let prev = 'start'
-    const reworkSeen = new Set<string>()
-    for (const s of list) {
-      const id = `s-${s.id}`
-      ns.push({
-        id,
-        type: 'step',
-        position: { x: 0, y: 0 },
-        data: {
-          step: s,
-          selected: selected === s.id,
-          current: highlight === s.id,
-        },
-      })
-      es.push({
-        id: `m-${prev}-${id}`,
-        source: prev,
-        target: id,
-        markerEnd: arrow,
-        data: { layout: true, kind: 'main' },
-      })
-      prev = id
-      if (s.step_type === 'sub_route' && s.sub_route_id) {
-        const sid = `sub-${s.id}`
-        ns.push({
-          id: sid,
-          type: 'ref',
-          position: { x: 0, y: 0 },
-          data: {
-            label: String(s.sub_route_label),
-            kind: 'sub',
-            steps: subs.data?.[String(s.sub_route_id)] ?? [],
-            linked: true,
-          },
-        })
-        es.push({
-          id: `call-${s.id}`,
-          source: id,
-          sourceHandle: 'side',
-          target: sid,
-          label: t('mes.edgeCall'),
-          animated: true,
-          markerEnd: arrow,
-          style: { strokeDasharray: '6 4' },
-          data: { layout: true, kind: 'call' },
-        })
-        es.push({
-          id: `ret-${s.id}`,
-          source: sid,
-          target: id,
-          targetHandle: 'side-in',
-          label: t('mes.edgeReturn'),
-          markerEnd: arrow,
-          style: { strokeDasharray: '6 4' },
-          data: { kind: 'return' },
-        })
-      }
-      if (s.rework_route_id) {
-        const rid = `rw-${String(s.rework_route_id)}`
-        if (!reworkSeen.has(rid)) {
-          reworkSeen.add(rid)
-          ns.push({
-            id: rid,
-            type: 'ref',
-            position: { x: 0, y: 0 },
-            data: {
-              label: String(s.rework_route_label),
-              kind: 'rework',
-              linked: true,
-            },
-          })
-        }
-        es.push({
-          id: `rw-${s.id}`,
-          source: id,
-          sourceHandle: 'side',
-          target: rid,
-          label: t('mes.edgeRework'),
-          markerEnd: arrow,
-          style: { stroke: 'var(--destructive)', strokeDasharray: '4 3' },
-          data: { layout: true, kind: 'rework', step: s },
-        })
-        es.push({
-          id: `rwb-${s.id}`,
-          source: rid,
-          target: id,
-          targetHandle: 'side-in',
-          markerEnd: arrow,
-          style: {
-            stroke: 'var(--destructive)',
-            strokeDasharray: '4 3',
-            opacity: 0.5,
-          },
-          data: { kind: 'return' },
-        })
-      }
-      if (s.branch_to_seq != null && bySeq.has(Number(s.branch_to_seq))) {
-        es.push({
-          id: `br-${s.id}`,
-          source: id,
-          sourceHandle: 'side',
-          target: `s-${bySeq.get(Number(s.branch_to_seq))!.id}`,
-          targetHandle: 'side-in',
-          label: String(s.branch_condition ?? ''),
-          labelStyle: { fill: 'var(--chart-1, #d97706)', fontWeight: 600 },
-          markerEnd: arrow,
-          style: { stroke: '#d97706', strokeWidth: 2 },
-          type: 'smoothstep',
-          data: { kind: 'branch', step: s },
-        })
-      }
-    }
-    es.push({
-      id: `m-${prev}-end`,
-      source: prev,
-      target: 'end',
-      markerEnd: arrow,
-      data: { layout: true, kind: 'main' },
+  const built = useMemo(() => {
+    const linked = new Set(list.map((s) => String(s.rework_route_id ?? '')))
+    return buildGraph({
+      list,
+      subs: subs.data,
+      options: editable
+        ? (reworks.data?.data ?? []).filter((r) => !linked.has(r.id))
+        : [],
+      highlight,
     })
-    // 草稿：未关联的已激活返工路线可作为连线目标
-    if (editable)
-      for (const r of reworks.data?.data ?? []) {
-        const rid = `rw-${r.id}`
-        if (!reworkSeen.has(rid))
-          ns.push({
-            id: rid,
-            type: 'ref',
-            position: { x: 0, y: 0 },
-            data: {
-              label: `${r.code} v${r.version}`,
-              kind: 'rework',
-              linked: false,
-            },
-          })
-      }
-    return {
-      nodes: layout(ns, es),
-      edges: es.map((e) => ({
-        ...e,
-        deletable:
-          editable && ['branch', 'rework'].includes(String(e.data?.kind)),
-      })),
+  }, [list, subs.data, reworks.data, editable, highlight])
+  // 节点首次完成测量后适配视图（之后不再自动改动用户的视角）
+  useEffect(() => {
+    if (measured && !fitted.current) {
+      fitted.current = true
+      fitView({ padding: 0.15 })
     }
-  }, [list, subs.data, reworks.data, editable, selected, highlight])
+  }, [measured, fitView])
+  // 数据变化后重建节点（保留选中状态）；节点位置在拖动过程中由本地状态持有
+  const [nodes, setNodes] = useState<Node[]>(built.nodes)
+  const [seen, setSeen] = useState(built)
+  if (seen !== built) {
+    setSeen(built)
+    const sel = new Set(nodes.filter((n) => n.selected).map((n) => n.id))
+    setNodes(built.nodes.map((n) => ({ ...n, selected: sel.has(n.id) })))
+  }
+  const edges = useMemo(
+    () =>
+      built.edges.map((e): Edge => {
+        const k = String(e.data?.kind)
+        const editableKind = editable && (k === 'branch' || k === 'rework')
+        return {
+          ...e,
+          deletable: editableKind,
+          reconnectable: editableKind ? 'target' : false,
+          ...(e.id === dropEdge
+            ? {
+                animated: true,
+                style: { ...e.style, stroke: 'var(--primary)', strokeWidth: 4 },
+              }
+            : {}),
+        }
+      }),
+    [built.edges, dropEdge, editable]
+  )
 
-  const stepOf = (nodeId: string) => list.find((s) => `s-${s.id}` === nodeId)
+  /** 当前主链上各工步节点的位置（按序号）与起止节点位置。 */
+  const chain = useCallback(() => {
+    const all = getNodes()
+    const at = new Map(all.map((n) => [n.id, n.position]))
+    return {
+      ordered: list.flatMap((s) => {
+        const p = at.get(stepNodeId(s.id))
+        return p ? [{ id: s.id, x: p.x, y: p.y }] : []
+      }),
+      start: at.get('start') ?? { x: 0, y: 0 },
+      end: at.get('end') ?? { x: 0, y: 0 },
+    }
+  }, [getNodes, list])
+  /** 点 `p` 命中的主链插入位置（同时更新高亮连线）。 */
+  const probe = (p: { x: number; y: number }, skip?: string) => {
+    const c = chain()
+    const idx = insertIndexAt(p, c.ordered, c.start, c.end, skip)
+    const ids = c.ordered.filter((s) => s.id !== skip).map((s) => s.id)
+    // 放回原位等同没有变化
+    const same =
+      skip &&
+      idx !== null &&
+      list.map((s) => s.id).join() ===
+        [...ids.slice(0, idx), skip, ...ids.slice(idx)].join()
+    const hit = same ? null : idx
+    setDropEdge(hit === null ? null : mainEdgeId(ids.map(stepNodeId), hit))
+    return hit
+  }
+
+  const onNodesChange = (ch: NodeChange[]) =>
+    setNodes((ns) => applyNodeChanges(ch, ns))
+  const onNodeDrag = (_: unknown, n: Node) => {
+    if (n.type === 'step')
+      probe(
+        { x: n.position.x + W / 2, y: n.position.y + H / 2 },
+        stepIdOf(n.id)!
+      )
+  }
+  const onNodeDragStop = (_: unknown, dragged: Node) => {
+    // 以松手时的位置重新判断落点，不依赖拖动中的状态
+    const index =
+      dragged.type === 'step'
+        ? probe(
+            { x: dragged.position.x + W / 2, y: dragged.position.y + H / 2 },
+            stepIdOf(dragged.id)!
+          )
+        : null
+    setDropEdge(null)
+    const pos = new Map(getNodes().map((n) => [n.id, n.position]))
+    pos.set(dragged.id, dragged.position)
+    const layout = layoutOf(list, (id) => pos.get(id))
+    let order: string[] | undefined
+    if (dragged.type === 'step' && index !== null) {
+      const id = stepIdOf(dragged.id)!
+      const ids = list.map((s) => s.id).filter((x) => x !== id)
+      order = [...ids.slice(0, index), id, ...ids.slice(index)]
+    }
+    commit.mutate({ layout, order })
+  }
+  const onDragOver = (e: DragEvent) => {
+    if (!editable || !e.dataTransfer.types.includes(PALETTE_MIME)) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'copy'
+    probe(screenToFlowPosition({ x: e.clientX, y: e.clientY }))
+  }
+  const onDrop = (e: DragEvent) => {
+    const raw = e.dataTransfer.getData(PALETTE_MIME)
+    if (!editable || !raw) return
+    e.preventDefault()
+    const p = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+    const index = probe(p)
+    setDropEdge(null)
+    add.mutate({
+      item: JSON.parse(raw) as PaletteItem,
+      at: { x: snap(p.x - W / 2), y: snap(p.y - H / 2) },
+      index,
+    })
+  }
+
+  const stepOf = (nodeId: string) => {
+    const id = nodeId.startsWith('s-') ? stepIdOf(nodeId) : null
+    return list.find((s) => s.id === id)
+  }
+  /** 把返工路线节点 `opt-…` 的位置记为该工步返工节点的位置。 */
+  const connectRework = (from: MesRow, target: string) => {
+    const routeId = target.slice('opt-'.length)
+    const at = getNodes().find((n) => n.id === target)?.position
+    patch.mutate(
+      { id: from.id, body: { rework_route_id: routeId } },
+      {
+        onSuccess: () => {
+          if (!at) return
+          const pos = new Map(getNodes().map((n) => [n.id, n.position]))
+          const layout = layoutOf(list, (id) => pos.get(id))
+          const own = layout[from.id]
+          if (own)
+            commit.mutate({
+              layout: { [from.id]: { ...own, rx: at.x, ry: at.y } },
+            })
+        },
+      }
+    )
+  }
   const onConnect = (c: Connection) => {
     const from = stepOf(c.source)
     if (!from || !editable) return
-    if (c.target.startsWith('rw-')) {
-      patch.mutate({
-        id: from.id,
-        body: { rework_route_id: c.target.slice(3) },
-      })
-      return
-    }
+    if (c.target.startsWith('opt-')) return connectRework(from, c.target)
     const to = stepOf(c.target)
     if (to && to.id !== from.id)
       setBranch({ from, to, cond: String(from.branch_condition ?? '') })
+  }
+  const onReconnect = (old: Edge, c: Connection) => {
+    const s = old.data?.step as MesRow | undefined
+    if (!s || !editable) return
+    if (old.data?.kind === 'branch') {
+      const to = stepOf(c.target)
+      if (to && to.id !== s.id)
+        patch.mutate({ id: s.id, body: { branch_to_seq: to.seq } })
+    } else if (old.data?.kind === 'rework' && c.target.startsWith('opt-'))
+      connectRework(s, c.target)
   }
   const onEdgesDelete = (deleted: Edge[]) => {
     for (const e of deleted) {
@@ -479,6 +466,26 @@ export function RouteFlow({
         patch.mutate({ id: s.id, body: { rework_route_id: null } })
     }
   }
+  /** Delete 键：工步节点先弹确认框，连线直接删除。 */
+  const onBeforeDelete = async ({
+    nodes: ns,
+    edges: es,
+  }: {
+    nodes: Node[]
+    edges: Edge[]
+  }) => {
+    const target = ns.find((n) => n.type === 'step')
+    if (target) setDeleting(stepOf(target.id) ?? null)
+    return target || es.length === 0 ? false : { nodes: [], edges: es }
+  }
+  const autoLayout = () =>
+    commit.mutate(
+      {
+        layout: Object.fromEntries(list.map((s) => [s.id, null])),
+      },
+      { onSuccess: () => toast.success(t('mes.flow.autoLayoutDone')) }
+    )
+
   const sel = list.find((s) => s.id === selected) ?? null
   const idx = sel ? list.indexOf(sel) : -1
   const swap = (i: number, j: number) => {
@@ -511,107 +518,154 @@ export function RouteFlow({
           </Button>
         )}
       </div>
-      <div className='relative h-[68vh] rounded-md border'>
-        {steps.isLoading ? (
-          <Loader2 className='m-auto mt-20 animate-spin' />
-        ) : (
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            nodeTypes={nodeTypes}
-            fitView
-            nodesDraggable={false}
-            nodesConnectable={editable}
-            onConnect={onConnect}
-            onEdgesDelete={onEdgesDelete}
-            deleteKeyCode={editable ? ['Backspace', 'Delete'] : null}
-            onNodeClick={(_, n) =>
-              setSelected(n.id.startsWith('s-') ? n.id.slice(2) : null)
-            }
-            onPaneClick={() => setSelected(null)}
-            proOptions={{ hideAttribution: true }}
-          >
-            <Background />
-            <Controls showInteractive={false} />
-          </ReactFlow>
-        )}
-        {sel && (
-          <aside
-            className='absolute end-2 top-2 z-10 w-72 space-y-2 rounded-md border bg-background p-3 text-sm shadow-lg'
-            data-testid='step-panel'
-          >
-            <div className='flex items-center justify-between'>
-              <span className='font-semibold'>
-                {t('mes.entity.route_step')} {String(sel.seq)}
-              </span>
-              <IconButton
-                label={t('common.close')}
-                variant='ghost'
-                className='size-7'
-                onClick={() => setSelected(null)}
-              >
-                <X className='size-4' />
-              </IconButton>
-            </div>
-            <dl className='space-y-1 text-xs'>
-              {(['operation', 'sub_route', 'rework_route'] as const).map((k) =>
-                sel[`${k}_label`] ? (
-                  <div key={k} className='flex gap-2'>
-                    <dt className='text-muted-foreground'>
-                      {t(`mes.field.route_step.${k}`)}
-                    </dt>
-                    <dd>{String(sel[`${k}_label`])}</dd>
-                  </div>
-                ) : null
+      <div className='flex h-[68vh] overflow-hidden rounded-md border'>
+        {editable && <Palette />}
+        <div
+          className='relative min-w-0 flex-1'
+          onDragOver={onDragOver}
+          onDragLeave={() => setDropEdge(null)}
+          onDrop={onDrop}
+        >
+          {steps.isLoading ? (
+            <Loader2 className='m-auto mt-20 animate-spin' />
+          ) : (
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              nodeTypes={nodeTypes}
+              nodesDraggable={editable}
+              nodesConnectable={editable}
+              snapToGrid={editable}
+              snapGrid={[GRID, GRID]}
+              onNodesChange={onNodesChange}
+              onNodeDrag={onNodeDrag}
+              onNodeDragStop={onNodeDragStop}
+              onConnect={onConnect}
+              onReconnect={onReconnect}
+              onEdgesDelete={onEdgesDelete}
+              onBeforeDelete={onBeforeDelete}
+              deleteKeyCode={editable ? ['Backspace', 'Delete'] : null}
+              onNodeClick={(_, n) =>
+                setSelected(n.id.startsWith('s-') ? stepIdOf(n.id) : null)
+              }
+              onNodeDoubleClick={(_, n) => {
+                const s = stepOf(n.id)
+                if (editable && s) setEditing(s)
+              }}
+              onEdgeDoubleClick={(_, e) => {
+                const s = e.data?.step as MesRow | undefined
+                const to = list.find(
+                  (x) => Number(x.seq) === Number(s?.branch_to_seq)
+                )
+                if (editable && e.data?.kind === 'branch' && s && to)
+                  setBranch({
+                    from: s,
+                    to,
+                    cond: String(s.branch_condition ?? ''),
+                  })
+              }}
+              onPaneClick={() => setSelected(null)}
+              proOptions={{ hideAttribution: true }}
+            >
+              <Background gap={GRID} />
+              <Controls showInteractive={false} />
+              <MiniMap pannable zoomable className='!bg-background' />
+              {editable && list.length > 0 && (
+                <Panel position='top-left'>
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    className='bg-background'
+                    onClick={autoLayout}
+                    disabled={commit.isPending}
+                  >
+                    <LayoutTemplate />
+                    {t('mes.flow.autoLayout')}
+                  </Button>
+                </Panel>
               )}
-              {sel.branch_to_seq != null && (
-                <div className='flex gap-2'>
-                  <dt className='text-muted-foreground'>
-                    {t('mes.field.route_step.branch_condition')}
-                  </dt>
-                  <dd>
-                    {String(sel.branch_condition)} → {String(sel.branch_to_seq)}
-                  </dd>
-                </div>
-              )}
-            </dl>
-            {editable && (
-              <div className='flex flex-wrap gap-1'>
-                <Button
-                  size='sm'
-                  variant='outline'
-                  onClick={() => setEditing(sel)}
-                >
-                  <Pencil />
-                  {t('common.edit')}
-                </Button>
+            </ReactFlow>
+          )}
+          {sel && (
+            <aside
+              className='absolute end-2 top-2 z-10 w-72 space-y-2 rounded-md border bg-background p-3 text-sm shadow-lg'
+              data-testid='step-panel'
+            >
+              <div className='flex items-center justify-between'>
+                <span className='font-semibold'>
+                  {t('mes.entity.route_step')} {String(sel.seq)}
+                </span>
                 <IconButton
-                  label={t('mes.moveUp')}
-                  variant='outline'
-                  disabled={idx <= 0}
-                  onClick={() => swap(idx, idx - 1)}
+                  label={t('common.close')}
+                  variant='ghost'
+                  className='size-7'
+                  onClick={() => setSelected(null)}
                 >
-                  <ArrowUp />
-                </IconButton>
-                <IconButton
-                  label={t('mes.moveDown')}
-                  variant='outline'
-                  disabled={idx >= list.length - 1}
-                  onClick={() => swap(idx, idx + 1)}
-                >
-                  <ArrowDown />
-                </IconButton>
-                <IconButton
-                  label={t('common.delete')}
-                  variant='outline'
-                  onClick={() => setDeleting(sel)}
-                >
-                  <Trash2 className='text-destructive' />
+                  <X className='size-4' />
                 </IconButton>
               </div>
-            )}
-          </aside>
-        )}
+              <dl className='space-y-1 text-xs'>
+                {(['operation', 'sub_route', 'rework_route'] as const).map(
+                  (k) =>
+                    sel[`${k}_label`] ? (
+                      <div key={k} className='flex gap-2'>
+                        <dt className='text-muted-foreground'>
+                          {t(`mes.field.route_step.${k}`)}
+                        </dt>
+                        <dd>{String(sel[`${k}_label`])}</dd>
+                      </div>
+                    ) : null
+                )}
+                {sel.branch_to_seq != null && (
+                  <div className='flex gap-2'>
+                    <dt className='text-muted-foreground'>
+                      {t('mes.field.route_step.branch_condition')}
+                    </dt>
+                    <dd>
+                      {String(sel.branch_condition)} →{' '}
+                      {String(sel.branch_to_seq)}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+              {editable && (
+                <div className='flex flex-wrap gap-1'>
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    onClick={() => setEditing(sel)}
+                  >
+                    <Pencil />
+                    {t('common.edit')}
+                  </Button>
+                  <IconButton
+                    label={t('mes.moveUp')}
+                    variant='outline'
+                    disabled={idx <= 0}
+                    onClick={() => swap(idx, idx - 1)}
+                  >
+                    <ArrowUp />
+                  </IconButton>
+                  <IconButton
+                    label={t('mes.moveDown')}
+                    variant='outline'
+                    disabled={idx >= list.length - 1}
+                    onClick={() => swap(idx, idx + 1)}
+                  >
+                    <ArrowDown />
+                  </IconButton>
+                  <IconButton
+                    label={t('common.delete')}
+                    variant='outline'
+                    onClick={() => setDeleting(sel)}
+                  >
+                    <Trash2 className='text-destructive' />
+                  </IconButton>
+                </div>
+              )}
+            </aside>
+          )}
+        </div>
       </div>
       <EntityForm
         entity={stepEntity}

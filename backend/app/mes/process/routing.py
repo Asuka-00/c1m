@@ -1,4 +1,4 @@
-"""路线工具：原子化的工步重排（序号重编）。"""
+"""路线工具：原子化的工步重排（序号重编）与画布布局保存。"""
 
 import uuid
 from typing import Any
@@ -46,14 +46,14 @@ def reorder_steps(
     check_editable(session, tid, ENTITIES["route"], route)
     t = TABLES["route_step"]
     c = conn(session)
-    current = {
-        r["id"]: r["seq"]
-        for r in c.execute(
-            sa.select(t.c.id, t.c.seq).where(
+    old_rows = list(
+        c.execute(
+            sa.select(t.c.id, t.c.seq, t.c.branch_to_seq).where(
                 t.c.tenant_id == tid, t.c.route_id == route_id
             )
         ).mappings()
-    }
+    )
+    current = {r["id"]: r["seq"] for r in old_rows}
     if set(ids) != set(current) or len(ids) != len(current):
         raise coded(
             422,
@@ -69,6 +69,15 @@ def reorder_steps(
             .where(t.c.id == sid)
             .values(seq=(i + 1) * STEP, updated_at=now())
         )
+    # 分支目标按序号引用：随工步一起换成新序号
+    new_seq = {current[sid]: (i + 1) * STEP for i, sid in enumerate(ids)}
+    for r in old_rows:
+        if r["branch_to_seq"] is not None and r["branch_to_seq"] in new_seq:
+            c.execute(
+                sa.update(t)
+                .where(t.c.id == r["id"])
+                .values(branch_to_seq=new_seq[r["branch_to_seq"]])
+            )
     audit(
         session,
         tid,
@@ -95,3 +104,48 @@ def reorder_steps(
         .mappings()
     ]
     return serialize(session, tid, e, rows)
+
+
+def save_layout(
+    session: Session,
+    tid: uuid.UUID,
+    route_id: uuid.UUID,
+    items: dict[uuid.UUID, dict[str, float] | None],
+) -> int:
+    """保存画布上节点的位置（仅 draft 路线；``None`` 清除该工步的已存位置）。
+
+    Args:
+        session: 数据库会话。
+        tid: 租户 id。
+        route_id: 路线 id。
+        items: 工步 id -> ``{x, y, ax, ay, rx, ry}``（工步节点、子路线节点、返工路线节点的坐标）。
+
+    Returns:
+        更新的工步数。
+
+    Raises:
+        HTTPException: 路线非 draft（409）或含不属于该路线的工步（422）。
+    """
+    route = get_row(session, ENTITIES["route"], tid, route_id)
+    check_editable(session, tid, ENTITIES["route"], route)
+    t = TABLES["route_step"]
+    c = conn(session)
+    own = set(
+        c.execute(
+            sa.select(t.c.id).where(t.c.tenant_id == tid, t.c.route_id == route_id)
+        ).scalars()
+    )
+    if not set(items) <= own:
+        raise coded(
+            422,
+            ec.ROUTE_LAYOUT_INVALID,
+            "The layout references steps outside this route",
+        )
+    for sid, pos in items.items():
+        c.execute(
+            sa.update(t)
+            .where(t.c.id == sid)
+            .values(layout=None if pos is None else dict(pos))
+        )
+    session.commit()
+    return len(items)

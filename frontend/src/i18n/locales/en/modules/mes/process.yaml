@@ -10,8 +10,13 @@ mes:
   edgeCall: call
   edgeReturn: return
   edgeRework: rework
-  flowDraftHint: Drag a step's handle to add a branch; click a step to edit it.
+  flowDraftHint: 'Drag nodes to arrange; drag operations from the left to add steps; double-click to edit.'
   branchDialog: Branch from step {{from}} to step {{to}}
+  flow:
+    paletteHint: 'Drag onto the canvas to add a step; drop on a link to insert it there.'
+    paletteSearch: 'Search operations / sub-routes'
+    autoLayout: 'Auto layout'
+    autoLayoutDone: 'Auto layout restored'
   ecn:
     release: Release
     cancel: Cancel change
@@ -67,6 +72,7 @@ mes:
       auto_track_out: Auto track out
       auto_move_out: Auto move out
       note: Note
+      layout: 'Canvas layout'
     step_resource:
       route_step: Route step
       resource_kind: Resource kind

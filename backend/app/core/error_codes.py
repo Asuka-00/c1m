@@ -255,6 +255,7 @@ PRODUCT_NEEDS_DEFAULT_ROUTE: Final = (
 )
 STEP_FIELD_REQUIRED: Final = 400042  # Required for this resource kind
 STEP_FIELD_EMPTY: Final = 400043  # Must be empty for this resource kind
+ROUTE_LAYOUT_INVALID: Final = 400044  # The layout references steps outside this route
 
 # ==================== MES 设备与质量 500000-509999 ====================
 

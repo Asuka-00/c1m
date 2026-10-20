@@ -10,8 +10,13 @@ mes:
   edgeCall: 呼出
   edgeReturn: 戻り
   edgeRework: リワーク
-  flowDraftHint: ステップのハンドルをドラッグして分岐を追加し、クリックで編集します。
+  flowDraftHint: 'ノードを移動、左の工程をドラッグして追加、ダブルクリックで編集。'
   branchDialog: ステップ {{from}} からステップ {{to}} への分岐
+  flow:
+    paletteHint: 'キャンバスへドラッグで追加。線の上に落とすと挿入。'
+    paletteSearch: '工程 / サブルートを検索'
+    autoLayout: '自動レイアウト'
+    autoLayoutDone: '自動レイアウトに戻しました'
   ecn:
     release: 発行
     cancel: 変更取消
@@ -67,6 +72,7 @@ mes:
       auto_track_out: 自動トラックアウト
       auto_move_out: 自動ムーブアウト
       note: 備考
+      layout: 'キャンバス位置'
     step_resource:
       route_step: ルートステップ
       resource_kind: 資源種別

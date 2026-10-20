@@ -10,8 +10,13 @@ mes:
   edgeCall: 调用
   edgeReturn: 返回
   edgeRework: 返工
-  flowDraftHint: 拖动步骤连接点添加分支，点击步骤进行编辑。
+  flowDraftHint: '拖动节点调整位置；从左侧拖入工序添加步骤，拖到连线上即插入；双击编辑。'
   branchDialog: 从步骤 {{from}} 分支到步骤 {{to}}
+  flow:
+    paletteHint: '把工序或子流程拖到画布添加步骤；拖到连线上即插入。'
+    paletteSearch: '搜索工序 / 子流程'
+    autoLayout: '自动布局'
+    autoLayoutDone: '已恢复自动布局'
   ecn:
     release: 发布
     cancel: 取消变更
@@ -67,6 +72,7 @@ mes:
       auto_track_out: 自动下机
       auto_move_out: 自动出站
       note: 备注
+      layout: '画布位置'
     step_resource:
       route_step: 流程步骤
       resource_kind: 资源类型

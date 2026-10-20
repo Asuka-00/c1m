@@ -218,6 +218,7 @@ error:
   code_400040: '{{field}}: 产品生效前须绑定一个生效的默认流程'
   code_400042: '{{field}}: 「$t(mes.enum.resource_kind.{{kind}})」类资源必填'
   code_400043: '{{field}}: 「$t(mes.enum.resource_kind.{{kind}})」类资源须留空'
+  code_400044: '布局包含不属于该流程的步骤'
   code_500001: 设备不存在
   code_500002: E10 状态不存在
   code_500003: 设备已处于 {{state}}

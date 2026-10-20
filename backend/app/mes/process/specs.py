@@ -212,6 +212,7 @@ register(
                 list=False,
             ),
             F("note", "str", "Note", max_length=200, list=False),
+            F("layout", "json", "Canvas layout", list=False, system=True),
         ],
         phase=3,
         has_code=False,

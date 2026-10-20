@@ -318,3 +318,65 @@ def test_recipes_specs_capability(client: TestClient, db: Session) -> None:
         m.list("recipe_equipment", recipe_id=v2["id"])["data"][0]["eqp_recipe"]
         == "M1_EXP_V3"
     )
+
+
+def test_route_layout_and_reorder_keeps_branches(
+    client: TestClient, db: Session
+) -> None:
+    m = Mes(client, db)
+    op = _ops(m)
+    route = m.post("route", {"code": "FLOW", "name": "Flow"})
+    ids = [
+        m.post(
+            "route_step",
+            {"route_id": route["id"], "seq": (i + 1) * 10, "operation_id": op[c]},
+        )["id"]
+        for i, c in enumerate(["COAT", "EXPO", "DEV"])
+    ]
+    # 第 3 步分支回第 1 步（序号 10）
+    m.patch("route_step", ids[2], {"branch_condition": "redo", "branch_to_seq": 10})
+    # 重排后分支目标跟随工步：原第 1 步现在排第 3
+    r = client.post(
+        f"{API}/route/{route['id']}/reorder",
+        headers=m.h,
+        json={"step_ids": [ids[1], ids[2], ids[0]]},
+    )
+    assert r.status_code == 200, r.text
+    by_id = {s["id"]: s for s in r.json()["data"]}
+    assert by_id[ids[0]]["seq"] == 30
+    assert by_id[ids[2]]["branch_to_seq"] == 30
+
+    # 保存 / 清除画布位置
+    pos = {"x": 12.5, "y": 40, "ax": 300, "ay": 40}
+    url = f"{API}/route/{route['id']}/layout"
+    r = client.put(url, headers=m.h, json={"steps": {ids[0]: pos, ids[1]: None}})
+    assert r.status_code == 200, r.text
+    assert r.json()["data"]["saved"] == 2
+    steps = {s["id"]: s for s in m.list("route_step", route_id=route["id"])["data"]}
+    assert steps[ids[0]]["layout"] == pos
+    assert steps[ids[1]]["layout"] is None
+    # 通用接口不能写 layout
+    m.patch("route_step", ids[0], {"layout": {"x": 1, "y": 1}})
+    steps = {s["id"]: s for s in m.list("route_step", route_id=route["id"])["data"]}
+    assert steps[ids[0]]["layout"] == pos
+    # 别的路线的工步不能写入
+    other = m.post("route", {"code": "OTHER", "name": "Other"})
+    foreign = m.post(
+        "route_step", {"route_id": other["id"], "seq": 10, "operation_id": op["CD"]}
+    )["id"]
+    assert (
+        client.put(url, headers=m.h, json={"steps": {foreign: pos}}).status_code == 422
+    )
+
+    # 激活后锁定；新版本复制位置
+    m.action("route", route["id"], "status", {"status": "active"})
+    assert (
+        client.put(url, headers=m.h, json={"steps": {ids[0]: pos}}).status_code == 409
+    )
+    v2 = m.action("route", route["id"], "new-version")
+    copied = m.list("route_step", route_id=v2["id"])["data"]
+    assert sorted((s["seq"], s["layout"] is not None) for s in copied) == [
+        (10, False),
+        (20, False),
+        (30, True),
+    ]

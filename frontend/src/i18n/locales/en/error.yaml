@@ -218,6 +218,7 @@ error:
   code_400040: '{{field}}: The product needs an active default route before activation'
   code_400042: '{{field}}: Required for a $t(mes.enum.resource_kind.{{kind}}) resource'
   code_400043: '{{field}}: Must be empty for a $t(mes.enum.resource_kind.{{kind}}) resource'
+  code_400044: 'The layout references steps outside this route'
   code_500001: Equipment not found
   code_500002: Unknown E10 state
   code_500003: The equipment is already in {{state}}
