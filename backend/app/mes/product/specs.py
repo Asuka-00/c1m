@@ -48,6 +48,8 @@ ENUMS.update(
             ("unload", "Unload|移出|取出し"),
             ("clean", "Clean|清洗|洗浄"),
             ("sort", "Wafer sort|晶圆整理|ウェーハソート"),
+            ("split", "Split|分批|分割"),
+            ("merge", "Merge|合批|統合"),
         ],
         "asset_status": [
             ("available", "Available|可用|使用可"),

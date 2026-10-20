@@ -12,6 +12,7 @@ from app.core.spec.engine import TABLES
 from app.core.spec.errors import http_422
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
+from app.mes.execution.carrier import event
 from app.mes.execution.sm_rules import (
     COPY,
     SPLIT_STATES,
@@ -38,7 +39,8 @@ def split(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
 
     仅允许在 Waiting / MovedIn 状态；受批次类型拆合批规则约束（允许、最大子批数、最小数量）。
     晶圆 / 单元模式按单元拆分，数量模式按数量拆分。子批继承产品、路线、当前工步与阶段、工单、
-    优先级、Q-Time 时钟、Hold 状态与属性；子批编码按批次类型规则生成；记录谱系、历史与审计。
+    优先级、Q-Time 时钟、Hold 状态、待触发的预约 Hold 与属性；子批编码按批次类型规则生成；
+    记录谱系、历史、审计与载具事件。
 
     Args:
         s: 数据库会话。
@@ -141,6 +143,8 @@ def split(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
     at = now()
     codes = _child_codes(s, tid, lot, rule or {}, len(kids))
     holds = find(s, tid, "lot_hold", lot_id=lot["id"], is_active=True)
+    fhs = find(s, tid, "future_hold", lot_id=lot["id"], fh_status="active")
+    pcar = one(s, tid, "carrier", lot["carrier_id"]) if lot["carrier_id"] else None
     out: list[Row] = []
     for i, code in enumerate(codes):
         vals = {k: lot[k] for k in COPY}
@@ -186,8 +190,26 @@ def split(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
                 held_by=h["held_by"],
                 route_step_id=h["route_step_id"],
             )
+        # 子批继承母批待触发的预约 Hold，到达该工步时同样被 Hold
+        for fh in fhs:
+            _ins(
+                s,
+                tid,
+                "future_hold",
+                user,
+                lot_id=cid,
+                route_step_id=fh["route_step_id"],
+                reason_id=fh["reason_id"],
+                comment=fh["comment"],
+                fh_status="active",
+            )
         ucodes = [u["code"] for u in take[i]]
         _genealogy(s, tid, lot, child, "split", qtys[i], ucodes, user, at)
+        ccar = one(s, tid, "carrier", carriers[i]) if carriers[i] else None
+        if ccar and (not pcar or ccar["id"] != pcar["id"]):
+            event(s, tid, ccar, "split", user, lot=child, other=pcar, qty=qtys[i])
+            if pcar:
+                event(s, tid, pcar, "split", user, lot=lot, other=ccar, qty=qtys[i])
         history(
             s,
             tid,

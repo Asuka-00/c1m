@@ -11,8 +11,9 @@ from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import TABLES
 from app.core.spec.errors import http_422
-from app.mes.common.query import one
+from app.mes.common.query import find, one
 from app.mes.common.rows import _upd
+from app.mes.execution.carrier import event
 from app.mes.execution.checks import service as ck
 from app.mes.execution.sm_rules import (
     SPLIT_STATES,
@@ -120,7 +121,8 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
     """把 ``body.source_lot_ids`` 合入目标批次 ``lot_id``（目标存续）。
 
     合并单元与数量，结果优先级取目标与源批次中最高者（历史记录新旧值）；Q-Time 时钟取
-    最早开始（最严格）；源批次置为 Merged 并终止；记录谱系、历史与审计；运行 merge 检查。
+    最早开始（最严格）；源批次待触发的预约 Hold 转给目标；源批次置为 Merged 并终止；
+    记录谱系、历史、审计与载具事件；运行 merge 检查。
 
     Args:
         s: 数据库会话。
@@ -215,6 +217,9 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
         return {"results": results}
     at = now()
     ws = TABLES["wafer"]
+    tcar = (
+        one(s, tid, "carrier", target["carrier_id"]) if target["carrier_id"] else None
+    )
     used = {u["slot"] for u in units(s, tid, target["id"]) if u["slot"]}
     merged: list[Row] = []
     for src in srcs:
@@ -235,6 +240,12 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
             )
         ucodes = [u["code"] for u in moved if u["wafer_status"] != "scrapped"]
         _genealogy(s, tid, src, target, "merge", src["qty"], ucodes, user, at)
+        scar = one(s, tid, "carrier", src["carrier_id"]) if src["carrier_id"] else None
+        if tcar and (not scar or scar["id"] != tcar["id"]):
+            event(s, tid, tcar, "merge", user, lot=target, other=scar, qty=src["qty"])
+        if scar and (not tcar or scar["id"] != tcar["id"]):
+            event(s, tid, scar, "merge", user, lot=src, other=tcar, qty=src["qty"])
+        _move_future_holds(s, tid, src, target, user)
         _upd(
             s,
             tid,
@@ -325,3 +336,20 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
     )
     s.commit()
     return {"results": results, "merged": merged, "lot": _ser(s, tid, lot_id)}
+
+
+def _move_future_holds(
+    s: Session, tid: uuid.UUID, src: Row, target: Row, user: Any
+) -> None:
+    """源批次待触发的预约 Hold 转给目标批次；目标在同一工步已有同原因的预约时取消源预约。"""
+    have = {
+        (fh["route_step_id"], fh["reason_id"])
+        for fh in find(s, tid, "future_hold", lot_id=target["id"], fh_status="active")
+    }
+    for fh in find(s, tid, "future_hold", lot_id=src["id"], fh_status="active"):
+        key = (fh["route_step_id"], fh["reason_id"])
+        if key in have:
+            _upd(s, tid, "future_hold", fh["id"], user, fh_status="cancelled")
+            continue
+        have.add(key)
+        _upd(s, tid, "future_hold", fh["id"], user, lot_id=target["id"])

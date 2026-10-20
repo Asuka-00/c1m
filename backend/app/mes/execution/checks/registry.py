@@ -212,10 +212,15 @@ def enabled(ctx: Ctx, check: str) -> bool:
 
 # ---------------- evaluation ----------------
 class CheckBlocked(HTTPException):
-    """存在未被放行的阻断检查结果（409，detail.code = check_blocked）。"""
+    """存在未被放行的阻断检查结果（409，detail.code = check_blocked）。
+
+    Attributes:
+        results: 全部检查结果。
+    """
 
     def __init__(self, results: list[Row]) -> None:
         """以检查结果列表构造 409 响应。"""
+        self.results = results
         super().__init__(
             status_code=409, detail={"code": "check_blocked", "results": results}
         )

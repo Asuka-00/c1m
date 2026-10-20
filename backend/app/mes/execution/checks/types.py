@@ -383,12 +383,18 @@ def _chamber_e10(ctx: Ctx, p: Row) -> Outcome:
 
 @check_type("batch_same_step")
 def _same_step(ctx: Ctx, p: Row) -> Outcome:
-    """批量作业：所有批次须在同一工步；``same_carrier`` 为真时还须同一载具。"""
+    """批量作业：所有批次须在同一工步、同一设备；``same_carrier`` 为真时还须同一载具。"""
     if len(ctx.batch) < 2:
         return "na", "single lot", {}
     steps = {str(x["current_step_id"]) for x in ctx.batch}
     if len(steps) > 1:
         return "fail", "lots are at different steps", {}
+    # 设备取各批次进站 / 上机的设备，以及本次作业选定的设备（未指定的不参与比较）
+    eqs = {str(x["equipment_id"]) for x in ctx.batch if x["equipment_id"]}
+    if ctx.equipment:
+        eqs.add(str(ctx.equipment["id"]))
+    if len(eqs) > 1:
+        return "fail", "lots are on different equipment", {}
     if p.get("same_carrier"):
         cars = {str(x["carrier_id"]) for x in ctx.batch}
         if len(cars) > 1:

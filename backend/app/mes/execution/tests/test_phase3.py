@@ -604,3 +604,213 @@ def test_operator_qualified_and_expiry_notice(client: TestClient, db: Session) -
     sweep_all_tenants([_uuid.UUID(str(f.m.tid))])
     sweep_all_tenants([_uuid.UUID(str(f.m.tid))])
     assert _types(f).count("mes.qual_expiring") == 1
+
+
+# ---------------- 计划核对修复：批量 / 工程变更 / 晶圆履历 / 拆合批 ----------------
+def test_batch_rolls_back_all_when_one_lot_fails(
+    client: TestClient, db: Session
+) -> None:
+    from app.mes.execution.tests.test_exec import Line
+
+    f = Line(client, db)
+    a, b = f.start(1, 1)
+    for x in (a, b):
+        f.stage(x, "move_in", equipment_id=f.eq["id"])
+    # b 已 Hold：执行时才失败（不在规则检查中）→ 整批回滚，a 也不执行
+    f.post(f"{EXEC}/lots/{b['id']}/hold", {"reason_id": f.reasons["hold"]["id"]})
+    r = client.post(
+        f"{EXEC}/batch/track_in",
+        headers=f.m.h,
+        json={"lot_ids": [a["id"], b["id"]], "equipment_id": f.eq["id"]},
+    )
+    assert r.status_code == 409, r.text
+    items = {i["code"]: i for i in r.json()["detail"]["items"]}
+    assert not items[a["code"]]["ok"] and "not executed" in items[a["code"]]["error"]
+    assert not items[b["code"]]["ok"] and items[b["code"]]["error"]
+    assert f.lot(a)["lot_status"] == "moved_in"
+    assert not f.sql(
+        "SELECT 1 FROM mes_lot_history WHERE lot_id = :l AND action = 'track_in'",
+        l=a["id"],
+    )
+    assert not f.sql("SELECT 1 FROM mes_lot_recipe_run WHERE lot_id = :l", l=a["id"])
+
+    # 检查阻断同样整批不执行，逐批返回检查结果；不同设备不能批量
+    eq2 = f.m.post("equipment", {"code": "EQ-B", "name": "eq b"})
+    f.bind("track_in", ("batch_same_step", "block", {}))
+    c = f.start(1)[0]
+    f.stage(c, "move_in", equipment_id=f.eq["id"])
+    f.sql("UPDATE mes_lot SET equipment_id = :e WHERE id = :l", e=eq2["id"], l=c["id"])
+    r = client.post(
+        f"{EXEC}/batch/track_in",
+        headers=f.m.h,
+        json={"lot_ids": [a["id"], c["id"]], "equipment_id": f.eq["id"]},
+    )
+    assert r.status_code == 409, r.text
+    res = [x for i in r.json()["detail"]["items"] for x in i.get("results") or []]
+    assert any(
+        x["check_type"] == "batch_same_step"
+        and x["result"] == "block"
+        and "different equipment" in x["message"]
+        for x in res
+    )
+    assert f.lot(a)["lot_status"] == "moved_in"
+
+
+def test_change_order_old_version_keeps_step_config(
+    client: TestClient, db: Session
+) -> None:
+    from app.mes.execution.tests.test_exec import API, Line
+
+    f = Line(client, db)
+    a, b = f.start(1, 1)
+    f.stage(b, "move_in", equipment_id=f.eq["id"])  # 已进站：保持旧版本
+    old10, old20 = f.steps[10]["id"], f.steps[20]["id"]
+    plan = f.bind(
+        "track_in",
+        ("recipe_active", "warn", {}),
+        scope="route_step",
+        route_step_id=old10,
+    )
+    f.m.post(
+        "qtime_rule",
+        {
+            "code": "QTK",
+            "name": "q",
+            "route_id": f.route["id"],
+            "from_step_id": old10,
+            "to_step_id": old20,
+            "max_minutes": 30,
+        },
+    )
+    fa = f.m.post("future_hold", {"lot_id": a["id"], "route_step_id": old20})
+    fb = f.m.post("future_hold", {"lot_id": b["id"], "route_step_id": old20})
+    v2 = f.m.action("route", f.route["id"], "new-version")
+    co = f.m.post(
+        "change_order",
+        {
+            "code": "ECNK",
+            "name": "e",
+            "change_type": "route",
+            "route_id": v2["id"],
+            "wip_rule": "switch_new",
+        },
+    )
+    res = f.post(f"{API}/change-order/{co['id']}/release", {})["data"]["result"]
+    assert res["switched"] == [a["code"]] and res["kept"] == [b["code"]]
+    assert res["copied"] == 2
+    new = dict(
+        f.sql("SELECT seq, id FROM mes_route_step WHERE route_id = :r", r=v2["id"])
+    )
+    new10, new20 = str(new[10]), str(new[20])
+    # 旧版本保留检查绑定与 Q-Time 规则，新版本各复制一份
+    binds = f.sql(
+        "SELECT route_step_id FROM mes_check_binding WHERE check_plan_id = :p",
+        p=plan["id"],
+    )
+    assert {str(x[0]) for x in binds} == {old10, new10}
+    qts = f.sql(
+        "SELECT code, route_id, from_step_id, to_step_id FROM mes_qtime_rule"
+        " WHERE code LIKE 'QTK%' ORDER BY code"
+    )
+    assert [x[0] for x in qts] == ["QTK", f"QTK-V{v2['version']}"]
+    assert [str(x) for x in qts[0][1:]] == [f.route["id"], old10, old20]
+    assert [str(x) for x in qts[1][1:]] == [v2["id"], new10, new20]
+    # 保持旧版本的 b 在旧工步仍受检查绑定管控
+    pv = f.post(f"{EXEC}/lots/{b['id']}/preview/track_in", {"equipment_id": f.eq["id"]})
+    assert any(x["check_type"] == "recipe_active" for x in pv["results"])
+    # 预约 Hold 只随切换的批次改指
+    fh = {x["id"]: x for x in f.m.list("future_hold")["data"]}
+    assert str(fh[fa["id"]]["route_step_id"]) == new20
+    assert str(fh[fb["id"]]["route_step_id"]) == old20
+
+    # 再次变更且旧版本不再使用（切换新版、无保持批次）：配置直接改指，不复制
+    f.sql("UPDATE mes_lot SET lot_status = 'completed' WHERE id = :l", l=b["id"])
+    v3 = f.m.action("route", v2["id"], "new-version")
+    co3 = f.m.post(
+        "change_order",
+        {
+            "code": "ECNK3",
+            "name": "e",
+            "change_type": "route",
+            "route_id": v3["id"],
+            "wip_rule": "switch_new",
+        },
+    )
+    res = f.post(f"{API}/change-order/{co3['id']}/release", {})["data"]["result"]
+    assert res["kept"] == [] and "copied" not in res
+    assert len(f.sql("SELECT 1 FROM mes_qtime_rule WHERE code LIKE 'QTK%'")) == 2
+
+
+def test_wafer_history_only_while_in_lot(client: TestClient, db: Session) -> None:
+    from app.mes.execution.tests.test_split_merge import _line, merge, split, uid
+
+    f = _line(client, db)
+    (lot,) = f.start(4)
+    (ch,) = split(f, lot, [{"unit_ids": uid(f, lot, 0, 1)}])["children"]
+    # 拆批后母批的批次级记录不属于已拆走的晶圆
+    f.post(f"{EXEC}/lots/{lot['id']}/hold", {"reason_id": f.reasons["hold"]["id"]})
+
+    def hist(wid: str) -> set[tuple[str, str]]:
+        r = client.get(f"{EXEC}/wafers/{wid}/history", headers=f.m.h)
+        assert r.status_code == 200, r.text
+        return {(str(h["lot_id"]), h["action"]) for h in r.json()["data"]}
+
+    moved = hist(f.ctx(ch)["units"][0]["id"])
+    assert (str(lot["id"]), "start") in moved
+    assert (str(ch["id"]), "split") in moved
+    assert (str(lot["id"]), "hold") not in moved
+    assert (str(lot["id"]), "hold") in hist(f.ctx(lot)["units"][0]["id"])
+
+    # 合批：目标批原有晶圆的履历不含源批次合批前的记录
+    t, src = f.start(2, 2)
+    own_w, src_w = f.ctx(t)["units"][0]["id"], f.ctx(src)["units"][0]["id"]
+    merge(f, t, [src])
+    own = hist(own_w)
+    assert (str(src["id"]), "start") not in own and (str(t["id"]), "start") in own
+    assert {(str(src["id"]), "start"), (str(t["id"]), "merge")} <= hist(src_w)
+
+
+def test_split_merge_carrier_events_and_future_holds(
+    client: TestClient, db: Session
+) -> None:
+    from app.mes.execution.tests.test_split_merge import _line, merge, split, uid
+
+    f = _line(client, db)
+    ct = f.m.post(
+        "carrier_type",
+        {"code": "FS", "name": "foup", "category": "foup", "capacity": 25},
+    )
+    ca, cb = (
+        f.m.post("carrier", {"code": c, "name": c, "carrier_type_id": ct["id"]})
+        for c in ("CA", "CB")
+    )
+    (lot,) = f.start(4)
+    f.post(f"{EXEC}/lots/{lot['id']}/carrier", {"carrier_id": ca["id"]})
+    s20, s40 = f.steps[20]["id"], f.steps[40]["id"]
+    f.m.post("future_hold", {"lot_id": lot["id"], "route_step_id": s20})
+    (ch,) = split(f, lot, [{"unit_ids": uid(f, lot, 0, 1), "carrier_id": cb["id"]}])[
+        "children"
+    ]
+
+    def events(car: Any) -> list[tuple[str, str]]:
+        return sorted(
+            (e["event"], str(e["lot_id"]))
+            for e in f.m.list("carrier_event", carrier=car["id"])["data"]
+        )
+
+    assert ("split", ch["id"]) in events(cb)
+    assert ("split", lot["id"]) in events(ca)
+    # 子批继承预约 Hold
+    kid = f.m.list("future_hold", lot=ch["id"])["data"]
+    assert [str(x["route_step_id"]) for x in kid] == [s20]
+    assert kid[0]["fh_status"] == "active"
+
+    # 合回母批：载具事件两边都有；同工步同原因的预约取消，其余转给目标
+    extra = f.m.post("future_hold", {"lot_id": ch["id"], "route_step_id": s40})
+    merge(f, lot, [ch])
+    assert ("merge", lot["id"]) in events(ca)
+    assert ("merge", ch["id"]) in events(cb)
+    fh = {x["id"]: x for x in f.m.list("future_hold")["data"]}
+    assert fh[kid[0]["id"]]["fh_status"] == "cancelled"
+    assert str(fh[extra["id"]]["lot_id"]) == lot["id"]
+    assert fh[extra["id"]]["fh_status"] == "active"

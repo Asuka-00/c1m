@@ -1,6 +1,7 @@
 """追溯查询：按批次 / 晶圆 / 设备 / 物料批，正向（下游产出）与反向（上游来源、设备、物料）追溯。"""
 
 import uuid
+from datetime import UTC, datetime
 from typing import Any
 
 import sqlalchemy as sa
@@ -186,14 +187,33 @@ def trace(s: Session, tid: uuid.UUID, kind: str, code: str) -> Row:
 
 
 # ---------------- 晶圆级履历与晶圆图 ----------------
-def wafer_lots(s: Session, tid: uuid.UUID, wafer: Row) -> list[Any]:
-    """晶圆经历过的批次：当前批次及其谱系上的全部来源批次（拆批 / 合批前的母批）。"""
-    up = _walk(s, tid, wafer["lot_id"], True)
-    return [wafer["lot_id"], *(uuid.UUID(x["id"]) for x in up)]
+def wafer_lots(s: Session, tid: uuid.UUID, wafer: Row) -> list[tuple[Any, Any, Any]]:
+    """晶圆经历过的批次及在其中的时间段 ``[(批次 id, 起, 止)]``（起 / 止为 None 表示不限）。
+
+    从当前批次出发，按谱系中记录了该晶圆的拆批 / 合批逆向追溯来源批次：
+    晶圆在来源批次中只到移出那一刻为止，不包含来源批次之后的记录，也不包含
+    与该晶圆无关的谱系（如合入目标批的其他源批次）。
+    """
+    out: list[tuple[Any, Any, Any]] = []
+    cur, end = wafer["lot_id"], None
+    for _ in range(50):
+        moves = [
+            g
+            for g in find(s, tid, "lot_genealogy", child_lot_id=cur)
+            if wafer["code"] in (g["units"] or [])
+            and (end is None or g["at"] is None or g["at"] <= end)
+        ]
+        if not moves:
+            out.append((cur, None, end))
+            break
+        g = max(moves, key=lambda x: x["at"] or datetime.min.replace(tzinfo=UTC))
+        out.append((cur, g["at"], end))
+        cur, end = g["parent_lot_id"], g["at"]
+    return out
 
 
 def wafer_history(s: Session, tid: uuid.UUID, wafer_id: uuid.UUID) -> list[Row]:
-    """晶圆履历：该晶圆的单元级记录，加上其所在批次（含来源批次）的批次级记录，按时间倒序。
+    """晶圆履历：该晶圆的单元级记录，加上其所在期间各批次的批次级记录，按时间倒序。
 
     Raises:
         HTTPException: 晶圆不存在（404）。
@@ -205,14 +225,24 @@ def wafer_history(s: Session, tid: uuid.UUID, wafer_id: uuid.UUID) -> list[Row]:
     if not w:
         raise HTTPException(status_code=404, detail="Record not found")
     h = TABLES["lot_history"]
+    spans = [
+        sa.and_(
+            h.c.lot_id == lid,
+            h.c.at >= start if start is not None else sa.true(),
+            h.c.at <= end if end is not None else sa.true(),
+        )
+        for lid, start, end in wafer_lots(s, tid, w)
+    ]
     rows = (
         conn(s)
         .execute(
             sa.select(h)
             .where(
                 h.c.tenant_id == tid,
-                h.c.lot_id.in_(wafer_lots(s, tid, w)),
-                sa.or_(h.c.unit_id.is_(None), h.c.unit_id == w["id"]),
+                sa.or_(
+                    h.c.unit_id == w["id"],
+                    sa.and_(h.c.unit_id.is_(None), sa.or_(*spans)),
+                ),
             )
             .order_by(h.c.at.desc())
             .limit(500)

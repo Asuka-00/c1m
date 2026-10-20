@@ -1,4 +1,4 @@
-/** 批次履历页面（时间线 + 谱系）。 */
+/** 批次履历页面（时间线 + 谱系 + 晶圆图 + 配方执行记录）。 */
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
@@ -38,6 +38,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { Page } from '@/components/crud'
 import { enumLabel, reasonLabel } from '@/features/mes/common/labels'
 import { RefSelect } from '@/features/mes/common/ref-select'
@@ -313,6 +321,159 @@ export function WaferMapCard({ lotId }: { lotId: string }) {
   )
 }
 
+/** 参数规格行（Track In 时快照）。 */
+interface SpecRow {
+  code: string
+  name?: string
+  target?: number | null
+  lsl?: number | null
+  usl?: number | null
+  uom?: string | null
+}
+
+const firstLabel = (v: unknown) => String(v ?? '').split(' · ')[0] || '—'
+const num = (v: unknown) => (v === null || v === undefined ? '—' : String(v))
+
+/** 配方执行记录：每次上机的配方版本、设备、腔体，点开查看参数快照与参数规格。 */
+export function RecipeRunCard({ lotId }: { lotId: string }) {
+  const tk = useTenantKey()
+  const [pick, setPick] = useState<MesRow | null>(null)
+  const runs = useQuery({
+    queryKey: ['mes', 'lot_recipe_run', 'trace', tk, lotId],
+    queryFn: () =>
+      mesApi.list('lot_recipe_run', {
+        lot: lotId,
+        sort_by: 'track_in_at',
+        sort_order: 'desc',
+        page_size: 100,
+      }),
+  })
+  const rows = runs.data?.data ?? []
+  if (rows.length === 0) return null
+  const f = (k: string) => t(`mes.field.lot_recipe_run.${k}`)
+  const params = Object.entries(
+    (pick?.params as Record<string, unknown> | null) ?? {}
+  )
+  const specs = (pick?.param_specs as SpecRow[] | null) ?? []
+  return (
+    <Card>
+      <CardHeader className='pb-2'>
+        <CardTitle className='text-base'>
+          {t('mes.entity.lot_recipe_run')}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className='overflow-x-auto'>
+        <Table data-testid='recipe-runs'>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{f('track_in_at')}</TableHead>
+              <TableHead>{f('operation')}</TableHead>
+              <TableHead>{f('equipment')}</TableHead>
+              <TableHead>{f('recipe')}</TableHead>
+              <TableHead>{f('chambers')}</TableHead>
+              <TableHead>{f('track_out_at')}</TableHead>
+              <TableHead />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((r) => (
+              <TableRow key={String(r.id)}>
+                <TableCell>{fmtDateTime(String(r.track_in_at))}</TableCell>
+                <TableCell>{firstLabel(r.operation_label)}</TableCell>
+                <TableCell>{firstLabel(r.equipment_label)}</TableCell>
+                <TableCell>
+                  {r.recipe_label
+                    ? `${firstLabel(r.recipe_label)} v${num(r.recipe_version)}`
+                    : '—'}
+                </TableCell>
+                <TableCell>{String(r.chambers ?? '') || '—'}</TableCell>
+                <TableCell>
+                  {r.track_out_at ? (
+                    fmtDateTime(String(r.track_out_at))
+                  ) : (
+                    <Badge variant='outline'>{t('mes.rrun.running')}</Badge>
+                  )}
+                </TableCell>
+                <TableCell className='text-right'>
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    onClick={() => setPick(r)}
+                    data-testid='recipe-run-params'
+                  >
+                    {t('mes.rrun.view')}
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+      <Dialog open={!!pick} onOpenChange={(o) => !o && setPick(null)}>
+        <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-2xl'>
+          <DialogHeader>
+            <DialogTitle>
+              {t('mes.rrun.title', {
+                recipe: firstLabel(pick?.recipe_label),
+                version: num(pick?.recipe_version),
+              })}
+            </DialogTitle>
+          </DialogHeader>
+          <h4 className='text-sm font-medium'>{f('params')}</h4>
+          {params.length === 0 ? (
+            <p className='text-sm text-muted-foreground'>
+              {t('mes.rrun.noParams')}
+            </p>
+          ) : (
+            <Table data-testid='recipe-run-param-table'>
+              <TableBody>
+                {params.map(([k, v]) => (
+                  <TableRow key={k}>
+                    <TableCell className='font-mono'>{k}</TableCell>
+                    <TableCell>
+                      {typeof v === 'object' ? JSON.stringify(v) : String(v)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+          {specs.length > 0 && (
+            <>
+              <h4 className='text-sm font-medium'>{f('param_specs')}</h4>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('mes.field.param_spec.code')}</TableHead>
+                    <TableHead>{t('mes.field.param_spec.target')}</TableHead>
+                    <TableHead>{t('mes.field.param_spec.lsl')}</TableHead>
+                    <TableHead>{t('mes.field.param_spec.usl')}</TableHead>
+                    <TableHead>{t('mes.field.param_spec.uom')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {specs.map((x) => (
+                    <TableRow key={x.code}>
+                      <TableCell>
+                        {x.code}
+                        {x.name ? ` · ${x.name}` : ''}
+                      </TableCell>
+                      <TableCell>{num(x.target)}</TableCell>
+                      <TableCell>{num(x.lsl)}</TableCell>
+                      <TableCell>{num(x.usl)}</TableCell>
+                      <TableCell>{x.uom ?? '—'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </Card>
+  )
+}
+
 /** 批次履历时间线：每个动作的时间、操作人、工步、设备、
  *  配方、数量、原因与检查结果。 */
 export default function LotTracePage() {
@@ -405,6 +566,7 @@ export default function LotTracePage() {
         </Card>
       )}
       {lotId && <WaferMapCard lotId={lotId} />}
+      {lotId && <RecipeRunCard lotId={lotId} />}
       {lotId && (
         <Card>
           <CardContent className='pt-6'>

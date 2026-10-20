@@ -990,6 +990,12 @@
       "title": "Wafer map",
       "history": "Wafer history: {{code}}"
     },
+    "rrun": {
+      "title": "Recipe parameters: {{recipe}} v{{version}}",
+      "view": "Parameters",
+      "running": "Running",
+      "noParams": "No recipe parameters for this run."
+    },
     "batch": {
       "hint": "Track several lots in or out together on one tool.",
       "search": "Search lot / carrier",

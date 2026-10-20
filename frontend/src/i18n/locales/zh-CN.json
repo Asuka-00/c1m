@@ -990,6 +990,12 @@
       "title": "晶圆图",
       "history": "晶圆履历：{{code}}"
     },
+    "rrun": {
+      "title": "配方参数：{{recipe}} v{{version}}",
+      "view": "参数",
+      "running": "加工中",
+      "noParams": "本次运行无配方参数。"
+    },
     "batch": {
       "hint": "同一设备上多个批次一起上机或下机。",
       "search": "搜索批次 / 载具",

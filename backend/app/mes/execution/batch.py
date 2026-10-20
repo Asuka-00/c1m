@@ -6,11 +6,12 @@ from typing import Any
 from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core.db import engine
 from app.core.spec.errors import http_422
+from app.core.tenant import set_tenant
 from app.mes.common.query import find, one
 from app.mes.execution.checks import service as ck
 from app.mes.execution.constants import NEXT_STAGE
-from app.mes.execution.context import build_ctx
 from app.mes.execution.dispatch import queue
 from app.mes.execution.stages import run_stage
 
@@ -19,10 +20,11 @@ MAX_BATCH = 25
 
 
 def batch_stage(s: Session, tid: uuid.UUID, stage: str, body: Row, user: Any) -> Row:
-    """批量执行 Track In / Track Out。
+    """批量执行 Track In / Track Out（全部批次执行成功才提交）。
 
-    先对全部批次预检（阶段一致 + 检查规则），任一阻断则整体不执行（409，按批次返回结果）；
-    预检通过后逐批执行，单批失败不影响其他批次。
+    全部批次在同一个数据库事务中逐批执行（含全部校验、检查规则、Hold / Q-Time 处置）；
+    任一批次失败（校验错误、检查阻断、Q-Time 超时转 Hold 等）则整批回滚，
+    返回 409 并按批次给出结果。
 
     Args:
         s: 数据库会话。
@@ -32,7 +34,11 @@ def batch_stage(s: Session, tid: uuid.UUID, stage: str, body: Row, user: Any) ->
         user: 操作人。
 
     Returns:
-        ``{items: [{lot_id, code, ok, results | error}]}``。
+        ``{items: [{lot_id, code, ok, results}]}``。
+
+    Raises:
+        HTTPException: 批次数量或状态不符（422）；批次不存在（404）；
+            任一批次失败（409，detail.code = batch_blocked，``items`` 为逐批结果）。
     """
     ids = list(dict.fromkeys(str(i) for i in body.get("lot_ids") or []))
     if not 2 <= len(ids) <= MAX_BATCH:
@@ -47,42 +53,53 @@ def batch_stage(s: Session, tid: uuid.UUID, stage: str, body: Row, user: Any) ->
             [("lot_ids", f"lot_ids: not ready for {stage}: {', '.join(bad)}")]
         )
     shared = {k: v for k, v in body.items() if k not in ("lot_ids", "carrier_id")}
-    # 预检：任一批次存在阻断则整体不执行
-    pre: list[Row] = []
-    for x in rows:
-        ctx = build_ctx(s, tid, x, stage, shared)
-        ctx.batch = rows
-        res = ck.run(ctx)
-        pre.append({"lot_id": str(x["id"]), "code": x["code"], "results": res})
-    if not body.get("override") and any(
-        r["result"] == "block" for p in pre for r in p["results"]
-    ):
-        raise HTTPException(
-            status_code=409, detail={"code": "batch_blocked", "items": pre}
-        )
+    shared["batch"] = rows
     items: list[Row] = []
-    for x in rows:
+    # 整批一个外层事务：各阶段内部的 commit / rollback 只作用于保存点
+    # （join_transaction_mode="create_savepoint"），由这里统一提交或回滚
+    with engine.connect() as c:
+        txn = c.begin()
+        bs = Session(bind=c, join_transaction_mode="create_savepoint")
+        set_tenant(bs, tid)
         try:
-            out = run_stage(s, tid, x["id"], stage, {**shared, "batch": rows}, user)
-            items.append(
-                {
-                    "lot_id": str(x["id"]),
-                    "code": x["code"],
-                    "ok": True,
-                    "results": out["results"],
-                }
-            )
-        except HTTPException as ex:
-            s.rollback()
-            items.append(
-                {
-                    "lot_id": str(x["id"]),
-                    "code": x["code"],
-                    "ok": False,
-                    "error": ex.detail,
-                }
-            )
-    return {"items": items}
+            items = [_run_one(bs, tid, x, stage, shared, user) for x in rows]
+            if all(i["ok"] for i in items):
+                bs.commit()
+                txn.commit()
+                return {"items": items}
+        finally:
+            bs.close()
+            if txn.is_active:
+                txn.rollback()
+    for i in items:
+        if i["ok"]:
+            i.update(ok=False, error="not executed: another lot in the batch failed")
+    raise HTTPException(
+        status_code=409, detail={"code": "batch_blocked", "items": items}
+    )
+
+
+def _run_one(
+    s: Session, tid: uuid.UUID, lot: Row, stage: str, body: Row, user: Any
+) -> Row:
+    """批量作业中执行一个批次；失败时撤销该批次未提交到保存点的改动（整批随后统一回滚）。"""
+    item: Row = {"lot_id": str(lot["id"]), "code": lot["code"]}
+    try:
+        out = run_stage(s, tid, lot["id"], stage, body, user)
+    except ck.CheckBlocked as ex:
+        s.rollback()
+        return {**item, "ok": False, "results": ex.results}
+    except HTTPException as ex:
+        s.rollback()
+        return {**item, "ok": False, "error": ex.detail}
+    if out.get("qtime"):  # Q-Time 超时已转 Hold，批次未执行本阶段
+        return {
+            **item,
+            "ok": False,
+            "results": out["results"],
+            "error": f"Q-Time exceeded: {out['qtime']}",
+        }
+    return {**item, "ok": True, "results": out["results"]}
 
 
 def batch_candidates(

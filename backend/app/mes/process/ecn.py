@@ -8,6 +8,8 @@
 - ``keep_old``：在制批次与未完工单沿用旧版本；
 - ``switch_new``：未完工单改用新版本；等待中的顶层批次按序号切换到新版本对应工步，
   已进站 / 加工中或位于子流程的批次保持旧版本（结果中列出）。
+旧版本仍在使用（``keep_old``，或有批次保持旧版本）时，工步级配置（检查绑定、Q-Time 规则）
+复制一份给新版本，旧版本保留原配置；否则直接改指。预约 Hold 按批次处理：只随切换到新版本的批次改指。
 配方变更：后续 Track In 使用新版本，已进站批次按其参数快照完成。
 """
 
@@ -21,15 +23,15 @@ from sqlmodel import Session
 
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
-from app.core.spec.engine import ENTITIES, TABLES, Entity
+from app.core.spec.engine import ENTITIES, TABLES, Entity, F
 from app.core.spec.errors import MesError
 from app.core.spec.validate import validator
 from app.core.spec.write import set_status
 from app.mes.common.query import find, one
 
 Row = dict[str, Any]
-#: 不随变更改指的实体（批次 / 工单由在制规则处理，变更单本身记录目标版本）
-SKIP = {"lot", "work_order", "change_order", "lot_recipe_run"}
+#: 不随变更改指的实体（批次 / 工单 / 预约 Hold 由在制规则处理，变更单本身记录目标版本）
+SKIP = {"lot", "work_order", "change_order", "lot_recipe_run", "future_hold"}
 OPEN_WO = ("draft", "released", "in_progress", "on_hold")
 
 
@@ -95,9 +97,6 @@ def apply(s: Session, tid: uuid.UUID, co: Row, user: Any) -> Row:
         res["refs"] = _repoint(s, tid, "recipe", ids, SKIP)
     else:
         steps = _step_map(s, tid, olds, new)
-        res["refs"] = _repoint(s, tid, "route", ids, SKIP) + _repoint(
-            s, tid, "route_step", steps, SKIP | {"route_step"}
-        )
         if co["wip_rule"] == "switch_new":
             _switch_wip(s, tid, ids, steps, new, user, res)
         else:
@@ -107,7 +106,124 @@ def apply(s: Session, tid: uuid.UUID, co: Row, user: Any) -> Row:
                 for x in find(s, tid, "lot", route_id=o["id"])
                 if x["lot_status"] in ("waiting", "moved_in", "running", "tracked_out")
             ]
+        # 配置只从被替换的现行版本（无则取最高旧版本）转给新版本；更早版本的配置
+        # 只服务于仍在其上的批次，保持不动（否则多个旧版本会同时改指到同一工步）
+        src = next((o for o in olds if o["status"] == "active"), None) or max(
+            olds, key=lambda o: o["version"], default=None
+        )
+        src_ids = {src["id"]: new["id"]} if src else {}
+        src_steps = _step_map(s, tid, [src], new) if src else {}
+        skip = SKIP | {"route_step"}
+        if co["wip_rule"] != "switch_new" or res["kept"]:
+            # 旧版本仍在使用：工步级配置复制给新版本，旧版本保留原配置
+            res["copied"] = _copy_step_config(s, tid, src_ids, src_steps, new, user)
+            skip |= set(_step_config())
+        res["refs"] = _repoint(s, tid, "route", src_ids, skip) + _repoint(
+            s, tid, "route_step", src_steps, skip
+        )
     return res
+
+
+def _step_config() -> dict[str, list[F]]:
+    """引用工步的配置实体及其工步引用字段（批次 / 履历等只读记录与 SKIP 除外）。"""
+    out: dict[str, list[F]] = {}
+    for e in ENTITIES.values():
+        if e.code in SKIP | {"route_step"} or e.readonly or e.code not in TABLES:
+            continue
+        fs = [
+            f
+            for f in e.all_fields
+            if f.type == "ref" and f.ref == "route_step" and not f.cascade
+        ]
+        if fs:
+            out[e.code] = fs
+    return out
+
+
+def _copy_code(s: Session, tid: uuid.UUID, t: sa.Table, code: str, ver: int) -> str:
+    """复制行的新编码：``<原编码>-V<新版本号>``（超长时截短原编码，重复时追加序号）。"""
+    size = getattr(t.c.code.type, "length", None) or 64
+    for i in range(1, 100):
+        tail = f"-V{ver}" if i == 1 else f"-V{ver}-{i}"
+        cand = code[: size - len(tail)] + tail
+        hit = conn(s).execute(
+            sa.select(t.c.id).where(t.c.tenant_id == tid, t.c.code == cand)
+        )
+        if hit.first() is None:
+            return cand
+    raise HTTPException(409, f"cannot derive a unique code from {code}")
+
+
+def _copy_step_config(
+    s: Session,
+    tid: uuid.UUID,
+    routes: dict[Any, Any],
+    steps: dict[Any, Any],
+    new: Row,
+    user: Any,
+) -> int:
+    """把引用旧版本工步的配置行复制一份，改指新版本对应工步（及流程），返回复制行数。
+
+    新版本中找不到对应工步（按序号）的配置不复制。
+    """
+    n = 0
+    uid = getattr(user, "id", None)
+    for code, fs in _step_config().items():
+        e, t = ENTITIES[code], TABLES[code]
+        cols = [t.c[f.column] for f in fs]
+        rows = (
+            conn(s)
+            .execute(
+                sa.select(t).where(
+                    t.c.tenant_id == tid, sa.or_(*(c.in_(list(steps)) for c in cols))
+                )
+            )
+            .mappings()
+            .all()
+        )
+        for r in rows:
+            if any(r[c.name] is not None and r[c.name] not in steps for c in cols):
+                continue
+            vals = {
+                **r,
+                "id": uuid.uuid4(),
+                "created_at": now(),
+                "updated_at": now(),
+                "created_by": uid,
+                "updated_by": uid,
+            }
+            for f in e.all_fields:
+                if f.type != "ref" or f.cascade or vals.get(f.column) is None:
+                    continue
+                if f.ref == "route_step":
+                    vals[f.column] = steps[vals[f.column]]
+                elif f.ref == "route":
+                    vals[f.column] = routes.get(vals[f.column], vals[f.column])
+            if _exists(s, tid, e, t, vals):
+                continue
+            if e.has_code:
+                vals["code"] = _copy_code(s, tid, t, r["code"], new["version"])
+            conn(s).execute(sa.insert(t).values(**vals))
+            n += 1
+    return n
+
+
+def _exists(s: Session, tid: uuid.UUID, e: Entity, t: sa.Table, vals: Row) -> bool:
+    """新版本上是否已有等同配置：按实体唯一键比较，无唯一键时按全部引用字段比较。"""
+    keys = (
+        [list(u) for u in e.unique]
+        if e.unique
+        else [[f.name for f in e.all_fields if f.type == "ref"]]
+    )
+    for names in keys:
+        cols = [t.c[fd.column] for n in names if (fd := e.field(n))]
+        q = sa.select(t.c.id).where(
+            t.c.tenant_id == tid,
+            *(c.is_(None) if vals[c.name] is None else c == vals[c.name] for c in cols),
+        )
+        if conn(s).execute(q).first() is not None:
+            return True
+    return False
 
 
 def _switch_wip(
@@ -119,7 +235,7 @@ def _switch_wip(
     user: Any,
     res: Row,
 ) -> None:
-    wt, lt = TABLES["work_order"], TABLES["lot"]
+    wt, lt, fh_t = TABLES["work_order"], TABLES["lot"], TABLES["future_hold"]
     for old in ids:
         conn(s).execute(
             sa.update(wt)
@@ -142,6 +258,16 @@ def _switch_wip(
                 .where(lt.c.id == x["id"])
                 .values(route_id=new["id"], current_step_id=to, updated_at=now())
             )
+            # 该批次待触发的预约 Hold 随批次改指新版本对应工步
+            for fh in find(s, tid, "future_hold", lot_id=x["id"], fh_status="active"):
+                if fh["route_step_id"] in steps:
+                    conn(s).execute(
+                        sa.update(fh_t)
+                        .where(fh_t.c.id == fh["id"])
+                        .values(
+                            route_step_id=steps[fh["route_step_id"]], updated_at=now()
+                        )
+                    )
             audit(
                 s,
                 tid,

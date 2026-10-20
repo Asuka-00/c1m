@@ -62,7 +62,7 @@ def wo_board(
             ops[step_id] = op["code"] if op else "—"
         return ops[step_id]
 
-    out = []
+    out: list[Row] = []
     for wo in find(s, tid, "work_order", order="code"):
         if wo["wo_status"] not in ACTIVE:
             continue

@@ -11,6 +11,7 @@ from enum import StrEnum
 from typing import Any
 
 import sqlalchemy as sa
+import sqlalchemy.exc
 from fastapi import HTTPException
 from sqlmodel import Session
 
@@ -168,7 +169,7 @@ def locked(s: Session, stmt: Any) -> list[Row]:
     c.execute(sa.text(f"SET LOCAL lock_timeout = '{LOCK_TIMEOUT}'"))
     try:
         rows = c.execute(stmt).mappings().all()
-    except sa.exc.OperationalError as ex:
+    except sqlalchemy.exc.OperationalError as ex:
         if getattr(ex.orig, "sqlstate", None) != "55P03":  # lock_not_available
             raise
         raise HTTPException(

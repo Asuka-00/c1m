@@ -1269,7 +1269,9 @@
         "load": "装入",
         "unload": "移出",
         "clean": "清洗",
-        "sort": "晶圆整理"
+        "sort": "晶圆整理",
+        "split": "分批",
+        "merge": "合批"
       },
       "asset_status": {
         "available": "可用",

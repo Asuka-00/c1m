@@ -1269,7 +1269,9 @@
         "load": "Load",
         "unload": "Unload",
         "clean": "Clean",
-        "sort": "Wafer sort"
+        "sort": "Wafer sort",
+        "split": "Split",
+        "merge": "Merge"
       },
       "asset_status": {
         "available": "Available",

@@ -1269,7 +1269,9 @@
         "load": "積込み",
         "unload": "取出し",
         "clean": "洗浄",
-        "sort": "ウェーハソート"
+        "sort": "ウェーハソート",
+        "split": "分割",
+        "merge": "統合"
       },
       "asset_status": {
         "available": "使用可",

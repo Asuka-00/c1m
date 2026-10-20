@@ -15,7 +15,7 @@ Row = dict[str, Any]
 def clean_due(s: Session, tid: uuid.UUID, car: Row) -> datetime | None:
     """载具下次清洗到期时间（载具类型未设清洗周期时为 None）。"""
     ct = one(s, tid, "carrier_type", car["carrier_type_id"])
-    days = ct and ct.get("clean_interval_days")
+    days = (ct or {}).get("clean_interval_days")
     if not days:
         return None
     base: datetime = car.get("last_cleaned_at") or car["created_at"]
