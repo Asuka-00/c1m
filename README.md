@@ -39,9 +39,9 @@ cp frontend/.env.example frontend/.env
 ### 2. 后端
 
 ```bash
-cd backend
-uv sync
+uv sync                       # 仓库根目录是 uv workspace，虚拟环境 .venv 位于根目录
 source .venv/bin/activate
+cd backend
 bash scripts/prestart.sh      # alembic 迁移 + 创建 app_user + 初始数据（initial_data）
 fastapi dev app/main.py       # http://localhost:8000 ，API 文档 /docs
 ```
@@ -93,6 +93,8 @@ frontend/src/
 ## 文档
 
 - [开发指南](docs/development.md)：架构、多租户与 RLS、RBAC、动态菜单、MES 规格系统、i18n、检查命令
+- [部署指南](docs/deployment.md)：生产环境 Docker Compose 部署（`deploy/`）
+- [历史计划归档](docs/archive/)：已完成的阶段计划，仅供追溯
 
 ## 许可
 
