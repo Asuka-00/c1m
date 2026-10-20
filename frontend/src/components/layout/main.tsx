@@ -12,14 +12,13 @@ export function Main({ fixed, className, fluid, ...props }: MainProps) {
     <main
       data-layout={fixed ? 'fixed' : 'auto'}
       className={cn(
-        'px-4 py-6',
+        'px-4 py-6 @3xl/content:px-6',
 
         // 固定布局时主容器使用 flex 并占满剩余空间
         fixed && 'flex grow flex-col overflow-hidden',
 
-        // 非流式布局时设置最大宽度
-        !fluid &&
-          '@7xl/content:mx-auto @7xl/content:w-full @7xl/content:max-w-7xl',
+        // 非流式布局：随内容区铺满，仅在超宽屏（> 120rem）上限宽并居中，避免两侧留白过大
+        !fluid && 'mx-auto w-full max-w-[120rem]',
         className
       )}
       {...props}
