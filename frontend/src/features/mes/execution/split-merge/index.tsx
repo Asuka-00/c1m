@@ -52,9 +52,9 @@ import { IconButton } from '@/components/icon-button'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
-import { CheckPanel } from './exec-parts'
-import { type LotPage, lotPageLink } from './lot-links'
-import { canMergeLot, canSplitLot, checkSplit } from './lot-rules'
+import { CheckPanel } from '../shared/exec-parts'
+import { type LotPage, lotPageLink } from '../shared/lot-links'
+import { canMergeLot, canSplitLot, checkSplit } from '../shared/lot-rules'
 
 /** 谱系列表：拆批母批 / 子批，合批源批次 / 目标批次。 */
 export function GenealogyList({

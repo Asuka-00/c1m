@@ -33,7 +33,7 @@ import { IconButton } from '@/components/icon-button'
 import { optLabel } from '@/features/mes/common/labels'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
-import { Pick } from '@/features/mes/execution/exec-parts'
+import { Pick } from '@/features/mes/execution/shared/exec-parts'
 import { ChamberStates } from './chamber-states'
 
 /** 去重选项。 */

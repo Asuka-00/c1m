@@ -36,13 +36,13 @@ import { optLabel } from '@/features/mes/common/labels'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
-import { Pick } from './exec-parts'
+import { Pick } from '../shared/exec-parts'
 import {
   blocksScrapToZero,
   canAdjustLot,
   canChangePriority,
   canJumpLot,
-} from './lot-rules'
+} from '../shared/lot-rules'
 import { PriorityDialog } from './priority-dialog'
 
 /** 在制调整卡片：按权限与批次状态提供跳站等操作。 */

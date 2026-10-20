@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DescItem, DescList } from '@/components/desc-list'
 import { enumLabel, optLabel } from '@/features/mes/common/labels'
-import { StageBar } from '../exec-parts'
+import { StageBar } from '../shared/exec-parts'
 
 export function LotSummaryCard({ cx }: { cx: ExecContext }) {
   const lot = cx.lot

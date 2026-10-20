@@ -24,7 +24,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Page } from '@/components/crud'
-import { HomeKpis } from '@/features/mes/execution/home-kpis'
+import { HomeKpis } from '@/features/mes/execution/report/home-kpis'
 
 function Stat({
   title,

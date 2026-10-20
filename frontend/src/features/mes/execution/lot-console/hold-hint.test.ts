@@ -1,6 +1,6 @@
 import { en, ja, zh } from '@/test-utils/locales'
 import { describe, expect, it } from 'vitest'
-import { canRunStage } from '../lot-rules'
+import { canRunStage } from '../shared/lot-rules'
 
 describe('Hold 提示与 Track Out（decisions #2）', () => {
   it('提示文案说明 Hold 中仍可 Track Out', () => {

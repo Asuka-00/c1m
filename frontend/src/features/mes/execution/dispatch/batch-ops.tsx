@@ -27,9 +27,9 @@ import {
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { RefLink } from '@/features/mes/common/ref-link'
 import { mesErrorMessage } from '@/features/mes/common/required'
+import { ChamberPick } from '../shared/chamber-pick'
+import { Pick } from '../shared/exec-parts'
 import { BatchResult } from './batch-result'
-import { ChamberPick } from './chamber-pick'
-import { Pick } from './exec-parts'
 
 /** 取行中某字段的去重选项。 */
 function distinct(rows: QueueRow[], k: 'product' | 'operation') {

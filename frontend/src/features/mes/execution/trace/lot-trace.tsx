@@ -50,8 +50,8 @@ import {
 import { Page } from '@/components/crud'
 import { enumLabel, reasonLabel } from '@/features/mes/common/labels'
 import { RefSelect } from '@/features/mes/common/ref-select'
-import { ResultBadge } from './exec-parts'
-import { GenealogyList } from './split-merge'
+import { ResultBadge } from '../shared/exec-parts'
+import { GenealogyList } from '../split-merge'
 
 const ICON: Record<string, [LucideIcon, string]> = {
   start: [Rocket, 'bg-sky-500'],

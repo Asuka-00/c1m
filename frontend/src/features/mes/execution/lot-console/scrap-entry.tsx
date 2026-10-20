@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/table'
 import { IconButton } from '@/components/icon-button'
 import { optLabel } from '@/features/mes/common/labels'
-import { Pick } from '../exec-parts'
+import { Pick } from '../shared/exec-parts'
 import type { Scrap } from './types'
 
 export function ScrapEntry(p: {

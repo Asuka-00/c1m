@@ -3,7 +3,7 @@ import { t } from '@/i18n'
 import { ListChecks, SearchCheck } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyState } from '@/components/desc-list'
-import { CheckPanel } from '../exec-parts'
+import { CheckPanel } from '../shared/exec-parts'
 import type { StageRun } from './use-stage-run'
 
 export function ChecksCard({

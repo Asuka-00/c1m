@@ -5,7 +5,7 @@ import { render } from 'vitest-browser-react'
 import { userEvent } from 'vitest/browser'
 import type { ExecContext } from '@/lib/api/mes/execution'
 import { MES_PERM } from '@/features/mes/common/mes-perm'
-import { SplitMergeCard } from './split-merge'
+import { SplitMergeCard } from './'
 
 function makeQc() {
   const qc = new QueryClient({

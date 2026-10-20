@@ -11,7 +11,7 @@ import {
   type CodedItem,
 } from '@/lib/backend-text'
 import { ErrorCode } from '@/lib/error-codes'
-import { TERMINAL_STATUSES } from '@/features/mes/execution/lot-rules'
+import { TERMINAL_STATUSES } from '@/features/mes/execution/shared/lot-rules'
 import { entityLabel, enumLabel, fieldLabel } from './labels'
 
 type V = Record<string, unknown>

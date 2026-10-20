@@ -9,7 +9,7 @@ import { mesApi, type MesRow } from '@/lib/api/mes/common'
 import { IconButton } from '@/components/icon-button'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { ReleaseDialog } from './lot-console/release-dialog'
-import { lotPageLink } from './lot-links'
+import { lotPageLink } from './shared/lot-links'
 
 /** 批次行操作：在操作台 / 履历时间线中打开。 */
 export function LotActions({ row }: { row: MesRow }) {

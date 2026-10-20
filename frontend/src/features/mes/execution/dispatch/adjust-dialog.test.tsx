@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { render } from 'vitest-browser-react'
 import { userEvent } from 'vitest/browser'
 import { MES_PERM } from '@/features/mes/common/mes-perm'
-import { execCtx, makeQc, Providers } from './lot-console/test-utils'
+import { execCtx, makeQc, Providers } from '../lot-console/test-utils'
 import { WipActionsCard } from './wip-actions'
 
 async function openAdjust(status: string) {

@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { mesErrorMessage } from '@/features/mes/common/required'
-import { Pick } from './exec-parts'
+import { Pick } from '../shared/exec-parts'
 import { packSlots, type SortRow } from './sort-slots'
 
 /**

@@ -31,7 +31,7 @@ import {
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
-import { Pick } from './exec-parts'
+import { Pick } from '../shared/exec-parts'
 import { DateRange } from './report-parts'
 import { isoDay } from './report-utils'
 

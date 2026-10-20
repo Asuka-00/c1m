@@ -21,7 +21,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
-import { Pick } from './exec-parts'
+import { Pick } from '../shared/exec-parts'
 
 /** 优先级变更：选择新优先级（急件标记火焰图标）、备注，可选强制放行。 */
 export function PriorityDialog({

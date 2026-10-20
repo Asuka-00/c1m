@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { enumLabel, optLabel } from '@/features/mes/common/labels'
 import { RefSelect } from '@/features/mes/common/ref-select'
-import { Pick } from '../exec-parts'
+import { Pick } from '../shared/exec-parts'
 import { MaterialPick } from './material-pick'
 
 export function TrackInInputs(p: {

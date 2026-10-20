@@ -43,7 +43,7 @@ import {
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { RefLink } from '@/features/mes/common/ref-link'
 import { mesErrorMessage } from '@/features/mes/common/required'
-import { Pick } from './exec-parts'
+import { Pick } from '../shared/exec-parts'
 import { QtimeHoldInfo } from './qtime-hold-info'
 
 /** Hold 来源。 */

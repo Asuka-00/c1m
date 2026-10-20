@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest'
 import { render } from 'vitest-browser-react'
 import type { ExecContext } from '@/lib/api/mes/execution'
 import { MES_PERM } from '@/features/mes/common/mes-perm'
+import { WipActionsCard } from '../dispatch/wip-actions'
 import { SplitMergeCard } from '../split-merge'
-import { WipActionsCard } from '../wip-actions'
 import { HoldCard } from './hold-card'
 
 function wrap(perms: string[]) {

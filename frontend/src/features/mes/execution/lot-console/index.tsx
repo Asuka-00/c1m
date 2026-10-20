@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Page } from '@/components/crud'
 import { IconButton } from '@/components/icon-button'
 import { RefSelect } from '@/features/mes/common/ref-select'
-import { DispatchQueue, LotScan } from '../dispatch-queue'
+import { DispatchQueue, LotScan } from '../dispatch/dispatch-queue'
 import { Console } from './console'
 
 /** 批次操作台：选择批次，填写输入并执行下一阶段。 */

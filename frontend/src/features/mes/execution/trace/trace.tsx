@@ -20,7 +20,7 @@ import {
 import { Page } from '@/components/crud'
 import { enumLabel } from '@/features/mes/common/labels'
 import { mesErrorMessage } from '@/features/mes/common/required'
-import { Pick } from './exec-parts'
+import { Pick } from '../shared/exec-parts'
 
 const KINDS: TraceKind[] = ['lot', 'wafer', 'equipment', 'material_lot']
 

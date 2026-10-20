@@ -17,7 +17,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { reasonLabel, reasonOptLabel } from '@/features/mes/common/labels'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
-import { Pick } from '../exec-parts'
+import { Pick } from '../shared/exec-parts'
 
 /** 释放 Hold 对话框（选择原因代码并填写备注）。 */
 export function ReleaseDialog({

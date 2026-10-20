@@ -19,9 +19,9 @@ import {
   reasonLabel,
 } from '@/features/mes/common/labels'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
-import { canHold } from '../lot-rules'
-import type { QtimeHoldFields, StepNames } from '../qtime-hold'
-import { QtimeHoldInfo } from '../qtime-hold-info'
+import type { QtimeHoldFields, StepNames } from '../hold/qtime-hold'
+import { QtimeHoldInfo } from '../hold/qtime-hold-info'
+import { canHold } from '../shared/lot-rules'
 import { HoldDialog } from './hold-dialog'
 import { ReleaseDialog } from './release-dialog'
 

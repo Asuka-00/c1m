@@ -1,9 +1,9 @@
 /** 批次操作台主体：左侧概要与作业面板，右侧检查、Hold、拆合批与在制调整卡片。 */
 import type { ExecContext } from '@/lib/api/mes/execution'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
-import { canRunStage } from '../lot-rules'
+import { WipActionsCard } from '../dispatch/wip-actions'
+import { canRunStage } from '../shared/lot-rules'
 import { SplitMergeCard } from '../split-merge'
-import { WipActionsCard } from '../wip-actions'
 import { ActionPanel } from './action-panel'
 import { ChecksCard } from './checks-card'
 import { HoldCard } from './hold-card'
