@@ -1,0 +1,826 @@
+mes:
+  exec:
+    stage:
+      move_in: Move in
+      track_in: Track in
+      track_out: Track out
+      move_out: Move out
+    done:
+      move_in: Move in done
+      track_in: Track in done
+      track_out: Track out done
+      move_out: Move out done
+    qtimeAction:
+      hold: Lot put on hold (Q-Time exceeded)
+      scrap: Lot scrapped (Q-Time exceeded)
+      rework: Lot sent to rework (Q-Time exceeded)
+    frame:
+      sub_route: sub-route
+      rework: rework route
+    refresh: Refresh
+    consoleHint: Run lot operations stage by stage.
+    pickLot: Select a lot to start.
+    auto: Automatic
+    autoDone: auto {{stage}}
+    blocked: Blocked by checks — see the check results
+    nowOnHold: lot is now on hold
+    onHold: On hold
+    pendingRework: Rework pending
+    step: Step
+    route: Route
+    qty: Qty
+    equipment: Equipment
+    recipe: Recipe
+    reticle: Reticle
+    carrier: Carrier
+    tool: Tool
+    lastAction: Last action
+    inSubRoute: Currently in a {{kind}}; it returns to the calling route at its end.
+    lastStep: 'Last step: moving out completes the lot.'
+    nextStepHint: Moving out advances the lot to the next route step.
+    takeBranch: 'Take branch to seq. {{seq}} (condition: {{cond}})'
+    toRework: Send to rework route {{route}}
+    preview: Preview checks
+    holdBlocks: 'The lot is on hold: a running lot can still Track Out, but Move In, Track In and Move Out require every hold to be released.'
+    terminal: Lot is {{status}} — no further stages.
+    checks: Check results
+    checksHint: Check results appear after running or previewing.
+    noChecks: No applicable checks.
+    overrideReason: Override reason
+    override: Force override and run
+    noOverride: You are not allowed to override blocking checks.
+    hold: Hold
+    held: Lot put on hold
+    release: Release
+    released: Hold released
+    releaseReason: Release reason
+    noHolds: No active hold.
+    reason: Reason code
+    comment: Comment
+    materials: Line-side material (consumed at track out)
+    noMaterial: No usable material lot
+    fefo: 'Nothing selected: first-expiry-first-out allocation.'
+    dc: Data collection
+    noDc: No data collection required at this step.
+    item: Item
+    unit: Wafer / unit
+    values: Values (sites)
+    lotLevel: Lot
+    scrapQty: Scrap quantity by reason
+    scrapUnits: Scrap / rework by wafer or unit
+    addScrap: Add scrap line
+    goodQty: 'Good quantity after track out: {{good}}'
+    good: Good
+    scrap: Scrap
+    rework: Rework
+    stepDone: Done
+    stepNext: Next
+    nextAction: Next action
+    slot: Slot
+    disposition: Disposition
+    oosAction: OOS action
+    eqpRecipe: Equipment recipe
+    eqpRecipeHint: Reported / scanned (optional)
+    chambers: Chambers
+    futureHold: 'Future hold at this step, lot held: {{reason}}'
+    qtimeHandled: Q-Time exceeded and handled
+    qtimeStageSkipped: '{{stage}} was not performed; check the lot status'
+  trace:
+    hint: All operations on the lot and its units.
+    empty: No history yet.
+    dc: DC {{n}} values, {{oos}} OOS
+    scrap: scrapped {{n}}
+    condition: 'condition: {{c}}'
+    source: 'source: {{s}}'
+    overrideReason: 'override reason: {{r}}'
+  sm:
+    childMinus: Fewer child lots
+    childPlus: More child lots
+    title: Split / merge
+    split: Split
+    merge: Merge
+    ruleSummary: 'Rule {{code}}: max {{max}} lots, min {{min}} per lot · {{n}} child lot(s) so far'
+    noSplit: split not allowed
+    noMerge: merge not allowed
+    noRule: No split/merge rule for this lot type.
+    stateHint: Split / merge only while Waiting or Moved in (not running).
+    noGenealogy: No split / merge yet.
+    genealogy: Genealogy
+    splitTo: split into
+    splitFrom: split from
+    mergedInto: merged into
+    mergedFrom: merged from
+    splitQtyHint: Enter the quantity for each child lot; the parent keeps the rest.
+    splitUnitHint: Assign wafers / units to child lots; the rest stay in the parent.
+    childCount: Child lots
+    remain: Parent keeps {{n}} / {{total}}
+    tooMany: Child lots must total less than the parent qty {{total}} (cannot split everything)
+    child: Child {{n}}
+    childShort: C{{n}}
+    keep: Keep
+    goesTo: Goes to
+    splitDone: 'Split done: {{codes}}'
+    mergeDone: 'Merged: {{codes}}'
+    mergeHint: Lots of the same product and step that can be merged.
+    noCandidates: No lot can be merged here.
+    mergedQty: 'Qty after merge: {{n}}'
+    qtimeNote: Q-Time uses the earliest (strictest) start.
+    factChildren: 'children: {{list}}'
+    factParent: from parent {{code}}
+    factTarget: merged into {{code}}
+    factSources: 'merged: {{list}}'
+    resultPriority: 'Resulting priority (highest wins):'
+    prioChange: raised from {{from}}
+    factPriority: priority {{from}} → {{to}}
+    rule: Rule
+    allowed: Allowed
+    maxLots: Max lots
+    usedLots: '{{n}} used'
+    minQty: Min qty / lot
+  wip:
+    title: WIP adjustments
+    hint: Jump, scrap or bonus adjustments for WIP lots.
+    jump: Jump step
+    jumpDesc: Move a waiting lot to another operation step of the same route.
+    toStep: Target step
+    jumped: Lot jumped
+    override: Override blocking checks (enter a reason)
+    adjust: Scrap/Bonus
+    adjustDesc: Scrap or add WIP quantity.
+    scrap: Scrap
+    bonus: Bonus
+    qty: Quantity
+    adjusted: Adjusted
+    runningScrapAll: A running lot cannot be scrapped down to 0; handle it after Track Out
+  qtime:
+    hint: Remaining Q-Time and violations of waiting lots.
+    refresh: Refresh
+    sweep: Sweep violations now
+    swept: Checked {{checked}} lot(s), acted on {{acted}}
+    lot: Lot
+    step: Step
+    rule: Rule
+    since: Since
+    elapsed: Elapsed (min)
+    max: Max (min)
+    remaining: Remaining (min)
+    action: Violation action
+    state: State
+    held: On hold
+    exceeded: Exceeded
+    ok: Running
+    act:
+      warn: Warn
+      hold: Hold
+      rework: Rework
+      scrap: Scrap
+    warnAt: Warn (min)
+    warn: Expiring soon
+    search: Search lot / rule
+    allStates: All states
+    allProducts: All products
+    allRoutes: All routes
+    product: Product
+    route: Route
+    autoRefresh: Auto refresh
+    sweepConfirm: Scan all waiting lots now and apply the configured action (hold / rework / scrap) to those that exceeded Q-Time?
+  traceq:
+    hint: Trace upstream and downstream by lot, wafer, equipment or material lot.
+    kind: Object
+    code: Code
+    search: Search
+    backward: Backward trace
+    forward: Forward trace
+    srcLots: Source lots
+    steps: Processing (track in)
+    materials: Consumed materials
+    outLots: Output lots
+    lots: Related lots
+    k:
+      lot: Lot
+      wafer: Wafer
+      equipment: Equipment
+      material_lot: Material lot
+    c:
+      code: Lot
+      lot: Lot
+      relation: Relation
+      qty: Qty
+      via: Via
+      level: Level
+      at: Time
+      step_seq: Step
+      operation: Operation
+      equipment: Equipment
+      recipe: Recipe
+      user: User
+      material_lot: Material lot
+      product: Product
+      consumed: Consumed
+      downstream: Downstream
+  holdrel:
+    hint: View and release held lots.
+    reason: Hold reason
+    source: Source
+    product: Product
+    all: All
+    release: Release selected
+    selected: '{{n}} selected'
+    released: Released {{ok}}, failed {{bad}}
+    lot: Lot
+    step: Step
+    heldAt: Held at
+    heldBy: Held by
+    hours: Held (h)
+    comment: Comment
+    src:
+      manual: Manual
+      qtime: Q-Time
+      oos: Out of spec
+      split: Split (inherited)
+      equipment: Equipment
+    search: Search lot / product / reason / comment
+    allStatus: All (incl. history)
+    status:
+      active: Active
+      released: Released
+    allReasons: All reasons
+    allSources: All sources
+    allProducts: All products
+    selectAll: Select all
+    state: State
+    releasedAt: Released at
+    releasedBy: Released by
+    releaseReason: Release reason
+    releaseComment: Release comment
+    showTerminal: Show scrapped / merged lots
+    lotStatus: Lot status
+  report:
+    hint: WIP distribution, waiting lots and daily output.
+    lots: WIP lots
+    qty: WIP qty
+    onHold: Lots on hold
+    byStatus: By status
+    byStep: By step
+    byProduct: By product
+    aging: Aging top 20
+    output: Daily output
+    status: Status
+    route: Route
+    step: Step
+    operation: Operation
+    product: Product
+    lot: Lot
+    hours: Idle (h)
+    since: Last event
+    day: Day
+    moves: Moves
+    moveQty: Move qty
+    scrapQty: Scrap qty
+    completed: Lots finished
+    to: To
+    oeeHint: OEE = availability × performance × quality.
+    equipment: Equipment
+    loading: Loading (h)
+    prd: PRD (h)
+    availability: Availability
+    performance: Performance
+    quality: Quality
+    oee: OEE
+    good: Good
+    scrap: Scrap
+    uphMissing: No UPH
+    from: From
+    oeeTrend: Daily trend
+    allLotTypes: All lot types
+  queue:
+    scan: Scan / enter lot ID, Enter
+    notFound: Lot {{code}} not found
+    search: Search lot / product
+    allStatuses: All statuses
+    allProducts: All products
+    allOperations: All operations
+    allHold: 'Hold: all'
+    notHeld: Not on hold
+    held: On hold
+    empty: No lots in WIP
+    lot: Lot
+    priority: Priority
+    product: Product
+    step: Step · operation
+    status: Status
+    qty: Qty
+    qtime: Q-Time left (min)
+    hours: Since last move (h)
+    open: Operate
+    hot: Hot lot
+    allPriorities: All lots
+    hotOnly: Hot lots only
+    notHot: Not hot
+  due:
+    overdue: Overdue
+    expired: Expired
+    expiring: Expiring
+    ongoing: Ongoing
+    hours: '{{n}} h'
+  wmap:
+    title: Wafer map
+    history: 'Wafer history: {{code}}'
+  rrun:
+    title: 'Recipe parameters: {{recipe}} v{{version}}'
+    view: Parameters
+    running: Running
+    noParams: No recipe parameters for this run.
+  batch:
+    hint: Track several lots in or out together on one tool.
+    search: Search lot / carrier
+    allProducts: All products
+    allOps: All operations
+    lot: Lot
+    product: Product
+    step: Step
+    carrier: Carrier
+    qty: Qty
+    selectAll: Select all
+    run: Batch {{stage}} ({{n}})
+    done: '{{ok}} / {{total}} lots done'
+    blocked: Some lots are blocked; nothing was run
+    ok: OK
+    failed: Failed
+  carrier:
+    hint: Carrier status, cleaning and carrier change.
+    search: Search carrier / lot
+    allTypes: All types
+    allStatus: All statuses
+    allDue: All cleaning states
+    due:
+      ok: OK
+      warn: Due soon
+      overdue: Needs cleaning
+    code: Carrier
+    type: Type
+    status: Status
+    lot: Lot
+    fill: Wafers / capacity
+    usage: Uses
+    cleanDue: Cleaning due
+    clean: Clean
+    cleanConfirm: Mark carrier {{code}} as cleaned?
+    cleaned: Cleaning recorded
+    change: Change carrier
+    changeDesc: 'Move lot {{lot}} from {{code}} to:'
+    target: Target carrier
+    moved: Carrier changed
+    splitMerge: Split / merge
+  sorter:
+    action: Sort
+    title: 'Wafer sort: {{lot}} ({{code}})'
+    target: Move to carrier (optional)
+    wafer: Wafer
+    from: From slot
+    to: To slot
+    pack: Pack in order
+    run: Sort
+    done: Wafer sort done
+  yield:
+    hint: Yield by operation, product or lot, with scrap reasons.
+    search: Search code / name
+    allBands: All yields
+    band:
+      low: Below 90%
+      mid: 90%–98%
+      high: 98% and above
+    by:
+      operation: Operation
+      product: Product
+      lot: Lot
+    total: Good {{good}}, scrap {{scrap}}, yield {{y}}
+    pareto: Scrap reason Pareto
+    noScrap: No scrap in this period.
+    qty: Qty
+    cum: Cumulative %
+    name: Name
+    good: Good
+    scrap: Scrap
+    yield: Yield
+  prio:
+    title: Change priority
+    desc: Hot lots dispatch first and are highlighted.
+    new: New priority
+    done: Priority changed
+  shiftLog:
+    hint: Record shift handover notes and open items; the next shift confirms.
+    search: Search notes / handed by
+    allStatus: All statuses
+    allShifts: All shifts
+    status:
+      open: Awaiting
+      acknowledged: Acknowledged
+    statusCol: Handover
+    date: Date / shift
+    shift: Shift
+    area: Area
+    summary: Handover notes
+    openItems: Open items
+    handedBy: Handed over by
+    new: Hand over
+    newDesc: Record this shift's notes and open items.
+    submit: Submit
+    created: Handed over
+    ack: Acknowledge
+    ackDesc: Confirm you have read the notes and open items.
+    ackComment: Note (optional)
+    acked: Acknowledged
+  label:
+    hint: Pick lots or carriers and print barcode / QR labels.
+    search: Search code / product
+    allStatus: All statuses
+    kind:
+      lot: Lot labels
+      carrier: Carrier labels
+    code:
+      both: Barcode + QR
+      barcode: Barcode only
+      qr: QR only
+    print: Print {{n}}
+    pickAll: Select page
+    codeCol: Code
+    info: Details
+    status: Status
+    qty: Qty
+  reasonCode:
+    qtime_expired: Q-Time expired
+  qtimeHold:
+    overdue: Overdue by {{time}}
+    steps: Steps {{from}} → {{to}}
+    rule: Q-Time rule
+    minutes: '{{m}} min'
+    hours: '{{h}} h'
+    hoursMinutes: '{{h}} h {{m}} min'
+  checkMsg:
+    registry:
+      not_implemented: check type not implemented
+      disabled: control disabled by rule {{rule}}
+    common:
+      no_equipment_selected: no equipment selected
+      no_equipment: no equipment
+      no_operation: no operation
+      no_carrier: no carrier
+    e10_available:
+      ok: '{{equipment}} is {{state}} ({{category}})'
+      bad: '{{equipment}} is {{state}} ({{category}}); needs {{allowed}}'
+    eqp_capability:
+      not_allowed: '{{equipment}} is not allowed at this step'
+      no_capability: '{{equipment}} has no capability for {{operation}}'
+      not_required: no capability records (not required)
+      not_qualified: '{{equipment}} is not qualified for {{operation}} with this recipe'
+      qualified: '{{equipment}} qualified for {{operation}}'
+    recipe_active:
+      required: recipe required
+      none: no recipe
+      status: recipe {{recipe}} v{{version}} is $t(mes.enum.status.{{status}})
+      not_allowed: recipe {{recipe}} is not allowed at this step
+      other_type: recipe {{recipe}} is for another equipment type
+      not_enabled: recipe {{recipe}} is not enabled on {{equipment}}
+      active: recipe {{recipe}} v{{version}} active
+    recipe_match:
+      na: no recipe / equipment
+      not_enabled: recipe {{recipe}} is not enabled on {{equipment}}
+      not_reported: equipment recipe not reported (expect {{expect}})
+      enabled: recipe {{recipe}} enabled on {{equipment}}
+      differs: equipment recipe {{got}} differs from {{expect}}
+      matches: equipment recipe {{got}} matches
+    pm_due:
+      overdue: '{{equipment}} PM overdue: {{plans}}'
+      due_soon: '{{equipment}} PM due soon: {{plans}}'
+      ok: '{{equipment}} PM ok'
+      no_plan: no PM plan
+    reticle_available:
+      not_required: no reticle required
+      required: reticle required
+      not_allowed: reticle {{reticle}} is not allowed at this step
+      status: reticle {{reticle}} is $t(mes.enum.asset_status.{{status}})
+      available: reticle {{reticle}} available
+    material_sufficient:
+      none: no material consumption
+      short: '{{material}}: need {{need}}, available {{available}}'
+      ok: materials sufficient
+    tool_life:
+      none: no tool required
+      required: tool of type {{fixture}} required
+      status: tool {{tool}} is $t(mes.enum.tool_status.{{status}})
+      life_reached: tool {{tool}} reached its life ({{used}}/{{max}})
+      expired: tool {{tool}} expired on {{date}}
+      near_end: tool {{tool}} near end of life ({{used}}/{{max}})
+      expires: tool {{tool}} expires on {{date}}
+      ok: tools available
+    carrier_available:
+      ok: 'carrier {{carrier}}: $t(mes.enum.asset_status.{{status}})'
+      bad: carrier {{carrier}} is $t(mes.enum.asset_status.{{status}})
+    qtime:
+      at_track_in: Q-Time is controlled at track in
+      none: no Q-Time rule
+      too_early: 'Q-Time {{rule}}: {{minutes}} min < min {{min}} min'
+      exceeded: 'Q-Time {{rule}}: {{minutes}} min > max {{max}} min'
+      ok: Q-Time ok
+    lot_hold:
+      on_hold: lot is on hold
+      ok: not on hold
+      held: 'on hold: {{lots}}'
+      none_held: no lot on hold
+    wo_status:
+      ok: work order $t(mes.enum.wo_status.{{status}})
+      bad: work order is $t(mes.enum.wo_status.{{status}})
+    dc_complete:
+      none: no data collection required
+      missing: 'missing DC values: {{items}}'
+      ok: DC complete
+    oos:
+      bad: '{{count}} value(s) out of spec'
+      ok: all values in spec
+      none: no DC values
+      values: 'OOS ($t(mes.enum.oos_action.{{action}})): {{values}}'
+    sampling:
+      no_operation: no operation
+      no_plan: no DC plan
+      every_lot: every lot (no sampling rule)
+      rule_sampled: 'rule {{rule}}: lot {{n}}, every {{freq}} → sampled'
+      rule_skipped: 'rule {{rule}}: lot {{n}}, every {{freq}} → skipped'
+      sampled: sampled
+      not_sampled: not sampled
+    rework_limit:
+      builtin: evaluated when entering a rework route
+      reached: 'rework limit reached at step {{step}}: {{count}} / {{max}}'
+      ok: rework {{next}} / {{max}}
+    qty_adjust_limit:
+      builtin: evaluated by scrap / bonus
+      exceeds: adjust qty {{qty}} exceeds {{pct}}% of lot qty {{base}}
+      within: within {{pct}}%
+    split_merge_rule:
+      builtin: evaluated by the split / merge service
+      split_status: cannot split a $t(mes.enum.lot_status.{{status}}) lot (only waiting / moved in)
+      no_rule: no split/merge rule for the lot type
+      split_not_allowed: 'rule {{rule}}: split not allowed'
+      max_children: 'rule {{rule}}: {{total}} lots exceed max {{max}}'
+      min_qty: 'rule {{rule}}: every lot needs at least {{min}}'
+      keep_one: parent lot must keep at least 1
+      child_carrier: 'child {{child}}: carrier {{carrier}} is not available'
+      child_capacity: 'child {{child}}: {{qty}} exceeds carrier capacity {{cap}}'
+      split_ok: split allowed
+      merge_status: cannot merge into a $t(mes.enum.lot_status.{{status}}) lot
+      merge_not_allowed: 'rule {{rule}}: merge not allowed'
+      capacity: '{{total}} exceeds carrier {{carrier}} capacity {{cap}}'
+      merge_ok: merge allowed
+      self: '{{lot}}: cannot merge a lot into itself'
+      src_status: '{{lot}}: cannot merge a $t(mes.enum.lot_status.{{status}}) lot'
+      diff_product: '{{lot}}: different product'
+      diff_route: '{{lot}}: different route / route version'
+      diff_step: '{{lot}}: different route step'
+      diff_stage: '{{lot}}: different stage'
+      diff_tracking: '{{lot}}: different tracking level'
+      diff_frame: '{{lot}}: different sub-route / rework frame'
+      diff_wo: '{{lot}}: different work order'
+      diff_priority: '{{lot}}: different priority'
+      src_no_rule: '{{lot}}: no split/merge rule for its lot type'
+      src_no_merge: '{{lot}}: rule {{rule}} does not allow merge'
+    chamber_required:
+      none: equipment has no chambers
+      select: '{{equipment}}: select a chamber'
+      selected: '{{chambers}}'
+    chamber_available:
+      none: no chamber selected
+      state: '{{chamber}} is {{state}} ({{category}})'
+      needs: needs {{allowed}}
+      ok: chambers available
+    batch_same_step:
+      single: single lot
+      steps: lots are at different steps
+      equipment: lots are on different equipment
+      carriers: lots are in different carriers
+      ok: '{{count}} lots at the same step'
+    carrier_clean:
+      no_interval: no cleaning interval
+      overdue: carrier {{carrier}} cleaning overdue
+      due_soon: carrier {{carrier}} cleaning due soon
+      clean: carrier {{carrier}} clean
+    carrier_usage:
+      none: no usage limit
+      limit: carrier {{carrier}} used {{used}}/{{max}}; clean first
+      used: carrier {{carrier}} used {{used}}/{{max}}
+    sort_order:
+      none: no wafer sort
+      changed: wafer order would change
+      kept: wafer order kept
+    notice:
+      scheduled: scheduled notice
+      handover: shift handover rule
+    future_hold:
+      pending: '{{count}} future hold(s) at this step'
+      none: no future hold
+    hot_lot_limit:
+      not_hot: not a hot lot
+      count: '{{hot}} hot lots in WIP (max {{max}})'
+    operator_qualified:
+      ok: '{{user}} qualified for {{operation}}'
+      bad: '{{user}} not qualified for {{operation}}'
+  checkSep: '; '
+  sysNote:
+    qtime_expired: 'Q-Time {{rule}} expired: {{minutes}} > {{max}} min'
+    oos: 'OOS: {{items}}'
+    inherited: Inherited from {{lot}}
+    e10_auto: Auto transition on $t(mes.exec.stage.{{trigger}}) of {{lot}}
+  entity:
+    check_rule: Check rule
+    check_plan: Check plan
+    check_plan_item: Plan rule
+    check_binding: Check binding
+    check_log: Check log
+    future_hold: Future hold
+    shift_log: Shift handover
+    operator_qual: Operator qualification
+  field:
+    check_rule:
+      code: Code
+      name: Name
+      check_type: Check type
+      severity: Severity
+      params: Parameters (JSON)
+      is_active: Active
+      description: Description
+    check_plan:
+      code: Code
+      name: Name
+      is_active: Active
+      description: Description
+    check_plan_item:
+      check_plan: Check plan
+      check_rule: Check rule
+      seq: Seq.
+    check_binding:
+      check_plan: Check plan
+      trigger: Trigger
+      scope: Scope
+      route_step: Route step
+      equipment: Equipment
+      operation: Operation
+      equipment_type: Equipment type
+      product: Product
+      is_active: Active
+    check_log:
+      lot: Lot
+      trigger: Trigger
+      route_step: Route step
+      equipment: Equipment
+      check_rule: Check rule
+      check_plan: Check plan
+      check_type: Check type
+      severity: Severity
+      result: Result
+      message: Message
+      context: Context
+      override_reason: Override reason
+      username: User
+    future_hold:
+      lot: Lot
+      route_step: Hold at step
+      reason: Reason code
+      comment: Comment
+      fh_status: Status
+      triggered_at: Triggered at
+    shift_log:
+      shift_date: Date
+      shift: Shift
+      area: Area
+      summary: Handover notes
+      open_items: Open items
+      handed_by: Handed over by
+      handed_at: Handed over at
+      log_status: Status
+      received_by: Received by
+      received_at: Received at
+      receive_comment: Receiver note
+    operator_qual:
+      username: User
+      operation: Operation
+      equipment_type: Equipment type
+      certified_on: Certified on
+      expires_on: Expires on
+      is_active: Active
+  help:
+    check_rule:
+      params: 'e.g. {"allowed": ["SBY", "PRD"]} for E10; {"days": 7} for warn ahead'
+    future_hold:
+      reason: 'Blank: default hold reason'
+    operator_qual:
+      equipment_type: 'Blank: any equipment type'
+  enum:
+    exec_trigger:
+      move_in: Move in
+      track_in: Track in
+      track_out: Track out
+      move_out: Move out
+      split: Split
+      merge: Merge
+      jump: Jump step
+      adjust: Scrap / bonus
+      sort: Wafer sort
+      priority: Priority change
+    check_type:
+      e10_available: Equipment E10 state available
+      eqp_capability: Equipment capability / recipe match
+      recipe_active: Recipe active
+      reticle_available: Reticle available
+      material_sufficient: Material sufficient
+      tool_life: Tool available + life
+      carrier_available: Carrier available
+      batch_same_step: 'Batch: same step'
+      sort_order: Sort keeps wafer order
+      hot_lot_limit: Hot lot WIP limit
+      handover_ack_other: Handover confirmed by another user
+      operator_qualified: Operator qualified
+      qual_expiry_notice: Qualification expiry notice
+      future_hold: Future hold at step
+      wo_due: Work order due notice
+      carrier_clean: Carrier cleaning due
+      carrier_usage: Carrier usage limit
+      chamber_required: Chamber selected
+      chamber_available: Chamber E10 state available
+      qtime: Q-Time
+      lot_hold: Lot not on hold
+      wo_status: Work order status
+      dc_complete: DC completeness
+      oos: Out of spec
+      sampling: Sampling decision
+      split_merge_rule: Split / merge rule
+      recipe_match: Recipe ↔ equipment mapping
+      pm_due: Equipment PM not overdue
+      rework_limit: Rework count limit
+      qty_adjust_limit: Scrap / bonus qty limit
+    check_severity:
+      block: Block
+      warn: Warn
+      off: Off (control disabled)
+    check_result:
+      pass: Pass
+      warn: Warn
+      block: Block
+      overridden: Overridden
+    check_scope:
+      route_step: Route step
+      equipment: Equipment
+      operation: Operation
+      equipment_type: Equipment type
+      product: Product
+    ml_status:
+      available: Available
+      hold: On hold
+      empty: Used up
+      expired: Expired
+    tool_status:
+      available: Available
+      in_use: In use
+      pending_maintenance: Pending maintenance
+      expired: Expired
+      retired: Retired
+    e10_trigger:
+      track_in: Track in
+      track_out: Track out (no other running lots)
+    hold_type:
+      manual: Manual
+      auto: Automatic
+      future: Future hold
+    shift_log_status:
+      open: Awaiting handover
+      acknowledged: Acknowledged
+    fh_status:
+      active: Waiting
+      triggered: Triggered
+      cancelled: Cancelled
+    history_action:
+      start: Lot start
+      move_in: Move in
+      track_in: Track in
+      track_out: Track out
+      move_out: Move out
+      hold: Hold
+      release: Release
+      scrap: Scrap
+      rework: Rework
+      branch: Branch
+      sub_route: Enter sub-route
+      return: Return from sub/rework route
+      complete: Finished (to receive)
+      receive: Received
+      override: Check override
+      qtime: Q-Time violation
+      oos: Out of spec
+      split: Split
+      merge: Merge
+      jump: Jump step
+      bonus: Bonus
+      carrier_change: Carrier change
+      sort: Wafer sort
+      priority: Priority change
+    genealogy_relation:
+      split: Split
+      merge: Merge

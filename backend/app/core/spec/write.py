@@ -4,10 +4,10 @@ import uuid
 from typing import Any
 
 import sqlalchemy as sa
-from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.audit import audit, diff
 from app.core.spec.base import Row, conn, now, table
 from app.core.spec.engine import (
@@ -16,7 +16,7 @@ from app.core.spec.engine import (
     STATUSES,
     Entity,
 )
-from app.core.spec.errors import MesError, http_422, integrity
+from app.core.spec.errors import MesError, coded, fe, http_422, integrity
 from app.core.spec.query import get_row
 from app.core.spec.validate import VALIDATORS, check_editable, locking_parent, validate
 
@@ -45,12 +45,15 @@ def create_row(
         序列化后的新行。
     """
     if e.readonly:
-        raise HTTPException(status_code=405, detail="Read-only entity")
+        raise coded(405, ec.READ_ONLY_ENTITY, "Read-only entity")
     values = validate(session, tenant_id, e, data, None)
     lp = locking_parent(session, tenant_id, e, values)
     if lp and lp[1]["status"] != "draft":
-        raise HTTPException(
-            status_code=409, detail=f"Parent {lp[0].code} is not a draft"
+        raise coded(
+            409,
+            ec.PARENT_NOT_DRAFT,
+            f"Parent {lp[0].code} is not a draft",
+            entity=lp[0].code,
         )
     rid = uuid.uuid4()
     values.update(
@@ -196,14 +199,26 @@ def set_status(
         HTTPException: 非法状态迁移（409）或激活校验失败（422）。
     """
     if not e.versioned:
-        raise HTTPException(status_code=404, detail="Entity is not versioned")
+        raise coded(404, ec.ENTITY_IS_NOT_VERSIONED, "Entity is not versioned")
     if status not in STATUSES:
-        raise http_422([("status", f"status must be one of: {', '.join(STATUSES)}")])
+        raise http_422(
+            [
+                fe(
+                    "status",
+                    ec.STATUS_INVALID,
+                    f"status must be one of: {', '.join(STATUSES)}",
+                    allowed=", ".join(STATUSES),
+                )
+            ]
+        )
     old = get_row(session, e, tenant_id, rid)
     if status not in STATUS_TRANSITIONS[old["status"]]:
-        raise HTTPException(
-            status_code=409,
-            detail=f"Cannot change status from {old['status']} to {status}",
+        raise coded(
+            409,
+            ec.STATUS_TRANSITION,
+            f"Cannot change status from {old['status']} to {status}",
+            src=old["status"],
+            to=status,
         )
     t = table(e)
     c = conn(session)
@@ -286,7 +301,7 @@ def new_version(
 ) -> Row:
     """复制某版本（含子表行）为下一个 draft 版本。"""
     if not e.versioned:
-        raise HTTPException(status_code=404, detail="Entity is not versioned")
+        raise coded(404, ec.ENTITY_IS_NOT_VERSIONED, "Entity is not versioned")
     old = get_row(session, e, tenant_id, rid)
     nid = uuid.uuid4()
     vals = {

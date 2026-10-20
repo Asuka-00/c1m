@@ -21,7 +21,7 @@
     "nav.impersonatingShort",
     "nav.exitImpersonation",
     "config.platformDesc",
-    "backend.Tenant slug already exists",
-    "backend.Only platform admins can change tenant status"
+    "error.code_200013",
+    "error.code_200036"
   ]
 }

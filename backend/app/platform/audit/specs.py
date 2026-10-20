@@ -6,14 +6,14 @@ register(
     Entity(
         "audit_log",
         "common",
-        "Audit log|审计日志|監査ログ",
+        "Audit log",
         [
-            F("entity_type", "enum", "Entity|实体|エンティティ", enum="entity_type"),
-            F("action", "enum", "Action|操作|操作", enum="audit_action"),
+            F("entity_type", "enum", "Entity", enum="entity_type"),
+            F("action", "enum", "Action", enum="audit_action"),
             F(
                 "record_id",
                 "str",
-                "Record id|记录 ID|レコード ID",
+                "Record id",
                 max_length=36,
                 list=False,
                 filter=False,
@@ -21,15 +21,15 @@ register(
             F(
                 "record_code",
                 "str",
-                "Record|记录|レコード",
+                "Record",
                 max_length=200,
                 search=True,
             ),
-            F("changes", "json", "Changes|变更内容|変更内容"),
+            F("changes", "json", "Changes"),
             F(
                 "username",
                 "str",
-                "User|用户|ユーザー",
+                "User",
                 max_length=255,
                 search=True,
                 filter=True,

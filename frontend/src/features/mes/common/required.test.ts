@@ -1,9 +1,12 @@
 import { AxiosError, AxiosHeaders } from 'axios'
 import { t } from '@/i18n'
+import { en, ja, zh } from '@/test-utils/locales'
 import { describe, expect, it } from 'vitest'
 import type { MesEntity } from '@/lib/api/mes/common'
+import { detailParams } from '@/lib/backend-text'
+import { ErrorCode } from '@/lib/error-codes'
 import { enumLabel } from './labels'
-import { codeParams, mesCodeMessage, mesErrorMessage } from './required'
+import { mesCodeMessage, mesErrorMessage } from './required'
 
 function axErr(status: number, detail: unknown) {
   const e = new AxiosError('Request failed')
@@ -16,27 +19,37 @@ function axErr(status: number, detail: unknown) {
   }
   return e
 }
-const field = (f: string, msg: string) => [
-  { loc: ['body', f], msg, type: 'value_error' },
-]
+const item = (
+  f: string,
+  code: number,
+  params: Record<string, unknown> = {}
+) => ({
+  loc: ['body', f],
+  msg: `${f}: english fallback`,
+  type: 'value_error',
+  code,
+  params,
+})
 const lotE = { code: 'lot', fields: [] } as unknown as MesEntity
+const text = (code: number, params?: Record<string, unknown>) =>
+  t(`error.code_${code}`, params)
 
-describe('mesErrorMessage：N5 对象格式', () => {
-  it('on_hold / lot_status 按 code 识别，lot_status 用 action 与状态生成提示', () => {
+describe('mesErrorMessage：错误码对象 {code, message, params}', () => {
+  it('ON_HOLD 按错误码识别', () => {
+    const e = axErr(422, {
+      code: ErrorCode.ON_HOLD,
+      message: 'lot is on hold',
+      action: 'move_out',
+    })
+    expect(mesErrorMessage(e, lotE)).toBe(text(ErrorCode.ON_HOLD))
+    expect(mesErrorMessage(e, undefined)).toBe(text(ErrorCode.ON_HOLD))
+  })
+
+  it('LOT_STATUS 用 action 与状态生成具体提示', () => {
     expect(
       mesErrorMessage(
         axErr(422, {
-          code: 'on_hold',
-          message: 'lot is on hold',
-          action: 'move_out',
-        }),
-        lotE
-      )
-    ).toBe(t('mes.err.code.on_hold'))
-    expect(
-      mesErrorMessage(
-        axErr(422, {
-          code: 'lot_status',
+          code: ErrorCode.LOT_STATUS,
           action: 'track_in',
           lot_status: 'waiting',
         }),
@@ -51,7 +64,7 @@ describe('mesErrorMessage：N5 对象格式', () => {
     expect(
       mesErrorMessage(
         axErr(422, {
-          code: 'lot_status',
+          code: ErrorCode.LOT_STATUS,
           action: 'hold',
           lot_status: 'scrapped',
         }),
@@ -62,31 +75,30 @@ describe('mesErrorMessage：N5 对象格式', () => {
         status: enumLabel('lot_status', 'scrapped'),
       })
     )
-    expect(mesErrorMessage(axErr(422, { code: 'lot_status' }), lotE)).toBe(
-      t('mes.err.code.lot_status')
-    )
+    expect(
+      mesErrorMessage(axErr(422, { code: ErrorCode.LOT_STATUS }), lotE)
+    ).toBe(t('mes.err.code.lot_status'))
   })
 
-  it('merge_source_invalid 优先按 code，即使 message 不含关键词', () => {
+  it('合批源错误按错误码识别，即使 message 不含关键词', () => {
     expect(
       mesErrorMessage(
         axErr(422, {
-          code: 'merge_source_invalid',
+          code: ErrorCode.MERGE_SOURCE_INVALID,
           message: 'bad sources',
           duplicates: ['L2'],
           includes_target: false,
         }),
         lotE
       )
-    ).toBe(t('mes.err.code.merge_source_invalid'))
+    ).toBe(text(ErrorCode.MERGE_SOURCE_INVALID))
   })
 
-  it('D24：409 qtime_rule_in_use 显示规则编码与引用的 Hold 条数，提示改为停用', () => {
+  it('Q-Time 规则被 Hold 引用：显示规则编码与条数，提示改为停用', () => {
     const msg = mesErrorMessage(
       axErr(409, {
-        code: 'qtime_rule_in_use',
-        message:
-          'Q-Time rule is referenced by lot holds; deactivate it instead',
+        code: ErrorCode.QTIME_RULE_IN_USE,
+        message: 'in use',
         qtime_rule_id: 'R-1',
         qtime_rule_code: 'QT-ETCH',
         hold_count: 3,
@@ -94,7 +106,7 @@ describe('mesErrorMessage：N5 对象格式', () => {
       { code: 'qtime_rule', fields: [] } as unknown as MesEntity
     )
     expect(msg).toBe(
-      t('mes.err.code.qtime_rule_in_use', {
+      text(ErrorCode.QTIME_RULE_IN_USE, {
         qtime_rule_code: 'QT-ETCH',
         hold_count: 3,
       })
@@ -103,172 +115,121 @@ describe('mesErrorMessage：N5 对象格式', () => {
     expect(msg).toContain('3')
   })
 
-  it('Hold 详情 404 hold_not_found 按 code 本地化', () => {
-    expect(
-      mesErrorMessage(
-        axErr(404, {
-          code: 'hold_not_found',
-          message: 'Hold not found',
-          hold_id: 'H9',
-        }),
-        lotE
-      )
-    ).toBe(t('mes.err.code.hold_not_found'))
-  })
-
-  it('审计动作 qtime_rework 有本地化标签', () => {
-    expect(t('mes.enum.audit_action.qtime_rework')).not.toBe(
-      'mes.enum.audit_action.qtime_rework'
-    )
-  })
-
-  it('幂等键错误码只认 detail.code，裸字符串不当作错误码', () => {
-    expect(mesCodeMessage(axErr(409, 'idempotency_in_progress'))).toBeNull()
-    expect(
-      mesCodeMessage(axErr(409, { code: 'idempotency_in_progress' }))
-    ).toBe(t('mes.err.code.idempotency_in_progress'))
-  })
-})
-
-describe('mesErrorMessage：旧格式兜底（后端按 N5 落地后可删）', () => {
-  it('on_hold（422 字段错误）', () => {
-    const e = axErr(
-      422,
-      field('on_hold', 'on_hold: lot is on hold; release it first')
-    )
-    expect(mesErrorMessage(e, lotE)).toBe(t('mes.err.code.on_hold'))
-    expect(mesErrorMessage(e, undefined)).toBe(t('mes.err.code.on_hold'))
-  })
-
-  it('lot_status：解析阶段与状态', () => {
-    expect(
-      mesErrorMessage(
-        axErr(
-          422,
-          field('lot_status', 'lot_status: cannot track_in a waiting lot')
-        ),
-        lotE
-      )
-    ).toBe(
-      t('mes.err.code.lot_status_stage', {
-        stage: t('mes.exec.stage.track_in'),
-        status: enumLabel('lot_status', 'waiting'),
-      })
-    )
-    expect(
-      mesErrorMessage(
-        axErr(422, field('lot_status', 'lot_status: lot is merged')),
-        lotE
-      )
-    ).toBe(
-      t('mes.err.code.lot_status_is', {
-        status: enumLabel('lot_status', 'merged'),
-      })
-    )
-    expect(
-      mesErrorMessage(
-        axErr(
-          422,
-          field('lot_status', 'lot_status: split qty must leave the parent')
-        ),
-        lotE
-      )
-    ).toBe(t('mes.err.code.lot_status'))
-  })
-
-  it('合批源重复或包含目标（P14）', () => {
-    for (const msg of [
-      'lot_status: duplicate source lots',
-      'lot_status: sources include the target lot',
-    ])
-      expect(mesErrorMessage(axErr(422, field('lot_status', msg)), lotE)).toBe(
-        t('mes.err.code.merge_source_invalid')
-      )
-  })
-
   it.each([
-    [409, 'lot_busy'],
-    [409, 'batch_blocked'],
-    [409, 'idempotency_in_progress'],
-    [422, 'idempotency_key_mismatch'],
-    [422, 'idempotency_key_reused'],
-    [422, 'merge_source_invalid'],
-    [422, 'rework_route_missing'],
-  ])('%i %s：按 detail.code 识别（N5）', (status, code) => {
-    const want = t(`mes.err.code.${code}`)
+    [409, ErrorCode.LOT_BUSY],
+    [409, ErrorCode.BATCH_BLOCKED],
+    [422, ErrorCode.REWORK_ROUTE_MISSING],
+    [404, ErrorCode.HOLD_NOT_FOUND],
+    [422, ErrorCode.QTIME_ACTION_INVALID],
+  ])('%i %i：按 detail.code 识别', (status, code) => {
+    const want = text(code)
+    expect(want).not.toBe(`error.code_${code}`)
     expect(mesErrorMessage(axErr(status, { code, message: 'x' }), lotE)).toBe(
-      want
-    )
-    expect(mesErrorMessage(axErr(status, { code, items: [] }), undefined)).toBe(
       want
     )
     expect(mesCodeMessage(axErr(status, { code }))).toBe(want)
   })
 
-  it('非错误码保持原有处理', () => {
-    expect(
-      mesCodeMessage(axErr(409, 'Record is referenced by other records'))
-    ).toBeNull()
-    const msg = mesErrorMessage(
-      axErr(422, field('comment', 'comment: required')),
-      lotE
-    )
-    expect(msg).toContain(t('mes.err.required'))
-  })
-
-  it('每个错误码在中英日都有翻译', async () => {
-    const [zh, en, ja] = await Promise.all([
-      import('@/i18n/locales/zh-CN.json'),
-      import('@/i18n/locales/en.json'),
-      import('@/i18n/locales/ja.json'),
-    ])
-    const keys = [
-      'on_hold',
-      'lot_status',
-      'lot_status_is',
-      'lot_status_stage',
-      'lot_busy',
-      'batch_blocked',
-      'idempotency_in_progress',
-      'idempotency_key_mismatch',
-      'idempotency_key_reused',
-      'merge_source_invalid',
-      'rework_route_missing',
-    ]
-    for (const l of [zh, en, ja])
-      for (const k of keys)
-        expect((l.mes.err.code as Record<string, string>)[k]).toBeTruthy()
+  it('裸字符串 / 非数字 code 不当作错误码', () => {
+    expect(mesCodeMessage(axErr(409, 'Record is referenced'))).toBeNull()
+    expect(mesCodeMessage(axErr(409, { code: 'lot_busy' }))).toBeNull()
   })
 })
 
-describe('错误码插值参数白名单', () => {
-  it('只传白名单字段，detail 的其他键（code / message / 嵌套对象等）不传', () => {
-    expect(
-      codeParams({
-        code: 'qtime_rule_in_use',
-        message: 'in use',
-        qtime_rule_id: 'R-1',
-        qtime_rule_code: 'QT-ETCH',
-        hold_count: 3,
-        lng: 'ja',
-        defaultValue: 'x',
-        nested: { a: 1 },
+describe('mesErrorMessage：422 字段错误项（code + params）', () => {
+  it('字段规则：{{field}} 用实体字段标签，参数插值', () => {
+    const e = {
+      code: 'work_order',
+      fields: [{ name: 'planned_qty' }],
+    } as unknown as MesEntity
+    const msg = mesErrorMessage(
+      axErr(422, [item('planned_qty', ErrorCode.FIELD_MIN, { min: 1 })]),
+      e
+    )
+    expect(msg).toContain('1')
+    expect(msg).not.toContain('{{')
+    expect(msg).toBe(
+      text(ErrorCode.FIELD_MIN, {
+        min: 1,
+        field: t('mes.field.work_order.planned_qty'),
       })
-    ).toEqual({ qtime_rule_code: 'QT-ETCH', hold_count: 3 })
+    )
   })
 
-  it('detail 中的 i18next 选项键（如 lng）不影响提示语言', () => {
+  it('独立句子：参数插值，嵌套的枚举译文生效', () => {
+    const msg = mesErrorMessage(
+      axErr(422, [item('lot', ErrorCode.LOT_TERMINAL, { status: 'merged' })]),
+      lotE
+    )
+    expect(msg).toContain(enumLabel('lot_status', 'merged'))
+  })
+
+  it('带行号时前缀“第 N 行”', () => {
+    const msg = mesErrorMessage(
+      axErr(422, [
+        item('lines.1.lot', ErrorCode.RECEIPT_LOT_ON_HOLD, {
+          lot: 'L1',
+          line: 2,
+        }),
+      ]),
+      lotE
+    )
+    expect(msg).toBe(
+      t('mes.err.withLine', {
+        line: 2,
+        text: text(ErrorCode.RECEIPT_LOT_ON_HOLD, { lot: 'L1' }),
+      })
+    )
+  })
+
+  it('没有错误码的项回退英文并加校验失败前缀', () => {
+    const msg = mesErrorMessage(
+      axErr(422, [{ loc: ['body', 'comment'], msg: 'comment: required' }]),
+      lotE
+    )
+    expect(msg).toContain(t('error.validation'))
+    expect(msg).toContain('comment')
+  })
+})
+
+describe('错误码文案齐全', () => {
+  it('每个后端错误码在中英日都有翻译', () => {
+    for (const l of [zh, en, ja])
+      for (const code of Object.values(ErrorCode))
+        expect(l.error[`code_${code}`], `code_${code}`).toBeTruthy()
+  })
+})
+
+describe('错误详情插值参数', () => {
+  it('取 params 与顶层标量字段，忽略 code / message / 结果列表', () => {
+    expect(
+      detailParams({
+        code: 1,
+        message: 'x',
+        results: [],
+        lot_code: 'L1',
+        hold_count: 3,
+        nested: { a: 1 },
+        params: { extra: 'y' },
+      })
+    ).toEqual({ lot_code: 'L1', hold_count: 3, extra: 'y' })
+  })
+
+  it('i18next 选项键（如 lng / defaultValue）不会被服务端参数覆盖', () => {
+    expect(
+      detailParams({ lng: 'ja', defaultValue: 'x', params: { context: 'c' } })
+    ).toEqual({})
     expect(
       mesCodeMessage(
         axErr(409, {
-          code: 'qtime_rule_in_use',
+          code: ErrorCode.QTIME_RULE_IN_USE,
           qtime_rule_code: 'QT-ETCH',
           hold_count: 3,
           lng: 'ja',
         })
       )
     ).toBe(
-      t('mes.err.code.qtime_rule_in_use', {
+      text(ErrorCode.QTIME_RULE_IN_USE, {
         qtime_rule_code: 'QT-ETCH',
         hold_count: 3,
       })

@@ -13,26 +13,40 @@ from typing import Any
 import sqlalchemy as sa
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.base import conn, now
 from app.core.spec.engine import TABLES
-from app.core.spec.errors import MesError
+from app.core.spec.errors import FieldError, MesError, fe
 
 TOKEN = re.compile(r"\{([A-Z0-9]+)(?::(\d+))?\}")
 KNOWN = {"YYYY", "YY", "MM", "DD", "JJJ", "SEQ", "SEQ36", "LOT", "SLOT"}
 B36 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 
-def check_pattern(pattern: str) -> list[tuple[str, str]]:
+def check_pattern(pattern: str) -> list[FieldError]:
     """校验编码模式，返回字段错误列表（未知占位符、缺少序号等）。"""
-    errs: list[tuple[str, str]] = []
+    errs: list[FieldError] = []
     tokens = [m.group(1) for m in TOKEN.finditer(pattern)]
     for tk in tokens:
         if tk not in KNOWN:
-            errs.append(("pattern", f"pattern: unknown token {{{tk}}}"))
+            errs.append(
+                fe(
+                    "pattern",
+                    ec.CODERULE_UNKNOWN_TOKEN,
+                    f"pattern: unknown token {{{tk}}}",
+                    token=f"{{{tk}}}",
+                )
+            )
     if not {"SEQ", "SEQ36", "SLOT"} & set(tokens):
-        errs.append(("pattern", "pattern: needs {SEQ}, {SEQ36} or {SLOT}"))
+        errs.append(
+            fe(
+                "pattern",
+                ec.CODERULE_NEEDS_SEQ,
+                "pattern: needs {SEQ}, {SEQ36} or {SLOT}",
+            )
+        )
     if re.sub(TOKEN, "", pattern).count("{") or re.sub(TOKEN, "", pattern).count("}"):
-        errs.append(("pattern", "pattern: unbalanced braces"))
+        errs.append(fe("pattern", ec.CODERULE_UNBALANCED, "pattern: unbalanced braces"))
     return errs
 
 
@@ -92,7 +106,15 @@ def render(
             case "SEQ":
                 s = str(seq).rjust(width, "0")
                 if len(s) > width:
-                    raise MesError([("seq", "sequence overflow for this period")])
+                    raise MesError(
+                        [
+                            fe(
+                                "seq",
+                                ec.CODERULE_SEQ_OVERFLOW,
+                                "sequence overflow for this period",
+                            )
+                        ]
+                    )
                 return s
             case "SEQ36":
                 return b36(seq, width)

@@ -6,10 +6,11 @@ from typing import Any
 from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.audit import audit
 from app.core.spec.base import now
 from app.core.spec.engine import ENTITIES
-from app.core.spec.errors import http_422
+from app.core.spec.errors import FieldError, coded, fe, http_422
 from app.core.spec.serialize import serialize
 from app.mes.common.query import one
 from app.mes.common.rows import _upd
@@ -55,7 +56,15 @@ def move_in(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any)
             s.commit()
             return _result(s, tid, lot_id, [], future_hold=fired)
     if ctx.equipment and ctx.equipment["unit_kind"] != "main":
-        raise http_422([("equipment_id", "equipment_id: select a main equipment unit")])
+        raise http_422(
+            [
+                fe(
+                    "equipment_id",
+                    ec.EQUIPMENT_NOT_MAIN,
+                    "equipment_id: select a main equipment unit",
+                )
+            ]
+        )
     results = ck.evaluate(
         ctx,
         user,
@@ -105,30 +114,56 @@ def track_in(
         return _result(s, tid, lot_id, [], qtime=q)
     ctx = build_ctx(s, tid, lot, "track_in", body)
     eq = ctx.equipment
-    errs: list[tuple[str, str]] = []
+    errs: list[FieldError] = []
     if not eq and ck.allowed_equipment_ids(ctx):
-        errs.append(("equipment_id", "equipment_id: required for track in"))
+        errs.append(
+            fe(
+                "equipment_id",
+                ec.EQUIPMENT_REQUIRED,
+                "equipment_id: required for track in",
+            )
+        )
     elif eq and (eq["unit_kind"] != "main" or not eq["is_active"]):
         errs.append(
-            ("equipment_id", "equipment_id: select an active main equipment unit")
+            fe(
+                "equipment_id",
+                ec.EQUIPMENT_NOT_MAIN,
+                "equipment_id: select an active main equipment unit",
+            )
         )
     for c in ctx.chambers:
         if not eq or c["parent_id"] != eq["id"] or c["unit_kind"] != "chamber":
             errs.append(
-                (
+                fe(
                     "chamber_ids",
+                    ec.CHAMBER_NOT_OF_EQUIPMENT,
                     f"chamber_ids: {c['code']} is not a chamber of the equipment",
+                    chamber=c["code"],
                 )
             )
         elif not c["is_active"]:
-            errs.append(("chamber_ids", f"chamber_ids: {c['code']} is inactive"))
+            errs.append(
+                fe(
+                    "chamber_ids",
+                    ec.CHAMBER_INACTIVE,
+                    f"chamber_ids: {c['code']} is inactive",
+                    chamber=c["code"],
+                )
+            )
     if not ctx.recipe and any(r["recipe_id"] for r in ctx.resources()):
-        errs.append(("recipe_id", "recipe_id: required at this step"))
+        errs.append(
+            fe("recipe_id", ec.RECIPE_REQUIRED, "recipe_id: required at this step")
+        )
     for fid in {r["fixture_id"] for r in ctx.resources("fixture") if r["fixture_id"]}:
         if not any(t["fixture_id"] == fid for t in ctx.tools):
             fx = one(s, tid, "fixture", fid)
             errs.append(
-                ("tool_ids", f"tool_ids: a {fx and fx['code']} tool is required")
+                fe(
+                    "tool_ids",
+                    ec.TOOL_REQUIRED,
+                    f"tool_ids: a {fx and fx['code']} tool is required",
+                    fixture=fx and fx["code"],
+                )
             )
     if errs:
         raise http_422(errs)
@@ -329,7 +364,7 @@ def preview(
     """预览阶段检查结果（不执行、不写日志）。"""
     lot = one(s, tid, "lot", lot_id)
     if not lot:
-        raise HTTPException(status_code=404, detail="Record not found")
+        raise coded(404, ec.RECORD_NOT_FOUND, "Record not found")
     ctx = build_ctx(s, tid, lot, stage, body)
     res = ck.evaluate(ctx, user, preview=True)
     s.commit()

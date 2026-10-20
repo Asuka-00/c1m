@@ -3,12 +3,12 @@
 import uuid
 from typing import Any
 
-from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.audit import audit
 from app.core.spec.engine import ENTITIES
-from app.core.spec.errors import http_422
+from app.core.spec.errors import coded, fe, http_422
 from app.mes.common.query import one
 from app.mes.common.rows import _upd
 from app.mes.execution.checks import service as ck
@@ -39,12 +39,23 @@ def set_priority(
     """
     lot = lock_lot(s, tid, lot_id)
     if lot["lot_status"] in TERMINAL:
-        raise http_422([("lot_status", f"lot_status: lot is {lot['lot_status']}")])
+        raise http_422(
+            [
+                fe(
+                    "lot_status",
+                    ec.LOT_TERMINAL,
+                    f"lot_status: lot is {lot['lot_status']}",
+                    status=lot["lot_status"],
+                )
+            ]
+        )
     pr = one(s, tid, "lot_priority", body.get("priority_id"))
     if not pr:
-        raise http_422([("priority_id", "priority_id: not found")])
+        raise http_422(
+            [fe("priority_id", ec.PRIORITY_NOT_FOUND, "priority_id: not found")]
+        )
     if pr["id"] == lot["priority_id"]:
-        raise HTTPException(409, "priority unchanged")
+        raise coded(409, ec.PRIORITY_UNCHANGED, "priority unchanged")
     old = one(s, tid, "lot_priority", lot["priority_id"])
     ctx = build_ctx(s, tid, lot, "priority", body)
     ctx.priority = pr

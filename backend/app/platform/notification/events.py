@@ -1,4 +1,4 @@
-"""通知事件类型注册表：业务模块在导入时登记事件（编码、三语名称、默认严重度、关联对象类型）。"""
+"""通知事件类型注册表：业务模块在导入时登记事件（编码、英文名称、默认严重度、关联对象类型）。"""
 
 from dataclasses import dataclass
 
@@ -11,7 +11,7 @@ class EventType:
 
     Attributes:
         code: 事件编码（如 ``mes.qtime_exceeded``）。
-        label: 三语名称 ``"en|zh|ja"``。
+        label: 英文名称（兜底；显示文案在前端 ``notify.event.<code>.label``）。
         severity: 默认严重度（info / warning / critical）。
         object_type: 关联对象类型（lot / equipment ...），用于跳转。
     """

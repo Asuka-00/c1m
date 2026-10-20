@@ -6,15 +6,17 @@ from datetime import UTC, datetime
 from typing import Annotated, Any
 
 import jwt
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Header, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core import security
 from app.core.config import settings
 from app.core.deps import SessionDep
+from app.core.spec.errors import coded
 from app.core.tenant import set_tenant
 from app.platform.auth.schemas import TokenPayload
 from app.platform.tenants.models import Tenant, TenantMember
@@ -43,9 +45,10 @@ def get_token_payload(token: TokenDep) -> TokenPayload:
         )
         return TokenPayload(**payload)
     except InvalidTokenError, ValidationError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Could not validate credentials",
+        raise coded(
+            status.HTTP_403_FORBIDDEN,
+            ec.COULD_NOT_VALIDATE_CREDENTIALS,
+            "Could not validate credentials",
         )
 
 
@@ -60,9 +63,9 @@ def get_current_user(session: SessionDep, token_data: TokenPayloadDep) -> User:
     """
     user = session.get(User, token_data.sub)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise coded(404, ec.USER_NOT_FOUND, "User not found")
     if not user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise coded(400, ec.INACTIVE_USER, "Inactive user")
     return user
 
 
@@ -76,8 +79,10 @@ def get_current_active_superuser(current_user: CurrentUser) -> User:
         HTTPException: 非超级用户（403）。
     """
     if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=403, detail="The user doesn't have enough privileges"
+        raise coded(
+            403,
+            ec.USER_PRIVILEGES_INSUFFICIENT,
+            "The user doesn't have enough privileges",
         )
     return current_user
 
@@ -94,8 +99,10 @@ def require_permissions(*codes: str) -> Callable[[User], User]:
 
     def checker(current_user: CurrentUser) -> User:
         if not has_permissions(current_user, *codes):
-            raise HTTPException(
-                status_code=403, detail="The user doesn't have enough privileges"
+            raise coded(
+                403,
+                ec.USER_PRIVILEGES_INSUFFICIENT,
+                "The user doesn't have enough privileges",
             )
         return current_user
 
@@ -124,15 +131,15 @@ def resolve_tenant(
     member = get_membership(session, tenant_id, user.id) if tenant else None
     if not tenant or (not member and not user.is_superuser and not impersonating):
         # 不暴露租户是否存在
-        raise HTTPException(status_code=404, detail="Tenant not found")
+        raise coded(404, ec.TENANT_NOT_FOUND, "Tenant not found")
     if tenant.status != "active" and not user.is_superuser:
-        raise HTTPException(status_code=403, detail="Tenant is suspended")
+        raise coded(403, ec.TENANT_IS_SUSPENDED, "Tenant is suspended")
     if tenant.expires_at and not user.is_superuser:
         exp = tenant.expires_at
         if exp.tzinfo is None:
             exp = exp.replace(tzinfo=UTC)
         if exp < datetime.now(UTC):
-            raise HTTPException(status_code=403, detail="Tenant has expired")
+            raise coded(403, ec.TENANT_HAS_EXPIRED, "Tenant has expired")
     set_tenant(session, tenant.id)
     perms = user_permission_codes(user) | member_permission_codes(member)
     if impersonating:  # 平台管理员以租户身份进入：等同租户所有者
@@ -155,8 +162,10 @@ def get_current_tenant(
     if token_data.imp and token_data.tid:  # 模拟令牌只能访问其绑定的租户
         tid = uuid.UUID(token_data.tid)
         if x_tenant_id is not None and x_tenant_id != tid:
-            raise HTTPException(
-                status_code=403, detail="Impersonation token is bound to another tenant"
+            raise coded(
+                403,
+                ec.IMPERSONATION_TENANT_MISMATCH,
+                "Impersonation token is bound to another tenant",
             )
         return resolve_tenant(session, current_user, tid, impersonating=True)
     tenant_id = x_tenant_id
@@ -169,9 +178,10 @@ def get_current_tenant(
             select(TenantMember).where(TenantMember.user_id == current_user.id)
         ).all()
         if len(memberships) != 1:
-            raise HTTPException(
-                status_code=400,
-                detail="X-Tenant-ID header is required (user belongs to multiple or no tenants)",
+            raise coded(
+                400,
+                ec.TENANT_HEADER_REQUIRED,
+                "X-Tenant-ID header is required (user belongs to multiple or no tenants)",
             )
         tenant_id = memberships[0].tenant_id
     return resolve_tenant(session, current_user, tenant_id)
@@ -188,8 +198,10 @@ def get_path_tenant(
 ) -> TenantContext:
     """从路径参数 ``{tenant_id}`` 解析租户（用于租户管理接口）。"""
     if token_data.imp and token_data.tid != str(tenant_id):
-        raise HTTPException(
-            status_code=403, detail="Impersonation token is bound to another tenant"
+        raise coded(
+            403,
+            ec.IMPERSONATION_TENANT_MISMATCH,
+            "Impersonation token is bound to another tenant",
         )
     return resolve_tenant(
         session, current_user, tenant_id, impersonating=token_data.imp
@@ -202,8 +214,10 @@ PathTenant = Annotated[TenantContext, Depends(get_path_tenant)]
 def _tenant_checker(dep: Any, codes: tuple[str, ...]) -> Callable[..., TenantContext]:
     def checker(ctx: TenantContext = Depends(dep)) -> TenantContext:
         if not ctx.can(*codes):
-            raise HTTPException(
-                status_code=403, detail="The user doesn't have enough privileges"
+            raise coded(
+                403,
+                ec.USER_PRIVILEGES_INSUFFICIENT,
+                "The user doesn't have enough privileges",
             )
         return ctx
 
@@ -282,9 +296,10 @@ def require_platform_access(
         HTTPException: 模拟令牌或缺少权限（403）。
     """
     if token_data.imp:
-        raise HTTPException(
-            status_code=403,
-            detail="Exit tenant impersonation to use the platform console",
+        raise coded(
+            403,
+            ec.EXIT_IMPERSONATION_FIRST,
+            "Exit tenant impersonation to use the platform console",
         )
     if current_user.is_superuser:
         return current_user
@@ -293,8 +308,10 @@ def require_platform_access(
     from app.platform.rbac.service import has_permissions
 
     if code is None or not has_permissions(current_user, code):
-        raise HTTPException(
-            status_code=403, detail="The user doesn't have enough privileges"
+        raise coded(
+            403,
+            ec.USER_PRIVILEGES_INSUFFICIENT,
+            "The user doesn't have enough privileges",
         )
     return current_user
 

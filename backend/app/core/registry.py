@@ -22,7 +22,7 @@ class Module:
 
     Attributes:
         name: 模块名，如 ``mes.lot``。
-        perm_modules: 规格权限模块 ``{编码: ("en|zh|ja" 标签, 排序)}``，各生成 ``mes.<编码>:read/write``。
+        perm_modules: 规格权限模块 ``{编码: (英文标签, 排序)}``，各生成 ``mes.<编码>:read/write``。
         permissions: 额外的租户权限 ``{编码: 描述}``。
         specs: 为副作用导入的模块（实体规格、CRUD 校验器）。
         routers: ``"pkg.mod:attr"`` 形式的路由引用，按此顺序挂载。
@@ -34,7 +34,7 @@ class Module:
     """
 
     name: str
-    #: spec permission modules: code -> ("en|zh|ja" label, sort order); each
+    #: spec permission modules: code -> (English label, sort order); each
     #: yields ``mes.<code>:read`` / ``mes.<code>:write``
     perm_modules: dict[str, tuple[str, int]] = field(default_factory=dict)
     #: extra tenant permission codes -> description

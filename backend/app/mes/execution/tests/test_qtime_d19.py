@@ -15,6 +15,7 @@ from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import make_url
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.config import settings
 from app.mes.execution.tests.test_exec import EXEC, Line
 
@@ -100,7 +101,7 @@ def test_qt_02_moved_in_overdue_sweep_holds_and_track_in_rejected(
     assert h["source"] == "qtime" and h["reason"] == "qtime_expired"
     _assert_qf(f, h, rule)
     d = f.stage(lot, "track_in", 422, **_eq(f))["detail"]
-    assert d["code"] == "on_hold"
+    assert d["code"] == ec.ON_HOLD
     assert len(_list(f, lot)) == 1  # 不重复挂
 
 
@@ -122,7 +123,7 @@ def test_qt_07_track_in_overdue_rejected_and_held(
     assert h["source"] == "qtime" and h["hold_type"] == "auto"
     _assert_qf(f, h, rule)
     d = f.stage(lot, "track_in", 422, **_eq(f))["detail"]
-    assert d["code"] == "on_hold" and d["lot_code"] == lot["code"]
+    assert d["code"] == ec.ON_HOLD and d["lot_code"] == lot["code"]
     assert len(_list(f, lot)) == 1
 
 
@@ -183,7 +184,7 @@ def test_qf_02_manual_and_legacy_holds_fields_null(
         d = _detail(f, h["id"])
         assert all(d[k] is None for k in QF) and d["lot"] == lot["code"]
     d = _detail(f, str(uuid.uuid4()), 404)["detail"]
-    assert d["code"] == "hold_not_found" and d["message"]
+    assert d["code"] == ec.HOLD_NOT_FOUND and d["message"]
 
 
 # ---------------- QF-03 迁移可重复执行、可回滚 ----------------
@@ -369,7 +370,7 @@ def test_qr_01_delete_referenced_qtime_rule_409(
     r = f.c.delete(f.m.url("qtime_rule", rule["id"]), headers=f.m.h)
     assert r.status_code == 409, r.text
     d = r.json()["detail"]
-    assert d["code"] == "qtime_rule_in_use" and d["qtime_rule_id"] == rule["id"]
+    assert d["code"] == ec.QTIME_RULE_IN_USE and d["qtime_rule_id"] == rule["id"]
     assert d["message"] and d["hold_count"] == 1
     assert _detail(f, h["id"])["qtime_rule_id"] == rule["id"]
     got = f.m.list("qtime_rule", code=rule["code"])["data"]
@@ -470,8 +471,6 @@ def test_d25_invalid_reason_still_422(client: TestClient, db: Session) -> None:
 
 def test_d25_form_meta_matches_validation(client: TestClient, db: Session) -> None:
     """D25/D26：表单元数据：处置无 scrap，原因码选填（有说明），与校验一致。"""
-    import json
-
     import app
 
     f = Line(client, db)
@@ -481,8 +480,9 @@ def test_d25_form_meta_matches_validation(client: TestClient, db: Session) -> No
     assert not fr["required_when"] and fr["help"]
     acts = meta["enums"]["qtime_action"]
     assert acts == ["warn", "hold", "rework"]
-    p = Path(app.__file__).parents[2] / "frontend/src/i18n/locales/mes/zh-CN.json"
-    assert "qtime_expired" in json.dumps(json.loads(p.read_text()), ensure_ascii=False)
+    # 系统原因码 qtime_expired 的各语言名称在前端语言包（modules/mes/execution.yaml）
+    p = Path(app.__file__).parents[2] / "frontend/src/i18n/locales/zh-CN/modules/mes"
+    assert "qtime_expired" in (p / "execution.yaml").read_text(encoding="utf-8")
     # 校验与元数据一致：hold / rework 缺原因码 200
     f.m.post("qtime_rule", _rule_body(f, reason_id=None))
     f.m.post("qtime_rule", _rule_body(f, action="rework", reason_id=None))
@@ -495,12 +495,14 @@ def test_d26_scrap_action_rejected(client: TestClient, db: Session) -> None:
     r = f.c.post(f.m.url("qtime_rule"), headers=f.m.h, json=body)
     assert r.status_code == 422, r.text
     d = r.json()["detail"]
-    assert d["code"] == "qtime_action_invalid" and d["message"]
+    assert d["code"] == ec.QTIME_ACTION_INVALID and d["message"]
     ok = f.m.post("qtime_rule", _rule_body(f, reason_id=None))
     r = f.c.patch(
         f.m.url("qtime_rule", ok["id"]), headers=f.m.h, json={"action": "scrap"}
     )
-    assert r.status_code == 422 and r.json()["detail"]["code"] == "qtime_action_invalid"
+    assert (
+        r.status_code == 422 and r.json()["detail"]["code"] == ec.QTIME_ACTION_INVALID
+    )
 
 
 def _m0011() -> Any:

@@ -3,12 +3,12 @@
 import uuid
 from typing import Any
 
-from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.base import now
 from app.core.spec.engine import ENTITIES
-from app.core.spec.errors import http_422
+from app.core.spec.errors import coded, fe, http_422
 from app.core.spec.serialize import serialize, to_json
 from app.mes.common.query import find, one
 from app.mes.execution.checks import service as ck
@@ -32,12 +32,14 @@ def build_ctx(s: Session, tid: uuid.UUID, lot: Row, trigger: str, body: Row) -> 
     """根据批次、触发点与请求载荷构建检查上下文。"""
     step = one(s, tid, "route_step", lot["current_step_id"])
     if not step:
-        raise http_422([("lot", "lot: no current step")])
+        raise http_422([fe("lot", ec.NO_CURRENT_STEP, "lot: no current step")])
     xc = lot.get("exec_ctx") or {}
     eq_id = body.get("equipment_id") or lot.get("equipment_id")
     eq = one(s, tid, "equipment", eq_id)
     if eq_id and not eq:
-        raise http_422([("equipment_id", "equipment_id: not found")])
+        raise http_422(
+            [fe("equipment_id", ec.EQUIPMENT_NOT_FOUND_2, "equipment_id: not found")]
+        )
     rc = one(s, tid, "recipe", body.get("recipe_id") or lot.get("recipe_id"))
     rt = one(s, tid, "reticle", body.get("reticle_id") or xc.get("reticle_id"))
     car = one(s, tid, "carrier", body.get("carrier_id") or lot.get("carrier_id"))
@@ -83,7 +85,7 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
     """
     lot = one(s, tid, "lot", lot_id)
     if not lot:
-        raise HTTPException(status_code=404, detail="Record not found")
+        raise coded(404, ec.RECORD_NOT_FOUND, "Record not found")
     step = one(s, tid, "route_step", lot["current_step_id"])
     out: Row = {
         "lot": serialize(s, tid, LOT, [lot])[0],

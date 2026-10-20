@@ -7,15 +7,18 @@ import sqlalchemy as sa
 from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import TABLES
-from app.core.spec.errors import http_422
+from app.core.spec.errors import fe, http_422
 from app.mes.common.query import find, one
 from app.mes.common.rows import _upd
 from app.mes.execution.carrier import event
 from app.mes.execution.checks import service as ck
+from app.mes.execution.checks.types import M_HOLD
 from app.mes.execution.sm_rules import (
+    M_SMR,
     SPLIT_STATES,
     _carrier_cap,
     _evaluate,
@@ -37,7 +40,7 @@ Row = dict[str, Any]
 # ---------------- merge ----------------
 def merge_problems(
     target: Row, src: Row, rule: Row | None, src_rule: Row | None = None
-) -> list[str]:
+) -> list[ck.Msg]:
     """检查源批次能否合入目标批次。
 
     校验同产品、同路线及版本、同工步与阶段、同工单（规则允许时除外）、均未 Hold，
@@ -47,39 +50,39 @@ def merge_problems(
         不满足的原因列表（为空表示可合批）。
     """
     c = src["code"]
-    p: list[str] = []
+    p: list[ck.Msg] = []
     if src["id"] == target["id"]:
-        return [f"{c}: cannot merge a lot into itself"]
+        return [M_SMR("self", lot=c)]
     if src["lot_status"] not in SPLIT_STATES:
-        p.append(f"{c}: cannot merge a {src['lot_status']} lot")
-    for f, label in (
-        ("product_id", "product"),
-        ("route_id", "route / route version"),
-        ("current_step_id", "route step"),
-        ("lot_status", "stage"),
-        ("tracking_level", "tracking level"),
+        p.append(M_SMR("src_status", lot=c, status=src["lot_status"]))
+    for f, key in (
+        ("product_id", "diff_product"),
+        ("route_id", "diff_route"),
+        ("current_step_id", "diff_step"),
+        ("lot_status", "diff_stage"),
+        ("tracking_level", "diff_tracking"),
     ):
         if src[f] != target[f]:
-            p.append(f"{c}: different {label}")
+            p.append(M_SMR(key, lot=c))
     if (src.get("route_stack") or []) != (target.get("route_stack") or []):
-        p.append(f"{c}: different sub-route / rework frame")
+        p.append(M_SMR("diff_frame", lot=c))
     if (
         rule
         and rule.get("merge_same_wo", True)
         and src["work_order_id"] != target["work_order_id"]
     ):
-        p.append(f"{c}: different work order")
+        p.append(M_SMR("diff_wo", lot=c))
     if (
         rule
         and rule.get("merge_same_priority")
         and src["priority_id"] != target["priority_id"]
     ):
-        p.append(f"{c}: different priority")
+        p.append(M_SMR("diff_priority", lot=c))
     # 源批次自身批次类型的规则也必须允许合批
     if src_rule is None:
-        p.append(f"{c}: no split/merge rule for its lot type")
+        p.append(M_SMR("src_no_rule", lot=c))
     elif not src_rule["allow_merge"]:
-        p.append(f"{c}: rule {src_rule['code']} does not allow merge")
+        p.append(M_SMR("src_no_merge", lot=c, rule=src_rule["code"]))
     return p
 
 
@@ -109,12 +112,20 @@ def merge_candidates(s: Session, tid: uuid.UUID, target: Row) -> list[Row]:
             "qty": r["qty"],
             "on_hold": r["on_hold"],
             "priority": _prio_json(_prio(s, tid, r["priority_id"])),
-            "problems": merge_problems(
-                target, dict(r), rule, rule_for(s, tid, dict(r))
+            **_problems(
+                merge_problems(target, dict(r), rule, rule_for(s, tid, dict(r)))
             ),
         }
         for r in rows
     ]
+
+
+def _problems(ps: list[ck.Msg]) -> Row:
+    """合批候选的问题：英文文本 + 消息键 / 参数（前端按 mes.checkMsg.* 翻译）。"""
+    return {
+        "problems": [x.text for x in ps],
+        "problem_parts": [{"key": x.key, "params": x.params} for x in ps],
+    }
 
 
 def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -> Row:
@@ -140,13 +151,15 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
     """
     ids = [str(x) for x in body.get("source_lot_ids") or []]
     if not ids:
-        raise http_422([("source_lot_ids", "source_lot_ids: pick lots to merge")])
+        raise http_422(
+            [fe("source_lot_ids", ec.MERGE_PICK, "source_lot_ids: pick lots to merge")]
+        )
     dup = sorted({x for x in ids if ids.count(x) > 1})
     if dup or str(lot_id) in ids:  # P14：不静默去重
         raise HTTPException(
             status_code=422,
             detail={
-                "code": "merge_source_invalid",
+                "code": ec.MERGE_SOURCE_INVALID,
                 "message": "source_lot_ids: duplicate lots or the target lot itself",
                 "duplicates": dup,
                 "includes_target": str(lot_id) in ids,
@@ -157,7 +170,16 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
         try:
             src_ids.append(uuid.UUID(x))
         except ValueError:
-            raise http_422([("source_lot_ids", f"source_lot_ids: {x} not found")])
+            raise http_422(
+                [
+                    fe(
+                        "source_lot_ids",
+                        ec.MERGE_LOT_NOT_FOUND,
+                        f"source_lot_ids: {x} not found",
+                        lots=x,
+                    )
+                ]
+            )
     # 目标与源批次按 id 升序一次加锁，避免反向合批互相等待造成死锁
     try:
         locked = lock_lots(s, tid, [lot_id, *src_ids])
@@ -166,7 +188,14 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
             raise
         missing = [str(x) for x in src_ids if not one(s, tid, "lot", x)]
         raise http_422(
-            [("source_lot_ids", f"source_lot_ids: {', '.join(missing)} not found")]
+            [
+                fe(
+                    "source_lot_ids",
+                    ec.MERGE_LOT_NOT_FOUND,
+                    f"source_lot_ids: {', '.join(missing)} not found",
+                    lots=", ".join(missing),
+                )
+            ]
         )
     target = locked[uuid.UUID(str(lot_id))]
     srcs = [locked[x] for x in src_ids]
@@ -177,7 +206,7 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
         check_transition(src, "merge_source")
         if src["lot_status"] != target["lot_status"]:
             raise lot_error(
-                "lot_status",
+                ec.LOT_STATUS,
                 f"{src['code']} is {src['lot_status']}, "
                 f"target is {target['lot_status']}",
                 src,
@@ -186,13 +215,13 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
                 target_status=target["lot_status"],
             )
     rule = rule_for(s, tid, target)
-    errs: list[str] = []
+    errs: list[ck.Msg] = []
     if target["lot_status"] not in SPLIT_STATES:
-        errs.append(f"cannot merge into a {target['lot_status']} lot")
+        errs.append(M_SMR("merge_status", status=target["lot_status"]))
     if not rule:
-        errs.append("no split/merge rule for the lot type")
+        errs.append(M_SMR("no_rule"))
     elif not rule["allow_merge"]:
-        errs.append(f"rule {rule['code']}: merge not allowed")
+        errs.append(M_SMR("merge_not_allowed", rule=rule["code"]))
     for src in srcs:
         errs += merge_problems(target, src, rule, rule_for(s, tid, src))
     qty_mode = (target["tracking_level"] or "wafer") == "quantity"
@@ -200,14 +229,14 @@ def merge(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
     if target["carrier_id"] and not qty_mode:
         car, cap = _carrier_cap(s, tid, target["carrier_id"])
         if cap and total > cap:
-            errs.append(f"{total} exceeds carrier {car['code']} capacity {cap}")
+            errs.append(M_SMR("capacity", total=total, carrier=car["code"], cap=cap))
     held = [x["code"] for x in [target, *srcs] if x["on_hold"]]
     extra = [
-        _rule_result(errs, "merge allowed"),
+        _rule_result(errs, M_SMR("merge_ok")),
         ck.result(
             "lot_hold",
             "fail" if held else "pass",
-            f"on hold: {', '.join(held)}" if held else "no lot on hold",
+            M_HOLD("held", lots=", ".join(held)) if held else M_HOLD("none_held"),
             overridable=False,
         ),
     ]

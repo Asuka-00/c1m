@@ -1,0 +1,120 @@
+mes:
+  entity:
+    measurement_item: 測定項目
+    dc_plan: データ収集計画
+    dc_plan_item: 収集項目
+    sampling_rule: サンプリング規則
+    defect_code: 欠陥コード
+    reason_code: 理由コード
+    dc_result: 測定データ
+  field:
+    measurement_item:
+      code: コード
+      name: 名称
+      meas_type: データ型
+      uom: 単位
+      precision: 小数桁
+      oos_action: 規格外処置
+      oos_reason: 規格外ホールド理由
+      description: 説明
+    dc_plan:
+      code: コード
+      name: 名称
+      operation: 工程
+      description: 説明
+    dc_plan_item:
+      dc_plan: データ収集計画
+      measurement_item: 測定項目
+      seq: 順番
+      sites: ウェーハ当たり測定点
+      target: 目標値
+      lsl: 規格下限
+      usl: 規格上限
+    sampling_rule:
+      code: コード
+      name: 名称
+      level: レベル
+      operation: 工程
+      dc_plan: データ収集計画
+      product: 製品
+      lot_frequency: N ロット毎
+      wafer_count: ロット当たり枚数
+      wafer_selection: ウェーハ選択
+      fixed_slots: 固定スロット
+      is_active: 有効
+      description: 説明
+    defect_code:
+      code: コード
+      name: 名称
+      category: カテゴリ
+      severity: 重大度
+      is_killer: キラー欠陥
+      description: 説明
+    reason_code:
+      code: コード
+      name: 名称
+      reason_type: 理由種別
+      area: エリア
+      comment_required: コメント必須
+      is_active: 有効
+      description: 説明
+    dc_result:
+      lot: ロット
+      unit: ウェーハ・ユニット
+      route_step: ルートステップ
+      dc_plan: データ収集計画
+      measurement_item: 測定項目
+      site_no: 測定点
+      value: 値
+      is_oos: 規格外
+      oos_action: 規格外処置
+      username: ユーザー
+  help:
+    sampling_rule:
+      fixed_slots: カンマ区切りのスロット番号（例：1,13,25）
+  enum:
+    child_id_mode:
+      suffix: 親番号 + 接尾辞
+      code_rule: ロットタイプ ID ルール
+    meas_type:
+      numeric: 数値
+      attribute: 属性（合否）
+      count: 計数
+    sample_level:
+      lot: ロット
+      wafer: ウェーハ
+    wafer_selection:
+      first: 先頭 N 枚
+      last: 末尾 N 枚
+      random: ランダム
+      alternate: 交互スロット
+      fixed: 固定スロット
+    defect_category:
+      particle: パーティクル
+      scratch: スクラッチ
+      pattern: パターン欠陥
+      residue: 残渣
+      electrical: 電気特性
+      other: その他
+    severity:
+      minor: 軽微
+      major: 重大
+      critical: 致命的
+    reason_type:
+      scrap: スクラップ
+      rework: リワーク
+      hold: ホールド
+      e10: 設備状態変更
+      downtime: 設備停止
+      release: リリース
+      jump: ステップジャンプ
+      bonus: 追加
+    oos_action:
+      warn: 警告
+      rework: リワーク
+      auto_hold: 自動ホールド
+      block: トラックアウト禁止
+    qtime_action:
+      warn: 警告
+      hold: ロットをホールド
+      rework: リワーク

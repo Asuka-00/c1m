@@ -1,0 +1,192 @@
+mes:
+  clear: Clear
+  editTitle: Edit {{entity}}
+  newTitle: New {{entity}}
+  versionInfo: Version {{version}} (draft)
+  formDesc: Fields marked * are required.
+  customAttrs: Custom attributes
+  allOf: 'All: {{field}}'
+  saved: Saved
+  deleted: Deleted
+  statusChanged: Status changed
+  versionCreated: Draft version {{version}} created
+  imported: 'Imported: {{created}} created, {{updated}} updated'
+  importFailed: Import failed — nothing was saved
+  importRow: 'Row {{row}}: {{msg}}'
+  version: Version
+  at: Time
+  details: Details
+  versionActions: Version actions
+  activate: Activate
+  deactivate: Deactivate
+  newVersion: New version (copy)
+  treeView: Tree view
+  tableView: Table view
+  export: Export
+  import: Import
+  new: New
+  empty: No {{entity}} yet.
+  deleteTitle: Delete {{entity}}?
+  deleteDesc: “{{name}}” will be deleted. This cannot be undone.
+  detailDesc: Related data of this record.
+  pattern: Pattern
+  sampleLot: Sample lot ID
+  previewHint: Preview only — no numbers are reserved.
+  panel:
+    code_rule: Preview
+    uom: Converter
+    route: Flow diagram
+    lot_type: ID preview
+    lot: Lot & route
+  noLotRule: No lot ID rule assigned.
+  nextLotId: Next lot ID
+  waferIds: Wafer IDs
+  err:
+    required: Required
+    requiredWhen: Required when {{cond}} is {{value}}
+    isSet: set
+    defaultsFrom: Leave blank to use {{field}}
+    code:
+      lot_status_is: The lot is {{status}}; this action is not allowed
+      lot_status_stage: A {{status}} lot cannot {{stage}}
+      lot_status: The lot status does not allow this action
+    withLine: 'Line {{line}}: {{text}}'
+  exportHint: Export rows matching the current search and filters
+  fieldIs: '{{field}}: {{value}}'
+  treeToggle: Expand / collapse
+  tree:
+    all: All {{name}}
+    expand: Expand
+    collapse: Collapse
+  module:
+    common: Common
+    equipment: Equipment
+    exec: Execution
+    inventory: Line-side material & tools
+    check: Checks
+    org: Organization
+    lot: Lot & wafer rules
+    wo: Work orders
+    process: Process
+    product: Product & material
+    quality: Quality
+    wh: Warehouse
+  entity:
+    dict_type: Dictionary
+    dict_item: Dictionary item
+    code_rule: Code rule
+    attr_def: Custom attribute
+    audit_log: Audit log
+  field:
+    dict_type:
+      code: Code
+      name: Name
+      is_active: Active
+      description: Description
+    dict_item:
+      code: Code
+      name: Name
+      dict_type: Dictionary
+      value: Value
+      color: Color
+      sort_order: Sort order
+      is_active: Active
+      description: Description
+    code_rule:
+      code: Code
+      name: Name
+      target: Applies to
+      pattern: Pattern
+      seq_width: Sequence width
+      seq_start: Sequence start
+      seq_reset: Reset
+      description: Description
+    attr_def:
+      code: Code
+      name: Name
+      entity_type: Entity
+      data_type: Data type
+      required: Required
+      options: Options (comma separated)
+      dict_type: Options from dictionary
+      sort_order: Sort order
+      description: Description
+    audit_log:
+      entity_type: Entity
+      action: Action
+      record_id: Record id
+      record_code: Record
+      changes: Changes
+      username: User
+  help:
+    code_rule:
+      pattern: 'Tokens: {YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}'
+  enum:
+    status:
+      draft: Draft
+      active: Active
+      inactive: Inactive
+    audit_action:
+      create: Create
+      update: Update
+      delete: Delete
+      status: Status change
+      import: Import
+      new_version: New version
+      release: Release
+      hold: Hold
+      resume: Resume
+      complete: Complete
+      submit: Submit
+      confirm: Confirm
+      reject: Reject
+      receive: Receive
+      close: Close
+      cancel: Cancel
+      start: Lot start
+      undo_start: Undo start
+      move_in: Move in
+      track_in: Track in
+      track_out: Track out
+      move_out: Move out
+      override: Check override
+      split: Split
+      qtime_rework: Q-Time rework
+      merge: Merge
+      e10: E10 state change
+    seq_reset:
+      never: Never
+      daily: Daily
+      monthly: Monthly
+      yearly: Yearly
+    code_target:
+      lot: Lot ID
+      wafer: Wafer ID
+      carrier: Carrier ID
+      material: Material lot
+      equipment: Equipment ID
+      work_order: Work order no.
+      receipt: Receipt no.
+      unit: Unit serial no.
+      other: Other
+    attr_type:
+      string: Text
+      number: Number
+      boolean: Yes/No
+      date: Date
+      select: Select
+    area_type:
+      fab: Fab (front-end)
+      cleanroom: Clean room
+      test: Test / probe
+      assembly: Assembly
+      warehouse: Warehouse
+      facility: Facility
+    wc_kind:
+      bay: Bay
+      workcenter: Work center
+      cell: Cell
+    day_type:
+      workday: Workday
+      holiday: Holiday
+      maintenance: Maintenance

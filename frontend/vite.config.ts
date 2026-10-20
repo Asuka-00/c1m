@@ -1,10 +1,23 @@
 /// <reference types="vitest/config" />
 import path from 'path'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import { playwright } from '@vitest/browser-playwright'
+import YAML from 'yaml'
+
+/** 把 `.yaml` 语言包编译为 JS 对象（locales/<语言>/**.yaml）。 */
+const yamlLocales = (): Plugin => ({
+  name: 'yaml-locales',
+  transform(code, id) {
+    if (!id.endsWith('.yaml')) return null
+    return {
+      code: `export default ${JSON.stringify(YAML.parse(code))}`,
+      map: null,
+    }
+  },
+})
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -15,6 +28,7 @@ export default defineConfig({
     }),
     react(),
     tailwindcss(),
+    yamlLocales(),
   ],
   resolve: {
     alias: {

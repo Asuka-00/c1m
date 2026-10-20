@@ -1,0 +1,85 @@
+notify:
+  bell: 通知
+  title: 通知
+  unreadCount: '{{count}} 条未读'
+  markAllRead: 全部标为已读
+  empty: 暂无通知
+  viewAll: 在消息中心查看全部
+  center: 消息中心
+  centerDesc: 您订阅的事件产生的通知
+  search: 搜索标题或对象…
+  allTypes: 全部类型
+  allRead: 全部已读状态
+  allSeverities: 全部级别
+  unread: 未读
+  read: 已读
+  time: 时间
+  severityCol: 级别
+  type: 事件类型
+  content: 内容
+  object: 关联对象
+  open: 打开
+  readAt: 阅读时间
+  severity:
+    info: 提示
+    warning: 警告
+    critical: 严重
+  sub:
+    title: 通知订阅
+    desc: 配置各事件类型通知哪些角色 / 用户
+    new: 新建订阅
+    edit: 编辑订阅
+    delete: 删除订阅
+    deleteDesc: 确定删除订阅“{{name}}”？
+    created: 订阅已创建
+    updated: 订阅已更新
+    deleted: 订阅已删除
+    search: 搜索名称…
+    allStatus: 全部状态
+    enabled: 启用
+    disabled: 停用
+    name: 名称
+    roles: 角色
+    users: 用户
+    channels: 渠道
+    status: 状态
+  channel:
+    in_app: 站内
+  event:
+    mes:
+      qtime_warn:
+        label: Q-Time 预警
+        title: 批次 {{lot}} 的 Q-Time {{rule}} 将在 {{left}} 分钟后超时
+      qtime_exceeded:
+        label: Q-Time 超时
+        title: 批次 {{lot}} 的 Q-Time {{rule}} 已超时：{{minutes}} > {{max}} 分钟（{{action}}）
+      lot_hold:
+        label: 批次自动 Hold
+        title: 批次 {{lot}} 被自动 Hold（{{source}}）：{{reason}}
+      oos:
+        label: 超规（OOS）
+        title: 批次 {{lot}} 在工步 {{step}} 超规：{{items}}（{{action}}）
+      pm_due:
+        label: PM 即将到期
+        title: 设备 {{equipment}} 的 PM {{plan}} 即将到期
+      pm_overdue:
+        label: PM 已超期
+        title: 设备 {{equipment}} 的 PM {{plan}} 已超期
+      eqp_down:
+        label: 设备宕机
+        title: 设备 {{equipment}} 宕机：{{state}} {{state_name}}
+      downtime:
+        label: 停机记录
+        title: 设备 {{equipment}} 登记停机：{{reason}}
+      wo_due:
+        label: 工单临近交期
+        title: 工单 {{wo}} 临近交期 {{due}}（进度 {{progress}}%）
+      wo_overdue:
+        label: 工单逾期
+        title: 工单 {{wo}} 已逾期 {{days}} 天（交期 {{due}}）
+      qual_expiring:
+        label: 资质即将到期
+        title: '{{user}} 的 {{operation}} 资质将于 {{date}} 到期'
+      qual_expired:
+        label: 资质已过期
+        title: '{{user}} 的 {{operation}} 资质已于 {{date}} 过期'

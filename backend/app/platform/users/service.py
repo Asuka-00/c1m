@@ -2,9 +2,12 @@
 
 from typing import Any
 
+from fastapi import HTTPException
 from sqlmodel import Session, func, select
 
+from app.core import error_codes as ec
 from app.core.security import get_password_hash, verify_password
+from app.core.spec.errors import coded
 from app.platform.rbac.permissions import ADMIN_ROLE, DEFAULT_USER_ROLE
 from app.platform.rbac.service import assign_role
 from app.platform.users.models import User
@@ -78,7 +81,7 @@ def identity_conflict(
     username: str | None,
     email: str | None,
     exclude_id: Any = None,
-) -> str | None:
+) -> HTTPException | None:
     """用户名 / 邮箱重复检查（用户名不区分大小写；邮箱仅在填写时检查）。
 
     Args:
@@ -88,18 +91,20 @@ def identity_conflict(
         exclude_id: 排除的用户 id（更新自身时）。
 
     Returns:
-        冲突时的错误信息（前端按 backend.<detail> 翻译），否则 None。
+        冲突时的 409 错误（带错误码），否则 None。
     """
     if username:
         other = get_user_by_username(session=session, username=username)
         if other and other.id != exclude_id:
-            return "User with this username already exists"
+            return coded(
+                409, ec.USERNAME_EXISTS, "User with this username already exists"
+            )
     if email:
         other = session.exec(
             select(User).where(func.lower(User.email) == email.lower())
         ).first()
         if other and other.id != exclude_id:
-            return "User with this email already exists"
+            return coded(409, ec.EMAIL_EXISTS, "User with this email already exists")
     return None
 
 

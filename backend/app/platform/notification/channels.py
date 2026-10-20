@@ -29,7 +29,7 @@ class InAppChannel:
     """站内渠道：为每个接收人写一行未读记录（同一通知同一用户只写一次）。"""
 
     code = "in_app"
-    label = "In-app|站内|アプリ内"
+    label = "In-app"
 
     def deliver(
         self, session: Session, note: Notification, user_ids: set[uuid.UUID]

@@ -38,7 +38,9 @@ def sampling(s: Session, tid: uuid.UUID, lot: Row, step: Row, us: list[Row]) -> 
         us: 批次单元。
 
     Returns:
-        ``{sampled, items, unit_ids, message}``；无工序 / 无计划时 ``unit_ids`` 为空列表。
+        ``{sampled, items, unit_ids, message, reason, reason_params}``；无工序 / 无计划时
+        ``unit_ids`` 为空列表。``reason`` 为判定原因码（no_operation / no_plan / every_lot /
+        rule_sampled / rule_skipped），前端按码翻译，``message`` 为英文兜底。
     """
     op_id = step["operation_id"]
     if not op_id:
@@ -47,6 +49,7 @@ def sampling(s: Session, tid: uuid.UUID, lot: Row, step: Row, us: list[Row]) -> 
             "items": [],
             "unit_ids": [],
             "message": "no operation",
+            "reason": "no_operation",
         }
     rules = [
         r
@@ -61,8 +64,15 @@ def sampling(s: Session, tid: uuid.UUID, lot: Row, step: Row, us: list[Row]) -> 
         else None
     ) or dc_plan_for(s, tid, op_id)
     if not plan:
-        return {"sampled": False, "items": [], "unit_ids": [], "message": "no DC plan"}
+        return {
+            "sampled": False,
+            "items": [],
+            "unit_ids": [],
+            "message": "no DC plan",
+            "reason": "no_plan",
+        }
     sampled, unit_ids, msg = True, [], "every lot (no sampling rule)"
+    reason, params = "every_lot", {}
     if rule:
         h = TABLES["lot_history"]
         n = (
@@ -81,6 +91,8 @@ def sampling(s: Session, tid: uuid.UUID, lot: Row, step: Row, us: list[Row]) -> 
         freq = max(1, rule["lot_frequency"] or 1)
         sampled = n % freq == 0
         msg = f"rule {rule['code']}: lot {n + 1}, every {freq} → {'sampled' if sampled else 'skipped'}"
+        reason = "rule_sampled" if sampled else "rule_skipped"
+        params = {"rule": rule["code"], "n": n + 1, "freq": freq}
         if sampled and rule["level"] == "wafer" and us:
             k = min(len(us), rule["wafer_count"] or 1)
             sel = rule["wafer_selection"] or "first"
@@ -128,6 +140,8 @@ def sampling(s: Session, tid: uuid.UUID, lot: Row, step: Row, us: list[Row]) -> 
         "unit_ids": unit_ids,
         "items": items,
         "message": msg,
+        "reason": reason,
+        "reason_params": params,
     }
 
 

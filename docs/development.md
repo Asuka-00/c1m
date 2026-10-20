@@ -19,7 +19,7 @@ backend/
     tests/           架构（导入规则）测试
     alembic/         数据库迁移
   conftest.py        共享 pytest fixtures（独立测试库 app_test）
-  scripts/           prestart、DB 角色、演示数据、i18n 导出、测试、lint
+  scripts/           prestart、DB 角色、演示数据、i18n code 清单导出、测试、lint
 frontend/
   src/
     features/
@@ -29,7 +29,7 @@ frontend/
       shell/         dashboard、errors、dynamic（菜单 component → 页面 的动态注册表）
     components/      通用组件（shadcn/ui、布局、CRUD、描述列表）
     lib/api/         client / request / types / hooks；platform/*、mes/{common,process,planning,execution}
-    i18n/locales/    zh-CN / ja / en 文案（mes/ 为规格导出）
+    i18n/locales/    zh-CN / ja / en 文案，按领域拆分的 YAML（common、error、menu、modules/…）
 ```
 
 ### 后端模块约定
@@ -82,7 +82,7 @@ core  <-  platform.*  <-  mes.common  <-  mes.<domain>  <-  mes.execution
 
 ## MES 规格系统
 
-- 每个实体用声明式规格描述（各 MES 模块的 `specs.py`）：字段、类型、引用、枚举、校验、三语标签。
+- 每个实体用声明式规格描述（各 MES 模块的 `specs.py`）：字段、类型、引用、枚举、校验、英文标签（各语言显示文案在前端语言包）。
 - `app/core/spec/engine.py` 的 `build_table` 根据规格生成 SQLAlchemy 表（`registry.load()` 按模块顺序加载规格后统一构建）；通用路由 `app/mes/common/router.py` 提供列表 / 详情 / 新增 / 修改 / 删除 / 导入导出。
 - 前端 `features/mes/common` 读取同一份元数据自动生成表格列、表单与筛选，因此大多数主数据页面无需手写；实体专属面板/按钮在各模块 `extensions.ts(x)` 中声明。
 - 修改规格后需新增 Alembic 迁移（`alembic revision -m "..."` 并手写变更）。
@@ -90,9 +90,41 @@ core  <-  platform.*  <-  mes.common  <-  mes.<domain>  <-  mes.execution
 
 ## i18n
 
-- 前端文案在 `frontend/src/i18n/locales/{zh-CN,ja,en}.json`，三语键必须一致。
-- 规格中的标签可用 `backend/scripts/export_mes_i18n.py` 导出到前端文案。
-- `pnpm i18n:check` 校验缺失 / 多余键（构建时自动执行）。
+显示文案只在前端维护；后端对外只输出稳定的**错误码 + 参数**（英文 `message` 仅作兜底与日志），不含任何语言的显示文案。
+
+### 前端语言包
+
+`frontend/src/i18n/locales/<语言>/` 下按领域拆成 YAML，三种语言（zh-CN / ja / en）目录与键完全镜像，启动时由 `import.meta.glob` 读取并深度合并（`i18n/resources.ts`）：
+
+```
+locales/<语言>/
+├── common.yaml              # 通用文案（按钮、表格、主题、导航、首页…）
+├── menu.yaml                # 菜单标题（menu.<菜单 key>）
+├── error.yaml               # 错误提示（error.network 等）与后端错误码（error.code_<错误码>）
+└── modules/
+    ├── auth.yaml
+    ├── platform/{account,tenant,config,notify}.yaml
+    └── mes/{common,factory,product,process,equipment,quality,lot,planning,warehouse,execution}.yaml
+```
+
+MES 的实体 / 字段 / 枚举 / 帮助文案按所属后端模块放在 `modules/mes/<模块>.yaml`。新增一个键只需在对应领域文件加三份译文；`pnpm i18n:check` 校验：各语言文件结构一致、键一致、值非空、`{{占位符}}` 一致、代码里静态使用的 `t('…')` 存在，以及后端 code 清单里的每个键都有译文。
+
+### 后端错误码
+
+- 错误码集中在 `backend/app/core/error_codes.py`（对应参考项目的 `ErrorCodeConstants`），按段位编号：`1xxxxx` 系统与通用、`2xxxxx` 认证与平台、`3xxxxx` 系统配置、`4xxxxx` MES 主数据、`5xxxxx` 设备与质量、`6xxxxx` 批次 / 工单 / 入库、`7xxxxx` MES 执行。新增错误码在对应段追加常量。
+- 抛错统一三种形式（`app/tests/test_error_conventions.py` 用 AST 强制）：
+  - 业务错误：`raise coded(409, ec.CARRIER_BUSY, "english fallback", carrier=code)` → `detail = {code, message, params}`；
+  - 字段校验：`fe(字段, ec.FIELD_MIN, "english fallback", min=1)` → 422 列表项 `{loc, msg, code, params}`（`MesError` / `http_422` 承载）；
+  - 请求体 Pydantic 错误由全局处理器统一加 `code` / `params`（`core/validation.py`）。
+  不得再把英文原文放进 `HTTPException(detail=…)`，也不得使用裸 `(字段, "字段: 消息")` 元组。
+- 前端按 `error.code_<错误码>` 翻译，参数用 `{{名称}}` 插值；字段类文案用 `{{field}}` 引用字段显示名（前端按实体字段标签填入）；状态类参数用 `$t(mes.enum.<枚举>.{{参数}})` 嵌套翻译。错误码常量由导出脚本生成到 `frontend/src/lib/error-codes.ts`。
+
+### 其他后端输出
+
+- 检查结果说明：检查类型用 `messages("<检查类型>", 键="英文模板 {参数}")` 声明模板，返回 `M("键", 参数=…)`；结果带 `msg_parts`（`[{key, params}]`），前端按 `mes.checkMsg.<检查类型>.<键>` 翻译（`lib/backend-text.ts`）。
+- 系统自动生成的说明（Q-Time 超时 Hold、OOS Hold、分批继承 Hold、E10 自动迁移）存结构化 `note = {key, params}`（`lot_hold.note` / `e10_history.note`），前端按 `mes.sysNote.<key>` 翻译，人工备注仍在 `comment`；检查日志的说明在 `context.msg_parts`。
+- 实体 / 字段 / 枚举 / 菜单 / 权限 / 角色 / 通知事件在后端只写英文标识（数据库种子与兜底），各语言名称在前端语言包。
+- `backend/scripts/export_i18n_codes.py` 导出前端必须翻译的全部键（`frontend/src/i18n/backend-codes.json`）和错误码常量（`frontend/src/lib/error-codes.ts`）；后端测试校验两者为最新，修改后端后重新运行即可。
 
 ## 注释规范
 
@@ -167,7 +199,7 @@ UI 布局巡检（需前后端已启动）：`node scripts/ui-audit.cjs`。
 - 平台接口（`/platform/...`）按平台权限授权（`auth.deps.platform_permission`）：路径首段映射资源，GET 需 `<资源>:read`，其余需 `<资源>:write`；`users` 删除需 `users:delete`，设置用户角色需 `roles:write`，租户品牌属 `platform.config:*`。资源：`users`、`roles`（角色 / 权限 / 权限树 / 菜单）、`tenants`、`platform.config`、`platform.notify`、`platform.audit`。超级用户直接通过；非超级用户不能创建 / 修改 / 删除超级用户。
 - 平台菜单带访问权限（`menus.service.PLATFORM_MENU_PERMS`），`/menus/me?space=platform` 按权限过滤；持有任一平台权限即可进入控制台（`/menus/me` 返回 `platform_access`）。
 - 菜单 `status`（active / disabled）：停用的菜单对所有人隐藏，其路径进入 `forbidden_paths`（前端 403）。
-- 内置权限 / 角色名称：`rbac.labels` 提供三语名称，种子数据补齐英文 `name` / `title`，`scripts/export_mes_i18n.py` 生成前端 `permName.*` / `roleName.*`；前端在名称为空或仍为内置英文名时按语言翻译（`lib/rbac-labels.ts`）。
+- 内置权限 / 角色名称：`rbac.labels` 提供英文名称，种子数据补齐英文 `name` / `title`；各语言名称在前端 `permName.*` / `roleName.*`（`modules/platform/account.yaml`），前端在名称为空或仍为内置英文名时按语言翻译（`lib/rbac-labels.ts`）。
 - 以租户身份进入：`POST /platform/tenants/{id}/enter`（`tenants:write`）签发 `imp` 模拟令牌（`IMPERSONATION_EXPIRE_MINUTES`，默认 30 分钟），只能访问绑定租户（具全部租户权限）且不能调用平台接口；前端保存原令牌，退出（或模拟令牌过期）时恢复并调用 `POST /platform/tenants/{id}/exit`。进入 / 退出均记入平台操作日志。
 
 ## 用户身份：用户名为主

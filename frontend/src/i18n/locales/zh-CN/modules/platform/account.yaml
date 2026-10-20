@@ -1,0 +1,249 @@
+users:
+  title: 用户
+  desc: 平台所有用户
+  new: 新建用户
+  edit: 编辑用户
+  newDesc: 创建平台用户并分配租户。
+  passwordMin: 至少 8 个字符
+  rolesDesc: 租户角色在各租户的成员页面管理。
+  delete: 删除用户
+  deleteDesc: 确定删除 {{email}} 吗？其条目也会被删除。
+  created: 用户已创建
+  updated: 用户已更新
+  deleted: 用户已删除
+  regular: 普通用户
+  usernameHint: 必填；3–50 位字母、数字、. _ -，不区分大小写
+  emailOptional: 可选；填写时须唯一
+  tenants: 所属租户
+  tenant: 租户
+  pickTenant: 选择租户
+  addTenant: 添加租户
+  removeTenant: 移除该租户
+roles:
+  platformDesc: 平台级角色（分配给用户）。
+  tenantTitle: 角色
+  tenantDesc: 管理角色及其权限。
+  new: 新建角色
+  edit: 编辑角色
+  delete: 删除角色
+  deleteDesc: 确定删除角色 {{name}} 吗？
+  created: 角色已创建
+  updated: 角色已更新
+  deleted: 角色已删除
+permissions:
+  title: 权限
+  desc: 为角色分配权限。
+  role: 角色：{{name}}
+  ownerFixed: 系统管理员角色不可修改。
+  selected: 已选 {{count}} 项
+  count: '{{count}} 项权限'
+  allOf: 全部 {{resource}} 权限
+  all: 全部权限
+  new: 新建权限
+  edit: 编辑权限
+  code: 代码
+  codeLabel: 代码（资源:操作）
+  scope: 范围
+  scopes:
+    platform: 平台
+    tenant: 租户
+  delete: 删除权限
+  deleteDesc: 确定删除 {{code}} 吗？它将从所有角色中移除。
+  saved: 权限已保存
+  created: 权限已创建
+  updated: 权限已更新
+  deleted: 权限已删除
+  tenantTitle: 角色权限
+  tenantDesc: 为租户「{{name}}」的角色分配权限。
+members:
+  title: 用户
+  desc: 可登录本系统的用户、角色与状态
+  add: 添加用户
+  addDesc: 按用户名添加已注册的用户。
+  rolesOf: '{{email}} 的角色'
+  tenantRoles: 角色
+  leave: 移除我的访问权限
+  remove: 移除用户
+  removeDesc: 确定移除用户 {{email}} 的访问权限吗？
+  added: 用户已添加
+  rolesUpdated: 角色已更新
+  removed: 用户已移除
+  edit: 编辑用户
+  addExisting: 添加已有用户
+  createUser: 新建用户
+  createDesc: 创建新的登录账号。
+  created: 用户已创建
+  initialPassword: 初始密码
+  usernameHint: 输入已有用户的用户名
+  sharedUser: 该账号由管理员统一管理，这里只能修改其角色；账号信息与密码请联系管理员。
+rbac:
+  actions: 操作
+  enabled: 启用
+  disabled: 禁用
+  displayName: 显示名称
+  updatedBy: 更新人
+  updatedAt: 更新时间
+  saved: 已保存
+  deleted: 已删除
+  resetPassword: 重置密码
+  resetPasswordDesc: 为 {{name}} 设置新密码。
+  newPassword: 新密码
+  passwordReset: 密码已重置
+  pickRoles: 选择角色…
+  roleCode: 角色编码
+  roleName: 角色名称
+  permCount: 权限数
+  permTree: 权限
+  searchTree: 搜索名称 / 编码 / 路径
+  expandAll: 全部展开
+  collapseAll: 全部折叠
+  selectedOf: 已选 {{n}} / {{total}}
+  treeTitle: 权限树
+  treeDesc: 管理菜单与权限。
+  newRoot: 新增根权限
+  child: 子项
+  childMenu: 子菜单
+  childPerm: 权限 / 按钮
+  newChildMenu: 新增「{{parent}}」的子菜单
+  newChildPerm: 新增「{{parent}}」下的权限
+  editMenu: 编辑菜单
+  code: 编码
+  type: 类型
+  path: 路径
+  sort: 排序
+  visible: 显示
+  shown: 显示
+  hidden: 隐藏
+  space: 空间
+  allSpaces: 全部空间
+  allTypes: 全部类型
+  spaces:
+    workspace: 工作区
+    platform: 平台
+  menuKey: 菜单标识
+  icon: 图标
+  component: 组件
+  menuPerm: 访问权限编码
+  otherPerms: 其他权限
+  deleteNode: 删除节点
+  deleteMenuDesc: 确定删除菜单「{{name}}」及其子菜单吗？
+  search: 搜索…
+permName:
+  users__read: 查看平台用户
+  users__write: 编辑平台用户
+  users__delete: 删除平台用户
+  roles__read: 查看角色与权限
+  roles__write: 管理角色与权限
+  tenants__read: 查看租户
+  tenants__write: 管理租户
+  platform_config__read: 查看平台默认配置
+  platform_config__write: 编辑平台默认配置
+  platform_notify__read: 查看通知渠道
+  platform_notify__write: 配置通知渠道
+  platform_audit__read: 查看审计与日志
+  tenant__manage: 管理系统设置与管理员
+  members__read: 查看用户
+  members__write: 管理用户
+  config__read: 查看系统配置
+  config__write: 编辑系统配置
+  mes_common__read: 通用·查看
+  mes_common__write: 通用·编辑
+  mes_equipment__read: 设备·查看
+  mes_equipment__write: 设备·编辑
+  mes_exec__read: 生产执行·查看
+  mes_exec__write: 生产执行·编辑
+  mes_inventory__read: 物料与工具·查看
+  mes_inventory__write: 物料与工具·编辑
+  mes_check__read: 卡控·查看
+  mes_check__write: 卡控·编辑
+  mes_org__read: 组织·查看
+  mes_org__write: 组织·编辑
+  mes_lot__read: 批次与晶圆规则·查看
+  mes_lot__write: 批次与晶圆规则·编辑
+  mes_wo__read: 工单·查看
+  mes_wo__write: 工单·编辑
+  mes_process__read: 工艺·查看
+  mes_process__write: 工艺·编辑
+  mes_product__read: 产品与物料·查看
+  mes_product__write: 产品与物料·编辑
+  mes_quality__read: 质量·查看
+  mes_quality__write: 质量·编辑
+  mes_wh__read: 仓储·查看
+  mes_wh__write: 仓储·编辑
+  mes_equipment__e10: 设备·变更 E10 状态
+  mes_equipment__pm: 设备·记录保养
+  mes_exec__override: 生产执行·强制放行
+  mes_exec__hold: 生产执行·暂停 / 释放
+  mes_exec__split: 生产执行·分批
+  mes_exec__merge: 生产执行·合批
+  mes_exec__jump: 生产执行·跳站
+  mes_exec__adjust: 生产执行·报废 / 补数
+  mes_wo__release: 工单·下达 / 关闭
+  mes_lot__start: 批次与晶圆规则·投产
+  mes_wh__confirm: 仓储·确认入库
+  notify__config: 配置通知订阅
+roleName:
+  admin: 管理员
+  user: 普通用户
+  owner: 系统管理员
+  member: 普通用户
+permDesc:
+  users__read: 允许：查看平台用户
+  users__write: 允许：编辑平台用户
+  users__delete: 允许：删除平台用户
+  roles__read: 允许：查看角色与权限
+  roles__write: 允许：管理角色与权限
+  tenants__read: 允许：查看租户
+  tenants__write: 允许：管理租户
+  platform_config__read: 允许：查看平台默认配置
+  platform_config__write: 允许：编辑平台默认配置
+  platform_notify__read: 允许：查看通知渠道
+  platform_notify__write: 允许：配置通知渠道
+  platform_audit__read: 允许：查看审计与日志
+  tenant__manage: 允许：管理系统设置与管理员
+  members__read: 允许：查看用户
+  members__write: 允许：管理用户
+  config__read: 允许：查看系统配置
+  config__write: 允许：编辑系统配置
+  mes_common__read: 允许：通用·查看
+  mes_common__write: 允许：通用·编辑
+  mes_equipment__read: 允许：设备·查看
+  mes_equipment__write: 允许：设备·编辑
+  mes_exec__read: 允许：生产执行·查看
+  mes_exec__write: 允许：生产执行·编辑
+  mes_inventory__read: 允许：物料与工具·查看
+  mes_inventory__write: 允许：物料与工具·编辑
+  mes_check__read: 允许：卡控·查看
+  mes_check__write: 允许：卡控·编辑
+  mes_org__read: 允许：组织·查看
+  mes_org__write: 允许：组织·编辑
+  mes_lot__read: 允许：批次与晶圆规则·查看
+  mes_lot__write: 允许：批次与晶圆规则·编辑
+  mes_wo__read: 允许：工单·查看
+  mes_wo__write: 允许：工单·编辑
+  mes_process__read: 允许：工艺·查看
+  mes_process__write: 允许：工艺·编辑
+  mes_product__read: 允许：产品与物料·查看
+  mes_product__write: 允许：产品与物料·编辑
+  mes_quality__read: 允许：质量·查看
+  mes_quality__write: 允许：质量·编辑
+  mes_wh__read: 允许：仓储·查看
+  mes_wh__write: 允许：仓储·编辑
+  mes_equipment__e10: 允许：设备·变更 E10 状态
+  mes_equipment__pm: 允许：设备·记录保养
+  mes_exec__override: 允许：生产执行·强制放行
+  mes_exec__hold: 允许：生产执行·暂停 / 释放
+  mes_exec__split: 允许：生产执行·分批
+  mes_exec__merge: 允许：生产执行·合批
+  mes_exec__jump: 允许：生产执行·跳站
+  mes_exec__adjust: 允许：生产执行·报废 / 补数
+  mes_wo__release: 允许：工单·下达 / 关闭
+  mes_lot__start: 允许：批次与晶圆规则·投产
+  mes_wh__confirm: 允许：仓储·确认入库
+  notify__config: 允许：配置通知订阅
+roleDesc:
+  platform_admin: 拥有全部权限的平台管理员
+  platform_user: 无平台权限的普通用户
+  owner: 拥有全部权限的系统管理员
+  admin: 管理用户、系统设置与全部业务数据
+  member: 只读访问业务数据

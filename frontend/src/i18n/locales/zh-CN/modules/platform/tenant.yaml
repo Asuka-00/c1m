@@ -1,0 +1,105 @@
+tenants:
+  title: 租户
+  desc: 平台所有租户
+  new: 新建租户
+  edit: 编辑租户
+  slug: 标识
+  slugLabel: 标识（a-z、0-9、-）
+  status:
+    active: 正常
+    suspended: 已停用
+  delete: 删除租户
+  deleteDesc: 确定删除 {{name}} 及其全部成员、角色和条目吗？
+  created: 租户已创建（你是所有者）
+  updated: 租户已更新
+  deleted: 租户已删除
+settings:
+  title: 设置
+  desc: 个人资料、密码和语言
+  profile: 个人资料
+  superAccount: 超级管理员账户
+  regularAccount: 普通账户
+  saveProfile: 保存资料
+  passwordHint: 至少 8 个字符。
+  currentPassword: 当前密码
+  newPassword: 新密码
+  confirmPassword: 确认新密码
+  mismatch: 两次输入的密码不一致
+  changePassword: 修改密码
+  profileUpdated: 资料已更新
+  passwordChanged: 密码已修改
+  language: 语言
+  languageDesc: 选择界面语言。
+platform:
+  plans:
+    trial: 试用
+    standard: 标准版
+    enterprise: 企业版
+  allPlans: 全部套餐
+  tenantsDesc: 管理所有租户。
+  plan: 套餐
+  expiresAt: 到期时间
+  expired: 已过期
+  never: 永久
+  owners: Owner
+  memberCount: 成员数
+  members: 成员
+  branding: 品牌
+  enter: 以租户身份进入
+  expiresHint: YYYY-MM-DD，留空表示永久
+  ownerAssigned: 已指定 owner
+  membersOf: 「{{name}}」的成员
+  membersDesc: 管理租户成员与角色。
+  assignOwner: 设为 owner
+  brandingOf: 「{{name}}」的品牌
+  brandingDesc: 该租户的品牌设置。
+  channelSaved: 通知渠道已更新
+  channelsDesc: 管理通知渠道。
+  channel: 渠道
+  code: 编码
+  enabled: 启用
+  searchLogin: 搜索邮箱 / IP
+  allResults: 全部结果
+  success: 成功
+  failure: 失败
+  loginLogDesc: 所有登录尝试（成功与失败），用于安全审计。
+  time: 时间
+  result: 结果
+  reason: 原因
+  reasons:
+    bad_credentials: 用户名或密码错误
+    inactive: 用户已停用
+  userAgent: 客户端
+  searchOps: 搜索操作人 / 操作 / 目标
+  allActions: 全部操作
+  actions:
+    tenant.create: 创建租户
+    tenant.update: 更新租户
+    tenant.delete: 删除租户
+    tenant.enter: 以租户身份进入
+    tenant.exit: 退出租户身份
+    tenant.owner: 指定 owner
+    tenant.branding: 修改租户品牌
+    member.add: 添加成员
+    member.roles: 修改成员角色
+    member.remove: 移除成员
+    config.update: 修改平台配置
+    channel.update: 修改通知渠道
+    audit.cross_tenant_read: 跨租户读取审计
+  opsLogDesc: 平台管理员的操作记录。
+  actor: 操作人
+  action: 操作
+  target: 目标
+  detail: 详情
+  searchAudit: 搜索记录 / 操作人
+  allTenants: 全部租户
+  auditDesc: 所有租户的业务审计日志。
+  tenant: 租户
+  entity: 实体
+  record: 记录
+  spaces:
+    workspace: 工作区
+    platform: 平台管理
+  allSpaces: 全部空间
+  space: 空间
+  ownerUsername: Owner 用户名（已有用户）

@@ -1,0 +1,163 @@
+mes:
+  eqp:
+    hint: 主設備の状態と PM 期限。
+    refresh: 更新
+    code: 設備コード
+    name: 設備名
+    state: E10 状態
+    pm: PM 計画
+    actions: 操作
+    down: 停止中
+    nextDue: 次回期限
+    pmDue: 期限切れ
+    daysLeft: 残り {{n}} 日
+    changeState: 状態変更
+    pmDone: PM 完了
+    changed: 状態を変更しました
+    current: 現在の状態
+    toState: 遷移先
+    pmRecorded: PM を記録しました
+    pmDesc: PM 完了を記録します。
+    result: 結果
+    search: 設備コード / 名称を検索
+    allWorkcenters: 全ワークセンター
+    allStates: 全 E10 状態
+    allPm: 全 PM 状態
+    pmWarn: PM 期限間近
+    allDown: 全て（停止有無）
+    notDown: 停止なし
+    workcenter: ワークセンター
+    chambers: チャンバー
+    chamberCount: チャンバー {{n}}
+    chambersOf: '{{code}} のチャンバー'
+  pmStatus:
+    title: 期限状態
+    due: '{{n}} 台超過'
+    warn: '{{n}} 台期限間近'
+    ok: 正常
+    next: 次回 {{d}}
+  entity:
+    equipment_type: 設備タイプ
+    equipment_group: 設備グループ
+    e10_state: E10 状態
+    e10_transition: E10 状態遷移
+    equipment: 設備
+    equipment_capability: 設備能力
+    tool: 工具
+    e10_auto_rule: E10 自動遷移
+    e10_history: E10 状態履歴
+    pm_plan: PM 計画
+    pm_record: PM 実施記録
+    downtime: 停止記録
+  field:
+    equipment_type:
+      code: コード
+      name: 名称
+      category: カテゴリ
+      vendor: ベンダー
+      model: 型式
+      description: 説明
+    equipment_group:
+      code: コード
+      name: 名称
+      equipment_type: 設備タイプ
+      area: エリア
+      description: 説明
+    e10_state:
+      code: コード
+      name: 名称
+      e10_category: E10 区分
+      color: 色
+      is_initial: 初期状態
+      sort_order: 並び順
+      description: 説明
+    e10_transition:
+      from_state: 遷移元
+      to_state: 遷移先
+      reason_required: 理由必須
+    equipment:
+      code: コード
+      name: 名称
+      parent: 親
+      unit_kind: ユニット種別
+      equipment_type: 設備タイプ
+      equipment_group: 設備グループ
+      workcenter: ワークセンター
+      serial_no: シリアル番号
+      initial_state: 初期 E10 状態
+      e10_state: 現在 E10 状態
+      ideal_uph: 理論スループット（UPH）
+      is_active: 有効
+      description: 説明
+    equipment_capability:
+      equipment: 設備
+      operation: 工程
+      recipe: レシピ
+      is_qualified: 認定済
+      qualified_until: 認定期限
+    tool:
+      code: 工具 ID
+      fixture: 工具タイプ
+      serial_no: シリアル番号
+      usage_count: 使用回数
+      max_usage: 最大使用回数
+      warn_pct: 警告しきい値（寿命%）
+      expiry_date: 有効期限
+      tool_status: 状態
+      equipment: 装着設備
+      description: 説明
+    e10_auto_rule:
+      trigger: トリガー
+      equipment_type: 設備タイプ
+      to_state: 遷移先
+      is_active: 有効
+    e10_history:
+      equipment: 設備
+      from_state: 遷移元
+      to_state: 遷移先
+      source: ソース
+      reason: 理由コード
+      comment: コメント
+      username: ユーザー
+      at: 日時
+      note: システム説明
+    pm_plan:
+      code: コード
+      name: 名称
+      equipment: 設備
+      equipment_type: 設備タイプ
+      interval_days: 周期（日）
+      interval_lots: 周期（ロット数）
+      warn_days: 事前警告（日）
+      is_active: 有効
+      description: 説明
+    pm_record:
+      pm_plan: PM 計画
+      equipment: 設備
+      result: 結果
+      comment: コメント
+      username: ユーザー
+      done_at: 実施日時
+    downtime:
+      equipment: 設備
+      start_at: 開始
+      end_at: 終了
+      reason: 理由コード
+      e10_state: E10 状態
+      comment: コメント
+  help:
+    equipment:
+      ideal_uph: 任意。OEE 性能稼働率用に予約
+    tool:
+      max_usage: 空欄：工具タイプの最大使用回数
+    e10_auto_rule:
+      equipment_type: 空欄：全タイプ
+    pm_plan:
+      equipment: 空欄：タイプの全設備
+  enum:
+    e10_source:
+      manual: 手動
+      auto: 自動
+    pm_result:
+      ok: 合格
+      ng: 不合格

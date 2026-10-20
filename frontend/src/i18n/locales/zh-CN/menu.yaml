@@ -1,0 +1,128 @@
+menu:
+  dashboard: 仪表盘
+  members: 用户
+  user-roles: 角色
+  users: 用户
+  roles: 角色
+  permissions: 权限
+  tenants: 厂区
+  menus: 菜单
+  settings: 个人设置
+  config: 系统设置
+  notifications: 消息中心
+  notify-subscriptions: 通知订阅
+  mes-wo-board: 工单进度
+  mes-change_order: 工程变更（ECN）
+  mes-future_hold: Future Hold（预约 Hold）
+  mes-shift-handover: 交接班日志
+  mes-label-print: 标签打印
+  mes-operator_qual: 操作员资质
+  g-workspace: 工作台
+  g-execution: 批次作业
+  g-exception: 异常处置
+  g-wip: 在制与查询
+  g-planning: 生产计划
+  g-warehouse: 仓储管理
+  g-equipment: 机台管理
+  g-quality: 质量管理
+  g-process: 工艺管理
+  g-product: 产品与物料
+  g-factory: 工厂建模
+  g-master: 基础数据
+  g-system: 系统管理
+  mes-lot-console: 批次作业（进出站）
+  mes-lot_hold: Hold 管理
+  mes-qtime-monitor: Q-Time 监控
+  mes-batch-ops: 批量作业
+  mes-carrier-ops: 载具作业
+  mes-check_log: 卡控记录
+  mes-wip-dashboard: WIP 看板
+  mes-oee-report: 设备 OEE
+  mes-yield-report: 良率报表
+  mes-lot-history: 批次履历与追溯
+  mes-lot_recipe_run: 配方执行记录
+  mes-lot: 批次查询
+  mes-wafer: 晶圆查询
+  mes-lot-start: 投片/开批
+  mes-work_order: 工单
+  mes-receipt: 完工入库
+  mes-material_lot: 线边物料批
+  mes-warehouse-master: 仓库主数据
+  mes-eqp-board: 机台状态看板
+  mes-pm_plan: PM 计划
+  mes-downtime: 停机记录
+  mes-e10_history: E10 状态履历
+  mes-tool: 耗材/治具寿命
+  mes-equipment-master: 机台主数据
+  mes-e10-model: E10 状态配置
+  mes-dc_result: 量测数据
+  mes-dc-config: 数据收集配置
+  mes-defect_code: 缺陷代码
+  mes-route-master: 工艺流程配置
+  mes-recipe-param: 配方与参数
+  mes-qtime_rule: Q-Time 规则
+  mes-check-config: 卡控配置
+  mes-lot-rules: 批次规则
+  mes-product-master: 产品主数据
+  mes-material-master: 物料主数据
+  mes-carrier-master: 载具主数据
+  mes-reticle: 光罩
+  mes-fixture: 治具
+  mes-factory-model: 工厂模型
+  mes-calendar: 日历与班次
+  mes-reason_code: 原因代码
+  mes-code_rule: 编码规则
+  mes-uom: 计量单位
+  mes-dict_type: 数据字典
+  mes-attr_def: 自定义属性
+  user-permissions: 用户与权限
+  mes-audit_log: 审计日志
+  mes-check_rule: 卡控规则
+  mes-check_plan: 卡控方案
+  mes-check_binding: 卡控绑定
+  mes-product: 产品
+  mes-product_family: 产品族
+  mes-tech_node: 工艺节点
+  mes-material: 物料
+  mes-material_type: 物料类型
+  mes-carrier: 载具
+  mes-carrier_type: 载具类型
+  mes-equipment: 设备
+  mes-equipment_type: 设备类型
+  mes-equipment_group: 设备组
+  mes-equipment_capability: 设备能力
+  mes-e10_state: E10 状态模型
+  mes-e10_auto_rule: E10 自动迁移
+  mes-lot_type: 批次类型
+  mes-lot_priority: 优先级
+  mes-split_merge_rule: 分批合批规则
+  mes-site: 工厂
+  mes-area: 区域
+  mes-workcenter: 工作中心
+  mes-work_calendar: 工作日历
+  mes-shift: 班次
+  mes-route: 工艺流程
+  mes-operation: 工序
+  mes-product_route: 产品流程
+  mes-recipe: 配方
+  mes-param_spec: 参数规格
+  mes-dc_plan: 数据收集计划
+  mes-measurement_item: 量测项目
+  mes-sampling_rule: 抽样规则
+  mes-lot-trace: 批次履历
+  mes-trace: 追溯查询
+  mes-warehouse: 仓库
+  mes-storage_location: 库位
+  p-g-tenants: 租户管理
+  p-g-rbac: 平台权限
+  p-g-settings: 平台设置
+  p-g-ops: 运维与审计
+  p-tenants: 租户列表
+  p-users: 平台用户
+  p-roles: 平台角色
+  p-permissions: 权限树
+  p-config: 系统配置（平台默认）
+  p-channels: 通知渠道
+  p-audit: 跨租户审计日志
+  p-login-log: 登录日志
+  p-ops-log: 平台操作日志

@@ -5,7 +5,9 @@ from dataclasses import dataclass, field
 
 from sqlmodel import Session, select
 
+from app.core import error_codes as ec
 from app.core.registry import seed_tenant
+from app.core.spec.errors import coded
 from app.platform.rbac.models import Permission, Role
 from app.platform.rbac.permissions import TENANT_ROLES
 from app.platform.rbac.service import fill_names
@@ -103,7 +105,12 @@ def set_member_roles(session: Session, member: TenantMember, roles: list[str]) -
     for name in roles:
         role = tenant_role(session, member.tenant_id, name)
         if not role:
-            raise ValueError(f"Role '{name}' does not exist in this tenant")
+            raise coded(
+                400,
+                ec.TENANT_ROLE_MISSING,
+                f"Role '{name}' does not exist in this tenant",
+                name=name,
+            )
         resolved.append(role)
     member.roles = resolved
     session.add(member)

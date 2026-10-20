@@ -1,0 +1,136 @@
+common:
+  save: 保存
+  cancel: キャンセル
+  continue: 続行
+  delete: 削除
+  remove: 削除
+  edit: 編集
+  name: 名前
+  title: タイトル
+  description: 説明
+  status: ステータス
+  created: 作成日時
+  email: メールアドレス
+  password: パスワード
+  fullName: 氏名
+  roles: ロール
+  permissions: 権限
+  active: 有効
+  inactive: 無効
+  superuser: スーパーユーザー
+  owner: システム管理者
+  id: ID
+  select: 選択…
+  none: — なし —
+  me: 自分
+  you: （あなた）
+  yes: はい
+  noResults: データがありません
+  total: 全 {{count}} 件
+  loading: 読み込み中…
+  expand: 展開
+  collapse: 折りたたむ
+  goBack: 戻る
+  backHome: ホームへ戻る
+  close: 閉じる
+  no: いいえ
+  username: ユーザー名
+  loginName: ログイン名
+table:
+  rowsPerPage: 表示件数
+  pageOf: '{{page}} / {{total}} ページ'
+  firstPage: 最初のページ
+  prevPage: 前のページ
+  nextPage: 次のページ
+  lastPage: 最後のページ
+  goToPage: '{{page}} ページへ'
+  asc: 昇順
+  desc: 降順
+  hide: 非表示
+  search: 検索…
+  clearSearch: 検索をクリア
+  noMatch: 「{{q}}」に一致する結果はありません。
+  searchUsers: メールアドレスまたは名前で検索…
+  searchTenants: 名前またはスラッグで検索…
+  allStatuses: すべてのステータス
+  noMatchFilters: 現在のフィルターに一致する結果はありません。
+  resetFilters: フィルターをリセット
+  allRoles: すべてのロール
+  visible: 表示
+  moreFilters: その他の条件
+  recordFilter: 指定レコード
+  clearRecordFilter: すべて表示
+  searchOptions: 検索…
+  range:
+    today: 今日
+    last7: 過去 7 日
+    last30: 過去 30 日
+    thisMonth: 今月
+    from: 開始日
+    to: 終了日
+    clear: 期間をクリア
+theme:
+  toggle: テーマ切替
+  light: ライト
+  dark: ダーク
+  system: システム
+password:
+  show: パスワードを表示
+  hide: パスワードを隠す
+lang:
+  label: 言語
+  zh-CN: 简体中文
+  ja: 日本語
+  en: English
+nav:
+  searchMenu: メニュー検索
+  searchMenuHint: メニュー名（中 / 英 / 日）またはキーを入力
+  searchMenuEmpty: 一致するメニューはありません
+  breadcrumb: パンくずリスト
+  selectTenant: 工場を選択
+  tenants: 工場
+  tenantsCount: '{{count}} 工場'
+  noRole: ロールなし
+  profile: プロフィールとパスワード
+  superuserTag: （スーパーユーザー）
+  signOut: ログアウト
+  signOutDesc: ログアウトしますか？再度アクセスするにはログインが必要です。
+  sidebar: ナビゲーション
+  platformAdmin: プラットフォーム管理
+  platformSubtitle: プラットフォーム権限が必要
+  backToWorkspace: ワークスペースに戻る
+  impersonating: テナント「{{name}}」として表示中
+  impersonatingShort: テナントとして表示中
+  exitImpersonation: テナント表示を終了してプラットフォーム管理へ戻る
+  noTenant: 工場未割り当て
+dashboard:
+  title: ダッシュボード
+  signedInAs: ログイン中：{{email}}
+  currentTenant: 現在の工場
+  rolesHint: ロール：{{roles}}
+  selectTenant: 工場を選択してください
+  members: ユーザー
+  inTenant: 現在の工場内
+  myTenants: 所属工場
+  superuserHint: スーパーユーザー：全工場にアクセス可能
+  effective: 有効な権限
+  effectiveDesc: 現在保有しているすべての権限
+  bypass: スーパーユーザー（全権限）
+  showPerms: 表示
+  hidePerms: 非表示
+  noTenantTitle: 工場・権限が未割り当てです
+  noTenantDesc: 工場または権限が未割り当てです。管理者にお問い合わせください。
+sidebar:
+  toggle: サイドバーの切り替え
+home:
+  wip: 仕掛ロット
+  wipQty: 総数量 {{n}}
+  hold: Hold ロット
+  holdHint: Hold 解除へ
+  qtime: Q-Time 超過 / 警告
+  qtimeHint: 待機ロットの現在ステップ
+  equipment: 設備 E10 状態
+  pm: PM 超過 / 期限間近
+  pmHint: 主設備の PM 計画
+  trackOuts: 本日のトラックアウト
+  trackOutsHint: ロットのトラックアウト回数

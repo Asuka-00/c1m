@@ -1,0 +1,85 @@
+notify:
+  bell: Notifications
+  title: Notifications
+  unreadCount: '{{count}} unread'
+  markAllRead: Mark all read
+  empty: No notifications
+  viewAll: View all in Message Center
+  center: Message Center
+  centerDesc: Your notifications from subscribed events
+  search: Search title or object…
+  allTypes: All types
+  allRead: Read & unread
+  allSeverities: All severities
+  unread: Unread
+  read: Read
+  time: Time
+  severityCol: Severity
+  type: Event type
+  content: Content
+  object: Related object
+  open: Open
+  readAt: Read at
+  severity:
+    info: Info
+    warning: Warning
+    critical: Critical
+  sub:
+    title: Notification Subscriptions
+    desc: Choose which roles / users receive each event
+    new: New subscription
+    edit: Edit subscription
+    delete: Delete subscription
+    deleteDesc: Delete subscription "{{name}}"?
+    created: Subscription created
+    updated: Subscription updated
+    deleted: Subscription deleted
+    search: Search name…
+    allStatus: All status
+    enabled: Enabled
+    disabled: Disabled
+    name: Name
+    roles: Roles
+    users: Users
+    channels: Channels
+    status: Status
+  channel:
+    in_app: In-app
+  event:
+    mes:
+      qtime_warn:
+        label: Q-Time warning
+        title: Q-Time {{rule}} on lot {{lot}} expires in {{left}} min
+      qtime_exceeded:
+        label: Q-Time exceeded
+        title: 'Q-Time {{rule}} exceeded on lot {{lot}}: {{minutes}} > {{max}} min ({{action}})'
+      lot_hold:
+        label: Lot auto hold
+        title: 'Lot {{lot}} auto hold ({{source}}): {{reason}}'
+      oos:
+        label: Out of spec
+        title: 'OOS on lot {{lot}} at step {{step}}: {{items}} ({{action}})'
+      pm_due:
+        label: PM due soon
+        title: PM {{plan}} on {{equipment}} is due soon
+      pm_overdue:
+        label: PM overdue
+        title: PM {{plan}} on {{equipment}} is overdue
+      eqp_down:
+        label: Equipment down
+        title: 'Equipment {{equipment}} down: {{state}} {{state_name}}'
+      downtime:
+        label: Downtime recorded
+        title: 'Downtime recorded on {{equipment}}: {{reason}}'
+      wo_due:
+        label: WO due soon
+        title: Work order {{wo}} due {{due}} ({{progress}}% done)
+      wo_overdue:
+        label: WO overdue
+        title: Work order {{wo}} overdue by {{days}} d (due {{due}})
+      qual_expiring:
+        label: Qualification expiring
+        title: "{{user}}'s {{operation}} qualification expires {{date}}"
+      qual_expired:
+        label: Qualification expired
+        title: "{{user}}'s {{operation}} qualification expired {{date}}"

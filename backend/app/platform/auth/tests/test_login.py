@@ -129,7 +129,7 @@ def test_reset_password_invalid_token(
 
     assert "detail" in response
     assert r.status_code == 400
-    assert response["detail"] == "Invalid token"
+    assert response["detail"]["message"] == "Invalid token"
 
 
 def test_login_with_argon2_password_keeps_hash(client: TestClient, db: Session) -> None:

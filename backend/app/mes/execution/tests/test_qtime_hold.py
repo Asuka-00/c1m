@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.db import admin_engine, engine
 from app.mes.execution import qtime_actions as qa
 from app.mes.execution.tests.test_exec import EXEC, Line
@@ -120,7 +121,7 @@ def test_qt_02_03_ah_02_in_process_lots_auto_held(
         stage = "tracked_out"
     if stage == "tracked_out":
         d = f.stage(lot, "move_out", 422)["detail"]
-        assert d["code"] == "on_hold"  # D2
+        assert d["code"] == ec.ON_HOLD  # D2
 
 
 def test_qt_04_held_lot_overdue_again_stacks_hold(

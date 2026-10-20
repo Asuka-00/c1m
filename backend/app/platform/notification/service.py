@@ -18,8 +18,10 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import Session, SQLModel, col, func, select
 
+from app.core import error_codes as ec
 from app.core.models import get_datetime_utc
 from app.core.pagination import ListParams, paginate
+from app.core.spec.errors import FieldError, fe
 from app.platform.notification.channels import CHANNELS
 from app.platform.notification.channels import register_channel as register_channel
 from app.platform.notification.events import EVENT_TYPES, SEVERITIES
@@ -290,16 +292,31 @@ def channels() -> list[Row]:
     return [{"code": c.code, "label": c.label} for c in CHANNELS.values()]
 
 
-def validate_subscription(data: Row) -> list[tuple[str, str]]:
-    """校验订阅配置，返回 ``[(字段, 错误)]``。"""
-    errs = []
+def validate_subscription(data: Row) -> list[FieldError]:
+    """校验订阅配置，返回字段错误列表。"""
+    errs: list[FieldError] = []
     if data.get("event_type") not in EVENT_TYPES:
-        errs.append(("event_type", "event_type: unknown event type"))
+        errs.append(
+            fe("event_type", ec.SUB_EVENT_UNKNOWN, "event_type: unknown event type")
+        )
     bad = [c for c in data.get("channels") or [] if c not in CHANNELS]
     if bad or not data.get("channels"):
-        errs.append(("channels", f"channels: unknown or empty {bad}"))
+        errs.append(
+            fe(
+                "channels",
+                ec.SUB_CHANNELS_INVALID,
+                f"channels: unknown or empty {bad}",
+                channels=str(bad),
+            )
+        )
     if not data.get("role_ids") and not data.get("user_ids"):
-        errs.append(("role_ids", "role_ids: select at least one role or user"))
+        errs.append(
+            fe(
+                "role_ids",
+                ec.SUB_RECIPIENTS_REQUIRED,
+                "role_ids: select at least one role or user",
+            )
+        )
     return errs
 
 

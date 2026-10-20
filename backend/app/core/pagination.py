@@ -2,8 +2,11 @@
 
 from typing import Annotated, Any, Literal
 
-from fastapi import Depends, HTTPException, Query
+from fastapi import Depends, Query
 from sqlmodel import Session, func, or_, select
+
+from app.core import error_codes as ec
+from app.core.spec.errors import coded
 
 DEFAULT_PAGE_SIZE = 20
 MAX_PAGE_SIZE = 100
@@ -71,9 +74,11 @@ def paginate(
     count = session.exec(select(func.count()).select_from(stmt.subquery())).one()
     key, order = (params.sort_by, params.sort_order) if params.sort_by else default
     if key not in sortable:
-        raise HTTPException(
-            status_code=422,
-            detail=f"sort_by must be one of: {', '.join(sorted(sortable))}",
+        raise coded(
+            422,
+            ec.SORT_BY_INVALID,
+            f"sort_by must be one of: {', '.join(sorted(sortable))}",
+            allowed=", ".join(sorted(sortable)),
         )
     column = sortable[key]
     stmt = stmt.order_by(

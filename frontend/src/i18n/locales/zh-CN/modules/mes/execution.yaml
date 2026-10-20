@@ -1,0 +1,826 @@
+mes:
+  exec:
+    stage:
+      move_in: 进站
+      track_in: 上机
+      track_out: 下机
+      move_out: 出站
+    done:
+      move_in: 进站完成
+      track_in: 上机完成
+      track_out: 下机完成
+      move_out: 出站完成
+    qtimeAction:
+      hold: Q-Time 超时，批次已 Hold
+      scrap: Q-Time 超时，批次已报废
+      rework: Q-Time 超时，批次转返工
+    frame:
+      sub_route: 子流程
+      rework: 返工流程
+    refresh: 刷新
+    consoleHint: 按阶段执行批次作业。
+    pickLot: 请选择批次。
+    auto: 自动
+    autoDone: 自动{{stage}}
+    blocked: 被卡控拦截，请查看卡控结果
+    nowOnHold: 批次已 Hold
+    onHold: Hold 中
+    pendingRework: 待返工
+    step: 步骤
+    route: 流程
+    qty: 数量
+    equipment: 设备
+    recipe: 配方
+    reticle: 光罩
+    carrier: 载具
+    tool: 工具
+    lastAction: 最近操作
+    inSubRoute: 当前位于{{kind}}，结束后返回调用流程。
+    lastStep: 最后一步：出站后批次完成。
+    nextStepHint: 出站后批次进入下一流程步骤。
+    takeBranch: 走分支至序号 {{seq}}（条件：{{cond}}）
+    toRework: 转入返工流程 {{route}}
+    preview: 预检卡控
+    holdBlocks: 批次处于 Hold 状态：加工中的批次仍可 Track Out，但 Move In、Track In 和 Move Out 需解除全部 Hold 后才能进行。
+    terminal: 批次已{{status}}，无后续作业。
+    checks: 卡控结果
+    checksHint: 执行或预检后显示卡控结果。
+    noChecks: 无适用卡控。
+    overrideReason: 放行原因
+    override: 强制放行并执行
+    noOverride: 您没有强制放行卡控的权限。
+    hold: Hold
+    held: 批次已 Hold
+    release: 解除 Hold
+    released: Hold 已解除
+    releaseReason: 解除原因
+    noHolds: 无生效中的 Hold。
+    reason: 原因代码
+    comment: 备注
+    materials: 线边物料（下机时扣减）
+    noMaterial: 无可用物料批
+    fefo: 未选择时按先到期先用（FEFO）自动分配。
+    dc: 数据收集
+    noDc: 本步骤无需数据收集。
+    item: 项目
+    unit: 晶圆 / 单元
+    values: 测值（测点）
+    lotLevel: 批次
+    scrapQty: 按原因报废数量
+    scrapUnits: 按晶圆/单元报废或返工
+    addScrap: 添加报废行
+    goodQty: 下机后良品数量：{{good}}
+    good: 良品
+    scrap: 报废
+    rework: 返工
+    stepDone: 已完成
+    stepNext: 下一步
+    nextAction: 下一操作
+    slot: 槽位
+    disposition: 处置
+    oosAction: 超规动作
+    eqpRecipe: 设备端配方名
+    eqpRecipeHint: 设备上报或扫码（可选）
+    chambers: 腔体
+    futureHold: 到达预约 Hold 工步，批次已 Hold：{{reason}}
+    qtimeHandled: Q-Time 超时已处置
+    qtimeStageSkipped: 本次 {{stage}} 未执行，请刷新后查看批次状态
+  trace:
+    hint: 查看批次及其单元的全部操作记录。
+    empty: 暂无履历。
+    dc: 收集 {{n}} 个值，{{oos}} 个超规
+    scrap: 报废 {{n}}
+    condition: 条件：{{c}}
+    source: 来源：{{s}}
+    overrideReason: 放行原因：{{r}}
+  sm:
+    childMinus: 减少子批
+    childPlus: 增加子批
+    title: 分批 / 合批
+    split: 分批
+    merge: 合批
+    ruleSummary: 规则 {{code}}：最多 {{max}} 批，每批至少 {{min}} · 已分出 {{n}} 个子批
+    noSplit: 不允许分批
+    noMerge: 不允许合批
+    noRule: 该批次类型未配置分批合批规则。
+    stateHint: 仅等待或已进站时可分批/合批。
+    noGenealogy: 暂无分批/合批记录。
+    genealogy: 批次谱系
+    splitTo: 分出子批
+    splitFrom: 分自母批
+    mergedInto: 合入
+    mergedFrom: 合并自
+    splitQtyHint: 输入每个子批的数量，其余留在母批。
+    splitUnitHint: 将晶圆 / 单元分配到子批，未分配的留在母批。
+    childCount: 子批数
+    remain: 母批保留 {{n}} / {{total}}
+    tooMany: 子批合计必须小于母批数量 {{total}}（不能拆完）
+    child: 子批 {{n}}
+    childShort: 子{{n}}
+    keep: 保留
+    goesTo: 去向
+    splitDone: 分批完成：{{codes}}
+    mergeDone: 合批完成：{{codes}}
+    mergeHint: 可合批的同产品、同步骤批次。
+    noCandidates: 当前无可合批的批次。
+    mergedQty: 合批后数量：{{n}}
+    qtimeNote: Q-Time 取最早（最严格）起始时间。
+    factChildren: 子批：{{list}}
+    factParent: 来自母批 {{code}}
+    factTarget: 合入 {{code}}
+    factSources: 合入批次：{{list}}
+    resultPriority: 合批后优先级（取最高）：
+    prioChange: 由 {{from}} 提升
+    factPriority: 优先级 {{from}} → {{to}}
+    rule: 规则
+    allowed: 允许
+    maxLots: 最多批数
+    usedLots: 已用 {{n}}
+    minQty: 每批最少数量
+  wip:
+    title: 在制调整
+    hint: 对在制批次进行跳站、报废或补数调整。
+    jump: 跳站
+    jumpDesc: 将等待中的批次移到同一流程的其他工序工步。
+    toStep: 目标工步
+    jumped: 已跳站
+    override: 强制放行阻断检查（填写原因）
+    adjust: 报废/补数
+    adjustDesc: 在制品报废或补数。
+    scrap: 报废
+    bonus: 补数
+    qty: 数量
+    adjusted: 已调整
+    runningScrapAll: 加工中的批次不能整批报废（报废后数量会变为 0），请等 Track Out 后再处理
+  qtime:
+    hint: 查看等待中批次的 Q-Time 剩余时间与超时状态。
+    refresh: 刷新
+    sweep: 立即扫描超时
+    swept: 已扫描 {{checked}} 个批次，处置 {{acted}} 个
+    lot: 批次
+    step: 工步
+    rule: 规则
+    since: 起算时间
+    elapsed: 已用(分)
+    max: 上限(分)
+    remaining: 剩余(分)
+    action: 超时处置
+    state: 状态
+    held: 已 Hold
+    exceeded: 已超时
+    ok: 计时中
+    act:
+      warn: 警告
+      hold: Hold
+      rework: 返工
+      scrap: 报废
+    warnAt: 预警(分)
+    warn: 即将超时
+    search: 搜索批次号 / 规则
+    allStates: 全部状态
+    allProducts: 全部产品
+    allRoutes: 全部工艺路线
+    product: 产品
+    route: 工艺路线
+    autoRefresh: 自动刷新
+    sweepConfirm: 立即扫描所有等待中批次，并对已超时批次执行规则配置的处置（Hold / 返工 / 报废）？
+  traceq:
+    hint: 按批次、晶圆、设备或物料批追溯上下游。
+    kind: 对象
+    code: 编码
+    search: 查询
+    backward: 反向追溯
+    forward: 正向追溯
+    srcLots: 来源批次
+    steps: 加工经历（上机）
+    materials: 消耗物料
+    outLots: 产出批次
+    lots: 相关批次
+    k:
+      lot: 批次
+      wafer: 晶圆
+      equipment: 设备
+      material_lot: 物料批
+    c:
+      code: 批次
+      lot: 批次
+      relation: 关系
+      qty: 数量
+      via: 经由
+      level: 层级
+      at: 时间
+      step_seq: 工步
+      operation: 工序
+      equipment: 设备
+      recipe: 配方
+      user: 操作人
+      material_lot: 物料批
+      product: 产品
+      consumed: 消耗
+      downstream: 下游产出
+  holdrel:
+    hint: 查看并释放 Hold 中的批次。
+    reason: Hold 原因
+    source: 来源
+    product: 产品
+    all: 全部
+    release: 批量释放
+    selected: 已选 {{n}} 条
+    released: 已释放 {{ok}} 条，失败 {{bad}} 条
+    lot: 批次
+    step: 工步
+    heldAt: Hold 时间
+    heldBy: Hold 人
+    hours: 已 Hold(小时)
+    comment: 备注
+    src:
+      manual: 手动
+      qtime: Q-Time
+      oos: 超规
+      split: 分批继承
+      equipment: 设备
+    search: 搜索批次 / 产品 / 原因 / 备注
+    allStatus: 全部（含历史）
+    status:
+      active: 生效中
+      released: 已解除
+    allReasons: 全部原因
+    allSources: 全部来源
+    allProducts: 全部产品
+    selectAll: 全选
+    state: 状态
+    releasedAt: 解除时间
+    releasedBy: 解除人
+    releaseReason: 解除原因
+    releaseComment: 解除备注
+    showTerminal: 显示已报废、已合并的批次
+    lotStatus: 批次状态
+  report:
+    hint: 在制分布、滞留批次与每日产出。
+    lots: 在制批次
+    qty: 在制数量
+    onHold: Hold 批次
+    byStatus: 按状态
+    byStep: 按工步
+    byProduct: 按产品
+    aging: 滞留 Top 20
+    output: 产出日报
+    status: 状态
+    route: 流程
+    step: 工步
+    operation: 工序
+    product: 产品
+    lot: 批次
+    hours: 滞留(小时)
+    since: 最近操作
+    day: 日期
+    moves: 出站次数
+    moveQty: 出站数量
+    scrapQty: 报废数量
+    completed: 完工批次
+    to: 结束日期
+    oeeHint: OEE = 时间稼动率 × 性能稼动率 × 良品率。
+    equipment: 设备
+    loading: 负荷(小时)
+    prd: PRD(小时)
+    availability: 时间稼动率
+    performance: 性能稼动率
+    quality: 良品率
+    oee: OEE
+    good: 良品
+    scrap: 报废
+    uphMissing: 缺 UPH
+    from: 开始日期
+    oeeTrend: 日趋势
+    allLotTypes: 全部批次类型
+  queue:
+    scan: 扫码 / 输入批次号回车
+    notFound: 未找到批次 {{code}}
+    search: 搜索批次号 / 产品
+    allStatuses: 全部状态
+    allProducts: 全部产品
+    allOperations: 全部工序
+    allHold: Hold：全部
+    notHeld: 未 Hold
+    held: 已 Hold
+    empty: 暂无在制批次
+    lot: 批次
+    priority: 优先级
+    product: 产品
+    step: 工步 · 工序
+    status: 状态
+    qty: 数量
+    qtime: Q-Time 剩余(分)
+    hours: 滞留(小时)
+    open: 作业
+    hot: 急件
+    allPriorities: 全部急件状态
+    hotOnly: 仅急件
+    notHot: 非急件
+  due:
+    overdue: 逾期
+    expired: 过期
+    expiring: 临期
+    ongoing: 进行中
+    hours: '{{n}} 小时'
+  wmap:
+    title: 晶圆图
+    history: 晶圆履历：{{code}}
+  rrun:
+    title: 配方参数：{{recipe}} v{{version}}
+    view: 参数
+    running: 加工中
+    noParams: 本次运行无配方参数。
+  batch:
+    hint: 同一设备上多个批次一起上机或下机。
+    search: 搜索批次 / 载具
+    allProducts: 全部产品
+    allOps: 全部工序
+    lot: 批次
+    product: 产品
+    step: 工步
+    carrier: 载具
+    qty: 数量
+    selectAll: 全选
+    run: 批量{{stage}}（{{n}}）
+    done: 已完成 {{ok}} / {{total}} 个批次
+    blocked: 存在被拦截的批次，未执行
+    ok: 成功
+    failed: 失败
+  carrier:
+    hint: 查看载具状态，清洗或更换载具。
+    search: 搜索载具 / 批次
+    allTypes: 全部类型
+    allStatus: 全部状态
+    allDue: 全部清洗状态
+    due:
+      ok: 正常
+      warn: 即将到期
+      overdue: 需清洗
+    code: 载具
+    type: 类型
+    status: 状态
+    lot: 批次
+    fill: 晶圆 / 容量
+    usage: 使用次数
+    cleanDue: 清洗到期
+    clean: 清洗
+    cleanConfirm: 确认载具 {{code}} 已清洗？
+    cleaned: 已记录清洗
+    change: 换载具
+    changeDesc: 将批次 {{lot}} 从 {{code}} 移入：
+    target: 目标载具
+    moved: 已换载具
+    splitMerge: 分批 / 合批
+  sorter:
+    action: 整理
+    title: 晶圆整理：{{lot}}（{{code}}）
+    target: 移入载具（可选）
+    wafer: 晶圆
+    from: 原槽位
+    to: 新槽位
+    pack: 顺排
+    run: 执行整理
+    done: 已完成晶圆整理
+  yield:
+    hint: 按工序、产品或批次查看良率与报废原因。
+    search: 搜索编码 / 名称
+    allBands: 全部良率
+    band:
+      low: 低于 90%
+      mid: 90%–98%
+      high: 98% 及以上
+    by:
+      operation: 工序
+      product: 产品
+      lot: 批次
+    total: 良品 {{good}}，报废 {{scrap}}，良率 {{y}}
+    pareto: 报废原因帕累托
+    noScrap: 区间内无报废。
+    qty: 数量
+    cum: 累计占比
+    name: 名称
+    good: 良品
+    scrap: 报废
+    yield: 良率
+  prio:
+    title: 变更优先级
+    desc: 急件优先派工，并在队列中高亮。
+    new: 新优先级
+    done: 优先级已变更
+  shiftLog:
+    hint: 按班次记录交接事项与未结事项，接班人确认。
+    search: 搜索交接内容 / 交班人
+    allStatus: 全部状态
+    allShifts: 全部班次
+    status:
+      open: 待接班
+      acknowledged: 已接班
+    statusCol: 接班
+    date: 日期 / 班次
+    shift: 班次
+    area: 区域
+    summary: 交接事项
+    openItems: 未结事项
+    handedBy: 交班人
+    new: 交班
+    newDesc: 登记本班交接事项与未结事项。
+    submit: 提交交班
+    created: 已交班
+    ack: 接班确认
+    ackDesc: 确认已了解交接事项与未结事项。
+    ackComment: 接班备注（可选）
+    acked: 已接班
+  label:
+    hint: 选择批次或载具，打印条码 / 二维码标签。
+    search: 搜索编码 / 产品
+    allStatus: 全部状态
+    kind:
+      lot: 批次标签
+      carrier: 载具标签
+    code:
+      both: 条码 + 二维码
+      barcode: 仅条码
+      qr: 仅二维码
+    print: 打印 {{n}} 张
+    pickAll: 全选本页
+    codeCol: 编码
+    info: 信息
+    status: 状态
+    qty: 数量
+  reasonCode:
+    qtime_expired: Q-Time 超时
+  qtimeHold:
+    overdue: 超时 {{time}}
+    steps: 工步 {{from}} → {{to}}
+    rule: Q-Time 规则
+    minutes: '{{m}} 分钟'
+    hours: '{{h}} 小时'
+    hoursMinutes: '{{h}} 小时 {{m}} 分钟'
+  checkMsg:
+    registry:
+      not_implemented: 检查类型未实现
+      disabled: 规则 {{rule}} 已关闭此管控
+    common:
+      no_equipment_selected: 未选择设备
+      no_equipment: 无设备
+      no_operation: 无工序
+      no_carrier: 无载具
+    e10_available:
+      ok: '{{equipment}} 状态为 {{state}}（{{category}}）'
+      bad: '{{equipment}} 状态为 {{state}}（{{category}}），需为 {{allowed}}'
+    eqp_capability:
+      not_allowed: '{{equipment}} 不允许用于本工步'
+      no_capability: '{{equipment}} 没有工序 {{operation}} 的设备能力'
+      not_required: 无设备能力记录（不要求）
+      not_qualified: '{{equipment}} 未认证用此配方做工序 {{operation}}'
+      qualified: '{{equipment}} 已认证工序 {{operation}}'
+    recipe_active:
+      required: 需要选择配方
+      none: 无配方
+      status: 配方 {{recipe}} v{{version}} 状态为「$t(mes.enum.status.{{status}})」
+      not_allowed: 配方 {{recipe}} 不允许用于本工步
+      other_type: 配方 {{recipe}} 属于其他设备类型
+      not_enabled: 配方 {{recipe}} 未在 {{equipment}} 上启用
+      active: 配方 {{recipe}} v{{version}} 已生效
+    recipe_match:
+      na: 无配方 / 设备
+      not_enabled: 配方 {{recipe}} 未在 {{equipment}} 上启用
+      not_reported: 设备端配方未上报（应为 {{expect}}）
+      enabled: 配方 {{recipe}} 已在 {{equipment}} 上启用
+      differs: 设备端配方 {{got}} 与 {{expect}} 不一致
+      matches: 设备端配方 {{got}} 一致
+    pm_due:
+      overdue: '{{equipment}} PM 已超期：{{plans}}'
+      due_soon: '{{equipment}} PM 即将到期：{{plans}}'
+      ok: '{{equipment}} PM 正常'
+      no_plan: 无 PM 计划
+    reticle_available:
+      not_required: 不需要光罩
+      required: 需要选择光罩
+      not_allowed: 光罩 {{reticle}} 不允许用于本工步
+      status: 光罩 {{reticle}} 状态为「$t(mes.enum.asset_status.{{status}})」
+      available: 光罩 {{reticle}} 可用
+    material_sufficient:
+      none: 无物料消耗
+      short: '{{material}}：需要 {{need}}，可用 {{available}}'
+      ok: 物料充足
+    tool_life:
+      none: 不需要工具
+      required: 需要 {{fixture}} 类型的工具
+      status: 工具 {{tool}} 状态为「$t(mes.enum.tool_status.{{status}})」
+      life_reached: 工具 {{tool}} 已达寿命（{{used}}/{{max}}）
+      expired: 工具 {{tool}} 已于 {{date}} 过期
+      near_end: 工具 {{tool}} 接近寿命（{{used}}/{{max}}）
+      expires: 工具 {{tool}} 将于 {{date}} 到期
+      ok: 工具可用
+    carrier_available:
+      ok: 载具 {{carrier}}：$t(mes.enum.asset_status.{{status}})
+      bad: 载具 {{carrier}} 状态为「$t(mes.enum.asset_status.{{status}})」
+    qtime:
+      at_track_in: Q-Time 在上机时管控
+      none: 无 Q-Time 规则
+      too_early: Q-Time {{rule}}：{{minutes}} 分钟，未达最短 {{min}} 分钟
+      exceeded: Q-Time {{rule}}：{{minutes}} 分钟，超过最长 {{max}} 分钟
+      ok: Q-Time 正常
+    lot_hold:
+      on_hold: 批次处于 Hold
+      ok: 未 Hold
+      held: 处于 Hold：{{lots}}
+      none_held: 没有批次处于 Hold
+    wo_status:
+      ok: 工单$t(mes.enum.wo_status.{{status}})
+      bad: 工单状态为「$t(mes.enum.wo_status.{{status}})」
+    dc_complete:
+      none: 无需数据收集
+      missing: 缺少 DC 数据：{{items}}
+      ok: DC 已完成
+    oos:
+      bad: '{{count}} 个值超规'
+      ok: 全部值在规格内
+      none: 无 DC 数据
+      values: 超规（$t(mes.enum.oos_action.{{action}})）：{{values}}
+    sampling:
+      no_operation: 无工序
+      no_plan: 无数据收集计划
+      every_lot: 每批都测（无抽样规则）
+      rule_sampled: 规则 {{rule}}：第 {{n}} 批，每 {{freq}} 批 → 抽中
+      rule_skipped: 规则 {{rule}}：第 {{n}} 批，每 {{freq}} 批 → 免测
+      sampled: 抽中
+      not_sampled: 未抽中
+    rework_limit:
+      builtin: 进入返工流程时判定
+      reached: 工步 {{step}} 已达返工上限：{{count}} / {{max}}
+      ok: 第 {{next}} 次返工 / 上限 {{max}}
+    qty_adjust_limit:
+      builtin: 报废 / 补数时判定
+      exceeds: 调整数量 {{qty}} 超过批次数量 {{base}} 的 {{pct}}%
+      within: 在 {{pct}}% 以内
+    split_merge_rule:
+      builtin: 分批 / 合批时判定
+      split_status: 「$t(mes.enum.lot_status.{{status}})」状态的批次不能分批（仅等待 / 已进站可分批）
+      no_rule: 该批次类型没有分批合批规则
+      split_not_allowed: 规则 {{rule}}：不允许分批
+      max_children: 规则 {{rule}}：{{total}} 个批次超过上限 {{max}}
+      min_qty: 规则 {{rule}}：每个批次至少 {{min}}
+      keep_one: 母批至少保留 1
+      child_carrier: 子批 {{child}}：载具 {{carrier}} 不可用
+      child_capacity: 子批 {{child}}：{{qty}} 超过载具容量 {{cap}}
+      split_ok: 允许分批
+      merge_status: 不能合入「$t(mes.enum.lot_status.{{status}})」状态的批次
+      merge_not_allowed: 规则 {{rule}}：不允许合批
+      capacity: '{{total}} 超过载具 {{carrier}} 的容量 {{cap}}'
+      merge_ok: 允许合批
+      self: '{{lot}}：不能合入自身'
+      src_status: '{{lot}}：「$t(mes.enum.lot_status.{{status}})」状态的批次不能合批'
+      diff_product: '{{lot}}：产品不同'
+      diff_route: '{{lot}}：流程或流程版本不同'
+      diff_step: '{{lot}}：工步不同'
+      diff_stage: '{{lot}}：作业阶段不同'
+      diff_tracking: '{{lot}}：追踪级别不同'
+      diff_frame: '{{lot}}：子流程或返工层级不同'
+      diff_wo: '{{lot}}：工单不同'
+      diff_priority: '{{lot}}：优先级不同'
+      src_no_rule: '{{lot}}：其批次类型没有分批合批规则'
+      src_no_merge: '{{lot}}：规则 {{rule}} 不允许合批'
+    chamber_required:
+      none: 设备没有腔体
+      select: '{{equipment}}：请选择腔体'
+      selected: '{{chambers}}'
+    chamber_available:
+      none: 未选择腔体
+      state: '{{chamber}} 状态为 {{state}}（{{category}}）'
+      needs: 需为 {{allowed}}
+      ok: 腔体可用
+    batch_same_step:
+      single: 单个批次
+      steps: 批次不在同一工步
+      equipment: 批次不在同一设备
+      carriers: 批次不在同一载具
+      ok: '{{count}} 个批次在同一工步'
+    carrier_clean:
+      no_interval: 未设清洗周期
+      overdue: 载具 {{carrier}} 清洗已超期
+      due_soon: 载具 {{carrier}} 清洗即将到期
+      clean: 载具 {{carrier}} 清洗有效
+    carrier_usage:
+      none: 未设使用次数上限
+      limit: 载具 {{carrier}} 已使用 {{used}}/{{max}} 次，请先清洗
+      used: 载具 {{carrier}} 已使用 {{used}}/{{max}} 次
+    sort_order:
+      none: 无晶圆整理
+      changed: 晶圆顺序会被打乱
+      kept: 晶圆顺序保持不变
+    notice:
+      scheduled: 定时提醒
+      handover: 交接班规则
+    future_hold:
+      pending: 本工步有 {{count}} 个预约 Hold
+      none: 无预约 Hold
+    hot_lot_limit:
+      not_hot: 不是急件
+      count: 在制急件 {{hot}} 个（上限 {{max}}）
+    operator_qualified:
+      ok: '{{user}} 具备工序 {{operation}} 的资质'
+      bad: '{{user}} 不具备工序 {{operation}} 的资质'
+  checkSep: ；
+  sysNote:
+    qtime_expired: Q-Time {{rule}} 超时：{{minutes}} > {{max}} 分钟
+    oos: 超规：{{items}}
+    inherited: 继承自 {{lot}}
+    e10_auto: 批次 {{lot}} $t(mes.exec.stage.{{trigger}})时自动切换
+  entity:
+    check_rule: 卡控规则
+    check_plan: 卡控方案
+    check_plan_item: 方案规则
+    check_binding: 卡控绑定
+    check_log: 卡控记录
+    future_hold: 预约 Hold
+    shift_log: 交接班日志
+    operator_qual: 操作员资质
+  field:
+    check_rule:
+      code: 编码
+      name: 名称
+      check_type: 卡控类型
+      severity: 严重度
+      params: 参数（JSON）
+      is_active: 启用
+      description: 描述
+    check_plan:
+      code: 编码
+      name: 名称
+      is_active: 启用
+      description: 描述
+    check_plan_item:
+      check_plan: 卡控方案
+      check_rule: 卡控规则
+      seq: 序号
+    check_binding:
+      check_plan: 卡控方案
+      trigger: 触发时机
+      scope: 范围
+      route_step: 流程步骤
+      equipment: 设备
+      operation: 工序
+      equipment_type: 设备类型
+      product: 产品
+      is_active: 启用
+    check_log:
+      lot: 批次
+      trigger: 触发时机
+      route_step: 流程步骤
+      equipment: 设备
+      check_rule: 卡控规则
+      check_plan: 卡控方案
+      check_type: 卡控类型
+      severity: 严重度
+      result: 结果
+      message: 信息
+      context: 上下文
+      override_reason: 放行原因
+      username: 用户
+    future_hold:
+      lot: 批次
+      route_step: Hold 工步
+      reason: 原因代码
+      comment: 备注
+      fh_status: 状态
+      triggered_at: 触发时间
+    shift_log:
+      shift_date: 日期
+      shift: 班次
+      area: 区域
+      summary: 交接事项
+      open_items: 未结事项
+      handed_by: 交班人
+      handed_at: 交班时间
+      log_status: 状态
+      received_by: 接班人
+      received_at: 接班时间
+      receive_comment: 接班备注
+    operator_qual:
+      username: 用户
+      operation: 工序
+      equipment_type: 设备类型
+      certified_on: 认证日期
+      expires_on: 有效期至
+      is_active: 启用
+  help:
+    check_rule:
+      params: '例如 E10 用 {"allowed": ["SBY", "PRD"]}'
+    future_hold:
+      reason: 留空则使用默认 Hold 原因
+    operator_qual:
+      equipment_type: 留空则适用全部设备类型
+  enum:
+    exec_trigger:
+      move_in: 进站
+      track_in: 上机
+      track_out: 下机
+      move_out: 出站
+      split: 分批
+      merge: 合批
+      jump: 跳站
+      adjust: 报废 / 补数
+      sort: 晶圆整理
+      priority: 优先级变更
+    check_type:
+      e10_available: 设备 E10 状态可用
+      eqp_capability: 设备能力 / 配方匹配
+      recipe_active: 配方已生效
+      reticle_available: 光罩可用
+      material_sufficient: 物料充足
+      tool_life: 工具可用 + 寿命
+      carrier_available: 载具可用
+      batch_same_step: 批量：同一工步
+      sort_order: 整理保持晶圆顺序
+      hot_lot_limit: 急件在制上限
+      handover_ack_other: 接班须由他人确认
+      operator_qualified: 操作员具备资质
+      qual_expiry_notice: 资质到期提醒
+      future_hold: 预约 Hold
+      wo_due: 工单交期提醒
+      carrier_clean: 载具清洗周期
+      carrier_usage: 载具使用次数
+      chamber_required: 已选腔体
+      chamber_available: 腔体 E10 状态可用
+      qtime: Q-Time
+      lot_hold: 批次未 Hold
+      wo_status: 工单状态
+      dc_complete: 数据收集完整
+      oos: 超规
+      sampling: 抽样判定
+      split_merge_rule: 分批合批规则
+      recipe_match: 配方设备映射
+      pm_due: 设备 PM 未超期
+      rework_limit: 返工次数上限
+      qty_adjust_limit: 报废 / 补数数量上限
+    check_severity:
+      block: 拦截
+      warn: 预警
+      off: 关闭（不管控）
+    check_result:
+      pass: 通过
+      warn: 预警
+      block: 拦截
+      overridden: 强制放行
+    check_scope:
+      route_step: 流程步骤
+      equipment: 设备
+      operation: 工序
+      equipment_type: 设备类型
+      product: 产品
+    ml_status:
+      available: 可用
+      hold: Hold
+      empty: 已用完
+      expired: 已过期
+    tool_status:
+      available: 可用
+      in_use: 使用中
+      pending_maintenance: 待保养
+      expired: 已过期
+      retired: 已报废
+    e10_trigger:
+      track_in: 上机
+      track_out: 下机（无其他加工批次）
+    hold_type:
+      manual: 手动
+      auto: 自动
+      future: 预约 Hold
+    shift_log_status:
+      open: 待接班
+      acknowledged: 已接班
+    fh_status:
+      active: 待触发
+      triggered: 已触发
+      cancelled: 已取消
+    history_action:
+      start: 投产
+      move_in: 进站
+      track_in: 上机
+      track_out: 下机
+      move_out: 出站
+      hold: Hold
+      release: 解除 Hold
+      scrap: 报废
+      rework: 返工
+      branch: 分支
+      sub_route: 进入子流程
+      return: 子流程/返工返回
+      complete: 完工待入库
+      receive: 入库
+      override: 卡控放行
+      qtime: Q-Time 超时
+      oos: 超规
+      split: 分批
+      merge: 合批
+      jump: 跳站
+      bonus: 补数
+      carrier_change: 换载具
+      sort: 晶圆整理
+      priority: 优先级变更
+    genealogy_relation:
+      split: 分批
+      merge: 合批

@@ -2,9 +2,9 @@
 
 # 规格权限模块：编码 -> ("en|zh|ja" 标签, 排序)
 PERM_MODULES: dict[str, tuple[str, int]] = {
-    "exec": ("Execution|生产执行|生産実行", 80),
-    "inventory": ("Line-side material & tools|物料与工具|資材・工具", 85),
-    "check": ("Checks|卡控|チェック", 90),
+    "exec": ("Execution", 80),
+    "inventory": ("Line-side material & tools", 85),
+    "check": ("Checks", 90),
 }
 # 额外权限编码（read/write 以外）
 PERMISSIONS: dict[str, str] = {

@@ -7,6 +7,7 @@ import {
   type CheckResult,
   type ExecStage,
 } from '@/lib/api/mes/execution'
+import { checkMessage } from '@/lib/backend-text'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -213,7 +214,7 @@ export function CheckPanel({
                 )}
               </div>
               <div className='break-words text-muted-foreground'>
-                {r.message}
+                {checkMessage(r)}
               </div>
             </div>
           </li>

@@ -1,0 +1,197 @@
+mes:
+  autoHint: 留空则自动生成
+  currentStep: 当前
+  lotFlowHint: 该批次的工艺流程，当前步骤已高亮。
+  lotRoute: 工艺流程
+  entity:
+    lot_priority: 批次优先级
+    lot_type: 批次类型
+    split_merge_rule: 分批合批规则
+    qtime_rule: Q-Time 规则
+    lot: 批次
+    wafer: 晶圆 / 单元
+    lot_hold: 批次 Hold
+    lot_history: 批次履历
+    lot_recipe_run: 配方执行记录
+    lot_genealogy: 批次谱系
+  field:
+    lot_priority:
+      code: 编码
+      name: 名称
+      level: 级别（1 = 最高）
+      color: 颜色
+      is_hot: 紧急批
+      description: 描述
+    lot_type:
+      code: 编码
+      name: 名称
+      category: 类别
+      default_priority: 默认优先级
+      lot_id_rule: 批次号规则
+      wafer_id_rule: 晶圆号规则
+      max_wafers: 每批最大片数/数量
+      description: 描述
+    split_merge_rule:
+      code: 编码
+      name: 名称
+      lot_type: 批次类型
+      allow_split: 允许分批
+      max_children: 最大子批数
+      min_wafers: 每批最少片数
+      child_id_mode: 子批号生成
+      allow_merge: 允许合批
+      merge_same_wo: 合批：同工单
+      merge_same_product: 合批：同产品
+      merge_same_step: 合批：同流程步骤
+      merge_same_priority: 合批：要求同优先级（否则取最高）
+      description: 描述
+    qtime_rule:
+      code: 编码
+      name: 名称
+      route: 流程
+      from_step: 起始步骤
+      to_step: 结束步骤
+      product: 产品
+      min_minutes: 最短（分钟）
+      max_minutes: 最长（分钟）
+      warn_minutes: 预警阈值（分钟）
+      action: 超时动作
+      reason: 原因代码
+      is_active: 启用
+      active_since: 启用时间
+      description: 描述
+    lot:
+      code: 批次号
+      work_order: 工单
+      product: 产品
+      route: 流程
+      lot_type: 批次类型
+      priority: 优先级
+      qty: 数量
+      tracking_level: 追踪层级
+      scrapped_qty: 报废数
+      bonus_qty: 补数
+      rework_count: 返工次数
+      site: 工厂
+      current_step: 当前步骤
+      lot_status: 状态
+      on_hold: Hold 中
+      equipment: 设备
+      recipe: 配方
+      step_in_at: 到站时间
+      stage_at: 最近操作
+      pending_rework: 待返工
+      route_stack: 流程栈
+      exec_ctx: 作业上下文
+      completed_at: 完成时间
+      received_qty: 已入库数（良品 + 报废）
+      stored_at: 入库完成时间
+      carrier: 载具
+      source_ref: 来源晶圆 / 物料批次
+      started_at: 投产时间
+      started_by: 投产人
+      description: 描述
+    wafer:
+      code: 晶圆号
+      lot: 批次
+      unit_kind: 单元类型
+      slot: 槽位
+      wafer_status: 状态
+      source_ref: 来源晶圆
+      scrap_reason: 报废原因
+      rework_count: 返工次数
+      description: 描述
+    lot_hold:
+      lot: 批次
+      reason: 原因代码
+      hold_type: Hold 类型
+      source: 来源
+      comment: 备注
+      is_active: 生效中
+      held_at: Hold 时间
+      held_by: Hold 人
+      route_step: 流程步骤
+      qtime_rule: Q-Time 规则
+      qtime_from_step: Q-Time 起始工步
+      qtime_to_step: Q-Time 终点工步
+      qtime_overdue_seconds: Q-Time 超时秒数
+      released_at: 解除时间
+      released_by: 解除人
+      release_reason: 解除原因
+      release_comment: 解除备注
+      note: 系统说明
+    lot_history:
+      lot: 批次
+      unit: 晶圆 / 单元
+      action: 操作
+      route_step: 流程步骤
+      step_seq: 序号
+      operation: 工序
+      equipment: 设备
+      recipe: 配方
+      qty: 数量
+      from_status: 原状态
+      to_status: 新状态
+      reason: 原因代码
+      comment: 备注
+      details: 详情
+      username: 用户
+      at: 时间
+    lot_recipe_run:
+      lot: 批次
+      route_step: 流程步骤
+      operation: 工序
+      equipment: 设备
+      recipe: 配方
+      recipe_version: 配方版本
+      eqp_recipe: 设备端配方
+      chambers: 腔体
+      params: 参数
+      param_specs: 参数规格
+      qty: 数量
+      track_in_at: 上机时间
+      track_out_at: 下机时间
+      username: 用户
+    lot_genealogy:
+      parent_lot: 母批 / 来源批
+      child_lot: 子批 / 目标批
+      relation: 关系
+      qty: 数量
+      units: 晶圆 / 单元
+      route_step: 流程步骤
+      username: 用户
+      at: 时间
+  help:
+    qtime_rule:
+      warn_minutes: 已用时间达到该值即预警（留空不预警）
+      reason: 选填；处置为 hold 时留空使用系统原因码 qtime_expired
+  enum:
+    wo_status:
+      draft: 草稿
+      released: 已下达
+      in_progress: 生产中
+      on_hold: 暂停
+      completed: 已完工
+      closed: 已关闭
+      cancelled: 已取消
+    lot_status:
+      waiting: 等待
+      moved_in: 已进站
+      running: 加工中
+      tracked_out: 已下机
+      completed: 待入库
+      stored: 已入库
+      scrapped: 已报废
+      merged: 已合批（终止）
+    wafer_status:
+      waiting: 等待
+      processing: 加工中
+      rework: 返工
+      completed: 已完成
+      scrapped: 已报废
+    track_unit_kind:
+      wafer: 晶圆
+      strip: 条
+      die: 晶粒
+      package: 封装体
+      unit: 单元

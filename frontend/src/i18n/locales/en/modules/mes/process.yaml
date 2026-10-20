@@ -1,0 +1,176 @@
+mes:
+  routeLockedHint: This version is locked — create a new version to change steps.
+  addStep: Add step
+  moveUp: Move up
+  moveDown: Move down
+  flowStart: Start
+  flowEnd: End
+  subRoute: Sub-route
+  reworkRoute: Rework
+  edgeCall: call
+  edgeReturn: return
+  edgeRework: rework
+  flowDraftHint: Drag a step's handle to add a branch; click a step to edit it.
+  branchDialog: Branch from step {{from}} to step {{to}}
+  ecn:
+    release: Release
+    cancel: Cancel change
+    confirm:
+      release: Release {{code}}? It takes effect now if its time has come.
+      cancel: Cancel {{code}}?
+    done:
+      released: Released, pending
+      applied: Applied
+      cancelled: Cancelled
+    result: New version v{{v}}, {{n}} references updated
+    switched: Lots switched
+    kept: Lots on old version
+  entity:
+    operation: Operation / step
+    route: Route / flow
+    route_step: Route step
+    step_resource: Step resource
+    product_route: Product ↔ route
+    recipe: Recipe
+    recipe_equipment: Recipe ↔ equipment
+    param_spec: Parameter spec
+    change_order: Engineering change
+  field:
+    operation:
+      code: Code
+      name: Name
+      operation_type: Type
+      area: Area
+      std_minutes: Standard time (min)
+      is_active: Active
+      description: Description
+    route:
+      code: Code
+      name: Name
+      route_type: Route type
+      product_family: Product family
+      description: Description
+    route_step:
+      route: Route
+      seq: Seq.
+      step_type: Step type
+      operation: Operation
+      sub_route: Sub-route
+      rework_route: Rework route
+      is_optional: Optional
+      branch_condition: Branch condition
+      branch_to_seq: Branch to seq.
+      max_rework: Max reworks
+      rework_return: Rework returns to
+      auto_move_in: Auto move in
+      auto_track_in: Auto track in
+      auto_track_out: Auto track out
+      auto_move_out: Auto move out
+      note: Note
+    step_resource:
+      route_step: Route step
+      resource_kind: Resource kind
+      equipment: Equipment
+      equipment_group: Equipment group
+      reticle: Reticle
+      material: Material
+      fixture: Fixture / tool
+      recipe: Recipe
+      qty: Quantity
+      uom: Unit
+      qty_basis: Quantity basis
+    product_route:
+      product: Product
+      route: Route
+      is_default: Default
+      priority: Priority
+      effective_from: Effective from
+      effective_to: Effective to
+    recipe:
+      code: Code
+      name: Name
+      equipment_type: Equipment type
+      recipe_type: Recipe type
+      body: Parameters (JSON)
+      description: Description
+    recipe_equipment:
+      recipe: Recipe
+      equipment: Equipment
+      eqp_recipe: Equipment recipe name
+      ideal_uph: Ideal throughput (UPH)
+      is_enabled: Enabled
+    param_spec:
+      code: Code
+      name: Name
+      operation: Operation
+      recipe: Recipe
+      product: Product
+      uom: Unit
+      target: Target
+      lsl: LSL
+      usl: USL
+      description: Description
+    change_order:
+      code: Code
+      name: Name
+      change_type: Change of
+      route: New route version
+      recipe: New recipe version
+      effective_at: Effective at
+      wip_rule: WIP rule
+      reason: Reason
+      ecn_status: Status
+      applied_at: Applied at
+      result: Result
+      description: Description
+  help:
+    route_step:
+      branch_condition: e.g. lot_type == 'ENG'
+      max_rework: 'Blank: unlimited'
+    recipe_equipment:
+      ideal_uph: Optional; overrides the equipment UPH for OEE
+    change_order:
+      wip_rule: 'Route changes: waiting lots stay on the old version or move to the new one by step seq'
+  enum:
+    operation_type:
+      process: Process
+      metrology: Metrology
+      inspection: Inspection
+      test: Test
+      clean: Clean
+      move: Move / stocker
+    route_type:
+      main: Main route
+      sub: Sub-route
+      rework: Rework route
+    step_type:
+      operation: Operation
+      sub_route: Call sub-route
+    recipe_type:
+      production: Production
+      monitor: Monitor
+      clean: Clean / seasoning
+      rework: Rework
+    rework_return:
+      same_step: Same step (re-process)
+      next_step: Next step
+    qty_basis:
+      per_lot: Per lot
+      per_unit: Per unit / wafer
+    change_type:
+      route: Route
+      recipe: Recipe
+    wip_rule:
+      keep_old: WIP keeps old version
+      switch_new: WIP switches to new
+    ecn_status:
+      draft: Draft
+      released: Released (pending)
+      applied: Effective
+      cancelled: Cancelled
+    resource_kind:
+      equipment: Equipment
+      equipment_group: Equipment group
+      reticle: Reticle
+      material: Material
+      fixture: Fixture / tool

@@ -37,7 +37,7 @@ def test_tenant_owner_creates_and_manages_user(client: TestClient, db: Session) 
         json={**body, "username": name.upper()},
     )
     assert dup.status_code == 409
-    assert dup.json()["detail"] == "User with this username already exists"
+    assert dup.json()["detail"]["message"] == "User with this username already exists"
     # 不能创建超级用户（字段被忽略）
     r2 = client.post(
         f"{API}/tenants/{t}/members/new",
@@ -159,4 +159,4 @@ def test_platform_assign_user_tenants_and_actor_username(
         json={"username": name + "f", "email": e.upper(), "password": "x" * 10},
     )
     assert d.status_code == 409
-    assert d.json()["detail"] == "User with this email already exists"
+    assert d.json()["detail"]["message"] == "User with this email already exists"

@@ -4,14 +4,16 @@ import uuid
 from datetime import timedelta
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlmodel import col, func, or_, select
 
+from app.core import error_codes as ec
 from app.core import security
 from app.core.config import settings
 from app.core.deps import SessionDep
 from app.core.models import Message
 from app.core.pagination import ListParamsDep, paginate
+from app.core.spec.errors import coded
 from app.core.tenant import set_tenant
 from app.platform.auth.deps import (
     CurrentUser,
@@ -130,8 +132,10 @@ def update_tenant(
 ) -> Any:
     data = tenant_in.model_dump(exclude_unset=True)
     if "status" in data and not has_permissions(ctx.user, "tenants:write"):
-        raise HTTPException(
-            status_code=403, detail="Only platform admins can change tenant status"
+        raise coded(
+            403,
+            ec.PLATFORM_ADMIN_ONLY_STATUS,
+            "Only platform admins can change tenant status",
         )
     tenant = ctx.tenant
     tenant.sqlmodel_update(data)
@@ -255,17 +259,12 @@ def add_tenant_member(
     """按用户名（或邮箱）添加已有用户为成员；只有 owner 能授予 owner 角色。"""
     user = crud.get_user_by_username(session=session, username=member_in.username)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise coded(404, ec.USER_NOT_FOUND, "User not found")
     if get_membership(session, ctx.id, user.id):
-        raise HTTPException(status_code=409, detail="User is already a member")
+        raise coded(409, ec.USER_IS_ALREADY_A_MEMBER, "User is already a member")
     if "owner" in member_in.roles and not ctx.can("tenant:manage"):
-        raise HTTPException(
-            status_code=403, detail="Only owners can grant the owner role"
-        )
-    try:
-        member = add_member(session, ctx.tenant, user, member_in.roles)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise coded(403, ec.OWNER_ONLY_GRANT, "Only owners can grant the owner role")
+    member = add_member(session, ctx.tenant, user, member_in.roles)
     session.commit()
     session.refresh(member)
     return _member_public(member)
@@ -277,11 +276,9 @@ def create_tenant_user(
 ) -> Any:
     """租户管理员在本租户内直接创建新用户并加入（不能创建超级用户、不创建个人工作区）。"""
     if "owner" in body.roles and not ctx.can("tenant:manage"):
-        raise HTTPException(
-            status_code=403, detail="Only owners can grant the owner role"
-        )
-    if detail := crud.identity_conflict(session, body.username, body.email):
-        raise HTTPException(status_code=409, detail=detail)
+        raise coded(403, ec.OWNER_ONLY_GRANT, "Only owners can grant the owner role")
+    if conflict := crud.identity_conflict(session, body.username, body.email):
+        raise conflict
     user = crud.create_user(
         session=session,
         user_create=UserCreate(
@@ -294,10 +291,7 @@ def create_tenant_user(
         ),
     )
     set_tenant(session, ctx.id)
-    try:
-        member = add_member(session, ctx.tenant, user, body.roles)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    member = add_member(session, ctx.tenant, user, body.roles)
     session.commit()
     session.refresh(member)
     return _member_public(member, True)
@@ -313,14 +307,15 @@ def update_tenant_user(
     """
     m = _target(session, ctx, user_id)
     if user_id not in _sole_tenant_ids(session, [user_id]):
-        raise HTTPException(
-            status_code=403,
-            detail="User belongs to other tenants; ask a platform admin",
+        raise coded(
+            403,
+            ec.USER_IN_OTHER_TENANTS,
+            "User belongs to other tenants; ask a platform admin",
         )
     if any(r.name == "owner" for r in m.roles) and not ctx.can("tenant:manage"):
-        raise HTTPException(status_code=403, detail="Only owners can manage owners")
-    if detail := crud.identity_conflict(session, None, body.email, user_id):
-        raise HTTPException(status_code=409, detail=detail)
+        raise coded(403, ec.OWNER_ONLY_MANAGE, "Only owners can manage owners")
+    if conflict := crud.identity_conflict(session, None, body.email, user_id):
+        raise conflict
     data = body.model_dump(exclude_unset=True)
     if data.get("is_active") is None:
         data.pop("is_active", None)
@@ -334,7 +329,7 @@ def _target(
 ) -> TenantMember:
     m = get_membership(session, ctx.id, user_id)
     if not m:
-        raise HTTPException(status_code=404, detail="Member not found")
+        raise coded(404, ec.MEMBER_NOT_FOUND, "Member not found")
     return m
 
 
@@ -345,17 +340,12 @@ def change_member_roles(
     m = _target(session, ctx, user_id)
     was_owner = any(r.name == "owner" for r in m.roles)
     if ("owner" in body.roles or was_owner) and not ctx.can("tenant:manage"):
-        raise HTTPException(
-            status_code=403, detail="Only owners can change owner roles"
+        raise coded(
+            403, ec.OWNER_ONLY_CHANGE_ROLES, "Only owners can change owner roles"
         )
     if was_owner and "owner" not in body.roles and owner_count(session, ctx.id) <= 1:
-        raise HTTPException(
-            status_code=400, detail="A tenant must keep at least one owner"
-        )
-    try:
-        set_member_roles(session, m, body.roles)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise coded(400, ec.TENANT_LAST_OWNER, "A tenant must keep at least one owner")
+    set_member_roles(session, m, body.roles)
     session.commit()
     session.refresh(m)
     return _member_public(m)
@@ -366,16 +356,16 @@ def remove_member(session: SessionDep, ctx: TenantMember_, user_id: uuid.UUID) -
     """Remove a member (members:write), or leave the tenant yourself."""
     m = _target(session, ctx, user_id)
     if user_id != ctx.user.id and not ctx.can("members:write"):
-        raise HTTPException(
-            status_code=403, detail="The user doesn't have enough privileges"
+        raise coded(
+            403,
+            ec.USER_PRIVILEGES_INSUFFICIENT,
+            "The user doesn't have enough privileges",
         )
     is_owner = any(r.name == "owner" for r in m.roles)
     if is_owner and user_id != ctx.user.id and not ctx.can("tenant:manage"):
-        raise HTTPException(status_code=403, detail="Only owners can remove owners")
+        raise coded(403, ec.OWNER_ONLY_REMOVE, "Only owners can remove owners")
     if is_owner and owner_count(session, ctx.id) <= 1:
-        raise HTTPException(
-            status_code=400, detail="A tenant must keep at least one owner"
-        )
+        raise coded(400, ec.TENANT_LAST_OWNER, "A tenant must keep at least one owner")
     session.delete(m)
     session.commit()
     return Message(message="Member removed successfully")
@@ -384,7 +374,7 @@ def remove_member(session: SessionDep, ctx: TenantMember_, user_id: uuid.UUID) -
 def _tenant_role(session: SessionDep, ctx: TenantContext, role_id: uuid.UUID) -> Role:
     role = session.get(Role, role_id)
     if not role or role.tenant_id != ctx.id:
-        raise HTTPException(status_code=404, detail="Role not found")
+        raise coded(404, ec.ROLE_NOT_FOUND, "Role not found")
     return role
 
 
@@ -394,8 +384,11 @@ def _tenant_perms(session: SessionDep, codes: list[str]) -> list[Permission]:
     ).all()
     bad = set(codes) - {p.code for p in perms if p.scope == "tenant"}
     if bad:
-        raise HTTPException(
-            status_code=400, detail=f"Not tenant-scope permissions: {sorted(bad)}"
+        raise coded(
+            400,
+            ec.PERM_NOT_TENANT_SCOPE,
+            f"Not tenant-scope permissions: {sorted(bad)}",
+            codes=", ".join(sorted(bad)),
         )
     return list(perms)
 
@@ -417,7 +410,7 @@ def create_tenant_role(
     if session.exec(
         select(Role).where(Role.tenant_id == ctx.id, Role.name == role_in.name)
     ).first():
-        raise HTTPException(status_code=409, detail="Role already exists")
+        raise coded(409, ec.ROLE_ALREADY_EXISTS, "Role already exists")
     role = Role(
         name=role_in.name,
         title=role_in.title,
@@ -439,9 +432,13 @@ def update_tenant_role(
 ) -> Any:
     role = _tenant_role(session, ctx, role_id)
     if role.name == "owner" and role_in.name not in (None, "owner"):
-        raise HTTPException(status_code=400, detail="The owner role cannot be renamed")
+        raise coded(
+            400, ec.OWNER_ROLE_CANNOT_BE_RENAMED, "The owner role cannot be renamed"
+        )
     if role.name == "owner" and role_in.status == "disabled":
-        raise HTTPException(status_code=400, detail="The owner role cannot be disabled")
+        raise coded(
+            400, ec.OWNER_ROLE_CANNOT_BE_DISABLED, "The owner role cannot be disabled"
+        )
     role.sqlmodel_update(role_in.model_dump(exclude_unset=True))
     touch(role, ctx.user)
     session.add(role)
@@ -456,8 +453,10 @@ def set_tenant_role_permissions(
 ) -> Any:
     role = _tenant_role(session, ctx, role_id)
     if role.name == "owner":
-        raise HTTPException(
-            status_code=400, detail="The owner role permissions are fixed"
+        raise coded(
+            400,
+            ec.OWNER_ROLE_PERMISSIONS_ARE_FIXED,
+            "The owner role permissions are fixed",
         )
     role.permissions = _tenant_perms(session, body.codes)
     touch(role, ctx.user)
@@ -473,7 +472,9 @@ def delete_tenant_role(
 ) -> Any:
     role = _tenant_role(session, ctx, role_id)
     if role.name == "owner":
-        raise HTTPException(status_code=400, detail="The owner role cannot be deleted")
+        raise coded(
+            400, ec.OWNER_ROLE_CANNOT_BE_DELETED, "The owner role cannot be deleted"
+        )
     session.delete(role)
     session.commit()
     return Message(message="Role deleted successfully")
@@ -489,7 +490,7 @@ def _platform_ctx(
     session: SessionDep, user: CurrentUser, tenant_id: uuid.UUID
 ) -> TenantContext:
     if not session.get(Tenant, tenant_id):
-        raise HTTPException(status_code=404, detail="Tenant not found")
+        raise coded(404, ec.TENANT_NOT_FOUND, "Tenant not found")
     # 平台接口已按平台权限授权；非成员的平台管理员同样获得该租户的全部权限
     return resolve_tenant(session, user, tenant_id, impersonating=True)
 
@@ -569,7 +570,7 @@ def platform_assign_owner(
     ctx = _platform_ctx(session, user, tenant_id)
     target = crud.get_user_by_username(session=session, username=body.username)
     if not target:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise coded(404, ec.USER_NOT_FOUND, "User not found")
     m = get_membership(session, tenant_id, target.id)
     if m is None:
         m = add_member(session, ctx.tenant, target, ["owner"])
@@ -585,7 +586,7 @@ def platform_assign_owner(
 def platform_user_tenants(session: SessionDep, user_id: uuid.UUID) -> Any:
     """用户所属的租户及其租户角色（平台用户编辑对话框）。"""
     if not session.get(User, user_id):
-        raise HTTPException(status_code=404, detail="User not found")
+        raise coded(404, ec.USER_NOT_FOUND, "User not found")
     ms = session.exec(select(TenantMember).where(TenantMember.user_id == user_id)).all()
     return [
         UserTenantRoles(
@@ -604,7 +605,7 @@ def platform_set_user_tenants(
     """整体设置用户的租户成员身份与租户角色（新增 / 修改 / 移除），逐项记入平台操作日志。"""
     target = session.get(User, user_id)
     if not target:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise coded(404, ec.USER_NOT_FOUND, "User not found")
     want = {i.tenant_id: i.roles for i in body.items}
     have = {
         m.tenant_id: m
@@ -615,8 +616,8 @@ def platform_set_user_tenants(
     for tid in set(have) - set(want):
         m = have[tid]
         if any(r.name == "owner" for r in m.roles) and owner_count(session, tid) <= 1:
-            raise HTTPException(
-                status_code=400, detail="A tenant must keep at least one owner"
+            raise coded(
+                400, ec.TENANT_LAST_OWNER, "A tenant must keep at least one owner"
             )
         record_platform_audit(
             session, user, "member.remove", "user", target.username, tid
@@ -624,39 +625,36 @@ def platform_set_user_tenants(
         session.delete(m)
     for tid, roles in want.items():
         ctx = _platform_ctx(session, user, tid)
-        try:
-            if tid in have:
-                m = have[tid]
-                if (
-                    any(r.name == "owner" for r in m.roles)
-                    and "owner" not in roles
-                    and owner_count(session, tid) <= 1
-                ):
-                    raise HTTPException(
-                        status_code=400, detail="A tenant must keep at least one owner"
-                    )
-                set_member_roles(session, m, roles)
-                record_platform_audit(
-                    session,
-                    user,
-                    "member.roles",
-                    "user",
-                    target.username,
-                    tid,
-                    {"roles": roles},
+        if tid in have:
+            m = have[tid]
+            if (
+                any(r.name == "owner" for r in m.roles)
+                and "owner" not in roles
+                and owner_count(session, tid) <= 1
+            ):
+                raise coded(
+                    400, ec.TENANT_LAST_OWNER, "A tenant must keep at least one owner"
                 )
-            else:
-                add_member(session, ctx.tenant, target, roles)
-                record_platform_audit(
-                    session,
-                    user,
-                    "member.add",
-                    "user",
-                    target.username,
-                    tid,
-                    {"roles": roles},
-                )
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            set_member_roles(session, m, roles)
+            record_platform_audit(
+                session,
+                user,
+                "member.roles",
+                "user",
+                target.username,
+                tid,
+                {"roles": roles},
+            )
+        else:
+            add_member(session, ctx.tenant, target, roles)
+            record_platform_audit(
+                session,
+                user,
+                "member.add",
+                "user",
+                target.username,
+                tid,
+                {"roles": roles},
+            )
     session.commit()
     return platform_user_tenants(session, user_id)

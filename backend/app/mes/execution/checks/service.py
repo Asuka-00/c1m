@@ -10,6 +10,9 @@ from app.mes.execution.checks.registry import (
     CHECKS as CHECKS,
 )
 from app.mes.execution.checks.registry import (
+    MESSAGES as MESSAGES,
+)
+from app.mes.execution.checks.registry import (
     SPECIFICITY as SPECIFICITY,
 )
 from app.mes.execution.checks.registry import (
@@ -17,6 +20,9 @@ from app.mes.execution.checks.registry import (
 )
 from app.mes.execution.checks.registry import (
     Ctx as Ctx,
+)
+from app.mes.execution.checks.registry import (
+    Msg as Msg,
 )
 from app.mes.execution.checks.registry import (
     check_type as check_type,
@@ -29,6 +35,9 @@ from app.mes.execution.checks.registry import (
 )
 from app.mes.execution.checks.registry import (
     evaluate as evaluate,
+)
+from app.mes.execution.checks.registry import (
+    messages as messages,
 )
 from app.mes.execution.checks.registry import (
     resolve as resolve,

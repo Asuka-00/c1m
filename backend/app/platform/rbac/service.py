@@ -48,18 +48,18 @@ def seed_rbac(session: Session) -> None:
 
 
 def fill_names(obj: Permission | Role) -> None:
-    """为内置权限 / 角色补齐英文显示名称与说明（仅在为空时填充；前端按 i18n 翻译内置值）。"""
+    """为内置权限 / 角色补齐英文显示名称与说明（仅在为空时填充；前端按语言包翻译内置值）。"""
     if isinstance(obj, Permission):
         if not obj.name and (lbl := permission_label(obj.code)):
-            obj.name = lbl.split("|")[0]
+            obj.name = lbl
         if desc := permission_description(obj.code):
-            obj.description = obj.description or desc.split("|")[0]
+            obj.description = obj.description or desc
         return
     if not obj.title and obj.name in ROLE_LABELS:
-        obj.title = ROLE_LABELS[obj.name].split("|")[0]
+        obj.title = ROLE_LABELS[obj.name]
     key = role_description_key(obj.name, obj.tenant_id is None)
     if not obj.description and key in ROLE_DESCRIPTIONS:
-        obj.description = ROLE_DESCRIPTIONS[key].split("|")[0]
+        obj.description = ROLE_DESCRIPTIONS[key]
 
 
 def get_role(session: Session, name: str) -> Role | None:

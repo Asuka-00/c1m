@@ -1,0 +1,212 @@
+mes:
+  convertValue: 数值（{{unit}}）
+  convertTo: 换算为
+  entity:
+    uom: 计量单位
+    uom_conversion: 单位换算
+    tech_node: 工艺节点
+    product_family: 产品族
+    product: 产品
+    material_type: 物料类型
+    material: 物料
+    carrier_type: 载具类型
+    carrier: 载具
+    carrier_event: 载具履历
+    reticle: 光罩
+    fixture: 治具 / 工具
+    material_lot: 线边物料批
+  field:
+    uom:
+      code: 编码
+      name: 名称
+      symbol: 符号
+      dimension: 量纲
+      description: 描述
+    uom_conversion:
+      from_uom: 源单位
+      to_uom: 目标单位
+      factor: 换算系数
+      offset: 偏移量
+    tech_node:
+      code: 编码
+      name: 名称
+      feature_nm: 特征尺寸（nm）
+      wafer_size: 晶圆尺寸
+      tracking_level: 追踪层级
+      description: 描述
+    product_family:
+      code: 编码
+      name: 名称
+      tech_node: 工艺节点
+      description: 描述
+    product:
+      code: 编码
+      name: 名称
+      family: 产品族
+      tech_node: 工艺节点
+      product_type: 类型
+      wafer_size: 晶圆尺寸
+      gross_die: 每片总晶粒数
+      uom: 单位
+      tracking_level: 追踪层级
+      serial_kind: 序列化单元类型
+      unit_code_rule: 单元序列号规则
+      description: 描述
+    material_type:
+      code: 编码
+      name: 名称
+      category: 类别
+      description: 描述
+    material:
+      code: 编码
+      name: 名称
+      material_type: 物料类型
+      uom: 单位
+      vendor: 供应商
+      shelf_life_days: 保质期（天）
+      storage: 存储条件
+      is_active: 启用
+      description: 描述
+    carrier_type:
+      code: 编码
+      name: 名称
+      category: 类别
+      capacity: 容量（槽位）
+      wafer_size: 晶圆尺寸
+      clean_interval_days: 清洗周期（天）
+      description: 描述
+    carrier:
+      code: 编码
+      name: 名称
+      carrier_type: 载具类型
+      status_code: 状态
+      max_uses: 最大使用次数
+      use_count: 清洗后使用次数
+      last_cleaned_at: 上次清洗
+      rfid: RFID 标签
+      description: 描述
+    carrier_event:
+      carrier: 载具
+      event: 事件
+      lot: 批次
+      other_carrier: 来源 / 目标载具
+      qty: 数量
+      comment: 备注
+      username: 用户
+      at: 时间
+    reticle:
+      code: 编码
+      name: 名称
+      product: 产品
+      layer: 层
+      grade: 类型
+      max_shots: 最大曝光次数
+      status_code: 状态
+      description: 描述
+    fixture:
+      code: 编码
+      name: 名称
+      kind: 类型
+      max_uses: 最大使用次数
+      status_code: 状态
+      description: 描述
+    material_lot:
+      code: 物料批号
+      material: 物料
+      qty_remaining: 剩余数量
+      initial_qty: 收料数量
+      uom: 单位
+      expiry_date: 有效期
+      location: 库位
+      ml_status: 状态
+      description: 描述
+  help:
+    uom_conversion:
+      factor: 目标 = 源 × 系数
+    product:
+      tracking_level: 留空则继承工艺节点
+  enum:
+    uom_dimension:
+      count: 数量
+      length: 长度
+      area: 面积
+      volume: 体积
+      mass: 质量
+      time: 时间
+      pressure: 压力
+      temperature: 温度
+      energy_density: 能量密度
+    wafer_size:
+      '100': 100 mm（4 寸）
+      '150': 150 mm（6 寸）
+      '200': 200 mm（8 寸）
+      '300': 300 mm（12 寸）
+    product_type:
+      production: 量产
+      engineering: 工程
+      monitor: 监控片
+      dummy: 陪片
+    material_category:
+      wafer: 原始晶圆
+      chemical: 化学品
+      gas: 气体
+      target: 靶材
+      slurry: 研磨液
+      photoresist: 光刻胶
+      consumable: 耗材
+    carrier_category:
+      foup: FOUP
+      fosb: FOSB
+      cassette: 片盒
+      pod: 光罩盒
+      smif: SMIF 盒
+    carrier_event_type:
+      load: 装入
+      unload: 移出
+      clean: 清洗
+      sort: 晶圆整理
+      split: 分批
+      merge: 合批
+    asset_status:
+      available: 可用
+      in_use: 使用中
+      dirty: 待清洗
+      hold: Hold
+      retired: 报废
+    reticle_grade:
+      binary: 二元掩模
+      psm: 相移掩模
+      euv: EUV
+    fixture_kind:
+      probe_card: 探针卡
+      fixture: 治具
+      jig: 夹具
+      tool: 工具
+    eqp_category:
+      process: 工艺设备
+      metrology: 量测设备
+      inspection: 检测设备
+      test: 测试设备
+      transport: 搬运设备
+    unit_kind:
+      main: 主设备
+      chamber: 腔体
+      load_port: 装载口
+      port: 端口
+      sub_unit: 子单元
+    tracking_level:
+      wafer: 晶圆（槽位）
+      unit: 序列化单元
+      quantity: 数量
+    serial_kind:
+      strip: 条
+      die: 晶粒
+      package: 封装体
+      unit: 单元
+    e10_category:
+      PRD: PRD · 生产
+      SBY: SBY · 待机
+      ENG: ENG · 工程
+      SDT: SDT · 计划停机
+      UDT: UDT · 非计划停机
+      NST: NST · 非排程

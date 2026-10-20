@@ -1,0 +1,66 @@
+config:
+  title: System configuration
+  tenantDesc: System settings. Items you have not changed use the default value.
+  platformDesc: Default settings for all tenants.
+  itemCount: '{{count}} items'
+  inherited: Inherited from platform
+  overridden: Overridden
+  resetToPlatform: Reset to default
+  resetDone: Reset to the platform value
+  platformValue: Platform value
+  unsaved: '{{count}} unsaved change(s)'
+  reset: Reset
+  saved: Configuration saved
+  invalidJson: Invalid JSON
+  upload: Upload
+  replace: Replace
+  remove: Remove
+  uploaded: File uploaded — save to apply
+  imageHint: PNG, JPG, SVG, WebP or ICO, max 5 MB
+  empty: No configurable settings.
+  support: Support
+  groups:
+    branding: Branding
+    security: Security
+    notification: Notification channels
+  groupDescs:
+    branding: Product name, logo and footer shown on the login page, sidebar and browser tab.
+    security: Platform sign-in policies (stored settings; platform admins only).
+    notification: Platform-wide switches for notification channels (platform admins only).
+  items:
+    branding:
+      app_name: App name
+      app_subtitle: Subtitle
+      logo: Logo
+      favicon: Favicon
+      login_background: Login background
+      primary_color: Accent color
+      footer_copyright: Footer copyright
+      support_url: Support URL
+    security:
+      session_minutes: Session length (minutes)
+      password_policy: Password policy
+      extra: Advanced (JSON)
+    notification:
+      in_app_enabled: In-app channel enabled
+  itemDescs:
+    branding:
+      app_name: Shown on the login page, sidebar and browser title.
+      app_subtitle: Optional tagline under the name.
+      logo: Square image, shown in the sidebar and on the login page.
+      favicon: Browser tab icon (falls back to the logo).
+      login_background: Optional background image for the login page.
+      primary_color: Brand accent color.
+      footer_copyright: Shown in the footer of the login page and the app.
+      support_url: Optional help / support link in the footer.
+    notification:
+      in_app_enabled: Deliver notifications to the in-app inbox.
+    security:
+      session_minutes: Access token lifetime for new sign-ins.
+      extra: Free-form JSON options.
+  options:
+    security:
+      password_policy:
+        basic: Basic (8+)
+        standard: Standard (8+, letters & digits)
+        strict: Strict (12+, mixed)

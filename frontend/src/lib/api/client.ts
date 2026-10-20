@@ -1,8 +1,13 @@
 import axios, { AxiosError } from 'axios'
-import i18n, { currentLanguage, t } from '@/i18n'
-import { TENANT_WORDING } from '@/i18n/workspace-wording'
+import { currentLanguage, t } from '@/i18n'
 import { useAuthStore } from '@/stores/auth-store'
-import { isPlatformPath } from '@/lib/space'
+import {
+  codeText,
+  detailParams,
+  itemText,
+  type CodedItem,
+} from '@/lib/backend-text'
+import { ErrorCode } from '@/lib/error-codes'
 
 /** 后端 API 地址（VITE_API_URL；设为空字符串时使用同源，生产经 nginx 反代 /api；未设置时默认 http://localhost:8000）。 */
 export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
@@ -23,12 +28,13 @@ http.interceptors.response.use(
   (error: AxiosError) => {
     const status = error.response?.status
     const url = error.config?.url ?? ''
-    const detail = (error.response?.data as { detail?: string })?.detail
+    const detailCode = codeOf(error.response?.data)
     const st = useAuthStore.getState()
     // 模拟令牌过期 / 失效：恢复原平台令牌并回到平台租户列表，而不是登出
     if (
       st.originalToken &&
-      (status === 401 || detail === 'Could not validate credentials')
+      (status === 401 ||
+        detailCode === ErrorCode.COULD_NOT_VALIDATE_CREDENTIALS)
     ) {
       st.endImpersonation()
       window.location.assign('/platform/tenants')
@@ -44,8 +50,7 @@ http.interceptors.response.use(
     // 所选租户已不存在 / 已非成员 -> 回退到默认租户解析
     if (
       status === 404 &&
-      (error.response?.data as { detail?: string })?.detail ===
-        'Tenant not found' &&
+      detailCode === ErrorCode.TENANT_NOT_FOUND &&
       !url.startsWith('/tenants/')
     ) {
       useAuthStore.getState().setTenantId(null)
@@ -54,35 +59,41 @@ http.interceptors.response.use(
   }
 )
 
-/** 把 API 错误转换为可读的多语言消息。已知的后端
- *  `detail` 字符串会被翻译（backend.<detail>）；否则回退为
- *  按状态码的翻译消息，最后才是原始 detail。 */
+/** 响应体里的数字错误码（`detail.code`），没有时为 undefined。 */
+function codeOf(data: unknown): number | undefined {
+  const d = (data as { detail?: { code?: unknown } } | undefined)?.detail
+  return typeof d?.code === 'number' ? d.code : undefined
+}
+
 /**
- * 把接口错误转换为当前语言的提示文本。
+ * 把接口错误转换为当前语言的提示文本：数字错误码按 `error.code_<code>`（插值取 `params`）翻译；
+ * 422 字段错误逐项翻译；框架级错误按状态码给通用提示。后端的英文原文不会直接显示。
  */
 export function errorMessage(e: unknown): string {
   if (e instanceof AxiosError) {
-    if (!e.response) return t('errors.network')
+    if (!e.response) return t('error.network')
     const status = e.response.status
     const d = (e.response.data as { detail?: unknown })?.detail
-    if (typeof d === 'string') {
-      const key = `backend.${d}`
-      if (i18n.exists(key)) return t(key)
-      // 工作区不暴露多租户概念：未翻译且提到 tenant 的后端消息改为通用提示
-      if (TENANT_WORDING.test(d) && !isPlatformPath(window.location.pathname))
-        return status === 403 ? t('errors.forbidden') : t('errors.generic')
-      return d
+    if (d && typeof d === 'object' && !Array.isArray(d) && 'code' in d) {
+      const coded = codeText(
+        (d as { code?: unknown }).code,
+        detailParams(d as Record<string, unknown>)
+      )
+      if (coded) return coded
     }
     if (status === 422) {
       if (Array.isArray(d)) {
-        const msgs = d.map((x: { msg?: string }) => x.msg).filter(Boolean)
-        return `${t('errors.validation')} ${msgs.join(', ')}`.trim()
+        const msgs = d
+          .map((x: CodedItem) => itemText(x) ?? x.msg)
+          .filter(Boolean)
+        return `${t('error.validation')} ${msgs.join(', ')}`.trim()
       }
-      return t('errors.validation')
+      return t('error.validation')
     }
-    if (status === 403) return t('errors.forbidden')
-    if (status >= 500) return t('errors.server')
-    return e.message
+    // 框架级错误（路由不存在、方法不允许等，detail 为英文字符串）和未登记的错误码：按状态码给通用提示
+    if (status === 403) return t('error.forbidden')
+    if (status >= 500) return t('error.server')
+    return t('error.generic')
   }
   return String(e)
 }

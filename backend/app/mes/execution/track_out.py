@@ -5,15 +5,17 @@ from typing import Any
 
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.models import actor_name
 from app.core.spec.audit import audit
 from app.core.spec.base import now
 from app.core.spec.engine import ENTITIES
-from app.core.spec.errors import http_422
+from app.core.spec.errors import FieldError, fe, http_422
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
 from app.mes.equipment.service import e10_apply
 from app.mes.execution.checks import service as ck
+from app.mes.execution.checks.types import M_OOS
 from app.mes.execution.constants import OOS_RANK
 from app.mes.execution.consumption import _consume
 from app.mes.execution.context import build_ctx
@@ -51,7 +53,7 @@ def track_out(
     ctx = build_ctx(s, tid, lot, "track_out", body)
     level = lot["tracking_level"] or "wafer"
     us = {str(u["id"]): u for u in units(s, tid, lot["id"])}
-    errs: list[tuple[str, str]] = []
+    errs: list[FieldError] = []
     # 报废 / 返工
     scrap_units: list[tuple[Row, Row]] = []
     scrap_qty: list[tuple[int, Row]] = []
@@ -59,33 +61,61 @@ def track_out(
         r = one(s, tid, "reason_code", x.get("reason_id"))
         if not r or r["reason_type"] != "scrap":
             errs.append(
-                (f"scrap.{i}.reason_id", f"scrap {i}: a scrap reason code is required")
+                fe(
+                    f"scrap.{i}.reason_id",
+                    ec.SCRAP_REASON_REQUIRED,
+                    f"scrap {i}: a scrap reason code is required",
+                    i=i,
+                )
             )
             continue
         if level == "quantity":
             n = int(x.get("qty") or 0)
             if n < 1:
-                errs.append((f"scrap.{i}.qty", f"scrap {i}: qty must be >= 1"))
+                errs.append(
+                    fe(
+                        f"scrap.{i}.qty",
+                        ec.SCRAP_QTY_MIN,
+                        f"scrap {i}: qty must be >= 1",
+                        i=i,
+                    )
+                )
             scrap_qty.append((n, r))
         else:
             u = us.get(str(x.get("unit_id")))
             if not u:
-                errs.append((f"scrap.{i}.unit_id", f"scrap {i}: unit not in this lot"))
+                errs.append(
+                    fe(
+                        f"scrap.{i}.unit_id",
+                        ec.SCRAP_UNIT_NOT_IN_LOT,
+                        f"scrap {i}: unit not in this lot",
+                        i=i,
+                    )
+                )
             else:
                 scrap_units.append((u, r))
     if level == "quantity" and sum(n for n, _ in scrap_qty) > lot["qty"]:
-        errs.append(("scrap", f"scrap: total exceeds lot qty {lot['qty']}"))
+        errs.append(
+            fe(
+                "scrap",
+                ec.SCRAP_TOTAL_EXCEEDS,
+                f"scrap: total exceeds lot qty {lot['qty']}",
+                qty=lot["qty"],
+            )
+        )
     if len({u["id"] for u, _ in scrap_units}) != len(scrap_units):
-        errs.append(("scrap", "scrap: a unit is listed twice"))
+        errs.append(fe("scrap", ec.SCRAP_UNIT_TWICE, "scrap: a unit is listed twice"))
     rework_units: list[tuple[Row, Row]] = []
     for i, x in enumerate(body.get("rework_units") or [], 1):
         r = one(s, tid, "reason_code", x.get("reason_id"))
         u = us.get(str(x.get("unit_id")))
         if not r or r["reason_type"] != "rework" or not u:
             errs.append(
-                (
+                fe(
                     f"rework_units.{i}",
+                    ec.REWORK_UNIT_REQUIRED,
                     f"rework {i}: unit of this lot + rework reason required",
+                    i=i,
                 )
             )
         else:
@@ -97,18 +127,39 @@ def track_out(
     for i, d in enumerate(body.get("dc") or [], 1):
         it = items.get(str(d.get("measurement_item_id")))
         if not it:
-            errs.append((f"dc.{i}", f"dc {i}: measurement item not in the DC plan"))
+            errs.append(
+                fe(
+                    f"dc.{i}",
+                    ec.DC_ITEM_NOT_IN_PLAN,
+                    f"dc {i}: measurement item not in the DC plan",
+                    i=i,
+                )
+            )
             continue
         if d.get("value") is None or d.get("value") == "":
             continue
         try:
             v = float(d["value"])
         except TypeError, ValueError:
-            errs.append((f"dc.{i}.value", f"dc {i}: value must be a number"))
+            errs.append(
+                fe(
+                    f"dc.{i}.value",
+                    ec.DC_VALUE_NUMBER,
+                    f"dc {i}: value must be a number",
+                    i=i,
+                )
+            )
             continue
         uid = d.get("unit_id")
         if uid and str(uid) not in {str(k) for k in us}:
-            errs.append((f"dc.{i}.unit_id", f"dc {i}: unit not in this lot"))
+            errs.append(
+                fe(
+                    f"dc.{i}.unit_id",
+                    ec.DC_UNIT_NOT_IN_LOT,
+                    f"dc {i}: unit not in this lot",
+                    i=i,
+                )
+            )
             continue
         dc.append(
             {
@@ -138,11 +189,15 @@ def track_out(
     if short and ck.enabled(ctx, "material_sufficient"):
         raise http_422(
             [
-                (
+                fe(
                     "material_lot_ids",
+                    ec.MATERIAL_INSUFFICIENT,
                     "material_lot_ids: insufficient "
                     + "; ".join(
                         f"{n['material_code']} need {n['need']:g}" for n in short
+                    ),
+                    items="; ".join(
+                        f"{n['material_code']} {n['need']:g}" for n in short
                     ),
                 )
             ]
@@ -158,7 +213,7 @@ def track_out(
             ck.result(
                 "oos",
                 "fail" if worst == "block" else "warn",
-                f"OOS ({worst}): {msg}",
+                M_OOS("values", action=worst, values=msg),
                 severity="block" if worst == "block" else "warn",
                 data={"action": worst, "values": len(oos)},
             )
@@ -315,7 +370,11 @@ def track_out(
             "consumed": consumed,
             "tools": tools,
             "e10": e10,
-            "sampling": smp.get("message"),
+            "sampling": {
+                "key": f"sampling.{smp.get('reason')}",
+                "params": smp.get("reason_params") or {},
+                "text": smp.get("message"),
+            },
             **_ov(body, results),
         },
     )
@@ -361,7 +420,12 @@ def track_out(
             reason,
             hold_type="auto",
             source="oos",
-            comment="OOS: " + ", ".join(f"{d['code']}={d['value']:g}" for d in oos[:5]),
+            note={
+                "key": "oos",
+                "params": {
+                    "items": ", ".join(f"{d['code']}={d['value']:g}" for d in oos[:5])
+                },
+            },
         )
     if status == "scrapped":
         history(

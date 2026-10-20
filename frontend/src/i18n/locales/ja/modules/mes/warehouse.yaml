@@ -1,0 +1,88 @@
+mes:
+  receipt:
+    actions: 入庫伝票の操作
+    noActions: 実行可能な操作はありません
+    confirmBtn: 確認
+    action:
+      submit: 提出
+      reject: 差戻し
+      confirm: 入庫確認
+      cancel: 入庫伝票を取消
+    done:
+      submit: 入庫伝票を提出しました
+      reject: 入庫伝票を下書きに戻しました
+      confirm: 入庫を確認しました
+      cancel: 入庫伝票を取り消しました
+    confirm:
+      submit: '{{code}} を提出しますか？提出後は明細を変更できず、数量が引き当てられます。'
+      reject: '{{code}} を下書きに差し戻しますか？'
+      confirm: '{{code}} の入庫を確認しますか？ロットの入庫済数と作業指示の完了数が加算され、全数入庫したロットはクローズされます。'
+      cancel: '{{code}} を取り消しますか？元に戻せません。'
+  entity:
+    warehouse: 倉庫
+    storage_location: ロケーション
+    receipt: 完成品入庫伝票
+    receipt_line: 入庫明細
+  field:
+    warehouse:
+      code: コード
+      name: 名称
+      site: 工場
+      warehouse_type: 倉庫種別
+      address: 住所
+      keeper: 倉庫管理者
+      is_active: 有効
+      description: 説明
+    storage_location:
+      code: コード
+      name: 名称
+      warehouse: 倉庫
+      location_type: ロケーション種別
+      capacity: 容量（ロット）
+      is_active: 有効
+      description: 説明
+    receipt:
+      code: 入庫伝票番号
+      warehouse: 倉庫
+      location: ロケーション
+      receipt_status: 状態
+      lot_count: ロット数
+      total_good: 良品数
+      total_scrap: 廃棄数
+      remarks: 備考
+      submitted_at: 提出日時
+      submitted_by: 提出者
+      confirmed_at: 確認日時
+      confirmed_by: 確認者
+      description: 説明
+    receipt_line:
+      receipt: 入庫伝票
+      lot: ロット
+      work_order: 作業指示
+      product: 製品
+      good_qty: 良品数
+      scrap_qty: 廃棄数
+      remarks: 備考
+  help:
+    storage_location:
+      capacity: 空欄：無制限
+    receipt_line:
+      lot: 入庫待ちロットのみ
+  enum:
+    warehouse_type:
+      finished_goods: 完成品倉庫
+      semi_finished: 半製品倉庫
+      raw_material: 原材料倉庫
+      quarantine: 隔離倉庫
+      scrap: 廃棄品倉庫
+    location_type:
+      rack: ラック
+      shelf: 棚
+      bin: ビン
+      dry_cabinet: ドライ・N2 キャビネット
+      floor: 平置き
+    receipt_status:
+      draft: 下書き
+      submitted: 提出済
+      confirmed: 確認済
+      cancelled: 取消

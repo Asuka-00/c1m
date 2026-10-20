@@ -6,9 +6,10 @@ from typing import Any
 import sqlalchemy as sa
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.base import conn
 from app.core.spec.engine import TABLES, Entity
-from app.core.spec.errors import MesError
+from app.core.spec.errors import FieldError, MesError, fe
 from app.core.spec.validate import validator
 from app.mes.common.validators import Row, _get
 from app.mes.equipment.service import check_recipe_equipment_type
@@ -23,28 +24,68 @@ def _route(s: Session, tid: uuid.UUID, rid: Any) -> Row | None:
 def _route_step(
     s: Session, tid: uuid.UUID, _e: Entity, row: Row, _old: Row | None
 ) -> None:
-    errs: list[tuple[str, str]] = []
+    errs: list[FieldError] = []
     if (row.get("seq") or 0) <= 0:
-        errs.append(("seq", "seq: must be > 0"))
+        errs.append(fe("seq", ec.FIELD_GT, "seq: must be > 0", min=0))
     if row.get("step_type") == "operation":
         if not row.get("operation_id"):
-            errs.append(("operation", "operation: required for an operation step"))
+            errs.append(
+                fe(
+                    "operation",
+                    ec.OPERATION_REQUIRED_FOR_STEP,
+                    "operation: required for an operation step",
+                )
+            )
         if row.get("sub_route_id"):
-            errs.append(("sub_route", "sub_route: only for sub-route steps"))
+            errs.append(
+                fe(
+                    "sub_route",
+                    ec.SUB_ROUTE_ONLY,
+                    "sub_route: only for sub-route steps",
+                )
+            )
     else:
         sub = _route(s, tid, row.get("sub_route_id"))
         if not sub:
-            errs.append(("sub_route", "sub_route: required for a sub-route step"))
+            errs.append(
+                fe(
+                    "sub_route",
+                    ec.SUB_ROUTE_REQUIRED,
+                    "sub_route: required for a sub-route step",
+                )
+            )
         elif sub["route_type"] != "sub":
-            errs.append(("sub_route", "sub_route: must be a route of type sub"))
+            errs.append(
+                fe(
+                    "sub_route",
+                    ec.SUB_ROUTE_TYPE,
+                    "sub_route: must be a route of type sub",
+                )
+            )
         elif sub["code"] == (_route(s, tid, row.get("route_id")) or {}).get("code"):
-            errs.append(("sub_route", "sub_route: a route cannot call itself"))
+            errs.append(
+                fe(
+                    "sub_route",
+                    ec.SUB_ROUTE_SELF,
+                    "sub_route: a route cannot call itself",
+                )
+            )
     rw = _route(s, tid, row.get("rework_route_id"))
     if row.get("rework_route_id") and (not rw or rw["route_type"] != "rework"):
-        errs.append(("rework_route", "rework_route: must be a route of type rework"))
+        errs.append(
+            fe(
+                "rework_route",
+                ec.REWORK_ROUTE_TYPE,
+                "rework_route: must be a route of type rework",
+            )
+        )
     if row.get("branch_to_seq") is not None and not row.get("branch_condition"):
         errs.append(
-            ("branch_condition", "branch_condition: required with branch_to_seq")
+            fe(
+                "branch_condition",
+                ec.BRANCH_CONDITION_REQUIRED,
+                "branch_condition: required with branch_to_seq",
+            )
         )
     if errs:
         raise MesError(errs)
@@ -62,24 +103,39 @@ def _route_activate(
         .mappings()
     ]
     if not steps:
-        raise MesError([("route", "route: needs at least one step before activation")])
+        raise MesError(
+            [
+                fe(
+                    "route",
+                    ec.ROUTE_ACTIVATION_STEPS,
+                    "route: needs at least one step before activation",
+                )
+            ]
+        )
     seqs = {x["seq"] for x in steps}
-    errs: list[tuple[str, str]] = []
+    errs: list[FieldError] = []
     for st in steps:
         if st["branch_to_seq"] is not None and st["branch_to_seq"] not in seqs:
             errs.append(
-                (
+                fe(
                     "route_step",
+                    ec.STEP_BRANCH_TARGET,
                     f"step {st['seq']}: branch target {st['branch_to_seq']} does not exist",
+                    seq=st["seq"],
+                    target=st["branch_to_seq"],
                 )
             )
         for k in ("sub_route_id", "rework_route_id"):
             ref = _route(s, tid, st[k])
             if ref and ref["status"] != "active":
                 errs.append(
-                    (
+                    fe(
                         "route_step",
+                        ec.STEP_REF_INACTIVE,
                         f"step {st['seq']}: {ref['code']} v{ref['version']} is not active",
+                        seq=st["seq"],
+                        code=ref["code"],
+                        version=ref["version"],
                     )
                 )
     if errs:
@@ -92,12 +148,17 @@ def _step_resource(
 ) -> None:
     kind = row.get("resource_kind")
     errs = [
-        (k, f"{k}: {'required' if k == kind else 'must be empty'} for {kind}")
+        fe(
+            k,
+            (ec.STEP_FIELD_REQUIRED if k == kind else ec.STEP_FIELD_EMPTY),
+            f"{k}: {'required' if k == kind else 'must be empty'} for {kind}",
+            kind=kind,
+        )
         for k in ("equipment", "equipment_group", "reticle", "material", "fixture")
         if bool(row.get(f"{k}_id")) != (k == kind)
     ]
     if row.get("qty") is not None and row["qty"] <= 0:
-        errs.append(("qty", "qty: must be > 0"))
+        errs.append(fe("qty", ec.FIELD_GT, "qty: must be > 0", min=0))
     if errs:
         raise MesError(errs)
 
@@ -107,17 +168,25 @@ def _param_spec(
     _s: Session, _t: uuid.UUID, _e: Entity, row: Row, _old: Row | None
 ) -> None:
     lsl, tgt, usl = row.get("lsl"), row.get("target"), row.get("usl")
-    errs: list[tuple[str, str]] = []
+    errs: list[FieldError] = []
     if not (row.get("operation_id") or row.get("recipe_id")):
-        errs.append(("operation", "operation: an operation or a recipe is required"))
+        errs.append(
+            fe(
+                "operation",
+                ec.OPERATION_OR_RECIPE,
+                "operation: an operation or a recipe is required",
+            )
+        )
     if lsl is None and usl is None:
-        errs.append(("lsl", "lsl: give LSL and/or USL"))
+        errs.append(fe("lsl", ec.SPEC_LIMIT_REQUIRED, "lsl: give LSL and/or USL"))
     if lsl is not None and usl is not None and lsl > usl:
-        errs.append(("usl", "usl: must be >= LSL"))
+        errs.append(fe("usl", ec.USL_GE_LSL, "usl: must be >= LSL"))
     if tgt is not None and (
         (lsl is not None and tgt < lsl) or (usl is not None and tgt > usl)
     ):
-        errs.append(("target", "target: must lie within LSL..USL"))
+        errs.append(
+            fe("target", ec.TARGET_WITHIN_LIMITS, "target: must lie within LSL..USL")
+        )
     if errs:
         raise MesError(errs)
 
@@ -128,10 +197,26 @@ def _product_route(
 ) -> None:
     r = _route(s, tid, row.get("route_id"))
     if r and r["route_type"] != "main":
-        raise MesError([("route", "route: products bind to main routes")])
+        raise MesError(
+            [
+                fe(
+                    "route",
+                    ec.PRODUCT_ROUTE_MAIN_ONLY,
+                    "route: products bind to main routes",
+                )
+            ]
+        )
     a, b = row.get("effective_from"), row.get("effective_to")
     if a and b and a > b:
-        raise MesError([("effective_to", "effective_to: must be after effective_from")])
+        raise MesError(
+            [
+                fe(
+                    "effective_to",
+                    ec.EFFECTIVE_TO_AFTER_FROM,
+                    "effective_to: must be after effective_from",
+                )
+            ]
+        )
     if row.get("is_default"):
         pr = TABLES["product_route"]
         other = (
@@ -148,7 +233,13 @@ def _product_route(
         )
         if other:
             raise MesError(
-                [("is_default", "is_default: the product already has a default route")]
+                [
+                    fe(
+                        "is_default",
+                        ec.DEFAULT_ROUTE_EXISTS,
+                        "is_default: the product already has a default route",
+                    )
+                ]
             )
 
 

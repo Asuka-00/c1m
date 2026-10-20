@@ -202,10 +202,9 @@ def test_disabled_menu_hidden_and_denied(
 
 
 def test_builtin_names_and_links(db: Session) -> None:
-    """内置权限均有三语名称并已补齐 name；tenant:manage 挂到租户设置菜单。"""
+    """内置权限均有名称并已补齐 name；tenant:manage 挂到租户设置菜单。"""
     for code in DEFAULT_PERMISSIONS:
-        lbl = permission_label(code)
-        assert lbl and all(lbl.split("|")), code
+        assert permission_label(code), code
     perms = {p.code: p for p in db.exec(select(Permission))}
     assert all(perms[c].name for c in DEFAULT_PERMISSIONS)
     cfg = db.exec(select(Menu).where(Menu.key == "config")).one()

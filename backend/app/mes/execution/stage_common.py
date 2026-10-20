@@ -114,6 +114,7 @@ def _brief(results: list[Row]) -> list[Row]:
             "rule": r["rule_code"],
             "result": r["result"],
             "message": r["message"],
+            "msg_parts": r.get("msg_parts") or [],
         }
         for r in results
         if r["applicable"] or r["result"] != "pass"

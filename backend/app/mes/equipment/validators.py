@@ -6,9 +6,10 @@ from typing import Any
 import sqlalchemy as sa
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.base import conn
 from app.core.spec.engine import TABLES, Entity
-from app.core.spec.errors import MesError
+from app.core.spec.errors import MesError, fe
 from app.core.spec.validate import validator
 from app.mes.common.validators import Row, _get
 from app.mes.equipment.maint import downtime_notify
@@ -34,14 +35,28 @@ def check_recipe_equipment_type(
         and rec["equipment_type_id"] != eqp["equipment_type_id"]
     ):
         raise MesError(
-            [("equipment", "equipment: type differs from the recipe's equipment type")]
+            [
+                fe(
+                    "equipment",
+                    ec.EQ_TYPE_DIFFERS_RECIPE,
+                    "equipment: type differs from the recipe's equipment type",
+                )
+            ]
         )
 
 
 @validator("e10_transition")
 def _e10_tr(_s: Session, _t: uuid.UUID, _e: Entity, row: Row, _old: Row | None) -> None:
     if row.get("from_state_id") == row.get("to_state_id"):
-        raise MesError([("to_state", "to_state: must differ from from_state")])
+        raise MesError(
+            [
+                fe(
+                    "to_state",
+                    ec.E10_TO_STATE_DIFFERS,
+                    "to_state: must differ from from_state",
+                )
+            ]
+        )
 
 
 @validator("e10_state")
@@ -63,7 +78,14 @@ def _e10_state(
         )
         if other:
             raise MesError(
-                [("is_initial", f"is_initial: {other} is already the initial state")]
+                [
+                    fe(
+                        "is_initial",
+                        ec.INITIAL_STATE_EXISTS,
+                        f"is_initial: {other} is already the initial state",
+                        other=other,
+                    )
+                ]
             )
 
 
@@ -73,11 +95,36 @@ def _equipment(
 ) -> None:
     kind, parent = row.get("unit_kind"), _get(s, tid, "equipment", row.get("parent_id"))
     if kind == "main" and parent:
-        raise MesError([("parent", "parent: main equipment cannot have a parent")])
+        raise MesError(
+            [
+                fe(
+                    "parent",
+                    ec.EQ_MAIN_NO_PARENT,
+                    "parent: main equipment cannot have a parent",
+                )
+            ]
+        )
     if kind != "main" and not parent:
-        raise MesError([("parent", f"parent: a {kind} needs a parent equipment")])
+        raise MesError(
+            [
+                fe(
+                    "parent",
+                    ec.EQ_NEEDS_PARENT,
+                    f"parent: a {kind} needs a parent equipment",
+                    kind=kind,
+                )
+            ]
+        )
     if parent and parent["unit_kind"] not in ("main", "sub_unit"):
-        raise MesError([("parent", "parent: must be a main equipment or sub-unit")])
+        raise MesError(
+            [
+                fe(
+                    "parent",
+                    ec.EQ_PARENT_KIND,
+                    "parent: must be a main equipment or sub-unit",
+                )
+            ]
+        )
     if parent:  # 子设备继承父设备的设备类型
         pt, cur = parent["equipment_type_id"], row.get("equipment_type_id")
         if cur is None:
@@ -85,8 +132,9 @@ def _equipment(
         elif pt is not None and cur != pt:
             raise MesError(
                 [
-                    (
+                    fe(
                         "equipment_type",
+                        ec.PARENT_TYPE_MISMATCH,
                         "equipment_type: must match the parent equipment's type",
                     )
                 ]
@@ -106,12 +154,28 @@ def _pm_plan(
 ) -> None:
     """PM 计划：须指定设备或设备类型，且至少一种周期（天数 / 批次数）。"""
     if not row.get("equipment_id") and not row.get("equipment_type_id"):
-        raise MesError([("equipment", "equipment: set equipment or equipment type")])
+        raise MesError(
+            [
+                fe(
+                    "equipment",
+                    ec.PM_TARGET_REQUIRED,
+                    "equipment: set equipment or equipment type",
+                )
+            ]
+        )
     if not row.get("interval_days") and not row.get("interval_lots"):
-        raise MesError([("interval_days", "interval_days: set days or lots interval")])
+        raise MesError(
+            [
+                fe(
+                    "interval_days",
+                    ec.PM_INTERVAL_REQUIRED,
+                    "interval_days: set days or lots interval",
+                )
+            ]
+        )
     for f in ("interval_days", "interval_lots"):
         if row.get(f) is not None and row[f] <= 0:
-            raise MesError([(f, f"{f}: must be > 0")])
+            raise MesError([fe(f, ec.FIELD_GT, f"{f}: must be > 0", min=0)])
 
 
 @validator("downtime")
@@ -121,6 +185,8 @@ def _downtime(
     """停机记录：结束时间须晚于开始时间；新建时发送停机通知（与记录同事务）。"""
     a, b = row.get("start_at"), row.get("end_at")
     if a and b and b <= a:
-        raise MesError([("end_at", "end_at: must be after start_at")])
+        raise MesError(
+            [fe("end_at", ec.END_AFTER_START, "end_at: must be after start_at")]
+        )
     if old is None:
         downtime_notify(s, tid, row)

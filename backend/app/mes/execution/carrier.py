@@ -4,13 +4,13 @@ import uuid
 from datetime import timedelta
 from typing import Any
 
-from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.models import actor_name
 from app.core.spec.audit import audit
 from app.core.spec.base import now
-from app.core.spec.errors import http_422
+from app.core.spec.errors import FieldError, coded, fe, http_422
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
 from app.mes.execution.checks import service as ck
@@ -70,17 +70,43 @@ def change_carrier(
     lot = lock_lot(s, tid, lot_id)
     if lot["lot_status"] in TERMINAL or lot["lot_status"] == "running":
         raise http_422(
-            [("lot", f"lot: cannot change carrier while {lot['lot_status']}")]
+            [
+                fe(
+                    "lot",
+                    ec.CARRIER_CHANGE_STATUS,
+                    f"lot: cannot change carrier while {lot['lot_status']}",
+                    status=lot["lot_status"],
+                )
+            ]
         )
     car, cap = _carrier_cap(s, tid, body["carrier_id"])
     if car["id"] == lot["carrier_id"]:
-        raise http_422([("carrier_id", "carrier_id: already in this carrier")])
+        raise http_422(
+            [fe("carrier_id", ec.CARRIER_SAME, "carrier_id: already in this carrier")]
+        )
     if car["status_code"] != "available" or _carrier_busy(s, tid, car["id"], lot["id"]):
-        raise http_422([("carrier_id", f"carrier_id: {car['code']} is not available")])
+        raise http_422(
+            [
+                fe(
+                    "carrier_id",
+                    ec.CARRIER_UNAVAILABLE,
+                    f"carrier_id: {car['code']} is not available",
+                    carrier=car["code"],
+                )
+            ]
+        )
     us = units(s, tid, lot["id"])
     if cap and len(us) > cap:
         raise http_422(
-            [("carrier_id", f"carrier_id: {len(us)} wafers exceed capacity {cap}")]
+            [
+                fe(
+                    "carrier_id",
+                    ec.CARRIER_CAPACITY,
+                    f"carrier_id: {len(us)} wafers exceed capacity {cap}",
+                    count=len(us),
+                    cap=cap,
+                )
+            ]
         )
     slots = [u["slot"] for u in us]
     keep = all(x and (not cap or x <= cap) for x in slots) and len(set(slots)) == len(
@@ -138,11 +164,29 @@ def clean_carrier(
     """清洗载具：使用次数清零、记录清洗时间并恢复可用（载具须为空）。"""
     car = one(s, tid, "carrier", carrier_id)
     if not car:
-        raise HTTPException(status_code=404, detail="Record not found")
+        raise coded(404, ec.RECORD_NOT_FOUND, "Record not found")
     if _carrier_busy(s, tid, car["id"]):
-        raise http_422([("carrier", f"carrier: {car['code']} still holds a lot")])
+        raise http_422(
+            [
+                fe(
+                    "carrier",
+                    ec.CARRIER_BUSY,
+                    f"carrier: {car['code']} still holds a lot",
+                    carrier=car["code"],
+                )
+            ]
+        )
     if car["status_code"] == "retired":
-        raise http_422([("carrier", f"carrier: {car['code']} is retired")])
+        raise http_422(
+            [
+                fe(
+                    "carrier",
+                    ec.CARRIER_RETIRED,
+                    f"carrier: {car['code']} is retired",
+                    carrier=car["code"],
+                )
+            ]
+        )
     _upd(
         s,
         tid,
@@ -218,27 +262,54 @@ def sort_wafers(
     """
     lot = lock_lot(s, tid, lot_id)
     if lot["lot_status"] in TERMINAL or lot["lot_status"] == "running":
-        raise http_422([("lot", f"lot: cannot sort while {lot['lot_status']}")])
+        raise http_422(
+            [
+                fe(
+                    "lot",
+                    ec.SORT_STATUS,
+                    f"lot: cannot sort while {lot['lot_status']}",
+                    status=lot["lot_status"],
+                )
+            ]
+        )
     cid = body.get("carrier_id") or lot["carrier_id"]
     if not cid:
-        raise http_422([("carrier_id", "carrier_id: required")])
+        raise http_422([fe("carrier_id", ec.CARRIER_REQUIRED, "carrier_id: required")])
     car, cap = _carrier_cap(s, tid, cid)
     moving = car["id"] != lot["carrier_id"]
     if moving and (
         car["status_code"] != "available" or _carrier_busy(s, tid, car["id"], lot["id"])
     ):
-        raise http_422([("carrier_id", f"carrier_id: {car['code']} is not available")])
+        raise http_422(
+            [
+                fe(
+                    "carrier_id",
+                    ec.CARRIER_UNAVAILABLE,
+                    f"carrier_id: {car['code']} is not available",
+                    carrier=car["code"],
+                )
+            ]
+        )
     us = {str(u["id"]): u for u in units(s, tid, lot["id"])}
     smap: list[Row] = [
         {"wafer": us.get(str(x["wafer_id"])), "slot": int(x["slot"])}
         for x in body.get("slots") or []
     ]
-    errs: list[tuple[str, str]] = []
+    errs: list[FieldError] = []
     if any(x["wafer"] is None for x in smap) or len(smap) != len(us):
-        errs.append(("slots", "slots: list every wafer of the lot once"))
+        errs.append(
+            fe("slots", ec.SORT_SLOTS_ALL, "slots: list every wafer of the lot once")
+        )
     sl = [x["slot"] for x in smap]
     if len(set(sl)) != len(sl) or any(x < 1 or (cap and x > cap) for x in sl):
-        errs.append(("slots", f"slots: use unique slots 1–{cap or '…'}"))
+        errs.append(
+            fe(
+                "slots",
+                ec.SORT_SLOTS_UNIQUE,
+                f"slots: use unique slots 1–{cap or '…'}",
+                cap=cap or "…",
+            )
+        )
     if errs:
         raise http_422(errs)
     ctx = build_ctx(s, tid, lot, "sort", {})

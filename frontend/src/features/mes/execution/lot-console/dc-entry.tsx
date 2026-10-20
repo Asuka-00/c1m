@@ -2,6 +2,7 @@
 import { useMemo } from 'react'
 import { t } from '@/i18n'
 import type { ExecContext } from '@/lib/api/mes/execution'
+import { partsText } from '@/lib/backend-text'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import {
@@ -35,7 +36,13 @@ export function DcEntry(p: {
         <h4 className='text-sm font-semibold'>{t('mes.exec.dc')}</h4>
         <p className='text-xs text-muted-foreground'>
           {dc?.dc_plan ? `${dc.dc_plan} · ` : ''}
-          {dc?.message}
+          {dc &&
+            partsText(
+              dc.reason
+                ? [{ key: `sampling.${dc.reason}`, params: dc.reason_params }]
+                : null,
+              dc.message
+            )}
         </p>
       </div>
       {dc?.sampled && dc.items.length > 0 ? (

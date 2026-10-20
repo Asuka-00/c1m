@@ -3,7 +3,7 @@ import i18n, { t } from '@/i18n'
 import type { MesEntity, MesField } from '@/lib/api/mes/common'
 import { splitLabel } from '@/lib/split-label'
 
-/** 标签来自生成的语言包（locales/mes/*.json）。 */
+/** 标签来自语言包（locales/<语言>/modules/mes/*.yaml）。 */
 export const entityLabel = (code: string) =>
   t(`mes.entity.${code}`, { defaultValue: code })
 /** 字段标签（按当前语言，缺失时回退字段名）。 */

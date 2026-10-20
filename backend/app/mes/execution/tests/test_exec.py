@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.base import now
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
@@ -273,7 +274,10 @@ def _msgs(r: Any) -> str:
     d = r["detail"]
     if isinstance(d, dict):
         if "results" not in d:  # N5：{code, message, ...}
-            return f"{d.get('code')}: {d.get('message', '')}"
+            return (
+                f"{ec.CODES.get(d.get('code'), d.get('code'))}".lower()
+                + f": {d.get('message', '')}"
+            )
         return " ".join(x["message"] for x in d["results"])
     return " ".join(x["msg"] for x in d)
 
@@ -378,7 +382,7 @@ def test_branch_and_rework_routing(client: TestClient, db: Session) -> None:
     f.stage(b, "track_out")
     assert "branch" in _msgs(f.stage(b, "move_out", 422, branch=True))
     d = f.stage(b, "move_out", 422, rework=True)["detail"]  # M3 / N5
-    assert d["code"] == "rework_route_missing" and d["message"] and d["route_step_id"]
+    assert d["code"] == ec.REWORK_ROUTE_MISSING and d["message"] and d["route_step_id"]
     assert f.lot(b)["lot_status"] == "tracked_out"
 
 
@@ -417,7 +421,7 @@ def test_block_override_permission_and_audit(client: TestClient, db: Session) ->
     f.stage(lot, "move_in", equipment_id=f.eq["id"])
     r = f.stage(lot, "track_in", 409, equipment_id=f.eq["id"])
     assert (
-        r["detail"]["code"] == "check_blocked"
+        r["detail"]["code"] == ec.CHECK_BLOCKED
         and r["detail"]["results"][0]["result"] == "block"
     )
     assert f.lot(lot)["lot_status"] == "moved_in"
@@ -771,7 +775,7 @@ def test_dc_completeness_and_oos_actions(client: TestClient, db: Session) -> Non
     assert (
         hold["hold_type"] == "auto"
         and hold["source"] == "oos"
-        and "B=5" in hold["comment"]
+        and "B=5" in hold["note"]["params"]["items"]
     )
     # block wins over hold; can be overridden
     assert "OOS (block)" in _msgs(f.stage(c, "track_out", 409, dc=_dc(items, 5, 5, 5)))
@@ -910,7 +914,9 @@ def test_qtime_min_and_violation_actions(client: TestClient, db: Session) -> Non
     r = f.c.patch(
         m.url("qtime_rule", rule["id"]), headers=m.h, json={"action": "scrap"}
     )
-    assert r.status_code == 422 and r.json()["detail"]["code"] == "qtime_action_invalid"
+    assert (
+        r.status_code == 422 and r.json()["detail"]["code"] == ec.QTIME_ACTION_INVALID
+    )
     m.patch("qtime_rule", rule["id"], {"reason_id": None})
     # QT-01（M1 / D25）：hold 规则无原因码 → 自动 Hold（原因码 qtime_expired），不报废
     qe = next(  # 系统原因码，租户初始化时已建（D18）
@@ -920,7 +926,7 @@ def test_qtime_min_and_violation_actions(client: TestClient, db: Session) -> Non
     )
     f.stage(c, "move_in", **eq)
     assert f.stage(c, "track_in", **eq)["qtime"] == "hold"
-    assert f.stage(c, "track_in", 422, **eq)["detail"]["code"] == "on_hold"
+    assert f.stage(c, "track_in", 422, **eq)["detail"]["code"] == ec.ON_HOLD
     got = f.lot(c)
     assert got["on_hold"] and got["lot_status"] == "moved_in" and got["qty"] > 0
     ch = [h for h in m.list("lot_hold", lot=c["id"])["data"] if h["is_active"]]

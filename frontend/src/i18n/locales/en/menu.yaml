@@ -1,0 +1,128 @@
+menu:
+  dashboard: Dashboard
+  members: Users
+  user-roles: Roles
+  users: Users
+  roles: Roles
+  permissions: Permissions
+  tenants: Sites
+  menus: Menus
+  settings: Profile
+  config: System Settings
+  notifications: Message Center
+  notify-subscriptions: Notification Subscriptions
+  mes-wo-board: WO Progress
+  mes-change_order: ECN
+  mes-future_hold: Future Hold
+  mes-shift-handover: Shift Handover
+  mes-label-print: Label Printing
+  mes-operator_qual: Operator Qualification
+  g-workspace: Workspace
+  g-execution: Lot Operation
+  g-exception: Exception Handling
+  g-wip: WIP & Inquiry
+  g-planning: Production Planning
+  g-warehouse: Warehouse Management
+  g-equipment: Tool Management
+  g-quality: Quality
+  g-process: Process Engineering
+  g-product: Product & Material
+  g-factory: Factory Modeling
+  g-master: Master Data
+  g-system: System
+  mes-lot-console: Lot Operation (Track In/Out)
+  mes-lot_hold: Hold Management
+  mes-qtime-monitor: Q-Time Monitor
+  mes-batch-ops: Batch Operation
+  mes-carrier-ops: Carrier Operation
+  mes-check_log: Interlock Log
+  mes-wip-dashboard: WIP Dashboard
+  mes-oee-report: Equipment OEE
+  mes-yield-report: Yield Report
+  mes-lot-history: Lot History & Trace
+  mes-lot_recipe_run: Recipe Run
+  mes-lot: Lot Inquiry
+  mes-wafer: Wafer Inquiry
+  mes-lot-start: Lot Start
+  mes-work_order: Work Order
+  mes-receipt: Finished Goods Receipt
+  mes-material_lot: Line-side Material Lot
+  mes-warehouse-master: Warehouse Master
+  mes-eqp-board: Tool Status Board
+  mes-pm_plan: PM Plan
+  mes-downtime: Downtime
+  mes-e10_history: E10 History
+  mes-tool: Consumable Life
+  mes-equipment-master: Equipment Master
+  mes-e10-model: E10 State Configuration
+  mes-dc_result: Metrology / DC Data
+  mes-dc-config: DC Configuration
+  mes-defect_code: Defect Code
+  mes-route-master: Route Configuration
+  mes-recipe-param: Recipe & Parameters
+  mes-qtime_rule: Q-Time Rule
+  mes-check-config: Check Config
+  mes-lot-rules: Lot Rules
+  mes-product-master: Product Master
+  mes-material-master: Material Master
+  mes-carrier-master: Carrier Master
+  mes-reticle: Reticle
+  mes-fixture: Fixture
+  mes-factory-model: Factory Model
+  mes-calendar: Calendar & Shifts
+  mes-reason_code: Reason Code
+  mes-code_rule: Code Rule
+  mes-uom: UOM
+  mes-dict_type: Dictionary
+  mes-attr_def: Custom Attribute
+  user-permissions: Users & Permissions
+  mes-audit_log: Audit Log
+  mes-check_rule: Check Rule
+  mes-check_plan: Check Plan
+  mes-check_binding: Check Binding
+  mes-product: Product
+  mes-product_family: Product Family
+  mes-tech_node: Technology Node
+  mes-material: Material
+  mes-material_type: Material Type
+  mes-carrier: Carrier
+  mes-carrier_type: Carrier Type
+  mes-equipment: Equipment
+  mes-equipment_type: Equipment Type
+  mes-equipment_group: Equipment Group
+  mes-equipment_capability: Capability
+  mes-e10_state: E10 State Model
+  mes-e10_auto_rule: E10 Auto Transition
+  mes-lot_type: Lot Type
+  mes-lot_priority: Priority
+  mes-split_merge_rule: Split / Merge Rule
+  mes-site: Site
+  mes-area: Area
+  mes-workcenter: Work Center
+  mes-work_calendar: Work Calendar
+  mes-shift: Shift
+  mes-route: Route
+  mes-operation: Operation
+  mes-product_route: Product Route
+  mes-recipe: Recipe
+  mes-param_spec: Parameter Spec
+  mes-dc_plan: DC Plan
+  mes-measurement_item: Measurement Item
+  mes-sampling_rule: Sampling Rule
+  mes-lot-trace: Lot History
+  mes-trace: Traceability
+  mes-warehouse: Warehouse
+  mes-storage_location: Storage Location
+  p-g-tenants: Tenant Management
+  p-g-rbac: Platform Access
+  p-g-settings: Platform Settings
+  p-g-ops: Operations & Audit
+  p-tenants: Tenants
+  p-users: Platform Users
+  p-roles: Platform Roles
+  p-permissions: Permission Tree
+  p-config: Platform Defaults
+  p-channels: Notification Channels
+  p-audit: Cross-tenant Audit Log
+  p-login-log: Login Log
+  p-ops-log: Platform Operation Log

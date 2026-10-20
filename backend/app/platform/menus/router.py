@@ -6,9 +6,11 @@ from typing import Annotated, Any, Literal
 from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlmodel import select
 
+from app.core import error_codes as ec
 from app.core.deps import SessionDep
 from app.core.models import Message
 from app.core.pagination import ListParamsDep, paginate
+from app.core.spec.errors import coded
 from app.platform.auth.deps import (
     CurrentUser,
     TokenPayloadDep,
@@ -56,8 +58,10 @@ def my_menus(
     paccess = current_user.is_superuser or bool(platform_codes(current_user))
     if space == "platform":
         if not paccess or token_data.imp:
-            raise HTTPException(
-                status_code=403, detail="No access to the platform console"
+            raise coded(
+                403,
+                ec.NO_ACCESS_TO_THE_PLATFORM_CONSOLE,
+                "No access to the platform console",
             )
         pperms = user_permission_codes(current_user)
         pmenus = list(session.exec(select(Menu).where(Menu.space == "platform")).all())
@@ -142,9 +146,9 @@ def list_menus(
 )
 def create_menu(session: SessionDep, menu_in: MenuCreate) -> Any:
     if session.exec(select(Menu).where(Menu.key == menu_in.key)).first():
-        raise HTTPException(status_code=409, detail="Menu key already exists")
+        raise coded(409, ec.MENU_KEY_ALREADY_EXISTS, "Menu key already exists")
     if menu_in.parent_id and not session.get(Menu, menu_in.parent_id):
-        raise HTTPException(status_code=404, detail="Parent menu not found")
+        raise coded(404, ec.PARENT_MENU_NOT_FOUND, "Parent menu not found")
     menu = Menu.model_validate(menu_in)
     session.add(menu)
     session.commit()
@@ -160,10 +164,12 @@ def create_menu(session: SessionDep, menu_in: MenuCreate) -> Any:
 def update_menu(session: SessionDep, id: uuid.UUID, menu_in: MenuUpdate) -> Any:
     menu = session.get(Menu, id)
     if not menu:
-        raise HTTPException(status_code=404, detail="Menu not found")
+        raise coded(404, ec.MENU_NOT_FOUND, "Menu not found")
     data = menu_in.model_dump(exclude_unset=True)
     if data.get("parent_id") == id:
-        raise HTTPException(status_code=400, detail="Menu cannot be its own parent")
+        raise coded(
+            400, ec.MENU_CANNOT_BE_ITS_OWN_PARENT, "Menu cannot be its own parent"
+        )
     menu.sqlmodel_update(data)
     session.add(menu)
     session.commit()
@@ -179,7 +185,7 @@ def update_menu(session: SessionDep, id: uuid.UUID, menu_in: MenuUpdate) -> Any:
 def delete_menu(session: SessionDep, id: uuid.UUID) -> Any:
     menu = session.get(Menu, id)
     if not menu:
-        raise HTTPException(status_code=404, detail="Menu not found")
+        raise coded(404, ec.MENU_NOT_FOUND, "Menu not found")
     session.delete(menu)
     session.commit()
     return Message(message="Menu deleted successfully")

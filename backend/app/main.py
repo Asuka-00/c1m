@@ -8,12 +8,14 @@ from pathlib import Path
 
 import sentry_sdk
 from fastapi import APIRouter, FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 
 from app import models as _models  # noqa: F401  (registers tables + MES specs first)
 from app.core import registry
 from app.core.config import settings
+from app.core.validation import validation_error_handler
 
 FRONTEND_DIR = Path(__file__).parent / "frontend"
 
@@ -68,6 +70,7 @@ app = FastAPI(
     generate_unique_id_function=custom_generate_unique_id,
 )
 
+app.add_exception_handler(RequestValidationError, validation_error_handler)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.FRONTEND_HOST],

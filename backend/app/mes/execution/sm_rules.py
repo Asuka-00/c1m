@@ -6,10 +6,11 @@ from typing import Any
 import sqlalchemy as sa
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.models import actor_name
 from app.core.spec.base import conn
 from app.core.spec.engine import TABLES
-from app.core.spec.errors import http_422
+from app.core.spec.errors import fe, http_422
 from app.core.spec.serialize import serialize
 from app.mes.common import coderule
 from app.mes.common.query import find, one
@@ -19,6 +20,35 @@ from app.mes.execution.context import build_ctx
 from app.mes.execution.stages import LOT
 
 Row = dict[str, Any]
+#: 拆 / 合批规则检查的说明（前端 mes.checkMsg.split_merge_rule.*；状态参数为 lot_status 枚举值）
+M_SMR = ck.messages(
+    "split_merge_rule",
+    split_status="cannot split a {status} lot (only waiting / moved in)",
+    no_rule="no split/merge rule for the lot type",
+    split_not_allowed="rule {rule}: split not allowed",
+    max_children="rule {rule}: {total} lots exceed max {max}",
+    min_qty="rule {rule}: every lot needs at least {min}",
+    keep_one="parent lot must keep at least 1",
+    child_carrier="child {child}: carrier {carrier} is not available",
+    child_capacity="child {child}: {qty} exceeds carrier capacity {cap}",
+    split_ok="split allowed",
+    merge_status="cannot merge into a {status} lot",
+    merge_not_allowed="rule {rule}: merge not allowed",
+    capacity="{total} exceeds carrier {carrier} capacity {cap}",
+    merge_ok="merge allowed",
+    self="{lot}: cannot merge a lot into itself",
+    src_status="{lot}: cannot merge a {status} lot",
+    diff_product="{lot}: different product",
+    diff_route="{lot}: different route / route version",
+    diff_step="{lot}: different route step",
+    diff_stage="{lot}: different stage",
+    diff_tracking="{lot}: different tracking level",
+    diff_frame="{lot}: different sub-route / rework frame",
+    diff_wo="{lot}: different work order",
+    diff_priority="{lot}: different priority",
+    src_no_rule="{lot}: no split/merge rule for its lot type",
+    src_no_merge="{lot}: rule {rule} does not allow merge",
+)
 SPLIT_STATES = ("waiting", "moved_in")  # == RULES["split"].from_（见 lot.state）
 COPY = (
     "work_order_id",
@@ -54,11 +84,11 @@ def rule_for(s: Session, tid: uuid.UUID, lot: Row) -> Row | None:
     return rows[0] if rows else None
 
 
-def _rule_result(errs: list[str], ok: str) -> Row:
+def _rule_result(errs: list[ck.Msg], ok: ck.Msg) -> Row:
     return ck.result(
         "split_merge_rule",
         "fail" if errs else "pass",
-        "; ".join(errs) if errs else ok,
+        errs or ok,
         overridable=False,
     )
 
@@ -70,7 +100,9 @@ def _children(s: Session, tid: uuid.UUID, lot_id: Any) -> list[Row]:
 def _carrier_cap(s: Session, tid: uuid.UUID, carrier_id: Any) -> tuple[Row, int | None]:
     car = one(s, tid, "carrier", carrier_id)
     if not car:
-        raise http_422([("carrier_id", "carrier_id: not found")])
+        raise http_422(
+            [fe("carrier_id", ec.CARRIER_NOT_FOUND, "carrier_id: not found")]
+        )
     ct = one(s, tid, "carrier_type", car["carrier_type_id"])
     cap = ct.get("capacity") if ct else None
     return car, int(cap) if cap else None
@@ -93,7 +125,9 @@ def _child_codes(s: Session, tid: uuid.UUID, lot: Row, rule: Row, n: int) -> lis
         lt = one(s, tid, "lot_type", lot["lot_type_id"])
         cr = lt and one(s, tid, "code_rule", lt["lot_id_rule_id"])
         if not cr:
-            raise http_422([("lot_type", "lot_type: no lot ID rule")])
+            raise http_422(
+                [fe("lot_type", ec.LOT_ID_RULE_MISSING, "lot_type: no lot ID rule")]
+            )
         return coderule.generate(s, tid, cr, n, commit=False)
     t = TABLES["lot"]
     taken = {

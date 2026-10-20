@@ -6,15 +6,18 @@ from typing import Any
 import sqlalchemy as sa
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import TABLES
-from app.core.spec.errors import http_422
+from app.core.spec.errors import fe, http_422
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
 from app.mes.execution.carrier import event
+from app.mes.execution.checks import service as ck
 from app.mes.execution.sm_rules import (
     COPY,
+    M_SMR,
     SPLIT_STATES,
     _carrier_busy,
     _carrier_cap,
@@ -62,7 +65,9 @@ def split(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
     qty_mode = (lot["tracking_level"] or "wafer") == "quantity"
     kids = body.get("children") or []
     if not kids:
-        raise http_422([("children", "children: at least one child lot")])
+        raise http_422(
+            [fe("children", ec.SPLIT_CHILDREN, "children: at least one child lot")]
+        )
     active = {str(u["id"]): u for u in units(s, tid, lot["id"])}
     take: list[list[Row]] = []
     qtys: list[int] = []
@@ -72,7 +77,14 @@ def split(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
             q = int(c.get("qty") or 0)
             if q <= 0:
                 raise http_422(
-                    [(f"children.{i}.qty", f"child {i + 1}: qty must be > 0")]
+                    [
+                        fe(
+                            f"children.{i}.qty",
+                            ec.SPLIT_CHILD_QTY,
+                            f"child {i + 1}: qty must be > 0",
+                            child=i + 1,
+                        )
+                    ]
                 )
             qtys.append(q)
             take.append([])
@@ -80,15 +92,24 @@ def split(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
         ids = [str(x) for x in c.get("unit_ids") or []]
         if not ids:
             raise http_422(
-                [(f"children.{i}.unit_ids", f"child {i + 1}: pick wafers / units")]
+                [
+                    fe(
+                        f"children.{i}.unit_ids",
+                        ec.SPLIT_CHILD_UNITS,
+                        f"child {i + 1}: pick wafers / units",
+                        child=i + 1,
+                    )
+                ]
             )
         bad = [x for x in ids if x not in active or x in seen]
         if bad:
             raise http_422(
                 [
-                    (
+                    fe(
                         f"children.{i}.unit_ids",
+                        ec.SPLIT_CHILD_UNITS_INVALID,
                         f"child {i + 1}: units not in the lot or picked twice",
+                        child=i + 1,
                     )
                 ]
             )
@@ -98,26 +119,26 @@ def split(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
     remain = lot["qty"] - sum(qtys)
     if remain < 1:  # 不能拆完，母批至少保留 1（P13）
         raise lot_error(
-            "lot_status", "parent lot must keep at least 1", lot, action="split"
+            ec.LOT_STATUS, "parent lot must keep at least 1", lot, action="split"
         )
     # 规则校验（不可强制放行）
-    errs: list[str] = []
+    errs: list[ck.Msg] = []
     if lot["lot_status"] not in SPLIT_STATES:
-        errs.append(f"cannot split a {lot['lot_status']} lot (only waiting / moved in)")
+        errs.append(M_SMR("split_status", status=lot["lot_status"]))
     if not rule:
-        errs.append("no split/merge rule for the lot type")
+        errs.append(M_SMR("no_rule"))
     elif not rule["allow_split"]:
-        errs.append(f"rule {rule['code']}: split not allowed")
+        errs.append(M_SMR("split_not_allowed", rule=rule["code"]))
     else:
         total = 1 + len(_children(s, tid, lot["id"])) + len(kids)
         mx = rule["max_children"] or 0
         if mx and total > mx:
-            errs.append(f"rule {rule['code']}: {total} lots exceed max {mx}")
+            errs.append(M_SMR("max_children", rule=rule["code"], total=total, max=mx))
         mn = rule["min_wafers"] or 1
         if remain < mn or any(q < mn for q in qtys):
-            errs.append(f"rule {rule['code']}: every lot needs at least {mn}")
+            errs.append(M_SMR("min_qty", rule=rule["code"], min=mn))
     if remain < 1:
-        errs.append("parent lot must keep at least 1")
+        errs.append(M_SMR("keep_one"))
     carriers: list[Any] = []
     for i, c in enumerate(kids):
         cid = c.get("carrier_id")
@@ -130,12 +151,12 @@ def split(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
             or _carrier_busy(s, tid, car["id"])
             or car["id"] in carriers
         ):
-            errs.append(f"child {i + 1}: carrier {car['code']} is not available")
+            errs.append(M_SMR("child_carrier", child=i + 1, carrier=car["code"]))
         if cap and not qty_mode and qtys[i] > cap:
-            errs.append(f"child {i + 1}: {qtys[i]} exceeds carrier capacity {cap}")
+            errs.append(M_SMR("child_capacity", child=i + 1, qty=qtys[i], cap=cap))
         carriers.append(car["id"])
     results = _evaluate(
-        s, tid, lot, "split", [_rule_result(errs, "split allowed")], body, user
+        s, tid, lot, "split", [_rule_result(errs, M_SMR("split_ok"))], body, user
     )
     if body.get("preview"):
         s.commit()
@@ -183,8 +204,8 @@ def split(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -
                 reason_id=h["reason_id"],
                 hold_type=h["hold_type"],
                 source="split",
-                comment=f"inherited from {lot['code']}"
-                + (f": {h['comment']}" if h["comment"] else ""),
+                comment=h["comment"],
+                note={"key": "inherited", "params": {"lot": lot["code"]}},
                 is_active=True,
                 held_at=h["held_at"],
                 held_by=h["held_by"],

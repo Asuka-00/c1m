@@ -12,7 +12,7 @@ from app.core.tenant import set_tenant
 
 #: 系统原因码：(reason_type, code, name)
 SYSTEM_REASONS: tuple[tuple[str, str, str], ...] = (
-    ("hold", "qtime_expired", "Q-Time 超时"),
+    ("hold", "qtime_expired", "Q-Time exceeded"),
 )
 
 

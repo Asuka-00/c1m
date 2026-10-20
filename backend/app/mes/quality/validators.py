@@ -4,22 +4,25 @@ import uuid
 
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.engine import Entity
-from app.core.spec.errors import MesError
+from app.core.spec.errors import FieldError, MesError, fe
 from app.core.spec.validate import validator
 from app.mes.common.validators import Row
 
 
 # ---------------- phase 4 ----------------
-def _limits(row: Row) -> list[tuple[str, str]]:
+def _limits(row: Row) -> list[FieldError]:
     lsl, tgt, usl = row.get("lsl"), row.get("target"), row.get("usl")
-    errs: list[tuple[str, str]] = []
+    errs: list[FieldError] = []
     if lsl is not None and usl is not None and lsl > usl:
-        errs.append(("usl", "usl: must be >= LSL"))
+        errs.append(fe("usl", ec.USL_GE_LSL, "usl: must be >= LSL"))
     if tgt is not None and (
         (lsl is not None and tgt < lsl) or (usl is not None and tgt > usl)
     ):
-        errs.append(("target", "target: must lie within LSL..USL"))
+        errs.append(
+            fe("target", ec.TARGET_WITHIN_LIMITS, "target: must lie within LSL..USL")
+        )
     return errs
 
 
@@ -29,7 +32,7 @@ def _dc_item(
 ) -> None:
     errs = _limits(row)
     if (row.get("sites") or 0) < 1:
-        errs.append(("sites", "sites: must be >= 1"))
+        errs.append(fe("sites", ec.FIELD_MIN, "sites: must be >= 1", min=1))
     if errs:
         raise MesError(errs)
 
@@ -38,16 +41,25 @@ def _dc_item(
 def _sampling(
     _s: Session, _t: uuid.UUID, _e: Entity, row: Row, _old: Row | None
 ) -> None:
-    errs: list[tuple[str, str]] = []
+    errs: list[FieldError] = []
     if (row.get("lot_frequency") or 0) < 1:
-        errs.append(("lot_frequency", "lot_frequency: must be >= 1"))
+        errs.append(
+            fe("lot_frequency", ec.FIELD_MIN, "lot_frequency: must be >= 1", min=1)
+        )
     if row.get("level") == "wafer":
         if not 1 <= (row.get("wafer_count") or 0) <= 25:
-            errs.append(("wafer_count", "wafer_count: 1..25 for wafer-level sampling"))
+            errs.append(
+                fe(
+                    "wafer_count",
+                    ec.WAFER_COUNT_RANGE,
+                    "wafer_count: 1..25 for wafer-level sampling",
+                )
+            )
         if not row.get("wafer_selection"):
             errs.append(
-                (
+                fe(
                     "wafer_selection",
+                    ec.WAFER_SELECTION_REQUIRED,
                     "wafer_selection: required for wafer-level sampling",
                 )
             )
@@ -59,8 +71,20 @@ def _sampling(
         except ValueError:
             slots = []
         if not slots or any(not 1 <= x <= 25 for x in slots):
-            errs.append(("fixed_slots", "fixed_slots: comma separated slots 1..25"))
+            errs.append(
+                fe(
+                    "fixed_slots",
+                    ec.FIXED_SLOTS_FORMAT,
+                    "fixed_slots: comma separated slots 1..25",
+                )
+            )
         elif row.get("wafer_count") and len(slots) != row["wafer_count"]:
-            errs.append(("fixed_slots", "fixed_slots: count must equal wafer_count"))
+            errs.append(
+                fe(
+                    "fixed_slots",
+                    ec.FIXED_SLOTS_COUNT,
+                    "fixed_slots: count must equal wafer_count",
+                )
+            )
     if errs:
         raise MesError(errs)

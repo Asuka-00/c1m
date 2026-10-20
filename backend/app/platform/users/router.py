@@ -3,15 +3,17 @@
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy import or_
 from sqlmodel import Session, col, select
 
+from app.core import error_codes as ec
 from app.core.config import settings
 from app.core.deps import SessionDep
 from app.core.models import Message, actor_name, get_datetime_utc
 from app.core.pagination import ListParamsDep, paginate
 from app.core.security import get_password_hash, verify_password
+from app.core.spec.errors import coded
 from app.platform.auth.deps import CurrentUser, platform_api_router, require_permissions
 from app.platform.auth.service import generate_new_account_email, send_email
 from app.platform.rbac.models import UserRole
@@ -40,8 +42,8 @@ def _check_identity(
     exclude_id: uuid.UUID | None = None,
 ) -> None:
     """用户名 / 邮箱重复时 409。"""
-    if detail := crud.identity_conflict(session, username, email, exclude_id):
-        raise HTTPException(status_code=409, detail=detail)
+    if conflict := crud.identity_conflict(session, username, email, exclude_id):
+        raise conflict
 
 
 @admin_router.get(
@@ -164,10 +166,12 @@ def update_password_me(
     """
     verified, _ = verify_password(body.current_password, current_user.hashed_password)
     if not verified:
-        raise HTTPException(status_code=400, detail="Incorrect password")
+        raise coded(400, ec.INCORRECT_PASSWORD, "Incorrect password")
     if body.current_password == body.new_password:
-        raise HTTPException(
-            status_code=400, detail="New password cannot be the same as the current one"
+        raise coded(
+            400,
+            ec.PASSWORD_UNCHANGED,
+            "New password cannot be the same as the current one",
         )
     hashed_password = get_password_hash(body.new_password)
     current_user.hashed_password = hashed_password
@@ -203,8 +207,10 @@ def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
     Delete own user.
     """
     if current_user.is_superuser:
-        raise HTTPException(
-            status_code=403, detail="Super users are not allowed to delete themselves"
+        raise coded(
+            403,
+            ec.SUPERUSER_SELF_DELETE,
+            "Super users are not allowed to delete themselves",
         )
     session.delete(current_user)
     session.commit()
@@ -222,12 +228,13 @@ def read_user_by_id(
     if user == current_user:
         return user
     if not has_permissions(current_user, "users:read"):
-        raise HTTPException(
-            status_code=403,
-            detail="The user doesn't have enough privileges",
+        raise coded(
+            403,
+            ec.USER_PRIVILEGES_INSUFFICIENT,
+            "The user doesn't have enough privileges",
         )
     if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise coded(404, ec.USER_NOT_FOUND, "User not found")
     return user
 
 
@@ -249,9 +256,10 @@ def update_user(
 
     db_user = session.get(User, user_id)
     if not db_user:
-        raise HTTPException(
-            status_code=404,
-            detail="The user with this id does not exist in the system",
+        raise coded(
+            404,
+            ec.USER_ID_NOT_FOUND,
+            "The user with this id does not exist in the system",
         )
     _guard_superuser(current_user, db_user, user_in.is_superuser)
     _check_identity(session, user_in.username, user_in.email, user_id)
@@ -273,10 +281,12 @@ def delete_user(
     """
     user = session.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise coded(404, ec.USER_NOT_FOUND, "User not found")
     if user == current_user:
-        raise HTTPException(
-            status_code=403, detail="Super users are not allowed to delete themselves"
+        raise coded(
+            403,
+            ec.SUPERUSER_SELF_DELETE,
+            "Super users are not allowed to delete themselves",
         )
     _guard_superuser(current_user, user, None)
     session.delete(user)
@@ -295,8 +305,8 @@ def _guard_superuser(
     if actor.is_superuser:
         return
     if want_superuser or (target is not None and target.is_superuser):
-        raise HTTPException(
-            status_code=403, detail="Only superusers can manage superuser accounts"
+        raise coded(
+            403, ec.SUPERUSER_ONLY, "Only superusers can manage superuser accounts"
         )
 
 

@@ -20,11 +20,12 @@ import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.models import actor_name
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, TABLES, Entity
-from app.core.spec.errors import MesError, http_422
+from app.core.spec.errors import FieldError, MesError, fe, http_422
 from app.core.spec.query import get_row
 from app.core.spec.validate import validator
 from app.mes.common import coderule
@@ -61,8 +62,8 @@ def _one(s: Session, tid: uuid.UUID, code: str, rid: Any) -> Row | None:
     return dict(r) if r else None
 
 
-def _err(field: str, msg: str) -> MesError:
-    return MesError([(field, f"{field}: {msg}")])
+def _err(field: str, code: int, msg: str, **params: Any) -> MesError:
+    return MesError([fe(field, code, f"{field}: {msg}", **params)])
 
 
 # ---------------- generic CRUD hooks ----------------
@@ -85,7 +86,11 @@ def _prefill(s: Session, tid: uuid.UUID, _e: Entity, row: Row, old: Row | None) 
             .first()
         )
         if not rule:
-            raise _err("code", "no code rule for work orders; enter a WO number")
+            raise _err(
+                "code",
+                ec.WO_CODE_RULE_MISSING,
+                "no code rule for work orders; enter a WO number",
+            )
         row["code"] = coderule.generate(s, tid, dict(rule), 1, commit=False)[0]
 
 
@@ -93,7 +98,7 @@ def _prefill(s: Session, tid: uuid.UUID, _e: Entity, row: Row, old: Row | None) 
 def _work_order(
     _s: Session, _tid: uuid.UUID, _e: Entity, row: Row, old: Row | None
 ) -> None:
-    errs: list[tuple[str, str]] = []
+    errs: list[FieldError] = []
     if old and old["wo_status"] != "draft":
         changed = [
             f.name
@@ -105,15 +110,30 @@ def _work_order(
         if changed:
             raise _err(
                 changed[0],
+                ec.WO_LATE_EDIT,
                 "only remarks, due date and references can change after release",
             )
     if (row.get("planned_qty") or 0) < 1:
-        errs.append(("planned_qty", "planned_qty: must be >= 1"))
+        errs.append(fe("planned_qty", ec.FIELD_MIN, "planned_qty: must be >= 1", min=1))
     if not 0 <= (row.get("over_start_limit_pct") or 0) <= 100:
-        errs.append(("over_start_limit_pct", "over_start_limit_pct: must be 0..100"))
+        errs.append(
+            fe(
+                "over_start_limit_pct",
+                ec.FIELD_RANGE,
+                "over_start_limit_pct: must be 0..100",
+                min=0,
+                max=100,
+            )
+        )
     a, b = row.get("planned_start"), row.get("due_date")
     if a and b and a > b:
-        errs.append(("due_date", "due_date: must not be before planned_start"))
+        errs.append(
+            fe(
+                "due_date",
+                ec.DUE_BEFORE_START,
+                "due_date: must not be before planned_start",
+            )
+        )
     if errs:
         raise MesError(errs)
 
@@ -124,7 +144,9 @@ def _wo_delete(
 ) -> None:
     if row["wo_status"] != "draft":
         raise _err(
-            "wo_status", "only draft work orders can be deleted (cancel instead)"
+            "wo_status",
+            ec.WO_DELETE_DRAFT_ONLY,
+            "only draft work orders can be deleted (cancel instead)",
         )
 
 
@@ -196,11 +218,15 @@ def first_step(s: Session, tid: uuid.UUID, route_id: Any) -> tuple[Row | None, A
 def _rules(s: Session, tid: uuid.UUID, wo: Row) -> tuple[Row, Row, Row]:
     lt = _one(s, tid, "lot_type", wo["lot_type_id"])
     if not lt:
-        raise _err("lot_type", "not found")
+        raise _err("lot_type", ec.LOT_TYPE_NOT_FOUND, "not found")
     lr = _one(s, tid, "code_rule", lt["lot_id_rule_id"])
     wr = _one(s, tid, "code_rule", lt["wafer_id_rule_id"])
     if not lr or lr["target"] != "lot" or not wr or wr["target"] != "wafer":
-        raise _err("lot_type", "lot type needs a lot ID rule and a wafer ID rule")
+        raise _err(
+            "lot_type",
+            ec.LOT_TYPE_RULES_MISSING,
+            "lot type needs a lot ID rule and a wafer ID rule",
+        )
     return lt, lr, wr
 
 
@@ -242,35 +268,55 @@ def transition(
         HTTPException: 非法迁移或释放校验失败（422）。
     """
     if action not in TRANSITIONS:
-        raise http_422([("action", f"action: must be one of {', '.join(TRANSITIONS)}")])
+        raise http_422(
+            [
+                fe(
+                    "action",
+                    ec.ACTION_INVALID,
+                    f"action: must be one of {', '.join(TRANSITIONS)}",
+                    actions=", ".join(TRANSITIONS),
+                )
+            ]
+        )
     wo = get_row(s, WO, tid, wo_id)
     allowed, to = TRANSITIONS[action]
     if wo["wo_status"] not in allowed:
         raise http_422(
             [
-                (
+                fe(
                     "wo_status",
+                    ec.WO_TRANSITION,
                     f"wo_status: cannot {action} a {wo['wo_status']} work order",
+                    action=action,
+                    status=wo["wo_status"],
                 )
             ]
         )
     extra: Row = {}
     if action == "release":
-        errs: list[tuple[str, str]] = []
+        errs: list[FieldError] = []
         prod = _one(s, tid, "product", wo["product_id"])
         route = default_route(s, tid, wo["product_id"])
         if not prod or prod["status"] != "active":
-            errs.append(("product", "product: must be active"))
+            errs.append(fe("product", ec.MUST_BE_ACTIVE, "product: must be active"))
         if not route:
-            errs.append(("route", "route: product has no active default route"))
+            errs.append(
+                fe(
+                    "route",
+                    ec.WO_ROUTE_MISSING,
+                    "route: product has no active default route",
+                )
+            )
         if wo["planned_qty"] < 1:
-            errs.append(("planned_qty", "planned_qty: must be >= 1"))
+            errs.append(
+                fe("planned_qty", ec.FIELD_MIN, "planned_qty: must be >= 1", min=1)
+            )
         try:
             _rules(s, tid, wo)
         except MesError as ex:
             errs += ex.errors
         if route and not _steps(s, tid, route["id"]):
-            errs.append(("route", "route: has no steps"))
+            errs.append(fe("route", ec.ROUTE_NO_STEPS, "route: has no steps"))
         if errs:
             raise http_422(errs)
         assert prod and route
@@ -305,15 +351,25 @@ def transition(
         if open_lots:
             raise http_422(
                 [
-                    (
+                    fe(
                         "wo_status",
+                        ec.WO_OPEN_LOTS,
                         "wo_status: lots still in process or awaiting receipt: "
                         + ", ".join(open_lots),
+                        lots=", ".join(open_lots),
                     )
                 ]
             )
     elif action == "cancel" and wo["started_qty"]:
-        raise http_422([("wo_status", "wo_status: lots were started; undo them first")])
+        raise http_422(
+            [
+                fe(
+                    "wo_status",
+                    ec.WO_LOTS_STARTED,
+                    "wo_status: lots were started; undo them first",
+                )
+            ]
+        )
     new = _set(s, tid, wo, user, action, wo_status=to, **extra)
     s.commit()
     return new
@@ -328,7 +384,16 @@ def plan(
     lt, lr, wr = _rules(s, tid, wo)
     size = lot_size or lt["max_wafers"] or 25
     if not 1 <= size <= (lt["max_wafers"] or 25):
-        raise http_422([("lot_size", f"lot_size: must be 1..{lt['max_wafers']}")])
+        raise http_422(
+            [
+                fe(
+                    "lot_size",
+                    ec.LOT_SIZE_RANGE,
+                    f"lot_size: must be 1..{lt['max_wafers']}",
+                    max=lt["max_wafers"],
+                )
+            ]
+        )
     room = max(0, cap(wo) - wo["started_qty"])
     want = (
         qty
@@ -410,22 +475,30 @@ def start(
     if wo["wo_status"] not in STARTABLE:
         raise http_422(
             [
-                (
+                fe(
                     "wo_status",
+                    ec.WO_NOT_STARTABLE,
                     f"wo_status: cannot start lots on a {wo['wo_status']} work order",
+                    status=wo["wo_status"],
                 )
             ]
         )
     lt, lr, wr = _rules(s, tid, wo)
-    errs: list[tuple[str, str]] = []
+    errs: list[FieldError] = []
     if not lots:
-        errs.append(("lots", "lots: at least one lot"))
+        errs.append(fe("lots", ec.WO_LOTS_REQUIRED, "lots: at least one lot"))
     total = sum(int(x.get("qty") or 0) for x in lots)
     if wo["started_qty"] + total > cap(wo):
         errs.append(
-            (
+            fe(
                 "lots",
+                ec.WO_START_LIMIT,
                 f"lots: started {wo['started_qty']} + {total} exceeds the limit {cap(wo)} (planned {wo['planned_qty']} + {wo['over_start_limit_pct'] or 0}%)",
+                started=wo["started_qty"],
+                total=total,
+                cap=cap(wo),
+                planned=wo["planned_qty"],
+                pct=wo["over_start_limit_pct"] or 0,
             )
         )
     seen: set[Any] = set()
@@ -433,7 +506,13 @@ def start(
         n = int(x.get("qty") or 0)
         if not 1 <= n <= (lt["max_wafers"] or 25):
             errs.append(
-                (f"lots.{i}.qty", f"lot {i}: qty must be 1..{lt['max_wafers']}")
+                fe(
+                    f"lots.{i}.qty",
+                    ec.LOT_QTY_RANGE,
+                    f"lot {i}: qty must be 1..{lt['max_wafers']}",
+                    i=i,
+                    max=lt["max_wafers"],
+                )
             )
         slots = x.get("slots") or list(range(1, n + 1))
         x["slots"] = slots
@@ -444,21 +523,34 @@ def start(
             car = _one(s, tid, "carrier", cid)
             ct = car and _one(s, tid, "carrier_type", car["carrier_type_id"])
             if not car or not ct:
-                errs.append((f"lots.{i}.carrier", f"lot {i}: carrier not found"))
+                errs.append(
+                    fe(
+                        f"lots.{i}.carrier",
+                        ec.LOT_CARRIER_NOT_FOUND,
+                        f"lot {i}: carrier not found",
+                        i=i,
+                    )
+                )
                 continue
             width = ct["capacity"]
             if car["status_code"] != "available":
                 errs.append(
-                    (
+                    fe(
                         f"lots.{i}.carrier",
+                        ec.LOT_CARRIER_UNAVAILABLE,
                         f"lot {i}: carrier {car['code']} is not available",
+                        i=i,
+                        carrier=car["code"],
                     )
                 )
             if cid in seen or _carrier_busy(s, tid, cid):
                 errs.append(
-                    (
+                    fe(
                         f"lots.{i}.carrier",
+                        ec.LOT_CARRIER_IN_USE,
                         f"lot {i}: carrier {car['code']} is already in use",
+                        i=i,
+                        carrier=car["code"],
                     )
                 )
             seen.add(cid)
@@ -470,23 +562,36 @@ def start(
             or not all(1 <= int(k) <= width for k in slots)
         ):
             errs.append(
-                (
+                fe(
                     f"lots.{i}.slots",
+                    ec.LOT_SLOTS,
                     f"lot {i}: {n} distinct slots within 1..{width} required",
+                    i=i,
+                    n=n,
+                    width=width,
                 )
             )
         srcs = x.get("wafer_sources") or []
         if srcs and len(srcs) != n:
-            errs.append((f"lots.{i}.wafer_sources", f"lot {i}: one source per wafer"))
+            errs.append(
+                fe(
+                    f"lots.{i}.wafer_sources",
+                    ec.LOT_WAFER_SOURCES,
+                    f"lot {i}: one source per wafer",
+                    i=i,
+                )
+            )
     if errs:
         raise http_422(errs)
     step, site = first_step(s, tid, wo["route_id"])
     if not step:
-        raise http_422([("route", "route: has no steps")])
+        raise http_422([fe("route", ec.ROUTE_NO_STEPS, "route: has no steps")])
     stack: list[Row] = []
     step = process_svc.enter_route(s, tid, step, stack, [])
     if not step:
-        raise http_422([("route", "route: has no operation steps")])
+        raise http_422(
+            [fe("route", ec.ROUTE_NO_OPERATION_STEPS, "route: has no operation steps")]
+        )
     prod = _one(s, tid, "product", wo["product_id"]) or {}
     lot_nos = coderule.generate(s, tid, lr, len(lots), commit=False)
     at, c, out = now(), conn(s), []
@@ -567,7 +672,13 @@ def start(
     except IntegrityError as ex:
         s.rollback()
         raise http_422(
-            [("lots", "lots: generated lot / wafer ID already exists")]
+            [
+                fe(
+                    "lots",
+                    ec.LOT_IDS_EXIST,
+                    "lots: generated lot / wafer ID already exists",
+                )
+            ]
         ) from ex
     return out
 
@@ -583,7 +694,14 @@ def undo_start(
     wo = get_row(s, WO, tid, wo_id)
     if wo["wo_status"] not in STARTABLE:
         raise http_422(
-            [("wo_status", f"wo_status: cannot undo on a {wo['wo_status']} work order")]
+            [
+                fe(
+                    "wo_status",
+                    ec.WO_NOT_UNDOABLE,
+                    f"wo_status: cannot undo on a {wo['wo_status']} work order",
+                    status=wo["wo_status"],
+                )
+            ]
         )
     t = TABLES["lot"]
     stmt = sa.select(t).where(t.c.tenant_id == tid, t.c.work_order_id == wo["id"])
@@ -591,7 +709,7 @@ def undo_start(
         stmt = stmt.where(t.c.id.in_(lot_ids))
     ids = list(conn(s).execute(stmt.with_only_columns(t.c.id)).scalars())
     if not ids:
-        raise http_422([("lots", "lots: nothing to undo")])
+        raise http_422([fe("lots", ec.NOTHING_TO_UNDO, "lots: nothing to undo")])
     # 加锁后再判断状态，防止与 Move In / Hold 并发
     lots = list(lot_svc.lock_lots(s, tid, ids).values())
     h = TABLES["lot_history"]
@@ -612,7 +730,16 @@ def undo_start(
         if x["lot_status"] != "waiting" or x["on_hold"] or x["id"] in acted
     ]
     if busy:
-        raise http_422([("lots", f"lots: already processed: {', '.join(busy)}")])
+        raise http_422(
+            [
+                fe(
+                    "lots",
+                    ec.LOTS_PROCESSED,
+                    f"lots: already processed: {', '.join(busy)}",
+                    lots=", ".join(busy),
+                )
+            ]
+        )
     n = sum(x["qty"] for x in lots)
     for x in lots:
         audit(s, tid, LOT, "undo_start", x, user, {"work_order": (wo["code"], None)})

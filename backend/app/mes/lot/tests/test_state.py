@@ -10,6 +10,7 @@ import pytest
 from fastapi import HTTPException
 
 import app.mes.lot.specs  # noqa: F401  注册 lot_status 枚举
+from app.core import error_codes as ec
 from app.core.spec.engine import ENUMS
 from app.mes.lot.lots import TERMINAL as LOTS_TERMINAL
 from app.mes.lot.state import RULES, TERMINAL, LotStatus, allowed, check, lock_order
@@ -331,7 +332,10 @@ def test_matrix(
     with pytest.raises(HTTPException) as e:
         check(lot, act)
     assert e.value.status_code == 422
-    assert e.value.detail["code"] == expect  # P01 / N5
+    assert (
+        e.value.detail["code"]
+        == {"on_hold": ec.ON_HOLD, "lot_status": ec.LOT_STATUS}[expect]
+    )
 
 
 def test_u01_track_out_targets() -> None:
@@ -376,11 +380,11 @@ def test_h2_02_ship_stored_on_hold_rejected() -> None:
     assert allowed(_lot("stored"), "ship")
     with pytest.raises(HTTPException) as e:
         check(_lot("stored", True), "ship")
-    assert e.value.status_code == 422 and e.value.detail["code"] == "on_hold"
+    assert e.value.status_code == 422 and e.value.detail["code"] == ec.ON_HOLD
     for st in ("completed", "scrapped", "merged", "waiting"):
         with pytest.raises(HTTPException) as e:
             check(_lot(st, True), "ship")
-        assert e.value.detail["code"] == "lot_status"
+        assert e.value.detail["code"] == ec.LOT_STATUS
 
 
 def test_qt_06_no_qtime_scrap_write_path() -> None:

@@ -1,0 +1,56 @@
+mes:
+  entity:
+    site: Factory / site
+    area: Area
+    workcenter: Bay / work center
+    shift: Shift
+    work_calendar: Work calendar
+    calendar_day: Calendar day
+  field:
+    site:
+      code: Code
+      name: Name
+      timezone: Time zone
+      address: Address
+      is_active: Active
+      description: Description
+    area:
+      code: Code
+      name: Name
+      site: Site
+      area_type: Area type
+      is_active: Active
+      description: Description
+    workcenter:
+      code: Code
+      name: Name
+      parent: Parent
+      area: Area
+      kind: Kind
+      is_active: Active
+      description: Description
+    shift:
+      code: Code
+      name: Name
+      site: Site
+      start_time: Start
+      end_time: End
+      crosses_midnight: Crosses midnight
+      sort_order: Sort order
+      description: Description
+    work_calendar:
+      code: Code
+      name: Name
+      site: Site
+      year: Year
+      is_active: Active
+      description: Description
+    calendar_day:
+      work_calendar: Calendar
+      day: Date
+      day_type: Day type
+      shifts: Shifts
+      note: Note
+  help:
+    calendar_day:
+      shifts: Comma separated shift codes

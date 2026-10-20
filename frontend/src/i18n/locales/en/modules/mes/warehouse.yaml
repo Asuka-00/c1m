@@ -1,0 +1,88 @@
+mes:
+  receipt:
+    actions: Receipt actions
+    noActions: No actions available
+    confirmBtn: Confirm
+    action:
+      submit: Submit
+      reject: Reject
+      confirm: Confirm receipt
+      cancel: Cancel receipt
+    done:
+      submit: Receipt submitted
+      reject: Receipt returned to draft
+      confirm: Receipt confirmed
+      cancel: Receipt cancelled
+    confirm:
+      submit: Submit {{code}}? Lines can no longer be changed and the quantities are reserved.
+      reject: Return {{code}} to draft?
+      confirm: Confirm receipt {{code}}? Lot received quantities and work-order completed quantities are increased; fully received lots are closed.
+      cancel: Cancel {{code}}? This cannot be undone.
+  entity:
+    warehouse: Warehouse
+    storage_location: Storage location
+    receipt: Finished-goods receipt
+    receipt_line: Receipt line
+  field:
+    warehouse:
+      code: Code
+      name: Name
+      site: Site
+      warehouse_type: Warehouse type
+      address: Address
+      keeper: Keeper
+      is_active: Active
+      description: Description
+    storage_location:
+      code: Code
+      name: Name
+      warehouse: Warehouse
+      location_type: Location type
+      capacity: Capacity (lots)
+      is_active: Active
+      description: Description
+    receipt:
+      code: Receipt no.
+      warehouse: Warehouse
+      location: Storage location
+      receipt_status: Status
+      lot_count: Lots
+      total_good: Good qty
+      total_scrap: Scrap qty
+      remarks: Remarks
+      submitted_at: Submitted at
+      submitted_by: Submitted by
+      confirmed_at: Confirmed at
+      confirmed_by: Confirmed by
+      description: Description
+    receipt_line:
+      receipt: Receipt
+      lot: Lot
+      work_order: Work order
+      product: Product
+      good_qty: Good qty
+      scrap_qty: Scrap qty
+      remarks: Remarks
+  help:
+    storage_location:
+      capacity: 'Blank: unlimited'
+    receipt_line:
+      lot: Only finished lots awaiting receipt
+  enum:
+    warehouse_type:
+      finished_goods: Finished goods
+      semi_finished: Semi-finished
+      raw_material: Raw material
+      quarantine: Quarantine
+      scrap: Scrap
+    location_type:
+      rack: Rack
+      shelf: Shelf
+      bin: Bin
+      dry_cabinet: Dry cabinet / N2 cabinet
+      floor: Floor area
+    receipt_status:
+      draft: Draft
+      submitted: Submitted
+      confirmed: Confirmed
+      cancelled: Cancelled

@@ -9,11 +9,12 @@ import sqlalchemy as sa
 from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.models import actor_name
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, TABLES
-from app.core.spec.errors import http_422
+from app.core.spec.errors import coded, fe, http_422
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
 from app.mes.execution.events import LOT_HOLD, notify_lot
@@ -44,7 +45,14 @@ def default_reason(s: Session, tid: uuid.UUID, rtype: str) -> Row:
     ]  # 系统原因码（如 qtime_expired，D18）不作为默认原因
     if not rs:
         raise http_422(
-            [("reason", f"reason: no active {rtype} reason code configured")]
+            [
+                fe(
+                    "reason",
+                    ec.REASON_MISSING,
+                    f"reason: no active {rtype} reason code configured",
+                    type=rtype,
+                )
+            ]
         )
     return rs[0]
 
@@ -54,7 +62,16 @@ def _reason(
 ) -> Row:
     r = one(s, tid, "reason_code", rid)
     if not r or r["reason_type"] != rtype:
-        raise http_422([(field, f"{field}: a {rtype} reason code is required")])
+        raise http_422(
+            [
+                fe(
+                    field,
+                    ec.REASON_REQUIRED,
+                    f"{field}: a {rtype} reason code is required",
+                    type=rtype,
+                )
+            ]
+        )
     return r
 
 
@@ -68,6 +85,7 @@ def hold_lot(
     hold_type: str = "manual",
     source: str = "manual",
     comment: str | None = None,
+    note: Row | None = None,
     details: Row | None = None,
     extra: Row | None = None,
 ) -> uuid.UUID | None:
@@ -81,7 +99,8 @@ def hold_lot(
         reason: 原因代码行。
         hold_type: Hold 类型。
         source: 来源（manual / qtime / dc / check ...）。
-        comment: 备注。
+        comment: 人工备注。
+        note: 系统生成的说明 ``{key, params}``（前端按 ``mes.sysNote.<key>`` 翻译）。
         details: 附加信息。
         extra: Hold 记录附加列（Q-Time 的 qtime_rule_id 等，D20）。
 
@@ -106,6 +125,7 @@ def hold_lot(
         hold_type=hold_type,
         source=source,
         comment=(comment or "")[:300] or None,
+        note=note,
         is_active=True,
         held_at=now(),
         held_by=actor_name(user) or "system",
@@ -160,7 +180,7 @@ def _lock_hold(s: Session, tid: uuid.UUID, hold_id: uuid.UUID) -> Row:
         .first()
     )
     if not r:
-        raise HTTPException(status_code=404, detail="Record not found")
+        raise coded(404, ec.RECORD_NOT_FOUND, "Record not found")
     return dict(r)
 
 
@@ -179,12 +199,12 @@ def release_hold(
     """
     h = one(s, tid, "lot_hold", hold_id)
     if not h:
-        raise HTTPException(status_code=404, detail="Record not found")
+        raise coded(404, ec.RECORD_NOT_FOUND, "Record not found")
     # 锁顺序 lot → lot_hold；加锁后重读 Hold，防止并发重复释放
     lot = lock_lot(s, tid, h["lot_id"])
     h = _lock_hold(s, tid, hold_id)
     if not h["is_active"]:
-        raise http_422([("hold", "hold: already released")])
+        raise http_422([fe("hold", ec.HOLD_RELEASED, "hold: already released")])
     rr = (
         _reason(s, tid, reason_id, "release", "release_reason_id")
         if reason_id
@@ -237,7 +257,15 @@ def manual_hold(
     check_transition(lot, "hold")
     r = _reason(s, tid, reason_id, "hold")
     if r["comment_required"] and not (comment or "").strip():
-        raise http_422([("comment", "comment: required for this reason code")])
+        raise http_422(
+            [
+                fe(
+                    "comment",
+                    ec.COMMENT_REQUIRED,
+                    "comment: required for this reason code",
+                )
+            ]
+        )
     hold_lot(s, tid, lot, user, r, comment=comment)
     s.commit()
     return lot
@@ -292,6 +320,7 @@ def hold_row(s: Session, tid: uuid.UUID, h: Row, lot: Row, at: datetime) -> Row:
         "held_by": h["held_by"],
         "hours": ha and end and round((end - ha).total_seconds() / 3600, 1),
         "comment": h["comment"],
+        "note": h.get("note"),
         "released_at": h["released_at"] and h["released_at"].isoformat(),
         "released_by": h["released_by"],
         "release_reason": rr and f"{rr['code']} · {rr['name'] or ''}",
@@ -310,7 +339,7 @@ def get_hold(s: Session, tid: uuid.UUID, hold_id: Any) -> Row:
         raise HTTPException(
             status_code=404,
             detail={
-                "code": "hold_not_found",
+                "code": ec.HOLD_NOT_FOUND,
                 "message": "Hold not found",
                 "hold_id": str(hold_id),
             },
@@ -397,7 +426,15 @@ def release_batch(
     """
     r = _reason(s, tid, reason_id, "release", "reason_id")
     if r["comment_required"] and not (comment or "").strip():
-        raise http_422([("comment", "comment: required for this reason code")])
+        raise http_422(
+            [
+                fe(
+                    "comment",
+                    ec.COMMENT_REQUIRED,
+                    "comment: required for this reason code",
+                )
+            ]
+        )
     ok: list[str] = []
     bad: list[Row] = []
     for hid in dict.fromkeys(hold_ids):

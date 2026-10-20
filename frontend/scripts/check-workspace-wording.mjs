@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 // 工作区文案检查：除 src/i18n/platform-only-keys.json 列出的平台控制台键外，
-// 任何语言包（含生成的 MES 包）的值都不得包含“租户 / tenant / テナント”。
+// 任何语言包的值都不得包含“租户 / tenant / テナント”。
 import { readFileSync } from 'node:fs'
+import { LOCALES, loadLocale } from './lib/locales.mjs'
 
 const dir = new URL('../src/i18n/', import.meta.url).pathname
 const { prefixes, keys } = JSON.parse(readFileSync(dir + 'platform-only-keys.json', 'utf8'))
 const RE = /租户|tenant|テナント/i
 const allowed = (k) => keys.includes(k) || prefixes.some((p) => k.startsWith(p))
 let bad = 0
-for (const f of ['zh-CN', 'en', 'ja', 'mes/zh-CN', 'mes/en', 'mes/ja']) {
+for (const f of LOCALES) {
   const walk = (o, p) => {
     for (const [k, v] of Object.entries(o)) {
       if (v && typeof v === 'object') walk(v, `${p}${k}.`)
@@ -18,7 +19,7 @@ for (const f of ['zh-CN', 'en', 'ja', 'mes/zh-CN', 'mes/en', 'mes/ja']) {
       }
     }
   }
-  walk(JSON.parse(readFileSync(`${dir}locales/${f}.json`, 'utf8')), '')
+  walk(loadLocale(f), '')
 }
 if (bad) {
   console.error(`${bad} workspace i18n value(s) mention tenants`)

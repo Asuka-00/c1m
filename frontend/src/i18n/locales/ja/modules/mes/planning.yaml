@@ -1,0 +1,114 @@
+mes:
+  wo:
+    actions: 作業指示の操作
+    startLots: ロット投入
+    undoStart: 投入取消
+    noActions: 操作なし
+    confirmBtn: 確認
+    undone: '{{count}} ロットを取消しました'
+    action:
+      release: リリース
+      hold: 保留
+      resume: 再開
+      complete: 完了
+      close: クローズ
+      cancel: 作業指示取消
+    done:
+      release: 作業指示をリリースしました
+      hold: 作業指示を保留しました
+      resume: 作業指示を再開しました
+      complete: 作業指示を完了しました
+      close: 作業指示をクローズしました
+      cancel: 作業指示を取消しました
+    confirm:
+      release: '{{code}} をリリースしますか？製品の既定ルートと版が作業指示に固定されます。'
+      hold: '{{code}} を保留しますか？保留中は投入できません。'
+      resume: '{{code}} を再開しますか？'
+      complete: '{{code}} を完了にしますか？以降は投入できません。'
+      close: '{{code}} をクローズしますか？配下のロットはすべて入庫・廃棄・統合済みである必要があり、元に戻せません。'
+      cancel: '{{code}} を取消しますか？元に戻せません。'
+      undo: '{{code}} の全投入を取消しますか？全ロットが先頭ステップで待機中の場合のみ可能。ロットとウェーハは削除されます。'
+  start:
+    desc: リリース済み作業指示をロットに分割し、先頭ステップに投入します。
+    step1: 作業指示を選択
+    step2: 分割とキャリア
+    step3: 確認
+    chooseWo: リリース済み・生産中の作業指示
+    noWo: リリース済みの作業指示がありません。
+    next: 次へ
+    back: 戻る
+    split: ロット分割
+    lotSize: ロット当たり枚数（最大 {{max}}）
+    qty: 今回の投入枚数（最大 {{max}}）
+    resplit: 再分割
+    lotNo: ロット番号（プレビュー）
+    slots: スロット
+    autoNo: （自動）
+    addLot: ロット追加
+    total: 合計 {{total}} / 最大 {{max}} 枚
+    limit: 投入上限
+    limitText: '{{max}} 枚（計画 + {{pct}}%）、残り {{remaining}} 枚'
+    errNoLots: ロットを 1 つ以上追加してください
+    errOver: '{{total}} 枚が残り上限 {{max}} を超えています'
+    errQty: ロット {{n}}：枚数は 1..{{max}}
+    errSlots: ロット {{n}}：重複しない {{qty}} 個のスロット（例：1-25、1,3,5）
+    errCarrierTwice: 1 つのキャリアには 1 ロットのみ
+    confirm: 投入の確認
+    firstStep: 先頭ステップ
+    wafers: ウェーハ ID
+    previewNote: ロット番号はプレビューです。確定時に正式採番されます。
+    confirmStart: '{{count}} ロット / {{total}} 枚を投入'
+    done: '{{count}} ロットを投入しました'
+    again: 続けて投入
+    searchWo: 作業指示 / 製品 / ルート / 顧客を検索
+    woMore: '{{n}} 件中先頭 {{show}} 件を表示。キーワードで絞り込んでください'
+  woBoard:
+    hint: 作業指示の進捗、仕掛分布、納期警告。
+    search: 作業指示 / 製品を検索
+    allRisks: すべての納期状態
+    risk:
+      overdue: 遅延
+      at_risk: 納期間近
+      ok: 順調
+      none: 納期なし
+      done: 完了
+    warnDays: 警告日数
+    code: 作業指示
+    product: 製品
+    status: 状態
+    qty: 完了/仕掛/廃棄/計画
+    progress: 進捗
+    wipByOp: 工程別仕掛
+    due: 納期
+    daysLeft: 残り {{n}} 日
+    riskCol: 納期状態
+    ruleDefault: ルール
+  entity:
+    work_order: 作業指示
+  field:
+    work_order:
+      code: 作業指示番号
+      product: 製品
+      route: ルート（既定・リリース時）
+      product_version: 製品版
+      route_version: ルート版
+      lot_type: ロットタイプ
+      priority: 優先度
+      planned_qty: 計画枚数
+      over_start_limit_pct: 超過投入上限（%）
+      started_qty: 投入済枚数
+      completed_qty: 完了数量
+      planned_start: 計画開始日
+      due_date: 納期
+      customer: 顧客
+      order_ref: 顧客注文番号
+      remarks: 備考
+      wo_status: 状態
+      held_from: 保留前状態
+      released_at: リリース日時
+      released_by: リリース者
+      description: 説明
+  help:
+    work_order:
+      priority: 空欄：ロットタイプの既定優先度
+      over_start_limit_pct: 投入枚数が計画を超えてよい割合

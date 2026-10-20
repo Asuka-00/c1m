@@ -4,6 +4,7 @@ import { t } from '@/i18n'
 import { describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
 import { mesApi, type MesEntity, type MesField } from '@/lib/api/mes/common'
+import { ErrorCode } from '@/lib/error-codes'
 import { EntityForm } from './entity-form'
 import { fieldHelp } from './labels'
 import { mesErrorMessage, requiredBy, validateRequired } from './required'
@@ -95,14 +96,14 @@ describe('Q-Time 规则（后端 463d599 规格）', () => {
       config: { headers: new AxiosHeaders() },
       data: {
         detail: {
-          code: 'qtime_action_invalid',
+          code: ErrorCode.QTIME_ACTION_INVALID,
           message: "Q-Time action 'scrap' is no longer supported",
           action: 'scrap',
         },
       },
     }
     expect(mesErrorMessage(e, rule)).toBe(
-      t('mes.err.code.qtime_action_invalid')
+      t(`error.code_${ErrorCode.QTIME_ACTION_INVALID}`)
     )
   })
 

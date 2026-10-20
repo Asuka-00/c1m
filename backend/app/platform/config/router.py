@@ -6,7 +6,9 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, col, select
 
+from app.core import error_codes as ec
 from app.core.deps import SessionDep
+from app.core.spec.errors import coded
 from app.core.tenant import set_tenant
 from app.platform.auth.deps import (
     CurrentTenant,
@@ -42,7 +44,7 @@ def _groups(session: Session) -> list[ConfigGroup]:
 def _get_group(session: Session, code: str) -> ConfigGroup:
     g = session.exec(select(ConfigGroup).where(ConfigGroup.code == code)).first()
     if not g:
-        raise HTTPException(status_code=404, detail="Config group not found")
+        raise coded(404, ec.CONFIG_GROUP_NOT_FOUND, "Config group not found")
     return g
 
 
@@ -73,10 +75,14 @@ def _check_file(
     try:
         fid = uuid.UUID(value.removeprefix(FILE_PREFIX))
     except ValueError:
-        raise ConfigValidationError("is not a valid file reference")
+        raise ConfigValidationError(
+            ec.CFG_BAD_FILE_REF, "is not a valid file reference"
+        )
     f = session.get(UploadedFile, fid)
     if not f or (f.tenant_id is not None and f.tenant_id != tenant_id):
-        raise ConfigValidationError("refers to a file you do not own")
+        raise ConfigValidationError(
+            ec.CFG_FILE_NOT_OWNED, "refers to a file you do not own"
+        )
 
 
 def _apply(
@@ -92,11 +98,21 @@ def _apply(
     for code, raw in values.items():
         item = items.get(code)
         if not item:
-            errors.append({"loc": ["values", code], "msg": "unknown config item"})
+            errors.append(
+                {
+                    "loc": ["values", code],
+                    "msg": "unknown config item",
+                    "code": ec.CFG_UNKNOWN_ITEM,
+                }
+            )
             continue
         if tenant_id is not None and not item.tenant_overridable:
             errors.append(
-                {"loc": ["values", code], "msg": "cannot be overridden by a tenant"}
+                {
+                    "loc": ["values", code],
+                    "msg": "cannot be overridden by a tenant",
+                    "code": ec.CFG_NOT_OVERRIDABLE,
+                }
             )
             continue
         try:
@@ -107,7 +123,15 @@ def _apply(
             _check_file(session, item, v, tenant_id)
             out.append((item, v))
         except ConfigValidationError as e:
-            errors.append({"loc": ["values", code], "msg": f"{item.name} {e}"})
+            errors.append(
+                {
+                    "loc": ["values", code],
+                    "msg": f"{item.name} {e}",
+                    "code": e.code,
+                    "params": e.params,
+                    "label_key": f"config.items.{group.code}.{code}",
+                }
+            )
     if errors:
         raise HTTPException(status_code=422, detail=errors)
     return out
@@ -172,7 +196,7 @@ def update_platform_config(
 def _tenant_ctx(*codes: str):  # type: ignore[no-untyped-def]
     def dep(ctx: CurrentTenant) -> TenantContext:
         if not ctx.can(*codes):
-            raise HTTPException(status_code=403, detail="Not enough permissions")
+            raise coded(403, ec.PERMISSION_DENIED, "Not enough permissions")
         return ctx
 
     return Depends(dep)
@@ -306,7 +330,7 @@ def _platform_tenant(
     session: SessionDep, user: CurrentUser, tenant_id: uuid.UUID
 ) -> TenantContext:
     if not session.get(Tenant, tenant_id):
-        raise HTTPException(status_code=404, detail="Tenant not found")
+        raise coded(404, ec.TENANT_NOT_FOUND, "Tenant not found")
     return resolve_tenant(session, user, tenant_id)
 
 

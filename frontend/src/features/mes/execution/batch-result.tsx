@@ -1,18 +1,31 @@
 /** 批量作业结果 / 预检阻断列表。 */
 import { t } from '@/i18n'
 import type { BatchItem } from '@/lib/api/mes/execution'
+import {
+  checkMessage,
+  codeText,
+  detailParams,
+  itemText,
+  type CodedItem,
+} from '@/lib/backend-text'
 import { Badge } from '@/components/ui/badge'
 
-/** 单批错误详情转为文本（校验错误 / 检查阻断 / 其他）。 */
+/** 单批错误详情转为文本（字段校验错误 / 检查阻断 / 业务错误码）。 */
 function detailText(d: unknown): string {
   if (Array.isArray(d))
-    return d.map((x: { msg?: string }) => x.msg ?? '').join('; ')
+    return d
+      .map((x: CodedItem) => itemText(x) ?? x.msg ?? '')
+      .join(t('mes.checkSep'))
   if (d && typeof d === 'object' && 'results' in d) {
     const rs = (d as { results: BatchItem['results'] }).results ?? []
     return rs
       .filter((r) => r.result === 'block')
-      .map((r) => `${r.rule_code ?? r.check_type}: ${r.message}`)
-      .join('; ')
+      .map((r) => `${r.rule_code ?? r.check_type}: ${checkMessage(r)}`)
+      .join(t('mes.checkSep'))
+  }
+  if (d && typeof d === 'object' && 'code' in d) {
+    const x = d as Record<string, unknown>
+    return codeText(x.code, detailParams(x)) ?? String(x.message ?? x.code)
   }
   return String(d)
 }
@@ -36,7 +49,7 @@ export function BatchResult({ items }: { items: BatchItem[] }) {
             </Badge>
             {blocks.map((r) => (
               <span key={r.rule_id ?? r.check_type} className='text-red-600'>
-                {r.rule_code ?? r.check_type}: {r.message}
+                {r.rule_code ?? r.check_type}: {checkMessage(r)}
               </span>
             ))}
             {it.error != null && (

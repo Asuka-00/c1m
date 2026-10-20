@@ -1,20 +1,12 @@
+import { en, ja, zh } from '@/test-utils/locales'
 import { describe, expect, it } from 'vitest'
 import { descriptionIssues, descriptionProblem } from './description-style'
-import en from './locales/en.json'
-import ja from './locales/ja.json'
-import mesEn from './locales/mes/en.json'
-import mesJa from './locales/mes/ja.json'
-import mesZh from './locales/mes/zh-CN.json'
-import zh from './locales/zh-CN.json'
 
 describe('说明文案', () => {
   it.each([
     ['zh-CN', zh],
     ['en', en],
     ['ja', ja],
-    ['mes/zh-CN', mesZh],
-    ['mes/en', mesEn],
-    ['mes/ja', mesJa],
   ])('%s 的说明简短且不含实现细节', (_, b) => {
     expect(descriptionIssues(b)).toEqual([])
   })

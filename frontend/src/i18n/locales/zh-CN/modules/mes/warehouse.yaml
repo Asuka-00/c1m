@@ -1,0 +1,88 @@
+mes:
+  receipt:
+    actions: 入库单操作
+    noActions: 无可用操作
+    confirmBtn: 确认
+    action:
+      submit: 提交
+      reject: 退回
+      confirm: 确认入库
+      cancel: 取消入库单
+    done:
+      submit: 入库单已提交
+      reject: 入库单已退回为草稿
+      confirm: 入库已确认
+      cancel: 入库单已取消
+    confirm:
+      submit: 提交 {{code}}？提交后明细不可修改，数量将被占用。
+      reject: 将 {{code}} 退回为草稿？
+      confirm: 确认 {{code}} 入库？批次已入库数与工单完工数将被累加，入库满额的批次将关闭。
+      cancel: 取消 {{code}}？取消后不可恢复。
+  entity:
+    warehouse: 仓库
+    storage_location: 库位
+    receipt: 完工入库单
+    receipt_line: 入库明细
+  field:
+    warehouse:
+      code: 编码
+      name: 名称
+      site: 工厂
+      warehouse_type: 仓库类型
+      address: 地址
+      keeper: 仓管员
+      is_active: 启用
+      description: 描述
+    storage_location:
+      code: 编码
+      name: 名称
+      warehouse: 仓库
+      location_type: 库位类型
+      capacity: 容量（批）
+      is_active: 启用
+      description: 描述
+    receipt:
+      code: 入库单号
+      warehouse: 仓库
+      location: 库位
+      receipt_status: 状态
+      lot_count: 批次数
+      total_good: 良品数
+      total_scrap: 报废数
+      remarks: 备注
+      submitted_at: 提交时间
+      submitted_by: 提交人
+      confirmed_at: 确认时间
+      confirmed_by: 确认人
+      description: 描述
+    receipt_line:
+      receipt: 入库单
+      lot: 批次
+      work_order: 工单
+      product: 产品
+      good_qty: 良品数
+      scrap_qty: 报废数
+      remarks: 备注
+  help:
+    storage_location:
+      capacity: 留空表示不限
+    receipt_line:
+      lot: 仅可选择待入库的批次
+  enum:
+    warehouse_type:
+      finished_goods: 成品仓
+      semi_finished: 半成品仓
+      raw_material: 原材料仓
+      quarantine: 待检隔离仓
+      scrap: 废品仓
+    location_type:
+      rack: 货架
+      shelf: 层板
+      bin: 料箱
+      dry_cabinet: 干燥柜 / 氮气柜
+      floor: 地面区
+    receipt_status:
+      draft: 草稿
+      submitted: 已提交
+      confirmed: 已确认
+      cancelled: 已取消

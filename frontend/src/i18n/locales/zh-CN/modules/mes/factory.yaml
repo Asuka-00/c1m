@@ -1,0 +1,56 @@
+mes:
+  entity:
+    site: 工厂
+    area: 区域
+    workcenter: Bay / 工作中心
+    shift: 班次
+    work_calendar: 工作日历
+    calendar_day: 日历日
+  field:
+    site:
+      code: 编码
+      name: 名称
+      timezone: 时区
+      address: 地址
+      is_active: 启用
+      description: 描述
+    area:
+      code: 编码
+      name: 名称
+      site: 工厂
+      area_type: 区域类型
+      is_active: 启用
+      description: 描述
+    workcenter:
+      code: 编码
+      name: 名称
+      parent: 上级
+      area: 区域
+      kind: 类型
+      is_active: 启用
+      description: 描述
+    shift:
+      code: 编码
+      name: 名称
+      site: 工厂
+      start_time: 开始时间
+      end_time: 结束时间
+      crosses_midnight: 跨午夜
+      sort_order: 排序
+      description: 描述
+    work_calendar:
+      code: 编码
+      name: 名称
+      site: 工厂
+      year: 年份
+      is_active: 启用
+      description: 描述
+    calendar_day:
+      work_calendar: 日历
+      day: 日期
+      day_type: 日类型
+      shifts: 班次
+      note: 备注
+  help:
+    calendar_day:
+      shifts: 逗号分隔的班次编码

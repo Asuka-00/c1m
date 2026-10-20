@@ -11,14 +11,16 @@ from datetime import timedelta
 from typing import Any, Literal
 
 import sqlalchemy as sa
-from fastapi import HTTPException, Query
+from fastapi import Query
 from sqlmodel import col, func, select
 
+from app.core import error_codes as ec
 from app.core import security
 from app.core.config import settings
 from app.core.deps import SessionDep
 from app.core.models import Message
 from app.core.pagination import ListParamsDep, paginate
+from app.core.spec.errors import coded
 from app.core.tenant import set_tenant
 from app.platform.auth.deps import CurrentUser, platform_api_router
 from app.platform.auth.schemas import Token
@@ -51,7 +53,7 @@ router = platform_api_router()
 def _tenant_or_404(session: SessionDep, tenant_id: uuid.UUID) -> Tenant:
     t = session.get(Tenant, tenant_id)
     if not t:
-        raise HTTPException(status_code=404, detail="Tenant not found")
+        raise coded(404, ec.TENANT_NOT_FOUND, "Tenant not found")
     return t
 
 
@@ -137,12 +139,12 @@ def create_platform_tenant(
 ) -> Any:
     """Create a tenant (with owner/admin/member role templates) and optional owner."""
     if session.exec(select(Tenant).where(Tenant.slug == body.slug)).first():
-        raise HTTPException(status_code=409, detail="Tenant slug already exists")
+        raise coded(409, ec.TENANT_SLUG_ALREADY_EXISTS, "Tenant slug already exists")
     owner = None
     if body.owner:
         owner = crud.get_user_by_username(session=session, username=body.owner)
         if not owner:
-            raise HTTPException(status_code=404, detail="Owner user not found")
+            raise coded(404, ec.OWNER_USER_NOT_FOUND, "Owner user not found")
     t = create_tenant(session, body.name, body.slug, owner=owner)
     t.plan = body.plan
     t.expires_at = body.expires_at
@@ -271,7 +273,7 @@ def set_channel(
     ch = next((c for c in list_registered_channels() if c["code"] == code), None)
     item = _channel_items(session).get(f"{code}_enabled")
     if not ch or not item:
-        raise HTTPException(status_code=404, detail="Channel not found")
+        raise coded(404, ec.CHANNEL_NOT_FOUND, "Channel not found")
     item.value = body.enabled
     session.add(item)
     record_platform_audit(

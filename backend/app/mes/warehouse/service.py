@@ -18,11 +18,12 @@ import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.models import actor_name
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, TABLES, Entity
-from app.core.spec.errors import MesError, http_422
+from app.core.spec.errors import CodedError, FieldError, MesError, fe, http_422
 from app.core.spec.query import get_row
 from app.core.spec.validate import validator
 from app.mes.common import coderule
@@ -45,8 +46,8 @@ RECEIVABLE = "completed"
 WO_OPEN = {"released", "in_progress", "completed"}
 
 
-def _err(field: str, msg: str) -> MesError:
-    return MesError([(field, f"{field}: {msg}")])
+def _err(field: str, code: int, msg: str, **params: Any) -> MesError:
+    return MesError([fe(field, code, f"{field}: {msg}", **params)])
 
 
 def pending_qty(
@@ -85,34 +86,58 @@ def remaining(lot: Row) -> int:
 
 def _check_line(
     s: Session, tid: uuid.UUID, lot: Row | None, good: int, scrap: int, receipt_id: Any
-) -> list[tuple[str, str]]:
+) -> list[CodedError]:
     """校验一行入库明细（批次状态、工单状态、数量），返回字段错误列表。"""
     if not lot:
-        return [("lot", "lot: not found")]
-    errs: list[tuple[str, str]] = []
+        return [fe("lot", ec.LOT_NOT_FOUND_2, "lot: not found")]
+    errs: list[CodedError] = []
     if lot["lot_status"] != RECEIVABLE:
-        errs.append(("lot", f"lot: {lot['code']} is not finished (awaiting receipt)"))
+        errs.append(
+            fe(
+                "lot",
+                ec.RECEIPT_LOT_UNFINISHED,
+                f"lot: {lot['code']} is not finished (awaiting receipt)",
+                lot=lot["code"],
+            )
+        )
     if lot["on_hold"]:
-        errs.append(("lot", f"lot: {lot['code']} is on hold"))
+        errs.append(
+            fe(
+                "lot",
+                ec.RECEIPT_LOT_ON_HOLD,
+                f"lot: {lot['code']} is on hold",
+                lot=lot["code"],
+            )
+        )
     wo = one(s, tid, "work_order", lot["work_order_id"])
     if wo and wo["wo_status"] not in WO_OPEN:
         errs.append(
-            (
+            fe(
                 "lot",
+                ec.RECEIPT_WO_STATUS,
                 f"lot: work order {wo['code']} is {wo['wo_status']}; cannot receive",
+                wo=wo["code"],
+                status=wo["wo_status"],
             )
         )
     if good < 0 or scrap < 0:
-        errs.append(("good_qty", "good_qty: quantities must be >= 0"))
+        errs.append(
+            fe("good_qty", ec.RECEIPT_QTY_NEGATIVE, "good_qty: quantities must be >= 0")
+        )
     elif good + scrap < 1:
-        errs.append(("good_qty", "good_qty: good + scrap must be >= 1"))
+        errs.append(
+            fe("good_qty", ec.RECEIPT_QTY_ZERO, "good_qty: good + scrap must be >= 1")
+        )
     else:
         room = remaining(lot) - pending_qty(s, tid, lot["id"], receipt_id)
         if good + scrap > room:
             errs.append(
-                (
+                fe(
                     "good_qty",
+                    ec.RECEIPT_QTY_EXCEEDS,
                     f"good_qty: {lot['code']} has only {max(room, 0)} left to receive",
+                    lot=lot["code"],
+                    room=max(room, 0),
                 )
             )
     return errs
@@ -162,23 +187,35 @@ def _prefill(s: Session, tid: uuid.UUID, _e: Entity, row: Row, old: Row | None) 
             .first()
         )
         if not rule:
-            raise _err("code", "no code rule for receipts; enter a receipt number")
+            raise _err(
+                "code",
+                ec.RECEIPT_CODE_RULE_MISSING,
+                "no code rule for receipts; enter a receipt number",
+            )
         row["code"] = coderule.generate(s, tid, dict(rule), 1, commit=False)[0]
 
 
 @validator("receipt")
 def _receipt(s: Session, tid: uuid.UUID, _e: Entity, row: Row, old: Row | None) -> None:
     if old and old["receipt_status"] != "draft":
-        raise _err("receipt_status", "only draft receipts can be edited")
+        raise _err(
+            "receipt_status",
+            ec.RECEIPT_EDIT_DRAFT_ONLY,
+            "only draft receipts can be edited",
+        )
     wh = one(s, tid, "warehouse", row.get("warehouse_id"))
     if wh and wh["is_active"] is False:
-        raise _err("warehouse", "warehouse is inactive")
+        raise _err("warehouse", ec.WAREHOUSE_INACTIVE, "warehouse is inactive")
     loc = one(s, tid, "storage_location", row.get("location_id"))
     if loc:
         if loc["warehouse_id"] != row.get("warehouse_id"):
-            raise _err("location", "location does not belong to the warehouse")
+            raise _err(
+                "location",
+                ec.LOCATION_WRONG_WAREHOUSE,
+                "location does not belong to the warehouse",
+            )
         if loc["is_active"] is False:
-            raise _err("location", "location is inactive")
+            raise _err("location", ec.LOCATION_INACTIVE, "location is inactive")
 
 
 @validator("receipt:delete")
@@ -187,7 +224,9 @@ def _receipt_delete(
 ) -> None:
     if row["receipt_status"] != "draft":
         raise _err(
-            "receipt_status", "only draft receipts can be deleted (cancel instead)"
+            "receipt_status",
+            ec.RECEIPT_DELETE_DRAFT_ONLY,
+            "only draft receipts can be deleted (cancel instead)",
         )
 
 
@@ -195,9 +234,15 @@ def _receipt_delete(
 def _line(s: Session, tid: uuid.UUID, _e: Entity, row: Row, old: Row | None) -> None:
     rc = one(s, tid, "receipt", row.get("receipt_id"))
     if not rc or rc["receipt_status"] != "draft":
-        raise _err("receipt", "lines can only change while the receipt is a draft")
+        raise _err(
+            "receipt",
+            ec.RECEIPT_LINES_DRAFT_ONLY,
+            "lines can only change while the receipt is a draft",
+        )
     if old and old["receipt_id"] != row["receipt_id"]:
-        raise _err("receipt", "cannot move a line to another receipt")
+        raise _err(
+            "receipt", ec.RECEIPT_LINE_MOVE, "cannot move a line to another receipt"
+        )
     lot = one(s, tid, "lot", row.get("lot_id"))
     errs = _check_line(
         s,
@@ -220,7 +265,11 @@ def _line_delete(
 ) -> None:
     rc = one(s, tid, "receipt", row["receipt_id"])
     if rc and rc["receipt_status"] != "draft":
-        raise _err("receipt", "lines can only change while the receipt is a draft")
+        raise _err(
+            "receipt",
+            ec.RECEIPT_LINES_DRAFT_ONLY,
+            "lines can only change while the receipt is a draft",
+        )
     _retotal(s, tid, row["receipt_id"], {"id": row["id"], "_delete": True})
 
 
@@ -228,20 +277,25 @@ def _line_delete(
 def _validate_all(s: Session, tid: uuid.UUID, rc: Row, lock: bool) -> list[Row]:
     lines = find(s, tid, "receipt_line", order="created_at", receipt_id=rc["id"])
     if not lines:
-        raise http_422([("lines", "lines: add at least one lot")])
+        raise http_422(
+            [fe("lines", ec.RECEIPT_LINES_REQUIRED, "lines: add at least one lot")]
+        )
     if lock:  # 多批次按 id 升序一次加锁，防止入库单行顺序相反时死锁
         lot_svc.lock_lots(s, tid, [x["lot_id"] for x in lines])
-    errs: list[tuple[str, str]] = []
+    errs: list[FieldError] = []
     for i, x in enumerate(lines, 1):
         lot = (
             lot_svc.lock_lot(s, tid, x["lot_id"])
             if lock
             else one(s, tid, "lot", x["lot_id"])
         )
-        for f, m in _check_line(
+        for e in _check_line(
             s, tid, lot, x["good_qty"] or 0, x["scrap_qty"] or 0, rc["id"]
         ):
-            errs.append((f"lines.{i}.{f}", f"line {i}: {m}"))
+            # 带行号：前端译文前加“第 N 行”
+            errs.append(
+                fe(f"lines.{i}.{e[0]}", e[2], f"line {i}: {e[1]}", **e[3], line=i)
+            )
     if errs:
         raise http_422(errs)
     return lines
@@ -325,7 +379,16 @@ def transition(
         HTTPException: 非法迁移或数量校验失败（422）。
     """
     if action not in TRANSITIONS:
-        raise http_422([("action", f"action: must be one of {', '.join(TRANSITIONS)}")])
+        raise http_422(
+            [
+                fe(
+                    "action",
+                    ec.ACTION_INVALID,
+                    f"action: must be one of {', '.join(TRANSITIONS)}",
+                    actions=", ".join(TRANSITIONS),
+                )
+            ]
+        )
     t = TABLES["receipt"]
     r = (
         conn(s)
@@ -342,9 +405,12 @@ def transition(
     if rc["receipt_status"] not in allowed:
         raise http_422(
             [
-                (
+                fe(
                     "receipt_status",
+                    ec.RECEIPT_TRANSITION,
                     f"receipt_status: cannot {action} a {rc['receipt_status']} receipt",
+                    action=action,
+                    status=rc["receipt_status"],
                 )
             ]
         )
@@ -374,7 +440,9 @@ def transition(
         s.commit()
     except IntegrityError as ex:  # pragma: no cover - 并发保护
         s.rollback()
-        raise http_422([("receipt", "receipt: concurrent update, retry")]) from ex
+        raise http_422(
+            [fe("receipt", ec.RECEIPT_CONCURRENT, "receipt: concurrent update, retry")]
+        ) from ex
     return new
 
 

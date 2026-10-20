@@ -1,0 +1,192 @@
+mes:
+  clear: クリア
+  editTitle: '{{entity}}を編集'
+  newTitle: '{{entity}}を新規作成'
+  versionInfo: バージョン {{version}}（下書き）
+  formDesc: '* は必須項目です。'
+  customAttrs: カスタム属性
+  allOf: すべての{{field}}
+  saved: 保存しました
+  deleted: 削除しました
+  statusChanged: ステータスを変更しました
+  versionCreated: 下書きバージョン {{version}} を作成しました
+  imported: インポート完了：作成 {{created}}、更新 {{updated}}
+  importFailed: インポート失敗（何も保存されていません）
+  importRow: '{{row}} 行目：{{msg}}'
+  version: バージョン
+  at: 日時
+  details: 詳細
+  versionActions: バージョン操作
+  activate: 有効化
+  deactivate: 無効化
+  newVersion: 新バージョン（コピー）
+  treeView: ツリー表示
+  tableView: テーブル表示
+  export: エクスポート
+  import: インポート
+  new: 新規
+  empty: '{{entity}}はまだありません。'
+  deleteTitle: '{{entity}}を削除しますか？'
+  deleteDesc: 「{{name}}」を削除します。元に戻せません。
+  detailDesc: このレコードの関連データ。
+  pattern: パターン
+  sampleLot: サンプルロット ID
+  previewHint: プレビューのみ（番号は確保されません）。
+  panel:
+    code_rule: プレビュー
+    uom: 換算ツール
+    route: フロー図
+    lot_type: ID プレビュー
+    lot: ロットとルート
+  noLotRule: ロット ID ルールが未設定です。
+  nextLotId: 次のロット ID
+  waferIds: ウェーハ ID
+  err:
+    required: 必須
+    requiredWhen: '{{cond}}が「{{value}}」の場合は必須'
+    isSet: 入力済み
+    defaultsFrom: 空欄の場合は{{field}}を使用
+    code:
+      lot_status_is: ロットは「{{status}}」状態のため、この操作はできません
+      lot_status_stage: 「{{status}}」状態のロットは {{stage}} できません
+      lot_status: 現在のロット状態ではこの操作はできません
+    withLine: '{{line}} 行目：{{text}}'
+  exportHint: 現在の検索・フィルター条件で出力
+  fieldIs: '{{field}}：{{value}}'
+  treeToggle: 展開 / 折りたたみ
+  tree:
+    all: すべての{{name}}
+    expand: 展開
+    collapse: 折りたたむ
+  module:
+    common: 共通
+    equipment: 設備
+    exec: 生産実行
+    inventory: 資材・工具
+    check: チェック
+    org: 組織
+    lot: ロット・ウェーハ規則
+    wo: 作業指示
+    process: プロセス
+    product: 製品・資材
+    quality: 品質
+    wh: 倉庫
+  entity:
+    dict_type: データ辞書
+    dict_item: 辞書項目
+    code_rule: 採番ルール
+    attr_def: カスタム属性
+    audit_log: 監査ログ
+  field:
+    dict_type:
+      code: コード
+      name: 名称
+      is_active: 有効
+      description: 説明
+    dict_item:
+      code: コード
+      name: 名称
+      dict_type: 辞書
+      value: 値
+      color: 色
+      sort_order: 並び順
+      is_active: 有効
+      description: 説明
+    code_rule:
+      code: コード
+      name: 名称
+      target: 対象
+      pattern: パターン
+      seq_width: 連番桁数
+      seq_start: 開始番号
+      seq_reset: リセット周期
+      description: 説明
+    attr_def:
+      code: コード
+      name: 名称
+      entity_type: エンティティ
+      data_type: データ型
+      required: 必須
+      options: 選択肢（カンマ区切り）
+      dict_type: 選択肢の辞書
+      sort_order: 並び順
+      description: 説明
+    audit_log:
+      entity_type: エンティティ
+      action: 操作
+      record_id: レコード ID
+      record_code: レコード
+      changes: 変更内容
+      username: ユーザー
+  help:
+    code_rule:
+      pattern: トークン：{YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}
+  enum:
+    status:
+      draft: 下書き
+      active: 有効
+      inactive: 無効
+    audit_action:
+      create: 作成
+      update: 更新
+      delete: 削除
+      status: ステータス変更
+      import: インポート
+      new_version: 新バージョン
+      release: リリース
+      hold: ホールド
+      resume: 再開
+      complete: 完了
+      submit: 提出
+      confirm: 確認
+      reject: 差戻し
+      receive: 入庫
+      close: クローズ
+      cancel: 取消
+      start: 投入
+      undo_start: 投入取消
+      move_in: ムーブイン
+      track_in: トラックイン
+      track_out: トラックアウト
+      move_out: ムーブアウト
+      override: チェック強制解除
+      split: 分割
+      qtime_rework: Q-Time リワーク
+      merge: 統合
+      e10: E10 状態変更
+    seq_reset:
+      never: リセットしない
+      daily: 毎日
+      monthly: 毎月
+      yearly: 毎年
+    code_target:
+      lot: ロット ID
+      wafer: ウェーハ ID
+      carrier: キャリア ID
+      material: 資材ロット
+      equipment: 設備 ID
+      work_order: 作業指示番号
+      receipt: 入庫伝票番号
+      unit: ユニットシリアル
+      other: その他
+    attr_type:
+      string: テキスト
+      number: 数値
+      boolean: はい/いいえ
+      date: 日付
+      select: 選択
+    area_type:
+      fab: 前工程
+      cleanroom: クリーンルーム
+      test: テスト
+      assembly: 組立
+      warehouse: 倉庫
+      facility: ファシリティ
+    wc_kind:
+      bay: ベイ
+      workcenter: ワークセンター
+      cell: セル
+    day_type:
+      workday: 稼働日
+      holiday: 休日
+      maintenance: 保全日

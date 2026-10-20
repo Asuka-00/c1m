@@ -4,12 +4,13 @@ import uuid
 from typing import Any
 
 import sqlalchemy as sa
-from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, TABLES, Entity
+from app.core.spec.errors import coded
 from app.core.spec.query import get_row
 from app.core.spec.serialize import serialize
 from app.core.spec.validate import check_editable
@@ -54,9 +55,10 @@ def reorder_steps(
         ).mappings()
     }
     if set(ids) != set(current) or len(ids) != len(current):
-        raise HTTPException(
-            status_code=422,
-            detail="step_ids must list every step of the route exactly once",
+        raise coded(
+            422,
+            ec.ROUTE_STEP_IDS_INVALID,
+            "step_ids must list every step of the route exactly once",
         )
     # 分两轮更新（先临时序号再正式序号），避免 (route, seq) 唯一约束冲突
     for i, sid in enumerate(ids):

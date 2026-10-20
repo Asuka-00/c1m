@@ -5,14 +5,14 @@ from datetime import date, datetime
 from typing import Any
 
 import sqlalchemy as sa
-from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.base import Row, conn, table
 from app.core.spec.engine import (
     Entity,
 )
-from app.core.spec.errors import http_422
+from app.core.spec.errors import coded, fe, http_422
 from app.core.spec.serialize import coerce, serialize
 
 
@@ -61,7 +61,7 @@ def apply_filters(
             try:
                 ids = [uuid.UUID(x) for x in raw.split(",") if x]
             except ValueError as ex:
-                raise http_422([("id", "id: invalid uuid")]) from ex
+                raise http_422([fe("id", ec.INVALID_UUID, "id: invalid uuid")]) from ex
             stmt = stmt.where(t.c.id.in_(ids))
             continue
         if not f and name.endswith(("_from", "_to")):
@@ -75,7 +75,16 @@ def apply_filters(
         try:
             v = coerce(f, raw)
         except ValueError as ex:
-            raise http_422([(name, f"{name} {ex}")]) from ex
+            raise http_422(
+                [
+                    fe(
+                        name,
+                        getattr(ex, "code", ec.FIELD_INVALID),
+                        f"{name} {ex}",
+                        **getattr(ex, "params", {}),
+                    )
+                ]
+            ) from ex
         stmt = stmt.where(t.c[f.column] == v)
     return stmt
 
@@ -99,7 +108,7 @@ def _range(e: Entity, stmt: sa.Select[Any], name: str, raw: str) -> sa.Select[An
             else datetime.fromisoformat(raw.replace("Z", "+00:00"))
         )
     except ValueError as ex:
-        raise http_422([(name, f"{name}: invalid date")]) from ex
+        raise http_422([fe(name, ec.INVALID_DATE, f"{name}: invalid date")]) from ex
     c = t.c[col]
     return stmt.where(c >= v if bound == "from" else c <= v)
 
@@ -142,8 +151,11 @@ def list_rows(
     cols = sortable(e)
     key = sort_by or e.sort_default
     if key not in cols:
-        raise HTTPException(
-            status_code=422, detail=f"sort_by must be one of: {', '.join(sorted(cols))}"
+        raise coded(
+            422,
+            ec.SORT_BY_INVALID,
+            f"sort_by must be one of: {', '.join(sorted(cols))}",
+            allowed=", ".join(sorted(cols)),
         )
     order = sort_order if sort_by else default_order(e, key)
     col = cols[key]
@@ -170,7 +182,7 @@ def get_row(session: Session, e: Entity, tenant_id: uuid.UUID, rid: uuid.UUID) -
         .first()
     )
     if not r:
-        raise HTTPException(status_code=404, detail="Record not found")
+        raise coded(404, ec.RECORD_NOT_FOUND, "Record not found")
     return dict(r)
 
 
@@ -208,7 +220,7 @@ def distinct_values(
     """
     f = e.field(name)
     if not f or f.type != "str" or not f.filterable:
-        raise HTTPException(status_code=422, detail=f"{name} is not a text filter")
+        raise coded(422, ec.FILTER_NOT_TEXT, f"{name} is not a text filter", name=name)
     sub = base_select(e, tenant_id).subquery()
     stmt = sa.select(sub.c[f.column]).where(sub.c[f.column].is_not(None)).distinct()
     if q:
@@ -220,7 +232,7 @@ def distinct_values(
 def tree(session: Session, tenant_id: uuid.UUID, e: Entity) -> list[Row]:
     """以嵌套 children 形式返回树形实体的全部节点。"""
     if not e.tree:
-        raise HTTPException(status_code=404, detail="Entity is not hierarchical")
+        raise coded(404, ec.ENTITY_IS_NOT_HIERARCHICAL, "Entity is not hierarchical")
     rows = serialize(session, tenant_id, e, all_rows(session, e, tenant_id))
     by_parent: dict[Any, list[Row]] = {}
     for r in rows:

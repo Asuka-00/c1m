@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { renderHook } from 'vitest-browser-react'
 import { execApi } from '@/lib/api/mes/execution'
+import { ErrorCode } from '@/lib/error-codes'
 import { execCtx, makeQc, Providers } from './test-utils'
 import { qtimeNotice, useStageRun } from './use-stage-run'
 
@@ -75,7 +76,7 @@ describe('useStageRun', () => {
   it('409 check_blocked：记录卡控结果并标记 blocked', async () => {
     const res = [{ check: 'qtime', result: 'block', message: 'x' }]
     vi.spyOn(execApi, 'stage').mockRejectedValue(
-      axErr(409, { code: 'check_blocked', results: res })
+      axErr(409, { code: ErrorCode.CHECK_BLOCKED, results: res })
     )
     const err = vi.spyOn(toast, 'error')
     const { wrapper } = setup()
@@ -97,6 +98,8 @@ describe('useStageRun', () => {
         {
           loc: ['body', 'on_hold'],
           msg: 'on_hold: lot is on hold; release it first',
+          code: ErrorCode.ON_HOLD,
+          params: {},
         },
       ])
     )
@@ -109,7 +112,7 @@ describe('useStageRun', () => {
     await act(async () => {
       await result.current.run.mutateAsync({}).catch(() => {})
     })
-    expect(err).toHaveBeenCalledWith(t('mes.err.code.on_hold'))
+    expect(err).toHaveBeenCalledWith(t(`error.code_${ErrorCode.ON_HOLD}`))
     expect(result.current.blocked).toBe(false)
   })
 
@@ -185,7 +188,7 @@ describe('useStageRun', () => {
   it('已持 Hold 的批次 Track In 返回 422 on_hold：报错并刷新', async () => {
     vi.spyOn(execApi, 'stage').mockRejectedValue(
       axErr(422, {
-        code: 'on_hold',
+        code: ErrorCode.ON_HOLD,
         message: 'lot is on hold; release it first',
       })
     )
@@ -198,7 +201,7 @@ describe('useStageRun', () => {
     await act(async () => {
       await result.current.run.mutateAsync({}).catch(() => {})
     })
-    expect(err).toHaveBeenCalledWith(t('mes.err.code.on_hold'))
+    expect(err).toHaveBeenCalledWith(t(`error.code_${ErrorCode.ON_HOLD}`))
     expect(inv).toHaveBeenCalledWith({ queryKey: ['mes'] })
   })
 })

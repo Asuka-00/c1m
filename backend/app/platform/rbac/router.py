@@ -3,12 +3,14 @@
 import uuid
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlmodel import col, select
 
+from app.core import error_codes as ec
 from app.core.deps import SessionDep
 from app.core.models import Message, actor_name, get_datetime_utc
 from app.core.pagination import ListParamsDep, paginate
+from app.core.spec.errors import coded
 from app.platform.auth.deps import (
     CurrentUser,
     platform_api_router,
@@ -48,11 +50,15 @@ def is_platform_code(code: str) -> bool:
 def _check_scope(code: str, scope: str) -> None:
     """平台权限不得声明为租户作用域（否则可被授予租户角色）。"""
     if scope not in ("platform", "tenant"):
-        raise HTTPException(status_code=400, detail="scope must be platform or tenant")
+        raise coded(
+            400, ec.SCOPE_MUST_BE_PLATFORM_OR_TENANT, "scope must be platform or tenant"
+        )
     if scope == "tenant" and is_platform_code(code):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Platform permission {code} cannot be tenant-scoped",
+        raise coded(
+            400,
+            ec.PERM_PLATFORM_ONLY,
+            f"Platform permission {code} cannot be tenant-scoped",
+            code=code,
         )
 
 
@@ -60,7 +66,7 @@ def _get_or_404(session: SessionDep, model: Any, id: uuid.UUID, name: str) -> An
     obj = session.get(model, id)
     # /roles manages platform roles only; tenant roles live under /tenants/{id}/roles
     if not obj or (model is Role and obj.tenant_id is not None):
-        raise HTTPException(status_code=404, detail=f"{name} not found")
+        raise coded(404, ec.NOT_FOUND_NAMED, f"{name} not found", name=name)
     return obj
 
 
@@ -96,7 +102,7 @@ def list_permissions(
 @permissions_router.post("/", dependencies=write_dep, response_model=PermissionPublic)
 def create_permission(session: SessionDep, perm_in: PermissionCreate) -> Any:
     if session.exec(select(Permission).where(Permission.code == perm_in.code)).first():
-        raise HTTPException(status_code=409, detail="Permission already exists")
+        raise coded(409, ec.PERMISSION_ALREADY_EXISTS, "Permission already exists")
     _check_scope(perm_in.code, perm_in.scope)
     perm = Permission.model_validate(perm_in)
     session.add(perm)
@@ -123,7 +129,7 @@ def update_permission(
             select(Permission).where(Permission.code == data["code"])
         ).first()
         if other and other.id != id:
-            raise HTTPException(status_code=409, detail="Permission already exists")
+            raise coded(409, ec.PERMISSION_ALREADY_EXISTS, "Permission already exists")
     _check_scope(data.get("code", perm.code), data.get("scope", perm.scope))
     perm.sqlmodel_update(data)
     session.add(perm)
@@ -179,7 +185,7 @@ def create_role(session: SessionDep, user: CurrentUser, role_in: RoleCreate) -> 
     if session.exec(
         select(Role).where(Role.name == role_in.name, col(Role.tenant_id).is_(None))
     ).first():
-        raise HTTPException(status_code=409, detail="Role already exists")
+        raise coded(409, ec.ROLE_ALREADY_EXISTS, "Role already exists")
     role = Role(
         name=role_in.name,
         title=role_in.title,
@@ -190,7 +196,9 @@ def create_role(session: SessionDep, user: CurrentUser, role_in: RoleCreate) -> 
     for code in role_in.permission_codes:
         perm = session.exec(select(Permission).where(Permission.code == code)).first()
         if not perm:
-            raise HTTPException(status_code=404, detail=f"Permission {code} not found")
+            raise coded(
+                404, ec.PERM_NOT_FOUND, f"Permission {code} not found", code=code
+            )
         role.permissions.append(perm)
     session.add(role)
     session.commit()
@@ -214,7 +222,7 @@ def update_role(
             select(Role).where(Role.name == data["name"], col(Role.tenant_id).is_(None))
         ).first()
         if other and other.id != id:
-            raise HTTPException(status_code=409, detail="Role already exists")
+            raise coded(409, ec.ROLE_ALREADY_EXISTS, "Role already exists")
     role.sqlmodel_update(data)
     touch(role, user)
     session.add(role)
@@ -289,7 +297,7 @@ def set_user_roles(
         )
     ).all()
     if len(roles) != len(set(body.role_ids)):
-        raise HTTPException(status_code=404, detail="Role not found")
+        raise coded(404, ec.ROLE_NOT_FOUND, "Role not found")
     user.roles = list(roles)
     user.updated_at = get_datetime_utc()
     user.updated_by = actor_name(current)
@@ -348,8 +356,11 @@ def set_role_permissions(
     ).all()
     missing = set(body.codes) - {p.code for p in perms}
     if missing:
-        raise HTTPException(
-            status_code=404, detail=f"Unknown permissions: {sorted(missing)}"
+        raise coded(
+            404,
+            ec.PERM_UNKNOWN,
+            f"Unknown permissions: {sorted(missing)}",
+            codes=", ".join(sorted(missing)),
         )
     role.permissions = list(perms)
     touch(role, user)

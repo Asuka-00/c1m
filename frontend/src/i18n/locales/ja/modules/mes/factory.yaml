@@ -1,0 +1,56 @@
+mes:
+  entity:
+    site: 工場
+    area: エリア
+    workcenter: ベイ / ワークセンター
+    shift: シフト
+    work_calendar: 稼働カレンダー
+    calendar_day: カレンダー日
+  field:
+    site:
+      code: コード
+      name: 名称
+      timezone: タイムゾーン
+      address: 住所
+      is_active: 有効
+      description: 説明
+    area:
+      code: コード
+      name: 名称
+      site: 工場
+      area_type: エリア種別
+      is_active: 有効
+      description: 説明
+    workcenter:
+      code: コード
+      name: 名称
+      parent: 親
+      area: エリア
+      kind: 種別
+      is_active: 有効
+      description: 説明
+    shift:
+      code: コード
+      name: 名称
+      site: 工場
+      start_time: 開始時刻
+      end_time: 終了時刻
+      crosses_midnight: 日跨ぎ
+      sort_order: 並び順
+      description: 説明
+    work_calendar:
+      code: コード
+      name: 名称
+      site: 工場
+      year: 年
+      is_active: 有効
+      description: 説明
+    calendar_day:
+      work_calendar: カレンダー
+      day: 日付
+      day_type: 日種別
+      shifts: シフト
+      note: 備考
+  help:
+    calendar_day:
+      shifts: カンマ区切りのシフトコード

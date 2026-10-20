@@ -7,10 +7,12 @@
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel
 
+from app.core import error_codes as ec
 from app.core.deps import SessionDep
+from app.core.spec.errors import coded
 from app.core.spec.serialize import serialize
 from app.mes.warehouse import service as svc
 from app.platform.auth.deps import CurrentTenant
@@ -29,7 +31,7 @@ NEED = {
 
 def _need(ctx: TenantContext, p: str) -> None:
     if not ctx.can(p):
-        raise HTTPException(status_code=403, detail="Not enough permissions")
+        raise coded(403, ec.PERMISSION_DENIED, "Not enough permissions")
 
 
 class TransitionIn(BaseModel):

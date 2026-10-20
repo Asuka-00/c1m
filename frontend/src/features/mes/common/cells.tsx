@@ -1,6 +1,7 @@
 /** MES 通用表格的单元格渲染。 */
 import { fmtDateTime, t } from '@/i18n'
 import type { MesEntity, MesRow } from '@/lib/api/mes/common'
+import { systemText } from '@/lib/backend-text'
 import { Badge } from '@/components/ui/badge'
 import { enumLabel } from './labels'
 import { RefLink } from './ref-link'
@@ -19,6 +20,8 @@ export function cellValue(
 ): React.ReactNode {
   const f = e.fields.find((x) => x.name === name)
   if (!f) return null
+  const sys = systemText(e.code, name, row)
+  if (sys) return sys
   const v = row[f.column]
   if (v == null || v === '')
     return <span className='text-muted-foreground'>—</span>

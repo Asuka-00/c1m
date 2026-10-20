@@ -7,14 +7,16 @@
 import uuid
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, File, Query, Request, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
+from app.core import error_codes as ec
 from app.core.deps import SessionDep
 from app.core.pagination import ListParamsDep
 from app.core.spec.base import get_entity
 from app.core.spec.engine import ENTITIES, EXTRA_PERMISSIONS, MODULES, Entity, perm
+from app.core.spec.errors import coded
 from app.core.spec.excel import export_xlsx, import_xlsx
 from app.core.spec.query import distinct_values, get_row, list_rows, tree
 from app.core.spec.serialize import serialize
@@ -46,7 +48,7 @@ def require_entity(
     """
     e = get_entity(code)
     if not ctx.can(perm(e.pmod, action)):
-        raise HTTPException(status_code=403, detail="Not enough permissions")
+        raise coded(403, ec.PERMISSION_DENIED, "Not enough permissions")
     return e
 
 
@@ -203,7 +205,7 @@ async def mes_import(
     e = require_entity(ctx, entity, "write")
     data = await file.read(10 * 1024 * 1024 + 1)
     if len(data) > 10 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="File too large")
+        raise coded(413, ec.FILE_TOO_LARGE, "File too large")
     return import_xlsx(session, ctx.id, e, data, ctx.user)
 
 

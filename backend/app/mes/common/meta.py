@@ -1,4 +1,4 @@
-"""前端实体元数据与 i18n 包生成（唯一来源：规格中的三语标签）。"""
+"""前端实体元数据（字段、枚举、引用等结构信息；显示文案在前端语言包）。"""
 
 from typing import Any
 
@@ -7,13 +7,8 @@ from app.core.spec.engine import (
     ENUMS,
     MODULES,
     Entity,
-    label_of,
     perm,
-    split_label,
 )
-from app.platform.menus.service import titles
-
-LANGS = ("zh-CN", "ja", "en")
 
 
 def field_meta(e: Entity) -> list[dict[str, Any]]:
@@ -76,46 +71,4 @@ def all_meta() -> dict[str, Any]:
         ],
         "entities": [entity_meta(e) for e in ENTITIES.values() if not e.internal],
         "enums": {k: [v for v, _ in vals] for k, vals in ENUMS.items()},
-    }
-
-
-def i18n_bundle(lang: str) -> dict[str, Any]:
-    """生成某语言的 i18n 包。
-
-    Args:
-        lang: 语言代码（en / zh-CN / ja）。
-
-    Returns:
-        ``{"mes": {...}, "menu": {...}}``，合并进前端语言包。
-    """
-
-    def pick(s: str) -> str:
-        return split_label(s)[lang]
-
-    ents: dict[str, Any] = {}
-    fields: dict[str, Any] = {}
-    helps: dict[str, Any] = {}
-    menu: dict[str, str] = {}
-    for e in ENTITIES.values():
-        if e.internal:
-            continue
-        ents[e.code] = pick(e.label)
-        fields[e.code] = {f.name: pick(label_of(f)) for f in e.all_fields}
-        hs = {f.name: pick(f.help) for f in e.all_fields if f.help}
-        if hs:
-            helps[e.code] = hs
-    menu.update(titles(["en", "zh-CN", "ja"].index(lang)))
-    return {
-        "mes": {
-            "module": {m: pick(lbl) for m, (lbl, _) in MODULES.items()},
-            "entity": ents,
-            "field": fields,
-            "help": helps,
-            "enum": {
-                k: {v: pick(lbl) for v, lbl in vals}
-                for k, vals in ENUMS.items()
-                if k != "entity_type"
-            },
-        },
-        "menu": menu,
     }

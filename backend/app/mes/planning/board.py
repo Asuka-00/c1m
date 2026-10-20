@@ -13,11 +13,9 @@ from app.mes.lot.service import TERMINAL
 from app.platform.notification.service import notify, register_event
 
 Row = dict[str, Any]
-WO_DUE = register_event(
-    "mes.wo_due", "WO due soon|工单临近交期|作業指示納期間近", "warning", "work_order"
-).code
+WO_DUE = register_event("mes.wo_due", "WO due soon", "warning", "work_order").code
 WO_OVERDUE = register_event(
-    "mes.wo_overdue", "WO overdue|工单逾期|作業指示納期遅延", "critical", "work_order"
+    "mes.wo_overdue", "WO overdue", "critical", "work_order"
 ).code
 ACTIVE = ("released", "in_progress", "on_hold", "completed")
 

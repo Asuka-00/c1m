@@ -27,7 +27,7 @@ STATUS_TRANSITIONS = {
     "inactive": {"active"},
 }
 
-# 规格权限模块：编码 -> ("en|zh|ja" 标签, 排序)，以及额外
+# 规格权限模块：编码 -> (英文标签, 排序)，以及额外
 # 权限编码；二者都由各模块的 module.py 通过
 # app.core.registry.register() 填充
 MODULES: dict[str, tuple[str, int]] = {}
@@ -54,7 +54,7 @@ class F:
     Attributes:
         name: 字段名（引用字段为目标名，列名为 ``<name>_id``）。
         type: 类型（str / text / int / float / bool / enum / ref / date / time / datetime / json）。
-        label: 三语标签 ``"en|zh|ja"``。
+        label: 英文标签（数据库种子 / 接口兜底用；各语言显示文案在前端语言包 ``mes.field.*``）。
         required: 是否必填。
         ref: 引用的实体编码。
         enum: 枚举名（见 ENUMS）。
@@ -62,7 +62,7 @@ class F:
 
     name: str
     type: FieldType = "str"
-    label: str | None = None  # "en|zh|ja"；None 表示使用共享的 FIELD_LABELS
+    label: str | None = None  # 英文标签；None 表示使用共享的 FIELD_LABELS
     required: bool = False
     enum: str | None = None  # ENUMS 的 key
     ref: str | None = None  # 目标实体编码
@@ -103,7 +103,7 @@ class Entity:
     Attributes:
         code: 实体编码（表名 ``mes_<code>``）。
         module: 所属权限模块。
-        label: 三语标签。
+        label: 英文标签（显示文案在前端语言包 ``mes.entity.*``）。
         fields: 字段规格。
         versioned: 是否版本化（draft/active/inactive，激活后锁定）。
         tree: 是否树形（parent 自引用）。
@@ -113,7 +113,7 @@ class Entity:
 
     code: str  # API 名，如 "equipment_type"
     module: str
-    label: str  # "en|zh|ja"
+    label: str  # 英文标签
     fields: list[F]
     phase: int
     path: str | None = None  # URL 段；默认把 code 中的 '_' 换成 '-'
@@ -301,18 +301,5 @@ def build_all() -> None:
 
 
 def label_of(f: F) -> str:
-    """字段的三语标签（缺省时取全局字段标签）。"""
+    """字段的英文标签（缺省时取全局字段标签）。"""
     return f.label or FIELD_LABELS[f.name]
-
-
-def split_label(s: str) -> dict[str, str]:
-    """拆分三语标签。
-
-    Args:
-        s: ``"en|zh|ja"`` 格式的标签。
-
-    Returns:
-        ``{"en": ..., "zh-CN": ..., "ja": ...}``，缺失语言回退英文。
-    """
-    en, zh, ja = s.split("|")
-    return {"en": en, "zh-CN": zh, "ja": ja}

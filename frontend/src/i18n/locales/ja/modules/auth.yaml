@@ -1,0 +1,10 @@
+auth:
+  appName: FastAPI 管理画面
+  signIn: ログイン
+  signInDesc: アカウントでログインしてください。
+  passwordRequired: パスワードを入力してください。
+  welcome: おかえりなさい、{{name}} さん！
+  loginLabel: ユーザー名
+  loginPlaceholder: 例：admin
+  loginRequired: ユーザー名またはメールを入力してください
+  loginInvalid: 有効なユーザー名（3〜50 文字の英数字・. _ -）を入力してください

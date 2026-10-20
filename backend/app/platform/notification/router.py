@@ -6,14 +6,15 @@
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 from sqlmodel import col, select
 
+from app.core import error_codes as ec
 from app.core.deps import SessionDep
 from app.core.models import get_datetime_utc
 from app.core.pagination import ListParamsDep, paginate
-from app.core.spec.errors import http_422
+from app.core.spec.errors import coded, http_422
 from app.platform.auth.deps import CurrentTenant
 from app.platform.notification import service as svc
 from app.platform.notification.models import NotificationSubscription
@@ -24,7 +25,7 @@ router = APIRouter(tags=["notifications"])
 
 def _need(ctx: TenantContext, p: str) -> None:
     if not ctx.can(p):
-        raise HTTPException(status_code=403, detail="Not enough permissions")
+        raise coded(403, ec.PERMISSION_DENIED, "Not enough permissions")
 
 
 # ---------------- my notifications ----------------
@@ -141,7 +142,7 @@ def create_subscription(
 def _get(session: Any, ctx: TenantContext, sid: uuid.UUID) -> NotificationSubscription:
     sub = session.get(NotificationSubscription, sid)
     if not sub or sub.tenant_id != ctx.id:
-        raise HTTPException(status_code=404, detail="Subscription not found")
+        raise coded(404, ec.SUBSCRIPTION_NOT_FOUND, "Subscription not found")
     return sub  # type: ignore[no-any-return]
 
 

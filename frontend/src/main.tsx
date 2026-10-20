@@ -35,7 +35,7 @@ const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error) => {
       if (error instanceof AxiosError && error.response?.status === 500) {
-        toast.error(t('errors.server'))
+        toast.error(t('error.server'))
       }
     },
   }),

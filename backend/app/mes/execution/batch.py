@@ -6,8 +6,9 @@ from typing import Any
 from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.db import engine
-from app.core.spec.errors import http_422
+from app.core.spec.errors import coded, fe, http_422
 from app.core.tenant import set_tenant
 from app.mes.common.query import find, one
 from app.mes.execution.checks import service as ck
@@ -42,15 +43,33 @@ def batch_stage(s: Session, tid: uuid.UUID, stage: str, body: Row, user: Any) ->
     """
     ids = list(dict.fromkeys(str(i) for i in body.get("lot_ids") or []))
     if not 2 <= len(ids) <= MAX_BATCH:
-        raise http_422([("lot_ids", f"lot_ids: select 2–{MAX_BATCH} lots")])
+        raise http_422(
+            [
+                fe(
+                    "lot_ids",
+                    ec.BATCH_SIZE,
+                    f"lot_ids: select 2–{MAX_BATCH} lots",
+                    min=2,
+                    max=MAX_BATCH,
+                )
+            ]
+        )
     lots = [one(s, tid, "lot", uuid.UUID(i)) for i in ids]
     if not all(lots):
-        raise HTTPException(status_code=404, detail="Record not found")
+        raise coded(404, ec.RECORD_NOT_FOUND, "Record not found")
     rows: list[Row] = [x for x in lots if x]
     bad = [x["code"] for x in rows if NEXT_STAGE.get(x["lot_status"]) != stage]
     if bad:
         raise http_422(
-            [("lot_ids", f"lot_ids: not ready for {stage}: {', '.join(bad)}")]
+            [
+                fe(
+                    "lot_ids",
+                    ec.BATCH_NOT_READY,
+                    f"lot_ids: not ready for {stage}: {', '.join(bad)}",
+                    stage=stage,
+                    lots=", ".join(bad),
+                )
+            ]
         )
     shared = {k: v for k, v in body.items() if k not in ("lot_ids", "carrier_id")}
     shared["batch"] = rows
@@ -73,9 +92,15 @@ def batch_stage(s: Session, tid: uuid.UUID, stage: str, body: Row, user: Any) ->
                 txn.rollback()
     for i in items:
         if i["ok"]:
-            i.update(ok=False, error="not executed: another lot in the batch failed")
+            i.update(
+                ok=False,
+                error={
+                    "code": ec.BATCH_ROLLED_BACK,
+                    "message": "not executed: another lot in the batch failed",
+                },
+            )
     raise HTTPException(
-        status_code=409, detail={"code": "batch_blocked", "items": items}
+        status_code=409, detail={"code": ec.BATCH_BLOCKED, "items": items}
     )
 
 
@@ -97,7 +122,10 @@ def _run_one(
             **item,
             "ok": False,
             "results": out["results"],
-            "error": f"Q-Time exceeded: {out['qtime']}",
+            "error": {
+                "code": ec.BATCH_QTIME,
+                "message": f"Q-Time exceeded: {out['qtime']}",
+            },
         }
     return {**item, "ok": True, "results": out["results"]}
 
@@ -108,7 +136,7 @@ def batch_candidates(
     """批量作业候选：该设备上可 Track In（已进站）/ Track Out（运行中）的批次，及可选腔体与配方。"""
     eq = one(s, tid, "equipment", equipment_id)
     if not eq:
-        raise HTTPException(status_code=404, detail="Record not found")
+        raise coded(404, ec.RECORD_NOT_FOUND, "Record not found")
     status = "moved_in" if stage == "track_in" else "running"
     lots = [
         r

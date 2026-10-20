@@ -1,4 +1,6 @@
 /** MES 批次执行：阶段作业、检查、Hold、拆合批。 */
+import type { MsgPart } from '@/lib/backend-text'
+import { ErrorCode } from '@/lib/error-codes'
 import { http } from '../client'
 import type { MesRow } from './common'
 
@@ -21,7 +23,9 @@ export interface CheckResult {
   severity: 'block' | 'warn'
   result: 'pass' | 'warn' | 'block' | 'overridden'
   applicable: boolean
+  /** 英文说明（兜底）；显示用 `checkMessage()` 按 `msg_parts` 翻译 */
   message: string
+  msg_parts?: MsgPart[]
   overridable: boolean
 }
 /** 简单选项（id + 标签）。 */
@@ -307,7 +311,9 @@ export interface SmContext {
     qty: number
     on_hold: boolean
     priority: PrioRef | null
+    /** 英文问题说明（兜底），problem_parts 为对应的消息键与参数 */
     problems: string[]
+    problem_parts?: MsgPart[]
   }[]
   genealogy: GenealogyLink[]
 }
@@ -390,7 +396,10 @@ export interface ExecContext {
     dc_plan?: string
     unit_ids?: string[]
     items: DcItem[]
+    /** 英文判定说明（兜底）；reason / reason_params 为判定原因码（mes.checkMsg.sampling.*） */
     message: string
+    reason?: string
+    reason_params?: Record<string, unknown>
   }
   qtime?: {
     rule: string
@@ -675,8 +684,8 @@ export function blockedResults(err: unknown): CheckResult[] | null {
   const r = (
     err as { response?: { status?: number; data?: { detail?: unknown } } }
   )?.response
-  const d = r?.data?.detail as { code?: string; results?: CheckResult[] }
-  return r?.status === 409 && d?.code === 'check_blocked'
+  const d = r?.data?.detail as { code?: number; results?: CheckResult[] }
+  return r?.status === 409 && d?.code === ErrorCode.CHECK_BLOCKED
     ? (d.results ?? [])
     : null
 }

@@ -1,0 +1,197 @@
+mes:
+  autoHint: Leave blank to generate automatically
+  currentStep: Current
+  lotFlowHint: Route of this lot; the current step is highlighted.
+  lotRoute: Route flow
+  entity:
+    lot_priority: Lot priority
+    lot_type: Lot type
+    split_merge_rule: Split / merge rule
+    qtime_rule: Q-Time rule
+    lot: Lot
+    wafer: Wafer / unit
+    lot_hold: Lot hold
+    lot_history: Lot history
+    lot_recipe_run: Recipe run
+    lot_genealogy: Lot genealogy
+  field:
+    lot_priority:
+      code: Code
+      name: Name
+      level: Level (1 = highest)
+      color: Color
+      is_hot: Hot lot
+      description: Description
+    lot_type:
+      code: Code
+      name: Name
+      category: Category
+      default_priority: Default priority
+      lot_id_rule: Lot ID rule
+      wafer_id_rule: Wafer ID rule
+      max_wafers: Max wafers / units per lot
+      description: Description
+    split_merge_rule:
+      code: Code
+      name: Name
+      lot_type: Lot type
+      allow_split: Allow split
+      max_children: Max child lots
+      min_wafers: Min wafers per lot
+      child_id_mode: Child lot no.
+      allow_merge: Allow merge
+      merge_same_wo: 'Merge: same work order'
+      merge_same_product: 'Merge: same product'
+      merge_same_step: 'Merge: same route step'
+      merge_same_priority: 'Merge: same priority required'
+      description: Description
+    qtime_rule:
+      code: Code
+      name: Name
+      route: Route
+      from_step: From step
+      to_step: To step
+      product: Product
+      min_minutes: Min (min)
+      max_minutes: Max (min)
+      warn_minutes: Warn at (min)
+      action: On violation
+      reason: Reason code
+      is_active: Active
+      active_since: Active since
+      description: Description
+    lot:
+      code: Lot no.
+      work_order: Work order
+      product: Product
+      route: Route
+      lot_type: Lot type
+      priority: Priority
+      qty: Qty
+      tracking_level: Tracking level
+      scrapped_qty: Scrapped
+      bonus_qty: Bonus
+      rework_count: Reworks
+      site: Site
+      current_step: Current step
+      lot_status: Status
+      on_hold: On hold
+      equipment: Equipment
+      recipe: Recipe
+      step_in_at: Arrived at step
+      stage_at: Last action at
+      pending_rework: Rework pending
+      route_stack: Route stack
+      exec_ctx: Execution context
+      completed_at: Completed at
+      received_qty: Received qty (good + scrap)
+      stored_at: Stored at
+      carrier: Carrier
+      source_ref: Source wafer / material batch
+      started_at: Started at
+      started_by: Started by
+      description: Description
+    wafer:
+      code: Wafer ID
+      lot: Lot
+      unit_kind: Unit kind
+      slot: Slot
+      wafer_status: Status
+      source_ref: Source wafer
+      scrap_reason: Scrap reason
+      rework_count: Rework count
+      description: Description
+    lot_hold:
+      lot: Lot
+      reason: Reason code
+      hold_type: Hold type
+      source: Source
+      comment: Comment
+      is_active: Active
+      held_at: Held at
+      held_by: Held by
+      route_step: Route step
+      qtime_rule: Q-Time rule
+      qtime_from_step: Q-Time from step
+      qtime_to_step: Q-Time to step
+      qtime_overdue_seconds: Q-Time overdue (s)
+      released_at: Released at
+      released_by: Released by
+      release_reason: Release reason
+      release_comment: Release comment
+      note: System note
+    lot_history:
+      lot: Lot
+      unit: Wafer / unit
+      action: Action
+      route_step: Route step
+      step_seq: Seq.
+      operation: Operation
+      equipment: Equipment
+      recipe: Recipe
+      qty: Qty
+      from_status: From
+      to_status: To
+      reason: Reason code
+      comment: Comment
+      details: Details
+      username: User
+      at: Time
+    lot_recipe_run:
+      lot: Lot
+      route_step: Route step
+      operation: Operation
+      equipment: Equipment
+      recipe: Recipe
+      recipe_version: Recipe version
+      eqp_recipe: Equipment recipe
+      chambers: Chambers
+      params: Parameters
+      param_specs: Parameter specs
+      qty: Qty
+      track_in_at: Track in
+      track_out_at: Track out
+      username: User
+    lot_genealogy:
+      parent_lot: Parent / source lot
+      child_lot: Child / target lot
+      relation: Relation
+      qty: Qty
+      units: Wafers / units
+      route_step: Route step
+      username: User
+      at: Time
+  help:
+    qtime_rule:
+      warn_minutes: 'Pre-expiry warning when elapsed ≥ this (blank: none)'
+      reason: Optional; for hold, blank uses system reason qtime_expired
+  enum:
+    wo_status:
+      draft: Draft
+      released: Released
+      in_progress: In progress
+      on_hold: On hold
+      completed: Completed
+      closed: Closed
+      cancelled: Cancelled
+    lot_status:
+      waiting: Waiting
+      moved_in: Moved in
+      running: Running
+      tracked_out: Tracked out
+      completed: Finished (to receive)
+      stored: Stored
+      scrapped: Scrapped
+      merged: Merged (terminated)
+    wafer_status:
+      waiting: Waiting
+      processing: Processing
+      rework: Rework
+      completed: Completed
+      scrapped: Scrapped
+    track_unit_kind:
+      wafer: Wafer
+      strip: Strip
+      die: Die
+      package: Package
+      unit: Unit

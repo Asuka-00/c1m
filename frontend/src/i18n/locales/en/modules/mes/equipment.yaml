@@ -1,0 +1,163 @@
+mes:
+  eqp:
+    hint: State and PM due status of main equipment.
+    refresh: Refresh
+    code: Equipment
+    name: Name
+    state: E10 state
+    pm: PM plan
+    actions: Actions
+    down: Down
+    nextDue: Next due
+    pmDue: overdue
+    daysLeft: '{{n}} d left'
+    changeState: Change state
+    pmDone: PM done
+    changed: State changed
+    current: Current state
+    toState: To state
+    pmRecorded: PM recorded
+    pmDesc: Record a completed PM.
+    result: Result
+    search: Search equipment code / name
+    allWorkcenters: All work centers
+    allStates: All E10 states
+    allPm: All PM
+    pmWarn: PM due soon
+    allDown: All (down or not)
+    notDown: Not down
+    workcenter: Work center
+    chambers: Chambers
+    chamberCount: '{{n}} chambers'
+    chambersOf: '{{code}} chambers'
+  pmStatus:
+    title: Due status
+    due: '{{n}} overdue'
+    warn: '{{n}} due soon'
+    ok: OK
+    next: Next {{d}}
+  entity:
+    equipment_type: Equipment type
+    equipment_group: Equipment group
+    e10_state: E10 state
+    e10_transition: E10 transition
+    equipment: Equipment
+    equipment_capability: Equipment capability
+    tool: Tool
+    e10_auto_rule: E10 auto transition
+    e10_history: E10 history
+    pm_plan: PM plan
+    pm_record: PM record
+    downtime: Downtime
+  field:
+    equipment_type:
+      code: Code
+      name: Name
+      category: Category
+      vendor: Vendor
+      model: Model
+      description: Description
+    equipment_group:
+      code: Code
+      name: Name
+      equipment_type: Equipment type
+      area: Area
+      description: Description
+    e10_state:
+      code: Code
+      name: Name
+      e10_category: E10 category
+      color: Color
+      is_initial: Initial state
+      sort_order: Sort order
+      description: Description
+    e10_transition:
+      from_state: From state
+      to_state: To state
+      reason_required: Reason required
+    equipment:
+      code: Code
+      name: Name
+      parent: Parent
+      unit_kind: Unit kind
+      equipment_type: Equipment type
+      equipment_group: Equipment group
+      workcenter: Work center
+      serial_no: Serial no.
+      initial_state: Initial E10 state
+      e10_state: Current E10 state
+      ideal_uph: Ideal throughput (UPH)
+      is_active: Active
+      description: Description
+    equipment_capability:
+      equipment: Equipment
+      operation: Operation
+      recipe: Recipe
+      is_qualified: Qualified
+      qualified_until: Qualified until
+    tool:
+      code: Tool ID
+      fixture: Tool type
+      serial_no: Serial no.
+      usage_count: Usage count
+      max_usage: Max usage
+      warn_pct: Warn at (% of life)
+      expiry_date: Expiry
+      tool_status: Status
+      equipment: Mounted on
+      description: Description
+    e10_auto_rule:
+      trigger: Trigger
+      equipment_type: Equipment type
+      to_state: To state
+      is_active: Active
+    e10_history:
+      equipment: Equipment
+      from_state: From state
+      to_state: To state
+      source: Source
+      reason: Reason code
+      comment: Comment
+      username: User
+      at: Time
+      note: System note
+    pm_plan:
+      code: Code
+      name: Name
+      equipment: Equipment
+      equipment_type: Equipment type
+      interval_days: Interval (days)
+      interval_lots: Interval (lots)
+      warn_days: Warn before (days)
+      is_active: Active
+      description: Description
+    pm_record:
+      pm_plan: PM plan
+      equipment: Equipment
+      result: Result
+      comment: Comment
+      username: User
+      done_at: Done at
+    downtime:
+      equipment: Equipment
+      start_at: Start
+      end_at: End
+      reason: Reason code
+      e10_state: E10 state
+      comment: Comment
+  help:
+    equipment:
+      ideal_uph: Optional; reserved for OEE performance rate
+    tool:
+      max_usage: "Blank: the tool type's max uses"
+    e10_auto_rule:
+      equipment_type: 'Blank: all types'
+    pm_plan:
+      equipment: 'Blank: all equipment of the type'
+  enum:
+    e10_source:
+      manual: Manual
+      auto: Automatic
+    pm_result:
+      ok: OK
+      ng: NG

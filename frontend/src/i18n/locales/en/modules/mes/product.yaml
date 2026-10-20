@@ -1,0 +1,212 @@
+mes:
+  convertValue: Value in {{unit}}
+  convertTo: Convert to
+  entity:
+    uom: Unit of measure
+    uom_conversion: UOM conversion
+    tech_node: Technology node
+    product_family: Product family
+    product: Product
+    material_type: Material type
+    material: Material
+    carrier_type: Carrier type
+    carrier: Carrier
+    carrier_event: Carrier event
+    reticle: Reticle
+    fixture: Fixture / tool
+    material_lot: Material lot
+  field:
+    uom:
+      code: Code
+      name: Name
+      symbol: Symbol
+      dimension: Dimension
+      description: Description
+    uom_conversion:
+      from_uom: From
+      to_uom: To
+      factor: Factor
+      offset: Offset
+    tech_node:
+      code: Code
+      name: Name
+      feature_nm: Feature size (nm)
+      wafer_size: Wafer size
+      tracking_level: Tracking level
+      description: Description
+    product_family:
+      code: Code
+      name: Name
+      tech_node: Technology node
+      description: Description
+    product:
+      code: Code
+      name: Name
+      family: Family
+      tech_node: Technology node
+      product_type: Type
+      wafer_size: Wafer size
+      gross_die: Gross die / wafer
+      uom: Unit
+      tracking_level: Tracking level
+      serial_kind: Serialized unit kind
+      unit_code_rule: Unit serial rule
+      description: Description
+    material_type:
+      code: Code
+      name: Name
+      category: Category
+      description: Description
+    material:
+      code: Code
+      name: Name
+      material_type: Material type
+      uom: Unit
+      vendor: Vendor
+      shelf_life_days: Shelf life (days)
+      storage: Storage condition
+      is_active: Active
+      description: Description
+    carrier_type:
+      code: Code
+      name: Name
+      category: Category
+      capacity: Capacity (slots)
+      wafer_size: Wafer size
+      clean_interval_days: Clean interval (days)
+      description: Description
+    carrier:
+      code: Code
+      name: Name
+      carrier_type: Carrier type
+      status_code: State
+      max_uses: Max uses
+      use_count: Uses since clean
+      last_cleaned_at: Last cleaned
+      rfid: RFID tag
+      description: Description
+    carrier_event:
+      carrier: Carrier
+      event: Event
+      lot: Lot
+      other_carrier: From / to carrier
+      qty: Qty
+      comment: Comment
+      username: User
+      at: Time
+    reticle:
+      code: Code
+      name: Name
+      product: Product
+      layer: Layer
+      grade: Grade
+      max_shots: Max shots
+      status_code: State
+      description: Description
+    fixture:
+      code: Code
+      name: Name
+      kind: Kind
+      max_uses: Max uses
+      status_code: State
+      description: Description
+    material_lot:
+      code: Material lot no.
+      material: Material
+      qty_remaining: Qty remaining
+      initial_qty: Received qty
+      uom: Unit
+      expiry_date: Expiry
+      location: Location
+      ml_status: Status
+      description: Description
+  help:
+    uom_conversion:
+      factor: to = from × factor
+    product:
+      tracking_level: 'Blank: inherit from the technology node'
+  enum:
+    uom_dimension:
+      count: Count
+      length: Length
+      area: Area
+      volume: Volume
+      mass: Mass
+      time: Time
+      pressure: Pressure
+      temperature: Temperature
+      energy_density: Energy density
+    wafer_size:
+      '100': 100 mm (4")
+      '150': 150 mm (6")
+      '200': 200 mm (8")
+      '300': 300 mm (12")
+    product_type:
+      production: Production
+      engineering: Engineering
+      monitor: Monitor
+      dummy: Dummy
+    material_category:
+      wafer: Raw wafer
+      chemical: Chemical
+      gas: Gas
+      target: Sputter target
+      slurry: Slurry
+      photoresist: Photoresist
+      consumable: Consumable
+    carrier_category:
+      foup: FOUP
+      fosb: FOSB
+      cassette: Cassette
+      pod: Reticle pod
+      smif: SMIF pod
+    carrier_event_type:
+      load: Load
+      unload: Unload
+      clean: Clean
+      sort: Wafer sort
+      split: Split
+      merge: Merge
+    asset_status:
+      available: Available
+      in_use: In use
+      dirty: Needs cleaning
+      hold: On hold
+      retired: Retired
+    reticle_grade:
+      binary: Binary
+      psm: Phase shift (PSM)
+      euv: EUV
+    fixture_kind:
+      probe_card: Probe card
+      fixture: Fixture
+      jig: Jig
+      tool: Tool
+    eqp_category:
+      process: Process
+      metrology: Metrology
+      inspection: Inspection
+      test: Test
+      transport: Transport (AMHS)
+    unit_kind:
+      main: Main equipment
+      chamber: Chamber
+      load_port: Load port
+      port: Port
+      sub_unit: Sub-unit
+    tracking_level:
+      wafer: Wafer (slots)
+      unit: Serialized unit
+      quantity: Quantity
+    serial_kind:
+      strip: Strip
+      die: Die
+      package: Package
+      unit: Unit
+    e10_category:
+      PRD: PRD · Productive
+      SBY: SBY · Standby
+      ENG: ENG · Engineering
+      SDT: SDT · Scheduled down
+      UDT: UDT · Unscheduled down
+      NST: NST · Non-scheduled

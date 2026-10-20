@@ -9,17 +9,15 @@ from app.platform.notification.service import notify, register_event
 
 Row = dict[str, Any]
 
-PM_DUE = register_event(
-    "mes.pm_due", "PM due soon|PM 即将到期|PM 期限間近", "warning", "equipment"
-).code
+PM_DUE = register_event("mes.pm_due", "PM due soon", "warning", "equipment").code
 PM_OVERDUE = register_event(
-    "mes.pm_overdue", "PM overdue|PM 已超期|PM 期限切れ", "critical", "equipment"
+    "mes.pm_overdue", "PM overdue", "critical", "equipment"
 ).code
 EQP_DOWN = register_event(
-    "mes.eqp_down", "Equipment down|设备宕机|設備ダウン", "critical", "equipment"
+    "mes.eqp_down", "Equipment down", "critical", "equipment"
 ).code
 DOWNTIME = register_event(
-    "mes.downtime", "Downtime recorded|停机记录|停止記録", "warning", "equipment"
+    "mes.downtime", "Downtime recorded", "warning", "equipment"
 ).code
 
 

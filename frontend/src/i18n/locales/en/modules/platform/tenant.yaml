@@ -1,0 +1,105 @@
+tenants:
+  title: Tenants
+  desc: All tenants on the platform
+  new: New tenant
+  edit: Edit tenant
+  slug: Slug
+  slugLabel: Slug (a-z, 0-9, -)
+  status:
+    active: active
+    suspended: suspended
+  delete: Delete tenant
+  deleteDesc: Delete {{name}} with ALL its members, roles and items?
+  created: Tenant created (you are owner)
+  updated: Tenant updated
+  deleted: Tenant deleted
+settings:
+  title: Settings
+  desc: Your profile, password and language
+  profile: Profile
+  superAccount: Superuser account
+  regularAccount: Regular account
+  saveProfile: Save profile
+  passwordHint: At least 8 characters.
+  currentPassword: Current password
+  newPassword: New password
+  confirmPassword: Confirm new password
+  mismatch: Passwords do not match
+  changePassword: Change password
+  profileUpdated: Profile updated
+  passwordChanged: Password changed
+  language: Language
+  languageDesc: Choose the interface language.
+platform:
+  plans:
+    trial: Trial
+    standard: Standard
+    enterprise: Enterprise
+  allPlans: All plans
+  tenantsDesc: Manage all tenants.
+  plan: Plan
+  expiresAt: Expires
+  expired: expired
+  never: Never
+  owners: Owners
+  memberCount: Members
+  members: Members
+  branding: Branding
+  enter: Enter as tenant
+  expiresHint: YYYY-MM-DD, empty = never
+  ownerAssigned: Owner assigned
+  membersOf: Members of "{{name}}"
+  membersDesc: Manage tenant members and roles.
+  assignOwner: Make owner
+  brandingOf: Branding of "{{name}}"
+  brandingDesc: Branding of this tenant.
+  channelSaved: Notification channel updated
+  channelsDesc: Manage notification channels.
+  channel: Channel
+  code: Code
+  enabled: Enabled
+  searchLogin: Search email / IP
+  allResults: All results
+  success: Success
+  failure: Failed
+  loginLogDesc: Every sign-in attempt (successful and failed) for security auditing.
+  time: Time
+  result: Result
+  reason: Reason
+  reasons:
+    bad_credentials: Wrong username or password
+    inactive: Inactive user
+  userAgent: Client
+  searchOps: Search actor / action / target
+  allActions: All actions
+  actions:
+    tenant.create: Create tenant
+    tenant.update: Update tenant
+    tenant.delete: Delete tenant
+    tenant.enter: Enter as tenant
+    tenant.exit: Exit tenant
+    tenant.owner: Assign owner
+    tenant.branding: Change tenant branding
+    member.add: Add member
+    member.roles: Change member roles
+    member.remove: Remove member
+    config.update: Change platform config
+    channel.update: Change notification channel
+    audit.cross_tenant_read: Cross-tenant audit read
+  opsLogDesc: Actions of platform administrators.
+  actor: Actor
+  action: Action
+  target: Target
+  detail: Detail
+  searchAudit: Search record / user
+  allTenants: All tenants
+  auditDesc: Business audit logs of all tenants.
+  tenant: Tenant
+  entity: Entity
+  record: Record
+  spaces:
+    workspace: Workspace
+    platform: Platform Admin
+  allSpaces: All spaces
+  space: Space
+  ownerUsername: Owner username (existing user)

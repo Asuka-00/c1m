@@ -3,14 +3,16 @@
 from datetime import timedelta
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from fastapi.security import OAuth2PasswordRequestForm
 
+from app.core import error_codes as ec
 from app.core import security
 from app.core.config import settings
 from app.core.deps import SessionDep
 from app.core.models import Message
+from app.core.spec.errors import coded
 from app.platform.auth.deps import CurrentUser, get_current_active_superuser
 from app.platform.auth.schemas import Token
 from app.platform.auth.service import (
@@ -45,10 +47,12 @@ def login_access_token(
         record_login(
             session, form_data.username, None, False, "bad_credentials", ip, ua
         )
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
+        raise coded(
+            400, ec.INCORRECT_USERNAME_OR_PASSWORD, "Incorrect username or password"
+        )
     elif not user.is_active:
         record_login(session, user.username, user, False, "inactive", ip, ua)
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise coded(400, ec.INACTIVE_USER, "Inactive user")
     record_login(session, user.username, user, True, None, ip, ua)
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return Token(
@@ -97,13 +101,13 @@ def reset_password(session: SessionDep, body: NewPassword) -> Message:
     """
     email = verify_password_reset_token(token=body.token)
     if not email:
-        raise HTTPException(status_code=400, detail="Invalid token")
+        raise coded(400, ec.INVALID_TOKEN, "Invalid token")
     user = crud.get_user_by_email(session=session, email=email)
     if not user:
         # 不暴露用户是否存在：与令牌无效返回相同错误
-        raise HTTPException(status_code=400, detail="Invalid token")
+        raise coded(400, ec.INVALID_TOKEN, "Invalid token")
     elif not user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise coded(400, ec.INACTIVE_USER, "Inactive user")
     user_in_update = UserUpdate(password=body.new_password)
     crud.update_user(
         session=session,
@@ -125,9 +129,10 @@ def recover_password_html_content(email: str, session: SessionDep) -> Any:
     user = crud.get_user_by_email(session=session, email=email)
 
     if not user or not user.email:
-        raise HTTPException(
-            status_code=404,
-            detail="The user with this username does not exist in the system.",
+        raise coded(
+            404,
+            ec.USERNAME_NOT_FOUND,
+            "The user with this username does not exist in the system",
         )
     password_reset_token = generate_password_reset_token(email=email)
     email_data = generate_reset_password_email(

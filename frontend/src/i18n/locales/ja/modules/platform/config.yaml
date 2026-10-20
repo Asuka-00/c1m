@@ -1,0 +1,66 @@
+config:
+  title: システム設定
+  tenantDesc: システム設定。変更していない項目は既定値を使用します。
+  platformDesc: 全テナントの既定設定。
+  itemCount: '{{count}} 項目'
+  inherited: プラットフォームから継承
+  overridden: 上書き済み
+  resetToPlatform: 既定値に戻す
+  resetDone: プラットフォームの値に戻しました
+  platformValue: プラットフォームの値
+  unsaved: 未保存の変更 {{count}} 件
+  reset: リセット
+  saved: 設定を保存しました
+  invalidJson: JSON が不正です
+  upload: アップロード
+  replace: 差し替え
+  remove: 削除
+  uploaded: アップロードしました（保存で反映）
+  imageHint: PNG・JPG・SVG・WebP・ICO、最大 5 MB
+  empty: 設定可能な項目はありません。
+  support: サポート
+  groups:
+    branding: ブランディング
+    security: セキュリティ
+    notification: 通知チャネル
+  groupDescs:
+    branding: ログイン画面・サイドバー・ブラウザタブに表示する製品名、ロゴ、フッター。
+    security: プラットフォームのサインインポリシー（プラットフォーム管理者のみ）。
+    notification: 通知チャネルのプラットフォーム全体スイッチ（プラットフォーム管理者のみ）。
+  items:
+    branding:
+      app_name: 製品名
+      app_subtitle: サブタイトル
+      logo: ロゴ
+      favicon: ファビコン
+      login_background: ログイン背景
+      primary_color: アクセントカラー
+      footer_copyright: フッターの著作権表示
+      support_url: サポート URL
+    security:
+      session_minutes: セッション時間（分）
+      password_policy: パスワードポリシー
+      extra: 詳細（JSON）
+    notification:
+      in_app_enabled: アプリ内通知を有効化
+  itemDescs:
+    branding:
+      app_name: ログイン画面・サイドバー・ブラウザのタイトルに表示されます。
+      app_subtitle: 名前の下に表示する任意のキャッチコピー。
+      logo: 正方形の画像。サイドバーとログイン画面に表示されます。
+      favicon: ブラウザタブのアイコン（未設定時はロゴ）。
+      login_background: ログイン画面の任意の背景画像。
+      primary_color: ブランドのアクセントカラー。
+      footer_copyright: ログイン画面とアプリのフッターに表示されます。
+      support_url: フッターに表示する任意のサポートリンク。
+    notification:
+      in_app_enabled: 通知をアプリ内の受信箱に配信します。
+    security:
+      session_minutes: 新規サインインのアクセストークン有効期間です。
+      extra: 自由形式の JSON オプションです。
+  options:
+    security:
+      password_policy:
+        basic: 基本（8 文字以上）
+        standard: 標準（8 文字以上、英数字）
+        strict: 厳格（12 文字以上、混在）

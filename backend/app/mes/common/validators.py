@@ -6,9 +6,10 @@ from typing import Any
 import sqlalchemy as sa
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.base import conn
 from app.core.spec.engine import TABLES, Entity
-from app.core.spec.errors import MesError
+from app.core.spec.errors import MesError, fe
 from app.core.spec.validate import validator
 from app.mes.common.coderule import check_pattern
 
@@ -22,9 +23,11 @@ def _code_rule(
     errs = check_pattern(row.get("pattern") or "")
     w = row.get("seq_width") or 0
     if not 1 <= w <= 12:
-        errs.append(("seq_width", "seq_width: must be 1..12"))
+        errs.append(
+            fe("seq_width", ec.FIELD_RANGE, "seq_width: must be 1..12", min=1, max=12)
+        )
     if (row.get("seq_start") or 0) < 0:
-        errs.append(("seq_start", "seq_start: must be >= 0"))
+        errs.append(fe("seq_start", ec.FIELD_MIN, "seq_start: must be >= 0", min=0))
     if errs:
         raise MesError(errs)
 
@@ -36,7 +39,15 @@ def _attr_def(
     if row.get("data_type") == "select" and not (
         row.get("options") or row.get("dict_type_id")
     ):
-        raise MesError([("options", "options: a select needs options or a dictionary")])
+        raise MesError(
+            [
+                fe(
+                    "options",
+                    ec.SELECT_NEEDS_OPTIONS,
+                    "options: a select needs options or a dictionary",
+                )
+            ]
+        )
 
 
 # ---------------- phase 2 ----------------

@@ -1,0 +1,192 @@
+mes:
+  clear: 清除
+  editTitle: 编辑{{entity}}
+  newTitle: 新建{{entity}}
+  versionInfo: 版本 {{version}}（草稿）
+  formDesc: 带 * 的字段为必填项。
+  customAttrs: 自定义属性
+  allOf: 全部{{field}}
+  saved: 已保存
+  deleted: 已删除
+  statusChanged: 状态已变更
+  versionCreated: 已创建草稿版本 {{version}}
+  imported: 导入完成：新增 {{created}}，更新 {{updated}}
+  importFailed: 导入失败，未保存任何数据
+  importRow: 第 {{row}} 行：{{msg}}
+  version: 版本
+  at: 时间
+  details: 详情
+  versionActions: 版本操作
+  activate: 生效
+  deactivate: 失效
+  newVersion: 新建版本（复制）
+  treeView: 树形视图
+  tableView: 表格视图
+  export: 导出
+  import: 导入
+  new: 新建
+  empty: 暂无{{entity}}。
+  deleteTitle: 删除{{entity}}？
+  deleteDesc: 将删除“{{name}}”，此操作不可撤销。
+  detailDesc: 该记录的关联数据。
+  pattern: 模板
+  sampleLot: 示例批次号
+  previewHint: 仅预览，不会占用流水号。
+  panel:
+    code_rule: 预览
+    uom: 换算器
+    route: 流程图
+    lot_type: 编号预览
+    lot: 批次与流程
+  noLotRule: 未设置批次号规则。
+  nextLotId: 下一个批次号
+  waferIds: 晶圆号
+  err:
+    required: 必填
+    requiredWhen: 当{{cond}}为“{{value}}”时必填
+    isSet: 已填写
+    defaultsFrom: 留空则使用{{field}}
+    code:
+      lot_status_is: 批次当前状态为“{{status}}”，不允许此操作
+      lot_status_stage: “{{status}}”状态的批次不能执行 {{stage}}
+      lot_status: 批次当前状态不允许此操作
+    withLine: 第 {{line}} 行：{{text}}
+  exportHint: 按当前搜索与筛选条件导出
+  fieldIs: '{{field}}：{{value}}'
+  treeToggle: 展开 / 收起
+  tree:
+    all: 全部{{name}}
+    expand: 展开
+    collapse: 收起
+  module:
+    common: 通用
+    equipment: 设备
+    exec: 生产执行
+    inventory: 物料与工具
+    check: 卡控
+    org: 组织
+    lot: 批次与晶圆规则
+    wo: 工单
+    process: 工艺
+    product: 产品与物料
+    quality: 质量
+    wh: 仓储
+  entity:
+    dict_type: 数据字典
+    dict_item: 字典项
+    code_rule: 编码规则
+    attr_def: 自定义属性
+    audit_log: 审计日志
+  field:
+    dict_type:
+      code: 编码
+      name: 名称
+      is_active: 启用
+      description: 描述
+    dict_item:
+      code: 编码
+      name: 名称
+      dict_type: 字典
+      value: 值
+      color: 颜色
+      sort_order: 排序
+      is_active: 启用
+      description: 描述
+    code_rule:
+      code: 编码
+      name: 名称
+      target: 适用对象
+      pattern: 模板
+      seq_width: 流水号位数
+      seq_start: 起始流水号
+      seq_reset: 重置周期
+      description: 描述
+    attr_def:
+      code: 编码
+      name: 名称
+      entity_type: 实体
+      data_type: 数据类型
+      required: 必填
+      options: 选项（逗号分隔）
+      dict_type: 选项来源字典
+      sort_order: 排序
+      description: 描述
+    audit_log:
+      entity_type: 实体
+      action: 操作
+      record_id: 记录 ID
+      record_code: 记录
+      changes: 变更内容
+      username: 用户
+  help:
+    code_rule:
+      pattern: 占位符：{YYYY} {YY} {MM} {DD} {JJJ} {SEQ} {SEQ36} {LOT} {SLOT}
+  enum:
+    status:
+      draft: 草稿
+      active: 生效
+      inactive: 失效
+    audit_action:
+      create: 新建
+      update: 修改
+      delete: 删除
+      status: 状态变更
+      import: 导入
+      new_version: 新版本
+      release: 下达
+      hold: 暂停
+      resume: 恢复
+      complete: 完工
+      submit: 提交
+      confirm: 确认
+      reject: 退回
+      receive: 入库
+      close: 关闭
+      cancel: 取消
+      start: 投产
+      undo_start: 撤销投产
+      move_in: 进站
+      track_in: 上机
+      track_out: 下机
+      move_out: 出站
+      override: 卡控放行
+      split: 分批
+      qtime_rework: Q-Time 返工
+      merge: 合批
+      e10: E10 状态变更
+    seq_reset:
+      never: 不重置
+      daily: 每日
+      monthly: 每月
+      yearly: 每年
+    code_target:
+      lot: 批次号
+      wafer: 晶圆号
+      carrier: 载具号
+      material: 物料批号
+      equipment: 设备编号
+      work_order: 工单号
+      receipt: 入库单号
+      unit: 单元序列号
+      other: 其他
+    attr_type:
+      string: 文本
+      number: 数值
+      boolean: 是/否
+      date: 日期
+      select: 下拉选择
+    area_type:
+      fab: 前道晶圆厂
+      cleanroom: 洁净室
+      test: 测试
+      assembly: 封装
+      warehouse: 仓库
+      facility: 厂务
+    wc_kind:
+      bay: Bay 区
+      workcenter: 工作中心
+      cell: 单元
+    day_type:
+      workday: 工作日
+      holiday: 节假日
+      maintenance: 维护日

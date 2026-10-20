@@ -1,0 +1,176 @@
+mes:
+  routeLockedHint: このバージョンはロックされています。変更するには新バージョンを作成してください。
+  addStep: ステップ追加
+  moveUp: 上へ
+  moveDown: 下へ
+  flowStart: 開始
+  flowEnd: 終了
+  subRoute: サブルート
+  reworkRoute: リワーク
+  edgeCall: 呼出
+  edgeReturn: 戻り
+  edgeRework: リワーク
+  flowDraftHint: ステップのハンドルをドラッグして分岐を追加し、クリックで編集します。
+  branchDialog: ステップ {{from}} からステップ {{to}} への分岐
+  ecn:
+    release: 発行
+    cancel: 変更取消
+    confirm:
+      release: '{{code}} を発行しますか？発効日時到来済みなら即時発効します。'
+      cancel: '{{code}} を取り消しますか？'
+    done:
+      released: 発行済（発効待ち）
+      applied: 発効しました
+      cancelled: 取り消しました
+    result: 新版 v{{v}}、参照 {{n}} 件を更新
+    switched: 新版へ切替えたロット
+    kept: 旧版継続のロット
+  entity:
+    operation: 工程
+    route: ルート / フロー
+    route_step: ルートステップ
+    step_resource: ステップ資源
+    product_route: 製品・ルート割当
+    recipe: レシピ
+    recipe_equipment: レシピ・設備対応
+    param_spec: プロセスパラメータ規格
+    change_order: 設計変更
+  field:
+    operation:
+      code: コード
+      name: 名称
+      operation_type: 種別
+      area: エリア
+      std_minutes: 標準時間（分）
+      is_active: 有効
+      description: 説明
+    route:
+      code: コード
+      name: 名称
+      route_type: ルート種別
+      product_family: 製品ファミリー
+      description: 説明
+    route_step:
+      route: ルート
+      seq: 順番
+      step_type: ステップ種別
+      operation: 工程
+      sub_route: サブルート
+      rework_route: リワークルート
+      is_optional: 任意
+      branch_condition: 分岐条件
+      branch_to_seq: 分岐先順番
+      max_rework: 最大リワーク回数
+      rework_return: リワーク復帰先
+      auto_move_in: 自動ムーブイン
+      auto_track_in: 自動トラックイン
+      auto_track_out: 自動トラックアウト
+      auto_move_out: 自動ムーブアウト
+      note: 備考
+    step_resource:
+      route_step: ルートステップ
+      resource_kind: 資源種別
+      equipment: 設備
+      equipment_group: 設備グループ
+      reticle: レチクル
+      material: 資材
+      fixture: 治具・工具
+      recipe: レシピ
+      qty: 数量
+      uom: 単位
+      qty_basis: 数量基準
+    product_route:
+      product: 製品
+      route: ルート
+      is_default: デフォルト
+      priority: 優先度
+      effective_from: 有効開始日
+      effective_to: 有効終了日
+    recipe:
+      code: コード
+      name: 名称
+      equipment_type: 設備タイプ
+      recipe_type: レシピ種別
+      body: パラメータ（JSON）
+      description: 説明
+    recipe_equipment:
+      recipe: レシピ
+      equipment: 設備
+      eqp_recipe: 装置レシピ名
+      ideal_uph: 理論スループット（UPH）
+      is_enabled: 有効
+    param_spec:
+      code: コード
+      name: 名称
+      operation: 工程
+      recipe: レシピ
+      product: 製品
+      uom: 単位
+      target: 目標値
+      lsl: 規格下限
+      usl: 規格上限
+      description: 説明
+    change_order:
+      code: コード
+      name: 名称
+      change_type: 変更対象
+      route: 新ルート版
+      recipe: 新レシピ版
+      effective_at: 発効日時
+      wip_rule: 仕掛ルール
+      reason: 変更理由
+      ecn_status: 状態
+      applied_at: 発効日時
+      result: 実行結果
+      description: 説明
+  help:
+    route_step:
+      branch_condition: 例：lot_type == 'ENG'
+      max_rework: 空欄：無制限
+    recipe_equipment:
+      ideal_uph: 任意。OEE 計算で設備 UPH より優先
+    change_order:
+      wip_rule: ルート変更：待機中の仕掛ロットは旧版継続、または工程番号で新版へ切替
+  enum:
+    operation_type:
+      process: 加工
+      metrology: 計測
+      inspection: 検査
+      test: テスト
+      clean: 洗浄
+      move: 搬送
+    route_type:
+      main: メインルート
+      sub: サブルート
+      rework: リワークルート
+    step_type:
+      operation: 工程
+      sub_route: サブルート呼出
+    recipe_type:
+      production: 生産
+      monitor: モニター
+      clean: 洗浄 / シーズニング
+      rework: リワーク
+    rework_return:
+      same_step: 同一ステップ（再処理）
+      next_step: 次ステップ
+    qty_basis:
+      per_lot: ロット当たり
+      per_unit: ユニット・ウェーハ当たり
+    change_type:
+      route: ルート
+      recipe: レシピ
+    wip_rule:
+      keep_old: 仕掛は旧版継続
+      switch_new: 仕掛を新版へ切替
+    ecn_status:
+      draft: 下書き
+      released: 発行済（発効待ち）
+      applied: 発効済
+      cancelled: 取消
+    resource_kind:
+      equipment: 設備
+      equipment_group: 設備グループ
+      reticle: レチクル
+      material: 資材
+      fixture: 治具・工具

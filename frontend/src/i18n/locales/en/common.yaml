@@ -1,0 +1,136 @@
+common:
+  save: Save
+  cancel: Cancel
+  continue: Continue
+  delete: Delete
+  remove: Remove
+  edit: Edit
+  name: Name
+  title: Title
+  description: Description
+  status: Status
+  created: Created
+  email: Email
+  password: Password
+  fullName: Full name
+  roles: Roles
+  permissions: Permissions
+  active: Active
+  inactive: inactive
+  superuser: Superuser
+  owner: System admin
+  id: ID
+  select: Select…
+  none: — none —
+  me: me
+  you: (you)
+  yes: yes
+  noResults: No results.
+  total: '{{count}} total'
+  loading: Loading…
+  expand: Expand
+  collapse: Collapse
+  goBack: Go Back
+  backHome: Back to Home
+  close: Close
+  no: no
+  username: Username
+  loginName: Login
+table:
+  rowsPerPage: Rows per page
+  pageOf: Page {{page}} of {{total}}
+  firstPage: Go to first page
+  prevPage: Go to previous page
+  nextPage: Go to next page
+  lastPage: Go to last page
+  goToPage: Go to page {{page}}
+  asc: Asc
+  desc: Desc
+  hide: Hide
+  search: Search…
+  clearSearch: Clear search
+  noMatch: No results match “{{q}}”.
+  searchUsers: Search email or name…
+  searchTenants: Search name or slug…
+  allStatuses: All statuses
+  noMatchFilters: No results match the current filters.
+  resetFilters: Reset filters
+  allRoles: All roles
+  visible: Visible
+  moreFilters: More filters
+  recordFilter: Linked record
+  clearRecordFilter: Show all records
+  searchOptions: Search…
+  range:
+    today: Today
+    last7: Last 7 days
+    last30: Last 30 days
+    thisMonth: This month
+    from: From
+    to: To
+    clear: Clear range
+theme:
+  toggle: Toggle theme
+  light: Light
+  dark: Dark
+  system: System
+password:
+  show: Show password
+  hide: Hide password
+lang:
+  label: Language
+  zh-CN: 简体中文
+  ja: 日本語
+  en: English
+nav:
+  searchMenu: Search menus
+  searchMenuHint: Type a menu name (zh / en / ja) or key
+  searchMenuEmpty: No matching menus
+  breadcrumb: Breadcrumb
+  selectTenant: Select site
+  tenants: Sites
+  tenantsCount: '{{count}} sites'
+  noRole: no role
+  profile: Profile & password
+  superuserTag: (superuser)
+  signOut: Sign out
+  signOutDesc: Are you sure you want to sign out? You will need to sign in again to access your account.
+  sidebar: Navigation
+  platformAdmin: Platform Admin
+  platformSubtitle: Platform permissions required
+  backToWorkspace: Back to workspace
+  impersonating: Viewing as tenant "{{name}}"
+  impersonatingShort: viewing as tenant
+  exitImpersonation: Leave tenant view, back to Platform Admin
+  noTenant: No site assigned
+dashboard:
+  title: Dashboard
+  signedInAs: Signed in as {{email}}
+  currentTenant: Current site
+  rolesHint: 'roles: {{roles}}'
+  selectTenant: select a site
+  members: Users
+  inTenant: in current site
+  myTenants: My sites
+  superuserHint: 'superuser: can access every site'
+  effective: Effective permissions
+  effectiveDesc: All permissions you currently have
+  bypass: superuser (bypass)
+  showPerms: Show
+  hidePerms: Hide
+  noTenantTitle: No site or permissions assigned
+  noTenantDesc: No site or permissions assigned yet. Please contact your administrator.
+sidebar:
+  toggle: Toggle sidebar
+home:
+  wip: WIP lots
+  wipQty: Total qty {{n}}
+  hold: Lots on hold
+  holdHint: Go to hold release
+  qtime: Q-Time exceeded / warning
+  qtimeHint: Waiting lots at current step
+  equipment: Equipment E10 states
+  pm: PM overdue / due soon
+  pmHint: Main equipment PM plans
+  trackOuts: Track-outs today
+  trackOutsHint: Lot track-out operations

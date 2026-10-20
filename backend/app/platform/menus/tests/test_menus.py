@@ -362,57 +362,17 @@ def test_merged_menu_permission_any_tab(db: Session) -> None:
 
 
 def test_menu_titles_plan_a() -> None:
-    """方案 A 菜单标题：三语齐全、改名、日文 Q-Time 带空格、Hold 不叫冻结。"""
-    import re
-
+    """方案 A 菜单英文标题（各语言措辞由前端语言包测试覆盖）：标题非空，合并菜单与首个页签不重名。"""
     from app.platform.menus import layout
 
-    en, zh, ja = (layout.titles(i) for i in range(3))
+    en = {k: lbl for k, lbl, _, _ in layout.GROUPS}
     for items in layout.ITEMS.values():
-        for _, lbl in items:
-            parts = lbl.split("|")
-            assert len(parts) == 3 and all(p.strip() for p in parts), lbl
-    for _, lbl, _, _ in layout.GROUPS:
-        assert len(lbl.split("|")) == 3 and all(lbl.split("|")), lbl
-    assert zh["g-execution"] == "批次作业" and zh["g-equipment"] == "机台管理"
-    assert zh["g-exception"] == "异常处置" and zh["g-wip"] == "在制与查询"
-    assert ja["mes-qtime-monitor"] == "Q-Time 監視"
-    assert ja["mes-qtime_rule"] == "Q-Time ルール"
-    assert not any("Q タイム" in v for v in ja.values())
-    assert not any(re.search(r"Q-Time(?! )", v) for v in ja.values())
-    assert not any("冻结" in v for v in zh.values())
-    assert zh["mes-lot-start"] == "投片/开批"
-    assert (
-        zh["mes-carrier-ops"] == "载具作业" and en["mes-check_log"] == "Interlock Log"
-    )
-    assert zh["mes-tool"] == "耗材/治具寿命" and en["mes-change_order"] == "ECN"
-    # 8 个与首个页签重名的合并菜单已改名，页签名不变
-    assert {
-        k: zh[k]
-        for k in (
-            "mes-warehouse-master",
-            "mes-equipment-master",
-            "mes-product-master",
-            "mes-material-master",
-            "mes-carrier-master",
-            "mes-e10-model",
-            "mes-route-master",
-            "mes-calendar",
-        )
-    } == {
-        "mes-warehouse-master": "仓库主数据",
-        "mes-equipment-master": "机台主数据",
-        "mes-product-master": "产品主数据",
-        "mes-material-master": "物料主数据",
-        "mes-carrier-master": "载具主数据",
-        "mes-e10-model": "E10 状态配置",
-        "mes-route-master": "工艺流程配置",
-        "mes-calendar": "日历与班次",
-    }
+        en.update(dict(items))
+    en.update(layout.TAB_TITLES)
+    assert all(v.strip() and "|" not in v for v in en.values())
+    assert en["mes-check_log"] == "Interlock Log" and en["mes-change_order"] == "ECN"
     for key, (*_, tabs) in layout.MERGED.items():
-        for lang in (en, zh, ja):
-            assert lang[key] != lang[tabs[0]], key
-    assert zh["mes-e10_state"] == "E10 状态模型"  # 页签名不变
+        assert en[key] != en[tabs[0]], key
 
 
 def test_admin_notify_config_and_member_user_permissions(

@@ -1,6 +1,4 @@
-import en from '@/i18n/locales/en.json'
-import ja from '@/i18n/locales/ja.json'
-import zh from '@/i18n/locales/zh-CN.json'
+import { en, ja, zh } from '@/test-utils/locales'
 import { describe, expect, it } from 'vitest'
 import { canRunStage } from '../lot-rules'
 

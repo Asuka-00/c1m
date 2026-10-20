@@ -1,0 +1,176 @@
+mes:
+  routeLockedHint: 此版本已锁定，如需修改请新建版本。
+  addStep: 添加步骤
+  moveUp: 上移
+  moveDown: 下移
+  flowStart: 开始
+  flowEnd: 结束
+  subRoute: 子流程
+  reworkRoute: 返工
+  edgeCall: 调用
+  edgeReturn: 返回
+  edgeRework: 返工
+  flowDraftHint: 拖动步骤连接点添加分支，点击步骤进行编辑。
+  branchDialog: 从步骤 {{from}} 分支到步骤 {{to}}
+  ecn:
+    release: 发布
+    cancel: 取消变更
+    confirm:
+      release: 发布变更单 {{code}}？生效时间已到时立即生效。
+      cancel: 取消变更单 {{code}}？
+    done:
+      released: 已发布，待生效
+      applied: 已生效
+      cancelled: 已取消
+    result: 新版本 v{{v}}，改指引用 {{n}} 处
+    switched: 切换新版的批次
+    kept: 沿用旧版的批次
+  entity:
+    operation: 工序
+    route: 工艺流程
+    route_step: 流程步骤
+    step_resource: 步骤资源
+    product_route: 产品流程绑定
+    recipe: 配方
+    recipe_equipment: 配方设备映射
+    param_spec: 工艺参数规格
+    change_order: 工程变更
+  field:
+    operation:
+      code: 编码
+      name: 名称
+      operation_type: 类型
+      area: 区域
+      std_minutes: 标准工时（分钟）
+      is_active: 启用
+      description: 描述
+    route:
+      code: 编码
+      name: 名称
+      route_type: 流程类型
+      product_family: 产品族
+      description: 描述
+    route_step:
+      route: 流程
+      seq: 序号
+      step_type: 步骤类型
+      operation: 工序
+      sub_route: 子流程
+      rework_route: 返工流程
+      is_optional: 可选
+      branch_condition: 分支条件
+      branch_to_seq: 分支跳转序号
+      max_rework: 最大返工次数
+      rework_return: 返工返回
+      auto_move_in: 自动进站
+      auto_track_in: 自动上机
+      auto_track_out: 自动下机
+      auto_move_out: 自动出站
+      note: 备注
+    step_resource:
+      route_step: 流程步骤
+      resource_kind: 资源类型
+      equipment: 设备
+      equipment_group: 设备组
+      reticle: 光罩
+      material: 物料
+      fixture: 治具 / 工具
+      recipe: 配方
+      qty: 数量
+      uom: 单位
+      qty_basis: 用量基准
+    product_route:
+      product: 产品
+      route: 流程
+      is_default: 默认
+      priority: 优先级
+      effective_from: 生效日期
+      effective_to: 失效日期
+    recipe:
+      code: 编码
+      name: 名称
+      equipment_type: 设备类型
+      recipe_type: 配方类型
+      body: 参数（JSON）
+      description: 描述
+    recipe_equipment:
+      recipe: 配方
+      equipment: 设备
+      eqp_recipe: 设备端配方名
+      ideal_uph: 理论产能（UPH）
+      is_enabled: 启用
+    param_spec:
+      code: 编码
+      name: 名称
+      operation: 工序
+      recipe: 配方
+      product: 产品
+      uom: 单位
+      target: 目标值
+      lsl: 规格下限
+      usl: 规格上限
+      description: 描述
+    change_order:
+      code: 编码
+      name: 名称
+      change_type: 变更对象
+      route: 新流程版本
+      recipe: 新配方版本
+      effective_at: 生效时间
+      wip_rule: 在制规则
+      reason: 变更原因
+      ecn_status: 状态
+      applied_at: 生效于
+      result: 执行结果
+      description: 描述
+  help:
+    route_step:
+      branch_condition: 例如 lot_type == 'ENG'
+      max_rework: 留空不限
+    recipe_equipment:
+      ideal_uph: 可选，OEE 计算优先于设备 UPH
+    change_order:
+      wip_rule: 流程变更：等待中的在制批次沿用旧版，或按工步序号切换到新版
+  enum:
+    operation_type:
+      process: 加工
+      metrology: 量测
+      inspection: 检验
+      test: 测试
+      clean: 清洗
+      move: 搬送
+    route_type:
+      main: 主流程
+      sub: 子流程
+      rework: 返工流程
+    step_type:
+      operation: 工序
+      sub_route: 调用子流程
+    recipe_type:
+      production: 生产
+      monitor: 监控
+      clean: 清洗 / 暖机
+      rework: 返工
+    rework_return:
+      same_step: 原步骤（重做）
+      next_step: 下一步骤
+    qty_basis:
+      per_lot: 每批
+      per_unit: 每单元/片
+    change_type:
+      route: 流程
+      recipe: 配方
+    wip_rule:
+      keep_old: 在制沿用旧版
+      switch_new: 在制切换新版
+    ecn_status:
+      draft: 草稿
+      released: 已发布（待生效）
+      applied: 已生效
+      cancelled: 已取消
+    resource_kind:
+      equipment: 设备
+      equipment_group: 设备组
+      reticle: 光罩
+      material: 物料
+      fixture: 治具 / 工具

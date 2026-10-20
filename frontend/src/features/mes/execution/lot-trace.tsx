@@ -27,6 +27,7 @@ import {
 import { useTenantKey } from '@/lib/api/hooks'
 import { mesApi, type MesRow } from '@/lib/api/mes/common'
 import { execApi, type WaferCell } from '@/lib/api/mes/execution'
+import { checkMessage, type MsgPart } from '@/lib/backend-text'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -78,6 +79,7 @@ type Check = {
   rule: string | null
   result: string
   message: string
+  msg_parts?: MsgPart[]
 }
 
 function Details({ d }: { d: Record<string, unknown> }) {
@@ -148,7 +150,7 @@ function Details({ d }: { d: Record<string, unknown> }) {
           {checks.map((c, i) => (
             <span
               key={i}
-              title={c.message}
+              title={checkMessage(c)}
               className='inline-flex items-center gap-1 text-xs'
             >
               <ResultBadge r={c.result} />

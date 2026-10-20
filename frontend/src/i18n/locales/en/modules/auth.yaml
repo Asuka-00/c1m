@@ -1,0 +1,10 @@
+auth:
+  appName: FastAPI Admin
+  signIn: Sign in
+  signInDesc: Sign in with your account.
+  passwordRequired: Please enter your password.
+  welcome: Welcome back, {{name}}!
+  loginLabel: Username
+  loginPlaceholder: e.g. admin
+  loginRequired: Please enter your username or email
+  loginInvalid: Enter a valid username (3–50 letters, digits, . _ -)

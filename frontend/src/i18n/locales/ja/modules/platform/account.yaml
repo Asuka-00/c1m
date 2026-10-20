@@ -1,0 +1,249 @@
+users:
+  title: ユーザー
+  desc: 全プラットフォームユーザー
+  new: 新規ユーザー
+  edit: ユーザーを編集
+  newDesc: プラットフォームユーザーを作成し、テナントを割り当てます。
+  passwordMin: 8文字以上
+  rolesDesc: テナントロールは各テナントのメンバー画面で管理します。
+  delete: ユーザーを削除
+  deleteDesc: '{{email}} を削除しますか？アイテムも削除されます。'
+  created: ユーザーを作成しました
+  updated: ユーザーを更新しました
+  deleted: ユーザーを削除しました
+  regular: 一般ユーザー
+  usernameHint: 必須。3〜50 文字の英数字と . _ -（大文字小文字を区別しない）
+  emailOptional: 任意。入力する場合は一意
+  tenants: 所属テナント
+  tenant: テナント
+  pickTenant: テナントを選択
+  addTenant: テナントを追加
+  removeTenant: このテナントを削除
+roles:
+  platformDesc: プラットフォーム全体のロール（ユーザーに割り当て）。
+  tenantTitle: ロール
+  tenantDesc: ロールと権限を管理します。
+  new: 新規ロール
+  edit: ロールを編集
+  delete: ロールを削除
+  deleteDesc: ロール {{name}} を削除しますか？
+  created: ロールを作成しました
+  updated: ロールを更新しました
+  deleted: ロールを削除しました
+permissions:
+  title: 権限
+  desc: ロールに権限を割り当てます。
+  role: ロール：{{name}}
+  ownerFixed: システム管理者ロールは固定です。
+  selected: '{{count}} 件選択'
+  count: '{{count}} 件の権限'
+  allOf: '{{resource}} の全権限'
+  all: すべての権限
+  new: 新規権限
+  edit: 権限を編集
+  code: コード
+  codeLabel: コード（リソース:操作）
+  scope: スコープ
+  scopes:
+    platform: プラットフォーム
+    tenant: テナント
+  delete: 権限を削除
+  deleteDesc: '{{code}} を削除しますか？すべてのロールから外されます。'
+  saved: 権限を保存しました
+  created: 権限を作成しました
+  updated: 権限を更新しました
+  deleted: 権限を削除しました
+  tenantTitle: ロール権限
+  tenantDesc: テナント「{{name}}」のロールに権限を割り当てます。
+members:
+  title: ユーザー
+  desc: ログインできるユーザーとロール・状態
+  add: ユーザーを追加
+  addDesc: ユーザー名で登録済みユーザーを追加します。
+  rolesOf: '{{email}} のロール'
+  tenantRoles: ロール
+  leave: 自分のアクセス権を削除
+  remove: ユーザーを削除
+  removeDesc: '{{email}} のアクセス権を削除しますか？'
+  added: ユーザーを追加しました
+  rolesUpdated: ロールを更新しました
+  removed: ユーザーを削除しました
+  edit: ユーザーを編集
+  addExisting: 既存ユーザーを追加
+  createUser: 新規ユーザー
+  createDesc: 新しいログインアカウントを作成します。
+  created: ユーザーを作成しました
+  initialPassword: 初期パスワード
+  usernameHint: 既存ユーザーのユーザー名
+  sharedUser: このアカウントは一元管理されているため、ここではロールのみ変更できます。アカウント情報とパスワードは管理者にお問い合わせください。
+rbac:
+  actions: 操作
+  enabled: 有効
+  disabled: 無効
+  displayName: 表示名
+  updatedBy: 更新者
+  updatedAt: 更新日時
+  saved: 保存しました
+  deleted: 削除しました
+  resetPassword: パスワードをリセット
+  resetPasswordDesc: '{{name}} の新しいパスワードを設定します。'
+  newPassword: 新しいパスワード
+  passwordReset: パスワードをリセットしました
+  pickRoles: ロールを選択…
+  roleCode: ロールコード
+  roleName: ロール名
+  permCount: 権限数
+  permTree: 権限
+  searchTree: 名前 / コード / パスで検索
+  expandAll: すべて展開
+  collapseAll: すべて折りたたむ
+  selectedOf: '{{n}} / {{total}} 件選択'
+  treeTitle: 権限ツリー
+  treeDesc: メニューと権限を管理します。
+  newRoot: ルート権限を追加
+  child: 子項目
+  childMenu: サブメニュー
+  childPerm: 権限 / ボタン
+  newChildMenu: 「{{parent}}」のサブメニューを追加
+  newChildPerm: 「{{parent}}」に権限を追加
+  editMenu: メニューを編集
+  code: コード
+  type: 種類
+  path: パス
+  sort: 並び順
+  visible: 表示
+  shown: 表示
+  hidden: 非表示
+  space: スペース
+  allSpaces: すべてのスペース
+  allTypes: すべての種類
+  spaces:
+    workspace: ワークスペース
+    platform: プラットフォーム
+  menuKey: メニューキー
+  icon: アイコン
+  component: コンポーネント
+  menuPerm: アクセス権限コード
+  otherPerms: その他の権限
+  deleteNode: ノードを削除
+  deleteMenuDesc: メニュー「{{name}}」とサブメニューを削除しますか？
+  search: 検索…
+permName:
+  users__read: プラットフォームユーザー閲覧
+  users__write: プラットフォームユーザー編集
+  users__delete: プラットフォームユーザー削除
+  roles__read: ロール・権限閲覧
+  roles__write: ロール・権限管理
+  tenants__read: テナント閲覧
+  tenants__write: テナント管理
+  platform_config__read: 既定設定閲覧
+  platform_config__write: 既定設定編集
+  platform_notify__read: 通知チャネル閲覧
+  platform_notify__write: 通知チャネル設定
+  platform_audit__read: 監査・ログ閲覧
+  tenant__manage: システム設定・管理者の管理
+  members__read: ユーザー閲覧
+  members__write: ユーザー管理
+  config__read: システム設定閲覧
+  config__write: システム設定編集
+  mes_common__read: 共通·閲覧
+  mes_common__write: 共通·編集
+  mes_equipment__read: 設備·閲覧
+  mes_equipment__write: 設備·編集
+  mes_exec__read: 生産実行·閲覧
+  mes_exec__write: 生産実行·編集
+  mes_inventory__read: 資材・工具·閲覧
+  mes_inventory__write: 資材・工具·編集
+  mes_check__read: チェック·閲覧
+  mes_check__write: チェック·編集
+  mes_org__read: 組織·閲覧
+  mes_org__write: 組織·編集
+  mes_lot__read: ロット・ウェーハ規則·閲覧
+  mes_lot__write: ロット・ウェーハ規則·編集
+  mes_wo__read: 作業指示·閲覧
+  mes_wo__write: 作業指示·編集
+  mes_process__read: プロセス·閲覧
+  mes_process__write: プロセス·編集
+  mes_product__read: 製品・資材·閲覧
+  mes_product__write: 製品・資材·編集
+  mes_quality__read: 品質·閲覧
+  mes_quality__write: 品質·編集
+  mes_wh__read: 倉庫·閲覧
+  mes_wh__write: 倉庫·編集
+  mes_equipment__e10: 設備·E10 状態変更
+  mes_equipment__pm: 設備·PM 記録
+  mes_exec__override: 生産実行·強制解除
+  mes_exec__hold: 生産実行·保留 / 解除
+  mes_exec__split: 生産実行·ロット分割
+  mes_exec__merge: 生産実行·ロット統合
+  mes_exec__jump: 生産実行·工程ジャンプ
+  mes_exec__adjust: 生産実行·廃棄 / 追加
+  mes_wo__release: 作業指示·発行 / クローズ
+  mes_lot__start: ロット・ウェーハ規則·投入
+  mes_wh__confirm: 倉庫·入庫確認
+  notify__config: 通知購読設定
+roleName:
+  admin: 管理者
+  user: 一般ユーザー
+  owner: システム管理者
+  member: 一般ユーザー
+permDesc:
+  users__read: 許可：プラットフォームユーザー閲覧
+  users__write: 許可：プラットフォームユーザー編集
+  users__delete: 許可：プラットフォームユーザー削除
+  roles__read: 許可：ロール・権限閲覧
+  roles__write: 許可：ロール・権限管理
+  tenants__read: 許可：テナント閲覧
+  tenants__write: 許可：テナント管理
+  platform_config__read: 許可：既定設定閲覧
+  platform_config__write: 許可：既定設定編集
+  platform_notify__read: 許可：通知チャネル閲覧
+  platform_notify__write: 許可：通知チャネル設定
+  platform_audit__read: 許可：監査・ログ閲覧
+  tenant__manage: 許可：システム設定・管理者の管理
+  members__read: 許可：ユーザー閲覧
+  members__write: 許可：ユーザー管理
+  config__read: 許可：システム設定閲覧
+  config__write: 許可：システム設定編集
+  mes_common__read: 許可：共通·閲覧
+  mes_common__write: 許可：共通·編集
+  mes_equipment__read: 許可：設備·閲覧
+  mes_equipment__write: 許可：設備·編集
+  mes_exec__read: 許可：生産実行·閲覧
+  mes_exec__write: 許可：生産実行·編集
+  mes_inventory__read: 許可：資材・工具·閲覧
+  mes_inventory__write: 許可：資材・工具·編集
+  mes_check__read: 許可：チェック·閲覧
+  mes_check__write: 許可：チェック·編集
+  mes_org__read: 許可：組織·閲覧
+  mes_org__write: 許可：組織·編集
+  mes_lot__read: 許可：ロット・ウェーハ規則·閲覧
+  mes_lot__write: 許可：ロット・ウェーハ規則·編集
+  mes_wo__read: 許可：作業指示·閲覧
+  mes_wo__write: 許可：作業指示·編集
+  mes_process__read: 許可：プロセス·閲覧
+  mes_process__write: 許可：プロセス·編集
+  mes_product__read: 許可：製品・資材·閲覧
+  mes_product__write: 許可：製品・資材·編集
+  mes_quality__read: 許可：品質·閲覧
+  mes_quality__write: 許可：品質·編集
+  mes_wh__read: 許可：倉庫·閲覧
+  mes_wh__write: 許可：倉庫·編集
+  mes_equipment__e10: 許可：設備·E10 状態変更
+  mes_equipment__pm: 許可：設備·PM 記録
+  mes_exec__override: 許可：生産実行·強制解除
+  mes_exec__hold: 許可：生産実行·保留 / 解除
+  mes_exec__split: 許可：生産実行·ロット分割
+  mes_exec__merge: 許可：生産実行·ロット統合
+  mes_exec__jump: 許可：生産実行·工程ジャンプ
+  mes_exec__adjust: 許可：生産実行·廃棄 / 追加
+  mes_wo__release: 許可：作業指示·発行 / クローズ
+  mes_lot__start: 許可：ロット・ウェーハ規則·投入
+  mes_wh__confirm: 許可：倉庫·入庫確認
+  notify__config: 許可：通知購読設定
+roleDesc:
+  platform_admin: 全権限を持つプラットフォーム管理者
+  platform_user: プラットフォーム権限のない一般ユーザー
+  owner: 全権限を持つシステム管理者
+  admin: ユーザー・設定・全業務データを管理
+  member: 業務データの閲覧のみ

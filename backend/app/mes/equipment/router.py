@@ -7,10 +7,12 @@ mes.equipment:pm（登记 PM 完成）。E10 履历、PM 计划、停机记录�
 import uuid
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
+from app.core import error_codes as ec
 from app.core.deps import SessionDep
+from app.core.spec.errors import coded
 from app.mes.common.query import one
 from app.mes.equipment import service as svc
 from app.platform.auth.deps import CurrentTenant
@@ -21,7 +23,7 @@ router = APIRouter(prefix="/mes/eqp", tags=["mes"])
 
 def _need(ctx: TenantContext, p: str) -> None:
     if not ctx.can(p):
-        raise HTTPException(status_code=403, detail="Not enough permissions")
+        raise coded(403, ec.PERMISSION_DENIED, "Not enough permissions")
 
 
 @router.get("/board")
@@ -52,7 +54,7 @@ def pm(session: SessionDep, ctx: CurrentTenant, eq_id: uuid.UUID) -> Any:
     _need(ctx, "mes.equipment:read")
     eq = one(session, ctx.id, "equipment", eq_id)
     if not eq:
-        raise HTTPException(status_code=404, detail="equipment not found")
+        raise coded(404, ec.EQUIPMENT_NOT_FOUND, "equipment not found")
     return {"data": svc.pm_status(session, ctx.id, eq)}
 
 

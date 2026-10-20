@@ -6,14 +6,15 @@ from datetime import UTC, datetime
 from typing import Any
 
 import sqlalchemy as sa
-from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.engine import (
     ENTITIES,
     TABLES,
     Entity,
 )
+from app.core.spec.errors import coded
 
 Row = dict[str, Any]
 Validator = Callable[[Session, uuid.UUID, Entity, Row, Row | None], None]
@@ -32,7 +33,7 @@ def get_entity(code: str, *, api: bool = True) -> Entity:
     """
     e = ENTITIES.get(code.replace("-", "_"))
     if not e or (api and e.internal):
-        raise HTTPException(status_code=404, detail="Unknown entity")
+        raise coded(404, ec.UNKNOWN_ENTITY, "Unknown entity")
     return e
 
 

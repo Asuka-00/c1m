@@ -5,6 +5,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.mes.execution.tests.test_exec import EXEC
 
 
@@ -166,7 +167,7 @@ def test_batch_track_in_out(client: TestClient, db: Session) -> None:
     f.run_step(c)
     f.stage(c, "move_in", equipment_id=f.eq["id"])
     r = batch("track_in", [a, b, c], 409, equipment_id=f.eq["id"])
-    assert r["detail"]["code"] == "batch_blocked"
+    assert r["detail"]["code"] == ec.BATCH_BLOCKED
     assert f.lot(a)["lot_status"] == "moved_in"
     out = batch("track_in", [a, b], equipment_id=f.eq["id"])
     assert [i["ok"] for i in out["items"]] == [True, True]
@@ -517,7 +518,7 @@ def test_hot_lot_priority_queue_and_limit(client: TestClient, db: Session) -> No
     r = f.post(
         f"{EXEC}/lots/{b['id']}/priority", {"priority_id": hot["id"]}, status=409
     )
-    assert r["detail"]["code"] == "check_blocked"
+    assert r["detail"]["code"] == ec.CHECK_BLOCKED
 
 
 # ---------------- 11: shift handover ----------------
@@ -586,7 +587,7 @@ def test_operator_qualified_and_expiry_notice(client: TestClient, db: Session) -
     f.bind("track_in", ("operator_qualified", "block", {}))
     f.stage(a, "move_in", equipment_id=f.eq["id"])
     r = f.stage(a, "track_in", 409, equipment_id=f.eq["id"])
-    assert r["detail"]["code"] == "check_blocked"
+    assert r["detail"]["code"] == ec.CHECK_BLOCKED
     me = client.get("/api/v1/users/me", headers=f.m.h).json()
     q = f.m.post(
         "operator_qual",
@@ -625,8 +626,18 @@ def test_batch_rolls_back_all_when_one_lot_fails(
     )
     assert r.status_code == 409, r.text
     items = {i["code"]: i for i in r.json()["detail"]["items"]}
-    assert not items[a["code"]]["ok"] and "not executed" in items[a["code"]]["error"]
+    assert not items[a["code"]]["ok"]
+    assert items[a["code"]]["error"]["code"] == ec.BATCH_ROLLED_BACK
     assert not items[b["code"]]["ok"] and items[b["code"]]["error"]
+    # 去重后不足 2 批：字段错误带错误码与插值参数（前端按 code 翻译）
+    r = client.post(
+        f"{EXEC}/batch/track_in",
+        headers=f.m.h,
+        json={"lot_ids": [a["id"], a["id"]], "equipment_id": f.eq["id"]},
+    )
+    assert r.status_code == 422, r.text
+    d = r.json()["detail"][0]
+    assert d["code"] == ec.BATCH_SIZE and d["params"] == {"min": 2, "max": 25}
     assert f.lot(a)["lot_status"] == "moved_in"
     assert not f.sql(
         "SELECT 1 FROM mes_lot_history WHERE lot_id = :l AND action = 'track_in'",
@@ -647,12 +658,14 @@ def test_batch_rolls_back_all_when_one_lot_fails(
     )
     assert r.status_code == 409, r.text
     res = [x for i in r.json()["detail"]["items"] for x in i.get("results") or []]
-    assert any(
-        x["check_type"] == "batch_same_step"
-        and x["result"] == "block"
-        and "different equipment" in x["message"]
+    hit = [
+        x
         for x in res
-    )
+        if x["check_type"] == "batch_same_step" and x["result"] == "block"
+    ]
+    assert hit and "different equipment" in hit[0]["message"]
+    # 检查结果说明带消息键（前端按 mes.checkMsg.* 翻译），英文 message 兜底
+    assert hit[0]["msg_parts"] == [{"key": "batch_same_step.equipment", "params": {}}]
     assert f.lot(a)["lot_status"] == "moved_in"
 
 

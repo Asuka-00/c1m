@@ -1,0 +1,826 @@
+mes:
+  exec:
+    stage:
+      move_in: ムーブイン
+      track_in: トラックイン
+      track_out: トラックアウト
+      move_out: ムーブアウト
+    done:
+      move_in: ムーブイン完了
+      track_in: トラックイン完了
+      track_out: トラックアウト完了
+      move_out: ムーブアウト完了
+    qtimeAction:
+      hold: Q-Time 超過：ロットをホールド
+      scrap: Q-Time 超過：ロット廃棄
+      rework: Q-Time 超過：リワークへ
+    frame:
+      sub_route: サブルート
+      rework: リワークルート
+    refresh: 更新
+    consoleHint: ロットの作業を工程ごとに実行します。
+    pickLot: ロットを選択してください。
+    auto: 自動
+    autoDone: 自動{{stage}}
+    blocked: チェックによりブロックされました（結果を確認）
+    nowOnHold: ロットはホールド中
+    onHold: ホールド中
+    pendingRework: リワーク待ち
+    step: ステップ
+    route: ルート
+    qty: 数量
+    equipment: 設備
+    recipe: レシピ
+    reticle: レチクル
+    carrier: キャリア
+    tool: 工具
+    lastAction: 最終操作
+    inSubRoute: 現在{{kind}}内です。終了時に呼出元ルートへ戻ります。
+    lastStep: 最終ステップ：ムーブアウトでロット完了。
+    nextStepHint: ムーブアウトで次のステップへ進みます。
+    takeBranch: 順番 {{seq}} へ分岐（条件：{{cond}}）
+    toRework: リワークルート {{route}} へ
+    preview: チェック事前確認
+    holdBlocks: ロットはホールド中です。加工中ロットは Track Out できますが、Move In・Track In・Move Out は全ホールド解除後に行えます。
+    terminal: ロットは{{status}}です。以降の作業はありません。
+    checks: チェック結果
+    checksHint: 実行・事前確認後にチェック結果を表示します。
+    noChecks: 該当するチェックはありません。
+    overrideReason: 強制解除理由
+    override: 強制解除して実行
+    noOverride: ブロックを強制解除する権限がありません。
+    hold: ホールド
+    held: ロットをホールドしました
+    release: ホールド解除
+    released: ホールドを解除しました
+    releaseReason: 解除理由
+    noHolds: 有効なホールドはありません。
+    reason: 理由コード
+    comment: コメント
+    materials: ラインサイド資材（トラックアウトで消費）
+    noMaterial: 使用可能な資材ロットなし
+    fefo: 未選択時は先入先出（期限順）で自動割当。
+    dc: データ収集
+    noDc: このステップではデータ収集は不要です。
+    item: 項目
+    unit: ウェーハ・ユニット
+    values: 測定値（測定点）
+    lotLevel: ロット
+    scrapQty: 理由別の廃棄数量
+    scrapUnits: ウェーハ・ユニット別の廃棄・リワーク
+    addScrap: 廃棄行を追加
+    goodQty: トラックアウト後の良品数：{{good}}
+    good: 良品
+    scrap: 廃棄
+    rework: リワーク
+    stepDone: 完了
+    stepNext: 次
+    nextAction: 次の操作
+    slot: スロット
+    disposition: 処置
+    oosAction: 規格外処置
+    eqpRecipe: 装置レシピ名
+    eqpRecipeHint: 装置報告またはスキャン（任意）
+    chambers: チャンバー
+    futureHold: 予約ホールド工程に到着、ロットをホールド：{{reason}}
+    qtimeHandled: Q-Time 超過を処置しました
+    qtimeStageSkipped: 今回の {{stage}} は実行されていません。ロット状態を確認してください
+  trace:
+    hint: ロットとユニットの全操作履歴。
+    empty: 履歴はまだありません。
+    dc: 測定 {{n}} 件、規格外 {{oos}} 件
+    scrap: 廃棄 {{n}}
+    condition: 条件：{{c}}
+    source: 発生元：{{s}}
+    overrideReason: 強制解除理由：{{r}}
+  sm:
+    childMinus: 子ロットを減らす
+    childPlus: 子ロットを増やす
+    title: 分割・統合
+    split: 分割
+    merge: 統合
+    ruleSummary: 規則 {{code}}：最大 {{max}} ロット、1 ロット最少 {{min}} · 子ロット {{n}} 件
+    noSplit: 分割不可
+    noMerge: 統合不可
+    noRule: このロットタイプには分割・統合規則がありません。
+    stateHint: 待機またはムーブイン済（処理中以外）のみ分割・統合できます。
+    noGenealogy: 分割・統合の記録はありません。
+    genealogy: ロット系譜
+    splitTo: 分割先
+    splitFrom: 分割元
+    mergedInto: 統合先
+    mergedFrom: 統合元
+    splitQtyHint: 子ロットごとの数量を入力（残りは親ロット）。
+    splitUnitHint: ウェーハ・ユニットを子ロットに割り当てます（未割当は親に残ります）。
+    childCount: 子ロット数
+    remain: 親ロット残 {{n}} / {{total}}
+    tooMany: 子ロット合計は親ロット数量 {{total}} 未満にしてください（全量分割不可）
+    child: 子ロット {{n}}
+    childShort: 子{{n}}
+    keep: 残す
+    goesTo: 移動先
+    splitDone: 分割完了：{{codes}}
+    mergeDone: 統合完了：{{codes}}
+    mergeHint: 統合可能な同一製品・同一ステップのロット。
+    noCandidates: 統合可能なロットはありません。
+    mergedQty: 統合後数量：{{n}}
+    qtimeNote: Q-Time は最も早い（厳しい）開始時刻を採用。
+    factChildren: 子ロット：{{list}}
+    factParent: 親ロット {{code}} から
+    factTarget: '{{code}} へ統合'
+    factSources: 統合元：{{list}}
+    resultPriority: 統合後の優先度（最高を採用）：
+    prioChange: '{{from}} から引上げ'
+    factPriority: 優先度 {{from}} → {{to}}
+    rule: 規則
+    allowed: 許可
+    maxLots: 最大ロット数
+    usedLots: 使用 {{n}}
+    minQty: 1 ロット最少数
+  wip:
+    title: 仕掛調整
+    hint: 仕掛ロットのジャンプ・廃棄・補数を行います。
+    jump: ステップジャンプ
+    jumpDesc: 待機中のロットを同一ルートの別の工程ステップへ移動します。
+    toStep: 移動先ステップ
+    jumped: ステップジャンプしました
+    override: ブロックを強制解除（理由を入力）
+    adjust: 廃棄/補数
+    adjustDesc: 仕掛品の廃棄または補数。
+    scrap: 廃棄
+    bonus: 補数
+    qty: 数量
+    adjusted: 調整しました
+    runningScrapAll: 加工中のロットは全数廃棄（数量 0）できません。Track Out 後に処理してください
+  qtime:
+    hint: 待機中ロットの Q-Time 残り時間と超過状況。
+    refresh: 更新
+    sweep: 超過を今すぐスキャン
+    swept: '{{checked}} ロットをスキャン、{{acted}} 件処置'
+    lot: ロット
+    step: 工程
+    rule: ルール
+    since: 起点
+    elapsed: 経過(分)
+    max: 上限(分)
+    remaining: 残り(分)
+    action: 超過処置
+    state: 状態
+    held: ホールド中
+    exceeded: 超過
+    ok: 計時中
+    act:
+      warn: 警告
+      hold: ホールド
+      rework: リワーク
+      scrap: 廃棄
+    warnAt: 警告(分)
+    warn: まもなく超過
+    search: ロット / ルールを検索
+    allStates: 全状態
+    allProducts: 全製品
+    allRoutes: 全工程ルート
+    product: 製品
+    route: 工程ルート
+    autoRefresh: 自動更新
+    sweepConfirm: 待機中の全ロットを今すぐスキャンし、Q-Time 超過ロットに設定済みの処置（Hold / リワーク / スクラップ）を実行しますか？
+  traceq:
+    hint: ロット・ウェーハ・設備・資材ロットで上流・下流を追跡します。
+    kind: 対象
+    code: コード
+    search: 検索
+    backward: 逆方向トレース
+    forward: 順方向トレース
+    srcLots: 元ロット
+    steps: 処理履歴（トラックイン）
+    materials: 消費資材
+    outLots: 産出ロット
+    lots: 関連ロット
+    k:
+      lot: ロット
+      wafer: ウェーハ
+      equipment: 設備
+      material_lot: 資材ロット
+    c:
+      code: ロット
+      lot: ロット
+      relation: 関係
+      qty: 数量
+      via: 経由
+      level: 階層
+      at: 日時
+      step_seq: 工程
+      operation: 工程
+      equipment: 設備
+      recipe: レシピ
+      user: ユーザー
+      material_lot: 資材ロット
+      product: 製品
+      consumed: 消費
+      downstream: 下流産出
+  holdrel:
+    hint: ホールド中のロットを確認・解除します。
+    reason: ホールド理由
+    source: 発生元
+    product: 製品
+    all: すべて
+    release: 一括解除
+    selected: '{{n}} 件選択'
+    released: 解除 {{ok}} 件、失敗 {{bad}} 件
+    lot: ロット
+    step: 工程
+    heldAt: ホールド日時
+    heldBy: ホールド者
+    hours: 経過(時間)
+    comment: コメント
+    src:
+      manual: 手動
+      qtime: Q-Time
+      oos: 規格外
+      split: 分割継承
+      equipment: 装置
+    search: ロット / 製品 / 理由 / コメントを検索
+    allStatus: すべて（履歴含む）
+    status:
+      active: 有効
+      released: 解除済み
+    allReasons: すべての理由
+    allSources: すべての発生元
+    allProducts: すべての製品
+    selectAll: すべて選択
+    state: 状態
+    releasedAt: 解除日時
+    releasedBy: 解除者
+    releaseReason: 解除理由
+    releaseComment: 解除コメント
+    showTerminal: 廃棄・統合済みロットを表示
+    lotStatus: ロット状態
+  report:
+    hint: 仕掛分布・滞留ロット・日次産出。
+    lots: 仕掛ロット
+    qty: 仕掛数量
+    onHold: ホールドロット
+    byStatus: 状態別
+    byStep: 工程別
+    byProduct: 製品別
+    aging: 滞留 Top 20
+    output: 日次産出
+    status: 状態
+    route: ルート
+    step: 工程
+    operation: オペレーション
+    product: 製品
+    lot: ロット
+    hours: 滞留(時間)
+    since: 最終操作
+    day: 日付
+    moves: ムーブアウト回数
+    moveQty: ムーブアウト数量
+    scrapQty: 廃棄数量
+    completed: 完了ロット
+    to: 終了日
+    oeeHint: OEE = 時間稼働率 × 性能稼働率 × 良品率。
+    equipment: 設備
+    loading: 負荷(時間)
+    prd: PRD(時間)
+    availability: 時間稼働率
+    performance: 性能稼働率
+    quality: 良品率
+    oee: OEE
+    good: 良品
+    scrap: 廃棄
+    uphMissing: UPH なし
+    from: 開始日
+    oeeTrend: 日次トレンド
+    allLotTypes: 全ロット種別
+  queue:
+    scan: ロット ID をスキャン / 入力して Enter
+    notFound: ロット {{code}} が見つかりません
+    search: ロット / 製品を検索
+    allStatuses: 全ステータス
+    allProducts: 全製品
+    allOperations: 全工程
+    allHold: ホールド：全て
+    notHeld: ホールドなし
+    held: ホールド中
+    empty: 仕掛ロットはありません
+    lot: ロット
+    priority: 優先度
+    product: 製品
+    step: ステップ · 工程
+    status: ステータス
+    qty: 数量
+    qtime: Q-Time 残り(分)
+    hours: 滞留(時間)
+    open: 作業
+    hot: ホットロット
+    allPriorities: すべてのロット
+    hotOnly: ホットロットのみ
+    notHot: 通常ロット
+  due:
+    overdue: 納期遅れ
+    expired: 期限切れ
+    expiring: 期限間近
+    ongoing: 継続中
+    hours: '{{n}} 時間'
+  wmap:
+    title: ウェーハマップ
+    history: ウェーハ履歴：{{code}}
+  rrun:
+    title: レシピパラメータ：{{recipe}} v{{version}}
+    view: パラメータ
+    running: 処理中
+    noParams: この実行にはレシピパラメータがありません。
+  batch:
+    hint: 同一装置で複数ロットを一括着工・完了します。
+    search: ロット・キャリア検索
+    allProducts: 全製品
+    allOps: 全工程
+    lot: ロット
+    product: 製品
+    step: ステップ
+    carrier: キャリア
+    qty: 数量
+    selectAll: すべて選択
+    run: 一括{{stage}}（{{n}}）
+    done: '{{ok}} / {{total}} ロット完了'
+    blocked: ブロックされたロットがあるため実行しません
+    ok: 成功
+    failed: 失敗
+  carrier:
+    hint: キャリアの状態確認・洗浄・載せ替え。
+    search: キャリア・ロット検索
+    allTypes: 全タイプ
+    allStatus: 全状態
+    allDue: 全洗浄状態
+    due:
+      ok: 正常
+      warn: 期限間近
+      overdue: 要洗浄
+    code: キャリア
+    type: タイプ
+    status: 状態
+    lot: ロット
+    fill: ウェーハ・容量
+    usage: 使用回数
+    cleanDue: 洗浄期限
+    clean: 洗浄
+    cleanConfirm: キャリア {{code}} を洗浄済みにしますか？
+    cleaned: 洗浄を記録しました
+    change: 載せ替え
+    changeDesc: ロット {{lot}} を {{code}} から移動：
+    target: 移動先キャリア
+    moved: 載せ替えました
+    splitMerge: 分割・統合
+  sorter:
+    action: ソート
+    title: ウェーハソート：{{lot}}（{{code}}）
+    target: 移動先キャリア（任意）
+    wafer: ウェーハ
+    from: 元スロット
+    to: 新スロット
+    pack: 順に詰める
+    run: ソート実行
+    done: ソート完了
+  yield:
+    hint: 工程・製品・ロット別の歩留まりと廃棄理由。
+    search: コード・名称検索
+    allBands: 全歩留まり
+    band:
+      low: 90% 未満
+      mid: 90%–98%
+      high: 98% 以上
+    by:
+      operation: 工程
+      product: 製品
+      lot: ロット
+    total: 良品 {{good}}・廃棄 {{scrap}}・歩留まり {{y}}
+    pareto: 廃棄理由パレート
+    noScrap: 期間内に廃棄はありません。
+    qty: 数量
+    cum: 累積比率
+    name: 名称
+    good: 良品
+    scrap: 廃棄
+    yield: 歩留まり
+  prio:
+    title: 優先度変更
+    desc: ホットロットは優先して払い出し、強調表示されます。
+    new: 新しい優先度
+    done: 優先度を変更しました
+  shiftLog:
+    hint: シフトごとに引継ぎ事項と未完了事項を記録し、次シフトが確認します。
+    search: 引継ぎ内容 / 引継ぎ者を検索
+    allStatus: すべての状態
+    allShifts: すべてのシフト
+    status:
+      open: 引継ぎ待ち
+      acknowledged: 引継ぎ済
+    statusCol: 引継ぎ
+    date: 日付 / シフト
+    shift: シフト
+    area: エリア
+    summary: 引継ぎ事項
+    openItems: 未完了事項
+    handedBy: 引継ぎ者
+    new: 引継ぎ登録
+    newDesc: このシフトの引継ぎ事項と未完了事項を登録します。
+    submit: 登録
+    created: 引継ぎを登録しました
+    ack: 引継ぎ確認
+    ackDesc: 引継ぎ事項と未完了事項を確認しました。
+    ackComment: メモ（任意）
+    acked: 引継ぎを確認しました
+  label:
+    hint: ロットまたはキャリアを選び、バーコード / QR ラベルを印刷します。
+    search: コード / 製品を検索
+    allStatus: すべての状態
+    kind:
+      lot: ロットラベル
+      carrier: キャリアラベル
+    code:
+      both: バーコード + QR
+      barcode: バーコードのみ
+      qr: QR のみ
+    print: '{{n}} 枚印刷'
+    pickAll: このページを選択
+    codeCol: コード
+    info: 詳細
+    status: 状態
+    qty: 数量
+  reasonCode:
+    qtime_expired: Q-Time 超過
+  qtimeHold:
+    overdue: '{{time}} 超過'
+    steps: 工程 {{from}} → {{to}}
+    rule: Q-Time ルール
+    minutes: '{{m}} 分'
+    hours: '{{h}} 時間'
+    hoursMinutes: '{{h}} 時間 {{m}} 分'
+  checkMsg:
+    registry:
+      not_implemented: チェック種別が未実装です
+      disabled: ルール {{rule}} によりこの管理は無効です
+    common:
+      no_equipment_selected: 設備が選択されていません
+      no_equipment: 設備なし
+      no_operation: 工程なし
+      no_carrier: キャリアなし
+    e10_available:
+      ok: '{{equipment}} は {{state}}（{{category}}）'
+      bad: '{{equipment}} は {{state}}（{{category}}）、{{allowed}} が必要です'
+    eqp_capability:
+      not_allowed: '{{equipment}} はこのステップで使用できません'
+      no_capability: '{{equipment}} に工程 {{operation}} の設備能力がありません'
+      not_required: 設備能力の記録なし（必須ではありません）
+      not_qualified: '{{equipment}} はこのレシピで工程 {{operation}} の認定がありません'
+      qualified: '{{equipment}} は工程 {{operation}} の認定済み'
+    recipe_active:
+      required: レシピが必要です
+      none: レシピなし
+      status: レシピ {{recipe}} v{{version}} の状態は「$t(mes.enum.status.{{status}})」です
+      not_allowed: レシピ {{recipe}} はこのステップで使用できません
+      other_type: レシピ {{recipe}} は別の設備タイプ用です
+      not_enabled: レシピ {{recipe}} は {{equipment}} で有効化されていません
+      active: レシピ {{recipe}} v{{version}} 有効
+    recipe_match:
+      na: レシピ / 設備なし
+      not_enabled: レシピ {{recipe}} は {{equipment}} で有効化されていません
+      not_reported: 装置レシピが未報告です（期待値 {{expect}}）
+      enabled: レシピ {{recipe}} は {{equipment}} で有効
+      differs: 装置レシピ {{got}} が {{expect}} と一致しません
+      matches: 装置レシピ {{got}} は一致
+    pm_due:
+      overdue: '{{equipment}} の PM が期限切れ：{{plans}}'
+      due_soon: '{{equipment}} の PM 期限間近：{{plans}}'
+      ok: '{{equipment}} の PM 正常'
+      no_plan: PM 計画なし
+    reticle_available:
+      not_required: レチクル不要
+      required: レチクルが必要です
+      not_allowed: レチクル {{reticle}} はこのステップで使用できません
+      status: レチクル {{reticle}} の状態は「$t(mes.enum.asset_status.{{status}})」です
+      available: レチクル {{reticle}} 使用可
+    material_sufficient:
+      none: 材料消費なし
+      short: '{{material}}：必要 {{need}}、在庫 {{available}}'
+      ok: 材料十分
+    tool_life:
+      none: ツール不要
+      required: '{{fixture}} タイプのツールが必要です'
+      status: ツール {{tool}} の状態は「$t(mes.enum.tool_status.{{status}})」です
+      life_reached: ツール {{tool}} は寿命に達しました（{{used}}/{{max}}）
+      expired: ツール {{tool}} は {{date}} に期限切れ
+      near_end: ツール {{tool}} は寿命間近（{{used}}/{{max}}）
+      expires: ツール {{tool}} は {{date}} に期限切れになります
+      ok: ツール使用可
+    carrier_available:
+      ok: キャリア {{carrier}}：$t(mes.enum.asset_status.{{status}})
+      bad: キャリア {{carrier}} の状態は「$t(mes.enum.asset_status.{{status}})」です
+    qtime:
+      at_track_in: Q-Time はトラックイン時に管理されます
+      none: Q-Time ルールなし
+      too_early: Q-Time {{rule}}：{{minutes}} 分、最短 {{min}} 分未満
+      exceeded: Q-Time {{rule}}：{{minutes}} 分、最長 {{max}} 分超過
+      ok: Q-Time 正常
+    lot_hold:
+      on_hold: ロットはホールド中です
+      ok: ホールドなし
+      held: ホールド中：{{lots}}
+      none_held: ホールド中のロットなし
+    wo_status:
+      ok: 作業指示は$t(mes.enum.wo_status.{{status}})
+      bad: 作業指示の状態は「$t(mes.enum.wo_status.{{status}})」です
+    dc_complete:
+      none: データ収集不要
+      missing: DC 値が不足：{{items}}
+      ok: DC 完了
+    oos:
+      bad: '{{count}} 件の値が規格外'
+      ok: 全値が規格内
+      none: DC 値なし
+      values: 規格外（$t(mes.enum.oos_action.{{action}})）：{{values}}
+    sampling:
+      no_operation: 工程なし
+      no_plan: データ収集計画なし
+      every_lot: 全ロット（抜取ルールなし）
+      rule_sampled: ルール {{rule}}：{{n}} ロット目、{{freq}} ロットごと → 抜取
+      rule_skipped: ルール {{rule}}：{{n}} ロット目、{{freq}} ロットごと → 対象外
+      sampled: 抜取対象
+      not_sampled: 抜取対象外
+    rework_limit:
+      builtin: リワークルート投入時に判定
+      reached: ステップ {{step}} でリワーク上限に到達：{{count}} / {{max}}
+      ok: リワーク {{next}} / {{max}}
+    qty_adjust_limit:
+      builtin: 廃棄・追加時に判定
+      exceeds: 調整数 {{qty}} がロット数 {{base}} の {{pct}}% を超えています
+      within: '{{pct}}% 以内'
+    split_merge_rule:
+      builtin: 分割・統合時に判定
+      split_status: 「$t(mes.enum.lot_status.{{status}})」のロットは分割できません（待機 / ムーブイン済のみ）
+      no_rule: このロットタイプに分割・統合ルールがありません
+      split_not_allowed: ルール {{rule}}：分割不可
+      max_children: ルール {{rule}}：{{total}} ロットが上限 {{max}} を超えます
+      min_qty: ルール {{rule}}：各ロットに最低 {{min}} 必要です
+      keep_one: 親ロットは最低 1 残す必要があります
+      child_carrier: 子ロット {{child}}：キャリア {{carrier}} は使用できません
+      child_capacity: 子ロット {{child}}：{{qty}} がキャリア容量 {{cap}} を超えます
+      split_ok: 分割可
+      merge_status: 「$t(mes.enum.lot_status.{{status}})」のロットには統合できません
+      merge_not_allowed: ルール {{rule}}：統合不可
+      capacity: '{{total}} がキャリア {{carrier}} の容量 {{cap}} を超えます'
+      merge_ok: 統合可
+      self: '{{lot}}：自分自身には統合できません'
+      src_status: '{{lot}}：「$t(mes.enum.lot_status.{{status}})」のロットは統合できません'
+      diff_product: '{{lot}}：製品が異なります'
+      diff_route: '{{lot}}：ルートまたはルート版数が異なります'
+      diff_step: '{{lot}}：ステップが異なります'
+      diff_stage: '{{lot}}：作業段階が異なります'
+      diff_tracking: '{{lot}}：追跡レベルが異なります'
+      diff_frame: '{{lot}}：サブルート / リワーク階層が異なります'
+      diff_wo: '{{lot}}：作業指示が異なります'
+      diff_priority: '{{lot}}：優先度が異なります'
+      src_no_rule: '{{lot}}：ロットタイプに分割・統合ルールがありません'
+      src_no_merge: '{{lot}}：ルール {{rule}} は統合不可です'
+    chamber_required:
+      none: 設備にチャンバーがありません
+      select: '{{equipment}}：チャンバーを選択してください'
+      selected: '{{chambers}}'
+    chamber_available:
+      none: チャンバーが選択されていません
+      state: '{{chamber}} は {{state}}（{{category}}）'
+      needs: '{{allowed}} が必要です'
+      ok: チャンバー使用可
+    batch_same_step:
+      single: 単一ロット
+      steps: ロットのステップが異なります
+      equipment: ロットの設備が異なります
+      carriers: ロットのキャリアが異なります
+      ok: '{{count}} ロットが同一ステップ'
+    carrier_clean:
+      no_interval: 洗浄周期なし
+      overdue: キャリア {{carrier}} の洗浄期限切れ
+      due_soon: キャリア {{carrier}} の洗浄期限間近
+      clean: キャリア {{carrier}} 洗浄有効
+    carrier_usage:
+      none: 使用回数上限なし
+      limit: キャリア {{carrier}} は {{used}}/{{max}} 回使用済み、先に洗浄してください
+      used: キャリア {{carrier}} 使用 {{used}}/{{max}} 回
+    sort_order:
+      none: ウェーハソートなし
+      changed: ウェーハの順序が変わります
+      kept: ウェーハの順序は維持されます
+    notice:
+      scheduled: 定期通知
+      handover: シフト引継ぎルール
+    future_hold:
+      pending: このステップに予約ホールド {{count}} 件
+      none: 予約ホールドなし
+    hot_lot_limit:
+      not_hot: ホットロットではありません
+      count: 仕掛中のホットロット {{hot}} 件（上限 {{max}}）
+    operator_qualified:
+      ok: '{{user}} は工程 {{operation}} の資格あり'
+      bad: '{{user}} は工程 {{operation}} の資格がありません'
+  checkSep: ；
+  sysNote:
+    qtime_expired: Q-Time {{rule}} 超過：{{minutes}} > {{max}} 分
+    oos: 規格外：{{items}}
+    inherited: '{{lot}} から継承'
+    e10_auto: ロット {{lot}} の$t(mes.exec.stage.{{trigger}})で自動遷移
+  entity:
+    check_rule: チェックルール
+    check_plan: チェックプラン
+    check_plan_item: プランルール
+    check_binding: チェック割当
+    check_log: チェック記録
+    future_hold: 予約ホールド
+    shift_log: シフト引継ぎ
+    operator_qual: 作業者資格
+  field:
+    check_rule:
+      code: コード
+      name: 名称
+      check_type: チェック種別
+      severity: 重大度
+      params: パラメータ（JSON）
+      is_active: 有効
+      description: 説明
+    check_plan:
+      code: コード
+      name: 名称
+      is_active: 有効
+      description: 説明
+    check_plan_item:
+      check_plan: チェックプラン
+      check_rule: チェックルール
+      seq: 順番
+    check_binding:
+      check_plan: チェックプラン
+      trigger: トリガー
+      scope: スコープ
+      route_step: ルートステップ
+      equipment: 設備
+      operation: 工程
+      equipment_type: 設備タイプ
+      product: 製品
+      is_active: 有効
+    check_log:
+      lot: ロット
+      trigger: トリガー
+      route_step: ルートステップ
+      equipment: 設備
+      check_rule: チェックルール
+      check_plan: チェックプラン
+      check_type: チェック種別
+      severity: 重大度
+      result: 結果
+      message: メッセージ
+      context: コンテキスト
+      override_reason: 強制解除理由
+      username: ユーザー
+    future_hold:
+      lot: ロット
+      route_step: ホールド工程
+      reason: 理由コード
+      comment: コメント
+      fh_status: 状態
+      triggered_at: 発動日時
+    shift_log:
+      shift_date: 日付
+      shift: シフト
+      area: エリア
+      summary: 引継ぎ事項
+      open_items: 未完了事項
+      handed_by: 引継ぎ者
+      handed_at: 引継ぎ日時
+      log_status: 状態
+      received_by: 受領者
+      received_at: 受領日時
+      receive_comment: 受領メモ
+    operator_qual:
+      username: ユーザー
+      operation: 工程
+      equipment_type: 設備タイプ
+      certified_on: 認定日
+      expires_on: 有効期限
+      is_active: 有効
+  help:
+    check_rule:
+      params: '例：E10 は {"allowed": ["SBY", "PRD"]}'
+    future_hold:
+      reason: 空欄：既定のホールド理由
+    operator_qual:
+      equipment_type: 空欄：全設備タイプ
+  enum:
+    exec_trigger:
+      move_in: ムーブイン
+      track_in: トラックイン
+      track_out: トラックアウト
+      move_out: ムーブアウト
+      split: 分割
+      merge: 統合
+      jump: ステップジャンプ
+      adjust: 廃棄・追加
+      sort: ウェーハソート
+      priority: 優先度変更
+    check_type:
+      e10_available: 設備 E10 状態使用可
+      eqp_capability: 設備能力・レシピ整合
+      recipe_active: レシピ有効
+      reticle_available: レチクル使用可
+      material_sufficient: 資材充足
+      tool_life: 工具使用可・寿命
+      carrier_available: キャリア使用可
+      batch_same_step: 一括：同一ステップ
+      sort_order: ソート順序維持
+      hot_lot_limit: ホットロット仕掛上限
+      handover_ack_other: 引継ぎは別ユーザーが確認
+      operator_qualified: 作業者資格あり
+      qual_expiry_notice: 資格期限通知
+      future_hold: 予約ホールド
+      wo_due: 作業指示納期通知
+      carrier_clean: キャリア洗浄周期
+      carrier_usage: キャリア使用回数
+      chamber_required: チャンバー選択済
+      chamber_available: チャンバー E10 状態使用可
+      qtime: Q-Time
+      lot_hold: ロット非ホールド
+      wo_status: 作業指示状態
+      dc_complete: データ収集完了
+      oos: 規格外
+      sampling: サンプリング判定
+      split_merge_rule: 分割・統合規則
+      recipe_match: レシピ・設備対応
+      pm_due: 設備 PM 期限内
+      rework_limit: リワーク回数上限
+      qty_adjust_limit: 廃棄・追加数量上限
+    check_severity:
+      block: ブロック
+      warn: 警告
+      off: 無効（管控なし）
+    check_result:
+      pass: 合格
+      warn: 警告
+      block: ブロック
+      overridden: 強制解除
+    check_scope:
+      route_step: ルートステップ
+      equipment: 設備
+      operation: 工程
+      equipment_type: 設備タイプ
+      product: 製品
+    ml_status:
+      available: 使用可
+      hold: ホールド
+      empty: 使用済
+      expired: 期限切れ
+    tool_status:
+      available: 使用可
+      in_use: 使用中
+      pending_maintenance: 保全待ち
+      expired: 期限切れ
+      retired: 廃棄
+    e10_trigger:
+      track_in: トラックイン
+      track_out: トラックアウト（他の処理ロットなし）
+    hold_type:
+      manual: 手動
+      auto: 自動
+      future: 予約ホールド
+    shift_log_status:
+      open: 引継ぎ待ち
+      acknowledged: 引継ぎ済
+    fh_status:
+      active: 待機中
+      triggered: 発動済
+      cancelled: 取消
+    history_action:
+      start: 投入
+      move_in: ムーブイン
+      track_in: トラックイン
+      track_out: トラックアウト
+      move_out: ムーブアウト
+      hold: ホールド
+      release: ホールド解除
+      scrap: スクラップ
+      rework: リワーク
+      branch: 分岐
+      sub_route: サブルート開始
+      return: サブ・リワーク復帰
+      complete: 完了（入庫待ち）
+      receive: 入庫
+      override: チェック強制解除
+      qtime: Q-Time 違反
+      oos: 規格外
+      split: 分割
+      merge: 統合
+      jump: ステップジャンプ
+      bonus: 追加
+      carrier_change: キャリア変更
+      sort: ウェーハソート
+      priority: 優先度変更
+    genealogy_relation:
+      split: 分割
+      merge: 統合

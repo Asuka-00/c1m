@@ -11,7 +11,6 @@ from app.platform.menus.layout import (
     PLATFORM_ITEMS,
     TAB_TITLES,
 )
-from app.platform.menus.layout import titles as titles
 from app.platform.menus.models import Menu
 from app.platform.menus.schemas import MenuNode, MenuTab, PermNode
 from app.platform.rbac.models import Permission
@@ -61,7 +60,7 @@ def merged_tabs(key: str) -> list[MenuTab]:
     return [
         MenuTab(
             key=t,
-            title=TAB_TITLES[t].split("|")[0],
+            title=TAB_TITLES[t],
             component=defs[t][2],
             permission=defs[t][3],
         )
@@ -78,13 +77,12 @@ def registry_menus() -> list[MenuTuple]:
     """注册表菜单 ``(key, parent, title, path, icon, component, order, permission)``，分组在前。"""
     defs = _defs()
     out: list[MenuTuple] = [
-        (g, None, lbl.split("|")[0], None, icon, None, order, None)
-        for g, lbl, icon, order in GROUPS
+        (g, None, lbl, None, icon, None, order, None) for g, lbl, icon, order in GROUPS
     ]
     for g, items in ITEMS.items():
         for i, (key, lbl) in enumerate(items):
             path, icon, comp, p = defs[key] if key not in MERGED else _merged(key)
-            out.append((key, g, lbl.split("|")[0], path, icon, comp, i * 10, p))
+            out.append((key, g, lbl, path, icon, comp, i * 10, p))
     return out
 
 
@@ -108,12 +106,12 @@ def platform_menus() -> list[MenuTuple]:
     平台菜单的访问权限见 ``PLATFORM_MENU_PERMS``（超级用户可见全部）。
     """
     out: list[MenuTuple] = [
-        (g, None, lbl.split("|")[0], None, icon, None, order, None)
+        (g, None, lbl, None, icon, None, order, None)
         for g, lbl, icon, order in PLATFORM_GROUPS
     ]
     for i, (key, (g, lbl, path, icon, comp)) in enumerate(PLATFORM_ITEMS.items()):
         p = PLATFORM_MENU_PERMS.get(key)
-        out.append((key, g, lbl.split("|")[0], path, icon, comp, i * 10, p))
+        out.append((key, g, lbl, path, icon, comp, i * 10, p))
     return out
 
 

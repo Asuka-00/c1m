@@ -10,14 +10,66 @@ import sqlalchemy as sa
 from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.models import actor_name
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, ENUMS, TABLES
+from app.core.spec.errors import fe, http_422
 from app.mes.common.query import find, jsonable, one
 
 Row = dict[str, Any]
-Outcome = tuple[str, str, Row]  # ("pass" | "fail" | "warn" | "na", 消息, 数据)
+
+
+@dataclass(frozen=True)
+class Msg:
+    """检查结果说明：消息键 + 参数，前端按 ``mes.checkMsg.<key>`` 翻译。
+
+    Attributes:
+        key: ``<命名空间>.<键>``（命名空间一般为检查类型编码）。
+        text: 英文说明（写入检查日志，前端缺译文时兜底）。
+        params: 插值参数。
+    """
+
+    key: str
+    text: str
+    params: Row
+
+
+#: 全部消息模板 ``{"<命名空间>.<键>": 英文模板}``（导出到前端 code 清单）
+MESSAGES: dict[str, str] = {}
+Text = str | Msg | list[Msg]
+Outcome = tuple[str, Text, Row]  # ("pass" | "fail" | "warn" | "na", 说明, 数据)
+
+
+def messages(ns: str, **templates: str) -> Callable[..., Msg]:
+    """登记一组消息模板（``str.format`` 占位符），返回按键生成 :class:`Msg` 的函数。
+
+    Args:
+        ns: 命名空间（检查类型编码，或 ``common``）。
+        templates: ``键=英文模板``。
+    """
+    for k, v in templates.items():
+        MESSAGES[f"{ns}.{k}"] = v
+
+    def make(key: str, **params: Any) -> Msg:
+        full = f"{ns}.{key}"
+        return Msg(full, MESSAGES[full].format(**params), params)
+
+    return make
+
+
+def _parts(msg: Text) -> list[Msg]:
+    if isinstance(msg, Msg):
+        return [msg]
+    return msg if isinstance(msg, list) else []
+
+
+M = messages(
+    "registry",
+    not_implemented="check type not implemented",
+    disabled="control disabled by rule {rule}",
+)
 
 
 # ---------------- context ----------------
@@ -222,14 +274,14 @@ class CheckBlocked(HTTPException):
         """以检查结果列表构造 409 响应。"""
         self.results = results
         super().__init__(
-            status_code=409, detail={"code": "check_blocked", "results": results}
+            status_code=409, detail={"code": ec.CHECK_BLOCKED, "results": results}
         )
 
 
 def result(
     check: str,
     outcome: str,
-    msg: str,
+    msg: Text,
     *,
     severity: str = "block",
     rule: Row | None = None,
@@ -242,7 +294,7 @@ def result(
     Args:
         check: 检查类型编码。
         outcome: ``pass`` / ``warn`` / ``fail`` / ``na``（fail 按 severity 映射为 block 或 warn，na 视为不适用）。
-        msg: 说明。
+        msg: 说明：消息（:class:`Msg`）、多条消息（逐条翻译后拼接）或纯文本。
         severity: 规则配置的严重度。
         rule: 来源规则。
         plan: 来源方案。
@@ -250,6 +302,8 @@ def result(
         overridable: 阻断时是否允许有权限者强制放行。
     """
     res = {"fail": severity, "warn": "warn", "pass": "pass", "na": "pass"}[outcome]
+    parts = _parts(msg)
+    text = "; ".join(p.text for p in parts) if parts else str(msg)
     return {
         "check_type": check,
         "rule_id": rule and str(rule["id"]),
@@ -260,7 +314,8 @@ def result(
         "severity": severity,
         "result": res,
         "applicable": outcome != "na",
-        "message": msg,
+        "message": text,
+        "msg_parts": [{"key": p.key, "params": jsonable(p.params)} for p in parts],
         "overridable": overridable,
         "data": jsonable(data or {}),
     }
@@ -276,7 +331,7 @@ def run(ctx: Ctx) -> list[Row]:
                 result(
                     rule["check_type"],
                     "warn",
-                    "check type not implemented",
+                    M("not_implemented"),
                     rule=rule,
                     plan=plan,
                 )
@@ -287,7 +342,7 @@ def run(ctx: Ctx) -> list[Row]:
                 result(
                     rule["check_type"],
                     "na",
-                    f"control disabled by rule {rule['code']}",
+                    M("disabled", rule=rule["code"]),
                     severity="warn",
                     rule=rule,
                     plan=plan,
@@ -342,15 +397,8 @@ def evaluate(
     # 仅当所有阻断都可放行（无硬阻断）且非预览时才允许强制放行
     do_override = bool(override and blocks and not hard and not preview)
     if do_override and not (reason or "").strip():
-        raise HTTPException(
-            status_code=422,
-            detail=[
-                {
-                    "loc": ["body", "override_reason"],
-                    "msg": "override_reason: required",
-                    "type": "value_error",
-                }
-            ],
+        raise http_422(
+            [fe("override_reason", ec.FIELD_REQUIRED, "override_reason: required")]
         )
     if do_override:
         for r in blocks:
@@ -372,7 +420,11 @@ def evaluate(
                 severity=r["severity"],
                 result=r["result"],
                 message=r["message"][:500],
-                context={"preview": preview, **r["data"]},
+                context={
+                    "preview": preview,
+                    "msg_parts": r.get("msg_parts") or [],
+                    **r["data"],
+                },
                 override_reason=reason if r["result"] == "overridden" else None,
                 username=email,
                 created_at=ctx.at,

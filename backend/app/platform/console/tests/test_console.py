@@ -100,7 +100,9 @@ def test_tenant_lifecycle(
     )
     assert r.status_code == 200
     r = client.get(f"{API}/tenants/{tid}", headers=ho)
-    assert r.status_code == 403 and r.json()["detail"] == "Tenant has expired"
+    assert (
+        r.status_code == 403 and r.json()["detail"]["message"] == "Tenant has expired"
+    )
     # 停用
     r = client.patch(
         f"{API}/platform/tenants/{tid}",

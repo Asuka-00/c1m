@@ -6,13 +6,15 @@ from typing import Any
 import sqlalchemy as sa
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, TABLES
-from app.core.spec.errors import http_422
+from app.core.spec.errors import FieldError, fe, http_422
 from app.mes.common.query import one
 from app.mes.common.rows import _upd
 from app.mes.execution.checks import service as ck
+from app.mes.execution.checks.types import M_RW
 from app.mes.execution.context import build_ctx
 from app.mes.execution.stage_common import _brief, _ov, _result
 from app.mes.lot.service import TERMINAL, history, lock_lot
@@ -53,11 +55,14 @@ def rework_limit_result(ctx: ck.Ctx) -> Row | None:
         return ck.result(
             "rework_limit",
             "fail",
-            f"rework limit reached at step {ctx.step['seq']}: {n} / {mx}",
+            M_RW("reached", step=ctx.step["seq"], count=n, max=mx),
             data={"count": n, "max": mx},
         )
     return ck.result(
-        "rework_limit", "pass", f"rework {n + 1} / {mx}", data={"count": n, "max": mx}
+        "rework_limit",
+        "pass",
+        M_RW("ok", next=n + 1, max=mx),
+        data={"count": n, "max": mx},
     )
 
 
@@ -83,28 +88,55 @@ def jump(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) ->
     if lot["lot_status"] in TERMINAL or lot["lot_status"] != "waiting":
         raise http_422(
             [
-                (
+                fe(
                     "lot_status",
+                    ec.JUMP_STATUS,
                     f"lot_status: only waiting lots can jump ({lot['lot_status']})",
+                    status=lot["lot_status"],
                 )
             ]
         )
     if lot["on_hold"]:
-        raise http_422([("on_hold", "on_hold: lot is on hold; release it first")])
+        raise http_422(
+            [fe("on_hold", ec.ON_HOLD, "on_hold: lot is on hold; release it first")]
+        )
     cur = one(s, tid, "route_step", lot["current_step_id"])
     to = one(s, tid, "route_step", body.get("to_step_id"))
-    errs: list[tuple[str, str]] = []
+    errs: list[FieldError] = []
     if not cur or not to or to["route_id"] != cur["route_id"]:
-        errs.append(("to_step_id", "to_step_id: must be a step of the current route"))
+        errs.append(
+            fe(
+                "to_step_id",
+                ec.JUMP_STEP_ROUTE,
+                "to_step_id: must be a step of the current route",
+            )
+        )
     elif to["id"] == cur["id"]:
-        errs.append(("to_step_id", "to_step_id: already at this step"))
+        errs.append(
+            fe("to_step_id", ec.JUMP_SAME_STEP, "to_step_id: already at this step")
+        )
     elif not to.get("operation_id"):
-        errs.append(("to_step_id", "to_step_id: target must be an operation step"))
+        errs.append(
+            fe(
+                "to_step_id",
+                ec.JUMP_STEP_OPERATION,
+                "to_step_id: target must be an operation step",
+            )
+        )
     reason = one(s, tid, "reason_code", body.get("reason_id"))
     if not reason or reason["reason_type"] != "jump":
-        errs.append(("reason_id", "reason_id: a jump reason code is required"))
+        errs.append(
+            fe(
+                "reason_id",
+                ec.REASON_REQUIRED,
+                "reason_id: a jump reason code is required",
+                type="jump",
+            )
+        )
     elif reason.get("comment_required") and not (body.get("comment") or "").strip():
-        errs.append(("comment", "comment: required by this reason code"))
+        errs.append(
+            fe("comment", ec.COMMENT_REQUIRED, "comment: required by this reason code")
+        )
     if errs:
         raise http_422(errs)
     assert cur and to and reason

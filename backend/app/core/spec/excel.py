@@ -15,8 +15,10 @@ from fastapi import HTTPException
 from openpyxl import Workbook, load_workbook
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.base import conn, table
 from app.core.spec.engine import ENTITIES, Entity
+from app.core.spec.errors import CoerceError, coded
 from app.core.spec.query import all_rows
 from app.core.spec.serialize import to_json
 from app.core.spec.validate import attr_defs
@@ -125,6 +127,27 @@ def _resolve(session: Session, tenant_id: uuid.UUID, target: Entity, raw: str) -
     return c.execute(stmt.limit(1)).scalar()
 
 
+def _row_errors(n: int, d: Any) -> list[dict[str, Any]]:
+    """把一行的 HTTPException 详情展开为行错误（保留错误码与参数供前端翻译）。"""
+    if isinstance(d, list):
+        out = []
+        for x in d:
+            item: dict[str, Any] = {"row": n, "msg": x.get("msg", "")}
+            if x.get("code"):
+                item["code"], item["params"] = x["code"], x.get("params") or {}
+            loc = x.get("loc") or []
+            if loc:
+                item["field"] = str(loc[-1])
+            out.append(item)
+        return out
+    if isinstance(d, dict):
+        item = {"row": n, "msg": str(d.get("message", ""))}
+        if d.get("code"):
+            item["code"], item["params"] = d["code"], d.get("params") or {}
+        return [item]
+    return [{"row": n, "msg": str(d)}]
+
+
 def import_xlsx(
     session: Session, tenant_id: uuid.UUID, e: Entity, data: bytes, user: Any
 ) -> dict[str, int]:
@@ -144,21 +167,24 @@ def import_xlsx(
         HTTPException: 任一行校验失败（422，消息带行号）。
     """
     if e.readonly:
-        raise HTTPException(status_code=405, detail="Read-only entity")
+        raise coded(405, ec.READ_ONLY_ENTITY, "Read-only entity")
     try:
         wb = load_workbook(io.BytesIO(data), read_only=True, data_only=True)
     except Exception as ex:  # noqa: BLE001 - any parse error is a bad upload
-        raise HTTPException(status_code=400, detail="Not a valid .xlsx file") from ex
+        raise coded(400, ec.NOT_A_VALID_XLSX_FILE, "Not a valid xlsx file") from ex
     ws = wb.worksheets[0]
     it = ws.iter_rows(values_only=True)
     header = [str(h).strip() if h is not None else "" for h in next(it, ())]
     if not header or not any(header):
-        raise HTTPException(status_code=400, detail="Empty sheet")
+        raise coded(400, ec.EMPTY_SHEET, "Empty sheet")
     known = set(columns(session, tenant_id, e)) | {""}
     unknown = [h for h in header if h not in known]
     if unknown:
-        raise HTTPException(
-            status_code=422, detail=f"Unknown columns: {', '.join(unknown)}"
+        raise coded(
+            422,
+            ec.IMPORT_UNKNOWN_COLUMNS,
+            f"Unknown columns: {', '.join(unknown)}",
+            columns=", ".join(unknown),
         )
     errors: list[dict[str, Any]] = []
     created = updated = 0
@@ -166,7 +192,14 @@ def import_xlsx(
     nested = session.begin_nested()
     for n, values in enumerate(it, start=2):
         if n > MAX_ROWS + 1:
-            errors.append({"row": n, "msg": f"too many rows (max {MAX_ROWS})"})
+            errors.append(
+                {
+                    "row": n,
+                    "msg": f"too many rows (max {MAX_ROWS})",
+                    "code": ec.IMPORT_TOO_MANY_ROWS,
+                    "params": {"max": MAX_ROWS},
+                }
+            )
             break
         raw = dict(zip(header, values, strict=False))
         if all(v in (None, "") for v in raw.values()):
@@ -185,7 +218,12 @@ def import_xlsx(
                 if f and f.type == "ref" and v not in (None, ""):
                     rid = _resolve(session, tenant_id, ENTITIES[f.ref or ""], str(v))
                     if rid is None:
-                        raise ValueError(f"{k}: '{v}' not found")
+                        raise CoerceError(
+                            ec.REF_VALUE_NOT_FOUND,
+                            f"{k}: '{v}' not found",
+                            field=k,
+                            value=str(v),
+                        )
                     payload[f.column] = rid
                 elif f and f.type == "json" and isinstance(v, str) and v.strip():
                     payload[k] = json.loads(v)
@@ -222,13 +260,11 @@ def import_xlsx(
                 create_row(session, tenant_id, e, payload, user, commit=False)
                 created += 1
         except HTTPException as ex:
-            d = ex.detail
-            msg = (
-                "; ".join(x.get("msg", "") for x in d)
-                if isinstance(d, list)
-                else str(d)
+            errors.extend(_row_errors(n, ex.detail))
+        except CoerceError as ex:
+            errors.append(
+                {"row": n, "msg": str(ex), "code": ex.code, "params": ex.params}
             )
-            errors.append({"row": n, "msg": msg})
         except (ValueError, TypeError) as ex:
             errors.append({"row": n, "msg": str(ex)})
     if errors:

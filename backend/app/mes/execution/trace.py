@@ -5,11 +5,12 @@ from datetime import UTC, datetime
 from typing import Any
 
 import sqlalchemy as sa
-from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.base import conn
 from app.core.spec.engine import TABLES
+from app.core.spec.errors import coded
 from app.mes.common.query import find, jsonable, one
 
 Row = dict[str, Any]
@@ -146,7 +147,12 @@ def trace(s: Session, tid: uuid.UUID, kind: str, code: str) -> Row:
         物料批：``{target, lots}``（消耗了该物料批的批次及其下游产出）。
     """
     if kind not in KINDS:
-        raise HTTPException(status_code=422, detail=f"kind must be one of {KINDS}")
+        raise coded(
+            422,
+            ec.TRACE_KIND_INVALID,
+            f"kind must be one of {KINDS}",
+            allowed=", ".join(KINDS),
+        )
     t = TABLES[kind]
     hit = (
         conn(s)
@@ -155,14 +161,16 @@ def trace(s: Session, tid: uuid.UUID, kind: str, code: str) -> Row:
         .first()
     )
     if not hit:
-        raise HTTPException(status_code=404, detail=f"{kind} {code} not found")
+        raise coded(
+            404, ec.TRACE_NOT_FOUND, f"{kind} {code} not found", kind=kind, code=code
+        )
     tgt = dict(hit)
     h = TABLES["lot_history"]
     out: Row = {"kind": kind, "target": {"id": str(tgt["id"]), "code": tgt["code"]}}
     if kind in ("lot", "wafer"):
         lot = tgt if kind == "lot" else one(s, tid, "lot", tgt["lot_id"])
         if not lot:
-            raise HTTPException(status_code=404, detail="lot not found")
+            raise coded(404, ec.LOT_NOT_FOUND, "lot not found")
         out["target"]["lot"] = lot["code"]
         out["target"]["lot_id"] = str(lot["id"])
         out |= _lot_trace(s, tid, lot)
@@ -223,7 +231,7 @@ def wafer_history(s: Session, tid: uuid.UUID, wafer_id: uuid.UUID) -> list[Row]:
 
     w = one(s, tid, "wafer", wafer_id)
     if not w:
-        raise HTTPException(status_code=404, detail="Record not found")
+        raise coded(404, ec.RECORD_NOT_FOUND, "Record not found")
     h = TABLES["lot_history"]
     spans = [
         sa.and_(
@@ -261,7 +269,7 @@ def wafer_map(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
     """
     lot = one(s, tid, "lot", lot_id)
     if not lot:
-        raise HTTPException(status_code=404, detail="Record not found")
+        raise coded(404, ec.RECORD_NOT_FOUND, "Record not found")
     cap = 25
     car = lot["carrier_id"] and one(s, tid, "carrier", lot["carrier_id"])
     ct = car and one(s, tid, "carrier_type", car["carrier_type_id"])

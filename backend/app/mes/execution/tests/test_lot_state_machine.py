@@ -12,6 +12,7 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from sqlmodel import Session, text
 
+from app.core import error_codes as ec
 from app.core.db import engine
 from app.mes.execution import hold as hold_svc
 from app.mes.execution import merge as merge_mod
@@ -229,7 +230,7 @@ def test_b03_split_all_rejected(client: TestClient, db: Session) -> None:
     (lot,) = f.start(2)
     us = [u["id"] for u in f.ctx(lot)["units"]]
     r = f.post(f"{EXEC}/lots/{lot['id']}/split", {"children": [{"unit_ids": us}]}, 422)
-    assert "lot_status" in str(r) and f.lot(lot)["qty"] == 2
+    assert r["detail"]["code"] == ec.LOT_STATUS and f.lot(lot)["qty"] == 2
 
 
 def test_b07_split_running_rejected(client: TestClient, db: Session) -> None:
@@ -251,12 +252,12 @@ def test_b11_b13_merge_duplicate_or_self_rejected(
     a, b = f.start(2, 2)
     url = f"{EXEC}/lots/{a['id']}/merge"
     d = f.post(url, {"source_lot_ids": [b["id"], b["id"]]}, 422)["detail"]
-    assert d["code"] == "merge_source_invalid" and d["duplicates"] == [b["id"]]
+    assert d["code"] == ec.MERGE_SOURCE_INVALID and d["duplicates"] == [b["id"]]
     assert not d["includes_target"] and d["message"]
     d = f.post(url, {"source_lot_ids": [b["id"], a["id"]]}, 422)["detail"]  # B12
-    assert d["code"] == "merge_source_invalid" and d["includes_target"]
+    assert d["code"] == ec.MERGE_SOURCE_INVALID and d["includes_target"]
     d = f.post(url, {"source_lot_ids": [a["id"]]}, 422)["detail"]  # B11
-    assert d["code"] == "merge_source_invalid"
+    assert d["code"] == ec.MERGE_SOURCE_INVALID
     assert f.lot(b)["lot_status"] == "waiting" and f.lot(a)["qty"] == 2
 
 
@@ -273,7 +274,7 @@ def test_k04_lock_timeout_409_lot_busy(
     with _session(f.m.tid) as a:
         lock_lot(a, tid, uuid.UUID(lot["id"]))
         r = f.stage(lot, "move_in", 409, equipment_id=f.eq["id"])
-        assert r["detail"]["code"] == "lot_busy"
+        assert r["detail"]["code"] == ec.LOT_BUSY
         a.rollback()
     assert f.lot(lot)["lot_status"] == "waiting"
 
@@ -301,7 +302,7 @@ def test_p15_scrap_to_zero_keeps_hold(client: TestClient, db: Session) -> None:
 def _field(r: Any) -> str:
     d = r["detail"]
     assert d["message"]  # N5：{code, message, ...}
-    return str(d["code"])
+    return ec.CODES[d["code"]].lower()
 
 
 def test_b08_merge_different_status_rejected(client: TestClient, db: Session) -> None:
@@ -351,7 +352,7 @@ def test_n4_rule_mismatch_still_409(client: TestClient, db: Session) -> None:
     f = _line(client, db)
     a, b = f.start(2, 2)
     f.run_step(b)
-    assert merge(f, a, [b], 409)["detail"]["code"] == "check_blocked"
+    assert merge(f, a, [b], 409)["detail"]["code"] == ec.CHECK_BLOCKED
 
 
 def test_x03_duplicate_track_out_without_key(client: TestClient, db: Session) -> None:
@@ -362,7 +363,7 @@ def test_x03_duplicate_track_out_without_key(client: TestClient, db: Session) ->
     f.stage(lot, "track_in", equipment_id=f.eq["id"])
     f.stage(lot, "track_out")
     r = f.stage(lot, "track_out", 422)
-    assert r["detail"]["code"] == "lot_status"
+    assert r["detail"]["code"] == ec.LOT_STATUS
     assert f.lot(lot)["lot_status"] == "tracked_out"
 
 
@@ -411,11 +412,11 @@ def test_n5_error_shapes(client: TestClient, db: Session) -> None:
     f = Line(client, db)
     (lot,) = f.start(1)
     d = f.stage(lot, "track_in", 422)["detail"]
-    assert d["code"] == "lot_status" and d["action"] == "track_in"
+    assert d["code"] == ec.LOT_STATUS and d["action"] == "track_in"
     assert d["lot_status"] == "waiting" and d["lot_id"] == lot["id"] and d["message"]
     _hold(f, lot)
     d = f.stage(lot, "move_in", 422, equipment_id=f.eq["id"])["detail"]
-    assert d["code"] == "on_hold" and d["message"]
+    assert d["code"] == ec.ON_HOLD and d["message"]
 
 
 @pytest.mark.parametrize("status", ["completed", "stored"])
@@ -435,4 +436,4 @@ def test_m2_merged_manual_hold_rejected(client: TestClient, db: Session) -> None
     f = Line(client, db)
     (lot,) = f.start(1)
     f.sql("UPDATE mes_lot SET lot_status='merged' WHERE id=:i", i=lot["id"])
-    assert _hold(f, lot, 422)["detail"]["code"] == "lot_status"
+    assert _hold(f, lot, 422)["detail"]["code"] == ec.LOT_STATUS

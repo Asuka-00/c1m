@@ -6,7 +6,8 @@ from typing import Any
 from fastapi import HTTPException
 from sqlmodel import Session
 
-from app.core.spec.errors import http_422
+from app.core import error_codes as ec
+from app.core.spec.errors import fe, http_422
 from app.mes.common.query import find, one
 
 Row = dict[str, Any]
@@ -95,7 +96,7 @@ def next_location(
             raise HTTPException(
                 status_code=422,
                 detail={
-                    "code": "rework_route_missing",
+                    "code": ec.REWORK_ROUTE_MISSING,
                     "message": "this step has no rework route",
                     "route_step_id": str(step["id"]),
                     "step_seq": step.get("seq"),
@@ -103,7 +104,15 @@ def next_location(
             )
         steps = route_steps(s, tid, step["rework_route_id"])
         if not steps:
-            raise http_422([("rework", "rework: rework route has no steps")])
+            raise http_422(
+                [
+                    fe(
+                        "rework",
+                        ec.REWORK_ROUTE_EMPTY,
+                        "rework: rework route has no steps",
+                    )
+                ]
+            )
         rt = one(s, tid, "route", step["rework_route_id"])
         stack.append(
             {
@@ -117,7 +126,9 @@ def next_location(
         return enter_route(s, tid, steps[0], stack, ev), stack, ev
     if branch:
         if step["branch_to_seq"] is None:
-            raise http_422([("branch", "branch: this step has no branch")])
+            raise http_422(
+                [fe("branch", ec.BRANCH_NONE, "branch: this step has no branch")]
+            )
         tgt = next(
             (
                 x
@@ -128,7 +139,14 @@ def next_location(
         )
         if tgt is None:
             raise http_422(
-                [("branch", f"branch: target seq {step['branch_to_seq']} not found")]
+                [
+                    fe(
+                        "branch",
+                        ec.BRANCH_TARGET_MISSING,
+                        f"branch: target seq {step['branch_to_seq']} not found",
+                        target=step["branch_to_seq"],
+                    )
+                ]
             )
         ev.append(
             {

@@ -23,9 +23,9 @@ export function ErrorPage({
         {!minimal && (
           <h1 className='text-[7rem] leading-tight font-bold'>{code}</h1>
         )}
-        <span className='font-medium'>{t(`errors.${code}.title`)}</span>
+        <span className='font-medium'>{t(`error.${code}.title`)}</span>
         <p className='max-w-sm text-center text-muted-foreground'>
-          {t(`errors.${code}.desc`)}
+          {t(`error.${code}.desc`)}
         </p>
         {code !== 503 && (
           <div className='mt-6 flex gap-4'>

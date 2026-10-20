@@ -4,14 +4,14 @@ import uuid
 from datetime import date
 from typing import Any
 
-from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.models import actor_name
 from app.core.spec.audit import audit
 from app.core.spec.base import now
 from app.core.spec.engine import ENTITIES
-from app.core.spec.errors import http_422
+from app.core.spec.errors import coded, fe, http_422
 from app.mes.common.query import find, jsonable, one
 from app.mes.common.rows import _ins, _upd
 from app.mes.common.switch import switch
@@ -52,11 +52,11 @@ def create(s: Session, tid: uuid.UUID, body: Row, user: Any) -> Row:
     """登记交班：日期、班次、区域（可选）、交接事项、未结事项。"""
     errs = []
     if not one(s, tid, "shift", body.get("shift_id")):
-        errs.append(("shift_id", "shift_id: not found"))
+        errs.append(fe("shift_id", ec.SHIFT_NOT_FOUND, "shift_id: not found"))
     if body.get("area_id") and not one(s, tid, "area", body["area_id"]):
-        errs.append(("area_id", "area_id: not found"))
+        errs.append(fe("area_id", ec.AREA_NOT_FOUND, "area_id: not found"))
     if not (body.get("summary") or "").strip():
-        errs.append(("summary", "summary: required"))
+        errs.append(fe("summary", ec.SUMMARY_REQUIRED, "summary: required"))
     if errs:
         raise http_422(errs)
     rid = _ins(
@@ -85,13 +85,15 @@ def acknowledge(
     """接班确认（「接班须由他人确认」管控开启时，交班人不能自己确认）。"""
     row = one(s, tid, "shift_log", rid)
     if not row:
-        raise HTTPException(404, "shift log not found")
+        raise coded(404, ec.SHIFT_LOG_NOT_FOUND, "shift log not found")
     if row["log_status"] != "open":
-        raise HTTPException(409, "already acknowledged")
+        raise coded(409, ec.ALREADY_ACKNOWLEDGED, "already acknowledged")
     if switch(s, tid, "handover_ack_other") is not None and row[
         "created_by"
     ] == getattr(user, "id", None):
-        raise http_422([("received_by", "received_by: must be another user")])
+        raise http_422(
+            [fe("received_by", ec.ACK_OTHER_USER, "received_by: must be another user")]
+        )
     vals = {
         "log_status": "acknowledged",
         "received_by": actor_name(user),

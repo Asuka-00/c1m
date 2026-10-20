@@ -5,11 +5,12 @@ from collections import deque
 from typing import Any
 
 import sqlalchemy as sa
-from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.base import conn
 from app.core.spec.engine import TABLES
+from app.core.spec.errors import coded
 
 Edge = tuple[float, float]  # 目标值 = 源值 * factor + offset
 
@@ -52,6 +53,4 @@ def convert(
                 return {"value": nv, "path": [str(p) for p in [*path, nxt]]}
             seen.add(nxt)
             q.append((nxt, nv, [*path, nxt]))
-    raise HTTPException(
-        status_code=422, detail="No conversion path between these units"
-    )
+    raise coded(422, ec.UOM_NO_CONVERSION, "No conversion path between these units")

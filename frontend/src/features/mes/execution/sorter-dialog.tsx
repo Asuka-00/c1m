@@ -9,6 +9,7 @@ import {
   execApi,
   type CarrierRow,
 } from '@/lib/api/mes/execution'
+import { checkMessage } from '@/lib/backend-text'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -75,8 +76,8 @@ export function SorterDialog({
         b
           ? b
               .filter((r) => r.result === 'block')
-              .map((r) => r.message)
-              .join('; ')
+              .map(checkMessage)
+              .join(t('mes.checkSep'))
           : mesErrorMessage(e, undefined)
       )
     },

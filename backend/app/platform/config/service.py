@@ -12,6 +12,7 @@ from typing import Any
 
 from sqlmodel import Session, select
 
+from app.core import error_codes as ec
 from app.platform.config.models import ConfigGroup, ConfigItem, ConfigValueType
 
 T = ConfigValueType
@@ -23,7 +24,7 @@ TENANT_OVERRIDABLE_GROUPS = {"branding"}
 # 配置项：(编码, 名称, 类型, 默认值, 是否公开, 选项, 校验, 描述)
 DEFAULT_CONFIG: dict[str, tuple[str, str, str, int, list[tuple[Any, ...]]]] = {
     "branding": (
-        "产品品牌",
+        "Product branding",
         "config.groups.branding",
         "Product name, logo and footer shown on the login page, sidebar and browser tab.",
         0,
@@ -111,7 +112,7 @@ DEFAULT_CONFIG: dict[str, tuple[str, str, str, int, list[tuple[Any, ...]]]] = {
         ],
     ),
     "notification": (
-        "通知渠道",
+        "Notification channels",
         "config.groups.notification",
         "Platform-wide switches for notification channels (platform admins only).",
         20,
@@ -129,7 +130,7 @@ DEFAULT_CONFIG: dict[str, tuple[str, str, str, int, list[tuple[Any, ...]]]] = {
         ],
     ),
     "security": (
-        "安全",
+        "Security",
         "config.groups.security",
         "Platform sign-in policies (stored settings; platform admins only).",
         10,
@@ -221,9 +222,18 @@ _URL = re.compile(r"^(https?://[^\s]+|/[^\s]*)$")
 
 
 class ConfigValidationError(ValueError):
-    """配置值校验失败。"""
+    """配置值校验失败（带错误码与参数，前端按 ``error.code_<code>`` 翻译）。
 
-    pass
+    Attributes:
+        code: 错误码。
+        params: 插值参数。
+    """
+
+    def __init__(self, code: int, msg: str, **params: Any) -> None:
+        """以错误码、英文消息与参数构造。"""
+        super().__init__(msg)
+        self.code = code
+        self.params = params
 
 
 def validate_value(item: ConfigItem, value: Any) -> Any:
@@ -243,40 +253,52 @@ def validate_value(item: ConfigItem, value: Any) -> Any:
     t = item.value_type
     if value is None:
         if rules.get("required") and item.default_value in (None, ""):
-            raise ConfigValidationError("is required")
+            raise ConfigValidationError(ec.FIELD_REQUIRED, "is required")
         return item.default_value
     if t in (T.string, T.text, T.color, T.url, T.image, T.file, T.select):
         if not isinstance(value, str):
-            raise ConfigValidationError("must be a string")
+            raise ConfigValidationError(ec.CFG_NOT_STRING, "must be a string")
         value = value.strip() if t != T.text else value
         if rules.get("required") and not value:
-            raise ConfigValidationError("is required")
+            raise ConfigValidationError(ec.FIELD_REQUIRED, "is required")
         if (mx := rules.get("max_length")) and len(value) > mx:
-            raise ConfigValidationError(f"must be at most {mx} characters")
+            raise ConfigValidationError(
+                ec.STR_TOO_LONG, f"must be at most {mx} characters", max=mx
+            )
         if value and t == T.color and not _COLOR.match(value):
-            raise ConfigValidationError("must be a hex color like #1e40af")
+            raise ConfigValidationError(
+                ec.CFG_BAD_COLOR, "must be a hex color like #1e40af"
+            )
         if value and t in (T.url, T.image, T.file) and not _URL.match(value):
-            raise ConfigValidationError("must be an http(s) URL or an absolute path")
+            raise ConfigValidationError(
+                ec.CFG_BAD_URL, "must be an http(s) URL or an absolute path"
+            )
         if t == T.select and value not in {o["value"] for o in item.options or []}:
-            raise ConfigValidationError("is not one of the allowed options")
+            raise ConfigValidationError(
+                ec.CFG_BAD_OPTION, "is not one of the allowed options"
+            )
         return value
     if t == T.number:
         if isinstance(value, bool) or not isinstance(value, int | float):
-            raise ConfigValidationError("must be a number")
+            raise ConfigValidationError(ec.NOT_NUMBER, "must be a number")
         if (mn := rules.get("min")) is not None and value < mn:
-            raise ConfigValidationError(f"must be >= {mn}")
+            raise ConfigValidationError(ec.FIELD_MIN, f"must be >= {mn}", min=mn)
         if (mx := rules.get("max")) is not None and value > mx:
-            raise ConfigValidationError(f"must be <= {mx}")
+            raise ConfigValidationError(ec.FIELD_MAX, f"must be <= {mx}", max=mx)
         return value
     if t == T.boolean:
         if not isinstance(value, bool):
-            raise ConfigValidationError("must be true or false")
+            raise ConfigValidationError(ec.NOT_BOOL, "must be true or false")
         return value
     if t == T.json:
         if isinstance(value, str):  # 也接受文本形式的 JSON 文档
             try:
                 return json.loads(value)
             except json.JSONDecodeError as e:
-                raise ConfigValidationError(f"is not valid JSON ({e.msg})") from e
+                raise ConfigValidationError(
+                    ec.CFG_INVALID_JSON, f"is not valid JSON ({e.msg})", error=e.msg
+                ) from e
         return value
-    raise ConfigValidationError("has an unsupported type")  # pragma: no cover
+    raise ConfigValidationError(  # pragma: no cover
+        ec.CFG_UNSUPPORTED_TYPE, "has an unsupported type"
+    )

@@ -7,6 +7,7 @@ from typing import Any
 import sqlalchemy as sa
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.base import Row, conn, table
 from app.core.spec.engine import (
     ENTITIES,
@@ -14,6 +15,7 @@ from app.core.spec.engine import (
     Entity,
     F,
 )
+from app.core.spec.errors import CoerceError
 
 
 # ---------------- (de)serialization ----------------
@@ -26,11 +28,27 @@ def to_json(v: Any) -> Any:
     return v
 
 
+def _num(fn: Any, v: Any, code: int, msg: str) -> Any:
+    """转换数字，失败时抛带错误码的 :class:`CoerceError`。"""
+    try:
+        return fn(v)
+    except (ValueError, TypeError) as ex:
+        raise CoerceError(code, msg) from ex
+
+
+def _parse(code: int, fn: Any, raw: str) -> Any:
+    """解析日期 / 时间 / UUID，失败时抛带错误码的 :class:`CoerceError`。"""
+    try:
+        return fn(raw)
+    except ValueError as ex:
+        raise CoerceError(code, f"invalid value: {raw}") from ex
+
+
 def coerce(f: F, v: Any) -> Any:
     """把原始 JSON / xlsx 值转换为字段对应的 Python 值。
 
     Raises:
-        ValueError: 值不符合字段类型。
+        CoerceError: 值不符合字段类型（ValueError 子类，带错误码）。
     """
     if v is None or (isinstance(v, str) and v.strip() == "" and f.type != "json"):
         return None
@@ -38,16 +56,20 @@ def coerce(f: F, v: Any) -> Any:
         case "str" | "text":
             s = str(v).strip() if f.type == "str" else str(v)
             if f.type == "str" and len(s) > f.max_length:
-                raise ValueError(f"at most {f.max_length} characters")
+                raise CoerceError(
+                    ec.STR_TOO_LONG,
+                    f"at most {f.max_length} characters",
+                    max=f.max_length,
+                )
             return s
         case "int":
             if isinstance(v, bool) or (isinstance(v, float) and not v.is_integer()):
-                raise ValueError("must be an integer")
-            return int(v)
+                raise CoerceError(ec.NOT_INTEGER, "must be an integer")
+            return _num(int, v, ec.NOT_INTEGER, "must be an integer")
         case "float":
             if isinstance(v, bool):
-                raise ValueError("must be a number")
-            return float(v)
+                raise CoerceError(ec.NOT_NUMBER, "must be a number")
+            return _num(float, v, ec.NOT_NUMBER, "must be a number")
         case "bool":
             if isinstance(v, bool):
                 return v
@@ -55,24 +77,44 @@ def coerce(f: F, v: Any) -> Any:
                 return True
             if str(v).lower() in ("false", "0", "no", "n"):
                 return False
-            raise ValueError("must be true/false")
+            raise CoerceError(ec.NOT_BOOL, "must be true/false")
         case "enum":
             allowed = [k for k, _ in ENUMS[f.enum or ""]]
             if str(v) not in allowed:
-                raise ValueError(f"must be one of: {', '.join(allowed)}")
+                raise CoerceError(
+                    ec.NOT_IN_ENUM,
+                    f"must be one of: {', '.join(allowed)}",
+                    allowed=", ".join(allowed),
+                )
             return str(v)
         case "date":
             if isinstance(v, datetime):
                 return v.date()
-            return v if isinstance(v, date) else date.fromisoformat(str(v)[:10])
+            return (
+                v
+                if isinstance(v, date)
+                else _parse(ec.INVALID_DATE, date.fromisoformat, str(v)[:10])
+            )
         case "time":
             if isinstance(v, datetime):
                 return v.time()
-            return v if isinstance(v, time) else time.fromisoformat(str(v))
+            return (
+                v
+                if isinstance(v, time)
+                else _parse(ec.INVALID_TIME, time.fromisoformat, str(v))
+            )
         case "datetime":
-            return v if isinstance(v, datetime) else datetime.fromisoformat(str(v))
+            return (
+                v
+                if isinstance(v, datetime)
+                else _parse(ec.INVALID_DATETIME, datetime.fromisoformat, str(v))
+            )
         case "ref":
-            return v if isinstance(v, uuid.UUID) else uuid.UUID(str(v))
+            return (
+                v
+                if isinstance(v, uuid.UUID)
+                else _parse(ec.INVALID_UUID, uuid.UUID, str(v))
+            )
         case "json":
             return v
     return v

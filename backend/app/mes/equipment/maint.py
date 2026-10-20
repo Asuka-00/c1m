@@ -5,14 +5,14 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import sqlalchemy as sa
-from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.models import actor_name
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, TABLES
-from app.core.spec.errors import http_422
+from app.core.spec.errors import coded, fe, http_422
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
 from app.mes.equipment.events import (
@@ -39,8 +39,9 @@ def e10_log(
     user: Any,
     reason_id: Any = None,
     comment: str | None = None,
+    note: Row | None = None,
 ) -> None:
-    """写一条 E10 状态履历（手动 / 自动迁移共用）。"""
+    """写一条 E10 状态履历（手动 / 自动迁移共用；``note`` 为系统生成的说明 ``{key, params}``）。"""
     _ins(
         s,
         tid,
@@ -52,6 +53,7 @@ def e10_log(
         source=source,
         reason_id=reason_id,
         comment=comment,
+        note=note,
         username=actor_name(user),
         at=now(),
     )
@@ -77,13 +79,24 @@ def e10_change(
     """
     eq = one(s, tid, "equipment", eq_id)
     if not eq:
-        raise HTTPException(status_code=404, detail="equipment not found")
+        raise coded(404, ec.EQUIPMENT_NOT_FOUND, "equipment not found")
     to = one(s, tid, "e10_state", body.get("to_state_id"))
     if not to:
-        raise http_422([("to_state_id", "to_state_id: unknown E10 state")])
+        raise http_422(
+            [fe("to_state_id", ec.E10_STATE_UNKNOWN, "to_state_id: unknown E10 state")]
+        )
     cur = e10_current(s, tid, eq)
     if cur and cur["id"] == to["id"]:
-        raise http_422([("to_state_id", f"to_state_id: already {to['code']}")])
+        raise http_422(
+            [
+                fe(
+                    "to_state_id",
+                    ec.E10_ALREADY,
+                    f"to_state_id: already {to['code']}",
+                    state=to["code"],
+                )
+            ]
+        )
     tr = (
         find(s, tid, "e10_transition", from_state_id=cur["id"], to_state_id=to["id"])
         if cur
@@ -91,13 +104,37 @@ def e10_change(
     )
     if cur and not tr:
         raise http_422(
-            [("to_state_id", f"to_state_id: {cur['code']} -> {to['code']} not allowed")]
+            [
+                fe(
+                    "to_state_id",
+                    ec.E10_TRANSITION_DENIED,
+                    f"to_state_id: {cur['code']} -> {to['code']} not allowed",
+                    src=cur["code"],
+                    to=to["code"],
+                )
+            ]
         )
     reason = one(s, tid, "reason_code", body.get("reason_id"))
     if body.get("reason_id") and (not reason or reason["reason_type"] != "e10"):
-        raise http_422([("reason_id", "reason_id: must be an e10 reason code")])
+        raise http_422(
+            [
+                fe(
+                    "reason_id",
+                    ec.E10_REASON_TYPE,
+                    "reason_id: must be an e10 reason code",
+                )
+            ]
+        )
     if tr and tr[0]["reason_required"] and not reason:
-        raise http_422([("reason_id", "reason_id: required for this transition")])
+        raise http_422(
+            [
+                fe(
+                    "reason_id",
+                    ec.E10_REASON_REQUIRED,
+                    "reason_id: required for this transition",
+                )
+            ]
+        )
     _upd(s, tid, "equipment", eq["id"], user, e10_state_id=to["id"])
     e10_log(
         s,
@@ -227,9 +264,17 @@ def pm_complete(
     p = one(s, tid, "pm_plan", plan_id)
     eq = one(s, tid, "equipment", body.get("equipment_id"))
     if not p or not eq:
-        raise HTTPException(status_code=404, detail="PM plan / equipment not found")
+        raise coded(404, ec.PM_PLAN_NOT_FOUND, "PM plan / equipment not found")
     if not any(x["id"] == p["id"] for x in _plans(s, tid, eq)):
-        raise http_422([("equipment_id", "equipment_id: plan does not apply")])
+        raise http_422(
+            [
+                fe(
+                    "equipment_id",
+                    ec.PM_PLAN_NOT_APPLICABLE,
+                    "equipment_id: plan does not apply",
+                )
+            ]
+        )
     _ins(
         s,
         tid,

@@ -14,6 +14,7 @@ import {
 import { toast } from 'sonner'
 import { useTenantKey } from '@/lib/api/hooks'
 import { mesApi, type MesEntity, type MesRow } from '@/lib/api/mes/common'
+import { itemText, type CodedItem } from '@/lib/backend-text'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -141,7 +142,7 @@ export function EntityTable({
       const d =
         err instanceof AxiosError
           ? (err.response?.data as {
-              detail?: { errors?: { row: number; msg: string }[] }
+              detail?: { errors?: (CodedItem & { row: number })[] }
             })
           : undefined
       const rows = d?.detail?.errors
@@ -149,7 +150,15 @@ export function EntityTable({
         toast.error(t('mes.importFailed'), {
           description: rows
             .slice(0, 5)
-            .map((x) => t('mes.importRow', x))
+            .map((x) =>
+              t('mes.importRow', {
+                row: x.row,
+                msg:
+                  itemText(x, (n) =>
+                    e.fields.some((f) => f.name === n) ? fieldLabel(e, n) : n
+                  ) ?? x.msg,
+              })
+            )
             .join('\n'),
         })
       else onErr(err)

@@ -7,9 +7,11 @@ from typing import Annotated, Any, Literal
 from fastapi import APIRouter, File, Header, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 
+from app.core import error_codes as ec
 from app.core.config import settings
 from app.core.deps import SessionDep
 from app.core.models import Message
+from app.core.spec.errors import coded
 from app.platform.auth.deps import CurrentUser, TokenPayloadDep, get_current_tenant
 from app.platform.files.models import UploadedFile
 from app.platform.files.schemas import FileUploadPublic
@@ -45,15 +47,15 @@ async def upload_file(
     tenant_id: uuid.UUID | None = None
     if scope == "platform":
         if not has_permissions(current_user, "config:write"):
-            raise HTTPException(status_code=403, detail="Not enough permissions")
+            raise coded(403, ec.PERMISSION_DENIED, "Not enough permissions")
     else:
         ctx = get_current_tenant(session, current_user, token_data, x_tenant_id)
         if not ctx.can("config:write"):
-            raise HTTPException(status_code=403, detail="Not enough permissions")
+            raise coded(403, ec.PERMISSION_DENIED, "Not enough permissions")
         tenant_id = ctx.id
     ext = IMAGE_TYPES.get((file.content_type or "").lower())
     if not ext:
-        raise HTTPException(status_code=415, detail="Unsupported file type")
+        raise coded(415, ec.UNSUPPORTED_FILE_TYPE, "Unsupported file type")
     fid = uuid.uuid4()
     stored = f"{fid.hex}{ext}"
     dest = upload_dir() / stored
@@ -63,14 +65,14 @@ async def upload_file(
             while chunk := await file.read(CHUNK):
                 size += len(chunk)
                 if size > settings.MAX_UPLOAD_BYTES:
-                    raise HTTPException(status_code=413, detail="File too large")
+                    raise coded(413, ec.FILE_TOO_LARGE, "File too large")
                 out.write(chunk)
     except HTTPException:
         dest.unlink(missing_ok=True)
         raise
     if size == 0:
         dest.unlink(missing_ok=True)
-        raise HTTPException(status_code=400, detail="Empty file")
+        raise coded(400, ec.EMPTY_FILE, "Empty file")
     rec = UploadedFile(
         id=fid,
         tenant_id=tenant_id,
@@ -102,7 +104,7 @@ def cleanup_files(
     """Platform admins: delete uploads no config references, older than the grace
     period (default 24h, min 1h so in-progress uploads survive)."""
     if not has_permissions(current_user, "config:write"):
-        raise HTTPException(status_code=403, detail="Not enough permissions")
+        raise coded(403, ec.PERMISSION_DENIED, "Not enough permissions")
     victims = cleanup_unreferenced(
         session, timedelta(hours=older_than_hours), dry_run=dry_run
     )
@@ -116,7 +118,7 @@ def get_file(session: SessionDep, file_id: uuid.UUID) -> FileResponse:
     rec = session.get(UploadedFile, file_id)
     path = upload_dir() / rec.stored_name if rec else None
     if not rec or not path or not path.is_file():
-        raise HTTPException(status_code=404, detail="File not found")
+        raise coded(404, ec.FILE_NOT_FOUND, "File not found")
     return FileResponse(
         path,
         media_type=rec.content_type,

@@ -15,8 +15,10 @@ import sqlalchemy.exc
 from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.base import conn
 from app.core.spec.engine import TABLES
+from app.core.spec.errors import coded
 
 Row = dict[str, Any]
 
@@ -94,7 +96,7 @@ RULES: dict[str, Rule] = {
 
 
 def lot_error(
-    code: str, message: str, lot: Row | None = None, **extra: Any
+    code: int, message: str, lot: Row | None = None, **extra: Any
 ) -> HTTPException:
     """批次业务错误（N5）：``detail = {code, message, lot_id?, lot_code?, ...}``，422。"""
     d: Row = {"code": code, "message": message}
@@ -127,19 +129,19 @@ def check(lot: Row, action: str, to: str | None = None) -> LotStatus:
     ctx = {"action": action, "lot_status": cur}
     if cur not in rule.from_:
         msg = f"lot is {cur}" if cur in TERMINAL else f"cannot {action} a {cur} lot"
-        raise lot_error("lot_status", msg, lot, **ctx)
+        raise lot_error(ec.LOT_STATUS, msg, lot, **ctx)
     if lot.get("on_hold") and not rule.allow_hold:
-        raise lot_error("on_hold", "lot is on hold; release it first", lot, **ctx)
+        raise lot_error(ec.ON_HOLD, "lot is on hold; release it first", lot, **ctx)
     if not rule.targets:
         if to is not None and to != cur:
-            raise lot_error("lot_status", f"{action} cannot go to {to}", lot, **ctx)
+            raise lot_error(ec.LOT_STATUS, f"{action} cannot go to {to}", lot, **ctx)
         return S(cur)
     if to is None:
         # 多目标且未指定时只校验起始状态与 Hold，目标由调用方随后再校验
         return next(iter(rule.targets)) if len(rule.targets) == 1 else S(cur)
     if to not in rule.targets:
         raise lot_error(
-            "lot_status", f"cannot {action} a {cur} lot to {to}", lot, **ctx
+            ec.LOT_STATUS, f"cannot {action} a {cur} lot to {to}", lot, **ctx
         )
     return S(to)
 
@@ -175,7 +177,7 @@ def locked(s: Session, stmt: Any) -> list[Row]:
         raise HTTPException(
             status_code=409,
             detail={
-                "code": "lot_busy",
+                "code": ec.LOT_BUSY,
                 "message": "lot is locked by another operation",
             },
         ) from ex
@@ -206,5 +208,5 @@ def lock_lots(s: Session, tid: uuid.UUID, ids: Iterable[Any]) -> dict[uuid.UUID,
     )
     out = {r["id"]: dict(r) for r in rows}
     if len(out) != len(order):
-        raise HTTPException(status_code=404, detail="Record not found")
+        raise coded(404, ec.RECORD_NOT_FOUND, "Record not found")
     return out

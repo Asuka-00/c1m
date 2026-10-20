@@ -14,6 +14,7 @@ import sqlalchemy as sa
 from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, TABLES
@@ -74,8 +75,14 @@ def qtime_hold(
         reason,
         hold_type="auto",
         source="qtime",
-        comment=f"Q-Time {r['code']} expired: "
-        f"{x['minutes']:g} > {r['max_minutes']} min",
+        note={
+            "key": "qtime_expired",
+            "params": {
+                "rule": r["code"],
+                "minutes": f"{x['minutes']:g}",
+                "max": r["max_minutes"],
+            },
+        },
         details={**det, "configured_action": r["action"] or "hold", "action": "hold"},
         extra=extra,
     )
@@ -195,7 +202,7 @@ def _qtime_rule_delete(
         raise HTTPException(
             status_code=409,
             detail={
-                "code": "qtime_rule_in_use",
+                "code": ec.QTIME_RULE_IN_USE,
                 "message": "Q-Time rule is referenced by lot holds; deactivate it instead",
                 "qtime_rule_id": str(row["id"]),
                 "qtime_rule_code": row["code"],

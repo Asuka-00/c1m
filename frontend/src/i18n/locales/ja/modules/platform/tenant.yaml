@@ -1,0 +1,105 @@
+tenants:
+  title: テナント
+  desc: プラットフォーム上の全テナント
+  new: 新規テナント
+  edit: テナントを編集
+  slug: スラッグ
+  slugLabel: スラッグ（a-z、0-9、-）
+  status:
+    active: 有効
+    suspended: 停止中
+  delete: テナントを削除
+  deleteDesc: '{{name}} とそのメンバー・ロール・アイテムをすべて削除しますか？'
+  created: テナントを作成しました（あなたが所有者です）
+  updated: テナントを更新しました
+  deleted: テナントを削除しました
+settings:
+  title: 設定
+  desc: プロフィール、パスワード、言語
+  profile: プロフィール
+  superAccount: スーパーユーザーアカウント
+  regularAccount: 一般アカウント
+  saveProfile: プロフィールを保存
+  passwordHint: 8文字以上。
+  currentPassword: 現在のパスワード
+  newPassword: 新しいパスワード
+  confirmPassword: 新しいパスワード（確認）
+  mismatch: パスワードが一致しません
+  changePassword: パスワードを変更
+  profileUpdated: プロフィールを更新しました
+  passwordChanged: パスワードを変更しました
+  language: 言語
+  languageDesc: 表示言語を選択します。
+platform:
+  plans:
+    trial: トライアル
+    standard: スタンダード
+    enterprise: エンタープライズ
+  allPlans: すべてのプラン
+  tenantsDesc: 全テナントを管理します。
+  plan: プラン
+  expiresAt: 有効期限
+  expired: 期限切れ
+  never: 無期限
+  owners: オーナー
+  memberCount: メンバー数
+  members: メンバー
+  branding: ブランディング
+  enter: テナントとして入る
+  expiresHint: YYYY-MM-DD、空欄は無期限
+  ownerAssigned: オーナーを設定しました
+  membersOf: 「{{name}}」のメンバー
+  membersDesc: テナントのメンバーとロールを管理します。
+  assignOwner: オーナーにする
+  brandingOf: 「{{name}}」のブランディング
+  brandingDesc: このテナントのブランディング。
+  channelSaved: 通知チャネルを更新しました
+  channelsDesc: 通知チャネルを管理します。
+  channel: チャネル
+  code: コード
+  enabled: 有効
+  searchLogin: メール / IP を検索
+  allResults: すべての結果
+  success: 成功
+  failure: 失敗
+  loginLogDesc: すべてのログイン試行（成功・失敗）。セキュリティ監査用。
+  time: 日時
+  result: 結果
+  reason: 理由
+  reasons:
+    bad_credentials: ユーザー名またはパスワードが違います
+    inactive: 無効なユーザー
+  userAgent: クライアント
+  searchOps: 操作者 / 操作 / 対象を検索
+  allActions: すべての操作
+  actions:
+    tenant.create: テナント作成
+    tenant.update: テナント更新
+    tenant.delete: テナント削除
+    tenant.enter: テナントとして入る
+    tenant.exit: テナントから退出
+    tenant.owner: オーナー指定
+    tenant.branding: テナントブランディング変更
+    member.add: メンバー追加
+    member.roles: メンバーロール変更
+    member.remove: メンバー削除
+    config.update: プラットフォーム設定変更
+    channel.update: 通知チャネル変更
+    audit.cross_tenant_read: テナント横断監査の閲覧
+  opsLogDesc: プラットフォーム管理者の操作履歴。
+  actor: 操作者
+  action: 操作
+  target: 対象
+  detail: 詳細
+  searchAudit: レコード / ユーザーを検索
+  allTenants: すべてのテナント
+  auditDesc: 全テナントの業務監査ログ。
+  tenant: テナント
+  entity: エンティティ
+  record: レコード
+  spaces:
+    workspace: ワークスペース
+    platform: プラットフォーム管理
+  allSpaces: すべてのスペース
+  space: スペース
+  ownerUsername: オーナーのユーザー名（既存ユーザー）

@@ -1,0 +1,373 @@
+error:
+  '401':
+    title: Unauthorized Access
+    desc: Please log in with the appropriate credentials to access this resource.
+  '403':
+    title: Access Forbidden
+    desc: You don't have the necessary permission to view this resource.
+  '404':
+    title: Oops! Page Not Found!
+    desc: It seems like the page you're looking for does not exist or might have been removed.
+  '500':
+    title: Oops! Something went wrong
+    desc: We apologize for the inconvenience. Please try again later.
+  '503':
+    title: Website is under maintenance!
+    desc: The site is not available at the moment. We'll be back online shortly.
+  server: Internal Server Error!
+  network: Network error, the backend is unreachable.
+  forbidden: You don't have enough privileges.
+  validation: Invalid input.
+  generic: The request failed; please contact your administrator.
+  code_100001: 'Sort field must be one of: {{allowed}}'
+  code_100002: Unknown entity
+  code_100003: A record with the same key already exists
+  code_100004: Record is referenced by other records
+  code_100005: The change violates a data constraint
+  code_100006: Read-only entity
+  code_100007: Not a valid xlsx file
+  code_100008: The sheet is empty
+  code_100009: 'Unknown columns: {{columns}}'
+  code_100010: '{{field}}: Too many rows (max {{max}})'
+  code_100011: "{{field}}: '{{value}}' not found"
+  code_100012: '{{field}}: Invalid ID'
+  code_100013: '{{field}}: Invalid date'
+  code_100014: Record not found
+  code_100015: '{{name}} is not a text filter'
+  code_100016: This entity is not hierarchical
+  code_100017: '{{field}}: At most {{max}} characters'
+  code_100018: '{{field}}: Must be an integer'
+  code_100019: '{{field}}: Must be a number'
+  code_100020: '{{field}}: Must be true or false'
+  code_100021: '{{field}}: Must be one of: {{allowed}}'
+  code_100022: '{{field}}: Required'
+  code_100023: '{{field}}: Required when {{when}} = {{value}}'
+  code_100024: '{{field}}: Referenced record not found'
+  code_100025: The parent would create a cycle
+  code_100026: Custom attributes must be an object
+  code_100027: Unknown attribute {{attr}}
+  code_100028: '{{name}} is required'
+  code_100029: '{{name}}: invalid {{type}} value'
+  code_100030: Only draft versions can be changed; create a new version
+  code_100031: The parent $t(mes.entity.{{entity}}) is not a draft; create a new version first
+  code_100032: This entity is not versioned
+  code_100033: 'Status must be one of: {{allowed}}'
+  code_100034: Cannot change status from $t(mes.enum.status.{{src}}) to $t(mes.enum.status.{{to}})
+  code_100035: Not enough permissions
+  code_100036: The file is too large
+  code_100037: '{{field}}: Must be between {{min}} and {{max}}'
+  code_100038: '{{field}}: Must be at least {{min}}'
+  code_100039: '{{field}}: Must be greater than {{min}}'
+  code_100040: The lot status does not allow this action
+  code_100041: The lot is on hold; release it first
+  code_100042: '{{field}}: Must be at least the lower spec limit'
+  code_100043: '{{field}}: Must lie within the spec limits'
+  code_100044: Site not found or not accessible
+  code_100045: '{{field}}: Invalid time'
+  code_100046: '{{field}}: Invalid date and time'
+  code_100047: '{{field}}: Invalid value'
+  code_100200: '{{field}}: Required'
+  code_100201: '{{field}}: Unsupported field'
+  code_100202: '{{field}}: Must be text'
+  code_100203: '{{field}}: Must be an integer'
+  code_100204: '{{field}}: Must be an integer'
+  code_100205: '{{field}}: Must be an integer'
+  code_100206: '{{field}}: Must be a number'
+  code_100207: '{{field}}: Must be a number'
+  code_100208: '{{field}}: Must be a number'
+  code_100209: '{{field}}: Must be a number'
+  code_100210: '{{field}}: Must be true or false'
+  code_100211: '{{field}}: Must be true or false'
+  code_100212: '{{field}}: Invalid ID'
+  code_100213: '{{field}}: Invalid ID'
+  code_100214: '{{field}}: Invalid date'
+  code_100215: '{{field}}: Invalid date'
+  code_100216: '{{field}}: Invalid date'
+  code_100217: '{{field}}: Invalid date and time'
+  code_100218: '{{field}}: Invalid date and time'
+  code_100219: '{{field}}: Invalid time'
+  code_100220: '{{field}}: Invalid time'
+  code_100221: '{{field}}: At least {{min_length}} characters'
+  code_100222: '{{field}}: At most {{max_length}} characters'
+  code_100223: '{{field}}: Invalid format'
+  code_100224: '{{field}}: Must be greater than {{gt}}'
+  code_100225: '{{field}}: Must be at least {{ge}}'
+  code_100226: '{{field}}: Must be less than {{lt}}'
+  code_100227: '{{field}}: Must be at most {{le}}'
+  code_100228: '{{field}}: At least {{min_length}} items'
+  code_100229: '{{field}}: At most {{max_length}} items'
+  code_100230: '{{field}}: Must be one of: {{expected}}'
+  code_100231: '{{field}}: Must be one of: {{expected}}'
+  code_100232: '{{field}}: Invalid JSON'
+  code_100233: '{{field}}: Must be an object'
+  code_100234: '{{field}}: Must be an object'
+  code_100235: '{{field}}: Must be an object'
+  code_100236: '{{field}}: Must be a list'
+  code_100237: '{{field}}: Invalid URL'
+  code_100238: '{{field}}: Invalid URL'
+  code_100239: '{{field}}: Invalid value'
+  code_100240: '{{field}}: Invalid value'
+  code_100241: '{{field}}: Invalid value'
+  code_200001: Could not validate credentials
+  code_200002: User not found
+  code_200003: Inactive user
+  code_200004: The user doesn't have enough privileges
+  code_200005: This site is suspended; contact your administrator
+  code_200006: This site has expired; contact your administrator
+  code_200007: This access token belongs to another workspace
+  code_200008: Please select a site first
+  code_200009: Exit workspace access to use the platform console
+  code_200010: Incorrect username or password
+  code_200011: Invalid token
+  code_200012: The user does not exist
+  code_200013: Tenant slug already exists
+  code_200014: Owner user not found
+  code_200015: Channel not found
+  code_200016: Unsupported file type
+  code_200017: The file is empty
+  code_200018: File not found
+  code_200019: No access to the platform console
+  code_200020: Menu key already exists
+  code_200021: Parent menu not found
+  code_200022: Menu not found
+  code_200023: A menu cannot be its own parent
+  code_200024: Subscription not found
+  code_200025: Unknown event type
+  code_200026: 'Unknown or empty channels: {{channels}}'
+  code_200027: Select at least one role or user
+  code_200028: The scope must be platform or workspace
+  code_200029: Platform permission {{code}} cannot be assigned to a workspace
+  code_200030: '{{name}} not found'
+  code_200031: Permission already exists
+  code_200032: Role already exists
+  code_200033: Permission {{code}} not found
+  code_200034: Role not found
+  code_200035: 'Unknown permissions: {{codes}}'
+  code_200036: Only platform admins can change tenant status
+  code_200037: User already added
+  code_200038: Only system admins can grant the system admin role
+  code_200039: This account is managed centrally; ask your administrator
+  code_200040: Only system admins can manage system admins
+  code_200041: User not found
+  code_200042: Only system admins can change system admin roles
+  code_200043: At least one system admin must remain
+  code_200044: Only system admins can remove system admins
+  code_200045: 'Not workspace-scope permissions: {{codes}}'
+  code_200046: The owner role cannot be renamed
+  code_200047: The owner role cannot be disabled
+  code_200048: The system admin role permissions are fixed
+  code_200049: The system admin role cannot be deleted
+  code_200050: Role '{{name}}' does not exist in this workspace
+  code_200051: Incorrect password
+  code_200052: New password cannot be the same as the current one
+  code_200053: Super users are not allowed to delete themselves
+  code_200054: The user does not exist
+  code_200055: Only superusers can manage superuser accounts
+  code_200056: User with this username already exists
+  code_200057: User with this email already exists
+  code_300001: Config group not found
+  code_300002: '{{field}}: Is not a valid file reference'
+  code_300003: '{{field}}: Refers to a file you do not own'
+  code_300004: '{{field}}: Unknown config item'
+  code_300005: '{{field}}: Cannot be overridden by a workspace'
+  code_300006: '{{field}}: Must be text'
+  code_300007: '{{field}}: Must be a hex color like #1e40af'
+  code_300008: '{{field}}: Must be an http(s) URL or an absolute path'
+  code_300009: '{{field}}: Is not one of the allowed options'
+  code_300010: '{{field}}: Must be at most {{max}}'
+  code_300011: '{{field}}: Is not valid JSON ({{error}})'
+  code_300012: '{{field}}: Has an unsupported type'
+  code_400001: Unknown token {{token}} in the pattern
+  code_400002: The pattern needs {SEQ}, {SEQ36} or {SLOT}
+  code_400003: The pattern has unbalanced braces
+  code_400004: The sequence number overflowed for this period
+  code_400006: No conversion path between these units
+  code_400007: '{{field}}: A select field needs options or a dictionary'
+  code_400008: '{{field}}: Must differ from the start time'
+  code_400009: '{{field}}: Must be set exactly when the end is before the start'
+  code_400010: $t(mes.entity.{{entity}}) version {{version}} is inactive
+  code_400011: $t(mes.entity.{{entity}}) not found
+  code_400012: Cannot derive a unique code from {{code}}
+  code_400013: Change order not found
+  code_400014: The change order is $t(mes.enum.ecn_status.{{status}})
+  code_400015: Only draft change orders can be edited
+  code_400016: $t(mes.entity.{{entity}}) is not used for a $t(mes.enum.change_type.{{kind}}) change
+  code_400017: Only draft or cancelled change orders can be deleted
+  code_400018: No rework route is configured for this step
+  code_400019: The rework route has no steps
+  code_400020: This step has no branch
+  code_400021: Branch target seq {{target}} not found
+  code_400022: step_ids must list every step of the route exactly once
+  code_400023: '{{field}}: Required for an operation step'
+  code_400024: '{{field}}: Only for sub-route steps'
+  code_400025: '{{field}}: Required for a sub-route step'
+  code_400026: '{{field}}: Must be a route of type sub'
+  code_400027: '{{field}}: A route cannot call itself'
+  code_400028: '{{field}}: Must be a route of type rework'
+  code_400029: '{{field}}: Required together with the branch target'
+  code_400030: The route needs at least one step before activation
+  code_400031: 'Step {{seq}}: branch target {{target}} does not exist'
+  code_400032: 'Step {{seq}}: {{code}} v{{version}} is not active'
+  code_400033: '{{field}}: An operation or a recipe is required'
+  code_400034: '{{field}}: Give a lower and/or upper spec limit'
+  code_400035: Products can only bind to main routes
+  code_400036: '{{field}}: Must be after the effective-from date'
+  code_400037: '{{field}}: The product already has a default route'
+  code_400038: '{{field}}: Must differ from the source unit'
+  code_400039: '{{field}}: The unit dimensions differ'
+  code_400040: '{{field}}: The product needs an active default route before activation'
+  code_400042: '{{field}}: Required for a $t(mes.enum.resource_kind.{{kind}}) resource'
+  code_400043: '{{field}}: Must be empty for a $t(mes.enum.resource_kind.{{kind}}) resource'
+  code_500001: Equipment not found
+  code_500002: Unknown E10 state
+  code_500003: The equipment is already in {{state}}
+  code_500004: Transition {{src}} → {{to}} is not allowed
+  code_500005: Select an E10 reason code
+  code_500006: A reason is required for this transition
+  code_500007: PM plan / equipment not found
+  code_500008: The PM plan does not apply to this equipment
+  code_500009: The equipment type differs from the recipe's equipment type
+  code_500010: The target state must differ from the source state
+  code_500011: '{{other}} is already the initial state'
+  code_500012: A main equipment cannot have a parent
+  code_500013: A $t(mes.enum.unit_kind.{{kind}}) needs a parent equipment
+  code_500014: The parent must be a main equipment or a sub-unit
+  code_500015: "{{field}}: Must match the parent equipment's type"
+  code_500016: Set an equipment or an equipment type
+  code_500017: Set a day or lot interval
+  code_500018: '{{field}}: Must be after the start time'
+  code_500019: '{{field}}: Must be 1–25 for wafer-level sampling'
+  code_500020: '{{field}}: Required for wafer-level sampling'
+  code_500021: '{{field}}: Enter comma-separated slots 1–25'
+  code_500022: '{{field}}: The count must equal the wafer count'
+  code_600001: The lot is being used by another operation; try again shortly
+  code_600002: '{{field}}: Must be a code rule for $t(mes.enum.code_target.{{target}})'
+  code_600003: '{{field}}: Must be at least 2 when splitting is allowed'
+  code_600004: The Q-Time action must be Warn, Hold or Rework
+  code_600005: '{{field}}: Must be a step of the selected route'
+  code_600006: '{{field}}: Must come after the start step'
+  code_600007: Give a min and/or max time
+  code_600008: The times must be positive
+  code_600009: The max time must be at least the min time
+  code_600010: No code rule for work orders; enter a WO number
+  code_600011: Only remarks, due date and references can change after release
+  code_600012: '{{field}}: Must not be before the planned start'
+  code_600013: Only draft work orders can be deleted (cancel instead)
+  code_600014: Lot type not found
+  code_600015: The lot type needs a lot ID rule and a wafer ID rule
+  code_600016: 'Action must be one of: {{actions}}'
+  code_600017: Cannot $t(mes.wo.action.{{action}}) a $t(mes.enum.wo_status.{{status}}) work order
+  code_600018: '{{field}}: Must be active'
+  code_600019: The product has no active default route
+  code_600020: The route has no steps
+  code_600021: 'Lots are still in process or awaiting receipt: {{lots}}'
+  code_600022: Lots were started; undo them first
+  code_600023: Lot size must be 1–{{max}}
+  code_600024: Cannot start lots on a $t(mes.enum.wo_status.{{status}}) work order
+  code_600025: Add at least one lot
+  code_600026: Started {{started}} + {{total}} exceeds the limit {{cap}} (planned {{planned}} + {{pct}}%)
+  code_600027: 'Lot {{i}}: qty must be 1–{{max}}'
+  code_600028: 'Lot {{i}}: carrier not found'
+  code_600029: 'Lot {{i}}: carrier {{carrier}} is not available'
+  code_600030: 'Lot {{i}}: carrier {{carrier}} is already in use'
+  code_600031: 'Lot {{i}}: {{n}} distinct slots within 1–{{width}} are required'
+  code_600032: 'Lot {{i}}: one source per wafer'
+  code_600033: The route has no operation steps
+  code_600034: The generated lot / wafer IDs already exist
+  code_600035: Cannot undo lot start on a $t(mes.enum.wo_status.{{status}}) work order
+  code_600036: Nothing to undo
+  code_600037: 'Lots already processed: {{lots}}'
+  code_600038: Lot not found
+  code_600039: Lot {{lot}} is not finished (awaiting receipt)
+  code_600040: Lot {{lot}} is on hold
+  code_600041: Work order {{wo}} is $t(mes.enum.wo_status.{{status}}); cannot receive
+  code_600042: Quantities must be 0 or more
+  code_600043: Good + scrap must be at least 1
+  code_600044: Lot {{lot}} has only {{room}} left to receive
+  code_600045: No code rule for receipts; enter a receipt number
+  code_600046: Only draft receipts can be edited
+  code_600047: The warehouse is inactive
+  code_600048: The location does not belong to the warehouse
+  code_600049: The location is inactive
+  code_600050: Only draft receipts can be deleted (cancel instead)
+  code_600051: Lines can only change while the receipt is a draft
+  code_600052: A line cannot be moved to another receipt
+  code_600053: Add at least one lot
+  code_600054: The action "$t(mes.receipt.action.{{action}})" is not allowed for a $t(mes.enum.receipt_status.{{status}}) receipt
+  code_600055: Another change happened at the same time; retry
+  code_700001: The kind must be scrap or bonus
+  code_700002: A $t(mes.enum.reason_type.{{type}}) reason code is required
+  code_700003: A comment is required for this reason code
+  code_700004: Bonus is only for quantity-tracked lots
+  code_700005: Select active units of this lot
+  code_700006: The qty exceeds the lot qty {{qty}}
+  code_700007: Select {{min}}–{{max}} lots
+  code_700008: 'Not ready for $t(mes.exec.stage.{{stage}}): {{lots}}'
+  code_700009: 'Not executed: another lot in the batch failed'
+  code_700010: The batch was blocked by checks; review each lot's check results
+  code_700011: Q-Time exceeded; the lot was not tracked in
+  code_700012: Cannot change carrier while the lot is $t(mes.enum.lot_status.{{status}})
+  code_700013: The lot is already in this carrier
+  code_700014: Carrier {{carrier}} is not available
+  code_700015: '{{count}} wafers exceed carrier capacity {{cap}}'
+  code_700016: Carrier {{carrier}} still holds a lot
+  code_700017: Carrier {{carrier}} is retired
+  code_700018: Cannot sort wafers while the lot is $t(mes.enum.lot_status.{{status}})
+  code_700019: Select a carrier
+  code_700020: List every wafer of the lot once
+  code_700021: Use unique slots 1–{{cap}}
+  code_700022: The operation was blocked by checks
+  code_700023: The lot has no current step
+  code_700024: Equipment not found
+  code_700025: Only waiting future holds can be edited
+  code_700026: The lot is $t(mes.enum.lot_status.{{status}})
+  code_700027: The step is not on the lot's route
+  code_700028: No active $t(mes.enum.reason_type.{{type}}) reason code is configured
+  code_700029: This hold is already released
+  code_700030: The hold record does not exist or was deleted; refresh the list
+  code_700031: Pick lots to merge
+  code_700032: The source lots contain duplicates or include the target lot
+  code_700033: 'Lots not found: {{lots}}'
+  code_700034: Priority not found
+  code_700035: The priority is unchanged
+  code_700036: Q-Time rule {{qtime_rule_code}} is referenced by {{hold_count}} hold record(s) and cannot be deleted. Deactivate it instead.
+  code_700037: Only waiting lots can jump (the lot is $t(mes.enum.lot_status.{{status}}))
+  code_700038: The target must be a step of the current route
+  code_700039: The lot is already at this step
+  code_700040: The target must be an operation step
+  code_700041: The start date is after the end date
+  code_700042: Date range too long (max 366 days)
+  code_700043: Date range too long (max 92 days)
+  code_700044: Shift not found
+  code_700045: Area not found
+  code_700046: Enter the handover notes
+  code_700047: Shift handover log not found
+  code_700048: Already acknowledged
+  code_700049: The handover must be acknowledged by another user
+  code_700050: Carrier not found
+  code_700051: The lot type has no lot ID rule
+  code_700052: Add at least one child lot
+  code_700053: 'Child {{child}}: qty must be greater than 0'
+  code_700054: 'Child {{child}}: pick wafers / units'
+  code_700055: 'Child {{child}}: units not in the lot or picked twice'
+  code_700056: Select an active main equipment unit
+  code_700057: Track in needs equipment
+  code_700058: '{{chamber}} is not a chamber of this equipment'
+  code_700059: Chamber {{chamber}} is inactive
+  code_700060: A recipe is required at this step
+  code_700061: A {{fixture}} tool is required
+  code_700062: 'The trace kind must be one of: {{allowed}}'
+  code_700063: $t(mes.traceq.k.{{kind}}) {{code}} not found
+  code_700064: Lot not found
+  code_700065: 'Scrap {{i}}: a scrap reason code is required'
+  code_700066: 'Scrap {{i}}: qty must be at least 1'
+  code_700067: 'Scrap {{i}}: the unit is not in this lot'
+  code_700068: The scrap total exceeds the lot qty {{qty}}
+  code_700069: A unit is listed twice in the scrap list
+  code_700070: 'Rework {{i}}: pick a unit of this lot and a rework reason'
+  code_700071: 'DC {{i}}: the measurement item is not in the DC plan'
+  code_700072: 'DC {{i}}: the value must be a number'
+  code_700073: 'DC {{i}}: the unit is not in this lot'
+  code_700074: 'Not enough material lots: {{items}}'
+  code_700075: '{{field}}: This check type is not implemented'
+  code_700076: '{{field}}: Must be a JSON object'

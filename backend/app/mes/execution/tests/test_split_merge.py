@@ -8,6 +8,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.mes.execution.tests.test_exec import EXEC, Line, _msgs
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
@@ -190,7 +191,10 @@ def test_split_inherits_hold_and_qtime(client: TestClient, db: Session) -> None:
     assert c["lot"]["on_hold"] and c["qtime"][0]["exceeded"]
     h = f.m.list("lot_hold", lot=ch["id"])["data"]
     assert len(h) == 1 and h[0]["is_active"] and h[0]["source"] == "split"
-    assert "inherited" in h[0]["comment"]
+    assert (
+        h[0]["note"]["key"] == "inherited"
+        and h[0]["note"]["params"]["lot"] == lot["code"]
+    )
 
 
 def test_merge_back_and_terminate(client: TestClient, db: Session) -> None:
@@ -199,7 +203,7 @@ def test_merge_back_and_terminate(client: TestClient, db: Session) -> None:
     (ch,) = split(f, lot, [{"unit_ids": uid(f, lot, 0, 1)}])["children"]
     cands = f.ctx(lot)["sm"]["candidates"]
     assert [c["code"] for c in cands] == [ch["code"]] and cands[0]["problems"] == []
-    assert merge(f, lot, [lot], 422)["detail"]["code"] == "merge_source_invalid"  # P14
+    assert merge(f, lot, [lot], 422)["detail"]["code"] == ec.MERGE_SOURCE_INVALID  # P14
     r = merge(f, lot, [ch], comment="rejoin")
     assert r["lot"]["qty"] == 6 and r["merged"][0]["code"] == ch["code"]
     c = f.lot(ch)

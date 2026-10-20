@@ -1,0 +1,163 @@
+mes:
+  eqp:
+    hint: 查看主设备的状态与 PM 到期情况。
+    refresh: 刷新
+    code: 设备编码
+    name: 设备名称
+    state: E10 状态
+    pm: PM 计划
+    actions: 操作
+    down: 停机中
+    nextDue: 下次到期
+    pmDue: 已到期
+    daysLeft: 剩 {{n}} 天
+    changeState: 改状态
+    pmDone: PM 完成
+    changed: 状态已变更
+    current: 当前状态
+    toState: 目标状态
+    pmRecorded: PM 已登记
+    pmDesc: 登记一次 PM 完成。
+    result: 结果
+    search: 搜索设备编码 / 名称
+    allWorkcenters: 全部工作中心
+    allStates: 全部 E10 状态
+    allPm: 全部 PM 状态
+    pmWarn: PM 即将到期
+    allDown: 全部（停机与否）
+    notDown: 未停机
+    workcenter: 工作中心
+    chambers: 腔体
+    chamberCount: '{{n}} 个腔体'
+    chambersOf: '{{code}} 腔体'
+  pmStatus:
+    title: 到期状态
+    due: '{{n}} 台超期'
+    warn: '{{n}} 台即将到期'
+    ok: 正常
+    next: 最近到期 {{d}}
+  entity:
+    equipment_type: 设备类型
+    equipment_group: 设备组
+    e10_state: E10 状态
+    e10_transition: E10 状态迁移
+    equipment: 设备
+    equipment_capability: 设备能力
+    tool: 工具
+    e10_auto_rule: E10 自动迁移
+    e10_history: E10 状态履历
+    pm_plan: PM 计划
+    pm_record: PM 执行记录
+    downtime: 停机记录
+  field:
+    equipment_type:
+      code: 编码
+      name: 名称
+      category: 类别
+      vendor: 供应商
+      model: 型号
+      description: 描述
+    equipment_group:
+      code: 编码
+      name: 名称
+      equipment_type: 设备类型
+      area: 区域
+      description: 描述
+    e10_state:
+      code: 编码
+      name: 名称
+      e10_category: E10 类别
+      color: 颜色
+      is_initial: 初始状态
+      sort_order: 排序
+      description: 描述
+    e10_transition:
+      from_state: 源状态
+      to_state: 目标状态
+      reason_required: 需填写原因
+    equipment:
+      code: 编码
+      name: 名称
+      parent: 上级
+      unit_kind: 单元类型
+      equipment_type: 设备类型
+      equipment_group: 设备组
+      workcenter: 工作中心
+      serial_no: 序列号
+      initial_state: 初始 E10 状态
+      e10_state: 当前 E10 状态
+      ideal_uph: 理论产能（UPH）
+      is_active: 启用
+      description: 描述
+    equipment_capability:
+      equipment: 设备
+      operation: 工序
+      recipe: 配方
+      is_qualified: 已认证
+      qualified_until: 认证有效期
+    tool:
+      code: 工具编号
+      fixture: 工具类型
+      serial_no: 序列号
+      usage_count: 使用次数
+      max_usage: 最大使用次数
+      warn_pct: 预警阈值（寿命%）
+      expiry_date: 有效期
+      tool_status: 状态
+      equipment: 安装设备
+      description: 描述
+    e10_auto_rule:
+      trigger: 触发时机
+      equipment_type: 设备类型
+      to_state: 目标状态
+      is_active: 启用
+    e10_history:
+      equipment: 设备
+      from_state: 源状态
+      to_state: 目标状态
+      source: 来源
+      reason: 原因代码
+      comment: 备注
+      username: 用户
+      at: 时间
+      note: 系统说明
+    pm_plan:
+      code: 编码
+      name: 名称
+      equipment: 设备
+      equipment_type: 设备类型
+      interval_days: 周期（天）
+      interval_lots: 周期（批次数）
+      warn_days: 提前预警（天）
+      is_active: 启用
+      description: 描述
+    pm_record:
+      pm_plan: PM 计划
+      equipment: 设备
+      result: 结果
+      comment: 备注
+      username: 用户
+      done_at: 完成时间
+    downtime:
+      equipment: 设备
+      start_at: 开始时间
+      end_at: 结束时间
+      reason: 原因代码
+      e10_state: E10 状态
+      comment: 备注
+  help:
+    equipment:
+      ideal_uph: 可选，预留给 OEE 性能稼动率
+    tool:
+      max_usage: 留空则使用工具类型的最大使用次数
+    e10_auto_rule:
+      equipment_type: 留空表示所有类型
+    pm_plan:
+      equipment: 留空则适用该类型全部设备
+  enum:
+    e10_source:
+      manual: 手动
+      auto: 自动
+    pm_result:
+      ok: 合格
+      ng: 不合格

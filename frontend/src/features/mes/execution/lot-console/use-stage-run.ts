@@ -12,19 +12,24 @@ import {
   type ExecStage,
   type StageBody,
 } from '@/lib/api/mes/execution'
+import { ErrorCode } from '@/lib/error-codes'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
 
 const detailOf = (e: unknown) =>
   e instanceof AxiosError
     ? ((e.response?.data as { detail?: unknown })?.detail as
-        | { code?: string; message?: string }
+        | { code?: number; message?: string }
         | undefined)
     : undefined
 
 const isLotStateError = (e: unknown) => {
   const c = detailOf(e)?.code
-  return c === 'on_hold' || c === 'lot_status' || c === 'lot_busy'
+  return (
+    c === ErrorCode.ON_HOLD ||
+    c === ErrorCode.LOT_STATUS ||
+    c === ErrorCode.LOT_BUSY
+  )
 }
 
 /** Q-Time 超时处置提示：处置结果 + 本次作业未执行。 */

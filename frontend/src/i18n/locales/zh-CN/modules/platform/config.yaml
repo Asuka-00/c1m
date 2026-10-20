@@ -1,0 +1,66 @@
+config:
+  title: 系统配置
+  tenantDesc: 系统配置。未修改的项使用默认值。
+  platformDesc: 所有租户的默认配置。
+  itemCount: '{{count}} 项'
+  inherited: 继承自平台
+  overridden: 已覆盖
+  resetToPlatform: 恢复默认
+  resetDone: 已恢复为平台值
+  platformValue: 平台值
+  unsaved: '{{count}} 处未保存的修改'
+  reset: 重置
+  saved: 配置已保存
+  invalidJson: JSON 格式无效
+  upload: 上传
+  replace: 替换
+  remove: 移除
+  uploaded: 文件已上传，保存后生效
+  imageHint: PNG、JPG、SVG、WebP 或 ICO，最大 5 MB
+  empty: 没有可配置的项。
+  support: 帮助与支持
+  groups:
+    branding: 产品品牌
+    security: 安全
+    notification: 通知渠道
+  groupDescs:
+    branding: 产品名称、Logo 与页脚，用于登录页、侧边栏和浏览器标签。
+    security: 平台登录策略（仅平台管理员）。
+    notification: 通知渠道的全平台开关（仅平台管理员）。
+  items:
+    branding:
+      app_name: 产品名称
+      app_subtitle: 副标题
+      logo: Logo
+      favicon: 网站图标
+      login_background: 登录页背景
+      primary_color: 主题色
+      footer_copyright: 页脚版权
+      support_url: 支持链接
+    security:
+      session_minutes: 会话时长（分钟）
+      password_policy: 密码策略
+      extra: 高级（JSON）
+    notification:
+      in_app_enabled: 启用站内通知
+  itemDescs:
+    branding:
+      app_name: 显示在登录页、侧边栏和浏览器标题中。
+      app_subtitle: 名称下方的可选标语。
+      logo: 方形图片，显示在侧边栏和登录页。
+      favicon: 浏览器标签图标（未设置时使用 Logo）。
+      login_background: 登录页的可选背景图。
+      primary_color: 品牌主题色。
+      footer_copyright: 显示在登录页和应用的页脚。
+      support_url: 页脚中的可选帮助/支持链接。
+    notification:
+      in_app_enabled: 把通知投递到站内消息中心。
+    security:
+      session_minutes: 新登录的访问令牌有效期。
+      extra: 自由格式的 JSON 选项。
+  options:
+    security:
+      password_policy:
+        basic: 基础（8 位以上）
+        standard: 标准（8 位以上，含字母和数字）
+        strict: 严格（12 位以上，混合字符）

@@ -10,11 +10,13 @@ import uuid
 from datetime import date, datetime, time, timedelta
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field
 
+from app.core import error_codes as ec
 from app.core.deps import SessionDep
 from app.core.spec.engine import ENTITIES
+from app.core.spec.errors import coded
 from app.core.spec.serialize import serialize
 from app.mes.common.query import one
 from app.mes.execution import dispatch, shift_log
@@ -29,7 +31,7 @@ Stage = Literal["move_in", "track_in", "track_out", "move_out"]
 
 def _need(ctx: TenantContext, p: str) -> None:
     if not ctx.can(p):
-        raise HTTPException(status_code=403, detail="Not enough permissions")
+        raise coded(403, ec.PERMISSION_DENIED, "Not enough permissions")
 
 
 class DcIn(BaseModel):
@@ -273,9 +275,9 @@ def _window(
     end_d = date_to or datetime.now(tz).date()
     start_d = date_from or end_d - timedelta(days=days - 1)
     if start_d > end_d:
-        raise HTTPException(status_code=422, detail="date_from after date_to")
+        raise coded(422, ec.DATE_RANGE_INVERTED, "date_from after date_to")
     if (end_d - start_d).days > 366:
-        raise HTTPException(status_code=422, detail="range too long (max 366 days)")
+        raise coded(422, ec.DATE_RANGE_TOO_LONG_366, "range too long (max 366 days)")
     return (
         datetime.combine(start_d, time.min, tz),
         datetime.combine(end_d + timedelta(days=1), time.min, tz),
@@ -353,7 +355,7 @@ def report_oee_trend(
     _need(ctx, "mes.exec:read")
     a, b = _window(date_from, date_to, 7)
     if (b - a).days > 92:
-        raise HTTPException(status_code=422, detail="range too long (max 92 days)")
+        raise coded(422, ec.DATE_RANGE_TOO_LONG_92, "range too long (max 92 days)")
     return {"data": svc.oee_trend(session, ctx.id, a, b, workcenter)}
 
 

@@ -1,0 +1,120 @@
+mes:
+  entity:
+    measurement_item: 量测项目
+    dc_plan: 数据收集计划
+    dc_plan_item: 收集项
+    sampling_rule: 抽样规则
+    defect_code: 缺陷代码
+    reason_code: 原因代码
+    dc_result: 量测数据
+  field:
+    measurement_item:
+      code: 编码
+      name: 名称
+      meas_type: 数据类型
+      uom: 单位
+      precision: 小数位
+      oos_action: 超规动作
+      oos_reason: 超规 Hold 原因
+      description: 描述
+    dc_plan:
+      code: 编码
+      name: 名称
+      operation: 工序
+      description: 描述
+    dc_plan_item:
+      dc_plan: 数据收集计划
+      measurement_item: 量测项目
+      seq: 序号
+      sites: 每片测点数
+      target: 目标值
+      lsl: 规格下限
+      usl: 规格上限
+    sampling_rule:
+      code: 编码
+      name: 名称
+      level: 抽样层级
+      operation: 工序
+      dc_plan: 数据收集计划
+      product: 产品
+      lot_frequency: 每 N 批抽 1 批
+      wafer_count: 每批抽片数
+      wafer_selection: 选片方式
+      fixed_slots: 固定槽位
+      is_active: 启用
+      description: 描述
+    defect_code:
+      code: 编码
+      name: 名称
+      category: 类别
+      severity: 严重度
+      is_killer: 致命缺陷
+      description: 描述
+    reason_code:
+      code: 编码
+      name: 名称
+      reason_type: 原因类型
+      area: 区域
+      comment_required: 需填写备注
+      is_active: 启用
+      description: 描述
+    dc_result:
+      lot: 批次
+      unit: 晶圆 / 单元
+      route_step: 流程步骤
+      dc_plan: 数据收集计划
+      measurement_item: 量测项目
+      site_no: 测点
+      value: 值
+      is_oos: 超规
+      oos_action: 超规动作
+      username: 用户
+  help:
+    sampling_rule:
+      fixed_slots: 逗号分隔的槽位号，例如 1,13,25
+  enum:
+    child_id_mode:
+      suffix: 母批号 + 后缀
+      code_rule: 批次类型编码规则
+    meas_type:
+      numeric: 数值型
+      attribute: 属性型（合格/不合格）
+      count: 计数型
+    sample_level:
+      lot: 批次
+      wafer: 晶圆
+    wafer_selection:
+      first: 前 N 片
+      last: 后 N 片
+      random: 随机
+      alternate: 隔槽
+      fixed: 固定槽位
+    defect_category:
+      particle: 颗粒
+      scratch: 划伤
+      pattern: 图形缺陷
+      residue: 残留
+      electrical: 电性
+      other: 其他
+    severity:
+      minor: 轻微
+      major: 严重
+      critical: 致命
+    reason_type:
+      scrap: 报废
+      rework: 返工
+      hold: Hold
+      e10: 设备状态变更
+      downtime: 设备停机
+      release: 解冻
+      jump: 跳站
+      bonus: 补数
+    oos_action:
+      warn: 预警
+      rework: 返工
+      auto_hold: 自动 Hold
+      block: 禁止下机
+    qtime_action:
+      warn: 预警
+      hold: Hold 批次
+      rework: 返工

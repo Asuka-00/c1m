@@ -19,7 +19,7 @@ SQL = """
 INSERT INTO mes_reason_code
     (id, tenant_id, code, name, reason_type, comment_required, is_active,
      attrs, created_at, updated_at)
-SELECT gen_random_uuid(), t.id, 'qtime_expired', 'Q-Time 超时', 'hold', false, true,
+SELECT gen_random_uuid(), t.id, 'qtime_expired', 'Q-Time exceeded', 'hold', false, true,
        '{"system": true}'::json, now(), now()
 FROM tenant t
 ON CONFLICT ON CONSTRAINT uq_mes_reason_code_0 DO NOTHING

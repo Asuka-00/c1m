@@ -6,16 +6,16 @@ from datetime import date
 from typing import Any
 
 import sqlalchemy as sa
-from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.base import Row, Validator, conn, table
 from app.core.spec.engine import (
     ENTITIES,
     TABLES,
     Entity,
 )
-from app.core.spec.errors import MesError, http_422
+from app.core.spec.errors import FieldError, MesError, coded, fe, http_422
 from app.core.spec.query import get_row
 from app.core.spec.serialize import coerce
 
@@ -69,7 +69,7 @@ def validate(
     # 原始载荷校验器（在类型 / 枚举转换前，可直接抛 HTTPException 给出结构化错误）
     for fn in VALIDATORS.get(f"{e.code}:payload", []):
         fn(session, tenant_id, e, data, existing)
-    errors: list[tuple[str, str]] = []
+    errors: list[FieldError] = []
     values: Row = {}
     for f in e.all_fields:
         key = f.column if f.column in data else f.name if f.name in data else None
@@ -78,7 +78,14 @@ def validate(
         try:
             values[f.column] = coerce(f, data[key])
         except (ValueError, TypeError) as ex:
-            errors.append((f.name, f"{f.name}: {ex}"))
+            errors.append(
+                fe(
+                    f.name,
+                    getattr(ex, "code", ec.FIELD_INVALID),
+                    f"{f.name}: {ex}",
+                    **getattr(ex, "params", {}),
+                )
+            )
     if "attrs" in data:
         values["attrs"] = data["attrs"]
     merged = {**(existing or {}), **values}
@@ -104,13 +111,21 @@ def validate(
         if merged.get(f.column) not in (None, ""):
             continue
         if f.required:
-            errors.append((f.name, f"{f.name}: required"))
+            errors.append(fe(f.name, ec.FIELD_REQUIRED, f"{f.name}: required"))
         for k, allowed in (f.required_when or {}).items():
             cur = merged.get(by_name[k].column)
             active = cur not in (None, "") if "*" in allowed else cur in allowed
             if active:
                 cond = "set" if "*" in allowed else str(cur)
-                errors.append((f.name, f"{f.name}: required when {k} = {cond}"))
+                errors.append(
+                    fe(
+                        f.name,
+                        ec.FIELD_REQUIRED_WHEN,
+                        f"{f.name}: required when {k} = {cond}",
+                        when=k,
+                        value=cond,
+                    )
+                )
     # 引用目标必须属于本租户（其他租户的行本来也被 RLS 隐藏）
     for f in e.all_fields:
         v = values.get(f.column)
@@ -124,14 +139,22 @@ def validate(
                 .first()
             )
             if not hit:
-                errors.append((f.name, f"{f.name}: referenced record not found"))
+                errors.append(
+                    fe(
+                        f.name,
+                        ec.FIELD_REF_NOT_FOUND,
+                        f"{f.name}: referenced record not found",
+                    )
+                )
     if e.tree and values.get("parent_id") is not None and existing is not None:
         # 禁止成环：从新的父节点向上遍历
         seen, cur = {existing["id"]}, values["parent_id"]
         t = table(e)
         while cur is not None:
             if cur in seen:
-                errors.append(("parent", "parent: would create a cycle"))
+                errors.append(
+                    fe("parent", ec.PARENT_CYCLE, "parent: would create a cycle")
+                )
                 break
             seen.add(cur)
             cur = (
@@ -198,23 +221,37 @@ def attr_options(session: Session, tenant_id: uuid.UUID, d: Row) -> list[str]:
 
 def validate_attrs(
     session: Session, tenant_id: uuid.UUID, e: Entity, attrs: Any
-) -> list[tuple[str, str]]:
+) -> list[FieldError]:
     """按租户自定义属性定义校验 ``row.attrs``，返回字段错误列表。"""
     if e.code in ("attr_def", "audit_log"):
         return []
     attrs = attrs or {}
     if not isinstance(attrs, dict):
-        return [("attrs", "attrs: must be an object")]
+        return [fe("attrs", ec.ATTRS_NOT_OBJECT, "attrs: must be an object")]
     defs = {d["code"]: d for d in attr_defs(session, tenant_id, e)}
-    errs: list[tuple[str, str]] = []
+    errs: list[FieldError] = []
     for k in attrs:
         if k not in defs and not k.startswith("_"):  # "_x"：系统标记（如演示数据）
-            errs.append((f"attrs.{k}", f"attrs.{k}: unknown attribute"))
+            errs.append(
+                fe(
+                    f"attrs.{k}",
+                    ec.ATTR_UNKNOWN,
+                    f"attrs.{k}: unknown attribute",
+                    attr=k,
+                )
+            )
     for code, d in defs.items():
         v = attrs.get(code)
         if v in (None, ""):
             if d["required"]:
-                errs.append((f"attrs.{code}", f"{d['name']}: required"))
+                errs.append(
+                    fe(
+                        f"attrs.{code}",
+                        ec.ATTR_REQUIRED,
+                        f"{d['name']}: required",
+                        name=d["name"],
+                    )
+                )
             continue
         ok = True
         match d["data_type"]:
@@ -233,7 +270,13 @@ def validate_attrs(
                 ok = isinstance(v, str) and len(v) <= 500
         if not ok:
             errs.append(
-                (f"attrs.{code}", f"{d['name']}: invalid {d['data_type']} value")
+                fe(
+                    f"attrs.{code}",
+                    ec.ATTR_INVALID,
+                    f"{d['name']}: invalid {d['data_type']} value",
+                    name=d["name"],
+                    type=d["data_type"],
+                )
             )
     return errs
 
@@ -262,15 +305,20 @@ def check_editable(session: Session, tenant_id: uuid.UUID, e: Entity, row: Row) 
         HTTPException: 已激活 / 停用的版本不可修改（409）。
     """
     if e.readonly:
-        raise HTTPException(status_code=405, detail="Read-only entity")
+        raise coded(405, ec.READ_ONLY_ENTITY, "Read-only entity")
     if e.versioned and row.get("status", "draft") != "draft":
-        raise HTTPException(
-            status_code=409,
-            detail="Only draft versions can be changed; create a new version",
+        raise coded(
+            409,
+            ec.VERSION_NOT_DRAFT,
+            "Only draft versions can be changed; create a new version",
         )
     lp = locking_parent(session, tenant_id, e, row)
     if lp and lp[1]["status"] != "draft":
-        raise HTTPException(
-            status_code=409,
-            detail=f"Parent {lp[0].code} {lp[1].get('code', '')} v{lp[1]['version']} is not a draft",
+        raise coded(
+            409,
+            ec.PARENT_NOT_DRAFT,
+            f"Parent {lp[0].code} {lp[1].get('code', '')} v{lp[1]['version']} is not a draft",
+            entity=lp[0].code,
+            code=lp[1].get("code", ""),
+            version=lp[1]["version"],
         )

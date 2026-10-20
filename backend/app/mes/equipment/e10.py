@@ -73,7 +73,16 @@ def e10_apply(
     ):
         return {"skipped": f"transition {cur['code']} -> {to['code']} not allowed"}
     _upd(s, tid, "equipment", eq["id"], user, e10_state_id=to["id"])
-    e10_log(s, tid, eq, cur, to, "auto", user, comment=f"{trigger} {lot['code']}")
+    e10_log(
+        s,
+        tid,
+        eq,
+        cur,
+        to,
+        "auto",
+        user,
+        note={"key": "e10_auto", "params": {"trigger": trigger, "lot": lot["code"]}},
+    )
     audit(
         s,
         tid,

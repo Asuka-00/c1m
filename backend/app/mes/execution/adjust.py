@@ -5,13 +5,15 @@ from typing import Any
 
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.audit import audit
 from app.core.spec.base import now
 from app.core.spec.engine import ENTITIES
-from app.core.spec.errors import http_422
+from app.core.spec.errors import FieldError, fe, http_422
 from app.mes.common.query import one
 from app.mes.common.rows import _upd
 from app.mes.execution.checks import service as ck
+from app.mes.execution.checks.types import M_ADJ
 from app.mes.execution.context import build_ctx
 from app.mes.execution.stage_common import _brief, _ov, _result
 from app.mes.lot.service import check_transition, history, lock_lot, units
@@ -35,12 +37,14 @@ def limit_result(ctx: ck.Ctx, n: int) -> Row | None:
         return ck.result(
             "qty_adjust_limit",
             "fail",
-            f"adjust qty {n} exceeds {pct:g}% of lot qty {base}",
+            M_ADJ("exceeds", qty=n, pct=f"{pct:g}", base=base),
             severity=(rule or {}).get("severity") or "block",
             rule=rule,
             data=data,
         )
-    return ck.result("qty_adjust_limit", "pass", f"within {pct:g}%", data=data)
+    return ck.result(
+        "qty_adjust_limit", "pass", M_ADJ("within", pct=f"{pct:g}"), data=data
+    )
 
 
 def adjust(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -> Row:
@@ -67,31 +71,59 @@ def adjust(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) 
     kind = str(body.get("kind") or "")
     check_transition(lot, "adjust")
     level = lot["tracking_level"] or "wafer"
-    errs: list[tuple[str, str]] = []
+    errs: list[FieldError] = []
     reason = one(s, tid, "reason_code", body.get("reason_id"))
     if kind not in ("scrap", "bonus"):
-        errs.append(("kind", "kind: must be scrap or bonus"))
+        errs.append(fe("kind", ec.ADJUST_KIND, "kind: must be scrap or bonus"))
     elif not reason or reason["reason_type"] != kind:
-        errs.append(("reason_id", f"reason_id: a {kind} reason code is required"))
+        errs.append(
+            fe(
+                "reason_id",
+                ec.REASON_REQUIRED,
+                f"reason_id: a {kind} reason code is required",
+                type=kind,
+            )
+        )
     elif reason.get("comment_required") and not (body.get("comment") or "").strip():
-        errs.append(("comment", "comment: required by this reason code"))
+        errs.append(
+            fe("comment", ec.COMMENT_REQUIRED, "comment: required by this reason code")
+        )
     picked: list[Row] = []
     n = 0
     if kind == "bonus" and level != "quantity":
-        errs.append(("kind", "kind: bonus is only for quantity-tracked lots"))
+        errs.append(
+            fe(
+                "kind",
+                ec.BONUS_QUANTITY_ONLY,
+                "kind: bonus is only for quantity-tracked lots",
+            )
+        )
     elif kind == "scrap" and level != "quantity":
         active = {str(u["id"]): u for u in units(s, tid, lot["id"])}
         ids = [str(x) for x in body.get("unit_ids") or []]
         picked = [active[i] for i in dict.fromkeys(ids) if i in active]
         if not ids or len(picked) != len(set(ids)):
-            errs.append(("unit_ids", "unit_ids: select active units of this lot"))
+            errs.append(
+                fe(
+                    "unit_ids",
+                    ec.ADJUST_UNITS,
+                    "unit_ids: select active units of this lot",
+                )
+            )
         n = len(picked)
     else:
         n = int(body.get("qty") or 0)
         if n < 1:
-            errs.append(("qty", "qty: must be >= 1"))
+            errs.append(fe("qty", ec.FIELD_MIN, "qty: must be >= 1", min=1))
         elif kind == "scrap" and n > lot["qty"]:
-            errs.append(("qty", f"qty: exceeds lot qty {lot['qty']}"))
+            errs.append(
+                fe(
+                    "qty",
+                    ec.ADJUST_QTY_EXCEEDS,
+                    f"qty: exceeds lot qty {lot['qty']}",
+                    qty=lot["qty"],
+                )
+            )
     if errs:
         raise http_422(errs)
     if kind == "scrap" and n >= lot["qty"]:  # 报废到 0：加工中批次不能被报废

@@ -9,19 +9,15 @@ from app.platform.notification.service import notify, register_event
 
 Row = dict[str, Any]
 
-QTIME_WARN = register_event(
-    "mes.qtime_warn", "Q-Time warning|Q-Time 预警|Q-Time 事前警告", "warning", "lot"
-).code
+QTIME_WARN = register_event("mes.qtime_warn", "Q-Time warning", "warning", "lot").code
 QTIME_EXCEEDED = register_event(
     "mes.qtime_exceeded",
-    "Q-Time exceeded|Q-Time 超时|Q-Time 超過",
+    "Q-Time exceeded",
     "critical",
     "lot",
 ).code
-LOT_HOLD = register_event(
-    "mes.lot_hold", "Lot auto hold|批次自动 Hold|ロット自動ホールド", "warning", "lot"
-).code
-OOS = register_event("mes.oos", "Out of spec|超规|規格外", "critical", "lot").code
+LOT_HOLD = register_event("mes.lot_hold", "Lot auto hold", "warning", "lot").code
+OOS = register_event("mes.oos", "Out of spec", "critical", "lot").code
 
 
 def lot_link(lot: Row) -> str:
@@ -55,13 +51,13 @@ def notify_lot(
 
 QUAL_EXPIRING = register_event(
     "mes.qual_expiring",
-    "Qualification expiring|资质即将到期|資格期限間近",
+    "Qualification expiring",
     "warning",
     "operator_qual",
 ).code
 QUAL_EXPIRED = register_event(
     "mes.qual_expired",
-    "Qualification expired|资质已过期|資格期限切れ",
+    "Qualification expired",
     "critical",
     "operator_qual",
 ).code

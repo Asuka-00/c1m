@@ -23,6 +23,7 @@ import {
   type SmBody,
   type SplitChild,
 } from '@/lib/api/mes/execution'
+import { partsText } from '@/lib/backend-text'
 import { cn } from '@/lib/utils'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -557,7 +558,14 @@ function MergeDialog({
                     {c.problems.length > 0 && (
                       <ul className='list-disc ps-4 text-xs text-destructive'>
                         {c.problems.map((x, k) => (
-                          <li key={k}>{x}</li>
+                          <li key={k}>
+                            {partsText(
+                              c.problem_parts?.[k]
+                                ? [c.problem_parts[k]]
+                                : null,
+                              x
+                            )}
+                          </li>
                         ))}
                       </ul>
                     )}

@@ -4,12 +4,13 @@ import uuid
 from typing import Any
 
 import sqlalchemy as sa
-from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.models import actor_name
 from app.core.spec.base import now
 from app.core.spec.engine import TABLES
+from app.core.spec.errors import coded
 from app.mes.common import coderule
 from app.mes.common.query import find, jsonable, one
 from app.mes.common.rows import _ins
@@ -74,7 +75,7 @@ def lock_lot(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
         s, sa.select(t).where(t.c.tenant_id == tid, t.c.id == lot_id).with_for_update()
     )
     if not rows:
-        raise HTTPException(status_code=404, detail="Record not found")
+        raise coded(404, ec.RECORD_NOT_FOUND, "Record not found")
     return rows[0]
 
 

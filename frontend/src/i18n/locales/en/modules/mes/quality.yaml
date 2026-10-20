@@ -1,0 +1,120 @@
+mes:
+  entity:
+    measurement_item: Measurement item
+    dc_plan: Data collection plan
+    dc_plan_item: DC plan item
+    sampling_rule: Sampling rule
+    defect_code: Defect code
+    reason_code: Reason code
+    dc_result: DC result
+  field:
+    measurement_item:
+      code: Code
+      name: Name
+      meas_type: Data type
+      uom: Unit
+      precision: Decimals
+      oos_action: OOS action
+      oos_reason: OOS hold reason
+      description: Description
+    dc_plan:
+      code: Code
+      name: Name
+      operation: Operation
+      description: Description
+    dc_plan_item:
+      dc_plan: DC plan
+      measurement_item: Measurement item
+      seq: Seq.
+      sites: Sites per wafer
+      target: Target
+      lsl: LSL
+      usl: USL
+    sampling_rule:
+      code: Code
+      name: Name
+      level: Level
+      operation: Operation
+      dc_plan: DC plan
+      product: Product
+      lot_frequency: Every N lots
+      wafer_count: Wafers per lot
+      wafer_selection: Wafer selection
+      fixed_slots: Fixed slots
+      is_active: Active
+      description: Description
+    defect_code:
+      code: Code
+      name: Name
+      category: Category
+      severity: Severity
+      is_killer: Killer defect
+      description: Description
+    reason_code:
+      code: Code
+      name: Name
+      reason_type: Reason type
+      area: Area
+      comment_required: Comment required
+      is_active: Active
+      description: Description
+    dc_result:
+      lot: Lot
+      unit: Wafer / unit
+      route_step: Route step
+      dc_plan: DC plan
+      measurement_item: Measurement item
+      site_no: Site
+      value: Value
+      is_oos: OOS
+      oos_action: OOS action
+      username: User
+  help:
+    sampling_rule:
+      fixed_slots: Comma separated slot numbers, e.g. 1,13,25
+  enum:
+    child_id_mode:
+      suffix: Parent no. + suffix
+      code_rule: Lot type ID rule
+    meas_type:
+      numeric: Numeric
+      attribute: Attribute (pass/fail)
+      count: Count
+    sample_level:
+      lot: Lot
+      wafer: Wafer
+    wafer_selection:
+      first: First N
+      last: Last N
+      random: Random
+      alternate: Alternate slots
+      fixed: Fixed slots
+    defect_category:
+      particle: Particle
+      scratch: Scratch
+      pattern: Pattern
+      residue: Residue
+      electrical: Electrical
+      other: Other
+    severity:
+      minor: Minor
+      major: Major
+      critical: Critical
+    reason_type:
+      scrap: Scrap
+      rework: Rework
+      hold: Hold
+      e10: Equipment state change
+      downtime: Equipment downtime
+      release: Release
+      jump: Jump step
+      bonus: Bonus (qty added)
+    oos_action:
+      warn: Warn
+      rework: Rework
+      auto_hold: Auto hold
+      block: Block track out
+    qtime_action:
+      warn: Warn
+      hold: Hold lot
+      rework: Rework

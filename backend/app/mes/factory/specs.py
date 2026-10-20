@@ -7,16 +7,16 @@ register(
     Entity(
         "site",
         "org",
-        "Factory / site|工厂|工場",
+        "Factory / site",
         [
             F(
                 "timezone",
                 "str",
-                "Time zone|时区|タイムゾーン",
+                "Time zone",
                 default="Asia/Taipei",
                 max_length=50,
             ),
-            F("address", "str", "Address|地址|住所", max_length=300, list=False),
+            F("address", "str", "Address", max_length=300, list=False),
             F("is_active", "bool", default=True),
         ],
         phase=1,
@@ -29,13 +29,13 @@ register(
     Entity(
         "area",
         "org",
-        "Area|区域|エリア",
+        "Area",
         [
             F("site", "ref", required=True, ref="site"),
             F(
                 "area_type",
                 "enum",
-                "Area type|区域类型|エリア種別",
+                "Area type",
                 enum="area_type",
                 default="fab",
             ),
@@ -52,10 +52,10 @@ register(
     Entity(
         "workcenter",
         "org",
-        "Bay / work center|Bay / 工作中心|ベイ / ワークセンター",
+        "Bay / work center",
         [
             F("area", "ref", required=True, ref="area"),
-            F("kind", "enum", "Kind|类型|種別", enum="wc_kind", default="bay"),
+            F("kind", "enum", "Kind", enum="wc_kind", default="bay"),
             F("is_active", "bool", default=True),
         ],
         phase=1,
@@ -70,15 +70,15 @@ register(
     Entity(
         "shift",
         "org",
-        "Shift|班次|シフト",
+        "Shift",
         [
             F("site", "ref", required=True, ref="site"),
-            F("start_time", "time", "Start|开始时间|開始時刻", required=True),
-            F("end_time", "time", "End|结束时间|終了時刻", required=True),
+            F("start_time", "time", "Start", required=True),
+            F("end_time", "time", "End", required=True),
             F(
                 "crosses_midnight",
                 "bool",
-                "Crosses midnight|跨午夜|日跨ぎ",
+                "Crosses midnight",
                 default=False,
             ),
             F("sort_order", "int", default=0),
@@ -95,10 +95,10 @@ register(
     Entity(
         "work_calendar",
         "org",
-        "Work calendar|工作日历|稼働カレンダー",
+        "Work calendar",
         [
             F("site", "ref", required=True, ref="site"),
-            F("year", "int", "Year|年份|年", required=True),
+            F("year", "int", "Year", required=True),
             F("is_active", "bool", default=True),
         ],
         phase=1,
@@ -113,32 +113,32 @@ register(
     Entity(
         "calendar_day",
         "org",
-        "Calendar day|日历日|カレンダー日",
+        "Calendar day",
         [
             F(
                 "work_calendar",
                 "ref",
-                "Calendar|日历|カレンダー",
+                "Calendar",
                 required=True,
                 ref="work_calendar",
                 cascade=True,
             ),
-            F("day", "date", "Date|日期|日付", required=True),
+            F("day", "date", "Date", required=True),
             F(
                 "day_type",
                 "enum",
-                "Day type|日类型|日種別",
+                "Day type",
                 enum="day_type",
                 default="workday",
             ),
             F(
                 "shifts",
                 "str",
-                "Shifts|班次|シフト",
+                "Shifts",
                 max_length=200,
-                help="Comma separated shift codes|逗号分隔的班次编码|カンマ区切りのシフトコード",
+                help="Comma separated shift codes",
             ),
-            F("note", "str", "Note|备注|備考", max_length=200, list=False),
+            F("note", "str", "Note", max_length=200, list=False),
         ],
         phase=1,
         has_code=False,

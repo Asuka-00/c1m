@@ -18,13 +18,13 @@ from datetime import datetime
 from typing import Any
 
 import sqlalchemy as sa
-from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core import error_codes as ec
 from app.core.spec.audit import audit
 from app.core.spec.base import conn, now
 from app.core.spec.engine import ENTITIES, TABLES, Entity, F
-from app.core.spec.errors import MesError
+from app.core.spec.errors import MesError, coded, fe
 from app.core.spec.validate import validator
 from app.core.spec.write import set_status
 from app.mes.common.query import find, one
@@ -74,7 +74,13 @@ def _step_map(s: Session, tid: uuid.UUID, olds: list[Row], new: Row) -> dict[Any
 
 def _activate(s: Session, tid: uuid.UUID, code: str, row: Row, user: Any) -> None:
     if row["status"] == "inactive":
-        raise HTTPException(409, f"{code} version {row['version']} is inactive")
+        raise coded(
+            409,
+            ec.VERSION_INACTIVE,
+            f"{code} version {row['version']} is inactive",
+            entity=code,
+            version=row["version"],
+        )
     if row["status"] == "draft":
         set_status(s, tid, ENTITIES[code], row["id"], "active", user)
 
@@ -84,7 +90,7 @@ def apply(s: Session, tid: uuid.UUID, co: Row, user: Any) -> Row:
     kind = co["change_type"]
     new = one(s, tid, kind, co[f"{kind}_id"])
     if not new:
-        raise HTTPException(422, f"{kind} not found")
+        raise coded(422, ec.ECN_TARGET_NOT_FOUND, f"{kind} not found", entity=kind)
     olds = [
         r
         for r in find(s, tid, kind)
@@ -151,7 +157,12 @@ def _copy_code(s: Session, tid: uuid.UUID, t: sa.Table, code: str, ver: int) -> 
         )
         if hit.first() is None:
             return cand
-    raise HTTPException(409, f"cannot derive a unique code from {code}")
+    raise coded(
+        409,
+        ec.COPY_CODE_CONFLICT,
+        f"cannot derive a unique code from {code}",
+        code=code,
+    )
 
 
 def _copy_step_config(
@@ -284,9 +295,14 @@ def release(s: Session, tid: uuid.UUID, cid: Any, user: Any) -> Row:
     """发布变更单：生效时间已到（或未填）立即生效，否则待定时扫描生效。"""
     co = one(s, tid, "change_order", cid)
     if not co:
-        raise HTTPException(404, "change order not found")
+        raise coded(404, ec.CHANGE_ORDER_NOT_FOUND, "change order not found")
     if co["ecn_status"] != "draft":
-        raise HTTPException(409, f"change order is {co['ecn_status']}")
+        raise coded(
+            409,
+            ec.ECN_STATUS,
+            f"change order is {co['ecn_status']}",
+            status=co["ecn_status"],
+        )
     _set(s, tid, co, user, ecn_status="released")
     if not co["effective_at"] or co["effective_at"] <= now():
         _apply_one(s, tid, co, user)
@@ -298,9 +314,14 @@ def cancel(s: Session, tid: uuid.UUID, cid: Any, user: Any) -> Row:
     """取消未生效的变更单。"""
     co = one(s, tid, "change_order", cid)
     if not co:
-        raise HTTPException(404, "change order not found")
+        raise coded(404, ec.CHANGE_ORDER_NOT_FOUND, "change order not found")
     if co["ecn_status"] not in ("draft", "released"):
-        raise HTTPException(409, f"change order is {co['ecn_status']}")
+        raise coded(
+            409,
+            ec.ECN_STATUS,
+            f"change order is {co['ecn_status']}",
+            status=co["ecn_status"],
+        )
     _set(s, tid, co, user, ecn_status="cancelled")
     s.commit()
     return one(s, tid, "change_order", cid) or {}
@@ -342,11 +363,29 @@ def apply_due(s: Session, tid: uuid.UUID, at: datetime | None = None) -> int:
 def _co_save(_s: Session, _t: uuid.UUID, _e: Entity, row: Row, old: Row | None) -> None:
     """已发布的变更单不可修改；目标版本须与变更对象一致。"""
     if old and old["ecn_status"] != "draft":
-        raise MesError([("ecn_status", "only draft change orders can be edited")])
+        raise MesError(
+            [
+                fe(
+                    "ecn_status",
+                    ec.ECN_NOT_EDITABLE,
+                    "only draft change orders can be edited",
+                )
+            ]
+        )
     kind = row.get("change_type")
     other = "recipe" if kind == "route" else "route"
     if row.get(f"{other}_id"):
-        raise MesError([(other, f"{other}: not used for a {kind} change")])
+        raise MesError(
+            [
+                fe(
+                    other,
+                    ec.ECN_FIELD_UNUSED,
+                    f"{other}: not used for a {kind} change",
+                    entity=other,
+                    kind=kind,
+                )
+            ]
+        )
 
 
 @validator("change_order:delete")
@@ -355,5 +394,11 @@ def _co_delete(
 ) -> None:
     if row["ecn_status"] not in ("draft", "cancelled"):
         raise MesError(
-            [("ecn_status", "only draft or cancelled orders can be deleted")]
+            [
+                fe(
+                    "ecn_status",
+                    ec.ECN_NOT_DELETABLE,
+                    "only draft or cancelled orders can be deleted",
+                )
+            ]
         )

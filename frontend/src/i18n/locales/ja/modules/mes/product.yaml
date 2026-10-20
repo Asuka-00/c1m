@@ -1,0 +1,212 @@
+mes:
+  convertValue: 値（{{unit}}）
+  convertTo: 換算先
+  entity:
+    uom: 単位
+    uom_conversion: 単位換算
+    tech_node: テクノロジーノード
+    product_family: 製品ファミリー
+    product: 製品
+    material_type: 資材タイプ
+    material: 資材
+    carrier_type: キャリアタイプ
+    carrier: キャリア
+    carrier_event: キャリア履歴
+    reticle: レチクル
+    fixture: 治具・工具
+    material_lot: ラインサイド資材ロット
+  field:
+    uom:
+      code: コード
+      name: 名称
+      symbol: 記号
+      dimension: 次元
+      description: 説明
+    uom_conversion:
+      from_uom: 換算元
+      to_uom: 換算先
+      factor: 換算係数
+      offset: オフセット
+    tech_node:
+      code: コード
+      name: 名称
+      feature_nm: 最小寸法（nm）
+      wafer_size: ウェーハサイズ
+      tracking_level: 追跡レベル
+      description: 説明
+    product_family:
+      code: コード
+      name: 名称
+      tech_node: テクノロジーノード
+      description: 説明
+    product:
+      code: コード
+      name: 名称
+      family: ファミリー
+      tech_node: テクノロジーノード
+      product_type: 種別
+      wafer_size: ウェーハサイズ
+      gross_die: ウェーハ当たりダイ数
+      uom: 単位
+      tracking_level: 追跡レベル
+      serial_kind: シリアル単位種別
+      unit_code_rule: ユニット採番ルール
+      description: 説明
+    material_type:
+      code: コード
+      name: 名称
+      category: カテゴリ
+      description: 説明
+    material:
+      code: コード
+      name: 名称
+      material_type: 資材タイプ
+      uom: 単位
+      vendor: ベンダー
+      shelf_life_days: 使用期限（日）
+      storage: 保管条件
+      is_active: 有効
+      description: 説明
+    carrier_type:
+      code: コード
+      name: 名称
+      category: カテゴリ
+      capacity: 容量（スロット）
+      wafer_size: ウェーハサイズ
+      clean_interval_days: 洗浄周期（日）
+      description: 説明
+    carrier:
+      code: コード
+      name: 名称
+      carrier_type: キャリアタイプ
+      status_code: 状態
+      max_uses: 最大使用回数
+      use_count: 洗浄後使用回数
+      last_cleaned_at: 前回洗浄
+      rfid: RFID タグ
+      description: 説明
+    carrier_event:
+      carrier: キャリア
+      event: イベント
+      lot: ロット
+      other_carrier: 移動元・先キャリア
+      qty: 数量
+      comment: コメント
+      username: ユーザー
+      at: 日時
+    reticle:
+      code: コード
+      name: 名称
+      product: 製品
+      layer: レイヤー
+      grade: グレード
+      max_shots: 最大ショット数
+      status_code: 状態
+      description: 説明
+    fixture:
+      code: コード
+      name: 名称
+      kind: 種別
+      max_uses: 最大使用回数
+      status_code: 状態
+      description: 説明
+    material_lot:
+      code: 資材ロット番号
+      material: 資材
+      qty_remaining: 残数量
+      initial_qty: 受入数量
+      uom: 単位
+      expiry_date: 有効期限
+      location: ロケーション
+      ml_status: 状態
+      description: 説明
+  help:
+    uom_conversion:
+      factor: 換算先 = 換算元 × 係数
+    product:
+      tracking_level: 空欄：テクノロジーノードを継承
+  enum:
+    uom_dimension:
+      count: 数量
+      length: 長さ
+      area: 面積
+      volume: 体積
+      mass: 質量
+      time: 時間
+      pressure: 圧力
+      temperature: 温度
+      energy_density: エネルギー密度
+    wafer_size:
+      '100': 100 mm（4 インチ）
+      '150': 150 mm（6 インチ）
+      '200': 200 mm（8 インチ）
+      '300': 300 mm（12 インチ）
+    product_type:
+      production: 量産
+      engineering: エンジニアリング
+      monitor: モニター
+      dummy: ダミー
+    material_category:
+      wafer: 原料ウェーハ
+      chemical: 薬液
+      gas: ガス
+      target: ターゲット
+      slurry: スラリー
+      photoresist: フォトレジスト
+      consumable: 消耗品
+    carrier_category:
+      foup: FOUP
+      fosb: FOSB
+      cassette: カセット
+      pod: レチクルポッド
+      smif: SMIF ポッド
+    carrier_event_type:
+      load: 積込み
+      unload: 取出し
+      clean: 洗浄
+      sort: ウェーハソート
+      split: 分割
+      merge: 統合
+    asset_status:
+      available: 使用可
+      in_use: 使用中
+      dirty: 要洗浄
+      hold: ホールド
+      retired: 廃棄
+    reticle_grade:
+      binary: バイナリ
+      psm: 位相シフト
+      euv: EUV
+    fixture_kind:
+      probe_card: プローブカード
+      fixture: 治具
+      jig: ジグ
+      tool: 工具
+    eqp_category:
+      process: プロセス装置
+      metrology: 計測装置
+      inspection: 検査装置
+      test: テスト装置
+      transport: 搬送装置
+    unit_kind:
+      main: 本体
+      chamber: チャンバー
+      load_port: ロードポート
+      port: ポート
+      sub_unit: サブユニット
+    tracking_level:
+      wafer: ウェーハ（スロット）
+      unit: シリアル管理ユニット
+      quantity: 数量
+    serial_kind:
+      strip: ストリップ
+      die: ダイ
+      package: パッケージ
+      unit: ユニット
+    e10_category:
+      PRD: PRD · 生産
+      SBY: SBY · 待機
+      ENG: ENG · エンジニアリング
+      SDT: SDT · 計画停止
+      UDT: UDT · 計画外停止
+      NST: NST · 非稼働予定
