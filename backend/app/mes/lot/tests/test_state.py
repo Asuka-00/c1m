@@ -388,10 +388,10 @@ def test_h2_02_ship_stored_on_hold_rejected() -> None:
 
 
 def test_qt_06_no_qtime_scrap_write_path() -> None:
-    """QT-06（D12）：qtime.py / qtime_actions.py 无超时直接报废路径。"""
+    """QT-06（D12）：qtime.py / hold/qtime.py 无超时直接报废路径。"""
     from pathlib import Path
 
-    import app.mes.execution.qtime_actions as qa
+    import app.mes.execution.hold.qtime as qa
     import app.mes.lot.qtime as lq
 
     for mod in (qa, lq):

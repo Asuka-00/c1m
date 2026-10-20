@@ -13,8 +13,8 @@ from app.core.spec.serialize import serialize, to_json
 from app.mes.common.query import find, one
 from app.mes.execution.checks import service as ck
 from app.mes.execution.checks.registry import Ctx
-from app.mes.execution.constants import NEXT_STAGE, STAGES
-from app.mes.execution.consumption import candidate_lots, material_needs
+from app.mes.execution.stage.constants import NEXT_STAGE, STAGES
+from app.mes.execution.stage.consumption import candidate_lots, material_needs
 from app.mes.lot.service import TERMINAL, units
 from app.mes.process.service import step_after
 from app.mes.quality.service import sampling

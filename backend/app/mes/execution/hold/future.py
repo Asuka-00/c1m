@@ -12,7 +12,7 @@ from app.core.spec.errors import MesError, fe
 from app.core.spec.validate import validator
 from app.mes.common.query import find, one
 from app.mes.common.rows import _upd
-from app.mes.execution.hold import default_reason, hold_lot
+from app.mes.execution.hold.manage import default_reason, hold_lot
 from app.mes.lot.service import TERMINAL
 
 Row = dict[str, Any]

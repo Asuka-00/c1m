@@ -6,8 +6,8 @@ from typing import Any
 
 from app.mes.common.query import find, one
 from app.mes.equipment.service import e10_current, pm_status, tool_life
+from app.mes.execution.carrier.usage import clean_due
 from app.mes.execution.checks.registry import Ctx, Msg, check_type, messages
-from app.mes.execution.usage import clean_due
 from app.mes.lot.service import qtime_status
 
 Row = dict[str, Any]

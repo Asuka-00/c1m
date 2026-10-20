@@ -22,11 +22,11 @@ from app.core.spec.validate import validator
 from app.mes.common.query import find, one
 from app.mes.equipment.service import pm_notify
 from app.mes.execution.checks import service as ck
-from app.mes.execution.context import build_ctx
 from app.mes.execution.events import QTIME_EXCEEDED, QTIME_WARN, notify_lot
-from app.mes.execution.hold import default_reason, hold_lot
-from app.mes.execution.qual import qual_notify
-from app.mes.execution.stage_common import _relocate
+from app.mes.execution.hold.manage import default_reason, hold_lot
+from app.mes.execution.hold.qual import qual_notify
+from app.mes.execution.stage.common import _relocate
+from app.mes.execution.stage.context import build_ctx
 from app.mes.lot.service import history
 from app.mes.planning.service import wo_due_notify
 from app.mes.process.service import apply_due

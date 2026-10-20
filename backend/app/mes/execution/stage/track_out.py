@@ -16,13 +16,13 @@ from app.mes.common.rows import _ins, _upd
 from app.mes.equipment.service import e10_apply
 from app.mes.execution.checks import service as ck
 from app.mes.execution.checks.types import M_OOS
-from app.mes.execution.constants import OOS_RANK
-from app.mes.execution.consumption import _consume
-from app.mes.execution.context import build_ctx
 from app.mes.execution.events import OOS, notify_lot
-from app.mes.execution.hold import default_reason, hold_lot
-from app.mes.execution.recipe_run import close_run
-from app.mes.execution.stage_common import _brief, _guard, _ov, _result
+from app.mes.execution.hold.manage import default_reason, hold_lot
+from app.mes.execution.stage.common import _brief, _guard, _ov, _result
+from app.mes.execution.stage.constants import OOS_RANK
+from app.mes.execution.stage.consumption import _consume
+from app.mes.execution.stage.context import build_ctx
+from app.mes.execution.stage.recipe_run import close_run
 from app.mes.lot.service import history, lock_lot, units
 from app.mes.quality.service import out_of_spec
 

@@ -12,9 +12,9 @@ from app.core.spec.errors import coded, fe, http_422
 from app.core.tenant import set_tenant
 from app.mes.common.query import find, one
 from app.mes.execution.checks import service as ck
-from app.mes.execution.constants import NEXT_STAGE
-from app.mes.execution.dispatch import queue
-from app.mes.execution.stages import run_stage
+from app.mes.execution.stage.constants import NEXT_STAGE
+from app.mes.execution.stage.dispatch import queue
+from app.mes.execution.stage.stages import run_stage
 
 Row = dict[str, Any]
 MAX_BATCH = 25

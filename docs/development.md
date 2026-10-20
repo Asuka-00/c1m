@@ -86,7 +86,7 @@ core  <-  platform.*  <-  mes.common  <-  mes.<domain>  <-  mes.execution
 - `app/core/spec/engine.py` 的 `build_table` 根据规格生成 SQLAlchemy 表（`registry.load()` 按模块顺序加载规格后统一构建）；通用路由 `app/mes/common/router.py` 提供列表 / 详情 / 新增 / 修改 / 删除 / 导入导出。
 - 前端 `features/mes/common` 读取同一份元数据自动生成表格列、表单与筛选，因此大多数主数据页面无需手写；实体专属面板/按钮在各模块 `extensions.ts(x)` 中声明。
 - 修改规格后需新增 Alembic 迁移（`alembic revision -m "..."` 并手写变更）。
-- 业务逻辑：`mes/execution`（`stages.py` / `track_out.py` 四阶段作业、`checks/` 卡控注册表与检查类型、`consumption.py` 物料消耗、`hold.py` 暂停/释放、`split.py` / `merge.py` 分批合批）、`mes/planning/service.py`（工单与投产）、`mes/lot`（批次历史、单元、Q-Time）、`mes/process`（路线导航）、`mes/equipment`（E10 自动迁移）、`mes/quality`（DC 与抽样）。
+- 业务逻辑：`mes/execution`（`stage/` 四阶段作业与物料消耗、`checks/` 卡控注册表与检查类型、`hold/` 暂停/释放与 Q-Time 处理、`split_merge/` 分批合批、`carrier/` 载具作业、`report/` 报表与追溯）、`mes/planning/service.py`（工单与投产）、`mes/lot`（批次历史、单元、Q-Time）、`mes/process`（路线导航）、`mes/equipment`（E10 自动迁移）、`mes/quality`（DC 与抽样）。
 
 ## i18n
 

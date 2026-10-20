@@ -14,8 +14,8 @@ from sqlmodel import Session, text
 
 from app.core import error_codes as ec
 from app.core.db import engine
-from app.mes.execution import hold as hold_svc
-from app.mes.execution import merge as merge_mod
+from app.mes.execution.hold import manage as hold_svc
+from app.mes.execution.split_merge import merge as merge_mod
 from app.mes.execution.tests.test_exec import EXEC, Line, _msgs
 from app.mes.execution.tests.test_split_merge import _line, merge
 from app.mes.lot.service import lock_lot

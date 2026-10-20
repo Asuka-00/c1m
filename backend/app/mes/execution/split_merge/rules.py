@@ -16,8 +16,8 @@ from app.mes.common import coderule
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins
 from app.mes.execution.checks import service as ck
-from app.mes.execution.context import build_ctx
-from app.mes.execution.stages import LOT
+from app.mes.execution.stage.context import build_ctx
+from app.mes.execution.stage.stages import LOT
 
 Row = dict[str, Any]
 #: 拆 / 合批规则检查的说明（前端 mes.checkMsg.split_merge_rule.*；状态参数为 lot_status 枚举值）

@@ -19,9 +19,10 @@ from app.core.spec.engine import ENTITIES
 from app.core.spec.errors import coded
 from app.core.spec.serialize import serialize
 from app.mes.common.query import one
-from app.mes.execution import dispatch, shift_log
 from app.mes.execution import service as sm
 from app.mes.execution import service as svc
+from app.mes.execution.report import shift_log
+from app.mes.execution.stage import dispatch
 from app.platform.auth.deps import CurrentTenant
 from app.platform.tenants.service import TenantContext
 

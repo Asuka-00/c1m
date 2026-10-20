@@ -8,8 +8,8 @@ from sqlmodel import Session
 
 from app.core.spec.base import conn
 from app.core.spec.engine import TABLES
-from app.mes.execution.merge import merge_candidates
-from app.mes.execution.sm_rules import (
+from app.mes.execution.split_merge.merge import merge_candidates
+from app.mes.execution.split_merge.rules import (
     SPLIT_STATES,
     _children,
     _prio,

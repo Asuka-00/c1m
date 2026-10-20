@@ -14,7 +14,7 @@ from sqlmodel import Session
 
 from app.core import error_codes as ec
 from app.core.db import admin_engine, engine
-from app.mes.execution import qtime_actions as qa
+from app.mes.execution.hold import qtime as qa
 from app.mes.execution.tests.test_exec import EXEC, Line
 from app.mes.lot.service import lock_lot
 
@@ -151,7 +151,7 @@ def test_ah_01_qt_05_terminal_lot_auto_hold_skipped(
     (lot,) = f.start(1)
     f.sql("UPDATE mes_lot SET lot_status=:s WHERE id=:i", s=status, i=lot["id"])
     n0 = f.m.list("lot_history", lot=lot["id"])["count"]
-    with caplog.at_level(logging.WARNING, logger="app.mes.execution.hold"):
+    with caplog.at_level(logging.WARNING, logger="app.mes.execution.hold.manage"):
         assert _direct_hold(f, lot) is None
     assert not _holds(f, lot) and not f.lot(lot)["on_hold"]
     assert f.m.list("lot_history", lot=lot["id"])["count"] == n0

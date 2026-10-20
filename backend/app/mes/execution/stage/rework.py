@@ -15,8 +15,8 @@ from app.mes.common.query import one
 from app.mes.common.rows import _upd
 from app.mes.execution.checks import service as ck
 from app.mes.execution.checks.types import M_RW
-from app.mes.execution.context import build_ctx
-from app.mes.execution.stage_common import _brief, _ov, _result
+from app.mes.execution.stage.common import _brief, _ov, _result
+from app.mes.execution.stage.context import build_ctx
 from app.mes.lot.service import TERMINAL, history, lock_lot
 
 Row = dict[str, Any]

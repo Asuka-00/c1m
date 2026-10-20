@@ -13,9 +13,9 @@ from app.core.spec.engine import TABLES
 from app.core.spec.errors import fe, http_422
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
-from app.mes.execution.carrier import event
+from app.mes.execution.carrier.ops import event
 from app.mes.execution.checks import service as ck
-from app.mes.execution.sm_rules import (
+from app.mes.execution.split_merge.rules import (
     COPY,
     M_SMR,
     SPLIT_STATES,
@@ -29,8 +29,8 @@ from app.mes.execution.sm_rules import (
     _ser,
     rule_for,
 )
-from app.mes.execution.stage_common import _brief, _ov
-from app.mes.execution.stages import LOT
+from app.mes.execution.stage.common import _brief, _ov
+from app.mes.execution.stage.stages import LOT
 from app.mes.lot.service import check_transition, history, lock_lot, lot_error, units
 
 Row = dict[str, Any]

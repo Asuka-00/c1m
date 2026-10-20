@@ -13,11 +13,11 @@ from app.core.spec.base import now
 from app.core.spec.errors import FieldError, coded, fe, http_422
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
+from app.mes.execution.carrier.usage import clean_due
 from app.mes.execution.checks import service as ck
-from app.mes.execution.context import build_ctx
-from app.mes.execution.sm_rules import _carrier_busy, _carrier_cap
-from app.mes.execution.stages import LOT
-from app.mes.execution.usage import clean_due
+from app.mes.execution.split_merge.rules import _carrier_busy, _carrier_cap
+from app.mes.execution.stage.context import build_ctx
+from app.mes.execution.stage.stages import LOT
 from app.mes.lot.service import TERMINAL, history, lock_lot, units
 
 Row = dict[str, Any]
