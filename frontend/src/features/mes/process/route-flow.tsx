@@ -319,6 +319,9 @@ function RouteFlowInner({
         const editableKind = editable && (k === 'branch' || k === 'rework')
         return {
           ...e,
+          labelBgStyle: { fill: 'var(--background)', fillOpacity: 0.95 },
+          labelBgPadding: [6, 3] as [number, number],
+          labelBgBorderRadius: 4,
           deletable: editableKind,
           reconnectable: editableKind ? 'target' : false,
           ...(e.id === dropEdge

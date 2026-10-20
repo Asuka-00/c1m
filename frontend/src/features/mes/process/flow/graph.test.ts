@@ -107,6 +107,63 @@ describe('buildGraph', () => {
   })
 })
 
+describe('引用节点布局与连线', () => {
+  const sub = (id: string, seq: number, extra: Partial<MesRow> = {}) =>
+    step(id, seq, {
+      step_type: 'sub_route',
+      sub_route_id: `r-${id}`,
+      sub_route_label: 'SUB',
+      ...extra,
+    })
+  const subs = { 'r-a': [step('x', 10), step('y', 20), step('z', 30)] }
+
+  it('子路线 / 返工节点自动排在所属工步右侧，且不与下一工步的引用节点重叠', () => {
+    const g = buildGraph({
+      list: [
+        sub('a', 10, { rework_route_id: 'rw', rework_route_label: 'RW' }),
+        sub('b', 20, { sub_route_id: 'r-a' }),
+      ],
+      subs,
+    })
+    const a = pos(g, 's-a')
+    expect(pos(g, 'sub-a').x).toBeGreaterThan(a.x + W)
+    expect(pos(g, 'sub-a').y).toBe(a.y)
+    // 返工节点在子路线节点下方
+    expect(pos(g, 'rw-a').y).toBeGreaterThan(pos(g, 'sub-a').y)
+    // 下一工步的引用节点在上一组引用节点之下
+    expect(pos(g, 'sub-b').y).toBeGreaterThan(pos(g, 'rw-a').y + H)
+  })
+
+  it('调用 / 返回合成一条双向连线；没有回路线', () => {
+    const g = buildGraph({ list: [sub('a', 10)], subs })
+    const call = g.edges.find((e) => e.id === 'call-a')!
+    expect(call.markerStart).toBeDefined()
+    expect(call.markerEnd).toBeDefined()
+    expect(g.edges.some((e) => e.data?.kind === 'return')).toBe(false)
+  })
+
+  it('箭头足够大', () => {
+    const g = buildGraph({ list: [step('a', 10), step('b', 20)] })
+    for (const e of g.edges) {
+      const m = e.markerEnd as { width: number; height: number }
+      expect(m.width).toBeGreaterThanOrEqual(20)
+      expect(m.height).toBeGreaterThanOrEqual(20)
+    }
+  })
+
+  it('分支连线从左侧出、左侧进，绕到节点外侧', () => {
+    const g = buildGraph({
+      list: [
+        step('a', 10),
+        step('b', 20),
+        step('c', 30, { branch_condition: 'x', branch_to_seq: 10 }),
+      ],
+    })
+    const br = g.edges.find((e) => e.id === 'br-c')!
+    expect([br.sourceHandle, br.targetHandle]).toEqual(['left-out', 'left-in'])
+  })
+})
+
 describe('layoutOf / stepIdOf', () => {
   it('收集工步及其引用节点的位置', () => {
     const list = [step('a', 10), step('b', 20)]

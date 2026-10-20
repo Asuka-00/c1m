@@ -11,6 +11,15 @@ export const H = 72
 export const TERM_W = 100
 export const TERM_H = 32
 export const GRID = 16
+/** 引用节点（子路线 / 返工）与所属工步的水平间距、纵向间距。 */
+const REF_DX = 110
+const REF_GAP = 24
+/** 箭头大小与各类连线的颜色。 */
+const ARROW = 22
+const MAIN = '#64748b'
+const CALL = '#6366f1'
+const REWORK = '#dc2626'
+const BRANCH = '#d97706'
 /** 拖动节点到连线上插入 / 重排的命中距离（流程图坐标）。 */
 const HIT = 36
 
@@ -91,19 +100,37 @@ export function buildGraph({
   highlight = null,
   ignoreSaved = false,
 }: GraphInput): { nodes: Node[]; edges: Edge[] } {
-  const arrow = { type: MarkerType.ArrowClosed }
+  const arrow = (color: string) => ({
+    type: MarkerType.ArrowClosed,
+    width: ARROW,
+    height: ARROW,
+    color,
+  })
   const bySeq = new Map(list.map((s) => [Number(s.seq), s]))
   const dims: Dims[] = []
   const links: [string, string][] = []
   const nodes: Node[] = []
   const edges: Edge[] = []
   const step = new Map<string, MesRow>()
+  const rows = new Map<string, { subH: number; rwH: number }>()
+  let branchCount = 0
 
   let prev: string | null = null
   for (const s of list) {
     const id = stepNodeId(s.id)
     step.set(id, s)
-    dims.push({ id, w: W, h: H })
+    const subRows =
+      s.step_type === 'sub_route' && s.sub_route_id
+        ? (subs[String(s.sub_route_id)] ?? [])
+        : null
+    const subH = subRows ? refHeight(subRows.length) : 0
+    const rwH = s.rework_route_id ? H : 0
+    rows.set(id, { subH, rwH })
+    dims.push({
+      id,
+      w: W,
+      h: Math.max(H, subH + (subH && rwH ? REF_GAP : 0) + rwH),
+    })
     nodes.push({
       id,
       type: 'step',
@@ -115,17 +142,16 @@ export function buildGraph({
         id: `m-${prev}-${id}`,
         source: prev,
         target: id,
-        markerEnd: arrow,
+        markerEnd: arrow(MAIN),
+        style: { stroke: MAIN, strokeWidth: 1.5 },
         data: { kind: 'main' },
       })
       links.push([prev, id])
     }
     prev = id
-    if (s.step_type === 'sub_route' && s.sub_route_id) {
+    if (subRows) {
       const sid = subNodeId(s.id)
-      const sub = subs[String(s.sub_route_id)] ?? []
       step.set(sid, s)
-      dims.push({ id: sid, w: W, h: refHeight(sub.length) })
       nodes.push({
         id: sid,
         type: 'ref',
@@ -133,39 +159,27 @@ export function buildGraph({
         data: {
           label: String(s.sub_route_label),
           kind: 'sub',
-          steps: sub,
+          steps: subRows,
           linked: true,
         } satisfies RefData,
       })
-      links.push([id, sid])
-      edges.push(
-        {
-          id: `call-${s.id}`,
-          source: id,
-          sourceHandle: 'side',
-          target: sid,
-          label: t('mes.edgeCall'),
-          animated: true,
-          markerEnd: arrow,
-          style: { strokeDasharray: '6 4' },
-          data: { kind: 'call' },
-        },
-        {
-          id: `ret-${s.id}`,
-          source: sid,
-          target: id,
-          targetHandle: 'side-in',
-          label: t('mes.edgeReturn'),
-          markerEnd: arrow,
-          style: { strokeDasharray: '6 4' },
-          data: { kind: 'return' },
-        }
-      )
+      // 调用与返回合成一条双向箭头，避免回路线穿过其他节点
+      edges.push({
+        id: `call-${s.id}`,
+        source: id,
+        sourceHandle: 'side',
+        target: sid,
+        label: `${t('mes.edgeCall')} / ${t('mes.edgeReturn')}`,
+        animated: true,
+        markerStart: arrow(CALL),
+        markerEnd: arrow(CALL),
+        style: { stroke: CALL, strokeWidth: 1.5, strokeDasharray: '6 4' },
+        data: { kind: 'call' },
+      })
     }
     if (s.rework_route_id) {
       const rid = reworkNodeId(s.id)
       step.set(rid, s)
-      dims.push({ id: rid, w: W, h: H })
       nodes.push({
         id: rid,
         type: 'ref',
@@ -176,32 +190,16 @@ export function buildGraph({
           linked: true,
         } satisfies RefData,
       })
-      links.push([id, rid])
-      edges.push(
-        {
-          id: `rw-${s.id}`,
-          source: id,
-          sourceHandle: 'side',
-          target: rid,
-          label: t('mes.edgeRework'),
-          markerEnd: arrow,
-          style: { stroke: 'var(--destructive)', strokeDasharray: '4 3' },
-          data: { kind: 'rework', step: s },
-        },
-        {
-          id: `rwb-${s.id}`,
-          source: rid,
-          target: id,
-          targetHandle: 'side-in',
-          markerEnd: arrow,
-          style: {
-            stroke: 'var(--destructive)',
-            strokeDasharray: '4 3',
-            opacity: 0.5,
-          },
-          data: { kind: 'return' },
-        }
-      )
+      edges.push({
+        id: `rw-${s.id}`,
+        source: id,
+        sourceHandle: 'side',
+        target: rid,
+        label: t('mes.edgeRework'),
+        markerEnd: arrow(REWORK),
+        style: { stroke: REWORK, strokeWidth: 1.5, strokeDasharray: '4 3' },
+        data: { kind: 'rework', step: s },
+      })
     }
     const to =
       s.branch_to_seq != null ? bySeq.get(Number(s.branch_to_seq)) : null
@@ -209,32 +207,46 @@ export function buildGraph({
       edges.push({
         id: `br-${s.id}`,
         source: id,
-        sourceHandle: 'side',
+        sourceHandle: 'left-out',
         target: stepNodeId(to.id),
-        targetHandle: 'side-in',
+        targetHandle: 'left-in',
         label: String(s.branch_condition ?? ''),
-        labelStyle: { fill: 'var(--chart-1, #d97706)', fontWeight: 600 },
-        markerEnd: arrow,
-        style: { stroke: '#d97706', strokeWidth: 2 },
+        labelStyle: { fill: BRANCH, fontWeight: 600 },
+        markerEnd: arrow(BRANCH),
+        style: { stroke: BRANCH, strokeWidth: 2 },
         type: 'smoothstep',
+        // 两端都在左侧（右侧留给子路线 / 返工），绕到节点外侧；错开偏移避免多条分支重叠
+        pathOptions: { offset: 36 + 14 * branchCount++, borderRadius: 14 },
         data: { kind: 'branch', step: s },
-      })
+      } as Edge)
   }
 
-  // 位置：已存的优先，其余自动布局
+  // 位置：已存的优先；其余主链自动布局，子路线 / 返工节点排在所属工步右侧
   const auto = autoLayout(dims, links)
   const place = new Map<string, { x: number; y: number }>()
-  for (const d of dims) {
-    const s = step.get(d.id)!
+  const saved = (id: string, s: MesRow) => {
     const l = ignoreSaved ? null : savedLayout(s)
-    const kind = d.id.startsWith('sub-')
-      ? 'a'
-      : d.id.startsWith('rw-')
-        ? 'r'
-        : ''
-    const x = l && (kind ? l[`${kind}x`] : l.x)
-    const y = l && (kind ? l[`${kind}y`] : l.y)
-    place.set(d.id, x != null && y != null ? { x, y } : auto.get(d.id)!)
+    const k = id.startsWith('sub-') ? 'a' : id.startsWith('rw-') ? 'r' : ''
+    const x = l && (k ? l[`${k}x`] : l.x)
+    const y = l && (k ? l[`${k}y`] : l.y)
+    return x != null && y != null ? { x, y } : null
+  }
+  for (const [id, s] of step) {
+    if (!id.startsWith('s-')) continue
+    place.set(id, saved(id, s) ?? auto.get(id)!)
+    const p = place.get(id)!
+    const r = rows.get(id)!
+    const x = p.x + W + REF_DX
+    if (r.subH)
+      place.set(subNodeId(s.id), saved(subNodeId(s.id), s) ?? { x, y: p.y })
+    if (r.rwH)
+      place.set(
+        reworkNodeId(s.id),
+        saved(reworkNodeId(s.id), s) ?? {
+          x,
+          y: p.y + (r.subH ? r.subH + REF_GAP : 0),
+        }
+      )
   }
   for (const n of nodes) n.position = place.get(n.id)!
 
@@ -273,7 +285,8 @@ export function buildGraph({
       id: first ? `m-start-${stepNodeId(first.id)}` : 'm-start-end',
       source: 'start',
       target: first ? stepNodeId(first.id) : 'end',
-      markerEnd: arrow,
+      markerEnd: arrow(MAIN),
+      style: { stroke: MAIN, strokeWidth: 1.5 },
       data: { kind: 'main' },
     },
     ...(last
@@ -282,7 +295,8 @@ export function buildGraph({
             id: `m-${stepNodeId(last.id)}-end`,
             source: stepNodeId(last.id),
             target: 'end',
-            markerEnd: arrow,
+            markerEnd: arrow(MAIN),
+            style: { stroke: MAIN, strokeWidth: 1.5 },
             data: { kind: 'main' },
           } satisfies Edge,
         ]

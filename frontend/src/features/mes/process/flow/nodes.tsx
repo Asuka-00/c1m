@@ -15,7 +15,9 @@ export function StepNode({ data, selected }: NodeProps<Node<StepData>>) {
     <div
       className={cn(
         'rounded-lg border-2 bg-card px-3 py-2 text-xs shadow-sm',
-        sub ? 'border-primary/60 bg-primary/5' : 'border-border',
+        sub
+          ? 'border-primary/60 bg-[color-mix(in_oklab,var(--card),var(--primary)_8%)]'
+          : 'border-border',
         selected && 'ring-2 ring-primary',
         data.current &&
           'border-amber-500 bg-amber-50 ring-4 ring-amber-400/60 dark:bg-amber-950'
@@ -60,6 +62,19 @@ export function StepNode({ data, selected }: NodeProps<Node<StepData>>) {
         position={Position.Left}
         className={handle}
       />
+      {/* 分支连线的起落点（左侧，只用于绘制，不可手动操作） */}
+      <Handle
+        type='source'
+        id='left-out'
+        position={Position.Left}
+        className='!pointer-events-none !opacity-0'
+      />
+      <Handle
+        type='target'
+        id='left-in'
+        position={Position.Left}
+        className='!pointer-events-none !opacity-0'
+      />
     </div>
   )
 }
@@ -70,8 +85,8 @@ export function RefNode({ data, selected }: NodeProps<Node<RefData>>) {
       className={cn(
         'rounded-lg border-2 border-dashed bg-card px-3 py-2 text-xs',
         data.kind === 'rework'
-          ? 'border-destructive/60 bg-destructive/5'
-          : 'border-primary/60 bg-primary/5',
+          ? 'border-destructive/60 bg-[color-mix(in_oklab,var(--card),var(--destructive)_8%)]'
+          : 'border-primary/60 bg-[color-mix(in_oklab,var(--card),var(--primary)_8%)]',
         !data.linked && 'opacity-60',
         selected && 'ring-2 ring-primary'
       )}
@@ -92,7 +107,6 @@ export function RefNode({ data, selected }: NodeProps<Node<RefData>>) {
           ))}
         </ol>
       )}
-      <Handle type='source' position={Position.Right} className={handle} />
     </div>
   )
 }
