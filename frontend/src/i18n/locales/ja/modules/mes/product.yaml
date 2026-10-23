@@ -111,6 +111,8 @@ mes:
       status_code: 状態
       description: 説明
     material_lot:
+      supplier_lot: 仕入先ロット
+      work_order: 払出先の製造指図
       code: 資材ロット番号
       material: 資材
       qty_remaining: 残数量
@@ -121,6 +123,8 @@ mes:
       ml_status: 状態
       description: 説明
   help:
+    material_lot:
+      work_order: 払出伝票で設定。この製造指図の消費にのみ使用
     uom_conversion:
       factor: 換算先 = 換算元 × 係数
     product:

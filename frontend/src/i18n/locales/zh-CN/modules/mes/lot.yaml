@@ -61,6 +61,7 @@ mes:
       active_since: 启用时间
       description: 描述
     lot:
+      shipped_qty: 已出货数
       code: 批次号
       work_order: 工单
       product: 产品

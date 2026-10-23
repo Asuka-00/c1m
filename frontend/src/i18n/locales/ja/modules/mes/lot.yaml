@@ -61,6 +61,7 @@ mes:
       active_since: 有効化日時
       description: 説明
     lot:
+      shipped_qty: 出荷済み数
       code: ロット番号
       work_order: 作業指示
       product: 製品

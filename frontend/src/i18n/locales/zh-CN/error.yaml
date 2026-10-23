@@ -219,6 +219,8 @@ error:
   code_400042: '{{field}}: 「$t(mes.enum.resource_kind.{{kind}})」类资源必填'
   code_400043: '{{field}}: 「$t(mes.enum.resource_kind.{{kind}})」类资源须留空'
   code_400044: '布局包含不属于该流程的步骤'
+  code_400045: 请至少添加一条明细后再生效
+  code_400046: 该产品已有生效的 BOM：{{bom}}
   code_500001: 设备不存在
   code_500002: E10 状态不存在
   code_500003: 设备已处于 {{state}}
@@ -241,6 +243,8 @@ error:
   code_500020: '{{field}}: 晶圆级抽样必填'
   code_500021: '{{field}}: 请填写逗号分隔的槽位（1–25）'
   code_500022: '{{field}}: 数量须等于晶圆数'
+  code_500023: 物料批 {{lot}} 不可用
+  code_500024: 上料位 {{position}} 在该时段已装有物料批
   code_600001: 批次正被其他操作占用，请稍后重试
   code_600002: '{{field}}: 须为「$t(mes.enum.code_target.{{target}})」类编码规则'
   code_600003: '{{field}}: 允许分批时不能小于 2'
@@ -296,6 +300,14 @@ error:
   code_600053: 至少添加一个批次
   code_600054: 「$t(mes.enum.receipt_status.{{status}})」的入库单不能执行「$t(mes.receipt.action.{{action}})」
   code_600055: 数据被同时修改，请重试
+  code_600056: 仅草稿状态的单据可以修改或删除
+  code_600057: 工单 {{wo}} 状态为「$t(mes.enum.wo_status.{{status}})」，不能领料
+  code_600058: 物料批 {{lot}} 仅剩 {{room}}
+  code_600059: 请至少添加一条明细
+  code_600060: 单据处于「$t(mes.enum.issue_status.{{status}})」，不能执行该操作
+  code_600061: 批次 {{lot}} 仅剩 {{room}} 可出货
+  code_600062: 请先确认来料接收单，再做 IQC 判定
+  code_600063: 该明细已有 IQC 结果
   code_700001: 类型只能是报废或补数
   code_700002: 请选择「$t(mes.enum.reason_type.{{type}})」原因代码
   code_700003: 该原因代码要求填写备注

@@ -12,6 +12,7 @@ import {
   type ExecStage,
   type StageBody,
 } from '@/lib/api/mes/execution'
+import { checkMessage } from '@/lib/backend-text'
 import { ErrorCode } from '@/lib/error-codes'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
@@ -84,6 +85,10 @@ export function useStageRun(cx: ExecContext, body: () => StageBody) {
         qc.invalidateQueries({ queryKey: ['mes'] })
         return
       }
+      // 出站用量超过 BOM 标准用量：只提示，不影响本次作业
+      r.results
+        ?.filter((x) => x.check_type === 'bom_over' && x.result === 'warn')
+        .forEach((x) => toast.warning(checkMessage(x)))
       const auto = (r.auto ?? []).filter((a) => a.ok).map((a) => a.stage)
       toast.success(
         [

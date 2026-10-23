@@ -46,12 +46,16 @@ menu:
   mes-lot-start: ロット投入
   mes-work_order: 作業指示
   mes-receipt: 完成品入庫
+  mes-material_issue: 払出伝票
+  mes-shipment: 出荷
+  mes-material_receipt: 入荷受入
   mes-material_lot: ラインサイド資材ロット
   mes-warehouse-master: 倉庫マスタ
   mes-eqp-board: 装置状態ボード
   mes-pm_plan: PM 計画
   mes-downtime: 停止記録
   mes-e10_history: E10 状態履歴
+  mes-equipment_material_mount: 設備への材料装填
   mes-tool: 消耗品・治具寿命
   mes-equipment-master: 装置マスタ
   mes-e10-model: E10 状態設定
@@ -65,6 +69,7 @@ menu:
   mes-lot-rules: ロット規則
   mes-product-master: 製品マスタ
   mes-material-master: 資材マスタ
+  mes-bom: BOM
   mes-carrier-master: キャリアマスタ
   mes-reticle: レチクル
   mes-fixture: 治具

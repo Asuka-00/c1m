@@ -1,6 +1,7 @@
 """设备实体的 CRUD 校验器。"""
 
 import uuid
+from datetime import UTC, datetime
 from typing import Any
 
 import sqlalchemy as sa
@@ -190,3 +191,65 @@ def _downtime(
         )
     if old is None:
         downtime_notify(s, tid, row)
+
+
+@validator("equipment_material_mount")
+def _mount(s: Session, tid: uuid.UUID, _e: Entity, row: Row, old: Row | None) -> None:
+    """上料记录：卸料晚于上料；物料批可用；同一机台上料位同一时间只装一批。"""
+    # 无时区的输入按 UTC 处理，才能与库里的 timestamptz 比较
+    a, b = (
+        d.replace(tzinfo=d.tzinfo or UTC) if d else d
+        for d in (row.get("mounted_at"), row.get("unmounted_at"))
+    )
+    if a and b and b <= a:
+        raise MesError(
+            [
+                fe(
+                    "unmounted_at",
+                    ec.END_AFTER_START,
+                    "unmounted_at: must be after mounted_at",
+                )
+            ]
+        )
+    if not a:  # 必填缺失由通用校验报错
+        return
+    lot = _get(s, tid, "material_lot", row.get("material_lot_id"))
+    # 只在新增 / 换批时检查可用性，历史记录不受物料批后续状态影响
+    if lot and (old is None or old["material_lot_id"] != lot["id"]):
+        if lot["ml_status"] != "available":
+            raise MesError(
+                [
+                    fe(
+                        "material_lot",
+                        ec.MATERIAL_LOT_UNAVAILABLE,
+                        f"material_lot: {lot['code']} is not available",
+                        lot=lot["code"],
+                    )
+                ]
+            )
+    t = TABLES["equipment_material_mount"]
+    far = datetime.max.replace(tzinfo=UTC)
+    for o in (
+        conn(s)
+        .execute(
+            sa.select(t).where(
+                t.c.tenant_id == tid,
+                t.c.equipment_id == row.get("equipment_id"),
+                t.c.position == row.get("position"),
+                t.c.id != (old["id"] if old else uuid.UUID(int=0)),
+            )
+        )
+        .mappings()
+    ):
+        # 区间重叠（未卸料视为无穷远）
+        if o["mounted_at"] < (b or far) and (o["unmounted_at"] or far) > a:
+            raise MesError(
+                [
+                    fe(
+                        "position",
+                        ec.MOUNT_POSITION_BUSY,
+                        f"position: {row['position']} already holds a material lot",
+                        position=row["position"],
+                    )
+                ]
+            )

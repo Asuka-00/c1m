@@ -49,6 +49,7 @@ mes:
     pm_plan: PM 计划
     pm_record: PM 执行记录
     downtime: 停机记录
+    equipment_material_mount: 机台上料
   field:
     equipment_type:
       code: 编码
@@ -145,6 +146,12 @@ mes:
       reason: 原因代码
       e10_state: E10 状态
       comment: 备注
+    equipment_material_mount:
+      equipment: 设备
+      position: 上料位
+      material_lot: 物料批
+      mounted_at: 上料时间
+      unmounted_at: 卸料时间
   help:
     equipment:
       ideal_uph: 可选，预留给 OEE 性能稼动率
@@ -154,6 +161,8 @@ mes:
       equipment_type: 留空表示所有类型
     pm_plan:
       equipment: 留空则适用该类型全部设备
+    equipment_material_mount:
+      unmounted_at: 仍在机台上时留空
   enum:
     e10_source:
       manual: 手动

@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: changethis
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      FASTAPI_ENV: development
+      PROJECT_NAME: c1m
+      SECRET_KEY: ci-secret-key-ci-secret-key-123456
+      POSTGRES_PASSWORD: changethis
+      FIRST_SUPERUSER: admin@example.com
+      FIRST_SUPERUSER_USERNAME: admin
+      FIRST_SUPERUSER_PASSWORD: admin123
+      DATABASE_URL: postgresql+psycopg://app_user:changethis@localhost:5432/app
+      MIGRATION_DATABASE_URL: postgresql+psycopg://postgres:changethis@localhost:5432/app
+      QTIME_SWEEP_SECONDS: "0"
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+        working-directory: .
+      # conftest 通过子进程调用 alembic，需要虚拟环境在 PATH 上
+      - run: echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"
+      - run: bash scripts/lint.sh
+      - run: python scripts/export_i18n_codes.py --check
+      - run: python -m pytest -q
+      # 测试库已迁移到 head：模型与迁移不得有差异
+      - run: alembic check
+        env:
+          MIGRATION_DATABASE_URL: postgresql+psycopg://postgres:changethis@localhost:5432/app_test
+          DATABASE_URL: postgresql+psycopg://app_user:changethis@localhost:5432/app_test
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm i18n:check
+      - run: pnpm lint
+      - run: pnpm exec tsc -b
+      - run: pnpm format:check
+      - run: pnpm test:browser:install
+      - run: pnpm test

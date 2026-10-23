@@ -55,6 +55,35 @@ describe('useStageRun', () => {
     expect(inv).toHaveBeenCalledWith({ queryKey: ['mes'] })
   })
 
+  it('出站用量超出 BOM：额外给出警告，仍提示成功', async () => {
+    vi.spyOn(execApi, 'stage').mockResolvedValue({
+      auto: [],
+      lot: { on_hold: false },
+      results: [
+        {
+          check_type: 'bom_over',
+          result: 'warn',
+          message: 'over the BOM quantity: M1 4>2',
+          msg_parts: [],
+        },
+        { check_type: 'oos', result: 'warn', message: 'x', msg_parts: [] },
+      ],
+    } as never)
+    const warn = vi.spyOn(toast, 'warning')
+    const ok = vi.spyOn(toast, 'success')
+    const { wrapper } = setup()
+    const { result } = await renderHook(
+      () => useStageRun(execCtx('running'), () => ({})),
+      { wrapper }
+    )
+    await act(async () => {
+      await result.current.run.mutateAsync({})
+    })
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(warn).toHaveBeenCalledWith('over the BOM quantity: M1 4>2')
+    expect(ok).toHaveBeenCalled()
+  })
+
   it('future hold：警告而非成功提示', async () => {
     vi.spyOn(execApi, 'stage').mockResolvedValue({
       future_hold: [{ comment: 'FH', reason: 'R' }],

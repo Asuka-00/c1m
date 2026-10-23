@@ -185,6 +185,7 @@ mes:
     autoRefresh: 自动刷新
     sweepConfirm: 立即扫描所有等待中批次，并对已超时批次执行规则配置的处置（Hold / 返工 / 报废）？
   traceq:
+    shipments: 出货记录
     hint: 按批次、晶圆、设备或物料批追溯上下游。
     kind: 对象
     code: 编码
@@ -202,6 +203,9 @@ mes:
       equipment: 设备
       material_lot: 物料批
     c:
+      shipment: 出货单
+      customer: 客户
+      waybill: 运单号
       code: 批次
       lot: 批次
       relation: 关系
@@ -505,6 +509,10 @@ mes:
       none: 无物料消耗
       short: '{{material}}：需要 {{need}}，可用 {{available}}'
       ok: 物料充足
+    bom_over:
+      none: 无 BOM 用量可比对
+      over: 超出 BOM 标准用量：{{items}}
+      ok: 在 BOM 标准用量内
     tool_life:
       none: 不需要工具
       required: 需要 {{fixture}} 类型的工具
@@ -731,6 +739,7 @@ mes:
       recipe_active: 配方已生效
       reticle_available: 光罩可用
       material_sufficient: 物料充足
+      bom_over: BOM 用量不超标
       tool_life: 工具可用 + 寿命
       carrier_available: 载具可用
       batch_same_step: 批量：同一工步
@@ -772,6 +781,7 @@ mes:
       equipment_type: 设备类型
       product: 产品
     ml_status:
+      rejected: 已拒收
       available: 可用
       hold: Hold
       empty: 已用完
@@ -797,6 +807,7 @@ mes:
       triggered: 已触发
       cancelled: 已取消
     history_action:
+      ship: 出货
       start: 投产
       move_in: 进站
       track_in: 上机

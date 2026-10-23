@@ -270,3 +270,26 @@ add(
     wip_rule="keep_old",
     reason="Improve CD uniformity",
 )
+
+# BOM：MCU-A100 的刻蚀气体与 CMP 抛光液标准用量（与上面的工步用量一致，含 10% 损耗）
+add(
+    "bom",
+    code="BOM-A100",
+    name="MCU A100 bill of materials (DEMO)",
+    product=("product", "MCU-A100@1"),
+)
+for op, mat, qty, uom, basis in (
+    ("ET-POLY", "NF3", 0.2, "KG", "per_lot"),
+    ("CMP-OX", "SL-CU-01", 0.05, "L", "per_unit"),
+):
+    add(
+        "bom_line",
+        bom=("bom", "BOM-A100@1"),
+        operation=("operation", op),
+        material=("material", mat),
+        qty=qty,
+        uom=("uom", uom),
+        qty_basis=basis,
+        scrap_rate=10,
+    )
+ACTIVATE.append(("bom", "BOM-A100@1"))

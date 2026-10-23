@@ -18,11 +18,63 @@ mes:
       reject: '{{code}} を下書きに差し戻しますか？'
       confirm: '{{code}} の入庫を確認しますか？ロットの入庫済数と作業指示の完了数が加算され、全数入庫したロットはクローズされます。'
       cancel: '{{code}} を取り消しますか？元に戻せません。'
+  issue:
+    action:
+      confirm: 払出を確定
+      cancel: 払出伝票を取消
+    done:
+      confirm: 払出を確定しました
+      cancel: 払出伝票を取消しました
+    confirm:
+      confirm: '{{code}} の払出を確定しますか？払出元の材料ロットが減り、製造指図用のライン側ロットが作成されます。'
+      cancel: '{{code}} を取消しますか？元に戻せません。'
+    req:
+      empty: この製造指図にはBOMがなく、所要量はありません
+      bom: BOM {{bom}}
+      material: 材料
+      required: 所要量
+      issued: 払出済み
+      short: 不足
+  doc:
+    confirmBtn: 確定
+  shipment:
+    action:
+      confirm: 出荷を確定
+      cancel: 出荷伝票を取消
+    done:
+      confirm: 出荷を確定しました
+      cancel: 出荷伝票を取消しました
+    confirm:
+      confirm: '{{code}} の出荷を確定しますか？ロットの出荷済み数が加算され、元に戻せません。'
+      cancel: '{{code}} を取消しますか？元に戻せません。'
+  inbound:
+    action:
+      confirm: 受入を確定
+      cancel: 受入伝票を取消
+    done:
+      confirm: 受入を確定しました
+      cancel: 受入伝票を取消しました
+    confirm:
+      confirm: '{{code}} の受入を確定しますか？各行に検査待ちの材料ロットが作成され、IQC合格後に使用できます。'
+      cancel: '{{code}} を取消しますか？元に戻せません。'
+    iqc:
+      pass: 合格
+      fail: 不合格
+      confirm: この行を「{{result}}」と判定しますか？判定後は変更できません。
+      done:
+        pass: 合格と判定しました
+        fail: 不合格と判定しました
   entity:
     warehouse: 倉庫
     storage_location: ロケーション
     receipt: 完成品入庫伝票
     receipt_line: 入庫明細
+    material_issue: 払出伝票
+    material_issue_line: 払出明細
+    material_receipt: 入荷受入伝票
+    material_receipt_line: 入荷明細
+    shipment: 出荷伝票
+    shipment_line: 出荷明細
   field:
     warehouse:
       code: コード
@@ -63,11 +115,62 @@ mes:
       good_qty: 良品数
       scrap_qty: 廃棄数
       remarks: 備考
+    material_issue:
+      code: 払出伝票番号
+      work_order: 製造指図
+      issue_status: 状態
+      remarks: 備考
+      confirmed_at: 確定日時
+      confirmed_by: 確定者
+      description: 説明
+    material_issue_line:
+      material_issue: 払出伝票
+      material_lot: 払出元の材料ロット
+      qty: 数量
+    shipment:
+      code: 出荷伝票番号
+      customer: 顧客
+      warehouse: 倉庫
+      waybill: 送り状番号
+      issue_status: 状態
+      remarks: 備考
+      confirmed_at: 出荷日時
+      confirmed_by: 確定者
+      description: 説明
+    shipment_line:
+      shipment: 出荷伝票
+      lot: ロット
+      product: 製品
+      qty: 数量
+    material_receipt:
+      code: 受入伝票番号
+      supplier: 仕入先
+      issue_status: 状態
+      remarks: 備考
+      confirmed_at: 受入日時
+      confirmed_by: 確定者
+      description: 説明
+    material_receipt_line:
+      material_receipt: 入荷受入伝票
+      material: 材料
+      qty: 数量
+      uom: 単位
+      supplier_lot: 仕入先ロット
+      expiry_date: 有効期限
+      location: 保管場所
+      iqc_result: IQC結果
+      material_lot: 材料ロット
   help:
     storage_location:
       capacity: 空欄：無制限
     receipt_line:
       lot: 入庫待ちロットのみ
+    material_issue_line:
+      material_lot: 使用可能な材料ロットのみ選択できます
+    shipment_line:
+      lot: 入庫済みのロットのみ選択できます
+    material_receipt_line:
+      expiry_date: 空欄なら材料の保存期間から算出
   enum:
     warehouse_type:
       finished_goods: 完成品倉庫
@@ -86,3 +189,11 @@ mes:
       submitted: 提出済
       confirmed: 確認済
       cancelled: 取消
+    issue_status:
+      draft: 下書き
+      confirmed: 確定済み
+      cancelled: 取消済み
+    iqc_result:
+      pending: 検査待ち
+      pass: 合格
+      fail: 不合格

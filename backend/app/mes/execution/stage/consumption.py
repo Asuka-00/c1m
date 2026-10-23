@@ -7,8 +7,9 @@ from typing import Any
 from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core.spec.base import now
 from app.mes.common.query import find, one
-from app.mes.common.rows import _upd
+from app.mes.common.rows import _ins, _upd
 from app.mes.common.uom import convert
 
 Row = dict[str, Any]
@@ -45,8 +46,9 @@ def material_needs(
             m
             for m in chosen
             if m["material_id"] == r["material_id"]
+            and m["work_order_id"] in (None, lot["work_order_id"])
             # 操作员指定的线边批次优先，否则按先到期先出（FEFO）自动分配
-        ] or candidate_lots(s, tid, r["material_id"], at)
+        ] or candidate_lots(s, tid, r["material_id"], at, lot["work_order_id"])
         alloc, have, total = [], 0.0, 0.0
         for m in cands:
             if m["ml_status"] != "available" or (
@@ -88,20 +90,34 @@ def material_needs(
 
 
 def candidate_lots(
-    s: Session, tid: uuid.UUID, material_id: Any, at: datetime
+    s: Session, tid: uuid.UUID, material_id: Any, at: datetime, wo_id: Any = None
 ) -> list[Row]:
-    """物料的可用线边批次，按先到期先出（FEFO）排序。"""
+    """物料的可用线边批次：本工单已领的批在前，再按先到期先出（FEFO）排序。
+
+    已领给其他工单的批不可用。
+    """
     ls = [
         m
         for m in find(s, tid, "material_lot", material_id=material_id)
         if m["ml_status"] == "available"
         and (m["qty_remaining"] or 0) > 0
         and not (m["expiry_date"] and m["expiry_date"] < at.date())
+        and m["work_order_id"] in (None, wo_id)
     ]
-    return sorted(ls, key=lambda m: (m["expiry_date"] or date.max, m["code"]))
+    return sorted(
+        ls,
+        key=lambda m: (
+            m["work_order_id"] is None,
+            m["expiry_date"] or date.max,
+            m["code"],
+        ),
+    )
 
 
-def _consume(s: Session, tid: uuid.UUID, needs: list[Row], user: Any) -> list[Row]:
+def _consume(
+    s: Session, tid: uuid.UUID, needs: list[Row], lot: Row, step: Row, user: Any
+) -> list[Row]:
+    """扣减线边批次，并为每批写一条扣料明细（物料批反向追溯用）。"""
     out = []
     for n in needs:
         for a in n["allocation"]:
@@ -119,6 +135,21 @@ def _consume(s: Session, tid: uuid.UUID, needs: list[Row], user: Any) -> list[Ro
                 user,
                 qty_remaining=left,
                 ml_status="empty" if left <= 0 else m["ml_status"],
+            )
+            _ins(
+                s,
+                tid,
+                "lot_material_use",
+                user,
+                lot_id=lot["id"],
+                route_step_id=step["id"],
+                operation_id=step["operation_id"],
+                equipment_id=lot["equipment_id"],
+                material_lot_id=m["id"],
+                material_id=m["material_id"],
+                qty=round(q, 6),
+                uom_id=m["uom_id"],
+                at=now(),
             )
             out.append({"material_lot": m["code"], "qty": round(q, 6), "left": left})
     return out

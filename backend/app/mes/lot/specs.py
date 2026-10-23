@@ -360,6 +360,13 @@ register(
                 list=False,
             ),
             F(
+                "shipped_qty",
+                "int",
+                "Shipped qty",
+                default=0,
+                list=False,
+            ),
+            F(
                 "stored_at",
                 "datetime",
                 "Stored at",
@@ -639,6 +646,32 @@ register(
         order=2,
         sort_default="track_in_at",
         label_field="track_in_at",
+    ),
+)
+
+
+register(
+    Entity(
+        "lot_material_use",
+        "exec",
+        "Material use",
+        [
+            F("lot", "ref", "Lot", required=True, ref="lot", cascade=True),
+            F("route_step", "ref", ref="route_step"),
+            F("operation", "ref", ref="operation"),
+            F("equipment", "ref", ref="equipment"),
+            F("material_lot", "ref", "Material lot", required=True, ref="material_lot"),
+            F("material", "ref", "Material", required=True, ref="material"),
+            F("qty", "float", "Quantity", required=True),
+            F("uom", "ref", ref="uom"),
+            F("at", "datetime", "Time", required=True),
+        ],
+        phase=6,
+        has_code=False,
+        readonly=True,
+        internal=True,  # 出站扣料明细：只供追溯查询，不开放通用接口与菜单
+        sort_default="at",
+        label_field="qty",
     ),
 )
 

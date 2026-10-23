@@ -441,3 +441,30 @@ register(
         label_field="start_at",
     ),
 )
+
+
+register(
+    Entity(
+        "equipment_material_mount",
+        "equipment",
+        "Material mount",
+        [
+            F("equipment", "ref", required=True, ref="equipment"),
+            F("position", "str", "Position", required=True, max_length=50, search=True),
+            F("material_lot", "ref", "Material lot", required=True, ref="material_lot"),
+            F("mounted_at", "datetime", "Mounted at", required=True),
+            F(
+                "unmounted_at",
+                "datetime",
+                "Unmounted at",
+                help="Blank while the lot is still mounted",
+            ),
+        ],
+        phase=6,
+        has_code=False,
+        icon="PackagePlus",
+        order=11,
+        sort_default="mounted_at",
+        label_field="position",
+    ),
+)

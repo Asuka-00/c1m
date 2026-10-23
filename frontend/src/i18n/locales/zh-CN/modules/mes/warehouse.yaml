@@ -18,11 +18,63 @@ mes:
       reject: 将 {{code}} 退回为草稿？
       confirm: 确认 {{code}} 入库？批次已入库数与工单完工数将被累加，入库满额的批次将关闭。
       cancel: 取消 {{code}}？取消后不可恢复。
+  issue:
+    action:
+      confirm: 确认领料
+      cancel: 取消领料单
+    done:
+      confirm: 领料已确认
+      cancel: 领料单已取消
+    confirm:
+      confirm: 确认 {{code}} 领料？将扣减源物料批，并拆出归属该工单的线边批。
+      cancel: 取消 {{code}}？取消后不可恢复。
+    req:
+      empty: 该工单未锁定 BOM，没有物料需求
+      bom: BOM {{bom}}
+      material: 物料
+      required: 需求
+      issued: 已领
+      short: 缺料
+  doc:
+    confirmBtn: 确认
+  shipment:
+    action:
+      confirm: 确认出货
+      cancel: 取消出货单
+    done:
+      confirm: 出货已确认
+      cancel: 出货单已取消
+    confirm:
+      confirm: 确认 {{code}} 出货？将累加批次已出货数，确认后不可撤销。
+      cancel: 取消 {{code}}？取消后不可恢复。
+  inbound:
+    action:
+      confirm: 确认收料
+      cancel: 取消接收单
+    done:
+      confirm: 收料已确认
+      cancel: 接收单已取消
+    confirm:
+      confirm: 确认 {{code}} 收料？每行将生成一个待检物料批，IQC 合格后才可使用。
+      cancel: 取消 {{code}}？取消后不可恢复。
+    iqc:
+      pass: 合格
+      fail: 不合格
+      confirm: 将本行判定为「{{result}}」？判定后不可修改。
+      done:
+        pass: 已判定合格
+        fail: 已判定不合格
   entity:
     warehouse: 仓库
     storage_location: 库位
     receipt: 完工入库单
     receipt_line: 入库明细
+    material_issue: 领料单
+    material_issue_line: 领料明细
+    material_receipt: 来料接收单
+    material_receipt_line: 来料明细
+    shipment: 出货单
+    shipment_line: 出货明细
   field:
     warehouse:
       code: 编码
@@ -63,11 +115,62 @@ mes:
       good_qty: 良品数
       scrap_qty: 报废数
       remarks: 备注
+    material_issue:
+      code: 领料单号
+      work_order: 工单
+      issue_status: 状态
+      remarks: 备注
+      confirmed_at: 确认时间
+      confirmed_by: 确认人
+      description: 描述
+    material_issue_line:
+      material_issue: 领料单
+      material_lot: 源物料批
+      qty: 数量
+    shipment:
+      code: 出货单号
+      customer: 客户
+      warehouse: 仓库
+      waybill: 运单号
+      issue_status: 状态
+      remarks: 备注
+      confirmed_at: 出货时间
+      confirmed_by: 确认人
+      description: 描述
+    shipment_line:
+      shipment: 出货单
+      lot: 批次
+      product: 产品
+      qty: 数量
+    material_receipt:
+      code: 接收单号
+      supplier: 供应商
+      issue_status: 状态
+      remarks: 备注
+      confirmed_at: 收料时间
+      confirmed_by: 确认人
+      description: 描述
+    material_receipt_line:
+      material_receipt: 来料接收单
+      material: 物料
+      qty: 数量
+      uom: 单位
+      supplier_lot: 供应商批号
+      expiry_date: 有效期
+      location: 库位
+      iqc_result: IQC 结果
+      material_lot: 物料批
   help:
     storage_location:
       capacity: 留空表示不限
     receipt_line:
       lot: 仅可选择待入库的批次
+    material_issue_line:
+      material_lot: 仅可选择可用的物料批
+    shipment_line:
+      lot: 仅可选择已入库的批次
+    material_receipt_line:
+      expiry_date: 留空则按物料保质期推算
   enum:
     warehouse_type:
       finished_goods: 成品仓
@@ -86,3 +189,11 @@ mes:
       submitted: 已提交
       confirmed: 已确认
       cancelled: 已取消
+    issue_status:
+      draft: 草稿
+      confirmed: 已确认
+      cancelled: 已取消
+    iqc_result:
+      pending: 待检
+      pass: 合格
+      fail: 不合格

@@ -33,6 +33,7 @@ mes:
   sampleLot: 示例批次号
   previewHint: 仅预览，不会占用流水号。
   panel:
+    material_issue: 物料需求
     code_rule: 预览
     uom: 换算器
     route: 流程图
@@ -127,6 +128,7 @@ mes:
       active: 生效
       inactive: 失效
     audit_action:
+      ship: 出货
       create: 新建
       update: 修改
       delete: 删除

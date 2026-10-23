@@ -49,6 +49,7 @@ mes:
     pm_plan: PM 計画
     pm_record: PM 実施記録
     downtime: 停止記録
+    equipment_material_mount: 設備への材料装填
   field:
     equipment_type:
       code: コード
@@ -145,6 +146,12 @@ mes:
       reason: 理由コード
       e10_state: E10 状態
       comment: コメント
+    equipment_material_mount:
+      equipment: 設備
+      position: 装填位置
+      material_lot: 材料ロット
+      mounted_at: 装填日時
+      unmounted_at: 取外し日時
   help:
     equipment:
       ideal_uph: 任意。OEE 性能稼働率用に予約
@@ -154,6 +161,8 @@ mes:
       equipment_type: 空欄：全タイプ
     pm_plan:
       equipment: 空欄：タイプの全設備
+    equipment_material_mount:
+      unmounted_at: 装填中は空欄
   enum:
     e10_source:
       manual: 手動

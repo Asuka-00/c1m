@@ -68,6 +68,9 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
     ],
     "g-warehouse": [
         ("mes-receipt", "Finished Goods Receipt"),
+        ("mes-material_receipt", "Material Receipt"),
+        ("mes-material_issue", "Material Issue"),
+        ("mes-shipment", "Shipment"),
         (
             "mes-material_lot",
             "Line-side Material Lot",
@@ -79,6 +82,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-pm_plan", "PM Plan"),
         ("mes-downtime", "Downtime"),
         ("mes-e10_history", "E10 History"),
+        ("mes-equipment_material_mount", "Material Mount"),
         ("mes-tool", "Consumable Life"),
         ("mes-equipment-master", "Equipment Master"),
         ("mes-e10-model", "E10 State Configuration"),
@@ -99,6 +103,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
     "g-product": [
         ("mes-product-master", "Product Master"),
         ("mes-material-master", "Material Master"),
+        ("mes-bom", "BOM"),
         ("mes-carrier-master", "Carrier Master"),
         ("mes-reticle", "Reticle"),
         ("mes-fixture", "Fixture"),

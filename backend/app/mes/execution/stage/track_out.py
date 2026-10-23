@@ -15,7 +15,7 @@ from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
 from app.mes.equipment.service import e10_apply
 from app.mes.execution.checks import service as ck
-from app.mes.execution.checks.types import M_OOS
+from app.mes.execution.checks.types import M_OOS, bom_over_msg, over_bom
 from app.mes.execution.events import OOS, notify_lot
 from app.mes.execution.hold.manage import default_reason, hold_lot
 from app.mes.execution.stage.common import _brief, _guard, _ov, _result
@@ -218,6 +218,17 @@ def track_out(
                 data={"action": worst, "values": len(oos)},
             )
         )
+    over = over_bom(ctx) if ck.enabled(ctx, "bom_over") else []
+    if over:
+        extra.append(
+            ck.result(
+                "bom_over",
+                "warn",
+                bom_over_msg(over),
+                severity="warn",
+                data={"over": over},
+            )
+        )
     results = ck.evaluate(
         ctx,
         user,
@@ -243,7 +254,7 @@ def track_out(
             oos_action=d["oos_action"] if d["is_oos"] and oos_on else None,
             username=email,
         )
-    consumed = _consume(s, tid, ctx.material_needs, user)
+    consumed = _consume(s, tid, ctx.material_needs, lot, ctx.step, user)
     tools = []
     for t in ctx.tools:
         mx, used = ck.tool_life(s, tid, t)
@@ -368,6 +379,7 @@ def track_out(
             "oos_action": worst,
             "scrap": n_scrap,
             "consumed": consumed,
+            "bom_over": over,
             "tools": tools,
             "e10": e10,
             "sampling": {

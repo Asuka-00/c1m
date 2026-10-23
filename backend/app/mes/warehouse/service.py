@@ -30,6 +30,7 @@ from app.mes.common import coderule
 from app.mes.common.query import find, one
 from app.mes.common.rows import _upd
 from app.mes.lot import service as lot_svc
+from app.mes.warehouse.shipment import shipments_of as shipments_of
 
 Row = dict[str, Any]
 RECEIPT, LINE, LOT = (ENTITIES[c] for c in ("receipt", "receipt_line", "lot"))

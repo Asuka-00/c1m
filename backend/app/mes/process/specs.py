@@ -463,3 +463,57 @@ register(
         sort_default="created_at",
     ),
 )
+
+
+register(
+    Entity(
+        "bom",
+        "process",
+        "Bill of materials",
+        [F("product", "ref", ref="product", required=True)],
+        phase=3,
+        versioned=True,
+        children=["bom_line"],
+        icon="ListChecks",
+        order=10,
+    ),
+)
+
+
+register(
+    Entity(
+        "bom_line",
+        "process",
+        "BOM line",
+        [
+            F("bom", "ref", "BOM", required=True, ref="bom", cascade=True),
+            F("operation", "ref", ref="operation", required=True),
+            F("material", "ref", "Material", required=True, ref="material"),
+            F("qty", "float", "Quantity", required=True),
+            F("uom", "ref", ref="uom", required=True),
+            F(
+                "qty_basis",
+                "enum",
+                "Quantity basis",
+                enum="qty_basis",
+                default="per_unit",
+            ),
+            F(
+                "scrap_rate",
+                "float",
+                "Scrap rate (%)",
+                default=0,
+                help="Consumption above quantity × (1 + rate) is flagged at Track Out",
+            ),
+        ],
+        phase=3,
+        has_code=False,
+        parent="bom",
+        unique=[("bom", "operation", "material")],
+        icon="List",
+        order=11,
+        sort_default="created_at",
+        label_field="qty",
+        label_ref="material",
+    ),
+)

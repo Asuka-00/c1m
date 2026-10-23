@@ -87,6 +87,7 @@ mes:
     work_order: 工单
   field:
     work_order:
+      bom: BOM（下达时）
       code: 工单号
       product: 产品
       route: 流程（默认，下达时快照）

@@ -4,7 +4,10 @@ import uuid
 from datetime import date, timedelta
 from typing import Any
 
+from fastapi import HTTPException
+
 from app.mes.common.query import find, one
+from app.mes.common.uom import convert
 from app.mes.equipment.service import e10_current, pm_status, tool_life
 from app.mes.execution.carrier.usage import clean_due
 from app.mes.execution.checks.registry import Ctx, Msg, check_type, messages
@@ -287,6 +290,73 @@ def _material(ctx: Ctx, _p: Row) -> Outcome:
         ]
         return "fail", msgs, data
     return "pass", M_MAT("ok"), data
+
+
+M_BOM = messages(
+    "bom_over",
+    none="no BOM consumption to compare",
+    over="over the BOM quantity: {items}",
+    ok="within the BOM quantity",
+)
+
+
+def over_bom(ctx: Ctx) -> list[Row]:
+    """本工步物料用量超过工单锁定 BOM 标准用量（含损耗率）的物料。
+
+    BOM 明细按工序对应；用量单位不同时换算，无换算关系的跳过不比较。
+    """
+    bom_id = (ctx.wo or {}).get("bom_id")
+    lines = (
+        find(
+            ctx.s,
+            ctx.tid,
+            "bom_line",
+            bom_id=bom_id,
+            operation_id=ctx.step["operation_id"],
+        )
+        if bom_id
+        else []
+    )
+    over = []
+    for n in ctx.material_needs:
+        for ln in (x for x in lines if x["material_id"] == n["material_id"]):
+            plan = float(ln["qty"]) * (
+                ctx.lot["qty"] if ln["qty_basis"] == "per_unit" else 1
+            )
+            plan *= 1 + float(ln["scrap_rate"] or 0) / 100
+            actual = n["need"]
+            try:
+                if n["uom_id"] != ln["uom_id"]:
+                    actual = convert(ctx.s, ctx.tid, n["uom_id"], ln["uom_id"], actual)[
+                        "value"
+                    ]
+            except HTTPException:
+                continue
+            if actual > plan + 1e-9:
+                over.append(
+                    {
+                        "material": n["material_code"],
+                        "actual": round(actual, 6),
+                        "plan": round(plan, 6),
+                    }
+                )
+    return over
+
+
+def bom_over_msg(over: list[Row]) -> Msg:
+    """超量说明：``物料 实际>标准`` 逐项列出。"""
+    items = ", ".join(f"{o['material']} {o['actual']:g}>{o['plan']:g}" for o in over)
+    return M_BOM("over", items=items)
+
+
+@check_type("bom_over")
+def _bom_over(ctx: Ctx, _p: Row) -> Outcome:
+    if not (ctx.wo or {}).get("bom_id"):
+        return "na", M_BOM("none"), {}
+    over = over_bom(ctx)
+    if over:
+        return "warn", bom_over_msg(over), {"over": over}
+    return "pass", M_BOM("ok"), {}
 
 
 M_TOOL = messages(

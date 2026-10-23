@@ -29,6 +29,7 @@ from app.core.spec.errors import FieldError, MesError, fe, http_422
 from app.core.spec.query import get_row
 from app.core.spec.validate import validator
 from app.mes.common import coderule
+from app.mes.common.query import find
 from app.mes.lot import service as lot_svc
 from app.mes.planning.board import wo_due_notify as wo_due_notify
 from app.mes.process import service as process_svc
@@ -320,7 +321,10 @@ def transition(
         if errs:
             raise http_422(errs)
         assert prod and route
+        # 锁定下达时的生效 BOM；产品没有生效 BOM 时留空，不拦截下达
+        boms = find(s, tid, "bom", product_id=wo["product_id"], status="active")
         extra = {
+            "bom_id": boms[0]["id"] if boms else None,
             "route_id": route["id"],
             "product_version": prod["version"],
             "route_version": route["version"],

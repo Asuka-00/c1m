@@ -40,6 +40,8 @@ mes:
     recipe_equipment: レシピ・設備対応
     param_spec: プロセスパラメータ規格
     change_order: 設計変更
+    bom: 部品表（BOM）
+    bom_line: BOM明細
   field:
     operation:
       code: コード
@@ -129,6 +131,19 @@ mes:
       applied_at: 発効日時
       result: 実行結果
       description: 説明
+    bom:
+      code: コード
+      name: 名称
+      product: 製品
+      description: 説明
+    bom_line:
+      bom: BOM
+      operation: 工程
+      material: 材料
+      qty: 使用量
+      uom: 単位
+      qty_basis: 使用量の基準
+      scrap_rate: 損耗率（%）
   help:
     route_step:
       branch_condition: 例：lot_type == 'ENG'
@@ -137,6 +152,8 @@ mes:
       ideal_uph: 任意。OEE 計算で設備 UPH より優先
     change_order:
       wip_rule: ルート変更：待機中の仕掛ロットは旧版継続、または工程番号で新版へ切替
+    bom_line:
+      scrap_rate: 使用量 ×（1 + 損耗率）を超えると出庫時に警告
   enum:
     operation_type:
       process: 加工

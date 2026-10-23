@@ -256,6 +256,10 @@ PRODUCT_NEEDS_DEFAULT_ROUTE: Final = (
 STEP_FIELD_REQUIRED: Final = 400042  # Required for this resource kind
 STEP_FIELD_EMPTY: Final = 400043  # Must be empty for this resource kind
 ROUTE_LAYOUT_INVALID: Final = 400044  # The layout references steps outside this route
+BOM_NO_LINES: Final = 400045  # Add at least one line before activating the BOM
+BOM_ACTIVE_EXISTS: Final = (
+    400046  # Another BOM of this product is already active: {bom}
+)
 
 # ==================== MES 设备与质量 500000-509999 ====================
 
@@ -285,6 +289,10 @@ WAFER_COUNT_RANGE: Final = 500019  # Must be 1–25 for wafer-level sampling
 WAFER_SELECTION_REQUIRED: Final = 500020  # Required for wafer-level sampling
 FIXED_SLOTS_FORMAT: Final = 500021  # Enter comma-separated slots 1–25
 FIXED_SLOTS_COUNT: Final = 500022  # The count must equal the wafer count
+MATERIAL_LOT_UNAVAILABLE: Final = 500023  # Material lot {lot} is not available
+MOUNT_POSITION_BUSY: Final = (
+    500024  # Position {position} already holds a material lot in this period
+)
 
 # ==================== MES 批次、工单与入库 600000-609999 ====================
 
@@ -361,6 +369,16 @@ RECEIPT_LINE_MOVE: Final = 600052  # A line cannot be moved to another receipt
 RECEIPT_LINES_REQUIRED: Final = 600053  # Add at least one lot
 RECEIPT_TRANSITION: Final = 600054  # The action "mes.receipt.action.{action})" is not allowed for a mes.enum.receipt_
 RECEIPT_CONCURRENT: Final = 600055  # Another change happened at the same time; retry
+ISSUE_EDIT_DRAFT_ONLY: Final = (
+    600056  # Only draft material issues can be changed or deleted
+)
+ISSUE_WO_STATUS: Final = 600057  # Work order {wo} is {status}; cannot issue materials
+ISSUE_QTY_EXCEEDS: Final = 600058  # Material lot {lot} has only {room} left
+ISSUE_LINES_REQUIRED: Final = 600059  # Add at least one line
+ISSUE_TRANSITION: Final = 600060  # A document that is {status} cannot do this
+SHIP_QTY_EXCEEDS: Final = 600061  # Lot {lot} has only {room} left to ship
+IQC_NOT_READY: Final = 600062  # Confirm the receipt before judging IQC
+IQC_DECIDED: Final = 600063  # This line already has an IQC result
 
 # ==================== MES 执行（作业、Hold、批量、载具、追溯、交接班） 700000-709999 ====================
 

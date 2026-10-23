@@ -49,6 +49,7 @@ mes:
     pm_plan: PM plan
     pm_record: PM record
     downtime: Downtime
+    equipment_material_mount: Material mount
   field:
     equipment_type:
       code: Code
@@ -145,6 +146,12 @@ mes:
       reason: Reason code
       e10_state: E10 state
       comment: Comment
+    equipment_material_mount:
+      equipment: Equipment
+      position: Position
+      material_lot: Material lot
+      mounted_at: Mounted at
+      unmounted_at: Unmounted at
   help:
     equipment:
       ideal_uph: Optional; reserved for OEE performance rate
@@ -154,6 +161,8 @@ mes:
       equipment_type: 'Blank: all types'
     pm_plan:
       equipment: 'Blank: all equipment of the type'
+    equipment_material_mount:
+      unmounted_at: Blank while still mounted
   enum:
     e10_source:
       manual: Manual

@@ -40,6 +40,8 @@ mes:
     recipe_equipment: Recipe ↔ equipment
     param_spec: Parameter spec
     change_order: Engineering change
+    bom: Bill of materials
+    bom_line: BOM line
   field:
     operation:
       code: Code
@@ -129,6 +131,19 @@ mes:
       applied_at: Applied at
       result: Result
       description: Description
+    bom:
+      code: Code
+      name: Name
+      product: Product
+      description: Description
+    bom_line:
+      bom: BOM
+      operation: Operation
+      material: Material
+      qty: Quantity
+      uom: Unit
+      qty_basis: Quantity basis
+      scrap_rate: Scrap rate (%)
   help:
     route_step:
       branch_condition: e.g. lot_type == 'ENG'
@@ -137,6 +152,8 @@ mes:
       ideal_uph: Optional; overrides the equipment UPH for OEE
     change_order:
       wip_rule: 'Route changes: waiting lots stay on the old version or move to the new one by step seq'
+    bom_line:
+      scrap_rate: Flagged at Track Out above quantity × (1 + rate)
   enum:
     operation_type:
       process: Process

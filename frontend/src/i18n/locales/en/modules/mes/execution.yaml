@@ -185,6 +185,7 @@ mes:
     autoRefresh: Auto refresh
     sweepConfirm: Scan all waiting lots now and apply the configured action (hold / rework / scrap) to those that exceeded Q-Time?
   traceq:
+    shipments: Shipments
     hint: Trace upstream and downstream by lot, wafer, equipment or material lot.
     kind: Object
     code: Code
@@ -202,6 +203,9 @@ mes:
       equipment: Equipment
       material_lot: Material lot
     c:
+      shipment: Shipment
+      customer: Customer
+      waybill: Waybill no.
       code: Lot
       lot: Lot
       relation: Relation
@@ -505,6 +509,10 @@ mes:
       none: no material consumption
       short: '{{material}}: need {{need}}, available {{available}}'
       ok: materials sufficient
+    bom_over:
+      none: no BOM consumption to compare
+      over: 'over the BOM quantity: {{items}}'
+      ok: within the BOM quantity
     tool_life:
       none: no tool required
       required: tool of type {{fixture}} required
@@ -731,6 +739,7 @@ mes:
       recipe_active: Recipe active
       reticle_available: Reticle available
       material_sufficient: Material sufficient
+      bom_over: BOM consumption within limit
       tool_life: Tool available + life
       carrier_available: Carrier available
       batch_same_step: 'Batch: same step'
@@ -772,6 +781,7 @@ mes:
       equipment_type: Equipment type
       product: Product
     ml_status:
+      rejected: Rejected (IQC)
       available: Available
       hold: On hold
       empty: Used up
@@ -797,6 +807,7 @@ mes:
       triggered: Triggered
       cancelled: Cancelled
     history_action:
+      ship: Shipped
       start: Lot start
       move_in: Move in
       track_in: Track in

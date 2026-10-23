@@ -251,7 +251,9 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
                         "expiry": to_json(m["expiry_date"]),
                         "location": m["location"],
                     }
-                    for m in candidate_lots(s, tid, n["material_id"], at)
+                    for m in candidate_lots(
+                        s, tid, n["material_id"], at, lot["work_order_id"]
+                    )
                 ],
             }
         )

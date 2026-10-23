@@ -495,6 +495,15 @@ register(
             F("qty_remaining", "float", "Qty remaining", required=True),
             F("initial_qty", "float", "Received qty", list=False),
             F("uom", "ref", ref="uom", required=True),
+            F("supplier_lot", "str", "Supplier lot", max_length=100, list=False),
+            F(
+                "work_order",
+                "ref",
+                "Issued to work order",
+                ref="work_order",
+                system=True,
+                help="Set by a material issue; only that work order consumes this lot",
+            ),
             F("expiry_date", "date", "Expiry"),
             F(
                 "location",

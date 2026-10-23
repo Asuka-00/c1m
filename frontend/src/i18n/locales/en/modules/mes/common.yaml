@@ -33,6 +33,7 @@ mes:
   sampleLot: Sample lot ID
   previewHint: Preview only — no numbers are reserved.
   panel:
+    material_issue: Material requirement
     code_rule: Preview
     uom: Converter
     route: Flow diagram
@@ -127,6 +128,7 @@ mes:
       active: Active
       inactive: Inactive
     audit_action:
+      ship: Shipped
       create: Create
       update: Update
       delete: Delete

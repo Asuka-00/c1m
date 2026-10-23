@@ -12,6 +12,7 @@ from app.core.spec.base import conn
 from app.core.spec.engine import TABLES
 from app.core.spec.errors import coded
 from app.mes.common.query import find, jsonable, one
+from app.mes.warehouse.service import shipments_of
 
 Row = dict[str, Any]
 KINDS = ("lot", "wafer", "equipment", "material_lot")
@@ -67,6 +68,35 @@ def _hist(s: Session, tid: uuid.UUID, lot_ids: list[Any], action: str) -> list[R
     return [dict(r) for r in rows]
 
 
+def _mounted_at(s: Session, tid: uuid.UUID, equipment_id: Any, at: Any) -> list[Row]:
+    """某时刻机台上装着的物料批（上料记录）。"""
+    m = TABLES["equipment_material_mount"]
+    stmt = sa.select(m).where(
+        m.c.tenant_id == tid,
+        m.c.equipment_id == equipment_id,
+        m.c.mounted_at <= at,
+        sa.or_(m.c.unmounted_at.is_(None), m.c.unmounted_at >= at),
+    )
+    return [dict(r) for r in conn(s).execute(stmt).mappings()]
+
+
+def _shipments(s: Session, tid: uuid.UUID, lot: Row, fwd: list[Row]) -> list[Row]:
+    """本批及其下游批次的已确认出货记录（客户级出货追溯）。"""
+    ids = [lot["id"], *[uuid.UUID(x["id"]) for x in fwd]]
+    codes = {i: _code(s, tid, "lot", i) for i in ids}
+    return [
+        {
+            "lot": codes[r["lot_id"]],
+            "shipment": r["code"],
+            "customer": r["customer"],
+            "waybill": r["waybill"],
+            "qty": r["qty"],
+            "at": r["confirmed_at"],
+        }
+        for r in shipments_of(s, tid, ids)
+    ]
+
+
 def _lot_trace(s: Session, tid: uuid.UUID, lot: Row) -> Row:
     back = _walk(s, tid, lot["id"], True)
     fwd = _walk(s, tid, lot["id"], False)
@@ -95,9 +125,23 @@ def _lot_trace(s: Session, tid: uuid.UUID, lot: Row) -> Row:
         for r in _hist(s, tid, ids, "track_out")
         for c in ((r["details"] or {}).get("consumed") or [])
     ]
+    # 过站时机台上装着的物料批（上料记录），与出站扣料并列
+    mats += [
+        {
+            "lot": codes[r["lot_id"]],
+            "step_seq": r["step_seq"],
+            "material_lot": _code(s, tid, "material_lot", m["material_lot_id"]),
+            "qty": None,
+            "at": r["at"],
+            "position": m["position"],
+        }
+        for r in _hist(s, tid, ids, "track_in")
+        if r["equipment_id"]
+        for m in _mounted_at(s, tid, r["equipment_id"], r["at"])
+    ]
     return {
         "backward": {"lots": back, "steps": steps, "materials": mats},
-        "forward": {"lots": fwd},
+        "forward": {"lots": fwd, "shipments": _shipments(s, tid, lot, fwd)},
     }
 
 
@@ -144,7 +188,7 @@ def trace(s: Session, tid: uuid.UUID, kind: str, code: str) -> Row:
     Returns:
         批次 / 晶圆：``{target, backward: {lots, steps, materials}, forward: {lots}}``；
         设备：``{target, lots}``（在该设备上 Track In 的批次）；
-        物料批：``{target, lots}``（消耗了该物料批的批次及其下游产出）。
+        物料批：``{target, lots}``（消耗了该物料批的批次，或该物料批装在机台上期间过站的批次，及其下游产出）。
     """
     if kind not in KINDS:
         raise coded(
@@ -179,15 +223,50 @@ def trace(s: Session, tid: uuid.UUID, kind: str, code: str) -> Row:
             s, tid, sa.and_(h.c.equipment_id == tgt["id"], h.c.action == "track_in")
         )
     else:
-        pat = f'%"material_lot": "{tgt["code"]}"%'
-        used = _lots_by(
-            s,
-            tid,
-            sa.and_(
-                h.c.action == "track_out",
-                sa.cast(h.c.details, sa.Text).like(pat),
-            ),
-        )
+        used: list[Row] = []
+        for u in find(
+            s, tid, "lot_material_use", order="at", material_lot_id=tgt["id"]
+        ):
+            lot = one(s, tid, "lot", u["lot_id"])
+            used.append(
+                {
+                    "id": str(u["lot_id"]),
+                    "code": lot and lot["code"],
+                    "product": lot and _code(s, tid, "product", lot["product_id"]),
+                    "step_seq": (
+                        one(s, tid, "route_step", u["route_step_id"]) or {}
+                    ).get("seq"),
+                    "operation": _code(s, tid, "operation", u["operation_id"]),
+                    "equipment": _code(s, tid, "equipment", u["equipment_id"]),
+                    "qty": u["qty"],
+                    "at": u["at"],
+                    "consumed": [{"material_lot": tgt["code"], "qty": u["qty"]}],
+                }
+            )
+        # 该物料批装在机台上期间过站（Track In）的批次
+        mt = TABLES["equipment_material_mount"]
+        for m in (
+            conn(s)
+            .execute(
+                sa.select(mt).where(
+                    mt.c.tenant_id == tid, mt.c.material_lot_id == tgt["id"]
+                )
+            )
+            .mappings()
+        ):
+            end = h.c.at <= m["unmounted_at"] if m["unmounted_at"] else sa.true()
+            for u in _lots_by(
+                s,
+                tid,
+                sa.and_(
+                    h.c.action == "track_in",
+                    h.c.equipment_id == m["equipment_id"],
+                    h.c.at >= m["mounted_at"],
+                    end,
+                ),
+            ):
+                u["position"] = m["position"]
+                used.append(u)
         for u in used:
             u["forward"] = _walk(s, tid, uuid.UUID(u["id"]), False)
         out["lots"] = used

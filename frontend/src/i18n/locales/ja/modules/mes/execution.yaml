@@ -185,6 +185,7 @@ mes:
     autoRefresh: 自動更新
     sweepConfirm: 待機中の全ロットを今すぐスキャンし、Q-Time 超過ロットに設定済みの処置（Hold / リワーク / スクラップ）を実行しますか？
   traceq:
+    shipments: 出荷記録
     hint: ロット・ウェーハ・設備・資材ロットで上流・下流を追跡します。
     kind: 対象
     code: コード
@@ -202,6 +203,9 @@ mes:
       equipment: 設備
       material_lot: 資材ロット
     c:
+      shipment: 出荷伝票
+      customer: 顧客
+      waybill: 送り状番号
       code: ロット
       lot: ロット
       relation: 関係
@@ -505,6 +509,10 @@ mes:
       none: 材料消費なし
       short: '{{material}}：必要 {{need}}、在庫 {{available}}'
       ok: 材料十分
+    bom_over:
+      none: 比較するBOM消費量がありません
+      over: BOM標準使用量を超過：{{items}}
+      ok: BOM標準使用量の範囲内
     tool_life:
       none: ツール不要
       required: '{{fixture}} タイプのツールが必要です'
@@ -731,6 +739,7 @@ mes:
       recipe_active: レシピ有効
       reticle_available: レチクル使用可
       material_sufficient: 資材充足
+      bom_over: BOM消費量が上限内
       tool_life: 工具使用可・寿命
       carrier_available: キャリア使用可
       batch_same_step: 一括：同一ステップ
@@ -772,6 +781,7 @@ mes:
       equipment_type: 設備タイプ
       product: 製品
     ml_status:
+      rejected: 受入拒否
       available: 使用可
       hold: ホールド
       empty: 使用済
@@ -797,6 +807,7 @@ mes:
       triggered: 発動済
       cancelled: 取消
     history_action:
+      ship: 出荷
       start: 投入
       move_in: ムーブイン
       track_in: トラックイン

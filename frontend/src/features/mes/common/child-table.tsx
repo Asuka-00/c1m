@@ -1,6 +1,7 @@
 /** MES 子表组件（行详情抽屉中的子表标签页）。 */
 import type { MesRow } from '@/lib/api/mes/common'
 import { useLocalListParams } from '@/components/crud'
+import { EXTRA_ACTIONS } from '@/features/mes/registry'
 import { EntityTable } from './entity-table'
 import { CHILD_LOCKS } from './row-rules'
 import { useMesEntity } from './use-mes-meta'
@@ -28,6 +29,7 @@ export function ChildTable({
       entity={entity}
       params={params}
       fixed={{ [f.column]: parentId }}
+      extraActions={EXTRA_ACTIONS[code]}
       readOnly={!!parentRow && !!CHILD_LOCKS[parentCode]?.(parentRow)}
     />
   )

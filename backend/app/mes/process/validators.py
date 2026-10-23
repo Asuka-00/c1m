@@ -11,6 +11,7 @@ from app.core.spec.base import conn
 from app.core.spec.engine import TABLES, Entity
 from app.core.spec.errors import FieldError, MesError, fe
 from app.core.spec.validate import validator
+from app.mes.common.query import find
 from app.mes.common.validators import Row, _get
 from app.mes.equipment.service import check_recipe_equipment_type
 
@@ -248,3 +249,51 @@ def _recipe_eqp(
     s: Session, tid: uuid.UUID, _e: Entity, row: Row, _old: Row | None
 ) -> None:
     check_recipe_equipment_type(s, tid, row.get("recipe_id"), row.get("equipment_id"))
+
+
+# ---------------- BOM ----------------
+@validator("bom_line")
+def _bom_line(_s: Session, _t: uuid.UUID, _e: Entity, row: Row, _o: Row | None) -> None:
+    errs: list[FieldError] = []
+    if (row.get("qty") or 0) <= 0:
+        errs.append(fe("qty", ec.FIELD_GT, "qty: must be > 0", min=0))
+    if not 0 <= (row.get("scrap_rate") or 0) <= 100:
+        errs.append(
+            fe(
+                "scrap_rate",
+                ec.FIELD_RANGE,
+                "scrap_rate: must be 0..100",
+                min=0,
+                max=100,
+            )
+        )
+    if errs:
+        raise MesError(errs)
+
+
+@validator("bom:activate")
+def _bom_activate(
+    s: Session, tid: uuid.UUID, _e: Entity, row: Row, _o: Row | None
+) -> None:
+    """生效前须有明细；同一产品同时只能有一个生效 BOM（同编码的旧版本由引擎置为停用）。"""
+    if not find(s, tid, "bom_line", bom_id=row["id"]):
+        raise MesError([fe("lines", ec.BOM_NO_LINES, "lines: add at least one line")])
+    other = next(
+        (
+            b
+            for b in find(s, tid, "bom", product_id=row["product_id"], status="active")
+            if b["code"] != row["code"]
+        ),
+        None,
+    )
+    if other:
+        raise MesError(
+            [
+                fe(
+                    "product",
+                    ec.BOM_ACTIVE_EXISTS,
+                    f"product: BOM {other['code']} is already active",
+                    bom=other["code"],
+                )
+            ]
+        )

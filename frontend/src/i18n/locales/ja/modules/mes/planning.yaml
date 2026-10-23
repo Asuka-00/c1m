@@ -87,6 +87,7 @@ mes:
     work_order: 作業指示
   field:
     work_order:
+      bom: BOM（発行時）
       code: 作業指示番号
       product: 製品
       route: ルート（既定・リリース時）

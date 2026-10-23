@@ -111,6 +111,8 @@ mes:
       status_code: State
       description: Description
     material_lot:
+      supplier_lot: Supplier lot
+      work_order: Issued to work order
       code: Material lot no.
       material: Material
       qty_remaining: Qty remaining
@@ -121,6 +123,8 @@ mes:
       ml_status: Status
       description: Description
   help:
+    material_lot:
+      work_order: Set by a material issue; only that work order consumes it
     uom_conversion:
       factor: to = from × factor
     product:

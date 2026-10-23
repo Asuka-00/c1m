@@ -1,7 +1,7 @@
 """执行演示数据（检查规则/方案、线边物料、工具、装配线）及演示作业。"""
 
 import uuid
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 import sqlalchemy as sa
@@ -170,6 +170,13 @@ for c, mat, qty, u, exp, loc in _rows(
         expiry_date=exp,
         location=loc,
     )
+add(
+    "equipment_material_mount",
+    equipment=("equipment", "CMP01"),
+    position="SLURRY-1",
+    material_lot=("material_lot", "ML-SLCU-0001"),
+    mounted_at=(datetime.now(UTC) - timedelta(days=1)).isoformat(),
+)
 add("fixture", code="PAD-CMP", name="CMP polishing pad", kind="tool", max_uses=500)
 for c, sn, used, mx, exp in _rows(
     [

@@ -219,6 +219,8 @@ error:
   code_400042: '{{field}}: Required for a $t(mes.enum.resource_kind.{{kind}}) resource'
   code_400043: '{{field}}: Must be empty for a $t(mes.enum.resource_kind.{{kind}}) resource'
   code_400044: 'The layout references steps outside this route'
+  code_400045: Add at least one line before activating
+  code_400046: 'Another BOM of this product is already active: {{bom}}'
   code_500001: Equipment not found
   code_500002: Unknown E10 state
   code_500003: The equipment is already in {{state}}
@@ -241,6 +243,8 @@ error:
   code_500020: '{{field}}: Required for wafer-level sampling'
   code_500021: '{{field}}: Enter comma-separated slots 1–25'
   code_500022: '{{field}}: The count must equal the wafer count'
+  code_500023: Material lot {{lot}} is not available
+  code_500024: Position {{position}} already holds a material lot in this period
   code_600001: The lot is being used by another operation; try again shortly
   code_600002: '{{field}}: Must be a code rule for $t(mes.enum.code_target.{{target}})'
   code_600003: '{{field}}: Must be at least 2 when splitting is allowed'
@@ -296,6 +300,14 @@ error:
   code_600053: Add at least one lot
   code_600054: The action "$t(mes.receipt.action.{{action}})" is not allowed for a $t(mes.enum.receipt_status.{{status}}) receipt
   code_600055: Another change happened at the same time; retry
+  code_600056: Only draft documents can be changed or deleted
+  code_600057: Work order {{wo}} is $t(mes.enum.wo_status.{{status}}); cannot issue materials
+  code_600058: Material lot {{lot}} has only {{room}} left
+  code_600059: Add at least one line
+  code_600060: A $t(mes.enum.issue_status.{{status}}) document cannot do this
+  code_600061: Lot {{lot}} has only {{room}} left to ship
+  code_600062: Confirm the receipt before judging IQC
+  code_600063: This line already has an IQC result
   code_700001: The kind must be scrap or bonus
   code_700002: A $t(mes.enum.reason_type.{{type}}) reason code is required
   code_700003: A comment is required for this reason code

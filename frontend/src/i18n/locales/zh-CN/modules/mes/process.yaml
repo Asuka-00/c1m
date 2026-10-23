@@ -40,6 +40,8 @@ mes:
     recipe_equipment: 配方设备映射
     param_spec: 工艺参数规格
     change_order: 工程变更
+    bom: 物料清单（BOM）
+    bom_line: BOM 明细
   field:
     operation:
       code: 编码
@@ -129,6 +131,19 @@ mes:
       applied_at: 生效于
       result: 执行结果
       description: 描述
+    bom:
+      code: 编码
+      name: 名称
+      product: 产品
+      description: 描述
+    bom_line:
+      bom: BOM
+      operation: 工序
+      material: 物料
+      qty: 用量
+      uom: 单位
+      qty_basis: 用量基准
+      scrap_rate: 损耗率（%）
   help:
     route_step:
       branch_condition: 例如 lot_type == 'ENG'
@@ -137,6 +152,8 @@ mes:
       ideal_uph: 可选，OEE 计算优先于设备 UPH
     change_order:
       wip_rule: 流程变更：等待中的在制批次沿用旧版，或按工步序号切换到新版
+    bom_line:
+      scrap_rate: 出站用量超过 用量 ×（1 + 损耗率）时提示
   enum:
     operation_type:
       process: 加工

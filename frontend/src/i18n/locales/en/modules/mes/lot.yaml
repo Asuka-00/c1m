@@ -61,6 +61,7 @@ mes:
       active_since: Active since
       description: Description
     lot:
+      shipped_qty: Shipped qty
       code: Lot no.
       work_order: Work order
       product: Product

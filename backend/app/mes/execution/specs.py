@@ -27,6 +27,7 @@ CHECK_TYPES = [
     ("recipe_active", "Recipe active"),
     ("reticle_available", "Reticle available"),
     ("material_sufficient", "Material sufficient"),
+    ("bom_over", "BOM consumption within limit"),
     ("tool_life", "Tool available + life"),
     ("carrier_available", "Carrier available"),
     ("batch_same_step", "Batch: same step"),
@@ -92,6 +93,7 @@ ENUMS.update(
             ("hold", "On hold"),
             ("empty", "Used up"),
             ("expired", "Expired"),
+            ("rejected", "Rejected (IQC)"),
         ],
         "tool_status": [
             ("available", "Available"),
@@ -139,6 +141,7 @@ ENUMS.update(
             ),
             ("complete", "Finished (to receive)"),
             ("receive", "Received"),
+            ("ship", "Shipped"),
             ("override", "Check override"),
             ("qtime", "Q-Time violation"),
             ("oos", "Out of spec"),

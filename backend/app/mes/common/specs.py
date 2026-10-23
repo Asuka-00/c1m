@@ -54,6 +54,7 @@ ENUMS.update(
             ("confirm", "Confirm"),
             ("reject", "Reject"),
             ("receive", "Receive"),
+            ("ship", "Ship"),
             ("close", "Close"),
             ("cancel", "Cancel"),
             ("start", "Lot start"),

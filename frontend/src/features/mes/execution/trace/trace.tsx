@@ -202,6 +202,11 @@ export default function TracePage() {
             rows={d.forward?.lots ?? []}
             cols={['code', 'relation', 'qty', 'via', 'level', 'at']}
           />
+          <TraceTable
+            title={t('mes.traceq.shipments')}
+            rows={d.forward?.shipments ?? []}
+            cols={['lot', 'shipment', 'customer', 'waybill', 'qty', 'at']}
+          />
         </div>
       )}
       {d?.lots && (

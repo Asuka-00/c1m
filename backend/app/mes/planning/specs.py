@@ -18,6 +18,14 @@ register(
                 filter=False,
             ),
             F(
+                "bom",
+                "ref",
+                "BOM (at release)",
+                ref="bom",
+                system=True,
+                list=False,
+            ),
+            F(
                 "product_version",
                 "int",
                 "Product ver.",

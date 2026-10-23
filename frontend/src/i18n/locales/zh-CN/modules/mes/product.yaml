@@ -111,6 +111,8 @@ mes:
       status_code: 状态
       description: 描述
     material_lot:
+      supplier_lot: 供应商批号
+      work_order: 归属工单
       code: 物料批号
       material: 物料
       qty_remaining: 剩余数量
@@ -121,6 +123,8 @@ mes:
       ml_status: 状态
       description: 描述
   help:
+    material_lot:
+      work_order: 由领料单设置，仅该工单出站扣料使用
     uom_conversion:
       factor: 目标 = 源 × 系数
     product:

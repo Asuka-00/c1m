@@ -33,6 +33,7 @@ mes:
   sampleLot: サンプルロット ID
   previewHint: プレビューのみ（番号は確保されません）。
   panel:
+    material_issue: 材料所要量
     code_rule: プレビュー
     uom: 換算ツール
     route: フロー図
@@ -127,6 +128,7 @@ mes:
       active: 有効
       inactive: 無効
     audit_action:
+      ship: 出荷
       create: 作成
       update: 更新
       delete: 削除

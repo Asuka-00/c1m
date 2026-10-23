@@ -151,7 +151,7 @@ export interface TraceResult {
   kind: TraceKind
   target: { id: string; code: string; lot?: string; lot_id?: string }
   backward?: { lots: TraceRow[]; steps: TraceRow[]; materials: TraceRow[] }
-  forward?: { lots: TraceRow[] }
+  forward?: { lots: TraceRow[]; shipments?: TraceRow[] }
   lots?: TraceRow[]
 }
 /** Q-Time 监控行。 */

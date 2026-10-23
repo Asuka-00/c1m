@@ -87,6 +87,7 @@ mes:
     work_order: Work order
   field:
     work_order:
+      bom: BOM (at release)
       code: WO no.
       product: Product
       route: Route (default, at release)

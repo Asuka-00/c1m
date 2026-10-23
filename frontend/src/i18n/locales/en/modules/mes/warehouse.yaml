@@ -18,11 +18,63 @@ mes:
       reject: Return {{code}} to draft?
       confirm: Confirm receipt {{code}}? Lot received quantities and work-order completed quantities are increased; fully received lots are closed.
       cancel: Cancel {{code}}? This cannot be undone.
+  issue:
+    action:
+      confirm: Confirm issue
+      cancel: Cancel issue
+    done:
+      confirm: Material issued
+      cancel: Material issue cancelled
+    confirm:
+      confirm: Confirm {{code}}? The source material lots are reduced and new line-side lots are created for the work order.
+      cancel: Cancel {{code}}? This cannot be undone.
+    req:
+      empty: This work order has no BOM, so no material requirement
+      bom: BOM {{bom}}
+      material: Material
+      required: Required
+      issued: Issued
+      short: Short
+  doc:
+    confirmBtn: Confirm
+  shipment:
+    action:
+      confirm: Confirm shipment
+      cancel: Cancel shipment
+    done:
+      confirm: Shipment confirmed
+      cancel: Shipment cancelled
+    confirm:
+      confirm: Confirm shipment {{code}}? Lot shipped quantities increase and this cannot be undone.
+      cancel: Cancel {{code}}? This cannot be undone.
+  inbound:
+    action:
+      confirm: Confirm receipt
+      cancel: Cancel receipt
+    done:
+      confirm: Receipt confirmed
+      cancel: Receipt cancelled
+    confirm:
+      confirm: Confirm receipt {{code}}? Each line creates a material lot on hold until IQC passes.
+      cancel: Cancel {{code}}? This cannot be undone.
+    iqc:
+      pass: Passed
+      fail: Failed
+      confirm: Judge this line as {{result}}? This cannot be changed.
+      done:
+        pass: Judged as passed
+        fail: Judged as failed
   entity:
     warehouse: Warehouse
     storage_location: Storage location
     receipt: Finished-goods receipt
     receipt_line: Receipt line
+    material_issue: Material issue
+    material_issue_line: Material issue line
+    material_receipt: Material receipt
+    material_receipt_line: Material receipt line
+    shipment: Shipment
+    shipment_line: Shipment line
   field:
     warehouse:
       code: Code
@@ -63,11 +115,62 @@ mes:
       good_qty: Good qty
       scrap_qty: Scrap qty
       remarks: Remarks
+    material_issue:
+      code: Issue no.
+      work_order: Work order
+      issue_status: Status
+      remarks: Remarks
+      confirmed_at: Confirmed at
+      confirmed_by: Confirmed by
+      description: Description
+    material_issue_line:
+      material_issue: Material issue
+      material_lot: Source material lot
+      qty: Quantity
+    shipment:
+      code: Shipment no.
+      customer: Customer
+      warehouse: Warehouse
+      waybill: Waybill no.
+      issue_status: Status
+      remarks: Remarks
+      confirmed_at: Shipped at
+      confirmed_by: Confirmed by
+      description: Description
+    shipment_line:
+      shipment: Shipment
+      lot: Lot
+      product: Product
+      qty: Quantity
+    material_receipt:
+      code: Receipt no.
+      supplier: Supplier
+      issue_status: Status
+      remarks: Remarks
+      confirmed_at: Received at
+      confirmed_by: Confirmed by
+      description: Description
+    material_receipt_line:
+      material_receipt: Material receipt
+      material: Material
+      qty: Quantity
+      uom: Unit
+      supplier_lot: Supplier lot
+      expiry_date: Expiry
+      location: Location
+      iqc_result: IQC result
+      material_lot: Material lot
   help:
     storage_location:
       capacity: 'Blank: unlimited'
     receipt_line:
       lot: Only finished lots awaiting receipt
+    material_issue_line:
+      material_lot: Only available lots can be picked
+    shipment_line:
+      lot: Only stored lots can be shipped
+    material_receipt_line:
+      expiry_date: "Blank: received date plus the material's shelf life"
   enum:
     warehouse_type:
       finished_goods: Finished goods
@@ -86,3 +189,11 @@ mes:
       submitted: Submitted
       confirmed: Confirmed
       cancelled: Cancelled
+    issue_status:
+      draft: Draft
+      confirmed: Confirmed
+      cancelled: Cancelled
+    iqc_result:
+      pending: Pending
+      pass: Passed
+      fail: Failed
