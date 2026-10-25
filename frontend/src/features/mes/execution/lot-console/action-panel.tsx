@@ -51,6 +51,7 @@ export function ActionPanel({
     eqChambers,
     equipment,
     setEquipment,
+    eqRecipes,
     recipe,
     setRecipe,
     chambers,
@@ -100,6 +101,7 @@ export function ActionPanel({
               required={stage === 'track_in' && (cx.equipment?.length ?? 0) > 0}
               value={equipment}
               onChange={setEquipment}
+              empty={t('mes.exec.noneAvailable')}
               options={(cx.equipment ?? []).map((e) => ({
                 id: e.id,
                 label: (
@@ -128,6 +130,7 @@ export function ActionPanel({
         {stage === 'track_in' && (
           <TrackInInputs
             cx={cx}
+            recipes={eqRecipes}
             recipe={recipe}
             setRecipe={setRecipe}
             eqpRecipe={eqpRecipe}

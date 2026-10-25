@@ -371,7 +371,8 @@ export interface ExecContext {
     } | null
     is_last: boolean
   }
-  equipment?: (EqpOpt & { chambers: EqpOpt[] })[]
+  /** 卡控规则放行的设备；recipe_ids 为该设备可用的配方 */
+  equipment?: (EqpOpt & { chambers: EqpOpt[]; recipe_ids: string[] })[]
   recipes?: (Opt & { version: number; status: string })[]
   reticles?: (Opt & { status: string })[]
   tools?: {

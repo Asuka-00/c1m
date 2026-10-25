@@ -84,6 +84,7 @@ mes:
     oosAction: OOS action
     eqpRecipe: Equipment recipe
     eqpRecipeHint: Reported / scanned (optional)
+    noneAvailable: None available (filtered by check rules)
     chambers: Chambers
     futureHold: 'Future hold at this step, lot held: {{reason}}'
     qtimeHandled: Q-Time exceeded and handled

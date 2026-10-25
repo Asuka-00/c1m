@@ -88,7 +88,7 @@ def test_chamber_select_checks_and_e10(client: TestClient, db: Session) -> None:
     assert e10(pm[0]["id"]) == f.st["PRD"]["id"]
     ctx = client.get(f"{EXEC}/lots/{c['id']}", headers=f.m.h).json()
     eq1 = next(e for e in ctx["equipment"] if e["id"] == f.eq["id"])
-    assert [x["code"] for x in eq1["chambers"]] == ["EQ1-PM1", "EQ1-PM2"]
+    assert [x["code"] for x in eq1["chambers"]] == ["EQ1-PM1"]  # PM2 DOWN 不列出
     f.stage(a, "track_out")
     assert e10(pm[0]["id"]) == f.st["SBY"]["id"]
     hist = f.m.list("lot_history", lot=a["id"], action="track_in")["data"][0]
@@ -575,8 +575,9 @@ def test_shift_handover_ack_rule(client: TestClient, db: Session) -> None:
 # ---------------- 13: operator qualification ----------------
 def test_operator_qualified_and_expiry_notice(client: TestClient, db: Session) -> None:
     import uuid as _uuid
-    from datetime import date, timedelta
+    from datetime import timedelta
 
+    from app.core.spec.base import now
     from app.mes.execution.service import sweep_all_tenants
     from app.mes.execution.tests.test_exec import Line
     from app.platform.notification.tests.test_notification import _sub_all, _types
@@ -594,12 +595,12 @@ def test_operator_qualified_and_expiry_notice(client: TestClient, db: Session) -
         {
             "username": me.get("username") or me["email"],
             "operation_id": f.steps[10]["operation_id"],
-            "expires_on": str(date.today() - timedelta(days=1)),
+            "expires_on": str(now().date() - timedelta(days=1)),
         },
     )
     f.stage(a, "track_in", 409, equipment_id=f.eq["id"])  # 已过期
     f.m.patch(
-        "operator_qual", q["id"], {"expires_on": str(date.today() + timedelta(days=3))}
+        "operator_qual", q["id"], {"expires_on": str(now().date() + timedelta(days=3))}
     )
     f.stage(a, "track_in", equipment_id=f.eq["id"])
     sweep_all_tenants([_uuid.UUID(str(f.m.tid))])

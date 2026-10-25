@@ -372,6 +372,18 @@ M_TOOL = messages(
 )
 
 
+def tool_issue(ctx: Ctx, t: Row) -> Msg | None:
+    """工具不可上机的原因：状态不可用、寿命用尽或过期；可用时为 None。"""
+    if t["tool_status"] not in ("available", "in_use"):
+        return M_TOOL("status", tool=t["code"], status=t["tool_status"])
+    mx, used = tool_life(ctx.s, ctx.tid, t)
+    if mx and used >= mx:
+        return M_TOOL("life_reached", tool=t["code"], used=used, max=mx)
+    if t["expiry_date"] and t["expiry_date"] < ctx.today:
+        return M_TOOL("expired", tool=t["code"], date=str(t["expiry_date"]))
+    return None
+
+
 @check_type("tool_life")
 def _tool(ctx: Ctx, p: Row) -> Outcome:
     types = {r["fixture_id"] for r in ctx.resources("fixture") if r["fixture_id"]}
@@ -384,15 +396,11 @@ def _tool(ctx: Ctx, p: Row) -> Outcome:
         fx = one(ctx.s, ctx.tid, "fixture", fid)
         if not t:
             return "fail", M_TOOL("required", fixture=fx and fx["code"]), {}
-        if t["tool_status"] not in ("available", "in_use"):
-            return "fail", M_TOOL("status", tool=t["code"], status=t["tool_status"]), {}
+        if bad := tool_issue(ctx, t):
+            return "fail", bad, {}
         mx, used = tool_life(ctx.s, ctx.tid, t)
         life = {"tool": t["code"], "used": used, "max": mx}
-        if mx and used >= mx:
-            return "fail", M_TOOL("life_reached", **life), {}
         exp = {"tool": t["code"], "date": str(t["expiry_date"])}
-        if t["expiry_date"] and t["expiry_date"] < ctx.today:
-            return "fail", M_TOOL("expired", **exp), {}
         if mx and used >= mx * (t["warn_pct"] or 90) / 100:
             warn.append(M_TOOL("near_end", **life))
         days = int(p.get("expiry_warn_days", 7))

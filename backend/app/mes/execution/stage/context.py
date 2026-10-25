@@ -12,7 +12,8 @@ from app.core.spec.errors import coded, fe, http_422
 from app.core.spec.serialize import serialize, to_json
 from app.mes.common.query import find, one
 from app.mes.execution.checks import service as ck
-from app.mes.execution.checks.registry import Ctx
+from app.mes.execution.checks.registry import Ctx, blocking, gate
+from app.mes.execution.checks.types import tool_issue
 from app.mes.execution.stage.constants import NEXT_STAGE, STAGES
 from app.mes.execution.stage.consumption import candidate_lots, material_needs
 from app.mes.lot.service import TERMINAL, units
@@ -21,6 +22,9 @@ from app.mes.quality.service import sampling
 
 Row = dict[str, Any]
 LOT = ENTITIES["lot"]
+# 设备 × 配方可用性判断的检查类型；设备端配方名上机时才上报，列候选时不要求
+EQ_RECIPE_CHECKS = {"recipe_active", "recipe_match", "eqp_capability"}
+RELAX_REPORT = {"require_report": False}
 
 
 # ---------------- context ----------------
@@ -165,6 +169,11 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
     }
     res = find(s, tid, "step_resource", route_step_id=step["id"])
     ctx = Ctx(s=s, tid=tid, trigger="move_in", lot=lot, step=step, op=op)
+    # 只列出生效阻断规则放行的资源；设备在进站时选定，故进站前同时按上机规则判断
+    stage = out["next_stage"]
+    trig = {"move_in": ["move_in", "track_in"], "track_in": ["track_in"]}
+    triggers = trig.get(stage or "", [])
+    ok = gate(ctx, triggers, {"recipe_match": RELAX_REPORT})
     eq_ids = ck.allowed_equipment_ids(ctx)
     if not eq_ids and op:
         eq_ids = {
@@ -180,6 +189,13 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
             if e["is_active"]
         ]
     )
+    rids = {r["recipe_id"] for r in res if r["recipe_id"]}
+    recipes = [
+        r
+        for r in (one(s, tid, "recipe", i) for i in rids)
+        if r and ok({"recipe_active"}, recipe=r)
+    ]
+    need_recipe = bool(rids) and blocking(ctx, "recipe_active", triggers)
 
     def _eq(e: Row, sub: bool = False) -> Row:
         st = ck.e10_current(s, tid, e)
@@ -192,11 +208,27 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
             "color": st and st["color"],
         }
         if not sub:
-            out["chambers"] = [_eq(c, True) for c in ck.chambers_of(s, tid, e)]
+            out["chambers"] = [
+                _eq(c, True)
+                for c in ck.chambers_of(s, tid, e)
+                if ok({"chamber_available"}, equipment=e, chambers=[c])
+            ]
         return out
 
-    out["equipment"] = sorted((_eq(e) for e in eqs), key=lambda x: x["code"])
-    rids = {r["recipe_id"] for r in res if r["recipe_id"]}
+    out["equipment"] = []
+    usable: set[str] = set()
+    for e in eqs:
+        if not ok({"e10_available", "pm_due"}, equipment=e):
+            continue
+        rs = [
+            str(r["id"]) for r in recipes if ok(EQ_RECIPE_CHECKS, equipment=e, recipe=r)
+        ]
+        # 需配方时至少有一个可用配方；否则不带配方也须通过能力检查
+        if not rs and (need_recipe or not ok({"eqp_capability"}, equipment=e)):
+            continue
+        usable.update(rs)
+        out["equipment"].append({**_eq(e), "recipe_ids": rs})
+    out["equipment"].sort(key=lambda x: x["code"])
     out["recipes"] = [
         {
             "id": str(r["id"]),
@@ -206,8 +238,8 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
             "status": r["status"],
             "equipment_type_id": str(r["equipment_type_id"]),
         }
-        for r in (one(s, tid, "recipe", i) for i in rids)
-        if r
+        for r in recipes
+        if str(r["id"]) in usable or not eqs
     ]
     out["reticles"] = [
         {"id": str(r["id"]), "code": r["code"], "status": r["status_code"]}
@@ -216,14 +248,17 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
             for x in res
             if x["resource_kind"] == "reticle" and x["reticle_id"]
         )
-        if r
+        if r and ok({"reticle_available"}, reticle=r)
     ]
+    tool_gate = blocking(ctx, "tool_life", triggers)
     out["tools"] = []
     for x in res:
         if x["resource_kind"] == "fixture" and x["fixture_id"]:
             fx = one(s, tid, "fixture", x["fixture_id"])
             opts = []
             for t in find(s, tid, "tool", order="code", fixture_id=x["fixture_id"]):
+                if tool_gate and tool_issue(ctx, t):
+                    continue
                 mx, used = ck.tool_life(s, tid, t)
                 opts.append(
                     {

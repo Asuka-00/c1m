@@ -62,6 +62,36 @@ describe('useStageForm', () => {
     })
   })
 
+  it('Track In：配方随所选设备收窄，失效的配方被清除', async () => {
+    const eq = (id: string, recipe_ids: string[]) => ({
+      ...opt(id),
+      state: 'SBY',
+      category: 'SBY',
+      color: null,
+      chambers: [],
+      recipe_ids,
+    })
+    const rc = (id: string) => ({ ...opt(id), version: 1, status: 'active' })
+    const { result } = await renderHook(() =>
+      useStageForm(
+        cx({
+          recipes: [rc('R1'), rc('R2'), rc('R3')],
+          equipment: [eq('E1', ['R1']), eq('E2', ['R2', 'R3'])],
+        })
+      )
+    )
+    expect(result.current.eqRecipes.map((r) => r.id)).toEqual([
+      'R1',
+      'R2',
+      'R3',
+    ])
+    await act(async () => result.current.setEquipment('E1'))
+    expect(result.current.recipe).toBe('R1')
+    await act(async () => result.current.setEquipment('E2'))
+    expect(result.current.eqRecipes.map((r) => r.id)).toEqual(['R2', 'R3'])
+    expect(result.current.recipe).toBe('')
+  })
+
   it('Track Out：只提交有效的量测值与报废行', async () => {
     const { result } = await renderHook(() =>
       useStageForm(cx({ next_stage: 'track_out' }))

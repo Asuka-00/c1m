@@ -521,6 +521,63 @@ def test_e10_capability_recipe_checks(client: TestClient, db: Session) -> None:
     assert {x["result"] for x in r["results"]} == {"pass"}
 
 
+def test_context_lists_only_usable_resources(client: TestClient, db: Session) -> None:
+    f = Line(client, db)
+    m = f.m
+    rc3 = m.post("recipe", {"code": "RC3", "name": "rc3"})
+    m.post("recipe_equipment", {"recipe_id": rc3["id"], "equipment_id": f.eq2["id"]})
+    m.action("recipe", rc3["id"], "status", {"status": "active"})
+    draft = m.post("recipe", {"code": "RC2", "name": "rc2"})
+    for r in (f.recipe, rc3, draft):
+        f.sql(
+            "INSERT INTO mes_step_resource (id, tenant_id, route_step_id, resource_kind, recipe_id) VALUES (gen_random_uuid(), :t, :s, 'equipment', :r)",
+            t=m.tid,
+            s=f.steps[10]["id"],
+            r=r["id"],
+        )
+    f.sql(
+        "INSERT INTO mes_step_resource (id, tenant_id, route_step_id, resource_kind, fixture_id) VALUES (gen_random_uuid(), :t, :s, 'fixture', :f)",
+        t=m.tid,
+        s=f.steps[10]["id"],
+        f=f.fixture["id"],
+    )
+    m.post("tool", {"code": "T1", "fixture_id": f.fixture["id"]})
+    expired = str(now().date() - timedelta(days=1))
+    m.post(
+        "tool", {"code": "T2", "fixture_id": f.fixture["id"], "expiry_date": expired}
+    )
+    f.bind(
+        "track_in",
+        ("e10_available", "block", {}),
+        ("eqp_capability", "block", {}),
+        ("recipe_active", "block", {}),
+        ("tool_life", "block", {}),
+    )
+    (a,) = f.start(1)
+
+    def lists() -> tuple[dict[str, list[str]], list[str], list[str]]:
+        cx = f.ctx(a)
+        rc = {r["id"]: r["code"] for r in cx["recipes"]}
+        eqs = {
+            e["code"]: sorted(rc[i] for i in e["recipe_ids"]) for e in cx["equipment"]
+        }
+        return eqs, sorted(rc.values()), [t["code"] for t in cx["tools"][0]["options"]]
+
+    # 进站前即按上机规则过滤：草稿配方、过期工具不列出；RC3 只在 EQ2 上启用
+    assert lists() == ({"EQ1": ["RC"], "EQ2": ["RC", "RC3"]}, ["RC", "RC3"], ["T1"])
+    f.sql(
+        "UPDATE mes_equipment SET e10_state_id = :s WHERE id = :e",
+        s=f.st["DOWN"]["id"],
+        e=f.eq["id"],
+    )
+    assert list(lists()[0]) == ["EQ2"]
+    # 规则降为预警 → 不再隐藏
+    f.sql("UPDATE mes_check_rule SET severity = 'warn'")
+    eqs, recipes, tools = lists()
+    assert list(eqs) == ["EQ1", "EQ2"]
+    assert recipes == ["RC", "RC2", "RC3"] and tools == ["T1", "T2"]
+
+
 def test_e10_auto_transitions(client: TestClient, db: Session) -> None:
     f = Line(client, db)
     a, b = f.start(1, 1)

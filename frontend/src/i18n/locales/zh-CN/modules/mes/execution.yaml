@@ -84,6 +84,7 @@ mes:
     oosAction: 超规动作
     eqpRecipe: 设备端配方名
     eqpRecipeHint: 设备上报或扫码（可选）
+    noneAvailable: 无可用项（已按卡控规则过滤）
     chambers: 腔体
     futureHold: 到达预约 Hold 工步，批次已 Hold：{{reason}}
     qtimeHandled: Q-Time 超时已处置

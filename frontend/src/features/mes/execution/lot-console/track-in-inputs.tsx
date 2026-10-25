@@ -10,6 +10,8 @@ import { MaterialPick } from './material-pick'
 
 export function TrackInInputs(p: {
   cx: ExecContext
+  /** 当前设备可用的配方 */
+  recipes: NonNullable<ExecContext['recipes']>
   recipe: string
   setRecipe: (v: string) => void
   eqpRecipe: string
@@ -33,7 +35,8 @@ export function TrackInInputs(p: {
           required={(cx.recipes?.length ?? 0) > 0}
           value={p.recipe}
           onChange={p.setRecipe}
-          options={(cx.recipes ?? []).map((r) => ({
+          empty={t('mes.exec.noneAvailable')}
+          options={p.recipes.map((r) => ({
             id: r.id,
             label: `${optLabel(r)} v${r.version} (${enumLabel('status', r.status)})`,
           }))}
@@ -67,6 +70,7 @@ export function TrackInInputs(p: {
             value={p.carrier}
             label={String(cx.lot.carrier_label ?? '') || null}
             onChange={(id) => p.setCarrier(id)}
+            filters={{ status_code: 'available' }}
           />
         </div>
         {(cx.tools ?? []).map((g) =>
@@ -78,6 +82,7 @@ export function TrackInInputs(p: {
               required
               value={p.tools[g.fixture.id] ?? ''}
               onChange={(v) => p.setTools({ ...p.tools, [g.fixture!.id]: v })}
+              empty={t('mes.exec.noneAvailable')}
               options={g.options.map((o) => ({
                 id: o.id,
                 label: `${o.code} · ${o.usage}/${o.max ?? '∞'} · ${enumLabel('tool_status', o.status)}`,

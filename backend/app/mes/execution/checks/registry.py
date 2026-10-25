@@ -1,8 +1,8 @@
 """可配置检查：检查上下文、检查类型注册表、绑定解析与评估。"""
 
 import uuid
-from collections.abc import Callable
-from dataclasses import dataclass, field
+from collections.abc import Callable, Collection, Iterable
+from dataclasses import dataclass, field, replace
 from datetime import date, datetime
 from typing import Any
 
@@ -260,6 +260,53 @@ def enabled(ctx: Ctx, check: str) -> bool:
     """
     rule = control_rule(ctx, check)
     return rule is None or rule["severity"] != "off"
+
+
+def blocking(ctx: Ctx, check: str, triggers: Iterable[str]) -> bool:
+    """给定触发点中是否有该类型的生效阻断规则。"""
+    return any(
+        rule["check_type"] == check and rule["severity"] == "block"
+        for t in triggers
+        for _plan, rule in resolve(replace(ctx, trigger=t))
+    )
+
+
+def gate(
+    ctx: Ctx, triggers: Iterable[str], relax: dict[str, Row] | None = None
+) -> Callable[..., bool]:
+    """资源可用性判定器：生效的阻断规则是否放行带候选资源的上下文。
+
+    用于只列出可用的设备 / 配方等；规则解析按 (触发点, 设备) 缓存。
+
+    Args:
+        ctx: 基础检查上下文。
+        triggers: 参与判断的触发点（如进站与上机）。
+        relax: 按检查类型覆盖的参数（如不要求设备上报配方名）。
+
+    Returns:
+        ``ok(checks, **resources)``：只评估 ``checks`` 中的类型，全部放行时为真。
+    """
+    cache: dict[tuple[str, Any], list[Row]] = {}
+
+    def ok(checks: Collection[str], **resources: Any) -> bool:
+        for t in triggers:
+            c = replace(ctx, trigger=t, **resources)
+            key = (t, (c.equipment or {}).get("id"))
+            if key not in cache:
+                cache[key] = [r for _p, r in resolve(c) if r["severity"] == "block"]
+            for rule in cache[key]:
+                fn = CHECKS.get(rule["check_type"])
+                if fn is None or rule["check_type"] not in checks:
+                    continue
+                params = {
+                    **(rule.get("params") or {}),
+                    **(relax or {}).get(rule["check_type"], {}),
+                }
+                if fn(c, params)[0] == "fail":
+                    return False
+        return True
+
+    return ok
 
 
 # ---------------- evaluation ----------------

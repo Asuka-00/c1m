@@ -34,6 +34,7 @@ export function Pick({
   required,
   none = true,
   disabled,
+  empty,
 }: {
   id: string
   label: string
@@ -43,6 +44,8 @@ export function Pick({
   required?: boolean
   none?: boolean
   disabled?: boolean
+  /** 无候选项时的提示（不传则不提示） */
+  empty?: string
 }) {
   return (
     <div className='grid gap-1'>
@@ -67,6 +70,9 @@ export function Pick({
           ))}
         </SelectContent>
       </Select>
+      {empty && options.length === 0 && (
+        <p className='text-xs text-muted-foreground'>{empty}</p>
+      )}
     </div>
   )
 }

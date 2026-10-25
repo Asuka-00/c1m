@@ -84,6 +84,7 @@ mes:
     oosAction: 規格外処置
     eqpRecipe: 装置レシピ名
     eqpRecipeHint: 装置報告またはスキャン（任意）
+    noneAvailable: 利用可能な候補なし（チェックルールで除外）
     chambers: チャンバー
     futureHold: 予約ホールド工程に到着、ロットをホールド：{{reason}}
     qtimeHandled: Q-Time 超過を処置しました

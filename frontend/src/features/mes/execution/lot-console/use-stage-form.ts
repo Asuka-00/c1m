@@ -13,10 +13,22 @@ export function useStageForm(cx: ExecContext) {
   const lot = cx.lot
   const stage = cx.next_stage
   const xc = cx.exec_ctx as Record<string, unknown>
-  const [equipment, setEquipment] = useState(String(lot.equipment_id ?? ''))
+  const [equipment, setEquipmentId] = useState(String(lot.equipment_id ?? ''))
+  // 选定设备后只列该设备可用的配方
+  const recipesFor = (eq: string) => {
+    const ids = cx.equipment?.find((e) => e.id === eq)?.recipe_ids
+    return (cx.recipes ?? []).filter((r) => !ids || ids.includes(r.id))
+  }
+  const eqRecipes = recipesFor(equipment)
   const [recipe, setRecipe] = useState(
-    String(lot.recipe_id ?? (cx.recipes?.length === 1 ? cx.recipes[0].id : ''))
+    String(lot.recipe_id ?? (eqRecipes.length === 1 ? eqRecipes[0].id : ''))
   )
+  const setEquipment = (eq: string) => {
+    setEquipmentId(eq)
+    const rs = recipesFor(eq)
+    if (!rs.some((r) => r.id === recipe))
+      setRecipe(rs.length === 1 ? rs[0].id : '')
+  }
   const [chambers, setChambers] = useState<string[]>(
     (xc.chamber_ids as string[]) ?? []
   )
@@ -102,6 +114,7 @@ export function useStageForm(cx: ExecContext) {
     eqChambers,
     equipment,
     setEquipment,
+    eqRecipes,
     recipe,
     setRecipe,
     chambers,
