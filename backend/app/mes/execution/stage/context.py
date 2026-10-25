@@ -154,6 +154,12 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
         "rework_route": rw and f"{rw['code']} v{rw['version']}",
         "rework_return": step["rework_return"],
         "auto": {k: bool(step[f"auto_{k}"]) for k in STAGES},
+        "convert": step["convert_to"]
+        and {
+            "to_kind": step["convert_to"],
+            "mode": step["convert_mode"],
+            "ratio": step["convert_ratio"],
+        },
         "is_last": step_after(s, tid, step) is None
         and not (lot.get("route_stack") or []),
     }

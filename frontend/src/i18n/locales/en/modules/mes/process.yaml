@@ -72,6 +72,9 @@ mes:
       auto_move_in: Auto move in
       auto_track_in: Auto track in
       auto_track_out: Auto track out
+      convert_to: Convert units to
+      convert_mode: Conversion mode
+      convert_ratio: Conversion ratio
       auto_move_out: Auto move out
       note: Note
       layout: 'Canvas layout'
@@ -147,6 +150,8 @@ mes:
   help:
     route_step:
       branch_condition: e.g. lot_type == 'ENG'
+      convert_to: Converts the lot's units automatically at track out
+      convert_ratio: 'Split: outputs per unit; assemble: units per output'
       max_rework: 'Blank: unlimited'
     recipe_equipment:
       ideal_uph: Optional; overrides the equipment UPH for OEE
@@ -177,6 +182,15 @@ mes:
     rework_return:
       same_step: Same step (re-process)
       next_step: Next step
+    convert_kind:
+      die: Die
+      strip: Strip
+      package: Package
+      unit: Unit
+    convert_mode:
+      map: Good dies by map
+      split: Split (1 → N)
+      assemble: Assemble (N → 1)
     qty_basis:
       per_lot: Per lot
       per_unit: Per unit / wafer

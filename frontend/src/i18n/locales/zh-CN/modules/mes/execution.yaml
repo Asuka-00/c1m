@@ -22,6 +22,9 @@ mes:
     pickLot: 请选择批次。
     auto: 自动
     autoDone: 自动{{stage}}
+    autoConverted: 已自动转换为 {{count}} 个{{kind}}
+    convertOnTrackOut: 下机时自动转换为{{kind}}：{{mode}}
+    convertRatio: 比例 {{ratio}}
     blocked: 被卡控拦截，请查看卡控结果
     nowOnHold: 批次已 Hold
     onHold: Hold 中

@@ -22,6 +22,9 @@ mes:
     pickLot: Select a lot to start.
     auto: Automatic
     autoDone: auto {{stage}}
+    autoConverted: 'converted to {{count}} {{kind}}'
+    convertOnTrackOut: 'Track out converts units to {{kind}}: {{mode}}'
+    convertRatio: 'ratio {{ratio}}'
     blocked: Blocked by checks — see the check results
     nowOnHold: lot is now on hold
     onHold: On hold

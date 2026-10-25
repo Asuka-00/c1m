@@ -8,6 +8,7 @@
 
 import math
 import uuid
+from dataclasses import dataclass
 from typing import Any
 
 import sqlalchemy as sa
@@ -24,8 +25,7 @@ from app.mes.common.query import one
 from app.mes.common.rows import _sys, _upd
 from app.mes.execution.carrier.ops import event
 from app.mes.execution.split_merge.rules import _evaluate, _ser
-from app.mes.execution.stage.common import _brief, _ov
-from app.mes.execution.stage.stages import LOT
+from app.mes.execution.stage.common import LOT, _brief, _ov
 from app.mes.execution.units.die_map import current_maps, good_bins
 from app.mes.lot.service import check_transition, history, lock_lot, units
 
@@ -93,26 +93,27 @@ def _sources(
     return items, bad
 
 
-def convert(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -> Row:
-    """单元转换（整批）。
+@dataclass
+class _Plan:
+    """校验通过的转换：目标类型、比例、来源单元与来源项。"""
 
-    Args:
-        s: 数据库会话。
-        tid: 租户 id。
-        lot_id: 批次 id。
-        body: ``{to_kind, per_parent?, per_child?, use_map?, comment, override,
-            override_reason, preview}``。
-        user: 操作人。
+    kind: str
+    per_child: int
+    parents: list[Row]
+    items: list[tuple[Row, list[int] | None]]
+    bad: int
 
-    Returns:
-        ``{results, count, bad_dies, codes, lot}``（预览时只有 results / count / bad_dies）。
+    @property
+    def n_out(self) -> int:
+        return math.ceil(len(self.items) / self.per_child)
+
+
+def _plan(s: Session, tid: uuid.UUID, lot: Row, body: Row) -> _Plan:
+    """校验转换参数并计算来源项。
 
     Raises:
-        HTTPException: 状态不允许或参数不合法（422），产出编号冲突（422）。
-        CheckBlocked: 卡控阻断。
+        HTTPException: 参数不合法、无可转换单元或缺晶圆图（422）。
     """
-    lot = lock_lot(s, tid, lot_id)
-    check_transition(lot, "convert")
     kind = str(body.get("to_kind") or "")
     per_parent = int(body.get("per_parent") or 1)
     per_child = int(body.get("per_child") or 1)
@@ -134,17 +135,40 @@ def convert(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any)
     if errs:
         raise http_422(errs)
     items, bad = _sources(s, tid, parents, body, errs)
-    n_out = math.ceil(len(items) / per_child)
-    if n_out > MAX_OUT:
+    plan = _Plan(kind, per_child, parents, items, bad)
+    if plan.n_out > MAX_OUT:
         errs.append(
-            fe("per_child", ec.CONVERT_TOO_MANY, "too many", count=n_out, max=MAX_OUT)
+            fe(
+                "per_child",
+                ec.CONVERT_TOO_MANY,
+                "too many",
+                count=plan.n_out,
+                max=MAX_OUT,
+            )
         )
     if errs:
         raise http_422(errs)
-    results = _evaluate(s, tid, lot, "convert", [], body, user)
-    if body.get("preview"):
-        s.commit()
-        return {"results": results, "count": n_out, "bad_dies": bad}
+    return plan
+
+
+def _apply(
+    s: Session, tid: uuid.UUID, lot: Row, plan: _Plan, body: Row, user: Any, extra: Row
+) -> list[str]:
+    """执行转换（不提交事务）：产出单元、谱系、来源消耗、批次数量、载具、历史与审计。
+
+    Returns:
+        产出单元编号。
+
+    Raises:
+        HTTPException: 产出编号已存在（422）。
+    """
+    kind, per_child, parents, items = (
+        plan.kind,
+        plan.per_child,
+        plan.parents,
+        plan.items,
+    )
+    n_out = plan.n_out
     codes = _codes(s, tid, lot, kind, n_out)
     if dup := _taken(s, tid, codes):
         raise http_422(
@@ -231,10 +255,10 @@ def convert(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any)
         "relation": relation,
         "sources": len(parents),
         "outputs": n_out,
-        "per_parent": per_parent,
+        "per_parent": int(body.get("per_parent") or 1),
         "per_child": per_child,
         "use_map": bool(body.get("use_map")),
-        "bad_dies": bad,
+        "bad_dies": plan.bad,
     }
     history(
         s,
@@ -243,7 +267,7 @@ def convert(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any)
         "convert",
         user,
         comment=body.get("comment"),
-        details={**summary, "checks": _brief(results), **_ov(body, results)},
+        details={**summary, **extra},
     )
     audit(
         s,
@@ -254,11 +278,73 @@ def convert(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any)
         user,
         {"qty": (before, n_out), "unit_kind": (summary["from_kind"], kind)},
     )
+    return codes
+
+
+def convert(s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any) -> Row:
+    """单元转换（整批，手动）。
+
+    Args:
+        s: 数据库会话。
+        tid: 租户 id。
+        lot_id: 批次 id。
+        body: ``{to_kind, per_parent?, per_child?, use_map?, comment, override,
+            override_reason, preview}``。
+        user: 操作人。
+
+    Returns:
+        ``{results, count, bad_dies, codes, lot}``（预览时只有 results / count / bad_dies）。
+
+    Raises:
+        HTTPException: 状态不允许或参数不合法（422），产出编号冲突（422）。
+        CheckBlocked: 卡控阻断。
+    """
+    lot = lock_lot(s, tid, lot_id)
+    check_transition(lot, "convert")
+    plan = _plan(s, tid, lot, body)
+    results = _evaluate(s, tid, lot, "convert", [], body, user)
+    if body.get("preview"):
+        s.commit()
+        return {"results": results, "count": plan.n_out, "bad_dies": plan.bad}
+    codes = _apply(
+        s, tid, lot, plan, body, user, {"checks": _brief(results), **_ov(body, results)}
+    )
     s.commit()
     return {
         "results": results,
-        "count": n_out,
-        "bad_dies": bad,
+        "count": plan.n_out,
+        "bad_dies": plan.bad,
         "codes": codes[:20],
         "lot": _ser(s, tid, lot_id),
     }
+
+
+def step_body(step: Row) -> Row | None:
+    """工步配置的自动转换参数（未配置 ``convert_to`` 时为 None）。"""
+    kind = step.get("convert_to")
+    if not kind:
+        return None
+    mode = step.get("convert_mode") or "split"
+    n = int(step.get("convert_ratio") or 1)
+    return {
+        "to_kind": kind,
+        "use_map": mode == "map",
+        "per_parent": n if mode == "split" else 1,
+        "per_child": n if mode == "assemble" else 1,
+    }
+
+
+def auto_convert(
+    s: Session, tid: uuid.UUID, lot: Row, user: Any, step: Row
+) -> Row | None:
+    """出站时按工步配置自动转换（不提交事务；参数不合法时抛 422，出站随之失败）。
+
+    Returns:
+        ``{to_kind, count, bad_dies}``；工步未配置转换时为 None。
+    """
+    body = step_body(step)
+    if not body:
+        return None
+    plan = _plan(s, tid, lot, body)
+    _apply(s, tid, lot, plan, body, user, {"auto": True})
+    return {"to_kind": plan.kind, "count": plan.n_out, "bad_dies": plan.bad}

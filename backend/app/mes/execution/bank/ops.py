@@ -14,7 +14,7 @@ from app.core.spec.errors import FieldError, fe, http_422
 from app.mes.common.query import one
 from app.mes.common.rows import _upd
 from app.mes.execution.split_merge.rules import _genealogy, _ser
-from app.mes.execution.stage.stages import LOT
+from app.mes.execution.stage.common import LOT
 from app.mes.lot.service import check_transition, history, lock_lot, lock_lots, units
 from app.mes.planning import service as planning
 

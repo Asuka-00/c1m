@@ -14,6 +14,7 @@ import {
 } from '@/lib/api/mes/execution'
 import { checkMessage } from '@/lib/backend-text'
 import { ErrorCode } from '@/lib/error-codes'
+import { enumLabel } from '@/features/mes/common/labels'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
 
@@ -93,6 +94,11 @@ export function useStageRun(cx: ExecContext, body: () => StageBody) {
       toast.success(
         [
           t(`mes.exec.done.${stage}`),
+          r.converted &&
+            t('mes.exec.autoConverted', {
+              count: r.converted.count,
+              kind: enumLabel('convert_kind', r.converted.to_kind),
+            }),
           ...auto.map((s) =>
             t('mes.exec.autoDone', { stage: t(`mes.exec.stage.${s}`) })
           ),

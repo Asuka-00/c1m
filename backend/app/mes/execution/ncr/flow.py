@@ -23,7 +23,7 @@ from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
 from app.mes.execution.events import NCR_REVIEW, notify_lot
 from app.mes.execution.hold.manage import _reason, default_reason, hold_lot, release
-from app.mes.execution.stage.stages import LOT
+from app.mes.execution.stage.common import LOT
 from app.mes.lot.service import check_transition, history, lock_lot, units
 
 Row = dict[str, Any]

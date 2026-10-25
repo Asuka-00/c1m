@@ -30,8 +30,7 @@ from app.mes.execution.split_merge.rules import (
     highest_priority,
     rule_for,
 )
-from app.mes.execution.stage.common import _brief, _ov
-from app.mes.execution.stage.stages import LOT
+from app.mes.execution.stage.common import LOT, _brief, _ov
 from app.mes.lot.service import check_transition, history, lock_lots, lot_error, units
 
 Row = dict[str, Any]

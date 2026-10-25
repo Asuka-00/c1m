@@ -6,6 +6,7 @@ import {
   PauseCircle,
   PlayCircle,
   SearchCheck,
+  Shuffle,
 } from 'lucide-react'
 import type { ExecContext } from '@/lib/api/mes/execution'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -155,6 +156,25 @@ export function ActionPanel({
             mats={mats}
             setMats={setMats}
           />
+        )}
+        {stage === 'track_out' && step?.convert && (
+          <Alert data-testid='convert-on-track-out'>
+            <Shuffle />
+            <AlertDescription>
+              {[
+                t('mes.exec.convertOnTrackOut', {
+                  kind: enumLabel('convert_kind', step.convert.to_kind),
+                  mode: enumLabel('convert_mode', step.convert.mode ?? 'split'),
+                }),
+                step.convert.mode !== 'map' &&
+                  t('mes.exec.convertRatio', {
+                    ratio: step.convert.ratio ?? 1,
+                  }),
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </AlertDescription>
+          </Alert>
         )}
         {stage === 'move_out' && (
           <div className='space-y-3 text-sm'>

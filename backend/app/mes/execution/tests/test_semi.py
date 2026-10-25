@@ -174,6 +174,58 @@ def test_die_map_import_and_convert_by_map(client: TestClient, db: Session) -> N
     assert attrs == [(0, 0), (0, 0), (1, 0)]
 
 
+# ---------------- 工步自动转换 ----------------
+def test_step_auto_convert_at_track_out(client: TestClient, db: Session) -> None:
+    f = Line(
+        client,
+        db,
+        {
+            10: {"convert_to": "die", "convert_mode": "map"},
+            20: {"convert_to": "strip", "convert_mode": "assemble", "convert_ratio": 2},
+        },
+    )
+    _bins(f)
+    a, b = f.start(2, 1)
+    eq = {"equipment_id": f.eq["id"]}
+    f.stage(a, "move_in", **eq)
+    f.stage(a, "track_in", **eq)
+    assert f.ctx(a)["step"]["convert"] == {"to_kind": "die", "mode": "map", "ratio": 1}
+    # 缺晶圆图：下机整体失败，批次仍在加工
+    assert ec.CONVERT_NO_MAP in _codes(f.stage(a, "track_out", 422))
+    assert f.lot(a)["lot_status"] == "running"
+    w1, w2 = f.ctx(a)["units"]
+    f.post(
+        f"{EXEC}/lots/{a['id']}/die-maps",
+        {
+            "maps": [
+                {"unit_id": w1["id"], "dies": [[0, 0, "1"], [1, 0, "X"], [2, 0, "1"]]},
+                {"unit_id": w2["id"], "dies": [[0, 0, "1"]]},
+            ]
+        },
+    )
+    r = f.stage(a, "track_out")
+    assert r["converted"] == {"to_kind": "die", "count": 3, "bad_dies": 1}
+    assert r["lot"]["qty"] == 3 and r["lot"]["lot_status"] == "tracked_out"
+    h = f.m.list("lot_history", lot=a["id"], action="convert")["data"]
+    assert len(h) == 1 and h[0]["details"]["auto"] is True
+    f.stage(a, "move_out")
+    f.stage(a, "move_in", **eq)
+    f.stage(a, "track_in", **eq)
+    r = f.stage(a, "track_out")
+    assert r["converted"] == {"to_kind": "strip", "count": 2, "bad_dies": 0}
+    assert {u["unit_kind"] for u in f.ctx(a)["units"]} == {"strip"}
+    # 待返工：不转换
+    f.stage(b, "move_in", **eq)
+    f.stage(b, "track_in", **eq)
+    (wb,) = f.ctx(b)["units"]
+    r = f.stage(
+        b,
+        "track_out",
+        rework_units=[{"unit_id": wb["id"], "reason_id": f.reasons["rework"]["id"]}],
+    )
+    assert r["converted"] is None and r["lot"]["tracking_level"] != "unit"
+
+
 # ---------------- Bank ----------------
 def test_bank_in_and_issue(client: TestClient, db: Session) -> None:
     f = Line(client, db)

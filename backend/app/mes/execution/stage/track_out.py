@@ -1,4 +1,4 @@
-"""Track Out：DC 录入、超规处置、扣料、报废/返工、E10、工具使用次数。"""
+"""Track Out：DC 录入、超规处置、扣料、报废/返工、E10、工具使用次数、工步配置的单元转换。"""
 
 import uuid
 from typing import Any
@@ -23,6 +23,7 @@ from app.mes.execution.stage.constants import OOC_RANK, OOS_RANK
 from app.mes.execution.stage.consumption import _consume
 from app.mes.execution.stage.context import build_ctx
 from app.mes.execution.stage.recipe_run import close_run
+from app.mes.execution.units.convert import auto_convert
 from app.mes.lot.service import history, lock_lot, units
 from app.mes.quality.service import ooc_check, out_of_spec
 
@@ -487,6 +488,12 @@ def track_out(
         user,
         {"lot_status": ("running", status), "qty": (lot["qty"] + n_scrap, qty)},
     )
+    # 待返工的批次不转换（返工后回到本工步再出站时转换）
+    converted = (
+        auto_convert(s, tid, lot, user, ctx.step)
+        if status != "scrapped" and not pending
+        else None
+    )
     s.commit()
     return _result(
         s,
@@ -499,6 +506,7 @@ def track_out(
         ooc_e10=ooc_e10,
         consumed=consumed,
         tools=tools,
+        converted=converted,
     )
 
 

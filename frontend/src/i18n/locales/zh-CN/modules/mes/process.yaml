@@ -72,6 +72,9 @@ mes:
       auto_move_in: 自动进站
       auto_track_in: 自动上机
       auto_track_out: 自动下机
+      convert_to: 下机时转换为
+      convert_mode: 转换方式
+      convert_ratio: 转换比例
       auto_move_out: 自动出站
       note: 备注
       layout: '画布位置'
@@ -147,6 +150,8 @@ mes:
   help:
     route_step:
       branch_condition: 例如 lot_type == 'ENG'
+      convert_to: 下机时自动把批次单元转换为该类型
+      convert_ratio: 拆分：每个单元产出数；组合：每个产出含单元数
       max_rework: 留空不限
     recipe_equipment:
       ideal_uph: 可选，OEE 计算优先于设备 UPH
@@ -177,6 +182,15 @@ mes:
     rework_return:
       same_step: 原步骤（重做）
       next_step: 下一步骤
+    convert_kind:
+      die: 芯片
+      strip: 条带
+      package: 封装
+      unit: 单颗
+    convert_mode:
+      map: 按晶圆图取良品
+      split: 拆分（1 → N）
+      assemble: 组合（N → 1）
     qty_basis:
       per_lot: 每批
       per_unit: 每单元/片

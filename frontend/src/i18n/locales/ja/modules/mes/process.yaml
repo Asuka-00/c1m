@@ -72,6 +72,9 @@ mes:
       auto_move_in: 自動ムーブイン
       auto_track_in: 自動トラックイン
       auto_track_out: 自動トラックアウト
+      convert_to: トラックアウト時の変換先
+      convert_mode: 変換方式
+      convert_ratio: 変換比率
       auto_move_out: 自動ムーブアウト
       note: 備考
       layout: 'キャンバス位置'
@@ -147,6 +150,8 @@ mes:
   help:
     route_step:
       branch_condition: 例：lot_type == 'ENG'
+      convert_to: トラックアウト時にロットのユニットを自動変換
+      convert_ratio: 分割：1 ユニットあたりの産出数、組立：1 産出あたりのユニット数
       max_rework: 空欄：無制限
     recipe_equipment:
       ideal_uph: 任意。OEE 計算で設備 UPH より優先
@@ -177,6 +182,15 @@ mes:
     rework_return:
       same_step: 同一ステップ（再処理）
       next_step: 次ステップ
+    convert_kind:
+      die: ダイ
+      strip: ストリップ
+      package: パッケージ
+      unit: 単品
+    convert_mode:
+      map: マップで良品を取得
+      split: 分割（1 → N）
+      assemble: 組立（N → 1）
     qty_basis:
       per_lot: ロット当たり
       per_unit: ユニット・ウェーハ当たり

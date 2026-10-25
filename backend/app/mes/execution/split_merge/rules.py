@@ -16,8 +16,8 @@ from app.mes.common import coderule
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins
 from app.mes.execution.checks import service as ck
+from app.mes.execution.stage.common import LOT
 from app.mes.execution.stage.context import build_ctx
-from app.mes.execution.stage.stages import LOT
 from app.mes.lot.service import TERMINAL
 
 Row = dict[str, Any]

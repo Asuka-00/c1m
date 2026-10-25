@@ -22,6 +22,9 @@ mes:
     pickLot: ロットを選択してください。
     auto: 自動
     autoDone: 自動{{stage}}
+    autoConverted: '{{kind}} {{count}} 個に自動変換しました'
+    convertOnTrackOut: トラックアウト時に{{kind}}へ自動変換：{{mode}}
+    convertRatio: 比率 {{ratio}}
     blocked: チェックによりブロックされました（結果を確認）
     nowOnHold: ロットはホールド中
     onHold: ホールド中

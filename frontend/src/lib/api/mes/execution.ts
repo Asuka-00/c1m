@@ -363,6 +363,12 @@ export interface ExecContext {
     rework_route: string | null
     rework_return: string | null
     auto: Record<ExecStage, boolean>
+    /** 下机时的自动单元转换（工步未配置时为空） */
+    convert?: {
+      to_kind: string
+      mode: string | null
+      ratio: number | null
+    } | null
     is_last: boolean
   }
   equipment?: (EqpOpt & { chambers: EqpOpt[] })[]
@@ -452,6 +458,8 @@ export interface StageResult {
   oos_action?: string | null
   e10?: Record<string, unknown> | null
   next_step?: { id: string; seq: number } | null
+  /** 下机时按工步配置自动转换的结果 */
+  converted?: { to_kind: string; count: number; bad_dies: number } | null
 }
 
 /** 批次执行接口：上下文、阶段作业、检查预览、Hold、拆合批、履历。 */
