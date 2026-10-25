@@ -5,13 +5,7 @@ import { CircleCheck, PauseCircle } from 'lucide-react'
 import type { ExecContext } from '@/lib/api/mes/execution'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { EmptyState } from '@/components/desc-list'
 import {
   enumLabel,
@@ -22,6 +16,7 @@ import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import type { QtimeHoldFields, StepNames } from '../hold/qtime-hold'
 import { QtimeHoldInfo } from '../hold/qtime-hold-info'
 import { canHold } from '../shared/lot-rules'
+import { SideCardHeader } from '../shared/side-card-header'
 import { HoldDialog } from './hold-dialog'
 import { ReleaseDialog } from './release-dialog'
 
@@ -31,24 +26,18 @@ export function HoldCard({ cx }: { cx: ExecContext }) {
   return (
     <>
       <Card className='gap-3'>
-        <CardHeader>
-          <CardTitle className='flex items-center gap-2 text-base'>
-            <PauseCircle className='size-4 text-muted-foreground' />
-            {t('menu.mes-lot_hold')}
-          </CardTitle>
+        <SideCardHeader icon={PauseCircle} title={t('menu.mes-lot_hold')}>
           {can(MES_PERM.execHold) && canHold(cx.lot) && (
-            <CardAction>
-              <Button
-                size='sm'
-                variant='outline'
-                data-testid='open-hold'
-                onClick={() => setHoldOpen(true)}
-              >
-                {t('mes.exec.hold')}
-              </Button>
-            </CardAction>
+            <Button
+              size='sm'
+              variant='outline'
+              data-testid='open-hold'
+              onClick={() => setHoldOpen(true)}
+            >
+              {t('mes.exec.hold')}
+            </Button>
           )}
-        </CardHeader>
+        </SideCardHeader>
         <CardContent className='space-y-2 text-sm'>
           {cx.holds.length === 0 && (
             <EmptyState icon={CircleCheck}>{t('mes.exec.noHolds')}</EmptyState>

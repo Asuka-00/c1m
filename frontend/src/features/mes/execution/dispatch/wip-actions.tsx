@@ -13,13 +13,7 @@ import { toast } from 'sonner'
 import { execApi, type ExecContext } from '@/lib/api/mes/execution'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
@@ -43,6 +37,7 @@ import {
   canChangePriority,
   canJumpLot,
 } from '../shared/lot-rules'
+import { SideCardHeader } from '../shared/side-card-header'
 import { PriorityDialog } from './priority-dialog'
 
 /** 在制调整卡片：按权限与批次状态提供跳站等操作。 */
@@ -57,44 +52,38 @@ export function WipActionsCard({ cx }: { cx: ExecContext }) {
   const canPriority = can(MES_PERM.execAdjust) && canChangePriority(cx.lot)
   return (
     <Card className='gap-3'>
-      <CardHeader>
-        <CardTitle className='flex items-center gap-2 text-base'>
-          <Wrench className='size-4 text-muted-foreground' />
-          {t('mes.wip.title')}
-        </CardTitle>
-        <CardAction className='flex gap-2'>
-          <Button
-            size='sm'
-            variant='outline'
-            disabled={!canPriority}
-            onClick={() => setOpen('priority')}
-            data-testid='open-priority'
-          >
-            <Flame className='size-4' />
-            {t('mes.prio.title')}
-          </Button>
-          <Button
-            size='sm'
-            variant='outline'
-            disabled={!canAdjust}
-            onClick={() => setOpen('adjust')}
-            data-testid='open-adjust'
-          >
-            <PackageMinus className='size-4' />
-            {t('mes.wip.adjust')}
-          </Button>
-          <Button
-            size='sm'
-            variant='outline'
-            disabled={!canJump}
-            onClick={() => setOpen('jump')}
-            data-testid='open-jump'
-          >
-            <SkipForward className='size-4' />
-            {t('mes.wip.jump')}
-          </Button>
-        </CardAction>
-      </CardHeader>
+      <SideCardHeader icon={Wrench} title={t('mes.wip.title')}>
+        <Button
+          size='sm'
+          variant='outline'
+          disabled={!canPriority}
+          onClick={() => setOpen('priority')}
+          data-testid='open-priority'
+        >
+          <Flame className='size-4' />
+          {t('mes.prio.title')}
+        </Button>
+        <Button
+          size='sm'
+          variant='outline'
+          disabled={!canAdjust}
+          onClick={() => setOpen('adjust')}
+          data-testid='open-adjust'
+        >
+          <PackageMinus className='size-4' />
+          {t('mes.wip.adjust')}
+        </Button>
+        <Button
+          size='sm'
+          variant='outline'
+          disabled={!canJump}
+          onClick={() => setOpen('jump')}
+          data-testid='open-jump'
+        >
+          <SkipForward className='size-4' />
+          {t('mes.wip.jump')}
+        </Button>
+      </SideCardHeader>
       <CardContent className='text-sm text-muted-foreground'>
         {t('mes.wip.hint')}
       </CardContent>

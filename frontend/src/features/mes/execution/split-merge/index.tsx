@@ -28,13 +28,7 @@ import { cn } from '@/lib/utils'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
@@ -55,6 +49,7 @@ import { useMesEntity } from '@/features/mes/common/use-mes-meta'
 import { CheckPanel } from '../shared/exec-parts'
 import { type LotPage, lotPageLink } from '../shared/lot-links'
 import { canMergeLot, canSplitLot, checkSplit } from '../shared/lot-rules'
+import { SideCardHeader } from '../shared/side-card-header'
 
 /** 谱系列表：拆批母批 / 子批，合批源批次 / 目标批次。 */
 export function GenealogyList({
@@ -141,34 +136,28 @@ export function SplitMergeCard({ cx }: { cx: ExecContext }) {
     !!r?.allow_merge
   return (
     <Card className='gap-3'>
-      <CardHeader>
-        <CardTitle className='flex items-center gap-2 text-base'>
-          <GitFork className='size-4 text-muted-foreground' />
-          {t('mes.sm.title')}
-        </CardTitle>
-        <CardAction className='flex gap-2'>
-          <Button
-            size='sm'
-            variant='outline'
-            disabled={!canSplit}
-            onClick={() => setOpen('split')}
-            data-testid='open-split'
-          >
-            <Split className='size-4' />
-            {t('mes.sm.split')}
-          </Button>
-          <Button
-            size='sm'
-            variant='outline'
-            disabled={!canMerge}
-            onClick={() => setOpen('merge')}
-            data-testid='open-merge'
-          >
-            <GitMerge className='size-4' />
-            {t('mes.sm.merge')}
-          </Button>
-        </CardAction>
-      </CardHeader>
+      <SideCardHeader icon={GitFork} title={t('mes.sm.title')}>
+        <Button
+          size='sm'
+          variant='outline'
+          disabled={!canSplit}
+          onClick={() => setOpen('split')}
+          data-testid='open-split'
+        >
+          <Split className='size-4' />
+          {t('mes.sm.split')}
+        </Button>
+        <Button
+          size='sm'
+          variant='outline'
+          disabled={!canMerge}
+          onClick={() => setOpen('merge')}
+          data-testid='open-merge'
+        >
+          <GitMerge className='size-4' />
+          {t('mes.sm.merge')}
+        </Button>
+      </SideCardHeader>
       <CardContent className='space-y-4 text-sm'>
         {r ? (
           <dl className='grid grid-cols-2 gap-x-4 gap-y-2 rounded-md bg-muted/40 p-3 text-xs'>
