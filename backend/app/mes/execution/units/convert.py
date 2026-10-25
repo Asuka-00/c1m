@@ -1,6 +1,6 @@
 """单元转换：整批单元转成下一级单元（晶圆 → 芯片 / 条带 / 单颗），记录单元级谱系。
 
-- 1 → N：每个来源单元产出 ``per_parent`` 个（如条带切单颗）；
+- 1 → N：每个来源单元产出 ``per_parent`` 个（如条带切单颗），合成来的来源单元以实际装入数封顶；
 - N → 1：每 ``per_child`` 个来源合成 1 个（如芯片固晶到条带，最后一个可不满）；
 - 按晶圆图：来源为各晶圆当前晶圆图上的良品芯片（坐标写入谱系），坏品不产出。
 来源单元标记为已转换（消耗），批次数量变为产出数，追踪级别变为序列化单元。
@@ -67,13 +67,39 @@ def _taken(s: Session, tid: uuid.UUID, codes: list[str]) -> list[str]:
     return out
 
 
+def _contained(s: Session, tid: uuid.UUID, parents: list[Row]) -> dict[Any, int]:
+    """合成单元实际装入的来源数（如未装满的条带）。"""
+    g = TABLES["unit_genealogy"]
+    ids = [p["id"] for p in parents]
+    out: dict[Any, int] = {}
+    for i in range(0, len(ids), _CHUNK):
+        out.update(
+            conn(s)
+            .execute(
+                sa.select(g.c.child_unit_id, sa.func.sum(g.c.qty))
+                .where(
+                    g.c.tenant_id == tid,
+                    g.c.relation == "assemble",
+                    g.c.child_unit_id.in_(ids[i : i + _CHUNK]),
+                )
+                .group_by(g.c.child_unit_id)
+            )
+            .tuples()
+            .all()
+        )
+    return out
+
+
 def _sources(
     s: Session, tid: uuid.UUID, parents: list[Row], body: Row, errs: list[FieldError]
 ) -> tuple[list[tuple[Row, list[int] | None]], int]:
     """来源项 ``[(来源单元, 芯片坐标 | None)]`` 与坏品芯片数。"""
     if not body.get("use_map"):
         n = int(body.get("per_parent") or 1)
-        return [(p, None) for p in parents for _ in range(n)], 0
+        held = _contained(s, tid, parents) if n > 1 else {}
+        return [
+            (p, None) for p in parents for _ in range(min(n, held.get(p["id"]) or n))
+        ], 0
     maps = current_maps(s, tid, [p["id"] for p in parents])
     good = good_bins(s, tid)
     items: list[tuple[Row, list[int] | None]] = []

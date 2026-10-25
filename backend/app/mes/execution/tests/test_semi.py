@@ -100,6 +100,9 @@ def test_convert_split_assemble_and_unit_trace(client: TestClient, db: Session) 
     back = t["units"]["backward"]["units"]
     assert {u["unit_kind"] for u in back if u["level"] == 1} == {"die"}
     assert {u["unit_kind"] for u in back if u["level"] == 2} == {"wafer"}
+    # 1 → N：切单按条带实际装入数（4 + 2），而不是每条满 4 颗
+    r = f.post(url, {"to_kind": "package", "per_parent": 4})
+    assert r["count"] == 6 and f.lot(lot)["qty"] == 6
     # 加工中不能转换；数量级批次不能转换
     f.stage(lot, "move_in", equipment_id=f.eq["id"])
     f.stage(lot, "track_in", equipment_id=f.eq["id"])
