@@ -12,6 +12,7 @@
 
 import argparse
 import random
+import secrets
 import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -689,6 +690,11 @@ def ncr(api: Api, ctx: Row) -> list[str]:
         f"/mes/exec/ncr/{a['id']}/propose",
         {"disposition": "use_as_is", "comment": "Within spec limits (DEMO)"},
     )
+    qa = approver(api, ctx["base"], ctx["tid"])
+    qa.post(
+        f"/mes/exec/ncr/{a['id']}/approve",
+        {"decision": "approve", "comment": "Level 1 OK, waiting for plant QA (DEMO)"},
+    )
     b_units = api.ctx(ctx["be_b"])["units"][:2]
     b = api.post(
         "/mes/exec/ncr",
@@ -702,6 +708,28 @@ def ncr(api: Api, ctx: Row) -> list[str]:
             "reason_id": api.id("reason_code", "HD-ENG"),
         },
     )["ncr"]
+    api.post(
+        f"/mes/exec/ncr/{b['id']}/propose",
+        {"disposition": "use_as_is", "comment": "Voids below 5 % (DEMO)"},
+    )
+    qa.post(f"/mes/exec/ncr/{b['id']}/approve", {"decision": "approve"})
+    d = api.post(
+        "/mes/exec/ncr",
+        {
+            "lot_id": ctx["be_b"]["id"],
+            "title": "Wire sweep suspected (DEMO)",
+            "severity": "minor",
+            "hold": False,
+        },
+    )["ncr"]
+    api.post(
+        f"/mes/exec/ncr/{d['id']}/propose",
+        {"disposition": "use_as_is", "comment": "No action (DEMO)"},
+    )
+    qa.post(
+        f"/mes/exec/ncr/{d['id']}/approve",
+        {"decision": "reject", "comment": "Need X-ray evidence first (DEMO)"},
+    )
     c = api.post(
         "/mes/exec/ncr",
         {
@@ -715,7 +743,7 @@ def ncr(api: Api, ctx: Row) -> list[str]:
         f"/mes/exec/ncr/{c['id']}/cancel", {"comment": "Duplicate of " + b["code"]}
     )
     out = []
-    for x in (a, b, c):
+    for x in (a, b, d, c):
         d = api.get(f"/mes/exec/ncr/{x['id']}")["ncr"]
         out.append(f"{d['code']} {d['ncr_status']}")
     return out
@@ -784,7 +812,30 @@ def lists(api: Api) -> list[str]:
     return [f"{len(ents)} entity lists"]
 
 
-def token() -> tuple[str, str]:
+QA = "demo-qa"
+QA_PERMS = ["mes.ncr:read", "mes.ncr:approve", "mes.exec:read"]
+
+
+def approver(api: Api, base: str, tid: str) -> Api:
+    """NCR 审批人（提案人不能自审）：仅 NCR 审批权限；首次创建时打印一次随机密码。"""
+    roles = api.get(f"/tenants/{tid}/roles", code=QA)["data"]
+    if not any(r["name"] == QA for r in roles):
+        api.post(
+            f"/tenants/{tid}/roles",
+            {"name": QA, "title": "Demo QA approver", "permission_codes": QA_PERMS},
+        )
+    members = api.get(f"/tenants/{tid}/members", username=QA)["data"]
+    if not any(m["username"] == QA for m in members):
+        pw = secrets.token_urlsafe(12)
+        api.post(
+            f"/tenants/{tid}/members/new",
+            {"username": QA, "full_name": "Demo QA", "password": pw, "roles": [QA]},
+        )
+        print(f"created user {QA} / {pw}", flush=True)  # noqa: T201
+    return Api(base, token(QA)[0], tid)
+
+
+def token(username: str | None = None) -> tuple[str, str]:
     from sqlmodel import Session, select
 
     from app.core.db import engine
@@ -793,7 +844,8 @@ def token() -> tuple[str, str]:
     from app.platform.users.models import User
 
     with Session(engine) as s:
-        u = s.exec(select(User).where(User.is_superuser)).first()
+        who = User.username == username if username else User.is_superuser
+        u = s.exec(select(User).where(who)).first()
         t = s.exec(select(Tenant).where(Tenant.slug == "default")).one()
         assert u is not None
         return create_access_token(u.id, timedelta(hours=3), tenant_id=t.id), str(t.id)
@@ -803,8 +855,9 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="http://localhost:8000/api/v1")
     args = ap.parse_args()
-    api = Api(args.base, *token())
-    ctx: Row = {}
+    tok, tid = token()
+    api = Api(args.base, tok, tid)
+    ctx: Row = {"base": args.base, "tid": tid}
     print(f"demo tour {RUN} → {args.base}", flush=True)  # noqa: T201
     with feature("主数据（工序 / 设备 / Bin / Bank / 路线 / 产品 / 量测 / BOM）") as n:
         n += master(api, ctx)
@@ -833,7 +886,7 @@ def main() -> None:
         n += run_be(api, ctx, ctx["be_b"], stop_after=2)
     with feature("成品入库 + 出货") as n:
         n += store_and_ship(api, ctx)
-    with feature("NCR / MRB：评审中 / 待处置 / 已取消") as n:
+    with feature("NCR / MRB：多级审批 / 处置关闭 / 待处置 / 已取消") as n:
         n += ncr(api, ctx)
     with feature("停机记录") as n:
         n += downtime(api, ctx)
