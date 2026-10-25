@@ -208,6 +208,7 @@ def propose(s: Session, tid: uuid.UUID, ncr_id: Any, body: Row, user: Any) -> Ro
         f"NCR {n['code']} on {lot.get('code')}: {disp} awaiting approval",
         {"ncr": n["code"], "disposition": disp},
         f"ncr:{n['id']}:{now():%Y%m%d%H%M%S}",
+        link=f"/mes/ncr?id={n['id']}",
     )
     s.commit()
     return detail(s, tid, n["id"])

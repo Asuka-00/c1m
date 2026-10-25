@@ -291,7 +291,10 @@ def test_bank_in_and_issue(client: TestClient, db: Session) -> None:
 
 # ---------------- NCR / MRB ----------------
 def test_ncr_review_and_scrap(client: TestClient, db: Session) -> None:
+    from app.platform.notification.tests.test_notification import _mine, _sub_all
+
     f = Line(client, db)
+    _sub_all(f)
     h2, h3 = _admin(f, client, db), _admin(f, client, db)
     (lot,) = f.start(3)
     us = f.ctx(lot)["units"]
@@ -316,6 +319,12 @@ def test_ncr_review_and_scrap(client: TestClient, db: Session) -> None:
         f"{url}/{nid}/propose",
         {"disposition": "scrap", "scrap_reason_id": f.reasons["scrap"]["id"]},
     )
+    note = next(
+        x
+        for x in _mine(f, page_size=100)["data"]
+        if x["event_type"] == "mes.ncr_review"
+    )
+    assert note["link"] == f"/mes/ncr?id={nid}"
     # 提案人不能审批；驳回须备注并回到 open
     assert ec.NCR_SELF_APPROVE in _codes(
         f.post(f"{url}/{nid}/approve", {"decision": "approve"}, 422)

@@ -690,7 +690,7 @@ def ncr(api: Api, ctx: Row) -> list[str]:
         f"/mes/exec/ncr/{a['id']}/propose",
         {"disposition": "use_as_is", "comment": "Within spec limits (DEMO)"},
     )
-    qa = approver(api, ctx["base"], ctx["tid"])
+    qa = ctx["qa"]
     qa.post(
         f"/mes/exec/ncr/{a['id']}/approve",
         {"decision": "approve", "comment": "Level 1 OK, waiting for plant QA (DEMO)"},
@@ -730,6 +730,19 @@ def ncr(api: Api, ctx: Row) -> list[str]:
         f"/mes/exec/ncr/{d['id']}/approve",
         {"decision": "reject", "comment": "Need X-ray evidence first (DEMO)"},
     )
+    e = api.post(
+        "/mes/exec/ncr",
+        {
+            "lot_id": ctx["be_b"]["id"],
+            "title": "Mold flash on 2 strips – please review (DEMO)",
+            "severity": "minor",
+            "hold": False,
+        },
+    )["ncr"]
+    api.post(
+        f"/mes/exec/ncr/{e['id']}/propose",
+        {"disposition": "use_as_is", "comment": "Flash removable at deflash (DEMO)"},
+    )
     c = api.post(
         "/mes/exec/ncr",
         {
@@ -743,7 +756,7 @@ def ncr(api: Api, ctx: Row) -> list[str]:
         f"/mes/exec/ncr/{c['id']}/cancel", {"comment": "Duplicate of " + b["code"]}
     )
     out = []
-    for x in (a, b, d, c):
+    for x in (a, b, d, e, c):
         d = api.get(f"/mes/exec/ncr/{x['id']}")["ncr"]
         out.append(f"{d['code']} {d['ncr_status']}")
     return out
@@ -816,14 +829,19 @@ QA = "demo-qa"
 QA_PERMS = ["mes.ncr:read", "mes.ncr:approve", "mes.exec:read"]
 
 
-def approver(api: Api, base: str, tid: str) -> Api:
+def approver(api: Api, base: str, tid: str) -> tuple[Api, str]:
     """NCR 审批人（提案人不能自审）：仅 NCR 审批权限；首次创建时打印一次随机密码。"""
-    roles = api.get(f"/tenants/{tid}/roles", code=QA)["data"]
-    if not any(r["name"] == QA for r in roles):
-        api.post(
-            f"/tenants/{tid}/roles",
-            {"name": QA, "title": "Demo QA approver", "permission_codes": QA_PERMS},
-        )
+    role = next(
+        (
+            r
+            for r in api.get(f"/tenants/{tid}/roles", code=QA)["data"]
+            if r["name"] == QA
+        ),
+        None,
+    ) or api.post(
+        f"/tenants/{tid}/roles",
+        {"name": QA, "title": "Demo QA approver", "permission_codes": QA_PERMS},
+    )
     members = api.get(f"/tenants/{tid}/members", username=QA)["data"]
     if not any(m["username"] == QA for m in members):
         pw = secrets.token_urlsafe(12)
@@ -832,7 +850,36 @@ def approver(api: Api, base: str, tid: str) -> Api:
             {"username": QA, "full_name": "Demo QA", "password": pw, "roles": [QA]},
         )
         print(f"created user {QA} / {pw}", flush=True)  # noqa: T201
-    return Api(base, token(QA)[0], tid)
+    return Api(base, token(QA)[0], tid), str(role["id"])
+
+
+def subscriptions(api: Api, ctx: Row) -> list[str]:
+    """补齐演示通知订阅：admin / owner 订阅全部 MES 事件，demo-qa 订阅 NCR 待审批。"""
+    tid = ctx["tid"]
+    ctx["qa"], qa_role = approver(api, ctx["base"], tid)
+    admins = [
+        str(r["id"])
+        for r in api.get(f"/tenants/{tid}/roles", page_size=100)["data"]
+        if r["name"] in ("admin", "owner")
+    ]
+    have = {
+        x["name"] for x in api.get("/notification-subscriptions", page_size=100)["data"]
+    }
+    want = {
+        f"[demo] {e['code']}": (e["code"], admins)
+        for e in api.get("/notification-meta")["event_types"]
+        if e["code"].startswith("mes.")
+    }
+    want[f"[demo] mes.ncr_review → {QA}"] = ("mes.ncr_review", [qa_role])
+    added = []
+    for name, (event, roles) in want.items():
+        if name not in have:
+            api.post(
+                "/notification-subscriptions",
+                {"name": name, "event_type": event, "role_ids": roles},
+            )
+            added.append(event)
+    return [f"{len(want)} subscriptions", f"added: {', '.join(added) or 'none'}"]
 
 
 def token(username: str | None = None) -> tuple[str, str]:
@@ -859,6 +906,8 @@ def main() -> None:
     api = Api(args.base, tok, tid)
     ctx: Row = {"base": args.base, "tid": tid}
     print(f"demo tour {RUN} → {args.base}", flush=True)  # noqa: T201
+    with feature("通知订阅 + NCR 审批人") as n:
+        n += subscriptions(api, ctx)
     with feature("主数据（工序 / 设备 / Bin / Bank / 路线 / 产品 / 量测 / BOM）") as n:
         n += master(api, ctx)
     with feature("来料接收 + IQC") as n:
@@ -886,7 +935,9 @@ def main() -> None:
         n += run_be(api, ctx, ctx["be_b"], stop_after=2)
     with feature("成品入库 + 出货") as n:
         n += store_and_ship(api, ctx)
-    with feature("NCR / MRB：多级审批 / 处置关闭 / 待处置 / 已取消") as n:
+    with feature(
+        "NCR / MRB：多级审批 / 处置关闭 / 驳回 / 待 demo-qa 审批 / 已取消"
+    ) as n:
         n += ncr(api, ctx)
     with feature("停机记录") as n:
         n += downtime(api, ctx)

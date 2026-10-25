@@ -37,8 +37,9 @@ def notify_lot(
     title: str,
     params: Row,
     dedupe_key: str | None = None,
+    link: str | None = None,
 ) -> uuid.UUID | None:
-    """发送批次相关通知（关联对象为批次，链接到批次作业页）。"""
+    """发送批次相关通知（关联对象为批次，默认链接到批次作业页）。"""
     return notify(
         s,
         tid,
@@ -48,7 +49,7 @@ def notify_lot(
         object_type="lot",
         object_id=lot["id"],
         object_code=lot["code"],
-        link=lot_link(lot),
+        link=link or lot_link(lot),
         dedupe_key=dedupe_key,
     )
 
