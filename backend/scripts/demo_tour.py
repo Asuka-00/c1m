@@ -469,17 +469,28 @@ def die_map(seed: str) -> list[list[Any]]:
     return dies
 
 
-def free_carrier(api: Api) -> str | None:
-    used = {lt["carrier_id"] for lt in api.rows("lot") if lt.get("carrier_id")}
-    for c in api.rows("carrier"):
-        if c["id"] not in used and c.get("status_code") == "available":
-            return str(c["id"])
-    return None
+def new_carriers(api: Api, n: int) -> list[str]:
+    """每轮新建演示载具：已完工批次会一直占用载具。"""
+    ct = api.find("carrier", "FP0001")
+    if not ct:
+        raise RuntimeError("carrier FP0001 missing (run mes_demo.py seed)")
+    return [
+        str(
+            api.create(
+                "carrier",
+                code=f"FD{RUN[-6:]}{c}",
+                name=f"Demo FOUP {RUN}-{c}",
+                carrier_type_id=ct["carrier_type_id"],
+                status_code="available",
+            )["id"]
+        )
+        for c in "AB"[:n]
+    ]
 
 
 def cp_test(api: Api, ctx: Row, n_lots: int = 10) -> list[str]:
     wo = work_order(api, ctx["cp_product"], "PROD", n_lots * 3, f"CP tour {RUN} (DEMO)")
-    car = free_carrier(api)
+    car, ctx["spare_carrier"] = new_carriers(api, 2)
     lots = api.post(
         f"/mes/work-order/{wo['id']}/start",
         {
@@ -488,6 +499,11 @@ def cp_test(api: Api, ctx: Row, n_lots: int = 10) -> list[str]:
             ]
         },
     )["data"]
+    api.post(
+        f"/mes/exec/lots/{lots[0]['id']}/carrier",
+        {"carrier_id": ctx["spare_carrier"], "comment": "Swap to clean FOUP (DEMO)"},
+    )
+    ctx["used_carrier"] = car
     eq = ctx["eq"]["SEMI-CP"]["id"]
     held, oos = [], 0
     for i, lot in enumerate(lots):
@@ -537,6 +553,19 @@ def cp_test(api: Api, ctx: Row, n_lots: int = 10) -> list[str]:
         f"{len(held)} held by OOC",
         f"{oos} OOS value",
     ]
+
+
+def carrier(api: Api, ctx: Row) -> list[str]:
+    old = ctx["used_carrier"]
+    api.post(f"/mes/exec/carriers/{old}/clean", {"comment": "Wet clean (DEMO)"})
+    ev = api.rows("carrier_event", carrier=old)
+    if not ev:
+        raise RuntimeError("no carrier events recorded")
+    lot = ctx["cp_lots"][0]
+    if lot.get("carrier_id") != ctx["spare_carrier"]:
+        raise RuntimeError("lot did not move to the new carrier")
+    kinds = sorted({e.get("event") or e.get("kind") or "?" for e in ev})
+    return [f"{lot['code']} moved to a new carrier", f"old carrier: {', '.join(kinds)}"]
 
 
 def spc(api: Api, ctx: Row) -> list[str]:
@@ -788,8 +817,10 @@ def main() -> None:
         n.append(ctx["be_wo"]["code"])
     with feature("领料 + 机台上料") as n:
         n += issue_and_mount(api, ctx)
-    with feature("CP 测试：晶圆图导入、DC、OOS / OOC 自动 Hold、载具") as n:
+    with feature("CP 测试：晶圆图导入、DC、OOS / OOC 自动 Hold") as n:
         n += cp_test(api, ctx)
+    with feature("载具：换载具 / 清洗") as n:
+        n += carrier(api, ctx)
     with feature("SPC 控制图") as n:
         n += spc(api, ctx)
     with feature("Wafer Bank 入库") as n:
