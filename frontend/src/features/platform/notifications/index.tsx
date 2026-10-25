@@ -1,8 +1,8 @@
-/** 消息中心页面：我的通知列表（搜索 / 类型 / 已读 / 严重度筛选），跳转关联对象。 */
+/** 消息中心页面：我的通知列表（搜索 / 类型 / 确认状态 / 严重度筛选），跳转关联对象，手动确认。 */
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { fmtDateTime, t } from '@/i18n'
-import { CheckCheck } from 'lucide-react'
+import { Check, CheckCheck } from 'lucide-react'
 import { api, type Notification } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -13,10 +13,11 @@ import {
   useListParams,
   type FilterDef,
 } from '@/components/crud'
+import { IconButton } from '@/components/icon-button'
 import { SeverityBadge } from '@/components/notify/severity-badge'
 import { eventLabel, linkTarget, noteTitle } from '@/components/notify/utils'
 
-/** 消息中心：分页列出当前用户的通知，点击标题跳转关联对象并标为已读。 */
+/** 消息中心：分页列出当前用户的通知；跳转关联对象不改变状态，须手动确认。 */
 export default function NotificationsPage() {
   const qc = useQueryClient()
   const filters: FilterDef[] = [
@@ -59,8 +60,7 @@ export default function NotificationsPage() {
     queryFn: () => api.notifications.list(lp.query),
   })
   const refresh = () => qc.invalidateQueries({ queryKey: ['notifications'] })
-  const markRead = (n: Notification) =>
-    !n.is_read && api.notifications.read([n.id]).then(refresh)
+  const ack = (n: Notification) => api.notifications.read([n.id]).then(refresh)
   return (
     <Page
       title={t('notify.center')}
@@ -115,10 +115,7 @@ export default function NotificationsPage() {
           {
             header: t('notify.content'),
             cell: (r) => (
-              <span
-                className={cn(!r.is_read && 'font-medium')}
-                onClick={() => markRead(r)}
-              >
+              <span className={cn(!r.is_read && 'font-medium')}>
                 {noteTitle(r)}
               </span>
             ),
@@ -129,7 +126,6 @@ export default function NotificationsPage() {
               r.link ? (
                 <Link
                   {...linkTarget(r.link)}
-                  onClick={() => markRead(r)}
                   className='font-mono text-xs text-blue-600 underline-offset-2 hover:underline'
                 >
                   {r.object_code ?? t('notify.open')}
@@ -140,7 +136,18 @@ export default function NotificationsPage() {
           },
           {
             header: t('notify.readAt'),
-            cell: (r) => (r.read_at ? fmtDateTime(r.read_at) : ''),
+            cell: (r) =>
+              r.read_at ? (
+                fmtDateTime(r.read_at)
+              ) : (
+                <IconButton
+                  label={t('notify.ack')}
+                  variant='outline'
+                  onClick={() => ack(r)}
+                >
+                  <Check className='size-4' />
+                </IconButton>
+              ),
           },
         ]}
       />

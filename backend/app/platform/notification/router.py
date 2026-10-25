@@ -47,7 +47,7 @@ def list_notifications(
 
 @router.get("/notifications/summary")
 def notification_summary(session: SessionDep, ctx: CurrentTenant) -> Any:
-    """Unread count and latest notifications (header bell)."""
+    """Count and latest of notifications awaiting confirmation (header bell)."""
     return svc.summary(session, ctx.id, ctx.user.id)
 
 

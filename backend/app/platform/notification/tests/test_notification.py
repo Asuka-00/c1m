@@ -141,10 +141,14 @@ def test_notify_dedupe_recipients_read(client: TestClient, db: Session) -> None:
     assert _mine(f, q="L-X")["count"] == 2
     client.post(f"{API}/notifications/read", headers=f.m.h, json={"ids": [d[0]["id"]]})
     assert _mine(f, is_read=False)["count"] == 1
+    # 铃铛只列待确认的通知
+    s = client.get(f"{API}/notifications/summary", headers=f.m.h).json()
+    assert s["unread"] == 1 and [n["event_type"] for n in s["latest"]] == [
+        "mes.lot_hold"
+    ]
     client.post(f"{API}/notifications/read", headers=f.m.h, json={})
-    assert (
-        client.get(f"{API}/notifications/summary", headers=f.m.h).json()["unread"] == 0
-    )
+    s = client.get(f"{API}/notifications/summary", headers=f.m.h).json()
+    assert s["unread"] == 0 and s["latest"] == []
 
 
 def test_mes_events_qtime_oos_e10_pm(client: TestClient, db: Session) -> None:

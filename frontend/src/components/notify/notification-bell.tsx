@@ -1,8 +1,8 @@
-/** 头部通知铃铛：未读徽标 + 最新通知下拉，30 秒轮询。 */
+/** 头部通知铃铛：待确认徽标 + 待确认通知下拉（逐条或全部确认），30 秒轮询。 */
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { fmtDateTime, t } from '@/i18n'
-import { Bell } from 'lucide-react'
+import { Bell, Check } from 'lucide-react'
 import { api, type Notification } from '@/lib/api'
 import { useCurrentTenant } from '@/lib/api/hooks'
 import { cn } from '@/lib/utils'
@@ -19,7 +19,7 @@ import { linkTarget, noteTitle } from './utils'
 /** 轮询间隔（毫秒）。 */
 export const POLL_MS = 30_000
 
-/** 通知铃铛：显示未读数，下拉列出最新通知，可全部标为已读、跳转消息中心。 */
+/** 通知铃铛：显示待确认数，下拉列出待确认通知；点击只跳转，须手动确认才消失。 */
 export function NotificationBell() {
   const tenant = useCurrentTenant()?.tenant.id
   const qc = useQueryClient()
@@ -34,10 +34,7 @@ export function NotificationBell() {
   if (!tenant) return null
   const unread = q.data?.unread ?? 0
   const refresh = () => qc.invalidateQueries({ queryKey: ['notifications'] })
-  const open = async (n: Notification) => {
-    if (!n.is_read) await api.notifications.read([n.id]).then(refresh)
-    if (n.link) void nav(linkTarget(n.link))
-  }
+  const ack = (n: Notification) => api.notifications.read([n.id]).then(refresh)
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
@@ -84,26 +81,36 @@ export function NotificationBell() {
             </p>
           )}
           {q.data?.latest.map((n) => (
-            <button
+            <div
               key={n.id}
-              type='button'
-              onClick={() => open(n)}
-              className={cn(
-                'flex w-full flex-col gap-1 border-b px-3 py-2 text-start last:border-b-0 hover:bg-accent',
-                !n.is_read && 'bg-primary/5'
-              )}
+              className='flex items-start gap-1 border-b bg-primary/5 last:border-b-0'
             >
-              <div className='flex items-center gap-2'>
-                {!n.is_read && (
-                  <span className='size-2 shrink-0 rounded-full bg-blue-600' />
+              <button
+                type='button'
+                disabled={!n.link}
+                onClick={() => n.link && void nav(linkTarget(n.link))}
+                className={cn(
+                  'flex min-w-0 flex-1 flex-col gap-1 px-3 py-2 text-start',
+                  n.link && 'hover:bg-accent'
                 )}
-                <SeverityBadge severity={n.severity} />
-                <span className='ms-auto text-[11px] text-muted-foreground'>
-                  {fmtDateTime(n.created_at)}
-                </span>
-              </div>
-              <span className='line-clamp-2 text-sm'>{noteTitle(n)}</span>
-            </button>
+              >
+                <div className='flex items-center gap-2'>
+                  <SeverityBadge severity={n.severity} />
+                  <span className='ms-auto text-[11px] text-muted-foreground'>
+                    {fmtDateTime(n.created_at)}
+                  </span>
+                </div>
+                <span className='line-clamp-2 text-sm'>{noteTitle(n)}</span>
+              </button>
+              <IconButton
+                label={t('notify.ack')}
+                variant='ghost'
+                className='me-1 mt-1 shrink-0'
+                onClick={() => ack(n)}
+              >
+                <Check className='size-4' />
+              </IconButton>
+            </div>
           ))}
         </div>
         <div className='border-t p-1'>

@@ -1,25 +1,26 @@
 notify:
   bell: 通知
   title: 通知
-  unreadCount: '{{count}} 条未读'
-  markAllRead: 全部标为已读
-  empty: 暂无通知
+  unreadCount: '{{count}} 条待确认'
+  markAllRead: 全部确认
+  empty: 暂无待确认的通知
   viewAll: 在消息中心查看全部
   center: 消息中心
-  centerDesc: 您订阅的事件产生的通知
+  centerDesc: 订阅事件与待你处理事项的通知，确认后从铃铛移除
   search: 搜索标题或对象…
   allTypes: 全部类型
-  allRead: 全部已读状态
+  allRead: 全部确认状态
   allSeverities: 全部级别
-  unread: 未读
-  read: 已读
+  unread: 待确认
+  read: 已确认
   time: 时间
   severityCol: 级别
   type: 事件类型
   content: 内容
   object: 关联对象
   open: 打开
-  readAt: 阅读时间
+  ack: 确认
+  readAt: 确认时间
   severity:
     info: 提示
     warning: 警告

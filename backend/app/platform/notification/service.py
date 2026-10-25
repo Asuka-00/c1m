@@ -243,7 +243,7 @@ def my_notifications(
 def summary(
     session: Session, tid: uuid.UUID, user_id: uuid.UUID, latest: int = 8
 ) -> Row:
-    """铃铛数据：未读数与最近 ``latest`` 条。"""
+    """铃铛数据：待确认（未读）数与最近 ``latest`` 条待确认通知。"""
     unread = session.exec(
         select(func.count())
         .select_from(NotificationRecipient)
@@ -255,6 +255,7 @@ def summary(
     ).one()
     rows = session.exec(
         _mine(tid, user_id)
+        .where(col(NotificationRecipient.read_at).is_(None))
         .order_by(col(Notification.created_at).desc(), col(Notification.id))
         .limit(latest)
     ).all()

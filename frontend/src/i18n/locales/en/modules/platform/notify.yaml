@@ -1,25 +1,26 @@
 notify:
   bell: Notifications
   title: Notifications
-  unreadCount: '{{count}} unread'
-  markAllRead: Mark all read
-  empty: No notifications
+  unreadCount: '{{count}} to confirm'
+  markAllRead: Confirm all
+  empty: Nothing to confirm
   viewAll: View all in Message Center
   center: Message Center
-  centerDesc: Your notifications from subscribed events
+  centerDesc: Notifications from subscribed events and items awaiting you; confirm to clear them from the bell
   search: Search title or object…
   allTypes: All types
-  allRead: Read & unread
+  allRead: All confirmation states
   allSeverities: All severities
-  unread: Unread
-  read: Read
+  unread: To confirm
+  read: Confirmed
   time: Time
   severityCol: Severity
   type: Event type
   content: Content
   object: Related object
   open: Open
-  readAt: Read at
+  ack: Confirm
+  readAt: Confirmed at
   severity:
     info: Info
     warning: Warning

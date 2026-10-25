@@ -1,25 +1,26 @@
 notify:
   bell: 通知
   title: 通知
-  unreadCount: 未読 {{count}} 件
-  markAllRead: すべて既読にする
-  empty: 通知はありません
+  unreadCount: '確認待ち {{count}} 件'
+  markAllRead: すべて確認
+  empty: 確認待ちの通知はありません
   viewAll: メッセージセンターですべて表示
   center: メッセージセンター
-  centerDesc: 購読したイベントからの通知
+  centerDesc: 購読イベントと対応待ち事項の通知。確認するとベルから消えます
   search: タイトル・対象を検索…
   allTypes: すべての種類
-  allRead: 既読・未読すべて
+  allRead: すべての確認状態
   allSeverities: すべての重要度
-  unread: 未読
-  read: 既読
+  unread: 確認待ち
+  read: 確認済み
   time: 日時
   severityCol: 重要度
   type: イベント種類
   content: 内容
   object: 関連対象
   open: 開く
-  readAt: 既読日時
+  ack: 確認
+  readAt: 確認日時
   severity:
     info: 情報
     warning: 警告
