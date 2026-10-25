@@ -39,10 +39,9 @@ export default function SubscriptionsPage() {
     queryFn: () => api.tenants.members(tid, ALL),
     enabled: !!tid,
   })
-  const types = (meta.data?.event_types ?? []).map((e) => ({
-    value: e.code,
-    label: eventLabel(e.code),
-  }))
+  const types = (meta.data?.event_types ?? [])
+    .filter((e) => !e.direct)
+    .map((e) => ({ value: e.code, label: eventLabel(e.code) }))
   const filters: FilterDef[] = [
     searchFilter(t('notify.sub.search')),
     {

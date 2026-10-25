@@ -40,6 +40,8 @@ mes:
     route: Flow diagram
     lot_type: ID preview
     lot: Lot & route
+    change_order: Change result
+    ncr: Disposition & approval
   noLotRule: No lot ID rule assigned.
   nextLotId: Next lot ID
   waferIds: Wafer IDs

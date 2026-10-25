@@ -21,14 +21,41 @@ from app.core.spec.errors import coded, fe, http_422
 from app.core.spec.serialize import serialize
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
-from app.mes.execution.events import NCR_REVIEW, notify_lot
+from app.mes.execution.events import NCR_REVIEW
 from app.mes.execution.hold.manage import _reason, default_reason, hold_lot, release
 from app.mes.execution.stage.common import LOT
 from app.mes.lot.service import check_transition, history, lock_lot, units
+from app.platform.notification import service as notification
+from app.platform.tenants.service import members_with
 
 Row = dict[str, Any]
 NCR = ENTITIES["ncr"]
 LEVELS = {"minor": 1, "major": 2, "critical": 3}
+
+
+def _notify_approvers(
+    s: Session, tid: uuid.UUID, n: Row, lot: Row, done: set[Any], level: int
+) -> None:
+    """通知当前这一级可审批的人：有审批权限，且不是提案人、本轮未审批过。"""
+    skip = done | {n["proposed_by"]}
+    users = {
+        uid
+        for uid, name in members_with(s, tid, "mes.ncr:approve").items()
+        if name not in skip
+    }
+    disp = n["disposition"]
+    notification.notify(
+        s,
+        tid,
+        NCR_REVIEW,
+        title=f"NCR {n['code']} on {lot.get('code')}: {disp} awaiting approval",
+        params={"ncr": n["code"], "lot": lot.get("code"), "disposition": disp},
+        object_id=n["id"],
+        object_code=n["code"],
+        link=f"/mes/ncr?id={n['id']}",
+        dedupe_key=f"ncr:{n['id']}:{n['proposed_at']:%Y%m%d%H%M%S%f}:L{level}",
+        users=users,
+    )
 
 
 def _err(ncr: Row) -> Exception:
@@ -200,16 +227,7 @@ def propose(s: Session, tid: uuid.UUID, ncr_id: Any, body: Row, user: Any) -> Ro
         proposed_by=actor_name(user),
         proposed_at=now(),
     )
-    notify_lot(
-        s,
-        tid,
-        NCR_REVIEW,
-        lot,
-        f"NCR {n['code']} on {lot.get('code')}: {disp} awaiting approval",
-        {"ncr": n["code"], "disposition": disp},
-        f"ncr:{n['id']}:{now():%Y%m%d%H%M%S}",
-        link=f"/mes/ncr?id={n['id']}",
-    )
+    _notify_approvers(s, tid, _lock(s, tid, n["id"]), lot, set(), 1)
     s.commit()
     return detail(s, tid, n["id"])
 
@@ -249,10 +267,14 @@ def approve(s: Session, tid: uuid.UUID, ncr_id: Any, body: Row, user: Any) -> Ro
         username=who,
         at=at,
     )
+    notification.close(s, tid, NCR_REVIEW, n["id"])
     if decision == "reject":
         _upd(s, tid, "ncr", n["id"], user, ncr_status="open", approved_levels=0)
     elif level < (n["required_levels"] or 1):
         _upd(s, tid, "ncr", n["id"], user, approved_levels=level)
+        lot = one(s, tid, "lot", n["lot_id"]) or {}
+        names = {a["username"] for a in done} | {who}
+        _notify_approvers(s, tid, n, lot, names, level + 1)
     else:
         result = _execute(s, tid, n, user)
         _upd(
@@ -290,6 +312,7 @@ def cancel(s: Session, tid: uuid.UUID, ncr_id: Any, body: Row, user: Any) -> Row
         closed_at=now(),
         result={"cancelled": comment},
     )
+    notification.close(s, tid, NCR_REVIEW, n["id"])
     history(
         s,
         tid,

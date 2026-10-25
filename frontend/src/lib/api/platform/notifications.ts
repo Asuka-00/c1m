@@ -35,6 +35,8 @@ export interface EventType {
   label: string
   severity: Severity
   object_type: string | null
+  /** 定向事件（如待审批）：只发给当前处理人，不可订阅 */
+  direct: boolean
 }
 
 /** 通知元数据：事件类型、渠道、严重度。 */

@@ -10,7 +10,7 @@ from app.core.registry import seed_tenant
 from app.core.spec.errors import coded
 from app.platform.rbac.models import Permission, Role
 from app.platform.rbac.permissions import TENANT_ROLES
-from app.platform.rbac.service import fill_names
+from app.platform.rbac.service import fill_names, user_permission_codes
 from app.platform.tenants.models import Tenant, TenantMember
 from app.platform.users.models import User
 
@@ -51,6 +51,23 @@ def member_permission_codes(member: TenantMember | None) -> set[str]:
     from app.platform.rbac.service import active_codes
 
     return active_codes(member.roles)
+
+
+def members_with(
+    session: Session, tenant_id: uuid.UUID, code: str
+) -> dict[uuid.UUID, str]:
+    """具备某权限的有效成员 ``{用户 id: 用户名}``（超级用户成员恒具备）。"""
+    out: dict[uuid.UUID, str] = {}
+    for m in session.exec(
+        select(TenantMember).where(TenantMember.tenant_id == tenant_id)
+    ).all():
+        u = m.user
+        if u.is_active and (
+            u.is_superuser
+            or code in member_permission_codes(m) | user_permission_codes(u)
+        ):
+            out[u.id] = u.username
+    return out
 
 
 def get_membership(

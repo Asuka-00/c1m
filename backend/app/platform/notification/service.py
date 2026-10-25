@@ -102,10 +102,11 @@ def notify(
     object_code: str | None = None,
     link: str | None = None,
     dedupe_key: str | None = None,
+    users: set[uuid.UUID] | None = None,
 ) -> uuid.UUID | None:
     """发送一条通知（调用方事务内，不提交）。
 
-    无订阅接收人时不生成通知；``dedupe_key`` 已存在时视为重复，直接忽略。
+    无接收人时不生成通知；``dedupe_key`` 已存在时视为重复，直接忽略。
 
     Args:
         session: 数据库会话（已设置租户 RLS 上下文）。
@@ -120,6 +121,7 @@ def notify(
         object_code: 关联对象编码（列表显示 / 搜索）。
         link: 前端跳转路径（如 ``/mes/lot-console?lot=<id>``）。
         dedupe_key: 去重键（租户内唯一）。
+        users: 定向事件的接收人（站内渠道）；为 None 时按订阅解析。
 
     Returns:
         新通知 id；重复或无接收人时为 None。
@@ -130,7 +132,10 @@ def notify(
     ev = EVENT_TYPES.get(event_type)
     if not ev:
         raise ValueError(f"unknown event type {event_type}")
-    targets = recipients(session, tid, event_type)
+    if ev.direct:
+        targets = {"in_app": users or set()}
+    else:
+        targets = recipients(session, tid, event_type)
     if not any(targets.values()):
         return None
     nid = uuid.uuid4()
@@ -274,6 +279,22 @@ def mark_read(
     return int(n or 0)
 
 
+def close(session: Session, tid: uuid.UUID, event_type: str, object_id: Any) -> int:
+    """关闭对象的未读通知（所有接收人标记已读，如审批完成后的待审批通知；不提交）。"""
+    n = SQLModel.metadata.tables["notification"]
+    r = SQLModel.metadata.tables["notification_recipient"]
+    ids = sa.select(n.c.id).where(
+        n.c.tenant_id == tid,
+        n.c.event_type == event_type,
+        n.c.object_id == str(object_id),
+    )
+    q = sa.update(r).where(
+        r.c.tenant_id == tid, r.c.read_at.is_(None), r.c.notification_id.in_(ids)
+    )
+    done = session.connection().execute(q.values(read_at=get_datetime_utc()))
+    return int(done.rowcount or 0)
+
+
 def event_types() -> list[Row]:
     """已登记的事件类型列表。"""
     return [
@@ -282,6 +303,7 @@ def event_types() -> list[Row]:
             "label": e.label,
             "severity": e.severity,
             "object_type": e.object_type,
+            "direct": e.direct,
         }
         for e in sorted(EVENT_TYPES.values(), key=lambda x: x.code)
     ]
@@ -295,7 +317,8 @@ def channels() -> list[Row]:
 def validate_subscription(data: Row) -> list[FieldError]:
     """校验订阅配置，返回字段错误列表。"""
     errs: list[FieldError] = []
-    if data.get("event_type") not in EVENT_TYPES:
+    ev = EVENT_TYPES.get(data.get("event_type") or "")
+    if ev is None or ev.direct:
         errs.append(
             fe("event_type", ec.SUB_EVENT_UNKNOWN, "event_type: unknown event type")
         )

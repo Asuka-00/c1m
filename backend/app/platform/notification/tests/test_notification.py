@@ -30,12 +30,12 @@ def _roles(c: TestClient, h: dict[str, str], tid: str) -> dict[str, str]:
 
 
 def _sub_all(f: Line) -> None:
-    """租户 owner 角色订阅全部 MES 事件。"""
+    """租户 owner 角色订阅全部可订阅的 MES 事件（定向事件除外）。"""
     c, h, tid = f.c, f.m.h, str(f.m.tid)
     meta = c.get(f"{API}/notification-meta", headers=h).json()
     owner = _roles(c, h, tid)["owner"]
     for e in meta["event_types"]:
-        if e["code"].startswith("mes."):
+        if e["code"].startswith("mes.") and not e["direct"]:
             r = c.post(
                 f"{API}/notification-subscriptions",
                 headers=h,
@@ -64,13 +64,12 @@ def test_subscription_crud_validation_permission(
     assert {"mes.qtime_warn", "mes.oos", "mes.pm_overdue", "mes.eqp_down"} <= codes
     assert [c["code"] for c in meta["channels"]] == ["in_app"]
     url = f"{API}/notification-subscriptions"
-    # 校验：未知事件 / 无接收人 / 未知渠道
+    # 校验：未知事件 / 定向事件不可订阅 / 无接收人 / 未知渠道
+    owner = _roles(client, h, tid)["owner"]
+    assert {e["code"] for e in meta["event_types"] if e["direct"]} == {"mes.ncr_review"}
     for body in (
-        {
-            "name": "x",
-            "event_type": "nope",
-            "role_ids": [_roles(client, h, tid)["owner"]],
-        },
+        {"name": "x", "event_type": "nope", "role_ids": [owner]},
+        {"name": "x", "event_type": "mes.ncr_review", "role_ids": [owner]},
         {"name": "x", "event_type": "mes.oos"},
         {
             "name": "x",

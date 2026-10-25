@@ -40,6 +40,8 @@ mes:
     route: フロー図
     lot_type: ID プレビュー
     lot: ロットとルート
+    change_order: 変更結果
+    ncr: 処置と承認
   noLotRule: ロット ID ルールが未設定です。
   nextLotId: 次のロット ID
   waferIds: ウェーハ ID

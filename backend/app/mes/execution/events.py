@@ -20,7 +20,7 @@ LOT_HOLD = register_event("mes.lot_hold", "Lot auto hold", "warning", "lot").cod
 OOS = register_event("mes.oos", "Out of spec", "critical", "lot").code
 OOC = register_event("mes.ooc", "Out of control (SPC)", "critical", "lot").code
 NCR_REVIEW = register_event(
-    "mes.ncr_review", "NCR awaiting approval", "warning", "lot"
+    "mes.ncr_review", "NCR awaiting approval", "warning", "ncr", direct=True
 ).code
 
 
@@ -37,9 +37,8 @@ def notify_lot(
     title: str,
     params: Row,
     dedupe_key: str | None = None,
-    link: str | None = None,
 ) -> uuid.UUID | None:
-    """发送批次相关通知（关联对象为批次，默认链接到批次作业页）。"""
+    """发送批次相关通知（关联对象为批次，链接到批次作业页）。"""
     return notify(
         s,
         tid,
@@ -49,7 +48,7 @@ def notify_lot(
         object_type="lot",
         object_id=lot["id"],
         object_code=lot["code"],
-        link=link or lot_link(lot),
+        link=lot_link(lot),
         dedupe_key=dedupe_key,
     )
 

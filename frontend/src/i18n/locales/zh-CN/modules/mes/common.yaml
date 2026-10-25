@@ -40,6 +40,8 @@ mes:
     route: 流程图
     lot_type: 编号预览
     lot: 批次与流程
+    change_order: 变更结果
+    ncr: 处置与审批
   noLotRule: 未设置批次号规则。
   nextLotId: 下一个批次号
   waferIds: 晶圆号

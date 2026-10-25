@@ -291,11 +291,18 @@ def test_bank_in_and_issue(client: TestClient, db: Session) -> None:
 
 # ---------------- NCR / MRB ----------------
 def test_ncr_review_and_scrap(client: TestClient, db: Session) -> None:
-    from app.platform.notification.tests.test_notification import _mine, _sub_all
-
     f = Line(client, db)
-    _sub_all(f)
     h2, h3 = _admin(f, client, db), _admin(f, client, db)
+
+    def todo(h: dict[str, str]) -> list[str]:
+        """未读的 NCR 待审批通知链接（无需订阅，只发给当前可审批的人）。"""
+        r = client.get(
+            f"{API[:-4]}/notifications",
+            headers=h,
+            params={"event_type": "mes.ncr_review", "is_read": False},
+        )
+        return [x["link"] for x in r.json()["data"]]
+
     (lot,) = f.start(3)
     us = f.ctx(lot)["units"]
     url = f"{EXEC}/ncr"
@@ -319,12 +326,8 @@ def test_ncr_review_and_scrap(client: TestClient, db: Session) -> None:
         f"{url}/{nid}/propose",
         {"disposition": "scrap", "scrap_reason_id": f.reasons["scrap"]["id"]},
     )
-    note = next(
-        x
-        for x in _mine(f, page_size=100)["data"]
-        if x["event_type"] == "mes.ncr_review"
-    )
-    assert note["link"] == f"/mes/ncr?id={nid}"
+    link = f"/mes/ncr?id={nid}"
+    assert todo(f.m.h) == [] and todo(h2) == [link] and todo(h3) == [link]
     # 提案人不能审批；驳回须备注并回到 open
     assert ec.NCR_SELF_APPROVE in _codes(
         f.post(f"{url}/{nid}/approve", {"decision": "approve"}, 422)
@@ -334,17 +337,22 @@ def test_ncr_review_and_scrap(client: TestClient, db: Session) -> None:
     )
     r = f.post(f"{url}/{nid}/approve", {"decision": "reject", "comment": "why"}, h=h2)
     assert r["ncr"]["ncr_status"] == "open"
+    assert todo(h2) == [] and todo(h3) == []
     f.post(
         f"{url}/{nid}/propose",
         {"disposition": "scrap", "scrap_reason_id": f.reasons["scrap"]["id"]},
     )
+    assert todo(h2) == [link] and todo(h3) == [link]
     r = f.post(f"{url}/{nid}/approve", {"decision": "approve"}, h=h2)
     assert r["ncr"]["approved_levels"] == 1 and r["ncr"]["ncr_status"] == "reviewing"
+    # 第 1 级审批后关闭通知，第 2 级只通知尚未审批的人
+    assert todo(h2) == [] and todo(h3) == [link]
     assert ec.NCR_ALREADY_APPROVED in _codes(
         f.post(f"{url}/{nid}/approve", {"decision": "approve"}, 422, h2)
     )
     r = f.post(f"{url}/{nid}/approve", {"decision": "approve"}, h=h3)
     assert r["ncr"]["ncr_status"] == "closed" and not r["hold_active"]
+    assert todo(h3) == []
     assert r["ncr"]["result"]["scrapped"] == 1 and len(r["approvals"]) == 3
     lt = f.lot(lot)
     assert lt["qty"] == 2 and lt["scrapped_qty"] == 1 and not lt["on_hold"]

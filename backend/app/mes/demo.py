@@ -31,7 +31,7 @@ DEMO_SUB = "[demo] "
 
 
 def _demo_subscriptions(session: Session, tid: Any) -> None:
-    """演示通知订阅：租户 admin / owner 角色订阅全部 MES 事件（幂等）。"""
+    """演示通知订阅：租户 admin / owner 角色订阅全部可订阅的 MES 事件（幂等）。"""
     import app.mes.equipment.events  # noqa: F401  （登记事件类型）
     import app.mes.execution.events  # noqa: F401
     from app.platform.notification.models import NotificationSubscription
@@ -52,7 +52,7 @@ def _demo_subscriptions(session: Session, tid: Any) -> None:
         ).all()
     )
     for e in event_types():
-        if e["code"].startswith("mes.") and e["code"] not in have:
+        if e["code"].startswith("mes.") and not e["direct"] and e["code"] not in have:
             session.add(
                 NotificationSubscription(
                     tenant_id=tid,

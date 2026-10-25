@@ -829,19 +829,14 @@ QA = "demo-qa"
 QA_PERMS = ["mes.ncr:read", "mes.ncr:approve", "mes.exec:read"]
 
 
-def approver(api: Api, base: str, tid: str) -> tuple[Api, str]:
+def approver(api: Api, base: str, tid: str) -> Api:
     """NCR 审批人（提案人不能自审）：仅 NCR 审批权限；首次创建时打印一次随机密码。"""
-    role = next(
-        (
-            r
-            for r in api.get(f"/tenants/{tid}/roles", code=QA)["data"]
-            if r["name"] == QA
-        ),
-        None,
-    ) or api.post(
-        f"/tenants/{tid}/roles",
-        {"name": QA, "title": "Demo QA approver", "permission_codes": QA_PERMS},
-    )
+    roles = api.get(f"/tenants/{tid}/roles", code=QA)["data"]
+    if not any(r["name"] == QA for r in roles):
+        api.post(
+            f"/tenants/{tid}/roles",
+            {"name": QA, "title": "Demo QA approver", "permission_codes": QA_PERMS},
+        )
     members = api.get(f"/tenants/{tid}/members", username=QA)["data"]
     if not any(m["username"] == QA for m in members):
         pw = secrets.token_urlsafe(12)
@@ -850,36 +845,43 @@ def approver(api: Api, base: str, tid: str) -> tuple[Api, str]:
             {"username": QA, "full_name": "Demo QA", "password": pw, "roles": [QA]},
         )
         print(f"created user {QA} / {pw}", flush=True)  # noqa: T201
-    return Api(base, token(QA)[0], tid), str(role["id"])
+    return Api(base, token(QA)[0], tid)
 
 
 def subscriptions(api: Api, ctx: Row) -> list[str]:
-    """补齐演示通知订阅：admin / owner 订阅全部 MES 事件，demo-qa 订阅 NCR 待审批。"""
+    """补齐演示通知订阅：admin / owner 订阅全部可订阅的 MES 事件。
+
+    定向事件（如 NCR 待审批）只发给当前可审批的人，不可订阅；删除旧版脚本建的此类订阅。
+    """
     tid = ctx["tid"]
-    ctx["qa"], qa_role = approver(api, ctx["base"], tid)
+    ctx["qa"] = approver(api, ctx["base"], tid)
     admins = [
         str(r["id"])
         for r in api.get(f"/tenants/{tid}/roles", page_size=100)["data"]
         if r["name"] in ("admin", "owner")
     ]
-    have = {
-        x["name"] for x in api.get("/notification-subscriptions", page_size=100)["data"]
-    }
-    want = {
-        f"[demo] {e['code']}": (e["code"], admins)
+    events = {
+        e["code"]: e
         for e in api.get("/notification-meta")["event_types"]
         if e["code"].startswith("mes.")
     }
-    want[f"[demo] mes.ncr_review → {QA}"] = ("mes.ncr_review", [qa_role])
+    have = api.get("/notification-subscriptions", page_size=100)["data"]
+    dropped = 0
+    for x in have:
+        ev = events.get(x["event_type"])
+        if ev and ev["direct"] and x["name"].startswith("[demo] "):
+            api.call("DELETE", f"/notification-subscriptions/{x['id']}")
+            dropped += 1
+    names = {x["name"] for x in have}
     added = []
-    for name, (event, roles) in want.items():
-        if name not in have:
+    for code, ev in events.items():
+        if not ev["direct"] and f"[demo] {code}" not in names:
             api.post(
                 "/notification-subscriptions",
-                {"name": name, "event_type": event, "role_ids": roles},
+                {"name": f"[demo] {code}", "event_type": code, "role_ids": admins},
             )
-            added.append(event)
-    return [f"{len(want)} subscriptions", f"added: {', '.join(added) or 'none'}"]
+            added.append(code)
+    return [f"added: {', '.join(added) or 'none'}", f"removed {dropped} direct"]
 
 
 def token(username: str | None = None) -> tuple[str, str]:
