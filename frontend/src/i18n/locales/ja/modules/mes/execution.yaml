@@ -631,12 +631,19 @@ mes:
     operator_qualified:
       ok: '{{user}} は工程 {{operation}} の資格あり'
       bad: '{{user}} は工程 {{operation}} の資格がありません'
+    ooc:
+      bad: '{{count}} 項目が管理外れ'
+      ok: 工程は管理状態
+      none: DC データなし
+      values: '管理外れ（$t(mes.enum.ooc_action.{{action}})）：{{values}}'
   checkSep: ；
   sysNote:
     qtime_expired: Q-Time {{rule}} 超過：{{minutes}} > {{max}} 分
     oos: 規格外：{{items}}
     inherited: '{{lot}} から継承'
     e10_auto: ロット {{lot}} の$t(mes.exec.stage.{{trigger}})で自動遷移
+    ooc: 'SPC 管理外れ：{{items}}'
+    ncr: 'NCR {{ncr}}'
   entity:
     check_rule: チェックルール
     check_plan: チェックプラン
@@ -733,6 +740,7 @@ mes:
       adjust: 廃棄・追加
       sort: ウェーハソート
       priority: 優先度変更
+      convert: ユニット変換
     check_type:
       e10_available: 設備 E10 状態使用可
       eqp_capability: 設備能力・レシピ整合
@@ -765,6 +773,7 @@ mes:
       pm_due: 設備 PM 期限内
       rework_limit: リワーク回数上限
       qty_adjust_limit: 廃棄・追加数量上限
+      ooc: SPC 管理外れ
     check_severity:
       block: ブロック
       warn: 警告
@@ -832,6 +841,13 @@ mes:
       carrier_change: キャリア変更
       sort: ウェーハソート
       priority: 優先度変更
+      convert: ユニット変換
+      die_map: ウェーハマップ取込
+      bank_in: バンク入庫
+      bank_out: バンク払出
+      ooc: SPC 管理外れ
+      ncr: NCR
     genealogy_relation:
       split: 分割
       merge: 統合
+      bank_issue: バンク払出

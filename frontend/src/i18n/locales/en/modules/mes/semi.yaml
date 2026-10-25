@@ -1,0 +1,160 @@
+mes:
+  entity:
+    bank: Bank
+    bin_code: Bin code
+    die_map: Die map
+    unit_genealogy: Unit genealogy
+    ncr: NCR
+    ncr_approval: Approval
+  field:
+    bank:
+      code: Code
+      name: Name
+      bank_kind: Kind
+      warehouse: Warehouse
+      is_active: Active
+      description: Description
+    bin_code:
+      code: Bin
+      name: Name
+      is_good: Good die
+      color: Color
+      is_active: Active
+      description: Description
+    die_map:
+      unit: Wafer
+      lot: Lot
+      route_step: Route step
+      test_kind: Kind
+      rows: Rows
+      cols: Columns
+      dies: Dies
+      gross: Gross dies
+      good: Good dies
+      yield_pct: Yield %
+      is_current: Current
+      source: Source
+      username: User
+      at: Time
+    unit_genealogy:
+      parent_unit: Source unit
+      child_unit: Output unit
+      lot: Lot
+      relation: Relation
+      qty: Qty
+      dies: Die coordinates
+      route_step: Route step
+      username: User
+      at: Time
+    ncr:
+      code: NCR no.
+      lot: Lot
+      title: Title
+      severity: Severity
+      defect_code: Defect code
+      description: Description
+      qty: Affected qty
+      units: Affected units
+      hold: Hold
+      ncr_status: Status
+      disposition: Disposition
+      disposition_comment: Disposition comment
+      scrap_reason: Scrap reason
+      required_levels: Required levels
+      approved_levels: Approved levels
+      raised_by: Raised by
+      raised_at: Raised at
+      proposed_by: Proposed by
+      proposed_at: Proposed at
+      closed_by: Closed by
+      closed_at: Closed at
+      result: Result
+    ncr_approval:
+      ncr: NCR
+      level: Level
+      decision: Decision
+      comment: Comment
+      username: Approver
+      at: Time
+  enum:
+    bank_kind:
+      wafer: Wafer bank
+      die: Die bank
+      finished: Finished goods
+    ooc_action:
+      warn: Warn
+      auto_hold: Hold lot
+      hold_equipment: Hold lot + equipment
+    unit_relation:
+      convert: Convert
+      assemble: Assemble
+    die_map_kind:
+      cp: CP test
+      aoi: AOI
+      ink: Merged / ink
+    ncr_status:
+      open: Open
+      reviewing: Reviewing
+      closed: Closed
+      cancelled: Cancelled
+    ncr_disposition:
+      release: Release
+      use_as_is: Use as is
+      rework: Rework
+      scrap: Scrap
+      downgrade: Downgrade
+      rtv: Return to vendor
+    ncr_decision:
+      approve: Approve
+      reject: Reject
+  semi:
+    unitHint: Import die maps and convert all units of a lot to the next unit kind.
+    units: 'Active units ({{count}})'
+    viewMap: View map
+    goodOfGross: '{{good}} good of {{gross}} dies'
+    importMap: Import die maps
+    csv: Map data (wafer ID,x,y,bin)
+    csvFile: Choose file
+    csvHint: One die per line, e.g. W01,0,0,1
+    csvParsed: 'Parsed {{maps}} wafers, {{dies}} dies'
+    csvBad: 'Invalid lines: {{rows}}'
+    import: Import
+    imported: 'Imported {{count}} die maps'
+    convert: Convert units
+    toKind: Target unit kind
+    mode: Mode
+    modes:
+      map: Good dies from die maps
+      split: N outputs per source (1 → N)
+      assemble: N sources per output (N → 1)
+    ratio:
+      split: Outputs per source
+      assemble: Sources per output
+    previewResult: '{{count}} units will be created, {{bad}} bad dies excluded'
+    converted: 'Converted into {{count}} units'
+    bankHint: Bank completed lots and issue them into new lots of a work order.
+    bankIn: Bank in
+    completedLot: Completed lot
+    bankedIn: 'Lot {{lot}} banked'
+    issue: Issue to work order
+    picked: '{{count}} banked lots selected'
+    issued: 'Issued lot {{lot}} with qty {{qty}}'
+    inBank: 'Banked lots ({{count}})'
+    bankEmpty: No lots in bank.
+    spcHint: Control chart and out-of-control points of a measurement item.
+    spcEmpty: No measurements yet.
+    rules: 'Rules: {{rules}}'
+    noRules: No rules enabled
+    mean: Mean
+    raiseNcr: Raise NCR
+    holdLot: Hold the lot
+    ncrRaised: '{{code}} raised'
+    propose: Propose disposition
+    proposed: Submitted for approval
+    cancelNcr: Cancel NCR
+    levels: 'Approved {{done}} of {{need}} levels'
+    ncrStatus:
+      open: Rejected, awaiting a new proposal
+      reviewing: Approved, awaiting the next level
+      closed: Approved and disposition executed
+      cancelled: NCR cancelled

@@ -295,8 +295,24 @@ ACTION = {
 }
 
 
+SEMI = {"bank_in", "bank_out", "convert"}
+
+
 def _from(act: str) -> set[str]:
     return {str(x) for x in RULES[act].from_}
+
+
+def test_semi_rules() -> None:
+    assert _from("bank_in") == {"completed"}
+    assert _from("bank_out") == {"banked"}
+    assert _from("convert") == {"waiting", "moved_in"}
+    for act in ("bank_out", "convert"):
+        assert not allowed(_lot(_from(act).pop(), True), act)
+    # 在库批次可 Hold，领完（issued）后终止
+    assert allowed(_lot("banked"), "hold")
+    assert not any(
+        allowed(_lot("issued"), a) for a in ("hold", "split", "bank_out", "convert")
+    )
 
 
 def _lot(status: str, on_hold: bool = False) -> dict[str, Any]:
@@ -304,8 +320,9 @@ def _lot(status: str, on_hold: bool = False) -> dict[str, Any]:
 
 
 def test_rules_cover_matrix_actions() -> None:
-    # ship（D13 规则层）、auto_hold（D17）不在清单矩阵中；qtime_scrap 按 D12 删除
-    assert set(RULES) - {"ship", "auto_hold"} == {
+    # ship（D13 规则层）、auto_hold（D17）、Bank / 单元转换（见下方用例）不在清单矩阵中；
+    # qtime_scrap 按 D12 删除
+    assert set(RULES) - {"ship", "auto_hold", *SEMI} == {
         ACTION.get(r[1], r[1]) for r in MATRIX
     }
     assert "qtime_scrap" not in RULES
@@ -359,12 +376,19 @@ def test_u03_no_abort_action() -> None:
 
 
 def test_u04_terminal() -> None:
-    assert {str(x) for x in TERMINAL} == {"completed", "stored", "scrapped", "merged"}
+    assert {str(x) for x in TERMINAL} == {
+        "completed",
+        "stored",
+        "scrapped",
+        "merged",
+        "banked",
+        "issued",
+    }
     assert set(TERMINAL) == set(LOTS_TERMINAL)
 
 
 def test_u05_lot_status_matches_spec_enum() -> None:
-    assert len(LotStatus) == 8
+    assert len(LotStatus) == 10
     assert [str(x) for x in LotStatus] == list(lot_status_enum())
 
 

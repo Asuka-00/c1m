@@ -3,6 +3,9 @@
 from app.mes.equipment.e10 import (
     e10_apply as e10_apply,
 )
+from app.mes.equipment.e10 import (
+    e10_force as e10_force,
+)
 from app.mes.equipment.maint import (
     e10_change as e10_change,
 )

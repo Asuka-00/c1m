@@ -526,6 +526,23 @@ def _oos(ctx: Ctx, _p: Row) -> Outcome:
     return ("pass", M_OOS("ok"), {}) if ctx.dc else ("na", M_OOS("none"), {})
 
 
+M_OOC = messages(
+    "ooc",
+    bad="{count} item(s) out of control",
+    ok="process in control",
+    none="no DC values",
+    values="OOC ({action}): {values}",
+)
+
+
+@check_type("ooc")
+def _ooc(ctx: Ctx, _p: Row) -> Outcome:
+    bad = {d["code"] for d in ctx.dc if d.get("ooc_rules")}
+    if bad:
+        return "fail", M_OOC("bad", count=len(bad)), {}
+    return ("pass", M_OOC("ok"), {}) if ctx.dc else ("na", M_OOC("none"), {})
+
+
 M_SMP = messages(
     "sampling",
     no_operation="no operation",

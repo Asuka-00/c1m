@@ -24,6 +24,7 @@ mes:
   tableView: 表格视图
   export: 导出
   import: 导入
+  importTemplate: 下载模板
   new: 新建
   empty: 暂无{{entity}}。
   deleteTitle: 删除{{entity}}？
@@ -53,6 +54,7 @@ mes:
       lot_status: 批次当前状态不允许此操作
     withLine: 第 {{line}} 行：{{text}}
   exportHint: 按当前搜索与筛选条件导出
+  importTemplateHint: 下载带列说明的空白导入模板
   fieldIs: '{{field}}：{{value}}'
   treeToggle: 展开 / 收起
   tree:
@@ -72,6 +74,7 @@ mes:
     product: 产品与物料
     quality: 质量
     wh: 仓储
+    ncr: 不合格品处置
   entity:
     dict_type: 数据字典
     dict_item: 字典项
@@ -156,6 +159,10 @@ mes:
       qtime_rework: Q-Time 返工
       merge: 合批
       e10: E10 状态变更
+      convert: 单元转换
+      bank_in: 入 Bank
+      bank_out: Bank 领用
+      disposition: NCR 处置
     seq_reset:
       never: 不重置
       daily: 每日

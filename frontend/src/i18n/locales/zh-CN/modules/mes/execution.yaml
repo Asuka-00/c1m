@@ -631,12 +631,19 @@ mes:
     operator_qualified:
       ok: '{{user}} 具备工序 {{operation}} 的资质'
       bad: '{{user}} 不具备工序 {{operation}} 的资质'
+    ooc:
+      bad: '{{count}} 个项目判异'
+      ok: 过程受控
+      none: 无 DC 数据
+      values: '判异（$t(mes.enum.ooc_action.{{action}})）：{{values}}'
   checkSep: ；
   sysNote:
     qtime_expired: Q-Time {{rule}} 超时：{{minutes}} > {{max}} 分钟
     oos: 超规：{{items}}
     inherited: 继承自 {{lot}}
     e10_auto: 批次 {{lot}} $t(mes.exec.stage.{{trigger}})时自动切换
+    ooc: 'SPC 判异：{{items}}'
+    ncr: 'NCR {{ncr}}'
   entity:
     check_rule: 卡控规则
     check_plan: 卡控方案
@@ -733,6 +740,7 @@ mes:
       adjust: 报废 / 补数
       sort: 晶圆整理
       priority: 优先级变更
+      convert: 单元转换
     check_type:
       e10_available: 设备 E10 状态可用
       eqp_capability: 设备能力 / 配方匹配
@@ -765,6 +773,7 @@ mes:
       pm_due: 设备 PM 未超期
       rework_limit: 返工次数上限
       qty_adjust_limit: 报废 / 补数数量上限
+      ooc: SPC 判异
     check_severity:
       block: 拦截
       warn: 预警
@@ -832,6 +841,13 @@ mes:
       carrier_change: 换载具
       sort: 晶圆整理
       priority: 优先级变更
+      convert: 单元转换
+      die_map: 导入晶圆图
+      bank_in: 入 Bank
+      bank_out: Bank 领用
+      ooc: SPC 判异
+      ncr: NCR
     genealogy_relation:
       split: 分批
       merge: 合批
+      bank_issue: Bank 领用

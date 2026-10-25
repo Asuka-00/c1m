@@ -16,4 +16,7 @@ export const pages: Pages = {
   'mes-page:shift-handover': lazy(() => import('./report/shift-handover')),
   'mes-page:label-print': lazy(() => import('./label/label-print')),
   'mes-page:carrier-ops': lazy(() => import('./carrier/carrier-ops')),
+  'mes-page:unit-ops': lazy(() => import('./semi/unit-ops')),
+  'mes-page:bank-ops': lazy(() => import('./semi/bank-ops')),
+  'mes-page:spc-chart': lazy(() => import('./semi/spc-chart')),
 }

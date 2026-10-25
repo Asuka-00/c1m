@@ -182,6 +182,10 @@ permName:
   mes_lot__start: ロット・ウェーハ規則·投入
   mes_wh__confirm: 倉庫·入庫確認
   notify__config: 通知購読設定
+  mes_ncr__read: 不適合処置·閲覧
+  mes_ncr__write: 不適合処置·編集
+  mes_exec__bank: 生産実行·バンク入庫 / 払出
+  mes_ncr__approve: 不適合処置·承認
 roleName:
   admin: 管理者
   user: 一般ユーザー
@@ -241,6 +245,10 @@ permDesc:
   mes_lot__start: 許可：ロット・ウェーハ規則·投入
   mes_wh__confirm: 許可：倉庫·入庫確認
   notify__config: 許可：通知購読設定
+  mes_ncr__read: 許可：不適合処置·閲覧
+  mes_ncr__write: 許可：不適合処置·編集
+  mes_exec__bank: 許可：生産実行·バンク入庫 / 払出
+  mes_ncr__approve: 許可：不適合処置·承認
 roleDesc:
   platform_admin: 全権限を持つプラットフォーム管理者
   platform_user: プラットフォーム権限のない一般ユーザー

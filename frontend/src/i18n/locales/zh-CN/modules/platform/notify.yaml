@@ -83,3 +83,9 @@ notify:
       qual_expired:
         label: 资质已过期
         title: '{{user}} 的 {{operation}} 资质已于 {{date}} 过期'
+      ooc:
+        label: SPC 判异（OOC）
+        title: '批次 {{lot}} 在工步 {{step}} 判异：{{items}}（{{action}}）'
+      ncr_review:
+        label: NCR 待审批
+        title: '批次 {{lot}} 的 NCR {{ncr}} 待审批：$t(mes.enum.ncr_disposition.{{disposition}})'

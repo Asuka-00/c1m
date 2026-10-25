@@ -1,4 +1,4 @@
-"""执行模块的通知事件：Q-Time 预警 / 超时、自动 Hold、超规（OOS）。"""
+"""执行模块的通知事件：Q-Time 预警 / 超时、自动 Hold、超规（OOS）、判异（OOC）、NCR 待审批。"""
 
 import uuid
 from typing import Any
@@ -18,6 +18,10 @@ QTIME_EXCEEDED = register_event(
 ).code
 LOT_HOLD = register_event("mes.lot_hold", "Lot auto hold", "warning", "lot").code
 OOS = register_event("mes.oos", "Out of spec", "critical", "lot").code
+OOC = register_event("mes.ooc", "Out of control (SPC)", "critical", "lot").code
+NCR_REVIEW = register_event(
+    "mes.ncr_review", "NCR awaiting approval", "warning", "lot"
+).code
 
 
 def lot_link(lot: Row) -> str:

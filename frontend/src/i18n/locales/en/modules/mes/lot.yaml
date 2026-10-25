@@ -92,6 +92,8 @@ mes:
       started_at: Started at
       started_by: Started by
       description: Description
+      bank: Bank
+      banked_at: Banked at
     wafer:
       code: Wafer ID
       lot: Lot
@@ -184,12 +186,15 @@ mes:
       stored: Stored
       scrapped: Scrapped
       merged: Merged (terminated)
+      banked: In bank
+      issued: Issued
     wafer_status:
       waiting: Waiting
       processing: Processing
       rework: Rework
       completed: Completed
       scrapped: Scrapped
+      converted: Converted
     track_unit_kind:
       wafer: Wafer
       strip: Strip

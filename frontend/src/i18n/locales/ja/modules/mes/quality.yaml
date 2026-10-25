@@ -17,6 +17,8 @@ mes:
       oos_action: 規格外処置
       oos_reason: 規格外ホールド理由
       description: 説明
+      ooc_action: 管理外れ時の処置
+      ooc_e10_state: 管理外れ時の設備状態
     dc_plan:
       code: コード
       name: 名称
@@ -30,6 +32,10 @@ mes:
       target: 目標値
       lsl: 規格下限
       usl: 規格上限
+      lcl: 管理下限
+      cl: 中心線
+      ucl: 管理上限
+      ooc_rules: 判定ルール
     sampling_rule:
       code: コード
       name: 名称
@@ -69,9 +75,17 @@ mes:
       is_oos: 規格外
       oos_action: 規格外処置
       username: ユーザー
+      is_ooc: 管理外れ
+      ooc_rules: 該当ルール
   help:
     sampling_rule:
       fixed_slots: カンマ区切りのスロット番号（例：1,13,25）
+    measurement_item:
+      ooc_action: 管理外れ時に警告・ロット保留・設備保留
+      ooc_e10_state: 設備保留時に切り替える E10 状態
+    dc_plan_item:
+      cl: 空欄の場合は管理限界の中点
+      ooc_rules: Nelson ルール番号（カンマ区切り）例：1,2,5
   enum:
     child_id_mode:
       suffix: 親番号 + 接尾辞

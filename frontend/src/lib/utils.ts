@@ -75,3 +75,12 @@ export function getDisplayNameInitials(displayName: string): string {
   const last = parts[parts.length - 1]?.[0] ?? ''
   return (first + last).toUpperCase()
 }
+
+/** 把 Blob 作为文件下载。 */
+export function saveBlob(blob: Blob, name: string) {
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = name
+  a.click()
+  URL.revokeObjectURL(a.href)
+}

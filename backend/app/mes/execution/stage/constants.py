@@ -19,3 +19,4 @@ NEXT_STAGE = {
     "tracked_out": "move_out",
 }
 OOS_RANK = {"warn": 1, "rework": 2, "auto_hold": 3, "block": 4}
+OOC_RANK = {"warn": 1, "auto_hold": 2, "hold_equipment": 3}

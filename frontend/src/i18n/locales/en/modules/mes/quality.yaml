@@ -17,6 +17,8 @@ mes:
       oos_action: OOS action
       oos_reason: OOS hold reason
       description: Description
+      ooc_action: OOC action
+      ooc_e10_state: Equipment state on OOC
     dc_plan:
       code: Code
       name: Name
@@ -30,6 +32,10 @@ mes:
       target: Target
       lsl: LSL
       usl: USL
+      lcl: LCL
+      cl: CL
+      ucl: UCL
+      ooc_rules: OOC rules
     sampling_rule:
       code: Code
       name: Name
@@ -69,9 +75,17 @@ mes:
       is_oos: OOS
       oos_action: OOS action
       username: User
+      is_ooc: OOC
+      ooc_rules: Rules hit
   help:
     sampling_rule:
       fixed_slots: Comma separated slot numbers, e.g. 1,13,25
+    measurement_item:
+      ooc_action: 'On OOC: warn, hold the lot, or hold the lot and the equipment'
+      ooc_e10_state: E10 state the equipment switches to
+    dc_plan_item:
+      cl: Blank uses the midpoint of UCL and LCL
+      ooc_rules: Nelson rule numbers, comma-separated, e.g. 1,2,5
   enum:
     child_id_mode:
       suffix: Parent no. + suffix

@@ -76,4 +76,23 @@ MENUS: dict[str, MenuItem] = {
         "mes-page:oee-report",
         "mes.exec:read",
     ),
+    # 单元转换（晶圆 → 芯片 / 条带 / 单颗）与芯片级晶圆图导入 / 查看
+    "mes-unit-ops": (
+        "/mes/unit-ops",
+        "Grid3x3",
+        "mes-page:unit-ops",
+        "mes.exec:read",
+    ),
+    "mes-bank-ops": (
+        "/mes/bank-ops",
+        "Vault",
+        "mes-page:bank-ops",
+        "mes.exec:read",
+    ),
+    "mes-spc-chart": (
+        "/mes/spc-chart",
+        "LineChart",
+        "mes-page:spc-chart",
+        "mes.exec:read",
+    ),
 }

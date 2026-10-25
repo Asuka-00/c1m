@@ -30,6 +30,12 @@ export const MES_PERM = {
   equipmentE10: 'mes.equipment:e10',
   /** 设备 PM */
   equipmentPm: 'mes.equipment:pm',
+  /** Bank 入库 / 领用 */
+  execBank: 'mes.exec:bank',
+  /** NCR 登记 / 提案 / 取消 */
+  ncrWrite: 'mes.ncr:write',
+  /** NCR 处置审批 */
+  ncrApprove: 'mes.ncr:approve',
 } as const
 
 export type MesPerm = (typeof MES_PERM)[keyof typeof MES_PERM] | (string & {})

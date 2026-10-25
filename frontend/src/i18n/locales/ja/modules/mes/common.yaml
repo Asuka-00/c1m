@@ -24,6 +24,7 @@ mes:
   tableView: テーブル表示
   export: エクスポート
   import: インポート
+  importTemplate: テンプレート
   new: 新規
   empty: '{{entity}}はまだありません。'
   deleteTitle: '{{entity}}を削除しますか？'
@@ -53,6 +54,7 @@ mes:
       lot_status: 現在のロット状態ではこの操作はできません
     withLine: '{{line}} 行目：{{text}}'
   exportHint: 現在の検索・フィルター条件で出力
+  importTemplateHint: 列の説明付きの空のインポートテンプレートをダウンロード
   fieldIs: '{{field}}：{{value}}'
   treeToggle: 展開 / 折りたたみ
   tree:
@@ -72,6 +74,7 @@ mes:
     product: 製品・資材
     quality: 品質
     wh: 倉庫
+    ncr: 不適合処置
   entity:
     dict_type: データ辞書
     dict_item: 辞書項目
@@ -156,6 +159,10 @@ mes:
       qtime_rework: Q-Time リワーク
       merge: 統合
       e10: E10 状態変更
+      convert: ユニット変換
+      bank_in: バンク入庫
+      bank_out: バンク払出
+      disposition: NCR 処置
     seq_reset:
       never: リセットしない
       daily: 毎日

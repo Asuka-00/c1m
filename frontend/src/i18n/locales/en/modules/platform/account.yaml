@@ -182,6 +182,10 @@ permName:
   mes_lot__start: Lot & wafer rules·Start lots
   mes_wh__confirm: Warehouse·Confirm receipts
   notify__config: Configure subscriptions
+  mes_ncr__read: NCR / MRB · View
+  mes_ncr__write: NCR / MRB · Edit
+  mes_exec__bank: Execution · Bank in / issue
+  mes_ncr__approve: NCR / MRB · Approve dispositions
 roleName:
   admin: Administrator
   user: User
@@ -241,6 +245,10 @@ permDesc:
   mes_lot__start: 'Allows: Lot & wafer rules·Start lots'
   mes_wh__confirm: 'Allows: Warehouse·Confirm receipts'
   notify__config: 'Allows: Configure subscriptions'
+  mes_ncr__read: 'Allows: NCR / MRB · View'
+  mes_ncr__write: 'Allows: NCR / MRB · Edit'
+  mes_exec__bank: 'Allows: Execution · Bank in / issue'
+  mes_ncr__approve: 'Allows: NCR / MRB · Approve dispositions'
 roleDesc:
   platform_admin: Platform administrator with all permissions
   platform_user: Regular user without platform permissions

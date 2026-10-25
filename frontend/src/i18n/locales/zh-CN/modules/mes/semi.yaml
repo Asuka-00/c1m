@@ -1,0 +1,160 @@
+mes:
+  entity:
+    bank: Bank
+    bin_code: Bin 代码
+    die_map: 晶圆图
+    unit_genealogy: 单元谱系
+    ncr: 不合格品处置单
+    ncr_approval: 审批记录
+  field:
+    bank:
+      code: 编码
+      name: 名称
+      bank_kind: 类型
+      warehouse: 仓库
+      is_active: 启用
+      description: 描述
+    bin_code:
+      code: Bin
+      name: 名称
+      is_good: 良品
+      color: 颜色
+      is_active: 启用
+      description: 描述
+    die_map:
+      unit: 晶圆
+      lot: 批次
+      route_step: 流程步骤
+      test_kind: 类型
+      rows: 行数
+      cols: 列数
+      dies: 芯片
+      gross: 总芯片数
+      good: 良品数
+      yield_pct: 良率 %
+      is_current: 当前
+      source: 来源
+      username: 用户
+      at: 时间
+    unit_genealogy:
+      parent_unit: 来源单元
+      child_unit: 产出单元
+      lot: 批次
+      relation: 关系
+      qty: 数量
+      dies: 芯片坐标
+      route_step: 流程步骤
+      username: 用户
+      at: 时间
+    ncr:
+      code: NCR 编号
+      lot: 批次
+      title: 标题
+      severity: 严重度
+      defect_code: 缺陷代码
+      description: 描述
+      qty: 受影响数量
+      units: 受影响单元
+      hold: Hold
+      ncr_status: 状态
+      disposition: 处置
+      disposition_comment: 处置说明
+      scrap_reason: 报废原因
+      required_levels: 所需审批级数
+      approved_levels: 已审批级数
+      raised_by: 登记人
+      raised_at: 登记时间
+      proposed_by: 提案人
+      proposed_at: 提案时间
+      closed_by: 关闭人
+      closed_at: 关闭时间
+      result: 执行结果
+    ncr_approval:
+      ncr: NCR
+      level: 级别
+      decision: 结论
+      comment: 备注
+      username: 审批人
+      at: 时间
+  enum:
+    bank_kind:
+      wafer: 晶圆库
+      die: 芯片库
+      finished: 成品库
+    ooc_action:
+      warn: 预警
+      auto_hold: Hold 批次
+      hold_equipment: Hold 批次 + 设备
+    unit_relation:
+      convert: 转换
+      assemble: 组装
+    die_map_kind:
+      cp: CP 测试
+      aoi: AOI 检测
+      ink: 合并 / 打点
+    ncr_status:
+      open: 待提案
+      reviewing: 审批中
+      closed: 已关闭
+      cancelled: 已取消
+    ncr_disposition:
+      release: 放行
+      use_as_is: 特采
+      rework: 返工
+      scrap: 报废
+      downgrade: 降级
+      rtv: 退供应商
+    ncr_decision:
+      approve: 批准
+      reject: 驳回
+  semi:
+    unitHint: 导入晶圆图并把整批单元转换为下一级单元。
+    units: '在制单元（{{count}}）'
+    viewMap: 查看晶圆图
+    goodOfGross: '良品 {{good}} / 共 {{gross}} 颗'
+    importMap: 导入晶圆图
+    csv: 晶圆图数据（晶圆编号,x,y,bin）
+    csvFile: 选择文件
+    csvHint: 每行一颗芯片，例如 W01,0,0,1
+    csvParsed: '已解析 {{maps}} 片晶圆、{{dies}} 颗芯片'
+    csvBad: '格式错误的行：{{rows}}'
+    import: 导入
+    imported: '已导入 {{count}} 张晶圆图'
+    convert: 单元转换
+    toKind: 目标单元类型
+    mode: 转换方式
+    modes:
+      map: 按晶圆图取良品芯片
+      split: 每个来源产出 N 个（1 → N）
+      assemble: 每 N 个来源合成 1 个（N → 1）
+    ratio:
+      split: 每个来源产出数
+      assemble: 每个产出的来源数
+    previewResult: '将产出 {{count}} 个单元，剔除坏品芯片 {{bad}} 颗'
+    converted: '已转换，产出 {{count}} 个单元'
+    bankHint: 完工批次入库，按工单从 Bank 领用开出新批次。
+    bankIn: 入 Bank
+    completedLot: 已完工批次
+    bankedIn: '批次 {{lot}} 已入 Bank'
+    issue: 领用开批
+    picked: '已选 {{count}} 个在库批次'
+    issued: '已开出批次 {{lot}}，数量 {{qty}}'
+    inBank: '在库批次（{{count}}）'
+    bankEmpty: Bank 中暂无批次。
+    spcHint: 查看量测项的控制图与判异点。
+    spcEmpty: 暂无量测数据。
+    rules: '判异规则：{{rules}}'
+    noRules: 未启用判异规则
+    mean: 均值
+    raiseNcr: 登记 NCR
+    holdLot: 同时 Hold 批次
+    ncrRaised: '已登记 {{code}}'
+    propose: 提交处置方案
+    proposed: 已提交，等待审批
+    cancelNcr: 取消 NCR
+    levels: '审批 {{done}} / {{need}} 级'
+    ncrStatus:
+      open: 已驳回，待重新提案
+      reviewing: 已批准，等待下一级审批
+      closed: 已批准并执行处置
+      cancelled: NCR 已取消

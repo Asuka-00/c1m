@@ -17,7 +17,14 @@ from app.mes.common.rows import _ins
 from app.mes.lot.state import locked
 
 Row = dict[str, Any]
-TERMINAL = ("completed", "stored", "scrapped", "merged")  # 与 state.TERMINAL 一致
+TERMINAL = (  # 与 state.TERMINAL 一致
+    "completed",
+    "stored",
+    "scrapped",
+    "merged",
+    "banked",
+    "issued",
+)
 
 
 def history(
@@ -88,10 +95,14 @@ def tracking_level(s: Session, tid: uuid.UUID, product: Row | None) -> str:
 
 
 def units(s: Session, tid: uuid.UUID, lot_id: Any, active: bool = True) -> list[Row]:
-    """批次的单元（active=True 时仅返回未报废 / 未移出的）。"""
+    """批次的单元（active=True 时仅返回未报废 / 未被转换消耗的）。"""
     rows = find(s, tid, "wafer", order="code", lot_id=lot_id)
     rows.sort(key=lambda u: (u["slot"] or 0, u["code"]))
-    return [u for u in rows if not active or u["wafer_status"] not in ("scrapped",)]
+    return [
+        u
+        for u in rows
+        if not active or u["wafer_status"] not in ("scrapped", "converted")
+    ]
 
 
 # ---------------- lot start hook ----------------

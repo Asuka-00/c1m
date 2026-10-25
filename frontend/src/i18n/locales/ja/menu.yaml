@@ -131,3 +131,10 @@ menu:
   p-audit: テナント横断監査ログ
   p-login-log: ログイン履歴
   p-ops-log: プラットフォーム操作ログ
+  mes-unit-ops: ユニット変換・ウェーハマップ
+  mes-ncr: 不適合処置（NCR）
+  mes-die_map: ウェーハマップ照会
+  mes-bank-ops: ウェーハ / ダイバンク
+  mes-bank: バンクマスタ
+  mes-spc-chart: SPC 管理図
+  mes-bin_code: Bin コード

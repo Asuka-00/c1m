@@ -461,6 +461,14 @@ export interface WaferCell {
   code: string
   status: string
   rework_count?: number
+  /** 当前芯片级晶圆图摘要 */
+  die_map?: {
+    id: string
+    test_kind: string
+    gross: number
+    good: number
+    yield_pct: number
+  } | null
 }
 /** 晶圆图：按槽位排列的晶圆。 */
 export interface WaferMap {

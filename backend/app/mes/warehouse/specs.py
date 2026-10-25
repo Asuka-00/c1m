@@ -1,4 +1,4 @@
-"""仓储实体规格：仓库、库位、完工入库单及其明细。"""
+"""仓储实体规格：Bank、仓库、库位、完工入库单及其明细。"""
 
 from app.core.spec.engine import ENUMS, Entity, F, register
 
@@ -38,7 +38,37 @@ ENUMS.update(
             ("confirmed", "Confirmed"),
             ("cancelled", "Cancelled"),
         ],
+        "bank_kind": [
+            ("wafer", "Wafer bank"),
+            ("die", "Die bank"),
+            ("finished", "Finished goods bank"),
+        ],
     }
+)
+
+
+register(
+    # 前后道交接的在库点：前道完工批次入库，封测工单从这里领用开批
+    Entity(
+        "bank",
+        "wh",
+        "Bank",
+        [
+            F(
+                "bank_kind",
+                "enum",
+                "Bank kind",
+                enum="bank_kind",
+                required=True,
+                default="wafer",
+            ),
+            F("warehouse", "ref", "Warehouse", ref="warehouse"),
+            F("is_active", "bool", default=True),
+        ],
+        phase=7,
+        icon="Vault",
+        order=0,
+    ),
 )
 
 

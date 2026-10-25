@@ -92,6 +92,8 @@ mes:
       started_at: 投入日時
       started_by: 投入者
       description: 説明
+      bank: バンク
+      banked_at: バンク入庫日時
     wafer:
       code: ウェーハ ID
       lot: ロット
@@ -184,12 +186,15 @@ mes:
       stored: 入庫済
       scrapped: 廃棄
       merged: 統合済（終了）
+      banked: バンク在庫
+      issued: 払出済
     wafer_status:
       waiting: 待機
       processing: 処理中
       rework: リワーク
       completed: 完了
       scrapped: 廃棄
+      converted: 変換済
     track_unit_kind:
       wafer: ウェーハ
       strip: ストリップ

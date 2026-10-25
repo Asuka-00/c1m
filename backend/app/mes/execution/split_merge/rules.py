@@ -18,6 +18,7 @@ from app.mes.common.rows import _ins
 from app.mes.execution.checks import service as ck
 from app.mes.execution.stage.context import build_ctx
 from app.mes.execution.stage.stages import LOT
+from app.mes.lot.service import TERMINAL
 
 Row = dict[str, Any]
 #: 拆 / 合批规则检查的说明（前端 mes.checkMsg.split_merge_rule.*；状态参数为 lot_status 枚举值）
@@ -113,7 +114,7 @@ def _carrier_busy(s: Session, tid: uuid.UUID, carrier_id: Any, but: Any = None) 
     q = sa.select(t.c.id).where(
         t.c.tenant_id == tid,
         t.c.carrier_id == carrier_id,
-        t.c.lot_status.notin_(["completed", "stored", "scrapped", "merged"]),
+        t.c.lot_status.notin_(TERMINAL),
     )
     if but is not None:
         q = q.where(t.c.id != but)

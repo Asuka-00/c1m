@@ -12,6 +12,7 @@ from app.core.spec.base import conn
 from app.core.spec.engine import TABLES
 from app.core.spec.errors import coded
 from app.mes.common.query import find, jsonable, one
+from app.mes.execution.units.die_map import current_maps
 from app.mes.warehouse.service import shipments_of
 
 Row = dict[str, Any]
@@ -145,6 +146,57 @@ def _lot_trace(s: Session, tid: uuid.UUID, lot: Row) -> Row:
     }
 
 
+UNIT_TRACE_MAX = 500
+
+
+def _unit_walk(s: Session, tid: uuid.UUID, start: Any, up: bool) -> Row:
+    """沿单元谱系（晶圆 → 芯片 → 封装）逐层追溯，最多返回 ``UNIT_TRACE_MAX`` 个单元。"""
+    g, w = TABLES["unit_genealogy"], TABLES["wafer"]
+    a, b = (
+        (g.c.child_unit_id, g.c.parent_unit_id)
+        if up
+        else (
+            g.c.parent_unit_id,
+            g.c.child_unit_id,
+        )
+    )
+    out: list[Row] = []
+    seen, todo, total = {start}, [start], 0
+    for depth in range(1, 11):
+        if not todo:
+            break
+        rows = (
+            conn(s)
+            .execute(
+                sa.select(b.label("o"), g.c.relation, g.c.at, w.c.code, w.c.unit_kind)
+                .join(w, w.c.id == b)
+                .where(g.c.tenant_id == tid, a.in_(todo))
+                .order_by(w.c.code)
+            )
+            .mappings()
+            .all()
+        )
+        todo = []
+        for r in rows:
+            if r["o"] in seen:
+                continue
+            seen.add(r["o"])
+            todo.append(r["o"])
+            total += 1
+            if len(out) < UNIT_TRACE_MAX:
+                out.append(
+                    {
+                        "id": str(r["o"]),
+                        "code": r["code"],
+                        "unit_kind": r["unit_kind"],
+                        "relation": r["relation"],
+                        "level": depth,
+                        "at": r["at"],
+                    }
+                )
+    return {"units": out, "total": total}
+
+
 def _lots_by(s: Session, tid: uuid.UUID, where: Any) -> list[Row]:
     h = TABLES["lot_history"]
     rows = (
@@ -218,6 +270,12 @@ def trace(s: Session, tid: uuid.UUID, kind: str, code: str) -> Row:
         out["target"]["lot"] = lot["code"]
         out["target"]["lot_id"] = str(lot["id"])
         out |= _lot_trace(s, tid, lot)
+        if kind == "wafer":
+            out["target"]["unit_kind"] = tgt["unit_kind"]
+            out["units"] = {
+                "backward": _unit_walk(s, tid, tgt["id"], True),
+                "forward": _unit_walk(s, tid, tgt["id"], False),
+            }
     elif kind == "equipment":
         out["lots"] = _lots_by(
             s, tid, sa.and_(h.c.equipment_id == tgt["id"], h.c.action == "track_in")
@@ -357,6 +415,7 @@ def wafer_map(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
     ws = find(s, tid, "wafer", lot_id=lot_id)
     cap = max([cap, *(w["slot"] or 0 for w in ws)])
     by = {w["slot"]: w for w in ws if w["slot"]}
+    maps = current_maps(s, tid, [w["id"] for w in ws], with_dies=False)
     slots = []
     for i in range(1, cap + 1):
         w = by.get(i)
@@ -369,6 +428,7 @@ def wafer_map(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
                     "code": w["code"],
                     "status": w["wafer_status"],
                     "rework_count": w["rework_count"] or 0,
+                    "die_map": _map_brief(maps.get(w["id"])),
                 },
             }
         )
@@ -387,3 +447,13 @@ def wafer_map(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
         }
     )
     return out
+
+
+def _map_brief(m: Row | None) -> Row | None:
+    return m and {
+        "id": str(m["id"]),
+        "test_kind": m["test_kind"],
+        "gross": m["gross"],
+        "good": m["good"],
+        "yield_pct": m["yield_pct"],
+    }

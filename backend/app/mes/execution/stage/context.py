@@ -93,7 +93,12 @@ def context(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
         if lot["lot_status"] in TERMINAL
         else NEXT_STAGE.get(lot["lot_status"]),
     }
-    us = units(s, tid, lot["id"], active=False)
+    # 已转换消耗的来源单元（如切割前的晶圆）只在单元谱系 / 追溯中查看
+    us = [
+        u
+        for u in units(s, tid, lot["id"], active=False)
+        if u["wafer_status"] != "converted"
+    ]
     out["units"] = [
         {
             "id": str(u["id"]),

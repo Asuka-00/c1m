@@ -24,6 +24,7 @@ mes:
   tableView: Table view
   export: Export
   import: Import
+  importTemplate: Template
   new: New
   empty: No {{entity}} yet.
   deleteTitle: Delete {{entity}}?
@@ -53,6 +54,7 @@ mes:
       lot_status: The lot status does not allow this action
     withLine: 'Line {{line}}: {{text}}'
   exportHint: Export rows matching the current search and filters
+  importTemplateHint: Download a blank import template with column notes
   fieldIs: '{{field}}: {{value}}'
   treeToggle: Expand / collapse
   tree:
@@ -72,6 +74,7 @@ mes:
     product: Product & material
     quality: Quality
     wh: Warehouse
+    ncr: NCR / MRB
   entity:
     dict_type: Dictionary
     dict_item: Dictionary item
@@ -156,6 +159,10 @@ mes:
       qtime_rework: Q-Time rework
       merge: Merge
       e10: E10 state change
+      convert: Unit conversion
+      bank_in: Bank in
+      bank_out: Bank issue
+      disposition: NCR disposition
     seq_reset:
       never: Never
       daily: Daily

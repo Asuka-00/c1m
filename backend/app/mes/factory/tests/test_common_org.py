@@ -1,13 +1,17 @@
 """MES phase 1: generic CRUD contract, org tree, dictionary, code rules,
 custom attributes, audit log, xlsx import/export, RLS + permissions."""
 
+import io
 import uuid
 
+import pytest
 from fastapi.testclient import TestClient
+from openpyxl import load_workbook
 from sqlalchemy import text
 from sqlmodel import Session
 
 from app.core.db import engine
+from app.core.spec.excel import TEMPLATE_DIR
 from app.core.tenant import set_tenant
 from app.platform.users import service as crud
 from app.platform.users.schemas import UserCreate
@@ -18,6 +22,7 @@ from app.testing.utils import (
     random_lower_string,
     username_for,
 )
+from scripts.export_import_templates import stale
 
 
 def _org(m: Mes) -> tuple[dict, dict]:  # type: ignore[type-arg]
@@ -349,6 +354,35 @@ def test_xlsx_roundtrip(client: TestClient, db: Session) -> None:
     assert m.list("area")["count"] == 2  # nothing partial
     assert m.list("audit_log", action="import")["count"] == 1
     _ = site
+
+
+def test_import_template(client: TestClient, db: Session) -> None:
+    m = Mes(client, db)
+    _org(m)
+    r = client.get(m.url("area", "import-template"), headers=m.h)
+    assert (
+        r.status_code == 200
+        and "area-template.xlsx" in r.headers["content-disposition"]
+    )
+    sheets = load_workbook(io.BytesIO(r.content)).worksheets
+    assert [ws.title for ws in sheets] == ["area", "README"]
+    header = [c.value for c in sheets[0][1]]
+    row = dict.fromkeys(header) | {"code": "ETCH", "name": "Etch", "site": "F1"}
+    assert m.import_rows("area", [header, [row[h] for h in header]]) == {
+        "created": 1,
+        "updated": 0,
+    }
+    csv = client.get(f"{API}/exec/die-maps/template", headers=m.h)
+    assert csv.status_code == 200 and csv.text.startswith("wafer,x,y,bin")
+    assert (
+        client.get(m.url("audit_log", "import-template"), headers=m.h).status_code
+        == 405
+    )
+
+
+@pytest.mark.skipif(not TEMPLATE_DIR.exists(), reason="templates not checked out")
+def test_import_templates_up_to_date() -> None:
+    assert stale() == []
 
 
 def test_isolation_and_permissions(client: TestClient, db: Session) -> None:

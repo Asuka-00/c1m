@@ -17,6 +17,8 @@ mes:
       oos_action: 超规动作
       oos_reason: 超规 Hold 原因
       description: 描述
+      ooc_action: 判异动作
+      ooc_e10_state: 判异时设备状态
     dc_plan:
       code: 编码
       name: 名称
@@ -30,6 +32,10 @@ mes:
       target: 目标值
       lsl: 规格下限
       usl: 规格上限
+      lcl: 控制下限
+      cl: 中心线
+      ucl: 控制上限
+      ooc_rules: 判异规则
     sampling_rule:
       code: 编码
       name: 名称
@@ -69,9 +75,17 @@ mes:
       is_oos: 超规
       oos_action: 超规动作
       username: 用户
+      is_ooc: 判异
+      ooc_rules: 触发规则
   help:
     sampling_rule:
       fixed_slots: 逗号分隔的槽位号，例如 1,13,25
+    measurement_item:
+      ooc_action: 判异后预警、Hold 批次或同时 Hold 设备
+      ooc_e10_state: Hold 设备时切换到的 E10 状态
+    dc_plan_item:
+      cl: 留空时取上下控制限的中点
+      ooc_rules: Nelson 规则编号，逗号分隔，例如 1,2,5
   enum:
     child_id_mode:
       suffix: 母批号 + 后缀

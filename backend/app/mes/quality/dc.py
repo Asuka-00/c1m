@@ -130,6 +130,11 @@ def sampling(s: Session, tid: uuid.UUID, lot: Row, step: Row, us: list[Row]) -> 
                     "target": it["target"],
                     "sites": it["sites"],
                     "oos_action": mi["oos_action"],
+                    "lcl": it["lcl"],
+                    "cl": it["cl"],
+                    "ucl": it["ucl"],
+                    "ooc_rules": it["ooc_rules"],
+                    "ooc_action": mi["ooc_action"] or "warn",
                 }
             )
     return {

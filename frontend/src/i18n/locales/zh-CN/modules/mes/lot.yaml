@@ -92,6 +92,8 @@ mes:
       started_at: 投产时间
       started_by: 投产人
       description: 描述
+      bank: Bank
+      banked_at: 入 Bank 时间
     wafer:
       code: 晶圆号
       lot: 批次
@@ -184,12 +186,15 @@ mes:
       stored: 已入库
       scrapped: 已报废
       merged: 已合批（终止）
+      banked: 在库（Bank）
+      issued: 已领用
     wafer_status:
       waiting: 等待
       processing: 加工中
       rework: 返工
       completed: 已完成
       scrapped: 已报废
+      converted: 已转换
     track_unit_kind:
       wafer: 晶圆
       strip: 条

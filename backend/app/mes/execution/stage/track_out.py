@@ -13,18 +13,18 @@ from app.core.spec.engine import ENTITIES
 from app.core.spec.errors import FieldError, fe, http_422
 from app.mes.common.query import find, one
 from app.mes.common.rows import _ins, _upd
-from app.mes.equipment.service import e10_apply
+from app.mes.equipment.service import e10_apply, e10_force
 from app.mes.execution.checks import service as ck
-from app.mes.execution.checks.types import M_OOS, bom_over_msg, over_bom
-from app.mes.execution.events import OOS, notify_lot
+from app.mes.execution.checks.types import M_OOC, M_OOS, bom_over_msg, over_bom
+from app.mes.execution.events import OOC, OOS, notify_lot
 from app.mes.execution.hold.manage import default_reason, hold_lot
 from app.mes.execution.stage.common import _brief, _guard, _ov, _result
-from app.mes.execution.stage.constants import OOS_RANK
+from app.mes.execution.stage.constants import OOC_RANK, OOS_RANK
 from app.mes.execution.stage.consumption import _consume
 from app.mes.execution.stage.context import build_ctx
 from app.mes.execution.stage.recipe_run import close_run
 from app.mes.lot.service import history, lock_lot, units
-from app.mes.quality.service import out_of_spec
+from app.mes.quality.service import ooc_check, out_of_spec
 
 Row = dict[str, Any]
 LOT = ENTITIES["lot"]
@@ -175,6 +175,7 @@ def track_out(
     if errs:
         raise http_422(errs)
     ctx.dc = dc
+    ooc = _ooc(s, tid, ctx, items, dc, smp.get("dc_plan_id"))
     # 内置管控开关（卡控规则 severity = off 时关闭，见 checks.enabled）
     oos_on = ck.enabled(ctx, "oos")
     if not oos_on:
@@ -218,6 +219,24 @@ def track_out(
                 data={"action": worst, "values": len(oos)},
             )
         )
+    ooc_worst = max(
+        (o["action"] for o in ooc), key=lambda a: OOC_RANK.get(a, 0), default=None
+    )
+    ooc_msg = "; ".join(
+        f"{o['code']}={o['mean']:g} (R{','.join(map(str, o['rules']))})"
+        for o in ooc[:6]
+    )
+    if ooc:
+        # 判异不阻断出站（过程已经发生），按量测项配置提示 / Hold
+        extra.append(
+            ck.result(
+                "ooc",
+                "warn",
+                M_OOC("values", action=ooc_worst, values=ooc_msg),
+                severity="warn",
+                data={"action": ooc_worst, "items": len(ooc)},
+            )
+        )
     over = over_bom(ctx) if ck.enabled(ctx, "bom_over") else []
     if over:
         extra.append(
@@ -252,6 +271,8 @@ def track_out(
             value=d["value"],
             is_oos=d["is_oos"],
             oos_action=d["oos_action"] if d["is_oos"] and oos_on else None,
+            is_ooc=bool(d.get("ooc_rules")),
+            ooc_rules=d.get("ooc_rules"),
             username=email,
         )
     consumed = _consume(s, tid, ctx.material_needs, lot, ctx.step, user)
@@ -377,6 +398,8 @@ def track_out(
             "dc": len(dc),
             "oos": len(oos),
             "oos_action": worst,
+            "ooc": len(ooc),
+            "ooc_action": ooc_worst,
             "scrap": n_scrap,
             "consumed": consumed,
             "bom_over": over,
@@ -439,6 +462,11 @@ def track_out(
                 },
             },
         )
+    ooc_e10 = (
+        _ooc_actions(s, tid, lot, ctx, ooc, ooc_worst, ooc_msg, user, eq)
+        if ooc and status != "scrapped"
+        else None
+    )
     if status == "scrapped":
         history(
             s,
@@ -467,6 +495,114 @@ def track_out(
         results,
         e10=e10,
         oos_action=worst,
+        ooc_action=ooc_worst,
+        ooc_e10=ooc_e10,
         consumed=consumed,
         tools=tools,
+    )
+
+
+def _ooc(
+    s: Session,
+    tid: uuid.UUID,
+    ctx: ck.Ctx,
+    items: dict[str, Row],
+    dc: list[Row],
+    dc_plan_id: Any,
+) -> list[Row]:
+    """按量测项把本次 DC 值作为一个子组判异，命中时在对应 DC 记录上标记触发的规则。
+
+    Returns:
+        ``[{code, mean, rules, action, measurement_item_id}]``；管控关闭或无控制限时为空。
+    """
+    if not dc or not dc_plan_id or not ck.enabled(ctx, "ooc"):
+        return []
+    by: dict[str, list[Row]] = {}
+    for d in dc:
+        by.setdefault(str(d["measurement_item_id"]), []).append(d)
+    out = []
+    for mid, ds in by.items():
+        it = items[mid]
+        mean = sum(d["value"] for d in ds) / len(ds)
+        rules = ooc_check(s, tid, it, dc_plan_id, mean)
+        if not rules:
+            continue
+        for d in ds:
+            d["ooc_rules"] = ",".join(map(str, rules))
+        out.append(
+            {
+                "measurement_item_id": mid,
+                "code": it["code"],
+                "mean": round(mean, 6),
+                "rules": rules,
+                "action": it.get("ooc_action") or "warn",
+            }
+        )
+    return out
+
+
+def _ooc_actions(
+    s: Session,
+    tid: uuid.UUID,
+    lot: Row,
+    ctx: ck.Ctx,
+    ooc: list[Row],
+    worst: str | None,
+    msg: str,
+    user: Any,
+    eq: Row | None,
+) -> Row | None:
+    """判异处置：写历史与通知；``auto_hold`` Hold 批次，``hold_equipment`` 另把机台切到配置的 E10 状态。
+
+    Returns:
+        机台状态切换结果（未切换时为 None）。
+    """
+    history(
+        s,
+        tid,
+        lot,
+        "ooc",
+        user,
+        step=ctx.step,
+        details={
+            "action": worst,
+            "items": [
+                {"item": o["code"], "mean": o["mean"], "rules": o["rules"]} for o in ooc
+            ],
+        },
+    )
+    notify_lot(
+        s,
+        tid,
+        OOC,
+        lot,
+        f"OOC on {lot['code']} step {ctx.step['seq']}: {msg} ({worst})",
+        {"step": ctx.step["seq"], "items": msg, "action": worst or ""},
+    )
+    if worst not in ("auto_hold", "hold_equipment"):
+        return None
+    hit = next(o for o in ooc if o["action"] == worst)
+    mi = one(s, tid, "measurement_item", uuid.UUID(hit["measurement_item_id"]))
+    reason = one(s, tid, "reason_code", mi and mi["oos_reason_id"]) or default_reason(
+        s, tid, "hold"
+    )
+    hold_lot(
+        s,
+        tid,
+        lot,
+        user,
+        reason,
+        hold_type="auto",
+        source="ooc",
+        note={"key": "ooc", "params": {"items": msg}},
+    )
+    if worst != "hold_equipment" or not eq or not mi or not mi["ooc_e10_state_id"]:
+        return None
+    return e10_force(
+        s,
+        tid,
+        eq,
+        mi["ooc_e10_state_id"],
+        user,
+        {"key": "ooc", "params": {"lot": lot["code"], "items": msg}},
     )

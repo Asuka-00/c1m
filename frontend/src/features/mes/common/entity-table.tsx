@@ -6,6 +6,7 @@ import { fmtDateTime, t } from '@/i18n'
 import {
   CopyPlus,
   Download,
+  FileDown,
   ListTree,
   MoreHorizontal,
   Plus,
@@ -295,6 +296,16 @@ export function EntityTable({
             className='hidden'
             onChange={(ev) => doImport(ev.target.files?.[0])}
           />
+          <Button
+            variant='outline'
+            size='sm'
+            title={t('mes.importTemplateHint')}
+            onClick={() => mesApi.importTemplate(e.code).catch(onErr)}
+            data-testid='crud-import-template'
+          >
+            <FileDown />
+            {t('mes.importTemplate')}
+          </Button>
           <Button
             variant='outline'
             size='sm'

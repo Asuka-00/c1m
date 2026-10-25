@@ -1,4 +1,4 @@
-"""执行实体规格：检查规则 / 方案 / 绑定 / 日志。"""
+"""执行实体规格：检查规则 / 方案 / 绑定 / 日志、单元谱系、晶圆图、NCR。"""
 
 from app.core.spec.engine import ENUMS, FIELD_LABELS, Entity, F, register
 
@@ -13,6 +13,7 @@ TRIGGERS = [
     ("adjust", "Scrap / bonus"),
     ("sort", "Wafer sort"),
     ("priority", "Priority change"),
+    ("convert", "Unit conversion"),
 ]
 # built-in check types (app.mes.checks implements them; plugins may add more)
 CHECK_TYPES = [
@@ -56,6 +57,7 @@ CHECK_TYPES = [
     ("wo_status", "Work order status"),
     ("dc_complete", "DC completeness"),
     ("oos", "Out of spec"),
+    ("ooc", "Out of control (SPC)"),
     ("sampling", "Sampling decision"),
     ("split_merge_rule", "Split / merge rule"),
     ("recipe_match", "Recipe ↔ equipment mapping"),
@@ -152,10 +154,44 @@ ENUMS.update(
             ("carrier_change", "Carrier change"),
             ("sort", "Wafer sort"),
             ("priority", "Priority change"),
+            ("convert", "Unit conversion"),
+            ("die_map", "Die map import"),
+            ("bank_in", "Bank in"),
+            ("bank_out", "Bank issue"),
+            ("ooc", "Out of control"),
+            ("ncr", "NCR disposition"),
         ],
         "genealogy_relation": [
             ("split", "Split"),
             ("merge", "Merge"),
+            ("bank_issue", "Bank issue"),
+        ],
+        "unit_relation": [
+            ("convert", "Convert (1 → N)"),
+            ("assemble", "Assemble (N → 1)"),
+        ],
+        "die_map_kind": [
+            ("cp", "Chip probing (CP)"),
+            ("aoi", "Inspection (AOI)"),
+            ("ink", "Ink / merged map"),
+        ],
+        "ncr_status": [
+            ("open", "Open"),
+            ("reviewing", "Under review"),
+            ("closed", "Closed"),
+            ("cancelled", "Cancelled"),
+        ],
+        "ncr_disposition": [
+            ("release", "Release"),
+            ("use_as_is", "Use as is (concession)"),
+            ("rework", "Rework"),
+            ("scrap", "Scrap"),
+            ("downgrade", "Downgrade"),
+            ("rtv", "Return to vendor"),
+        ],
+        "ncr_decision": [
+            ("approve", "Approve"),
+            ("reject", "Reject"),
         ],
     }
 )
@@ -487,5 +523,180 @@ register(
         sort_default="expires_on",
         label_field="username",
         unique=[("username", "operation", "equipment_type")],
+    ),
+)
+
+
+register(
+    # 单元级谱系：晶圆 → 芯片 → 条带 → 单颗的逐级转换（批次级谱系见 lot_genealogy）
+    Entity(
+        "unit_genealogy",
+        "exec",
+        "Unit genealogy",
+        [
+            F(
+                "parent_unit",
+                "ref",
+                "Source unit",
+                required=True,
+                ref="wafer",
+                cascade=True,
+            ),
+            F(
+                "child_unit",
+                "ref",
+                "Output unit",
+                required=True,
+                ref="wafer",
+                cascade=True,
+            ),
+            F("lot", "ref", "Lot", required=True, ref="lot", cascade=True),
+            F("relation", "enum", "Relation", enum="unit_relation"),
+            F("qty", "int", "Qty"),
+            # 取自晶圆图的芯片坐标 [[x, y], ...]
+            F("dies", "json", "Die coordinates", list=False),
+            F("route_step", "ref", ref="route_step", list=False, filter=False),
+            F("username", "str", "User", max_length=255, search=True),
+            F("at", "datetime", "Time"),
+        ],
+        phase=6,
+        has_code=False,
+        readonly=True,
+        icon="GitFork",
+        order=5,
+        menu=False,
+        sort_default="at",
+        label_field="relation",
+    ),
+)
+
+
+register(
+    Entity(
+        "die_map",
+        "exec",
+        "Die map",
+        [
+            F("unit", "ref", "Wafer", required=True, ref="wafer", cascade=True),
+            F("lot", "ref", "Lot", required=True, ref="lot", cascade=True),
+            F("route_step", "ref", ref="route_step", list=False, filter=False),
+            F(
+                "test_kind",
+                "enum",
+                "Map kind",
+                enum="die_map_kind",
+                required=True,
+                default="cp",
+            ),
+            F("rows", "int", "Rows", list=False),
+            F("cols", "int", "Columns", list=False),
+            # [[x, y, bin], ...]
+            F("dies", "json", "Dies", list=False),
+            F("gross", "int", "Gross die"),
+            F("good", "int", "Good die"),
+            F("yield_pct", "float", "Yield %"),
+            # 同一晶圆同一类型只有最新一张生效（重测覆盖）
+            F("is_current", "bool", "Current", default=True),
+            F("source", "str", "Source file", max_length=200, search=True),
+            F("username", "str", "User", max_length=255, search=True, list=False),
+            F("at", "datetime", "Time"),
+        ],
+        phase=6,
+        has_code=False,
+        readonly=True,
+        icon="Grid3x3",
+        order=6,
+        sort_default="at",
+        label_field="at",
+    ),
+)
+
+
+register(
+    Entity(
+        "ncr",
+        "ncr",
+        "NCR / MRB",
+        [
+            F("lot", "ref", "Lot", required=True, ref="lot", cascade=True),
+            F("title", "str", "Title", required=True, max_length=200, search=True),
+            F(
+                "severity",
+                "enum",
+                "Severity",
+                enum="severity",
+                required=True,
+                default="major",
+            ),
+            F("defect_code", "ref", "Defect code", ref="defect_code"),
+            F("qty", "int", "Affected qty"),
+            F("units", "json", "Affected units", list=False),
+            F("hold", "ref", "Hold", ref="lot_hold", list=False, filter=False),
+            F(
+                "ncr_status",
+                "enum",
+                "Status",
+                enum="ncr_status",
+                default="open",
+            ),
+            F("disposition", "enum", "Disposition", enum="ncr_disposition"),
+            F(
+                "disposition_comment",
+                "str",
+                "Disposition note",
+                max_length=300,
+                list=False,
+            ),
+            F(
+                "scrap_reason",
+                "ref",
+                "Scrap reason",
+                ref="reason_code",
+                list=False,
+                filter=False,
+            ),
+            # 审批级数按严重度：minor 1 / major 2 / critical 3
+            F("required_levels", "int", "Approval levels", list=False),
+            F("approved_levels", "int", "Approved levels", default=0),
+            F("raised_by", "str", "Raised by", max_length=255),
+            F("raised_at", "datetime", "Raised at"),
+            F("proposed_by", "str", "Proposed by", max_length=255, list=False),
+            F("proposed_at", "datetime", "Proposed at", list=False),
+            F("closed_by", "str", "Closed by", max_length=255, list=False),
+            F("closed_at", "datetime", "Closed at", list=False),
+            F("result", "json", "Execution result", list=False),
+        ],
+        phase=6,
+        has_name=False,
+        code_label="NCR no.",
+        readonly=True,
+        icon="FileWarning",
+        children=["ncr_approval"],
+        sort_default="raised_at",
+    ),
+)
+
+
+register(
+    Entity(
+        "ncr_approval",
+        "ncr",
+        "NCR approval",
+        [
+            F("ncr", "ref", "NCR", required=True, ref="ncr", cascade=True),
+            F("level", "int", "Level"),
+            F("decision", "enum", "Decision", enum="ncr_decision"),
+            F("comment", "str", "Comment", max_length=300),
+            F("username", "str", "User", max_length=255),
+            F("at", "datetime", "Time"),
+        ],
+        phase=6,
+        has_code=False,
+        parent="ncr",
+        readonly=True,
+        icon="Stamp",
+        order=1,
+        sort_default="at",
+        label_field="decision",
     ),
 )

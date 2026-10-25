@@ -1,0 +1,160 @@
+mes:
+  entity:
+    bank: バンク
+    bin_code: Bin コード
+    die_map: ウェーハマップ
+    unit_genealogy: ユニット系譜
+    ncr: 不適合処置票
+    ncr_approval: 承認履歴
+  field:
+    bank:
+      code: コード
+      name: 名称
+      bank_kind: 種別
+      warehouse: 倉庫
+      is_active: 有効
+      description: 説明
+    bin_code:
+      code: Bin
+      name: 名称
+      is_good: 良品
+      color: 色
+      is_active: 有効
+      description: 説明
+    die_map:
+      unit: ウェーハ
+      lot: ロット
+      route_step: フロー工程
+      test_kind: 種別
+      rows: 行数
+      cols: 列数
+      dies: ダイ
+      gross: 総ダイ数
+      good: 良品数
+      yield_pct: 歩留まり %
+      is_current: 現行
+      source: ソース
+      username: ユーザー
+      at: 日時
+    unit_genealogy:
+      parent_unit: 元ユニット
+      child_unit: 産出ユニット
+      lot: ロット
+      relation: 関係
+      qty: 数量
+      dies: ダイ座標
+      route_step: フロー工程
+      username: ユーザー
+      at: 日時
+    ncr:
+      code: NCR 番号
+      lot: ロット
+      title: 件名
+      severity: 重大度
+      defect_code: 欠陥コード
+      description: 説明
+      qty: 対象数量
+      units: 対象ユニット
+      hold: 保留
+      ncr_status: 状態
+      disposition: 処置
+      disposition_comment: 処置コメント
+      scrap_reason: スクラップ理由
+      required_levels: 必要承認段階
+      approved_levels: 承認済段階
+      raised_by: 起票者
+      raised_at: 起票日時
+      proposed_by: 提案者
+      proposed_at: 提案日時
+      closed_by: 完了者
+      closed_at: 完了日時
+      result: 実行結果
+    ncr_approval:
+      ncr: NCR
+      level: 段階
+      decision: 判断
+      comment: コメント
+      username: 承認者
+      at: 日時
+  enum:
+    bank_kind:
+      wafer: ウェーハバンク
+      die: ダイバンク
+      finished: 完成品バンク
+    ooc_action:
+      warn: 警告
+      auto_hold: ロット保留
+      hold_equipment: ロット + 設備保留
+    unit_relation:
+      convert: 変換
+      assemble: 組立
+    die_map_kind:
+      cp: CP テスト
+      aoi: AOI 検査
+      ink: 統合 / インク
+    ncr_status:
+      open: 提案待ち
+      reviewing: 承認中
+      closed: 完了
+      cancelled: 取消
+    ncr_disposition:
+      release: リリース
+      use_as_is: 特別採用
+      rework: リワーク
+      scrap: スクラップ
+      downgrade: 格下げ
+      rtv: 仕入先返却
+    ncr_decision:
+      approve: 承認
+      reject: 差し戻し
+  semi:
+    unitHint: ウェーハマップを取り込み、ロット全体を次のユニットに変換します。
+    units: '仕掛ユニット（{{count}}）'
+    viewMap: マップ表示
+    goodOfGross: '良品 {{good}} / 全 {{gross}} 個'
+    importMap: ウェーハマップ取込
+    csv: マップデータ（ウェーハ番号,x,y,bin）
+    csvFile: ファイルを選択
+    csvHint: 1 行に 1 ダイ。例：W01,0,0,1
+    csvParsed: '{{maps}} ウェーハ・{{dies}} ダイを解析'
+    csvBad: '形式エラーの行：{{rows}}'
+    import: 取込
+    imported: '{{count}} 枚のマップを取り込みました'
+    convert: ユニット変換
+    toKind: 変換先ユニット種別
+    mode: 変換方法
+    modes:
+      map: ウェーハマップの良品ダイ
+      split: ソースごとに N 個産出（1 → N）
+      assemble: N 個のソースから 1 個（N → 1）
+    ratio:
+      split: ソースあたり産出数
+      assemble: 産出あたりソース数
+    previewResult: '{{count}} ユニットを産出、不良ダイ {{bad}} 個を除外'
+    converted: '変換完了：{{count}} ユニット'
+    bankHint: 完了ロットを入庫し、作業指示でバンクから払い出します。
+    bankIn: バンク入庫
+    completedLot: 完了ロット
+    bankedIn: 'ロット {{lot}} をバンクに入庫しました'
+    issue: 払出・ロット発行
+    picked: '在庫ロット {{count}} 件を選択'
+    issued: 'ロット {{lot}}（数量 {{qty}}）を発行しました'
+    inBank: '在庫ロット（{{count}}）'
+    bankEmpty: バンクにロットはありません。
+    spcHint: 測定項目の管理図と管理外れ点を表示します。
+    spcEmpty: 測定データはありません。
+    rules: '判定ルール：{{rules}}'
+    noRules: 判定ルール未設定
+    mean: 平均
+    raiseNcr: NCR 起票
+    holdLot: ロットも保留する
+    ncrRaised: '{{code}} を起票しました'
+    propose: 処置案を提出
+    proposed: 提出しました。承認待ちです
+    cancelNcr: NCR 取消
+    levels: '承認 {{done}} / {{need}} 段階'
+    ncrStatus:
+      open: 差し戻し：再提案待ち
+      reviewing: 承認済：次の段階待ち
+      closed: 承認し処置を実行しました
+      cancelled: NCR を取り消しました

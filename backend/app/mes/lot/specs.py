@@ -245,6 +245,8 @@ ENUMS.update(
             ("stored", "Stored"),
             ("scrapped", "Scrapped"),
             ("merged", "Merged (terminated)"),
+            ("banked", "In bank"),
+            ("issued", "Issued from bank (terminated)"),
         ],
         "wafer_status": [
             ("waiting", "Waiting"),
@@ -252,6 +254,7 @@ ENUMS.update(
             ("rework", "Rework"),
             ("completed", "Completed"),
             ("scrapped", "Scrapped"),
+            ("converted", "Converted (consumed)"),
         ],
         "track_unit_kind": [
             ("wafer", "Wafer"),
@@ -373,6 +376,8 @@ register(
                 list=False,
             ),
             F("carrier", "ref", "Carrier", ref="carrier"),
+            F("bank", "ref", "Bank", ref="bank", list=False),
+            F("banked_at", "datetime", "Banked at", list=False),
             F(
                 "source_ref",
                 "str",

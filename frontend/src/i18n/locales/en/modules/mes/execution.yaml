@@ -631,12 +631,19 @@ mes:
     operator_qualified:
       ok: '{{user}} qualified for {{operation}}'
       bad: '{{user}} not qualified for {{operation}}'
+    ooc:
+      bad: '{{count}} item(s) out of control'
+      ok: Process in control
+      none: No DC values
+      values: 'OOC ($t(mes.enum.ooc_action.{{action}})): {{values}}'
   checkSep: '; '
   sysNote:
     qtime_expired: 'Q-Time {{rule}} expired: {{minutes}} > {{max}} min'
     oos: 'OOS: {{items}}'
     inherited: Inherited from {{lot}}
     e10_auto: Auto transition on $t(mes.exec.stage.{{trigger}}) of {{lot}}
+    ooc: 'Out of control: {{items}}'
+    ncr: 'NCR {{ncr}}'
   entity:
     check_rule: Check rule
     check_plan: Check plan
@@ -733,6 +740,7 @@ mes:
       adjust: Scrap / bonus
       sort: Wafer sort
       priority: Priority change
+      convert: Unit conversion
     check_type:
       e10_available: Equipment E10 state available
       eqp_capability: Equipment capability / recipe match
@@ -765,6 +773,7 @@ mes:
       pm_due: Equipment PM not overdue
       rework_limit: Rework count limit
       qty_adjust_limit: Scrap / bonus qty limit
+      ooc: Out of control (SPC)
     check_severity:
       block: Block
       warn: Warn
@@ -832,6 +841,13 @@ mes:
       carrier_change: Carrier change
       sort: Wafer sort
       priority: Priority change
+      convert: Unit conversion
+      die_map: Die map import
+      bank_in: Bank in
+      bank_out: Bank issue
+      ooc: Out of control
+      ncr: NCR
     genealogy_relation:
       split: Split
       merge: Merge
+      bank_issue: Bank issue

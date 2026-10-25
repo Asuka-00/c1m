@@ -197,6 +197,24 @@ def release_hold(
     Raises:
         HTTPException: Hold 不存在（404）或已释放（422）。
     """
+    lot = release(s, tid, hold_id, user, reason_id, comment)
+    s.commit()
+    return lot
+
+
+def release(
+    s: Session,
+    tid: uuid.UUID,
+    hold_id: Any,
+    user: Any,
+    reason_id: Any,
+    comment: str | None,
+) -> Row:
+    """:func:`release_hold` 的不提交版本（供 NCR 处置等组合操作在同一事务内调用）。
+
+    Raises:
+        HTTPException: Hold 不存在（404）或已释放（422）。
+    """
     h = one(s, tid, "lot_hold", hold_id)
     if not h:
         raise coded(404, ec.RECORD_NOT_FOUND, "Record not found")
@@ -240,7 +258,6 @@ def release_hold(
         details={"hold_id": str(hold_id), "remaining_holds": len(left)},
     )
     audit(s, tid, LOT, "resume", lot, user, {"release": (None, rr and rr["code"])})
-    s.commit()
     return lot
 
 

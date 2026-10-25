@@ -38,6 +38,8 @@ ACTIONS: dict[str, str] = {
     "release": "Release / close",
     "start": "Start lots",
     "confirm": "Confirm receipts",
+    "bank": "Bank in / issue",
+    "approve": "Approve dispositions",
 }
 # 内置角色（平台 + 租户默认角色）的显示名称；工作区不出现“租户”字样，owner 显示为系统管理员
 ROLE_LABELS: dict[str, str] = {

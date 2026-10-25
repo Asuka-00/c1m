@@ -3,21 +3,26 @@
 工作表布局：第 1 行为列键（字段名，版本化数据加 ``version``/``status``，自定义属性为
 ``attr:<code>``）。引用以目标编码读写（``CODE`` = 激活或最新版本，``CODE@2`` = 指定版本），
 无编码的目标使用 id。导入按业务唯一键新增或更新，全部成功或全部回滚。
+
+导入模板（``template_sheets``）由 ``scripts/export_import_templates.py`` 写入
+``app/resources/templates/mes/<实体>.xlsx`` 并纳入版本库；测试校验模板与规格一致。
 """
 
 import io
 import json
 import uuid
+from pathlib import Path
 from typing import Any
 
 import sqlalchemy as sa
 from fastapi import HTTPException
 from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Font
 from sqlmodel import Session
 
 from app.core import error_codes as ec
 from app.core.spec.base import conn, table
-from app.core.spec.engine import ENTITIES, Entity
+from app.core.spec.engine import ENTITIES, ENUMS, Entity, F, label_of
 from app.core.spec.errors import CoerceError, coded
 from app.core.spec.query import all_rows
 from app.core.spec.serialize import to_json
@@ -25,6 +30,17 @@ from app.core.spec.validate import attr_defs
 from app.core.spec.write import create_row, update_row
 
 MAX_ROWS = 5000
+TEMPLATE_DIR = Path(__file__).resolve().parents[2] / "resources" / "templates"
+README = "README"
+_FORMATS = {
+    "int": "integer",
+    "float": "number",
+    "bool": "TRUE / FALSE",
+    "date": "YYYY-MM-DD",
+    "time": "HH:MM:SS",
+    "datetime": "YYYY-MM-DDTHH:MM:SS",
+    "json": "JSON",
+}
 
 
 def _ref_code(
@@ -102,6 +118,87 @@ def export_xlsx(
                 v = r[f.column if f else c]
                 line.append(to_json(v) if f and f.type in ("date", "time") else v)
         ws.append(line)
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def template_path(e: Entity) -> Path:
+    """实体导入模板文件路径。"""
+    return TEMPLATE_DIR / "mes" / f"{e.code}.xlsx"
+
+
+def _format(f: F) -> str:
+    if f.type == "enum":
+        return " / ".join(v for v, _ in ENUMS[f.enum or ""])
+    if f.type == "ref":
+        target = ENTITIES[f.ref or ""]
+        if not target.has_code:
+            return f"{target.code} id"
+        return f"{target.code} code" + (
+            " (CODE or CODE@version)" if target.versioned else ""
+        )
+    if f.type == "str":
+        return f"text (max {f.max_length})"
+    return _FORMATS.get(f.type, "text")
+
+
+def _required(f: F) -> str | None:
+    if f.required_when:
+        cond = "; ".join(
+            f"{k} = {'any' if '*' in v else ' / '.join(map(str, v))}"
+            for k, v in f.required_when.items()
+        )
+        return f"when {cond}"
+    if not f.required:
+        return None
+    return "auto" if f.auto or f.default is not None or f.default_from else "yes"
+
+
+def template_sheets(e: Entity) -> dict[str, list[list[Any]]]:
+    """导入模板内容：首个工作表为导入列键（表头），``README`` 为逐列说明。
+
+    不含系统字段与租户自定义属性（可另加 ``attr:<code>`` 列）。
+
+    Returns:
+        工作表名 → 行（单元格值）。
+    """
+    fields = [f for f in e.all_fields if not f.system]
+    head = [f.name for f in fields] + (["version"] if e.versioned else [])
+    doc: list[list[Any]] = [["column", "label", "format", "required", "help"]]
+    doc += [[f.name, label_of(f), _format(f), _required(f), f.help] for f in fields]
+    if e.versioned:
+        doc.append(["version", "Version", "integer", "yes", None])
+    doc += [
+        [None] * 5,
+        [
+            f"Rows are matched by {', '.join(e.natural_key)}: existing rows are updated, others created."
+        ],
+        [
+            f"Only the first sheet is imported; all rows succeed or nothing is saved (max {MAX_ROWS})."
+        ],
+        [
+            "Leave unused columns blank or delete them; add attr:<code> columns for custom attributes."
+        ],
+    ]
+    return {e.code[:31]: [head], README: doc}
+
+
+def template_xlsx(e: Entity) -> bytes:
+    """按 ``template_sheets`` 生成导入模板 xlsx。"""
+    wb = Workbook()
+    assert wb.active is not None
+    wb.remove(wb.active)
+    for name, rows in template_sheets(e).items():
+        ws = wb.create_sheet(name)
+        for r in rows:
+            ws.append(r)
+        for c in ws[1]:
+            c.font = Font(bold=True)
+        for col in ws.iter_cols(max_row=len(rows)):
+            width = max(len(str(c.value or "")) for c in col)
+            ws.column_dimensions[col[0].column_letter].width = min(max(width, 10), 40)
+        ws.freeze_panes = "A2"
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()

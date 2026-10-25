@@ -83,3 +83,9 @@ notify:
       qual_expired:
         label: Qualification expired
         title: "{{user}}'s {{operation}} qualification expired {{date}}"
+      ooc:
+        label: Out of control (SPC)
+        title: 'Lot {{lot}} out of control at step {{step}}: {{items}} ({{action}})'
+      ncr_review:
+        label: NCR awaiting approval
+        title: 'NCR {{ncr}} on lot {{lot}} awaits approval: $t(mes.enum.ncr_disposition.{{disposition}})'

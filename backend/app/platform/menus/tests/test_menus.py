@@ -283,7 +283,7 @@ def test_menu_layout_complete_and_synced(
         "mes-qtime-monitor",
     ]
     assert not {"mes-lot", "mes-wafer", "mes-operator_qual"} & set(by["g-execution"])
-    assert by["g-exception"] == ["mes-future_hold", "mes-check_log"]
+    assert by["g-exception"] == ["mes-ncr", "mes-future_hold", "mes-check_log"]
     assert {"mes-lot", "mes-wafer"} <= set(by["g-wip"])
     assert "mes-operator_qual" in by["g-factory"]
     assert by["g-equipment"][0] == "mes-eqp-board"

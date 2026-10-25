@@ -1,4 +1,4 @@
-"""质量实体规格：量测项、DC 计划、抽样、缺陷 / 原因代码、DC 结果。"""
+"""质量实体规格：量测项、DC 计划（含控制限）、抽样、缺陷 / Bin / 原因代码、DC 结果。"""
 
 from app.core.spec.engine import ENUMS, Entity, F, register
 
@@ -53,6 +53,11 @@ ENUMS.update(
             ("auto_hold", "Auto hold"),
             ("block", "Block track out"),
         ],
+        "ooc_action": [
+            ("warn", "Warn"),
+            ("auto_hold", "Hold lot"),
+            ("hold_equipment", "Hold lot + equipment"),
+        ],
         "qtime_action": [
             ("warn", "Warn"),
             ("hold", "Hold lot"),
@@ -93,6 +98,24 @@ register(
                 "OOS hold reason",
                 ref="reason_code",
                 list=False,
+            ),
+            F(
+                "ooc_action",
+                "enum",
+                "OOC action",
+                enum="ooc_action",
+                default="warn",
+                list=False,
+                help="Out of control (SPC rule violated) on a DC plan item with limits",
+            ),
+            F(
+                "ooc_e10_state",
+                "ref",
+                "OOC equipment state",
+                ref="e10_state",
+                list=False,
+                required_when={"ooc_action": ("hold_equipment",)},
+                help="E10 state the equipment is switched to on OOC",
             ),
         ],
         phase=4,
@@ -147,6 +170,17 @@ register(
             F("target", "float"),
             F("lsl", "float"),
             F("usl", "float"),
+            F("lcl", "float", "LCL", list=False),
+            F("cl", "float", "CL", list=False, help="Blank: midpoint of UCL and LCL"),
+            F("ucl", "float", "UCL", list=False),
+            F(
+                "ooc_rules",
+                "str",
+                "SPC rules",
+                max_length=40,
+                list=False,
+                help="Western Electric / Nelson rules 1-8, e.g. 1,2,3,5 (blank: none)",
+            ),
         ],
         phase=4,
         has_code=False,
@@ -240,6 +274,23 @@ register(
 
 register(
     Entity(
+        "bin_code",
+        "quality",
+        "Bin code",
+        [
+            F("is_good", "bool", "Good die", default=False),
+            F("color", "str", max_length=20),
+            F("is_active", "bool", default=True),
+        ],
+        phase=4,
+        icon="Grid3x3",
+        order=6,
+    ),
+)
+
+
+register(
+    Entity(
         "reason_code",
         "quality",
         "Reason code",
@@ -300,6 +351,8 @@ register(
                 "OOS action",
                 enum="oos_action",
             ),
+            F("is_ooc", "bool", "OOC", default=False),
+            F("ooc_rules", "str", "Violated rules", max_length=40, list=False),
             F(
                 "username",
                 "str",

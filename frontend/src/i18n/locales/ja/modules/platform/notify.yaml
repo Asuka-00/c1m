@@ -83,3 +83,9 @@ notify:
       qual_expired:
         label: 資格期限切れ
         title: '{{user}} の {{operation}} 資格は {{date}} に期限切れ'
+      ooc:
+        label: SPC 管理外れ（OOC）
+        title: 'ロット {{lot}} が工程 {{step}} で管理外れ：{{items}}（{{action}}）'
+      ncr_review:
+        label: NCR 承認待ち
+        title: 'ロット {{lot}} の NCR {{ncr}} が承認待ち：$t(mes.enum.ncr_disposition.{{disposition}})'

@@ -131,3 +131,10 @@ menu:
   p-audit: Cross-tenant Audit Log
   p-login-log: Login Log
   p-ops-log: Platform Operation Log
+  mes-unit-ops: Unit Conversion & Die Map
+  mes-ncr: NCR / MRB
+  mes-die_map: Die Map Inquiry
+  mes-bank-ops: Wafer / Die Bank
+  mes-bank: Bank Master
+  mes-spc-chart: SPC Chart
+  mes-bin_code: Bin Code

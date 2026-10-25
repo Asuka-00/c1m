@@ -44,10 +44,12 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-qtime-monitor", "Q-Time Monitor"),
         ("mes-batch-ops", "Batch Operation"),
         ("mes-carrier-ops", "Carrier Operation"),
+        ("mes-unit-ops", "Unit Conversion & Die Map"),
         ("mes-shift-handover", "Shift Handover"),
         ("mes-label-print", "Label Printing"),
     ],
     "g-exception": [
+        ("mes-ncr", "NCR / MRB"),
         ("mes-future_hold", "Future Hold"),
         ("mes-check_log", "Interlock Log"),
     ],
@@ -59,6 +61,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-lot_recipe_run", "Recipe Run"),
         ("mes-lot", "Lot Inquiry"),
         ("mes-wafer", "Wafer Inquiry"),
+        ("mes-die_map", "Die Map Inquiry"),
     ],
     "g-planning": [
         # 投片/开批：叫法为推断，待产线确认
@@ -67,6 +70,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-work_order", "Work Order"),
     ],
     "g-warehouse": [
+        ("mes-bank-ops", "Wafer / Die Bank"),
         ("mes-receipt", "Finished Goods Receipt"),
         ("mes-material_receipt", "Material Receipt"),
         ("mes-material_issue", "Material Issue"),
@@ -76,6 +80,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
             "Line-side Material Lot",
         ),
         ("mes-warehouse-master", "Warehouse Master"),
+        ("mes-bank", "Bank Master"),
     ],
     "g-equipment": [
         ("mes-eqp-board", "Tool Status Board"),
@@ -89,8 +94,10 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
     ],
     "g-quality": [
         ("mes-dc_result", "Metrology / DC Data"),
+        ("mes-spc-chart", "SPC Chart"),
         ("mes-dc-config", "DC Configuration"),
         ("mes-defect_code", "Defect Code"),
+        ("mes-bin_code", "Bin Code"),
     ],
     "g-process": [
         ("mes-route-master", "Route Configuration"),

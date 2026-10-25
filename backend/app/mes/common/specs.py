@@ -68,6 +68,10 @@ ENUMS.update(
             ("qtime_rework", "Q-Time rework"),
             ("merge", "Merge"),
             ("e10", "E10 state change"),
+            ("convert", "Unit conversion"),
+            ("bank_in", "Bank in"),
+            ("bank_out", "Bank issue"),
+            ("disposition", "NCR disposition"),
         ],
         "seq_reset": [
             ("never", "Never"),

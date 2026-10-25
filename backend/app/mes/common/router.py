@@ -8,7 +8,7 @@ import uuid
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, File, Query, Request, UploadFile
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 
 from app.core import error_codes as ec
@@ -17,7 +17,7 @@ from app.core.pagination import ListParamsDep
 from app.core.spec.base import get_entity
 from app.core.spec.engine import ENTITIES, EXTRA_PERMISSIONS, MODULES, Entity, perm
 from app.core.spec.errors import coded
-from app.core.spec.excel import export_xlsx, import_xlsx
+from app.core.spec.excel import export_xlsx, import_xlsx, template_path
 from app.core.spec.query import distinct_values, get_row, list_rows, tree
 from app.core.spec.serialize import serialize
 from app.core.spec.validate import attr_defs, attr_options
@@ -191,6 +191,19 @@ def mes_export(
         export_xlsx(session, ctx.id, e, q=q, filters=filters),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{e.code}.xlsx"'},
+    )
+
+
+@router.get("/{entity}/import-template")
+def mes_import_template(ctx: CurrentTenant, entity: str) -> FileResponse:
+    """Blank import template (.xlsx, header row + README sheet) stored with the source."""
+    e = require_entity(ctx, entity, "write")
+    if e.readonly:
+        raise coded(405, ec.READ_ONLY_ENTITY, "Read-only entity")
+    return FileResponse(
+        template_path(e),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename=f"{e.code}-template.xlsx",
     )
 
 

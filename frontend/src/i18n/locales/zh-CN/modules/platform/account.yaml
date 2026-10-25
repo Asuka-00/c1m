@@ -182,6 +182,10 @@ permName:
   mes_lot__start: 批次与晶圆规则·投产
   mes_wh__confirm: 仓储·确认入库
   notify__config: 配置通知订阅
+  mes_ncr__read: 不合格品处置·查看
+  mes_ncr__write: 不合格品处置·编辑
+  mes_exec__bank: 生产执行·Bank 入库 / 领用
+  mes_ncr__approve: 不合格品处置·审批
 roleName:
   admin: 管理员
   user: 普通用户
@@ -241,6 +245,10 @@ permDesc:
   mes_lot__start: 允许：批次与晶圆规则·投产
   mes_wh__confirm: 允许：仓储·确认入库
   notify__config: 允许：配置通知订阅
+  mes_ncr__read: 允许：不合格品处置·查看
+  mes_ncr__write: 允许：不合格品处置·编辑
+  mes_exec__bank: 允许：生产执行·Bank 入库 / 领用
+  mes_ncr__approve: 允许：不合格品处置·审批
 roleDesc:
   platform_admin: 拥有全部权限的平台管理员
   platform_user: 无平台权限的普通用户

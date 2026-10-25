@@ -344,7 +344,9 @@ def transition(
                 .where(
                     t.c.tenant_id == tid,
                     t.c.work_order_id == wo["id"],
-                    t.c.lot_status.notin_(["stored", "scrapped", "merged"]),
+                    t.c.lot_status.notin_(
+                        ["stored", "scrapped", "merged", "banked", "issued"]
+                    ),
                 )
                 .order_by(t.c.code)
                 .limit(5)
@@ -442,7 +444,7 @@ def _carrier_busy(s: Session, tid: uuid.UUID, carrier_id: Any) -> bool:
             sa.select(t.c.id).where(
                 t.c.tenant_id == tid,
                 t.c.carrier_id == carrier_id,
-                t.c.lot_status.notin_(["completed", "stored", "scrapped", "merged"]),
+                t.c.lot_status.notin_(lot_svc.TERMINAL),
             )
         )
         .first()
@@ -687,6 +689,130 @@ def start(
     return out
 
 
+def open_lot(
+    s: Session,
+    tid: uuid.UUID,
+    wo_id: Any,
+    qty: int,
+    user: Any,
+    *,
+    tracking_level: str,
+    source_ref: str | None = None,
+    details: Row | None = None,
+) -> Row:
+    """在工单下开一个不带新单元的批次（调用方随后移入已有单元，如 Bank 领用）。
+
+    与 :func:`start` 共用工单状态、可开批上限、批次编号规则与首工步定位；不提交事务。
+
+    Args:
+        s: 数据库会话。
+        tid: 租户 id。
+        wo_id: 工单 id。
+        qty: 批次数量。
+        user: 操作人。
+        tracking_level: 追踪级别（沿用来源批次）。
+        source_ref: 来源说明（如来源批次号）。
+        details: 写入开批历史的附加信息。
+
+    Returns:
+        新批次行。
+
+    Raises:
+        HTTPException: 工单不可开批、超出上限或路线无工步（422）。
+    """
+    wo = get_row(s, WO, tid, wo_id)
+    if wo["wo_status"] not in STARTABLE:
+        raise http_422(
+            [
+                fe(
+                    "wo_status",
+                    ec.WO_NOT_STARTABLE,
+                    f"wo_status: cannot start lots on a {wo['wo_status']} work order",
+                    status=wo["wo_status"],
+                )
+            ]
+        )
+    if wo["started_qty"] + qty > cap(wo):
+        raise http_422(
+            [
+                fe(
+                    "lots",
+                    ec.WO_START_LIMIT,
+                    f"lots: started {wo['started_qty']} + {qty} exceeds the limit {cap(wo)}",
+                    started=wo["started_qty"],
+                    total=qty,
+                    cap=cap(wo),
+                    planned=wo["planned_qty"],
+                    pct=wo["over_start_limit_pct"] or 0,
+                )
+            ]
+        )
+    _lt, lr, _wr = _rules(s, tid, wo)
+    step, site = first_step(s, tid, wo["route_id"])
+    stack: list[Row] = []
+    step = process_svc.enter_route(s, tid, step, stack, []) if step else None
+    if not step:
+        raise http_422(
+            [fe("route", ec.ROUTE_NO_OPERATION_STEPS, "route: has no operation steps")]
+        )
+    (lot_no,) = coderule.generate(s, tid, lr, 1, commit=False)
+    at, lid = now(), uuid.uuid4()
+    conn(s).execute(
+        sa.insert(TABLES["lot"]).values(
+            id=lid,
+            tenant_id=tid,
+            code=lot_no,
+            work_order_id=wo["id"],
+            product_id=wo["product_id"],
+            route_id=wo["route_id"],
+            lot_type_id=wo["lot_type_id"],
+            priority_id=wo["priority_id"],
+            qty=qty,
+            tracking_level=tracking_level,
+            site_id=site,
+            current_step_id=step["id"],
+            route_stack=list(stack),
+            step_in_at=at,
+            on_hold=False,
+            scrapped_qty=0,
+            received_qty=0,
+            rework_count=0,
+            bonus_qty=0,
+            pending_rework=False,
+            lot_status="waiting",
+            source_ref=(source_ref or "")[:100] or None,
+            started_at=at,
+            started_by=actor_name(user),
+            attrs={},
+            created_at=at,
+            updated_at=at,
+            created_by=getattr(user, "id", None),
+            updated_by=getattr(user, "id", None),
+        )
+    )
+    lot = get_row(s, LOT, tid, lid)
+    audit(s, tid, LOT, "start", lot, user, {"work_order": (None, wo["code"])})
+    lot_svc.history(
+        s,
+        tid,
+        lot,
+        "start",
+        user,
+        step=step,
+        details={"work_order": wo["code"], **(details or {})},
+    )
+    _set(
+        s,
+        tid,
+        wo,
+        user,
+        "start",
+        started_qty=wo["started_qty"] + qty,
+        wo_status="in_progress",
+    )
+    return lot
+
+
 def undo_start(
     s: Session,
     tid: uuid.UUID,
@@ -724,6 +850,18 @@ def undo_start(
                 h.c.tenant_id == tid,
                 h.c.lot_id.in_([x["id"] for x in lots]),
                 h.c.action != "start",
+            )
+        )
+        .scalars()
+    )
+    # Bank 领用开出的批次带着来源批次的单元，撤销会删掉这些单元，因此不允许
+    g = TABLES["lot_genealogy"]
+    acted |= set(
+        conn(s)
+        .execute(
+            sa.select(g.c.child_lot_id).where(
+                g.c.tenant_id == tid,
+                g.c.child_lot_id.in_([x["id"] for x in lots]),
             )
         )
         .scalars()

@@ -24,7 +24,7 @@ Row = dict[str, Any]
 
 
 class LotStatus(StrEnum):
-    """批次流程状态（四段式过站，8 个状态，见 decisions.md #1）。"""
+    """批次流程状态（四段式过站 8 个状态，见 decisions.md #1；另加 Bank 在库 / 领出）。"""
 
     WAITING = "waiting"
     MOVED_IN = "moved_in"
@@ -34,19 +34,21 @@ class LotStatus(StrEnum):
     STORED = "stored"
     SCRAPPED = "scrapped"
     MERGED = "merged"
+    BANKED = "banked"  # 前道完工后在 Bank 中等待封测领用；不算在制
+    ISSUED = "issued"  # 已从 Bank 全部领出到新批次（终止）
 
 
 S = LotStatus
 ALL = frozenset(S)
-TERMINAL = frozenset({S.COMPLETED, S.STORED, S.SCRAPPED, S.MERGED})
+TERMINAL = frozenset({S.COMPLETED, S.STORED, S.SCRAPPED, S.MERGED, S.BANKED, S.ISSUED})
 ACTIVE = ALL - TERMINAL
 
-# 可被 Hold 的状态（手动 + 自动，D4 经 M2 修订：completed/stored 允许）
-HOLDABLE: frozenset[LotStatus] = ACTIVE | {S.COMPLETED, S.STORED}
+# 可被 Hold 的状态（手动 + 自动，D4 经 M2 修订：completed/stored 允许；在库批次同理）
+HOLDABLE: frozenset[LotStatus] = ACTIVE | {S.COMPLETED, S.STORED, S.BANKED}
 # 可被自动 Hold 的状态（D17）
 AUTO_HOLDABLE: frozenset[LotStatus] = ACTIVE
 # Hold 列表默认排除的批次状态（N6 经 M2 修订）；include_terminal=true 时显示全部
-HOLD_LIST_EXCLUDED: frozenset[LotStatus] = frozenset({S.SCRAPPED, S.MERGED})
+HOLD_LIST_EXCLUDED: frozenset[LotStatus] = frozenset({S.SCRAPPED, S.MERGED, S.ISSUED})
 
 
 @dataclass(frozen=True)
@@ -89,6 +91,11 @@ RULES: dict[str, Rule] = {
     "auto_hold": _r(AUTO_HOLDABLE, hold=True),
     "release": _r(ALL, hold=True),
     "store": _r([S.COMPLETED], [S.STORED, S.COMPLETED]),
+    "bank_in": _r([S.COMPLETED], [S.BANKED]),
+    # 部分领用仍留在 Bank，全部领出则终止
+    "bank_out": _r([S.BANKED], [S.BANKED, S.ISSUED]),
+    # 单元转换（晶圆 → 芯片 / 条带 / 单颗）只在工步前后进行，不能在加工中
+    "convert": _r([S.WAITING, S.MOVED_IN]),
     # 出货（D13 / H2-02）：仅 stored 且不能持 Hold。仓库尚无出货接口与 shipped
     # 状态（D1 维持 8 个状态），这里先定规则，接口落地时调用 check(lot, "ship")
     "ship": _r([S.STORED]),

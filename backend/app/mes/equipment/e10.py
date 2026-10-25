@@ -1,4 +1,4 @@
-"""E10 自动状态迁移：由执行事件（Track In / Track Out 等）触发。"""
+"""E10 自动状态迁移：由执行事件（Track In / Track Out、SPC 判异等）触发。"""
 
 import uuid
 from typing import Any
@@ -83,6 +83,52 @@ def e10_apply(
         user,
         note={"key": "e10_auto", "params": {"trigger": trigger, "lot": lot["code"]}},
     )
+    audit(
+        s,
+        tid,
+        ENTITIES["equipment"],
+        "e10",
+        eq,
+        user,
+        {"e10_state": (cur and cur["code"], to["code"])},
+    )
+    return {"equipment": eq["code"], "from": cur and cur["code"], "to": to["code"]}
+
+
+def e10_force(
+    s: Session, tid: uuid.UUID, eq: Row, to_state_id: Any, user: Any, note: Row
+) -> Row:
+    """系统事件（如 SPC 判异）把设备切到指定 E10 状态。
+
+    与自动规则一致：须满足迁移表，已处于目标状态时不变。不提交事务。
+
+    Args:
+        s: 数据库会话。
+        tid: 租户 id。
+        eq: 设备行。
+        to_state_id: 目标状态 id。
+        user: 操作人。
+        note: 系统说明 ``{key, params}``（写入 E10 履历）。
+
+    Returns:
+        ``{equipment, from, to}`` 或跳过原因 ``{equipment, skipped}``。
+    """
+    eq = one(s, tid, "equipment", eq["id"]) or eq  # 同一事务内可能已被自动规则改过
+    cur = e10_current(s, tid, eq)
+    to = one(s, tid, "e10_state", to_state_id)
+    if not to:
+        return {"equipment": eq["code"], "skipped": "no target state"}
+    if cur and cur["id"] == to["id"]:
+        return {"equipment": eq["code"], "skipped": f"already {to['code']}"}
+    if cur and not find(
+        s, tid, "e10_transition", from_state_id=cur["id"], to_state_id=to["id"]
+    ):
+        return {
+            "equipment": eq["code"],
+            "skipped": f"transition {cur['code']} -> {to['code']} not allowed",
+        }
+    _upd(s, tid, "equipment", eq["id"], user, e10_state_id=to["id"])
+    e10_log(s, tid, eq, cur, to, "auto", user, note=note)
     audit(
         s,
         tid,

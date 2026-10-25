@@ -125,6 +125,7 @@ MES 的实体 / 字段 / 枚举 / 帮助文案按所属后端模块放在 `modul
 - 系统自动生成的说明（Q-Time 超时 Hold、OOS Hold、分批继承 Hold、E10 自动迁移）存结构化 `note = {key, params}`（`lot_hold.note` / `e10_history.note`），前端按 `mes.sysNote.<key>` 翻译，人工备注仍在 `comment`；检查日志的说明在 `context.msg_parts`。
 - 实体 / 字段 / 枚举 / 菜单 / 权限 / 角色 / 通知事件在后端只写英文标识（数据库种子与兜底），各语言名称在前端语言包。
 - `backend/scripts/export_i18n_codes.py` 导出前端必须翻译的全部键（`frontend/src/i18n/backend-codes.json`）和错误码常量（`frontend/src/lib/error-codes.ts`）；后端测试校验两者为最新，修改后端后重新运行即可。
+- `backend/scripts/export_import_templates.py` 按实体规格生成导入模板（`backend/app/resources/templates/mes/<实体>.xlsx`，首表为列键，`README` 表为逐列说明）；增删改实体字段后重新运行，后端测试校验模板为最新。晶圆图 CSV 模板 `backend/app/resources/templates/die_map.csv` 为手工维护。
 
 ## 注释规范
 

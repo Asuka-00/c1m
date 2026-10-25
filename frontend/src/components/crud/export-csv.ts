@@ -1,3 +1,5 @@
+import { saveBlob } from '@/lib/utils'
+
 /** 单元格值转 CSV 字段（含逗号 / 引号 / 换行时加引号转义）。 */
 export function csvCell(v: unknown): string {
   const s = v == null ? '' : String(v)
@@ -20,9 +22,5 @@ export function downloadCsv(name: string, head: string[], rows: unknown[][]) {
   const blob = new Blob(['\uFEFF' + toCsv(head, rows)], {
     type: 'text/csv;charset=utf-8',
   })
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(blob)
-  a.download = `${name}.csv`
-  a.click()
-  URL.revokeObjectURL(a.href)
+  saveBlob(blob, `${name}.csv`)
 }

@@ -1,4 +1,5 @@
 /** MES 规格驱动的主数据：实体元数据 + 通用 CRUD 客户端（/mes/<entity>）。 */
+import { saveBlob } from '@/lib/utils'
 import { http } from '../client'
 import type { ListQuery } from '../request'
 import type { Paged } from '../types'
@@ -139,11 +140,13 @@ export const mesApi = {
       responseType: 'blob',
       params,
     })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(r.data)
-    a.download = `${code}.xlsx`
-    a.click()
-    URL.revokeObjectURL(a.href)
+    saveBlob(r.data, `${code}.xlsx`)
+  },
+  importTemplate: async (code: string) => {
+    const r = await http.get<Blob>(`${base(code)}/import-template`, {
+      responseType: 'blob',
+    })
+    saveBlob(r.data, `${code}-template.xlsx`)
   },
   importXlsx: (code: string, file: File) => {
     const fd = new FormData()
