@@ -2,6 +2,13 @@ auth:
   appName: FastAPI Admin
   signIn: Sign in
   signInDesc: Sign in with your account.
+  tagline: From wafer to finished goods, controlled and traceable
+  featLot: Lot execution
+  featLotDesc: Checks enforced at every move-in, track-in and track-out
+  featQuality: Quality & exceptions
+  featQualityDesc: Auto hold on OOC, multi-level NCR approval
+  featTrace: Full genealogy
+  featTraceDesc: Trace wafers, dies, strips and packages both ways
   passwordRequired: Please enter your password.
   welcome: Welcome back, {{name}}!
   loginLabel: Username

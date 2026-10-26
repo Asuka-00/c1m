@@ -2,6 +2,13 @@ auth:
   appName: FastAPI 管理后台
   signIn: 登录
   signInDesc: 使用你的账号登录。
+  tagline: 从晶圆到成品，全程受控、可追溯
+  featLot: 批次作业
+  featLotDesc: 进站、上机、下机全程卡控
+  featQuality: 质量与异常
+  featQualityDesc: 判异自动 Hold，NCR 多级审批
+  featTrace: 正反追溯
+  featTraceDesc: 晶圆、芯片、条带到成品一键追溯
   passwordRequired: 请输入密码。
   welcome: 欢迎回来，{{name}}！
   loginLabel: 用户名

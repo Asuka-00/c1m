@@ -73,7 +73,7 @@ export function UserAuthForm({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className={cn('grid gap-3', className)}
+        className={cn('grid gap-4', className)}
         {...props}
       >
         <FormField

@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { t } from '@/i18n'
-import { Logo } from '@/assets/logo'
 import { applyAccent } from '@/lib/accent'
 import type { Branding } from '@/lib/branding'
 import { cn } from '@/lib/utils'
@@ -30,25 +29,6 @@ export function BrandingHead({
     link.href = href
   }, [favicon, logo])
   return null
-}
-
-/** 品牌 Logo：有配置的 Logo 图片时显示图片，否则显示默认图标。 */
-export function BrandLogo({
-  branding,
-  className,
-}: {
-  branding: Branding
-  className?: string
-}) {
-  return branding.logo ? (
-    <img
-      src={branding.logo}
-      alt={branding.appName}
-      className={cn('size-8 rounded-md object-contain', className)}
-    />
-  ) : (
-    <Logo className={className} />
-  )
 }
 
 /** 品牌页脚文本（配置项 footer_text），未配置时不渲染。 */

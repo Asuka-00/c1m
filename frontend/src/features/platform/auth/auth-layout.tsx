@@ -6,12 +6,10 @@ import {
   rememberedBrandTenant,
   useBranding,
 } from '@/lib/branding'
-import {
-  BrandFooter,
-  BrandingHead,
-  BrandLogo,
-} from '@/components/branding/branding'
+import { BrandFooter, BrandingHead } from '@/components/branding/branding'
 import { LanguageSwitch } from '@/components/language-switch'
+import { ThemeSwitch } from '@/components/theme-switch'
+import { BrandMark, BrandPanel } from './brand-panel'
 
 type AuthLayoutProps = {
   children: React.ReactNode
@@ -25,37 +23,24 @@ export function AuthLayout({ children }: AuthLayoutProps) {
   useEffect(() => rememberBrandTenant(fromUrl), [fromUrl])
   const branding = useBranding(slug)
   return (
-    <div
-      className='relative flex min-h-svh flex-col bg-cover bg-center'
-      style={
-        branding.loginBackground
-          ? { backgroundImage: `url(${branding.loginBackground})` }
-          : undefined
-      }
-    >
+    <div className='grid min-h-svh lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]'>
       <BrandingHead branding={branding} />
-      <div className='absolute top-4 right-4'>
-        <LanguageSwitch />
-      </div>
-      <div className='container grid max-w-none flex-1 items-center justify-center'>
-        <div className='mx-auto flex w-full flex-col justify-center space-y-2 py-8 sm:p-8'>
-          <div className='mb-4 flex flex-col items-center justify-center gap-1'>
-            <div className='flex items-center gap-2'>
-              <BrandLogo branding={branding} />
-              <h1 className='text-xl font-medium' data-testid='brand-name'>
-                {branding.appName}
-              </h1>
-            </div>
-            {branding.subtitle && (
-              <p className='text-sm text-muted-foreground'>
-                {branding.subtitle}
-              </p>
-            )}
+      <BrandPanel branding={branding} />
+      <div className='flex min-w-0 flex-col'>
+        <header className='flex items-center gap-2 p-4'>
+          <h1 className='min-w-0 lg:invisible' data-testid='brand-name'>
+            <BrandMark branding={branding} />
+          </h1>
+          <div className='ms-auto flex items-center gap-1'>
+            <LanguageSwitch />
+            <ThemeSwitch />
           </div>
-          {children}
-        </div>
+        </header>
+        <main className='flex flex-1 items-center justify-center px-6 py-10'>
+          <div className='w-full max-w-sm'>{children}</div>
+        </main>
+        <BrandFooter branding={branding} />
       </div>
-      <BrandFooter branding={branding} />
     </div>
   )
 }

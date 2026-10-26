@@ -37,7 +37,7 @@ export function ThemeSwitch() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align='end'>
         <DropdownMenuItem onClick={() => setTheme('light')}>
-          Light{' '}
+          {t('theme.light')}
           <Check
             size={14}
             className={cn('ms-auto', theme !== 'light' && 'hidden')}

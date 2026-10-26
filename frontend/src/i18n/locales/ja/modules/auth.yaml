@@ -2,6 +2,13 @@ auth:
   appName: FastAPI 管理画面
   signIn: ログイン
   signInDesc: アカウントでログインしてください。
+  tagline: ウェハから完成品まで、一貫した管理とトレース
+  featLot: ロット作業
+  featLotDesc: 投入・着工・完了をすべてチェック
+  featQuality: 品質と異常
+  featQualityDesc: 異常判定で自動ホールド、NCR 多段承認
+  featTrace: 双方向トレース
+  featTraceDesc: ウェハ・チップ・ストリップから完成品まで追跡
   passwordRequired: パスワードを入力してください。
   welcome: おかえりなさい、{{name}} さん！
   loginLabel: ユーザー名
