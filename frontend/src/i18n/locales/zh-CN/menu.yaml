@@ -131,10 +131,10 @@ menu:
   p-audit: 跨租户审计日志
   p-login-log: 登录日志
   p-ops-log: 平台操作日志
-  mes-unit-ops: 单元转换与晶圆图
+  mes-unit-ops: 单元转换与芯片图
   mes-ncr: 不合格品处置（NCR）
-  mes-die_map: 晶圆图查询
-  mes-bank-ops: Wafer / Die Bank
-  mes-bank: Bank 库位
+  mes-die_map: 芯片图查询
+  mes-bank-ops: 晶圆 / 芯片库存
+  mes-bank: 库位主数据
   mes-spc-chart: SPC 控制图
   mes-bin_code: Bin 代码

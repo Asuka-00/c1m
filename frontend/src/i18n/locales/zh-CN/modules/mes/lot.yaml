@@ -9,7 +9,7 @@ mes:
     split_merge_rule: 分批合批规则
     qtime_rule: Q-Time 规则
     lot: 批次
-    wafer: 晶圆 / 单元
+    wafer: 单元（晶圆等）
     lot_hold: 批次 Hold
     lot_history: 批次履历
     lot_recipe_run: 配方执行记录
@@ -125,7 +125,7 @@ mes:
       note: 系统说明
     lot_history:
       lot: 批次
-      unit: 晶圆 / 单元
+      unit: 单元（晶圆等）
       action: 操作
       route_step: 流程步骤
       step_seq: 序号
@@ -160,7 +160,7 @@ mes:
       child_lot: 子批 / 目标批
       relation: 关系
       qty: 数量
-      units: 晶圆 / 单元
+      units: 单元（晶圆等）
       route_step: 流程步骤
       username: 用户
       at: 时间
@@ -198,6 +198,6 @@ mes:
     track_unit_kind:
       wafer: 晶圆
       strip: 条
-      die: 晶粒
+      die: 芯片
       package: 封装体
       unit: 单元

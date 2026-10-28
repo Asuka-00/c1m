@@ -1,4 +1,4 @@
-"""三期：晶圆级履历与晶圆图等。"""
+"""三期：晶圆级履历与晶圆状态等。"""
 
 from typing import Any
 
@@ -9,7 +9,7 @@ from app.core import error_codes as ec
 from app.mes.execution.tests.test_exec import EXEC
 
 
-def test_wafer_map_and_wafer_history(client: TestClient, db: Session) -> None:
+def test_wafer_status_and_wafer_history(client: TestClient, db: Session) -> None:
     from app.mes.execution.tests.test_split_merge import _line, split, uid
 
     f = _line(client, db)
@@ -21,13 +21,13 @@ def test_wafer_map_and_wafer_history(client: TestClient, db: Session) -> None:
         assert r.status_code == 200, r.text
         return r.json()
 
-    wm = get(f"/lots/{lot['id']}/wafer-map")
+    wm = get(f"/lots/{lot['id']}/wafer-status")
     filled = [x for x in wm["slots"] if x["wafer"]]
     assert len(filled) == 4 and wm["capacity"] >= 4
     w0 = filled[0]["wafer"]
     # 拆批后：子批中的晶圆仍能看到母批阶段的履历
     (ch,) = split(f, lot, [{"unit_ids": uid(f, lot, 0, 1)}])["children"]
-    child_map = get(f"/lots/{ch['id']}/wafer-map")
+    child_map = get(f"/lots/{ch['id']}/wafer-status")
     wid = next(x["wafer"]["id"] for x in child_map["slots"] if x["wafer"])
     hist = get(f"/wafers/{wid}/history")["data"]
     actions = {h["action"] for h in hist}

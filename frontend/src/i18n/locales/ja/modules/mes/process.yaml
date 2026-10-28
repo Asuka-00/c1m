@@ -186,7 +186,7 @@ mes:
       die: ダイ
       strip: ストリップ
       package: パッケージ
-      unit: 単品
+      unit: 完成品
     convert_mode:
       map: マップで良品を取得
       split: 分割（1 → N）

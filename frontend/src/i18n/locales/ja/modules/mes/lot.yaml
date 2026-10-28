@@ -9,7 +9,7 @@ mes:
     split_merge_rule: 分割・統合規則
     qtime_rule: Q-Time ルール
     lot: ロット
-    wafer: ウェーハ・ユニット
+    wafer: ユニット（ウェーハ等）
     lot_hold: ロットホールド
     lot_history: ロット履歴
     lot_recipe_run: レシピ実行記録
@@ -125,7 +125,7 @@ mes:
       note: システム説明
     lot_history:
       lot: ロット
-      unit: ウェーハ・ユニット
+      unit: ユニット（ウェーハ等）
       action: 操作
       route_step: ルートステップ
       step_seq: 順番
@@ -160,7 +160,7 @@ mes:
       child_lot: 子・統合先ロット
       relation: 関係
       qty: 数量
-      units: ウェーハ・ユニット
+      units: ユニット（ウェーハ等）
       route_step: ルートステップ
       username: ユーザー
       at: 日時

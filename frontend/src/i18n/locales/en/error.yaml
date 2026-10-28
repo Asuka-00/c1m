@@ -325,7 +325,7 @@ error:
   code_700015: '{{count}} wafers exceed carrier capacity {{cap}}'
   code_700016: Carrier {{carrier}} still holds a lot
   code_700017: Carrier {{carrier}} is retired
-  code_700018: Cannot sort wafers while the lot is $t(mes.enum.lot_status.{{status}})
+  code_700018: Cannot sort slots while the lot is $t(mes.enum.lot_status.{{status}})
   code_700019: Select a carrier
   code_700020: List every wafer of the lot once
   code_700021: Use unique slots 1–{{cap}}
@@ -361,7 +361,7 @@ error:
   code_700051: The lot type has no lot ID rule
   code_700052: Add at least one child lot
   code_700053: 'Child {{child}}: qty must be greater than 0'
-  code_700054: 'Child {{child}}: pick wafers / units'
+  code_700054: 'Child {{child}}: pick units'
   code_700055: 'Child {{child}}: units not in the lot or picked twice'
   code_700056: Select an active main equipment unit
   code_700057: Track in needs equipment

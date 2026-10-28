@@ -1,4 +1,4 @@
-/** 芯片级晶圆图：按坐标着色的芯片网格与 Bin 图例。 */
+/** 芯片级芯片图：按坐标着色的芯片网格与 Bin 图例。 */
 import { useQuery } from '@tanstack/react-query'
 import { fmtDateTime, t } from '@/i18n'
 import { useTenantKey } from '@/lib/api/hooks'
@@ -44,7 +44,7 @@ export function DieGrid({ map }: { map: DieMapDetail }) {
   )
 }
 
-/** 晶圆图对话框：网格 + 良率 + 图例。 */
+/** 芯片图对话框：网格 + 良率 + 图例。 */
 export function DieMapDialog({
   mapId,
   onClose,

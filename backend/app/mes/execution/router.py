@@ -379,11 +379,11 @@ def wafer_history(session: SessionDep, ctx: CurrentTenant, wafer_id: uuid.UUID) 
     return {"data": svc.wafer_history(session, ctx.id, wafer_id)}
 
 
-@router.get("/lots/{lot_id}/wafer-map")
-def wafer_map(session: SessionDep, ctx: CurrentTenant, lot_id: uuid.UUID) -> Any:
-    """Wafer map: slots of the lot's carrier with wafer status."""
+@router.get("/lots/{lot_id}/wafer-status")
+def wafer_status(session: SessionDep, ctx: CurrentTenant, lot_id: uuid.UUID) -> Any:
+    """Wafer status: slots of the lot's carrier with wafer status."""
     _need(ctx, "mes.exec:read")
-    return svc.wafer_map(session, ctx.id, lot_id)
+    return svc.wafer_status(session, ctx.id, lot_id)
 
 
 @router.get("/qtime/monitor")

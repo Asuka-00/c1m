@@ -91,7 +91,7 @@ mes:
     die_map_kind:
       cp: CP test
       aoi: AOI
-      ink: Merged / ink
+      ink: Merged map (ink)
     ncr_status:
       open: Open
       reviewing: Reviewing

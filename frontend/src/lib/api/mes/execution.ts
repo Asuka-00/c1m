@@ -464,13 +464,13 @@ export interface StageResult {
 }
 
 /** 批次执行接口：上下文、阶段作业、检查预览、Hold、拆合批、履历。 */
-/** 晶圆图中的一片晶圆。 */
+/** 晶圆状态中的一片晶圆。 */
 export interface WaferCell {
   id: string
   code: string
   status: string
   rework_count?: number
-  /** 当前芯片级晶圆图摘要 */
+  /** 当前芯片级芯片图摘要 */
   die_map?: {
     id: string
     test_kind: string
@@ -479,8 +479,8 @@ export interface WaferCell {
     yield_pct: number
   } | null
 }
-/** 晶圆图：按槽位排列的晶圆。 */
-export interface WaferMap {
+/** 晶圆状态：按槽位排列的晶圆。 */
+export interface WaferStatusMap {
   lot: string
   carrier: string | null
   capacity: number
@@ -541,9 +541,11 @@ export const execApi = {
         items: BatchItem[]
       }>(`/mes/exec/batch/${stage}`, { lot_ids: lotIds, ...body })
       .then((r) => r.data.items),
-  /** 批次晶圆图。 */
-  waferMap: (lotId: string) =>
-    http.get<WaferMap>(`/mes/exec/lots/${lotId}/wafer-map`).then((r) => r.data),
+  /** 批次晶圆状态。 */
+  waferStatus: (lotId: string) =>
+    http
+      .get<WaferStatusMap>(`/mes/exec/lots/${lotId}/wafer-status`)
+      .then((r) => r.data),
   /** 晶圆级履历（含所在批次的批次级记录）。 */
   waferHistory: (waferId: string) =>
     http

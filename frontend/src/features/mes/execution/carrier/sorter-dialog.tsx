@@ -44,8 +44,8 @@ export function SorterDialog({
   const [edits, setEdits] = useState<Record<string, number>>({})
   const [target, setTarget] = useState('')
   const map = useQuery({
-    queryKey: ['mes', 'exec', tk, 'wafer-map', carrier.lot_id],
-    queryFn: () => execApi.waferMap(carrier.lot_id!),
+    queryKey: ['mes', 'exec', tk, 'wafer-status', carrier.lot_id],
+    queryFn: () => execApi.waferStatus(carrier.lot_id!),
   })
   const rows: SortRow[] = useMemo(
     () =>

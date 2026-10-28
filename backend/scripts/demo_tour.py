@@ -5,7 +5,7 @@
 须在后端环境中运行（直接为默认租户的超级管理员签发 3 小时令牌）。主数据按编码幂等：已存在则复用，
 新建的带 ``attrs._demo`` 标记（``scripts/mes_demo.py remove`` 可清除）；工单、批次、单据每次运行都新建。
 
-流程：来料接收与 IQC → BOM 生效与工单锁定 → 领料 → 机台上料 → CP 测试（晶圆图、DC、SPC 判异自动 Hold）
+流程：来料接收与 IQC → BOM 生效与工单锁定 → 领料 → 机台上料 → CP 测试（芯片图、DC、SPC 判异自动 Hold）
 → Wafer Bank 入库 → 领用到封装工单 → 划片 / 固晶 / 切单自动单元转换 → 成品入库 → 出货 → NCR / MRB
 → 停机记录 → 追溯、报表、看板与全部实体列表。最后逐项输出结果，任一项失败时返回 1。
 """
@@ -799,7 +799,7 @@ def reads(api: Api, ctx: Row) -> list[str]:
         "/mes/exec/qtime/monitor",
         "/mes/exec/carriers/board",
         "/mes/eqp/board",
-        f"/mes/exec/lots/{ctx['banked'][-1]['id']}/wafer-map",
+        f"/mes/exec/lots/{ctx['banked'][-1]['id']}/wafer-status",
     ):
         api.get(p)
     return [
@@ -921,7 +921,7 @@ def main() -> None:
         n.append(ctx["be_wo"]["code"])
     with feature("领料 + 机台上料") as n:
         n += issue_and_mount(api, ctx)
-    with feature("CP 测试：晶圆图导入、DC、OOS / OOC 自动 Hold") as n:
+    with feature("CP 测试：芯片图导入、DC、OOS / OOC 自动 Hold") as n:
         n += cp_test(api, ctx)
     with feature("载具：换载具 / 清洗") as n:
         n += carrier(api, ctx)

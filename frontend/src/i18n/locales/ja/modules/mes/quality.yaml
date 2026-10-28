@@ -66,7 +66,7 @@ mes:
       description: 説明
     dc_result:
       lot: ロット
-      unit: ウェーハ・ユニット
+      unit: ユニット（ウェーハ等）
       route_step: ルートステップ
       dc_plan: データ収集計画
       measurement_item: 測定項目

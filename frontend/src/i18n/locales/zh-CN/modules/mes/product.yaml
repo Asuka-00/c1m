@@ -46,7 +46,7 @@ mes:
       tech_node: 工艺节点
       product_type: 类型
       wafer_size: 晶圆尺寸
-      gross_die: 每片总晶粒数
+      gross_die: 每片总芯片数
       uom: 单位
       tracking_level: 追踪层级
       serial_kind: 序列化单元类型
@@ -168,7 +168,7 @@ mes:
       load: 装入
       unload: 移出
       clean: 清洗
-      sort: 晶圆整理
+      sort: 槽位整理
       split: 分批
       merge: 合批
     asset_status:
@@ -204,7 +204,7 @@ mes:
       quantity: 数量
     serial_kind:
       strip: 条
-      die: 晶粒
+      die: 芯片
       package: 封装体
       unit: 单元
     e10_category:

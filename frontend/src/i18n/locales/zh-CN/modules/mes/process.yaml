@@ -186,9 +186,9 @@ mes:
       die: 芯片
       strip: 条带
       package: 封装
-      unit: 单颗
+      unit: 成品单颗
     convert_mode:
-      map: 按晶圆图取良品
+      map: 按芯片图取良品
       split: 拆分（1 → N）
       assemble: 组合（N → 1）
     qty_basis:

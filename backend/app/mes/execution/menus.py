@@ -76,7 +76,7 @@ MENUS: dict[str, MenuItem] = {
         "mes-page:oee-report",
         "mes.exec:read",
     ),
-    # 单元转换（晶圆 → 芯片 / 条带 / 单颗）与芯片级晶圆图导入 / 查看
+    # 单元转换（晶圆 → 芯片 / 条带 / 单颗）与芯片级芯片图导入 / 查看
     "mes-unit-ops": (
         "/mes/unit-ops",
         "Grid3x3",

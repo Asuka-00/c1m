@@ -66,11 +66,11 @@ mes:
     dc: Data collection
     noDc: No data collection required at this step.
     item: Item
-    unit: Wafer / unit
+    unit: Unit (wafer etc.)
     values: Values (sites)
     lotLevel: Lot
     scrapQty: Scrap quantity by reason
-    scrapUnits: Scrap / rework by wafer or unit
+    scrapUnits: Scrap / rework by unit
     addScrap: Add scrap line
     goodQty: 'Good quantity after track out: {{good}}'
     good: Good
@@ -115,7 +115,7 @@ mes:
     mergedInto: merged into
     mergedFrom: merged from
     splitQtyHint: Enter the quantity for each child lot; the parent keeps the rest.
-    splitUnitHint: Assign wafers / units to child lots; the rest stay in the parent.
+    splitUnitHint: Assign units to child lots; the rest stay in the parent.
     childCount: Child lots
     remain: Parent keeps {{n}} / {{total}}
     tooMany: Child lots must total less than the parent qty {{total}} (cannot split everything)
@@ -331,8 +331,8 @@ mes:
     expiring: Expiring
     ongoing: Ongoing
     hours: '{{n}} h'
-  wmap:
-    title: Wafer map
+  wstatus:
+    title: Wafer status
     history: 'Wafer history: {{code}}'
   rrun:
     title: 'Recipe parameters: {{recipe}} v{{version}}'
@@ -381,15 +381,15 @@ mes:
     moved: Carrier changed
     splitMerge: Split / merge
   sorter:
-    action: Sort
-    title: 'Wafer sort: {{lot}} ({{code}})'
+    action: Sort slots
+    title: 'Slot sorting: {{lot}} ({{code}})'
     target: Move to carrier (optional)
     wafer: Wafer
     from: From slot
     to: To slot
     pack: Pack in order
-    run: Sort
-    done: Wafer sort done
+    run: Run sorting
+    done: Slot sorting done
   yield:
     hint: Yield by operation, product or lot, with scrap reasons.
     search: Search code / name
@@ -620,7 +620,7 @@ mes:
       limit: carrier {{carrier}} used {{used}}/{{max}}; clean first
       used: carrier {{carrier}} used {{used}}/{{max}}
     sort_order:
-      none: no wafer sort
+      none: no slot sorting
       changed: wafer order would change
       kept: wafer order kept
     notice:
@@ -742,7 +742,7 @@ mes:
       merge: Merge
       jump: Jump step
       adjust: Scrap / bonus
-      sort: Wafer sort
+      sort: Slot sorting
       priority: Priority change
       convert: Unit conversion
     check_type:
@@ -843,7 +843,7 @@ mes:
       jump: Jump step
       bonus: Bonus
       carrier_change: Carrier change
-      sort: Wafer sort
+      sort: Slot sorting
       priority: Priority change
       convert: Unit conversion
       die_map: Die map import

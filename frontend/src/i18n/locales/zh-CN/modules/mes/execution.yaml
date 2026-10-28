@@ -66,11 +66,11 @@ mes:
     dc: 数据收集
     noDc: 本步骤无需数据收集。
     item: 项目
-    unit: 晶圆 / 单元
+    unit: 单元（晶圆等）
     values: 测值（测点）
     lotLevel: 批次
     scrapQty: 按原因报废数量
-    scrapUnits: 按晶圆/单元报废或返工
+    scrapUnits: 按单元报废或返工
     addScrap: 添加报废行
     goodQty: 下机后良品数量：{{good}}
     good: 良品
@@ -115,7 +115,7 @@ mes:
     mergedInto: 合入
     mergedFrom: 合并自
     splitQtyHint: 输入每个子批的数量，其余留在母批。
-    splitUnitHint: 将晶圆 / 单元分配到子批，未分配的留在母批。
+    splitUnitHint: 将单元分配到子批，未分配的留在母批。
     childCount: 子批数
     remain: 母批保留 {{n}} / {{total}}
     tooMany: 子批合计必须小于母批数量 {{total}}（不能拆完）
@@ -331,8 +331,8 @@ mes:
     expiring: 临期
     ongoing: 进行中
     hours: '{{n}} 小时'
-  wmap:
-    title: 晶圆图
+  wstatus:
+    title: 晶圆状态
     history: 晶圆履历：{{code}}
   rrun:
     title: 配方参数：{{recipe}} v{{version}}
@@ -382,14 +382,14 @@ mes:
     splitMerge: 分批 / 合批
   sorter:
     action: 整理
-    title: 晶圆整理：{{lot}}（{{code}}）
+    title: 槽位整理：{{lot}}（{{code}}）
     target: 移入载具（可选）
     wafer: 晶圆
     from: 原槽位
     to: 新槽位
     pack: 顺排
     run: 执行整理
-    done: 已完成晶圆整理
+    done: 已完成槽位整理
   yield:
     hint: 按工序、产品或批次查看良率与报废原因。
     search: 搜索编码 / 名称
@@ -620,7 +620,7 @@ mes:
       limit: 载具 {{carrier}} 已使用 {{used}}/{{max}} 次，请先清洗
       used: 载具 {{carrier}} 已使用 {{used}}/{{max}} 次
     sort_order:
-      none: 无晶圆整理
+      none: 无槽位整理
       changed: 晶圆顺序会被打乱
       kept: 晶圆顺序保持不变
     notice:
@@ -742,7 +742,7 @@ mes:
       merge: 合批
       jump: 跳站
       adjust: 报废 / 补数
-      sort: 晶圆整理
+      sort: 槽位整理
       priority: 优先级变更
       convert: 单元转换
     check_type:
@@ -843,10 +843,10 @@ mes:
       jump: 跳站
       bonus: 补数
       carrier_change: 换载具
-      sort: 晶圆整理
+      sort: 槽位整理
       priority: 优先级变更
       convert: 单元转换
-      die_map: 导入晶圆图
+      die_map: 导入芯片图
       bank_in: 入 Bank
       bank_out: Bank 领用
       ooc: SPC 判异

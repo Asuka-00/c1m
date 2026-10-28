@@ -331,7 +331,7 @@ def trace(s: Session, tid: uuid.UUID, kind: str, code: str) -> Row:
     return jsonable(out)  # type: ignore[no-any-return]
 
 
-# ---------------- 晶圆级履历与晶圆图 ----------------
+# ---------------- 晶圆级履历与晶圆状态 ----------------
 def wafer_lots(s: Session, tid: uuid.UUID, wafer: Row) -> list[tuple[Any, Any, Any]]:
     """晶圆经历过的批次及在其中的时间段 ``[(批次 id, 起, 止)]``（起 / 止为 None 表示不限）。
 
@@ -398,8 +398,8 @@ def wafer_history(s: Session, tid: uuid.UUID, wafer_id: uuid.UUID) -> list[Row]:
     return serialize(s, tid, ENTITIES["lot_history"], [dict(r) for r in rows])
 
 
-def wafer_map(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
-    """晶圆图：按槽位排列批次的晶圆（容量取载具类型，缺省 25），含状态与返工次数。
+def wafer_status(s: Session, tid: uuid.UUID, lot_id: uuid.UUID) -> Row:
+    """晶圆状态：按槽位排列批次的晶圆（容量取载具类型，缺省 25），含状态与返工次数。
 
     Raises:
         HTTPException: 批次不存在（404）。

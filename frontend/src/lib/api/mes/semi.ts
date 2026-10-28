@@ -1,4 +1,4 @@
-/** 泛半导体单元级作业：单元转换、芯片级晶圆图、Bank 入库 / 领用、NCR / MRB、SPC 控制图。 */
+/** 泛半导体单元级作业：单元转换、芯片级芯片图、Bank 入库 / 领用、NCR / MRB、SPC 控制图。 */
 import { saveBlob } from '@/lib/utils'
 import { http } from '../client'
 import type { MesRow } from './common'
@@ -86,7 +86,7 @@ export const semiApi = {
   /** 整批单元转换（preview 只预检）。 */
   convert: (lotId: string, body: ConvertBody) =>
     post<ConvertResult>(`/mes/exec/lots/${lotId}/convert`, body),
-  /** 导入批次内晶圆的芯片级晶圆图。 */
+  /** 导入批次内晶圆的芯片级芯片图。 */
   importDieMaps: (
     lotId: string,
     body: {
@@ -95,7 +95,7 @@ export const semiApi = {
       maps: { unit_code: string; dies: Die[] }[]
     }
   ) => post<{ maps: DieMapBrief[] }>(`/mes/exec/lots/${lotId}/die-maps`, body),
-  /** 下载晶圆图 CSV 模板。 */
+  /** 下载芯片图 CSV 模板。 */
   dieMapTemplate: async () => {
     const r = await http.get<Blob>('/mes/exec/die-maps/template', {
       responseType: 'blob',
@@ -148,7 +148,7 @@ export const semiApi = {
 }
 
 /**
- * 解析晶圆图 CSV：每行 `晶圆编号,x,y,bin`（可有表头），按晶圆分组。
+ * 解析芯片图 CSV：每行 `晶圆编号,x,y,bin`（可有表头），按晶圆分组。
  *
  * @param text - CSV 文本
  * @returns 每片晶圆的芯片列表；格式错误的行号在 `bad` 中

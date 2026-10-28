@@ -168,7 +168,7 @@ mes:
       load: Load
       unload: Unload
       clean: Clean
-      sort: Wafer sort
+      sort: Slot sorting
       split: Split
       merge: Merge
     asset_status:

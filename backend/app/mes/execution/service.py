@@ -29,7 +29,7 @@ from app.mes.execution.report.kpi import oee_trend as oee_trend
 from app.mes.execution.report.kpi import wip_summary as wip_summary
 from app.mes.execution.report.trace import trace as trace
 from app.mes.execution.report.trace import wafer_history as wafer_history
-from app.mes.execution.report.trace import wafer_map as wafer_map
+from app.mes.execution.report.trace import wafer_status as wafer_status
 from app.mes.execution.report.yields import yield_report as yield_report
 from app.mes.execution.split_merge.context import sm_context as sm_context
 from app.mes.execution.split_merge.merge import merge as merge

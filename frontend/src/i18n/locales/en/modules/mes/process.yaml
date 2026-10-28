@@ -186,7 +186,7 @@ mes:
       die: Die
       strip: Strip
       package: Package
-      unit: Unit
+      unit: Finished unit
     convert_mode:
       map: Good dies by map
       split: Split (1 → N)

@@ -66,7 +66,7 @@ mes:
       description: 描述
     dc_result:
       lot: 批次
-      unit: 晶圆 / 单元
+      unit: 单元（晶圆等）
       route_step: 流程步骤
       dc_plan: 数据收集计划
       measurement_item: 量测项目

@@ -1,4 +1,4 @@
-/** 单元转换与晶圆图页面：导入 CP / AOI 晶圆图、查看良率，整批转换为芯片 / 条带 / 单颗。 */
+/** 单元转换与芯片图页面：导入 CP / AOI 芯片图、查看良率，整批转换为芯片 / 条带 / 单颗。 */
 import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { t } from '@/i18n'
@@ -43,7 +43,7 @@ type Mode = ConvertMode
 const KINDS: UnitKind[] = ['die', 'strip', 'package', 'unit']
 const MAP_KINDS: DieMapKind[] = ['cp', 'aoi', 'ink']
 
-/** 单元转换与晶圆图。 */
+/** 单元转换与芯片图。 */
 export default function UnitOps() {
   const tk = useTenantKey()
   const qc = useQueryClient()
@@ -67,8 +67,8 @@ export default function UnitOps() {
     enabled: !!lot,
   })
   const wm = useQuery({
-    queryKey: ['mes', 'exec', tk, 'wafer-map', lot?.id],
-    queryFn: () => execApi.waferMap(lot!.id),
+    queryKey: ['mes', 'exec', tk, 'wafer-status', lot?.id],
+    queryFn: () => execApi.waferStatus(lot!.id),
     enabled: !!lot,
   })
   const maps = new Map(

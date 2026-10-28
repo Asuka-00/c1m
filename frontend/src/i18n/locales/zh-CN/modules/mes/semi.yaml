@@ -2,7 +2,7 @@ mes:
   entity:
     bank: Bank
     bin_code: Bin 代码
-    die_map: 晶圆图
+    die_map: 芯片图
     unit_genealogy: 单元谱系
     ncr: 不合格品处置单
     ncr_approval: 审批记录
@@ -91,7 +91,7 @@ mes:
     die_map_kind:
       cp: CP 测试
       aoi: AOI 检测
-      ink: 合并 / 打点
+      ink: 合并图（打点）
     ncr_status:
       open: 待提案
       reviewing: 审批中
@@ -108,23 +108,23 @@ mes:
       approve: 批准
       reject: 驳回
   semi:
-    unitHint: 导入晶圆图并把整批单元转换为下一级单元。
+    unitHint: 导入芯片图并把整批单元转换为下一级单元。
     units: '在制单元（{{count}}）'
-    viewMap: 查看晶圆图
+    viewMap: 查看芯片图
     goodOfGross: '良品 {{good}} / 共 {{gross}} 颗'
-    importMap: 导入晶圆图
-    csv: 晶圆图数据（晶圆编号,x,y,bin）
+    importMap: 导入芯片图
+    csv: 芯片图数据（晶圆编号,x,y,bin）
     csvFile: 选择文件
     csvHint: 每行一颗芯片，例如 W01,0,0,1
     csvParsed: '已解析 {{maps}} 片晶圆、{{dies}} 颗芯片'
     csvBad: '格式错误的行：{{rows}}'
     import: 导入
-    imported: '已导入 {{count}} 张晶圆图'
+    imported: '已导入 {{count}} 张芯片图'
     convert: 单元转换
     toKind: 目标单元类型
     mode: 转换方式
     modes:
-      map: 按晶圆图取良品芯片
+      map: 按芯片图取良品芯片
       split: 每个来源产出 N 个（1 → N）
       assemble: 每 N 个来源合成 1 个（N → 1）
     ratio:

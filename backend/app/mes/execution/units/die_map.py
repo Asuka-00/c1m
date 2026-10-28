@@ -1,4 +1,4 @@
-"""芯片级晶圆图：按晶圆导入 CP / AOI 结果（每颗芯片 ``[x, y, bin]``）与查看。"""
+"""芯片级芯片图：按晶圆导入 CP / AOI 结果（每颗芯片 ``[x, y, bin]``）与查看。"""
 
 import uuid
 from collections import Counter
@@ -18,7 +18,7 @@ from app.mes.lot.service import history, lock_lot, units
 
 Row = dict[str, Any]
 MAX_DIES = 200_000
-#: 转换取良品时使用的晶圆图类型（ink 为合并 / 打点后的图，优先）
+#: 转换取良品时使用的芯片图类型（ink 为合并 / 打点后的图，优先）
 PICK_KINDS = ("ink", "cp")
 
 
@@ -63,7 +63,7 @@ def _parse(
 def import_maps(
     s: Session, tid: uuid.UUID, lot_id: uuid.UUID, body: Row, user: Any
 ) -> Row:
-    """导入批次内晶圆的芯片级晶圆图。
+    """导入批次内晶圆的芯片级芯片图。
 
     同一晶圆同一类型的旧图标记为非当前（重测覆盖）；Bin 码须为已启用的 Bin 代码。
 
@@ -171,7 +171,7 @@ def import_maps(
 def current_maps(
     s: Session, tid: uuid.UUID, unit_ids: list[Any], *, with_dies: bool = True
 ) -> dict[Any, Row]:
-    """单元当前用于取片的晶圆图（ink 优先于 cp，同类取最新）。"""
+    """单元当前用于取片的芯片图（ink 优先于 cp，同类取最新）。"""
     if not unit_ids:
         return {}
     t = TABLES["die_map"]
@@ -217,7 +217,7 @@ def _legend(s: Session, tid: uuid.UUID, dies: list[list[Any]]) -> list[Row]:
 
 
 def get_map(s: Session, tid: uuid.UUID, map_id: uuid.UUID) -> Row:
-    """晶圆图详情：芯片列表与按 Bin 汇总的图例。
+    """芯片图详情：芯片列表与按 Bin 汇总的图例。
 
     Raises:
         HTTPException: 不存在（404）。
@@ -244,7 +244,7 @@ def get_map(s: Session, tid: uuid.UUID, map_id: uuid.UUID) -> Row:
 
 
 def unit_maps(s: Session, tid: uuid.UUID, unit_id: uuid.UUID) -> list[Row]:
-    """某晶圆的全部晶圆图（不含芯片明细），最新在前。"""
+    """某晶圆的全部芯片图（不含芯片明细），最新在前。"""
     t = TABLES["die_map"]
     cols = [c for c in t.c if c.name != "dies"]
     rows = (

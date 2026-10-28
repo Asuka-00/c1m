@@ -1,6 +1,6 @@
-"""单元级与前后道交接接口：单元转换、芯片级晶圆图、Bank 入库 / 领用、SPC 控制图。
+"""单元级与前后道交接接口：单元转换、芯片级芯片图、Bank 入库 / 领用、SPC 控制图。
 
-权限：mes.exec:write（转换、导入晶圆图）、mes.exec:bank（Bank 入库 / 领用）、mes.exec:read（查询）。
+权限：mes.exec:write（转换、导入芯片图）、mes.exec:bank（Bank 入库 / 领用）、mes.exec:read（查询）。
 """
 
 import uuid

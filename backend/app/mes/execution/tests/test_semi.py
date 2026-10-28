@@ -1,4 +1,4 @@
-"""泛半导体阶段 1：单元转换与单元谱系、芯片级晶圆图、Wafer / Die Bank、NCR / MRB、SPC 判异自动 Hold。"""
+"""泛半导体阶段 1：单元转换与单元谱系、芯片级芯片图、Wafer / Die Bank、NCR / MRB、SPC 判异自动 Hold。"""
 
 from typing import Any
 
@@ -114,7 +114,7 @@ def test_convert_split_assemble_and_unit_trace(client: TestClient, db: Session) 
     )
 
 
-# ---------------- 晶圆图 + 按图取良品 ----------------
+# ---------------- 芯片图 + 按图取良品 ----------------
 def test_die_map_import_and_convert_by_map(client: TestClient, db: Session) -> None:
     f = Line(client, db)
     _bins(f)
@@ -166,7 +166,7 @@ def test_die_map_import_and_convert_by_map(client: TestClient, db: Session) -> N
     d = client.get(f"{EXEC}/die-maps/{r['maps'][0]['id']}", headers=f.m.h).json()
     assert d["gross"] == 3 and d["good"] == 2 and d["rows"] == 2 and d["cols"] == 2
     assert {x["bin"]: x["count"] for x in d["legend"]} == {"1": 2, "X": 1}
-    wm = client.get(f"{EXEC}/lots/{lot['id']}/wafer-map", headers=f.m.h).json()
+    wm = client.get(f"{EXEC}/lots/{lot['id']}/wafer-status", headers=f.m.h).json()
     assert wm["slots"][0]["wafer"]["die_map"]["good"] == 2
     r = f.post(conv, {"to_kind": "die", "use_map": True})
     assert r["count"] == 3 and r["bad_dies"] == 1
@@ -193,7 +193,7 @@ def test_step_auto_convert_at_track_out(client: TestClient, db: Session) -> None
     f.stage(a, "move_in", **eq)
     f.stage(a, "track_in", **eq)
     assert f.ctx(a)["step"]["convert"] == {"to_kind": "die", "mode": "map", "ratio": 1}
-    # 缺晶圆图：下机整体失败，批次仍在加工
+    # 缺芯片图：下机整体失败，批次仍在加工
     assert ec.CONVERT_NO_MAP in _codes(f.stage(a, "track_out", 422))
     assert f.lot(a)["lot_status"] == "running"
     w1, w2 = f.ctx(a)["units"]

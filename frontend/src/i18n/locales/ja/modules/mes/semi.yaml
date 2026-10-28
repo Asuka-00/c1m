@@ -2,7 +2,7 @@ mes:
   entity:
     bank: バンク
     bin_code: Bin コード
-    die_map: ウェーハマップ
+    die_map: ダイマップ
     unit_genealogy: ユニット系譜
     ncr: 不適合処置票
     ncr_approval: 承認履歴
@@ -91,7 +91,7 @@ mes:
     die_map_kind:
       cp: CP テスト
       aoi: AOI 検査
-      ink: 統合 / インク
+      ink: 統合マップ（インク）
     ncr_status:
       open: 提案待ち
       reviewing: 承認中
@@ -108,11 +108,11 @@ mes:
       approve: 承認
       reject: 差し戻し
   semi:
-    unitHint: ウェーハマップを取り込み、ロット全体を次のユニットに変換します。
+    unitHint: ダイマップを取り込み、ロット全体を次のユニットに変換します。
     units: '仕掛ユニット（{{count}}）'
     viewMap: マップ表示
     goodOfGross: '良品 {{good}} / 全 {{gross}} 個'
-    importMap: ウェーハマップ取込
+    importMap: ダイマップ取込
     csv: マップデータ（ウェーハ番号,x,y,bin）
     csvFile: ファイルを選択
     csvHint: 1 行に 1 ダイ。例：W01,0,0,1
@@ -124,7 +124,7 @@ mes:
     toKind: 変換先ユニット種別
     mode: 変換方法
     modes:
-      map: ウェーハマップの良品ダイ
+      map: ダイマップの良品ダイ
       split: ソースごとに N 個産出（1 → N）
       assemble: N 個のソースから 1 個（N → 1）
     ratio:

@@ -9,7 +9,7 @@ mes:
     split_merge_rule: Split / merge rule
     qtime_rule: Q-Time rule
     lot: Lot
-    wafer: Wafer / unit
+    wafer: Unit (wafer etc.)
     lot_hold: Lot hold
     lot_history: Lot history
     lot_recipe_run: Recipe run
@@ -125,7 +125,7 @@ mes:
       note: System note
     lot_history:
       lot: Lot
-      unit: Wafer / unit
+      unit: Unit (wafer etc.)
       action: Action
       route_step: Route step
       step_seq: Seq.
@@ -160,7 +160,7 @@ mes:
       child_lot: Child / target lot
       relation: Relation
       qty: Qty
-      units: Wafers / units
+      units: Units (wafers etc.)
       route_step: Route step
       username: User
       at: Time

@@ -1,4 +1,4 @@
-"""执行实体规格：检查规则 / 方案 / 绑定 / 日志、单元谱系、晶圆图、NCR。"""
+"""执行实体规格：检查规则 / 方案 / 绑定 / 日志、单元谱系、芯片图、NCR。"""
 
 from app.core.spec.engine import ENUMS, FIELD_LABELS, Entity, F, register
 
@@ -553,7 +553,7 @@ register(
             F("lot", "ref", "Lot", required=True, ref="lot", cascade=True),
             F("relation", "enum", "Relation", enum="unit_relation"),
             F("qty", "int", "Qty"),
-            # 取自晶圆图的芯片坐标 [[x, y], ...]
+            # 取自芯片图的芯片坐标 [[x, y], ...]
             F("dies", "json", "Die coordinates", list=False),
             F("route_step", "ref", ref="route_step", list=False, filter=False),
             F("username", "str", "User", max_length=255, search=True),

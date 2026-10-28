@@ -66,11 +66,11 @@ mes:
     dc: データ収集
     noDc: このステップではデータ収集は不要です。
     item: 項目
-    unit: ウェーハ・ユニット
+    unit: ユニット（ウェーハ等）
     values: 測定値（測定点）
     lotLevel: ロット
     scrapQty: 理由別の廃棄数量
-    scrapUnits: ウェーハ・ユニット別の廃棄・リワーク
+    scrapUnits: ユニット別の廃棄・リワーク
     addScrap: 廃棄行を追加
     goodQty: トラックアウト後の良品数：{{good}}
     good: 良品
@@ -115,7 +115,7 @@ mes:
     mergedInto: 統合先
     mergedFrom: 統合元
     splitQtyHint: 子ロットごとの数量を入力（残りは親ロット）。
-    splitUnitHint: ウェーハ・ユニットを子ロットに割り当てます（未割当は親に残ります）。
+    splitUnitHint: ユニットを子ロットに割り当てます（未割当は親に残ります）。
     childCount: 子ロット数
     remain: 親ロット残 {{n}} / {{total}}
     tooMany: 子ロット合計は親ロット数量 {{total}} 未満にしてください（全量分割不可）
@@ -331,8 +331,8 @@ mes:
     expiring: 期限間近
     ongoing: 継続中
     hours: '{{n}} 時間'
-  wmap:
-    title: ウェーハマップ
+  wstatus:
+    title: ウェーハ状態
     history: ウェーハ履歴：{{code}}
   rrun:
     title: レシピパラメータ：{{recipe}} v{{version}}
@@ -381,15 +381,15 @@ mes:
     moved: 載せ替えました
     splitMerge: 分割・統合
   sorter:
-    action: ソート
-    title: ウェーハソート：{{lot}}（{{code}}）
+    action: 整列
+    title: スロット整列：{{lot}}（{{code}}）
     target: 移動先キャリア（任意）
     wafer: ウェーハ
     from: 元スロット
     to: 新スロット
     pack: 順に詰める
-    run: ソート実行
-    done: ソート完了
+    run: 整列実行
+    done: 整列完了
   yield:
     hint: 工程・製品・ロット別の歩留まりと廃棄理由。
     search: コード・名称検索
@@ -620,7 +620,7 @@ mes:
       limit: キャリア {{carrier}} は {{used}}/{{max}} 回使用済み、先に洗浄してください
       used: キャリア {{carrier}} 使用 {{used}}/{{max}} 回
     sort_order:
-      none: ウェーハソートなし
+      none: スロット整列なし
       changed: ウェーハの順序が変わります
       kept: ウェーハの順序は維持されます
     notice:
@@ -742,7 +742,7 @@ mes:
       merge: 統合
       jump: ステップジャンプ
       adjust: 廃棄・追加
-      sort: ウェーハソート
+      sort: スロット整列
       priority: 優先度変更
       convert: ユニット変換
     check_type:
@@ -755,7 +755,7 @@ mes:
       tool_life: 工具使用可・寿命
       carrier_available: キャリア使用可
       batch_same_step: 一括：同一ステップ
-      sort_order: ソート順序維持
+      sort_order: 整列時に順序を維持
       hot_lot_limit: ホットロット仕掛上限
       handover_ack_other: 引継ぎは別ユーザーが確認
       operator_qualified: 作業者資格あり
@@ -843,10 +843,10 @@ mes:
       jump: ステップジャンプ
       bonus: 追加
       carrier_change: キャリア変更
-      sort: ウェーハソート
+      sort: スロット整列
       priority: 優先度変更
       convert: ユニット変換
-      die_map: ウェーハマップ取込
+      die_map: ダイマップ取込
       bank_in: バンク入庫
       bank_out: バンク払出
       ooc: SPC 管理外れ

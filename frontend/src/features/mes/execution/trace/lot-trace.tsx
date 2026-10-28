@@ -1,4 +1,4 @@
-/** 批次履历页面（时间线 + 谱系 + 晶圆图 + 配方执行记录）。 */
+/** 批次履历页面（时间线 + 谱系 + 晶圆状态 + 配方执行记录）。 */
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
@@ -244,13 +244,13 @@ const WAFER_COLOR: Record<string, string> = {
   scrapped: 'bg-destructive border-destructive text-white',
 }
 
-/** 晶圆图：按槽位显示晶圆状态，点击晶圆查看晶圆履历。 */
-export function WaferMapCard({ lotId }: { lotId: string }) {
+/** 晶圆状态：按槽位显示晶圆状态，点击晶圆查看晶圆履历。 */
+export function WaferStatusCard({ lotId }: { lotId: string }) {
   const tk = useTenantKey()
   const [pick, setPick] = useState<WaferCell | null>(null)
   const map = useQuery({
-    queryKey: ['mes', 'exec', tk, lotId, 'wafer-map'],
-    queryFn: () => execApi.waferMap(lotId),
+    queryKey: ['mes', 'exec', tk, lotId, 'wafer-status'],
+    queryFn: () => execApi.waferStatus(lotId),
   })
   const hist = useQuery({
     queryKey: ['mes', 'exec', tk, pick?.id, 'wafer-history'],
@@ -285,14 +285,14 @@ export function WaferMapCard({ lotId }: { lotId: string }) {
     <Card>
       <CardHeader className='pb-2'>
         <CardTitle className='flex flex-wrap items-center gap-2 text-base'>
-          {t('mes.wmap.title')}
+          {t('mes.wstatus.title')}
           {m.carrier && <Badge variant='outline'>{m.carrier}</Badge>}
         </CardTitle>
       </CardHeader>
       <CardContent className='space-y-3'>
         <div
           className='grid grid-cols-5 gap-1.5 sm:grid-cols-10 lg:grid-cols-13'
-          data-testid='wafer-map'
+          data-testid='wafer-status'
         >
           {m.slots.map((x) => cell(x.wafer, String(x.slot), x.slot))}
           {m.units.map((w) => cell(w, '—', w.id))}
@@ -310,7 +310,7 @@ export function WaferMapCard({ lotId }: { lotId: string }) {
         <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-2xl'>
           <DialogHeader>
             <DialogTitle>
-              {t('mes.wmap.history', { code: pick?.code ?? '' })}
+              {t('mes.wstatus.history', { code: pick?.code ?? '' })}
             </DialogTitle>
           </DialogHeader>
           {hist.data && hist.data.length === 0 && (
@@ -567,7 +567,7 @@ export default function LotTracePage() {
           </CardContent>
         </Card>
       )}
-      {lotId && <WaferMapCard lotId={lotId} />}
+      {lotId && <WaferStatusCard lotId={lotId} />}
       {lotId && <RecipeRunCard lotId={lotId} />}
       {lotId && (
         <Card>

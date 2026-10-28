@@ -2,7 +2,7 @@
 
 - 1 → N：每个来源单元产出 ``per_parent`` 个（如条带切单颗），合成来的来源单元以实际装入数封顶；
 - N → 1：每 ``per_child`` 个来源合成 1 个（如芯片固晶到条带，最后一个可不满）；
-- 按晶圆图：来源为各晶圆当前晶圆图上的良品芯片（坐标写入谱系），坏品不产出。
+- 按芯片图：来源为各晶圆当前芯片图上的良品芯片（坐标写入谱系），坏品不产出。
 来源单元标记为已转换（消耗），批次数量变为产出数，追踪级别变为序列化单元。
 """
 
@@ -138,7 +138,7 @@ def _plan(s: Session, tid: uuid.UUID, lot: Row, body: Row) -> _Plan:
     """校验转换参数并计算来源项。
 
     Raises:
-        HTTPException: 参数不合法、无可转换单元或缺晶圆图（422）。
+        HTTPException: 参数不合法、无可转换单元或缺芯片图（422）。
     """
     kind = str(body.get("to_kind") or "")
     per_parent = int(body.get("per_parent") or 1)
