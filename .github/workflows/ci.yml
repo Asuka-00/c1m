@@ -54,7 +54,7 @@ jobs:
           DATABASE_URL: postgresql+psycopg://app_user:changethis@localhost:5432/app_test
 
   frontend:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright 暂不支持 ubuntu-latest（26.04）
     defaults:
       run:
         working-directory: frontend
