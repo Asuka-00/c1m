@@ -21,6 +21,7 @@ import { Page } from '@/components/crud'
 import { enumLabel } from '@/features/mes/common/labels'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { Pick } from '../shared/exec-parts'
+import { lotPageLink } from '../shared/lot-links'
 
 const KINDS: TraceKind[] = ['lot', 'wafer', 'equipment', 'material_lot']
 
@@ -42,7 +43,7 @@ function cell(col: string, v: unknown): React.ReactNode {
   return String(v)
 }
 
-/** 追溯结果表（lot / code 列可跳转到批次履历）。 */
+/** 追溯结果表（code 列可跳转到批次操作台）。 */
 function TraceTable({
   title,
   rows,
@@ -88,11 +89,7 @@ function TraceTable({
                   >
                     {c === 'code' && r.id ? (
                       <Link
-                        to='/$'
-                        params={{ _splat: 'mes/lot-history' }}
-                        search={
-                          { tab: 'mes-lot-trace', lot: String(r.id) } as never
-                        }
+                        {...lotPageLink(r.id)}
                         className='underline-offset-2 hover:underline'
                       >
                         {String(r.code)}

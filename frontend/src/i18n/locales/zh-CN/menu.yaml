@@ -39,7 +39,6 @@ menu:
   mes-wip-dashboard: WIP 看板
   mes-oee-report: 设备 OEE
   mes-yield-report: 良率报表
-  mes-lot-history: 批次履历与追溯
   mes-lot_recipe_run: 配方执行记录
   mes-lot: 批次查询
   mes-wafer: 晶圆查询
@@ -114,7 +113,6 @@ menu:
   mes-dc_plan: 数据收集计划
   mes-measurement_item: 量测项目
   mes-sampling_rule: 抽样规则
-  mes-lot-trace: 批次履历
   mes-trace: 追溯查询
   mes-warehouse: 仓库
   mes-storage_location: 库位

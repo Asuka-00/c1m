@@ -96,8 +96,8 @@ RULES: dict[str, Rule] = {
     "bank_out": _r([S.BANKED], [S.BANKED, S.ISSUED]),
     # 单元转换（晶圆 → 芯片 / 条带 / 单颗）只在工步前后进行，不能在加工中
     "convert": _r([S.WAITING, S.MOVED_IN]),
-    # 出货（D13 / H2-02）：仅 stored 且不能持 Hold。仓库尚无出货接口与 shipped
-    # 状态（D1 维持 8 个状态），这里先定规则，接口落地时调用 check(lot, "ship")
+    # 出货（D13 / H2-02）：仅 stored 且不能持 Hold；状态不变（D1 维持 8 个状态，
+    # 无 shipped），只累加 shipped_qty，见 warehouse/shipment.py
     "ship": _r([S.STORED]),
 }
 

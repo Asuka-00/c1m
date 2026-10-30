@@ -46,6 +46,8 @@ mes:
     preview: チェック事前確認
     holdBlocks: ロットはホールド中です。加工中ロットは Track Out できますが、Move In・Track In・Move Out は全ホールド解除後に行えます。
     terminal: ロットは{{status}}です。以降の作業はありません。
+    toBank: Bank 入庫へ
+    toReceipt: 完成品入庫へ
     checks: チェック結果
     checksHint: 実行・事前確認後にチェック結果を表示します。
     noChecks: 該当するチェックはありません。
@@ -331,6 +333,11 @@ mes:
     expiring: 期限間近
     ongoing: 継続中
     hours: '{{n}} 時間'
+  lotView:
+    ops: 作業
+    history: 履歴
+    wafers: ウェーハ
+    runs: レシピ実行
   wstatus:
     title: ウェーハ状態
     history: ウェーハ履歴：{{code}}

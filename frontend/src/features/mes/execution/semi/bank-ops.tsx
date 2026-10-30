@@ -1,6 +1,7 @@
 /** Wafer / Die Bank 页面：完工批次入库，按工单从 Bank 领用开出新批次。 */
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useSearch } from '@tanstack/react-router'
 import { fmtDateTime, t } from '@/i18n'
 import { PackageMinus, PackagePlus } from 'lucide-react'
 import { toast } from 'sonner'
@@ -63,7 +64,13 @@ export default function BankOps() {
   const qc = useQueryClient()
   const can = useMesCan()
   const canBank = can(MES_PERM.execBank)
-  const [lot, setLot] = useState<Ref>(null)
+  // 从操作台「去 Bank 入库」带 ?lot=&lot_code= 进入时预选该完工批次
+  const search = useSearch({ strict: false }) as Record<string, unknown>
+  const [lot, setLot] = useState<Ref>(() =>
+    search.lot
+      ? { id: String(search.lot), code: String(search.lot_code ?? search.lot) }
+      : null
+  )
   const [bank, setBank] = useState<Ref>(null)
   const [wo, setWo] = useState<Ref>(null)
   const [picked, setPicked] = useState<string[]>([])

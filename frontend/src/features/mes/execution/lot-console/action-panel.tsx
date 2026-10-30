@@ -1,12 +1,15 @@
-/** 作业面板：当前阶段的输入、预检与执行按钮；终态批次显示完成提示。 */
+/** 作业面板：当前阶段的输入、预检与执行按钮；终态批次显示完成提示（完工批次附入库入口）。 */
+import { Link } from '@tanstack/react-router'
 import { t } from '@/i18n'
 import {
   CircleCheck,
   Loader2,
+  PackageCheck,
   PauseCircle,
   PlayCircle,
   SearchCheck,
   Shuffle,
+  Vault,
 } from 'lucide-react'
 import type { ExecContext } from '@/lib/api/mes/execution'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -21,6 +24,7 @@ import {
 } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { enumLabel, optLabel } from '@/features/mes/common/labels'
+import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { ChamberPick } from '../shared/chamber-pick'
 import { Pick } from '../shared/exec-parts'
 import { TrackInInputs } from './track-in-inputs'
@@ -242,7 +246,44 @@ export function ActionPanel({
         {t('mes.exec.terminal', {
           status: enumLabel('lot_status', String(lot.lot_status)),
         })}
+        {lot.lot_status === 'completed' && !onHold && <CompletedNext cx={cx} />}
       </AlertDescription>
     </Alert>
+  )
+}
+
+/** 完工批次的去向入口：Bank 入库（带上批次）或成品入库，按权限显示。 */
+function CompletedNext({ cx }: { cx: ExecContext }) {
+  const can = useMesCan()
+  return (
+    <div className='mt-2 flex flex-wrap gap-2'>
+      {can(MES_PERM.execBank) && (
+        <Button size='sm' variant='outline' asChild>
+          <Link
+            to='/$'
+            params={{ _splat: 'mes/bank-ops' }}
+            search={
+              { lot: String(cx.lot.id), lot_code: String(cx.lot.code) } as never
+            }
+            data-testid='to-bank'
+          >
+            <Vault className='size-4' />
+            {t('mes.exec.toBank')}
+          </Link>
+        </Button>
+      )}
+      {can('mes.wh:write') && (
+        <Button size='sm' variant='outline' asChild>
+          <Link
+            to='/$'
+            params={{ _splat: 'mes/receipt' }}
+            data-testid='to-receipt'
+          >
+            <PackageCheck className='size-4' />
+            {t('mes.exec.toReceipt')}
+          </Link>
+        </Button>
+      )}
+    </div>
   )
 }

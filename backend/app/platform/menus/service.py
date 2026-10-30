@@ -9,6 +9,7 @@ from app.platform.menus.layout import (
     MERGED,
     PLATFORM_GROUPS,
     PLATFORM_ITEMS,
+    RETIRED,
     TAB_TITLES,
 )
 from app.platform.menus.models import Menu
@@ -118,6 +119,9 @@ def platform_menus() -> list[MenuTuple]:
 def seed_menus(session: Session) -> None:
     """按注册表创建 / 更新菜单（工作区与平台两个空间）；保留 hidden 与自定义菜单。"""
     existing = {m.key: m for m in session.exec(select(Menu)).all()}
+    for key in RETIRED:
+        if key in existing:
+            session.delete(existing.pop(key))
     for space, rows in (
         ("workspace", registry_menus()),
         ("platform", platform_menus()),

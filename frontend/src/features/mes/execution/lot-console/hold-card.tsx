@@ -86,12 +86,13 @@ function HoldRow({
           {t('mes.exec.release')}
         </Button>
       )}
-      <ReleaseDialog
-        hold={h}
-        reasons={cx.reasons.release}
-        open={open}
-        onOpenChange={setOpen}
-      />
+      {open && (
+        <ReleaseDialog
+          ids={[String(h.id)]}
+          lots={[String(cx.lot.code)]}
+          onClose={() => setOpen(false)}
+        />
+      )}
     </div>
   )
 }

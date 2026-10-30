@@ -276,14 +276,16 @@ def test_menu_layout_complete_and_synced(
     assert top[:4] == ["g-workspace", "g-execution", "g-exception", "g-wip"]
     assert top[-1] == "g-system"
     assert by["g-workspace"][:2] == ["dashboard", "notifications"]
-    # 方案 A：批次作业组前三项为进出站、Hold 管理、Q-Time 监控，只放作业项
-    assert by["g-execution"][:3] == [
-        "mes-lot-console",
+    # 批次作业组只放作业项，进出站在首位；Hold 管理与 Q-Time 监控归异常处理
+    assert by["g-execution"][:2] == ["mes-lot-console", "mes-batch-ops"]
+    assert not {"mes-lot", "mes-wafer", "mes-operator_qual"} & set(by["g-execution"])
+    assert by["g-exception"] == [
         "mes-lot_hold",
         "mes-qtime-monitor",
+        "mes-ncr",
+        "mes-future_hold",
+        "mes-check_log",
     ]
-    assert not {"mes-lot", "mes-wafer", "mes-operator_qual"} & set(by["g-execution"])
-    assert by["g-exception"] == ["mes-ncr", "mes-future_hold", "mes-check_log"]
     assert {"mes-lot", "mes-wafer"} <= set(by["g-wip"])
     assert "mes-operator_qual" in by["g-factory"]
     assert by["g-equipment"][0] == "mes-eqp-board"
@@ -313,6 +315,19 @@ def test_sync_restores_declared_layout(db: Session) -> None:
     assert keys["mes-wip-dashboard"].parent_id == keys["g-wip"].id
     assert keys["mes-wip-dashboard"].sort_order == 0
     assert keys["g-system"].sort_order == 110
+
+
+def test_sync_deletes_retired_menus(db: Session) -> None:
+    from sqlmodel import select
+
+    from app.platform.menus.layout import RETIRED
+    from app.platform.menus.models import Menu
+    from app.platform.menus.service import seed_menus
+
+    db.add(Menu(key=RETIRED[0], title="old", path="/old"))
+    db.commit()
+    seed_menus(db)
+    assert not db.exec(select(Menu).where(Menu.key == RETIRED[0])).all()
 
 
 def test_merged_menu_tabs(

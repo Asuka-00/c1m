@@ -39,7 +39,6 @@ menu:
   mes-wip-dashboard: WIP Dashboard
   mes-oee-report: Equipment OEE
   mes-yield-report: Yield Report
-  mes-lot-history: Lot History & Trace
   mes-lot_recipe_run: Recipe Run
   mes-lot: Lot Inquiry
   mes-wafer: Wafer Inquiry
@@ -114,7 +113,6 @@ menu:
   mes-dc_plan: DC Plan
   mes-measurement_item: Measurement Item
   mes-sampling_rule: Sampling Rule
-  mes-lot-trace: Lot History
   mes-trace: Traceability
   mes-warehouse: Warehouse
   mes-storage_location: Storage Location

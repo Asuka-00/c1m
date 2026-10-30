@@ -47,19 +47,17 @@ import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { mesErrorMessage } from '@/features/mes/common/required'
 import { useMesEntity } from '@/features/mes/common/use-mes-meta'
 import { CheckPanel } from '../shared/exec-parts'
-import { type LotPage, lotPageLink } from '../shared/lot-links'
+import { lotPageLink } from '../shared/lot-links'
 import { canMergeLot, canSplitLot, checkSplit } from '../shared/lot-rules'
 import { SideCardHeader } from '../shared/side-card-header'
 
 /** 谱系列表：拆批母批 / 子批，合批源批次 / 目标批次。 */
-export function GenealogyList({
+function GenealogyList({
   lotId,
   links,
-  page = 'lot-trace',
 }: {
   lotId: string
   links: GenealogyLink[]
-  page?: LotPage
 }) {
   if (!links.length)
     return <EmptyState icon={GitFork}>{t('mes.sm.noGenealogy')}</EmptyState>
@@ -89,7 +87,7 @@ export function GenealogyList({
             />
             <span className='text-muted-foreground'>{t(`mes.sm.${key}`)}</span>
             <Link
-              {...lotPageLink(page, other.id)}
+              {...lotPageLink(other.id)}
               className='font-mono font-medium underline-offset-2 hover:underline'
             >
               {other.code}
@@ -206,11 +204,7 @@ export function SplitMergeCard({ cx }: { cx: ExecContext }) {
           <p className='text-xs font-medium text-muted-foreground'>
             {t('mes.sm.genealogy')}
           </p>
-          <GenealogyList
-            lotId={String(cx.lot.id)}
-            links={sm.genealogy}
-            page='lot-console'
-          />
+          <GenealogyList lotId={String(cx.lot.id)} links={sm.genealogy} />
         </div>
       </CardContent>
       {open === 'split' && (

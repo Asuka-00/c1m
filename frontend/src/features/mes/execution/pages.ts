@@ -11,7 +11,6 @@ export const pages: Pages = {
   'mes-page:oee-report': lazy(() => import('./report/oee-report')),
   'mes-page:yield-report': lazy(() => import('./report/yield-report')),
   'mes-page:trace': lazy(() => import('./trace/trace')),
-  'mes-page:lot-trace': lazy(() => import('./trace/lot-trace')),
   'mes-page:batch-ops': lazy(() => import('./dispatch/batch-ops')),
   'mes-page:shift-handover': lazy(() => import('./report/shift-handover')),
   'mes-page:label-print': lazy(() => import('./label/label-print')),

@@ -3,27 +3,17 @@
  * 按原因 / 来源 / 产品 / Hold 时间筛选；支持单条释放与勾选后批量释放（须释放原因代码）。
  */
 import { useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { fmtDateTime, t } from '@/i18n'
 import { Download, PlayCircle, Unlock } from 'lucide-react'
-import { toast } from 'sonner'
 import { useTenantKey } from '@/lib/api/hooks'
 import { mesApi } from '@/lib/api/mes/common'
 import { execApi, type HoldRow } from '@/lib/api/mes/execution'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { Textarea } from '@/components/ui/textarea'
 import {
   DataTable,
   Page,
@@ -42,8 +32,7 @@ import {
 } from '@/features/mes/common/labels'
 import { MES_PERM, useMesCan } from '@/features/mes/common/mes-perm'
 import { RefLink } from '@/features/mes/common/ref-link'
-import { mesErrorMessage } from '@/features/mes/common/required'
-import { Pick } from '../shared/exec-parts'
+import { ReleaseDialog } from '../lot-console/release-dialog'
 import { QtimeHoldInfo } from './qtime-hold-info'
 
 /** Hold 来源。 */
@@ -385,90 +374,5 @@ export default function HoldManagePage() {
         />
       )}
     </Page>
-  )
-}
-
-/** 释放对话框（单条 / 批量共用）：释放原因代码 + 备注。 */
-function ReleaseDialog({
-  ids,
-  lots,
-  onClose,
-}: {
-  ids: string[]
-  lots: string[]
-  onClose: (done: boolean) => void
-}) {
-  const qc = useQueryClient()
-  const [reason, setReason] = useState('')
-  const [comment, setComment] = useState('')
-  const reasons = useQuery({
-    queryKey: ['mes', 'reason_code', 'release-options'],
-    queryFn: () =>
-      mesApi.list('reason_code', { reason_type: 'release', page_size: 100 }),
-  })
-  const m = useMutation({
-    mutationFn: () =>
-      execApi.releaseBatch({
-        hold_ids: ids,
-        reason_id: reason,
-        comment: comment || undefined,
-      }),
-    onSuccess: (r) => {
-      const msg = t('mes.holdrel.released', {
-        ok: r.released.length,
-        bad: r.failed.length,
-      })
-      if (r.failed.length) toast.warning(msg)
-      else toast.success(msg)
-      qc.invalidateQueries({ queryKey: ['mes'] })
-      onClose(true)
-    },
-    onError: (e) => toast.error(mesErrorMessage(e, undefined)),
-  })
-  const title =
-    ids.length > 1 ? t('mes.holdrel.release') : t('mes.exec.release')
-  return (
-    <Dialog open onOpenChange={(o) => !o && onClose(false)}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>
-            {ids.length > 1
-              ? t('mes.holdrel.selected', { n: ids.length })
-              : lots.join(', ')}
-          </DialogDescription>
-        </DialogHeader>
-        <Pick
-          id='batch-reason'
-          label={t('mes.exec.reason')}
-          required
-          none={false}
-          value={reason}
-          onChange={setReason}
-          options={(reasons.data?.data ?? []).map((r) => ({
-            id: String(r.id),
-            label: optLabel(r as { code: string; name?: string }),
-          }))}
-        />
-        <div className='grid gap-1'>
-          <Label htmlFor='batch-comment'>{t('mes.exec.comment')}</Label>
-          <Textarea
-            id='batch-comment'
-            rows={2}
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-          />
-        </div>
-        <DialogFooter>
-          <Button
-            disabled={!reason || m.isPending}
-            onClick={() => m.mutate()}
-            data-testid='confirm-release'
-          >
-            {title}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   )
 }

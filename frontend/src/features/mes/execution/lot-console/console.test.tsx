@@ -1,3 +1,9 @@
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from '@tanstack/react-router'
 import { describe, expect, it } from 'vitest'
 import { render } from 'vitest-browser-react'
 import { MES_PERM } from '@/features/mes/common/mes-perm'
@@ -6,10 +12,16 @@ import { execCtx, makeQc, Providers } from './test-utils'
 
 const ALL = Object.values(MES_PERM)
 
-async function show(status: string, onHold: boolean, perms = ALL) {
+async function show(status: string, onHold: boolean, perms: string[] = ALL) {
+  const router = createRouter({
+    routeTree: createRootRoute({
+      component: () => <Console cx={execCtx(status, onHold)} />,
+    }),
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+  })
   return render(
     <Providers qc={makeQc(perms)}>
-      <Console cx={execCtx(status, onHold)} />
+      <RouterProvider router={router} />
     </Providers>
   )
 }
@@ -39,8 +51,29 @@ describe('Console / ActionPanel：执行按钮 = 权限 + canRunStage', () => {
 
   it('终态批次不显示作业面板', async () => {
     const s = await show('completed', false)
+    await expect.element(s.getByTestId('to-bank')).toBeVisible()
     expect(s.container.querySelector('[data-testid=action-panel]')).toBeNull()
     expect(s.container.querySelector('[data-testid=run-stage]')).toBeNull()
+  })
+
+  it('完工批次按权限给出 Bank 入库 / 成品入库入口，Bank 带上批次', async () => {
+    const s = await show('completed', false, [...ALL, 'mes.wh:write'])
+    await expect
+      .element(s.getByTestId('to-bank'))
+      .toHaveAttribute('href', expect.stringContaining('lot=L1'))
+    await expect.element(s.getByTestId('to-receipt')).toBeVisible()
+    await s.unmount()
+
+    const bankOnly = await show('completed', false)
+    await expect.element(bankOnly.getByTestId('to-bank')).toBeVisible()
+    expect(
+      bankOnly.container.querySelector('[data-testid=to-receipt]')
+    ).toBeNull()
+    await bankOnly.unmount()
+
+    const held = await show('completed', true, [...ALL, 'mes.wh:write'])
+    await expect.element(held.getByText('LOT1').first()).toBeVisible()
+    expect(held.container.querySelector('[data-testid=to-bank]')).toBeNull()
   })
 
   it('Track Out 面板含量测与报废录入', async () => {

@@ -46,6 +46,8 @@ mes:
     preview: Preview checks
     holdBlocks: 'The lot is on hold: a running lot can still Track Out, but Move In, Track In and Move Out require every hold to be released.'
     terminal: Lot is {{status}} — no further stages.
+    toBank: Bank in
+    toReceipt: Finished goods receipt
     checks: Check results
     checksHint: Check results appear after running or previewing.
     noChecks: No applicable checks.
@@ -331,6 +333,11 @@ mes:
     expiring: Expiring
     ongoing: Ongoing
     hours: '{{n}} h'
+  lotView:
+    ops: Operation
+    history: History
+    wafers: Wafers
+    runs: Recipe runs
   wstatus:
     title: Wafer status
     history: 'Wafer history: {{code}}'

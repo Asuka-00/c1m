@@ -9,12 +9,6 @@ MENUS: dict[str, MenuItem] = {
         "mes-page:lot-console",
         "mes.exec:read",
     ),
-    "mes-lot-trace": (
-        "/mes/lot-trace",
-        "History",
-        "mes-page:lot-trace",
-        "mes.exec:read",
-    ),
     "mes-batch-ops": (
         "/mes/batch-ops",
         "Layers",

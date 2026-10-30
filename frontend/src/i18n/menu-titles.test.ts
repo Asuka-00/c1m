@@ -15,7 +15,6 @@ const MERGED_FIRST_TAB: Record<string, string> = {
   'mes-route-master': 'mes-route',
   'mes-recipe-param': 'mes-recipe',
   'mes-dc-config': 'mes-dc_plan',
-  'mes-lot-history': 'mes-lot-trace',
   'mes-warehouse-master': 'mes-warehouse',
 }
 

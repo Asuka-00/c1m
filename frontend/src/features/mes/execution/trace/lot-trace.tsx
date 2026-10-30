@@ -1,7 +1,6 @@
-/** 批次履历页面（时间线 + 谱系 + 晶圆状态 + 配方执行记录）。 */
+/** 批次履历、晶圆状态与配方执行记录卡片（批次操作台的页签）。 */
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { fmtDateTime, t } from '@/i18n'
 import {
   ArrowRightToLine,
@@ -9,8 +8,8 @@ import {
   CornerDownRight,
   GitFork,
   GitMerge,
-  Gauge,
   GitBranch,
+  Inbox,
   LogIn,
   LogOut,
   PauseCircle,
@@ -38,7 +37,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
 import {
   Table,
   TableBody,
@@ -47,11 +45,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Page } from '@/components/crud'
+import { EmptyState } from '@/components/desc-list'
 import { enumLabel, reasonLabel } from '@/features/mes/common/labels'
-import { RefSelect } from '@/features/mes/common/ref-select'
 import { ResultBadge } from '../shared/exec-parts'
-import { GenealogyList } from '../split-merge'
 
 const ICON: Record<string, [LucideIcon, string]> = {
   start: [Rocket, 'bg-sky-500'],
@@ -258,7 +254,9 @@ export function WaferStatusCard({ lotId }: { lotId: string }) {
     enabled: !!pick,
   })
   const m = map.data
-  if (!m || (!m.slots.some((x) => x.wafer) && m.units.length === 0)) return null
+  if (!m) return null
+  if (!m.slots.some((x) => x.wafer) && m.units.length === 0)
+    return <EmptyState icon={Inbox}>{t('common.noResults')}</EmptyState>
   const cell = (w: WaferCell | null, label: string, key: string | number) => (
     <button
       key={key}
@@ -351,7 +349,9 @@ export function RecipeRunCard({ lotId }: { lotId: string }) {
       }),
   })
   const rows = runs.data?.data ?? []
-  if (rows.length === 0) return null
+  if (runs.isLoading) return null
+  if (rows.length === 0)
+    return <EmptyState icon={Inbox}>{t('common.noResults')}</EmptyState>
   const f = (k: string) => t(`mes.field.lot_recipe_run.${k}`)
   const params = Object.entries(
     (pick?.params as Record<string, unknown> | null) ?? {}
@@ -478,16 +478,8 @@ export function RecipeRunCard({ lotId }: { lotId: string }) {
 
 /** 批次履历时间线：每个动作的时间、操作人、工步、设备、
  *  配方、数量、原因与检查结果。 */
-export default function LotTracePage() {
-  const search = useSearch({ strict: false }) as Record<string, unknown>
-  const nav = useNavigate()
-  const lotId = (search.lot as string) || ''
+export function LotHistoryCard({ lotId }: { lotId: string }) {
   const tk = useTenantKey()
-  const lot = useQuery({
-    queryKey: ['mes', 'lot', 'one', tk, lotId],
-    queryFn: () => mesApi.get('lot', lotId),
-    enabled: !!lotId,
-  })
   const hist = useQuery({
     queryKey: ['mes', 'lot_history', 'trace', tk, lotId],
     queryFn: () =>
@@ -497,88 +489,16 @@ export default function LotTracePage() {
         sort_order: 'desc',
         page_size: 100,
       }),
-    enabled: !!lotId,
-  })
-  const gen = useQuery({
-    queryKey: ['mes', 'exec', tk, lotId, 'genealogy'],
-    queryFn: () => execApi.context(lotId),
-    enabled: !!lotId,
   })
   const rows = hist.data?.data ?? []
   return (
-    <Page
-      title={t('menu.mes-lot-trace')}
-      description={t('mes.trace.hint')}
-      actions={
-        lotId && (
-          <Button variant='outline' asChild>
-            <Link
-              to='/$'
-              params={{ _splat: 'mes/lot-console' }}
-              search={{ lot: lotId } as never}
-            >
-              <Gauge className='size-4' />
-              {t('menu.mes-lot-console')}
-            </Link>
-          </Button>
-        )
-      }
-    >
-      <div className='flex max-w-xl items-center gap-2'>
-        <Label className='shrink-0'>{t('mes.entity.lot')}</Label>
-        <RefSelect
-          target='lot'
-          value={lotId || null}
-          label={lot.data ? String(lot.data.code) : null}
-          onChange={(id) =>
-            nav({
-              to: '/$',
-              params: { _splat: 'mes/lot-history' },
-              search: (id
-                ? { tab: 'mes-lot-trace', lot: id }
-                : { tab: 'mes-lot-trace' }) as never,
-            })
-          }
-        />
-        {lot.data && (
-          <>
-            <Badge variant='outline'>
-              {enumLabel('lot_status', String(lot.data.lot_status))}
-            </Badge>
-            {!!lot.data.on_hold && (
-              <Badge variant='destructive'>{t('mes.exec.onHold')}</Badge>
-            )}
-          </>
+    <Card>
+      <CardContent className='pt-6'>
+        {rows.length === 0 && !hist.isLoading && (
+          <p className='text-muted-foreground'>{t('mes.trace.empty')}</p>
         )}
-      </div>
-      {!lotId && (
-        <p className='text-muted-foreground'>{t('mes.exec.pickLot')}</p>
-      )}
-      {lotId && (gen.data?.sm?.genealogy.length ?? 0) > 0 && (
-        <Card>
-          <CardHeader className='pb-2'>
-            <CardTitle className='text-base'>{t('mes.sm.genealogy')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <GenealogyList
-              lotId={lotId}
-              links={gen.data?.sm?.genealogy ?? []}
-            />
-          </CardContent>
-        </Card>
-      )}
-      {lotId && <WaferStatusCard lotId={lotId} />}
-      {lotId && <RecipeRunCard lotId={lotId} />}
-      {lotId && (
-        <Card>
-          <CardContent className='pt-6'>
-            {rows.length === 0 && !hist.isLoading && (
-              <p className='text-muted-foreground'>{t('mes.trace.empty')}</p>
-            )}
-            <HistoryTimeline rows={rows} />
-          </CardContent>
-        </Card>
-      )}
-    </Page>
+        <HistoryTimeline rows={rows} />
+      </CardContent>
+    </Card>
   )
 }

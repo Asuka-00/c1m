@@ -46,6 +46,8 @@ mes:
     preview: 预检卡控
     holdBlocks: 批次处于 Hold 状态：加工中的批次仍可 Track Out，但 Move In、Track In 和 Move Out 需解除全部 Hold 后才能进行。
     terminal: 批次已{{status}}，无后续作业。
+    toBank: 去 Bank 入库
+    toReceipt: 去成品入库
     checks: 卡控结果
     checksHint: 执行或预检后显示卡控结果。
     noChecks: 无适用卡控。
@@ -331,6 +333,11 @@ mes:
     expiring: 临期
     ongoing: 进行中
     hours: '{{n}} 小时'
+  lotView:
+    ops: 作业
+    history: 履历
+    wafers: 晶圆
+    runs: 配方执行
   wstatus:
     title: 晶圆状态
     history: 晶圆履历：{{code}}

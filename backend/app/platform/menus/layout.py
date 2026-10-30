@@ -28,7 +28,8 @@ GROUPS: list[tuple[str, str, str, int]] = [
 ]
 
 # 分组 key -> [(菜单 key, 标题)]，按显示顺序（组内：日常作业在前，配置在后）
-# 批次作业组只放操作员高频项；查询类（批次 / 晶圆）在「在制与查询」。
+# 批次作业组只放操作员高频项；Hold / Q-Time 归「异常处理」；查询类（批次 / 晶圆）在「在制与查询」。
+# 批次履历 / 晶圆状态 / 配方执行是批次操作台的页签，不单设菜单。
 ITEMS: dict[str, list[tuple[str, str]]] = {
     "g-workspace": [
         ("dashboard", "Dashboard"),
@@ -40,8 +41,6 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
             "mes-lot-console",
             "Lot Operation (Track In/Out)",
         ),
-        ("mes-lot_hold", "Hold Management"),
-        ("mes-qtime-monitor", "Q-Time Monitor"),
         ("mes-batch-ops", "Batch Operation"),
         ("mes-carrier-ops", "Carrier Operation"),
         ("mes-unit-ops", "Unit Conversion & Die Map"),
@@ -49,6 +48,8 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-label-print", "Label Printing"),
     ],
     "g-exception": [
+        ("mes-lot_hold", "Hold Management"),
+        ("mes-qtime-monitor", "Q-Time Monitor"),
         ("mes-ncr", "NCR / MRB"),
         ("mes-future_hold", "Future Hold"),
         ("mes-check_log", "Interlock Log"),
@@ -57,7 +58,7 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
         ("mes-wip-dashboard", "WIP Dashboard"),
         ("mes-oee-report", "Equipment OEE"),
         ("mes-yield-report", "Yield Report"),
-        ("mes-lot-history", "Lot History & Trace"),
+        ("mes-trace", "Traceability"),
         ("mes-lot_recipe_run", "Recipe Run"),
         ("mes-lot", "Lot Inquiry"),
         ("mes-wafer", "Wafer Inquiry"),
@@ -135,6 +136,9 @@ ITEMS: dict[str, list[tuple[str, str]]] = {
     ],
 }
 
+
+# 已下线的菜单 key：菜单同步只增改不删，这里列出的在同步时从已有库删除。
+RETIRED: list[str] = ["mes-lot-history"]
 
 # 合并菜单：key -> (路径, 图标, 视图, [页签 key])。
 # 视图 "tabs"：页签页（各页签复用原页面组件，页签写入 URL ?tab=）；
@@ -217,12 +221,6 @@ MERGED: dict[str, tuple[str, str, str, list[str]]] = {
         "tabs",
         ["mes-dc_plan", "mes-measurement_item", "mes-sampling_rule"],
     ),
-    "mes-lot-history": (
-        "/mes/lot-history",
-        "History",
-        "tabs",
-        ["mes-lot-trace", "mes-trace"],
-    ),
     "mes-warehouse-master": (
         "/mes/warehouse-master",
         "Warehouse",
@@ -271,8 +269,6 @@ TAB_TITLES: dict[str, str] = {
     "mes-dc_plan": "DC Plan",
     "mes-measurement_item": "Measurement Item",
     "mes-sampling_rule": "Sampling Rule",
-    "mes-lot-trace": "Lot History",
-    "mes-trace": "Traceability",
     "mes-warehouse": "Warehouse",
     "mes-storage_location": "Storage Location",
     "members": "Users",
